@@ -42,6 +42,8 @@ class pushoperation(object):
         #   we have outgoing changesets but refused to push
         # - other values as described by addchangegroup()
         self.ret = None
+        # discover.outgoing object (contains common and outgoin data)
+        self.outgoing = None
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -101,6 +103,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             fco = discovery.findcommonoutgoing
             outgoing = fco(unfi, pushop.remote, onlyheads=pushop.revs,
                            commoninc=commoninc, force=pushop.force)
+            pushop.outgoing = outgoing
 
 
             if not outgoing.missing:
@@ -172,10 +175,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
             if pushop.ret:
                 # push succeed, synchronize target of the push
-                cheads = outgoing.missingheads
+                cheads = pushop.outgoing.missingheads
             elif pushop.revs is None:
                 # All out push fails. synchronize all common
-                cheads = outgoing.commonheads
+                cheads = pushop.outgoing.commonheads
             else:
                 # I want cheads = heads(::missingheads and ::commonheads)
                 # (missingheads is revs with secret changeset filtered out)
@@ -191,14 +194,14 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 #
                 # We can pick:
                 # * missingheads part of common (::commonheads)
-                common = set(outgoing.common)
+                common = set(pushop.outgoing.common)
                 nm = pushop.repo.changelog.nodemap
                 cheads = [node for node in pushop.revs if nm[node] in common]
                 # and
                 # * commonheads parents on missing
                 revset = unfi.set('%ln and parents(roots(%ln))',
-                                 outgoing.commonheads,
-                                 outgoing.missing)
+                                 pushop.outgoing.commonheads,
+                                 pushop.outgoing.missing)
                 cheads.extend(c.node() for c in revset)
             # even when we don't push, exchanging phase data is useful
             remotephases = pushop.remote.listkeys('phases')
