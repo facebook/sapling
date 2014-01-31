@@ -391,6 +391,26 @@ class pulloperation(object):
         self.heads = heads
         # do we force pull?
         self.force = force
+        # the name the pull transaction
+        self._trname = 'pull\n' + util.hidepassword(remote.url())
+        # hold the transaction once created
+        self._tr = None
+
+    def gettransaction(self):
+        """get appropriate pull transaction, creating it if needed"""
+        if self._tr is None:
+            self._tr = self.repo.transaction(self._trname)
+        return self._tr
+
+    def closetransaction(self):
+        """close transaction if created"""
+        if self._tr is not None:
+            self._tr.close()
+
+    def releasetransaction(self):
+        """release transaction if created"""
+        if self._tr is not None:
+            self._tr.release()
 
 def pull(repo, remote, heads=None, force=False):
     pullop = pulloperation(repo, remote, heads, force)
@@ -402,10 +422,6 @@ def pull(repo, remote, heads=None, force=False):
                     " %s") % (', '.join(sorted(missing)))
             raise util.Abort(msg)
 
-    # don't open transaction for nothing or you break future useful
-    # rollback call
-    tr = None
-    trname = 'pull\n' + util.hidepassword(pullop.remote.url())
     lock = pullop.repo.lock()
     try:
         tmp = discovery.findcommonincoming(pullop.repo.unfiltered(),
@@ -417,7 +433,10 @@ def pull(repo, remote, heads=None, force=False):
             pullop.repo.ui.status(_("no changes found\n"))
             result = 0
         else:
-            tr = pullop.repo.transaction(trname)
+            # We delay the open of the transaction as late as possible so we
+            # don't open transaction for nothing or you break future useful
+            # rollback call
+            pullop.gettransaction()
             if pullop.heads is None and list(common) == [nullid]:
                 pullop.repo.ui.status(_("requesting all changes\n"))
             elif (pullop.heads is None
@@ -465,20 +484,11 @@ def pull(repo, remote, heads=None, force=False):
             # should be seen as public
             phases.advanceboundary(pullop.repo, phases.public, subset)
 
-        def gettransaction():
-            if tr is None:
-                return pullop.repo.transaction(trname)
-            return tr
-
-        obstr = _pullobsolete(pullop.repo, pullop.remote, gettransaction)
-        if obstr is not None:
-            tr = obstr
-
-        if tr is not None:
-            tr.close()
+        _pullobsolete(pullop.repo, pullop.remote,
+                      pullop.gettransaction)
+        pullop.closetransaction()
     finally:
-        if tr is not None:
-            tr.release()
+        pullop.releasetransaction()
         lock.release()
 
     return result
