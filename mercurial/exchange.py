@@ -66,7 +66,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     if not pushop.remote.canpush():
         raise util.Abort(_("destination does not support push"))
     unfi = pushop.repo.unfiltered()
-    def localphasemove(nodes, phase=phases.public):
+    def localphasemove(pushop, nodes, phase=phases.public):
         """move <nodes> to <phase> in the local source repo"""
         if pushop.locallocked:
             phases.advanceboundary(pushop.repo, phase, nodes)
@@ -222,8 +222,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 # courtesy to publish changesets possibly locally draft
                 # on the remote.
                 remotephases = {'publishing': 'True'}
-            if not remotephases: # old server or public only repo
-                localphasemove(cheads)
+            if not remotephases: # old server or public only rer
+                localphasemove(pushop, cheads)
                 # don't push any phase data as there is nothing to push
             else:
                 ana = phases.analyzeremotephases(pushop.repo, cheads,
@@ -231,10 +231,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 pheads, droots = ana
                 ### Apply remote phase on local
                 if remotephases.get('publishing', False):
-                    localphasemove(cheads)
+                    localphasemove(pushop, cheads)
                 else: # publish = False
-                    localphasemove(pheads)
-                    localphasemove(cheads, phases.draft)
+                    localphasemove(pushop, pheads)
+                    localphasemove(pushop, cheads, phases.draft)
                 ### Apply local phase on remote
 
                 # Get the list of all revs draft on remote by public here.
