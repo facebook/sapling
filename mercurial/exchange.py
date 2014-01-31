@@ -44,6 +44,8 @@ class pushoperation(object):
         self.ret = None
         # discover.outgoing object (contains common and outgoin data)
         self.outgoing = None
+        # all remote heads before the push
+        self.remoteheads = None
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -104,6 +106,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             outgoing = fco(unfi, pushop.remote, onlyheads=pushop.revs,
                            commoninc=commoninc, force=pushop.force)
             pushop.outgoing = outgoing
+            pushop.remoteheads = remoteheads
 
 
             if not outgoing.missing:
@@ -163,6 +166,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                     # commit/push race), server aborts.
                     if pushop.force:
                         remoteheads = ['force']
+                    else:
+                        remoteheads = pushop.remoteheads
                     # ssh: return remote's addchangegroup()
                     # http: return remote's addchangegroup() or 0 for error
                     pushop.ret = pushop.remote.unbundle(cg, remoteheads,
