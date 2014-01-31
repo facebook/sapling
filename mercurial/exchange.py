@@ -33,6 +33,8 @@ class pushoperation(object):
         self.revs = revs
         # allow push of new branch
         self.newbranch = newbranch
+        # did a local lock get acquired?
+        self.locallocked = None
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -66,7 +68,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     unfi = pushop.repo.unfiltered()
     def localphasemove(nodes, phase=phases.public):
         """move <nodes> to <phase> in the local source repo"""
-        if locallock is not None:
+        if pushop.locallocked:
             phases.advanceboundary(pushop.repo, phase, nodes)
         else:
             # repo is not locked, do not change any phases!
@@ -81,7 +83,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     locallock = None
     try:
         locallock = pushop.repo.lock()
+        pushop.locallocked = True
     except IOError, err:
+        pushop.locallocked = False
         if err.errno != errno.EACCES:
             raise
         # source repo cannot be locked.
