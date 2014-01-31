@@ -259,9 +259,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     return ret
 
 def _pushobsolete(pushop):
-    """utility function to push obsolete markers to a remote
-
-    Exist mostly to allow overriding for experimentation purpose"""
+    """utility function to push obsolete markers to a remote"""
     repo = pushop.repo
     remote = pushop.remote
     if (obsolete._enabled and repo.obsstore and
