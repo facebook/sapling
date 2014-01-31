@@ -21,10 +21,12 @@ class pushoperation(object):
     afterward.
     """
 
-    def __init__(self, repo):
+    def __init__(self, repo, remote):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
+        # repo we push to
+        self.remote = remote
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -35,9 +37,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
-    pushop = pushoperation(repo)
-    if remote.local():
-        missing = set(pushop.repo.requirements) - remote.local().supported
+    pushop = pushoperation(repo, remote)
+    if pushop.remote.local():
+        missing = (set(pushop.repo.requirements)
+                   - pushop.remote.local().supported)
         if missing:
             msg = _("required features are not"
                     " supported in the destination:"
@@ -52,7 +55,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     # unbundle assumes local user cannot lock remote repo (new ssh
     # servers, http servers).
 
-    if not remote.canpush():
+    if not pushop.remote.canpush():
         raise util.Abort(_("destination does not support push"))
     unfi = pushop.repo.unfiltered()
     def localphasemove(nodes, phase=phases.public):
@@ -83,16 +86,16 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     try:
         pushop.repo.checkpush(force, revs)
         lock = None
-        unbundle = remote.capable('unbundle')
+        unbundle = pushop.remote.capable('unbundle')
         if not unbundle:
-            lock = remote.lock()
+            lock = pushop.remote.lock()
         try:
             # discovery
             fci = discovery.findcommonincoming
-            commoninc = fci(unfi, remote, force=force)
+            commoninc = fci(unfi, pushop.remote, force=force)
             common, inc, remoteheads = commoninc
             fco = discovery.findcommonoutgoing
-            outgoing = fco(unfi, remote, onlyheads=revs,
+            outgoing = fco(unfi, pushop.remote, onlyheads=revs,
                            commoninc=commoninc, force=force)
 
 
@@ -126,7 +129,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                                  % (ctx.troubles()[0],
                                                     ctx))
                     newbm = pushop.ui.configlist('bookmarks', 'pushing')
-                    discovery.checkheads(unfi, remote, outgoing,
+                    discovery.checkheads(unfi, pushop.remote, outgoing,
                                          remoteheads, newbranch,
                                          bool(inc), newbm)
 
@@ -156,11 +159,12 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                         remoteheads = ['force']
                     # ssh: return remote's addchangegroup()
                     # http: return remote's addchangegroup() or 0 for error
-                    ret = remote.unbundle(cg, remoteheads, 'push')
+                    ret = pushop.remote.unbundle(cg, remoteheads, 'push')
                 else:
                     # we return an integer indicating remote head count
                     # change
-                    ret = remote.addchangegroup(cg, 'push', pushop.repo.url())
+                    ret = pushop.remote.addchangegroup(cg, 'push',
+                                                       pushop.repo.url())
 
             if ret:
                 # push succeed, synchronize target of the push
@@ -193,7 +197,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                  outgoing.missing)
                 cheads.extend(c.node() for c in revset)
             # even when we don't push, exchanging phase data is useful
-            remotephases = remote.listkeys('phases')
+            remotephases = pushop.remote.listkeys('phases')
             if (pushop.ui.configbool('ui', '_usedassubrepo', False)
                 and remotephases    # server supports phases
                 and ret is None # nothing was pushed
@@ -229,15 +233,15 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 outdated =  unfi.set('heads((%ln::%ln) and public())',
                                      droots, cheads)
                 for newremotehead in outdated:
-                    r = remote.pushkey('phases',
-                                       newremotehead.hex(),
-                                       str(phases.draft),
-                                       str(phases.public))
+                    r = pushop.remote.pushkey('phases',
+                                              newremotehead.hex(),
+                                              str(phases.draft),
+                                              str(phases.public))
                     if not r:
                         pushop.ui.warn(_('updating %s to public failed!\n')
                                        % newremotehead)
             pushop.ui.debug('try to push obsolete markers to remote\n')
-            obsolete.syncpush(pushop.repo, remote)
+            obsolete.syncpush(pushop.repo, pushop.remote)
         finally:
             if lock is not None:
                 lock.release()
@@ -245,5 +249,5 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    bookmarks.updateremote(pushop.ui, unfi, remote, revs)
+    bookmarks.updateremote(pushop.ui, unfi, pushop.remote, revs)
     return ret
