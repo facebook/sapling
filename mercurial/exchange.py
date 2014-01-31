@@ -395,6 +395,8 @@ class pulloperation(object):
         self._trname = 'pull\n' + util.hidepassword(remote.url())
         # hold the transaction once created
         self._tr = None
+        # heads of the set of changeset target by the pull
+        self.pulledsubset = None
 
     def gettransaction(self):
         """get appropriate pull transaction, creating it if needed"""
@@ -469,20 +471,24 @@ def pull(repo, remote, heads=None, force=False):
             # We pulled a specific subset
             # sync on this subset
             subset = pullop.heads
+        pullop.pulledsubset = subset
 
         # Get remote phases data from remote
         remotephases = pullop.remote.listkeys('phases')
         publishing = bool(remotephases.get('publishing', False))
         if remotephases and not publishing:
             # remote is new and unpublishing
-            pheads, _dr = phases.analyzeremotephases(pullop.repo, subset,
+            pheads, _dr = phases.analyzeremotephases(pullop.repo,
+                                                     pullop.pulledsubset,
                                                      remotephases)
             phases.advanceboundary(pullop.repo, phases.public, pheads)
-            phases.advanceboundary(pullop.repo, phases.draft, subset)
+            phases.advanceboundary(pullop.repo, phases.draft,
+                                   pullop.pulledsubset)
         else:
             # Remote is old or publishing all common changesets
             # should be seen as public
-            phases.advanceboundary(pullop.repo, phases.public, subset)
+            phases.advanceboundary(pullop.repo, phases.public,
+                                   pullop.pulledsubset)
 
         _pullobsolete(pullop)
         pullop.closetransaction()
