@@ -255,13 +255,16 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    _pushbookmark(pushop.ui, unfi, pushop.remote, pushop.revs)
+    _pushbookmark(pushop)
     return ret
 
-def _pushbookmark(ui, repo, remote, revs):
+def _pushbookmark(pushop):
     """Update bookmark position on remote"""
+    ui = pushop.ui
+    repo = pushop.repo.unfiltered()
+    remote = pushop.remote
     ui.debug("checking for updated bookmarks\n")
-    revnums = map(repo.changelog.rev, revs or [])
+    revnums = map(repo.changelog.rev, pushop.revs or [])
     ancestors = [a for a in repo.changelog.ancestors(revnums, inclusive=True)]
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
      ) = bookmarks.compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
