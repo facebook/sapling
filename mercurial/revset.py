@@ -464,35 +464,35 @@ def bundle(repo, subset, x):
     return subset & bundlerevs
 
 def checkstatus(repo, subset, pat, field):
-    m = None
-    s = []
     hasset = matchmod.patkind(pat) == 'set'
-    fname = None
-    for r in subset:
-        c = repo[r]
+
+    def matches(x):
+        m = None
+        fname = None
+        c = repo[x]
         if not m or hasset:
             m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
             if not m.anypats() and len(m.files()) == 1:
                 fname = m.files()[0]
         if fname is not None:
             if fname not in c.files():
-                continue
+                return False
         else:
             for f in c.files():
                 if m(f):
                     break
             else:
-                continue
+                return False
         files = repo.status(c.p1().node(), c.node())[field]
         if fname is not None:
             if fname in files:
-                s.append(r)
+                return True
         else:
             for f in files:
                 if m(f):
-                    s.append(r)
-                    break
-    return baseset(s)
+                    return True
+
+    return lazyset(subset, matches)
 
 def _children(repo, narrow, parentset):
     cs = set()
