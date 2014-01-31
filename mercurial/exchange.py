@@ -66,19 +66,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     if not pushop.remote.canpush():
         raise util.Abort(_("destination does not support push"))
     unfi = pushop.repo.unfiltered()
-    def localphasemove(pushop, nodes, phase=phases.public):
-        """move <nodes> to <phase> in the local source repo"""
-        if pushop.locallocked:
-            phases.advanceboundary(pushop.repo, phase, nodes)
-        else:
-            # repo is not locked, do not change any phases!
-            # Informs the user that phases should have been moved when
-            # applicable.
-            actualmoves = [n for n in nodes if phase < pushop.repo[n].phase()]
-            phasestr = phases.phasenames[phase]
-            if actualmoves:
-                pushop.ui.status(_('cannot lock source repo, skipping '
-                                   'local %s phase update\n') % phasestr)
     # get local lock as we might write phase data
     locallock = None
     try:
@@ -223,7 +210,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 # on the remote.
                 remotephases = {'publishing': 'True'}
             if not remotephases: # old server or public only rer
-                localphasemove(pushop, cheads)
+                _localphasemove(pushop, cheads)
                 # don't push any phase data as there is nothing to push
             else:
                 ana = phases.analyzeremotephases(pushop.repo, cheads,
@@ -231,10 +218,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 pheads, droots = ana
                 ### Apply remote phase on local
                 if remotephases.get('publishing', False):
-                    localphasemove(pushop, cheads)
+                    _localphasemove(pushop, cheads)
                 else: # publish = False
-                    localphasemove(pushop, pheads)
-                    localphasemove(pushop, cheads, phases.draft)
+                    _localphasemove(pushop, pheads)
+                    _localphasemove(pushop, cheads, phases.draft)
                 ### Apply local phase on remote
 
                 # Get the list of all revs draft on remote by public here.
@@ -260,6 +247,20 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     _pushbookmark(pushop)
     return ret
+
+def _localphasemove(pushop, nodes, phase=phases.public):
+    """move <nodes> to <phase> in the local source repo"""
+    if pushop.locallocked:
+        phases.advanceboundary(pushop.repo, phase, nodes)
+    else:
+        # repo is not locked, do not change any phases!
+        # Informs the user that phases should have been moved when
+        # applicable.
+        actualmoves = [n for n in nodes if phase < pushop.repo[n].phase()]
+        phasestr = phases.phasenames[phase]
+        if actualmoves:
+            pushop.ui.status(_('cannot lock source repo, skipping '
+                               'local %s phase update\n') % phasestr)
 
 def _pushobsolete(pushop):
     """utility function to push obsolete markers to a remote"""
