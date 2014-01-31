@@ -373,10 +373,23 @@ def _pushbookmark(pushop):
         else:
             ui.warn(_('updating bookmark %s failed!\n') % b)
 
+class pulloperation(object):
+    """A object that represent a single pull operation
+
+    It purpose is to carry push related state and very common operation.
+
+    A new should be created at the begining of each push and discarded
+    afterward.
+    """
+
+    def __init__(self, repo):
+        # repo we pull from
+        self.repo = repo
 
 def pull(repo, remote, heads=None, force=False):
+    pullop = pulloperation(repo)
     if remote.local():
-        missing = set(remote.requirements) - repo.supported
+        missing = set(remote.requirements) - pullop.repo.supported
         if missing:
             msg = _("required features are not"
                     " supported in the destination:"
@@ -387,18 +400,18 @@ def pull(repo, remote, heads=None, force=False):
     # rollback call
     tr = None
     trname = 'pull\n' + util.hidepassword(remote.url())
-    lock = repo.lock()
+    lock = pullop.repo.lock()
     try:
-        tmp = discovery.findcommonincoming(repo.unfiltered(), remote,
+        tmp = discovery.findcommonincoming(pullop.repo.unfiltered(), remote,
                                            heads=heads, force=force)
         common, fetch, rheads = tmp
         if not fetch:
-            repo.ui.status(_("no changes found\n"))
+            pullop.repo.ui.status(_("no changes found\n"))
             result = 0
         else:
-            tr = repo.transaction(trname)
+            tr = pullop.repo.transaction(trname)
             if heads is None and list(common) == [nullid]:
-                repo.ui.status(_("requesting all changes\n"))
+                pullop.repo.ui.status(_("requesting all changes\n"))
             elif heads is None and remote.capable('changegroupsubset'):
                 # issue1320, avoid a race if remote changed after discovery
                 heads = rheads
@@ -415,7 +428,7 @@ def pull(repo, remote, heads=None, force=False):
                                        "changegroupsubset."))
             else:
                 cg = remote.changegroupsubset(fetch, heads, 'pull')
-            result = repo.addchangegroup(cg, 'pull', remote.url())
+            result = pullop.repo.addchangegroup(cg, 'pull', remote.url())
 
         # compute target subset
         if heads is None:
@@ -432,21 +445,21 @@ def pull(repo, remote, heads=None, force=False):
         publishing = bool(remotephases.get('publishing', False))
         if remotephases and not publishing:
             # remote is new and unpublishing
-            pheads, _dr = phases.analyzeremotephases(repo, subset,
+            pheads, _dr = phases.analyzeremotephases(pullop.repo, subset,
                                                      remotephases)
-            phases.advanceboundary(repo, phases.public, pheads)
-            phases.advanceboundary(repo, phases.draft, subset)
+            phases.advanceboundary(pullop.repo, phases.public, pheads)
+            phases.advanceboundary(pullop.repo, phases.draft, subset)
         else:
             # Remote is old or publishing all common changesets
             # should be seen as public
-            phases.advanceboundary(repo, phases.public, subset)
+            phases.advanceboundary(pullop.repo, phases.public, subset)
 
         def gettransaction():
             if tr is None:
-                return repo.transaction(trname)
+                return pullop.repo.transaction(trname)
             return tr
 
-        obstr = obsolete.syncpull(repo, remote, gettransaction)
+        obstr = obsolete.syncpull(pullop.repo, remote, gettransaction)
         if obstr is not None:
             tr = obstr
 
