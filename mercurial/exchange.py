@@ -395,8 +395,23 @@ class pulloperation(object):
         self._trname = 'pull\n' + util.hidepassword(remote.url())
         # hold the transaction once created
         self._tr = None
-        # heads of the set of changeset target by the pull
-        self.pulledsubset = None
+        # set of common changeset between local and remote before pull
+        self.common = None
+        # set of pulled head
+        self.rheads = None
+
+    @util.propertycache
+    def pulledsubset(self):
+        """heads of the set of changeset target by the pull"""
+        # compute target subset
+        if self.heads is None:
+            # We pulled every thing possible
+            # sync on everything common
+            return self.common + self.rheads
+        else:
+            # We pulled a specific subset
+            # sync on this subset
+            return self.heads
 
     def gettransaction(self):
         """get appropriate pull transaction, creating it if needed"""
@@ -430,7 +445,7 @@ def pull(repo, remote, heads=None, force=False):
                                            pullop.remote,
                                            heads=pullop.heads,
                                            force=force)
-        common, fetch, rheads = tmp
+        pullop.common, fetch, pullop.rheads = tmp
         if not fetch:
             pullop.repo.ui.status(_("no changes found\n"))
             result = 0
@@ -439,17 +454,19 @@ def pull(repo, remote, heads=None, force=False):
             # don't open transaction for nothing or you break future useful
             # rollback call
             pullop.gettransaction()
-            if pullop.heads is None and list(common) == [nullid]:
+            if pullop.heads is None and list(pullop.common) == [nullid]:
                 pullop.repo.ui.status(_("requesting all changes\n"))
             elif (pullop.heads is None
                   and pullop.remote.capable('changegroupsubset')):
                 # issue1320, avoid a race if remote changed after discovery
-                pullop.heads = rheads
+                pullop.heads = pullop.rheads
 
             if pullop.remote.capable('getbundle'):
                 # TODO: get bundlecaps from remote
-                cg = pullop.remote.getbundle('pull', common=common,
-                                             heads=pullop.heads or rheads)
+                cg = pullop.remote.getbundle('pull',
+                                             common=pullop.common,
+                                             heads=(pullop.heads
+                                                   or pullop.rheads))
             elif pullop.heads is None:
                 cg = pullop.remote.changegroup(fetch, 'pull')
             elif not pullop.remote.capable('changegroupsubset'):
@@ -461,17 +478,6 @@ def pull(repo, remote, heads=None, force=False):
                                                      'pull')
             result = pullop.repo.addchangegroup(cg, 'pull',
                                                 pullop.remote.url())
-
-        # compute target subset
-        if pullop.heads is None:
-            # We pulled every thing possible
-            # sync on everything common
-            subset = common + rheads
-        else:
-            # We pulled a specific subset
-            # sync on this subset
-            subset = pullop.heads
-        pullop.pulledsubset = subset
 
         _pullphase(pullop)
         _pullobsolete(pullop)
