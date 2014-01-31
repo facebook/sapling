@@ -992,7 +992,7 @@ def merge(repo, subset, x):
     # i18n: "merge" is a keyword
     getargs(x, 0, 0, _("merge takes no arguments"))
     cl = repo.changelog
-    return baseset([r for r in subset if cl.parentrevs(r)[1] != -1])
+    return lazyset(subset, lambda r: cl.parentrevs(r)[1] != -1)
 
 def branchpoint(repo, subset, x):
     """``branchpoint()``
