@@ -384,22 +384,6 @@ def pushmarker(repo, key, old, new):
     finally:
         lock.release()
 
-def syncpush(repo, remote):
-    """utility function to push obsolete markers to a remote
-
-    Exist mostly to allow overriding for experimentation purpose"""
-    if (_enabled and repo.obsstore and
-        'obsolete' in remote.listkeys('namespaces')):
-        rslts = []
-        remotedata = repo.listkeys('obsolete')
-        for key in sorted(remotedata, reverse=True):
-            # reverse sort to ensure we end with dump0
-            data = remotedata[key]
-            rslts.append(remote.pushkey('obsolete', key, '', data))
-        if [r for r in rslts if not r]:
-            msg = _('failed to push some obsolete markers!\n')
-            repo.ui.warn(msg)
-
 def syncpull(repo, remote, gettransaction):
     """utility function to pull obsolete markers from a remote
 

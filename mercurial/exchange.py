@@ -247,7 +247,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                         pushop.ui.warn(_('updating %s to public failed!\n')
                                        % newremotehead)
             pushop.ui.debug('try to push obsolete markers to remote\n')
-            obsolete.syncpush(pushop.repo, pushop.remote)
+            _pushobsolete(pushop.repo, pushop.remote)
         finally:
             if lock is not None:
                 lock.release()
@@ -257,6 +257,22 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     _pushbookmark(pushop)
     return ret
+
+def _pushobsolete(repo, remote):
+    """utility function to push obsolete markers to a remote
+
+    Exist mostly to allow overriding for experimentation purpose"""
+    if (obsolete._enabled and repo.obsstore and
+        'obsolete' in remote.listkeys('namespaces')):
+        rslts = []
+        remotedata = repo.listkeys('obsolete')
+        for key in sorted(remotedata, reverse=True):
+            # reverse sort to ensure we end with dump0
+            data = remotedata[key]
+            rslts.append(remote.pushkey('obsolete', key, '', data))
+        if [r for r in rslts if not r]:
+            msg = _('failed to push some obsolete markers!\n')
+            repo.ui.warn(msg)
 
 def _pushbookmark(pushop):
     """Update bookmark position on remote"""
