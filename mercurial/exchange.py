@@ -111,39 +111,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             pushop.remoteheads = remoteheads
             pushop.incoming = inc
 
-
-            if not outgoing.missing:
-                # nothing to push
-                scmutil.nochangesfound(unfi.ui, unfi, outgoing.excluded)
-            else:
-                # something to push
-                if not pushop.force:
-                    # if repo.obsstore == False --> no obsolete
-                    # then, save the iteration
-                    if unfi.obsstore:
-                        # this message are here for 80 char limit reason
-                        mso = _("push includes obsolete changeset: %s!")
-                        mst = "push includes %s changeset: %s!"
-                        # plain versions for i18n tool to detect them
-                        _("push includes unstable changeset: %s!")
-                        _("push includes bumped changeset: %s!")
-                        _("push includes divergent changeset: %s!")
-                        # If we are to push if there is at least one
-                        # obsolete or unstable changeset in missing, at
-                        # least one of the missinghead will be obsolete or
-                        # unstable. So checking heads only is ok
-                        for node in outgoing.missingheads:
-                            ctx = unfi[node]
-                            if ctx.obsolete():
-                                raise util.Abort(mso % ctx)
-                            elif ctx.troubled():
-                                raise util.Abort(_(mst)
-                                                 % (ctx.troubles()[0],
-                                                    ctx))
-                    newbm = pushop.ui.configlist('bookmarks', 'pushing')
-                    discovery.checkheads(unfi, pushop.remote, outgoing,
-                                         remoteheads, pushop.newbranch,
-                                         bool(pushop.incoming), newbm)
+            if _pushcheckoutgoing(pushop):
                 _pushchangeset(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
@@ -156,6 +124,45 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     _pushbookmark(pushop)
     return pushop.ret
+
+def _pushcheckoutgoing(pushop):
+    outgoing = pushop.outgoing
+    unfi = pushop.repo.unfiltered()
+    if not outgoing.missing:
+        # nothing to push
+        scmutil.nochangesfound(unfi.ui, unfi, outgoing.excluded)
+        return False
+    # something to push
+    if not pushop.force:
+        # if repo.obsstore == False --> no obsolete
+        # then, save the iteration
+        if unfi.obsstore:
+            # this message are here for 80 char limit reason
+            mso = _("push includes obsolete changeset: %s!")
+            mst = "push includes %s changeset: %s!"
+            # plain versions for i18n tool to detect them
+            _("push includes unstable changeset: %s!")
+            _("push includes bumped changeset: %s!")
+            _("push includes divergent changeset: %s!")
+            # If we are to push if there is at least one
+            # obsolete or unstable changeset in missing, at
+            # least one of the missinghead will be obsolete or
+            # unstable. So checking heads only is ok
+            for node in outgoing.missingheads:
+                ctx = unfi[node]
+                if ctx.obsolete():
+                    raise util.Abort(mso % ctx)
+                elif ctx.troubled():
+                    raise util.Abort(_(mst)
+                                     % (ctx.troubles()[0],
+                                        ctx))
+        newbm = pushop.ui.configlist('bookmarks', 'pushing')
+        discovery.checkheads(unfi, pushop.remote, outgoing,
+                             pushop.remoteheads,
+                             pushop.newbranch,
+                             bool(pushop.incoming),
+                             newbm)
+    return True
 
 def _pushchangeset(pushop):
     """Make the actual push of changeset bundle to remote repo"""
