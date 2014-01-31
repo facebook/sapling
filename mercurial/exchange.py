@@ -104,6 +104,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             _pushdiscovery(pushop)
             if _pushcheckoutgoing(pushop):
                 _pushchangeset(pushop)
+            _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
         finally:
@@ -207,9 +208,44 @@ def _pushchangeset(pushop):
         pushop.ret = pushop.remote.addchangegroup(cg, 'push',
                                                               pushop.repo.url())
 
+def _pushcomputecommonheads(pushop):
+    unfi = pushop.repo.unfiltered()
+    if pushop.ret:
+        # push succeed, synchronize target of the push
+        cheads = pushop.outgoing.missingheads
+    elif pushop.revs is None:
+        # All out push fails. synchronize all common
+        cheads = pushop.outgoing.commonheads
+    else:
+        # I want cheads = heads(::missingheads and ::commonheads)
+        # (missingheads is revs with secret changeset filtered out)
+        #
+        # This can be expressed as:
+        #     cheads = ( (missingheads and ::commonheads)
+        #              + (commonheads and ::missingheads))"
+        #              )
+        #
+        # while trying to push we already computed the following:
+        #     common = (::commonheads)
+        #     missing = ((commonheads::missingheads) - commonheads)
+        #
+        # We can pick:
+        # * missingheads part of common (::commonheads)
+        common = set(pushop.outgoing.common)
+        nm = pushop.repo.changelog.nodemap
+        cheads = [node for node in pushop.revs if nm[node] in common]
+        # and
+        # * commonheads parents on missing
+        revset = unfi.set('%ln and parents(roots(%ln))',
+                         pushop.outgoing.commonheads,
+                         pushop.outgoing.missing)
+        cheads.extend(c.node() for c in revset)
+    pushop.commonheads = cheads
+
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotly"""
     unfi = pushop.repo.unfiltered()
+    cheads = pushop.commonheads
     if pushop.ret:
         # push succeed, synchronize target of the push
         cheads = pushop.outgoing.missingheads
