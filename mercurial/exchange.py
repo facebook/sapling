@@ -452,35 +452,7 @@ def pull(repo, remote, heads=None, force=False):
             pullop.repo.ui.status(_("no changes found\n"))
             result = 0
         else:
-            # We delay the open of the transaction as late as possible so we
-            # don't open transaction for nothing or you break future useful
-            # rollback call
-            pullop.gettransaction()
-            if pullop.heads is None and list(pullop.common) == [nullid]:
-                pullop.repo.ui.status(_("requesting all changes\n"))
-            elif (pullop.heads is None
-                  and pullop.remote.capable('changegroupsubset')):
-                # issue1320, avoid a race if remote changed after discovery
-                pullop.heads = pullop.rheads
-
-            if pullop.remote.capable('getbundle'):
-                # TODO: get bundlecaps from remote
-                cg = pullop.remote.getbundle('pull',
-                                             common=pullop.common,
-                                             heads=(pullop.heads
-                                                   or pullop.rheads))
-            elif pullop.heads is None:
-                cg = pullop.remote.changegroup(pullop.fetch, 'pull')
-            elif not pullop.remote.capable('changegroupsubset'):
-                raise util.Abort(_("partial pull cannot be done because "
-                                       "other repository doesn't support "
-                                       "changegroupsubset."))
-            else:
-                cg = pullop.remote.changegroupsubset(pullop.fetch,
-                                                     pullop.heads,
-                                                     'pull')
-            result = pullop.repo.addchangegroup(cg, 'pull',
-                                                pullop.remote.url())
+            result = _pullchangeset(pullop)
 
         _pullphase(pullop)
         _pullobsolete(pullop)
@@ -490,6 +462,32 @@ def pull(repo, remote, heads=None, force=False):
         lock.release()
 
     return result
+
+def _pullchangeset(pullop):
+    """pull changeset from unbundle into the local repo"""
+    # We delay the open of the transaction as late as possible so we
+    # don't open transaction for nothing or you break future useful
+    # rollback call
+    pullop.gettransaction()
+    if pullop.heads is None and list(pullop.common) == [nullid]:
+        pullop.repo.ui.status(_("requesting all changes\n"))
+    elif pullop.heads is None and pullop.remote.capable('changegroupsubset'):
+        # issue1320, avoid a race if remote changed after discovery
+        pullop.heads = pullop.rheads
+
+    if pullop.remote.capable('getbundle'):
+        # TODO: get bundlecaps from remote
+        cg = pullop.remote.getbundle('pull', common=pullop.common,
+                                     heads=pullop.heads or pullop.rheads)
+    elif pullop.heads is None:
+        cg = pullop.remote.changegroup(pullop.fetch, 'pull')
+    elif not pullop.remote.capable('changegroupsubset'):
+        raise util.Abort(_("partial pull cannot be done because "
+                                   "other repository doesn't support "
+                                   "changegroupsubset."))
+    else:
+        cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
+    return pullop.repo.addchangegroup(cg, 'pull', pullop.remote.url())
 
 def _pullphase(pullop):
     # Get remote phases data from remote
