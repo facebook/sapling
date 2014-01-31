@@ -78,7 +78,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     if not pushop.remote.canpush():
         raise util.Abort(_("destination does not support push"))
-    unfi = pushop.repo.unfiltered()
     # get local lock as we might write phase data
     locallock = None
     try:
@@ -100,17 +99,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if not unbundle:
             lock = pushop.remote.lock()
         try:
-            # discovery
-            fci = discovery.findcommonincoming
-            commoninc = fci(unfi, pushop.remote, force=pushop.force)
-            common, inc, remoteheads = commoninc
-            fco = discovery.findcommonoutgoing
-            outgoing = fco(unfi, pushop.remote, onlyheads=pushop.revs,
-                           commoninc=commoninc, force=pushop.force)
-            pushop.outgoing = outgoing
-            pushop.remoteheads = remoteheads
-            pushop.incoming = inc
-
+            _pushdiscovery(pushop)
             if _pushcheckoutgoing(pushop):
                 _pushchangeset(pushop)
             _pushsyncphase(pushop)
@@ -124,6 +113,19 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     _pushbookmark(pushop)
     return pushop.ret
+
+def _pushdiscovery(pushop):
+    # discovery
+    unfi = pushop.repo.unfiltered()
+    fci = discovery.findcommonincoming
+    commoninc = fci(unfi, pushop.remote, force=pushop.force)
+    common, inc, remoteheads = commoninc
+    fco = discovery.findcommonoutgoing
+    outgoing = fco(unfi, pushop.remote, onlyheads=pushop.revs,
+                   commoninc=commoninc, force=pushop.force)
+    pushop.outgoing = outgoing
+    pushop.remoteheads = remoteheads
+    pushop.incoming = inc
 
 def _pushcheckoutgoing(pushop):
     outgoing = pushop.outgoing
