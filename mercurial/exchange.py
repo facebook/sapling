@@ -11,6 +11,20 @@ import errno
 import util, scmutil, changegroup
 import discovery, phases, obsolete, bookmarks
 
+
+class pushoperation(object):
+    """A object that represent a single push operation
+
+    It purpose is to carry push related state and very common operation.
+
+    A new should be created at the begining of each push and discarded
+    afterward.
+    """
+
+    def __init__(self, repo):
+        # repo we push from
+        self.repo = repo
+
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
@@ -20,8 +34,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
+    pushop = pushoperation(repo)
     if remote.local():
-        missing = set(repo.requirements) - remote.local().supported
+        missing = set(pushop.repo.requirements) - remote.local().supported
         if missing:
             msg = _("required features are not"
                     " supported in the destination:"
@@ -38,24 +53,24 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     if not remote.canpush():
         raise util.Abort(_("destination does not support push"))
-    unfi = repo.unfiltered()
+    unfi = pushop.repo.unfiltered()
     def localphasemove(nodes, phase=phases.public):
         """move <nodes> to <phase> in the local source repo"""
         if locallock is not None:
-            phases.advanceboundary(repo, phase, nodes)
+            phases.advanceboundary(pushop.repo, phase, nodes)
         else:
             # repo is not locked, do not change any phases!
             # Informs the user that phases should have been moved when
             # applicable.
-            actualmoves = [n for n in nodes if phase < repo[n].phase()]
+            actualmoves = [n for n in nodes if phase < pushop.repo[n].phase()]
             phasestr = phases.phasenames[phase]
             if actualmoves:
-                repo.ui.status(_('cannot lock source repo, skipping local'
-                                 ' %s phase update\n') % phasestr)
+                pushop.repo.ui.status(_('cannot lock source repo, skipping '
+                                        'local %s phase update\n') % phasestr)
     # get local lock as we might write phase data
     locallock = None
     try:
-        locallock = repo.lock()
+        locallock = pushop.repo.lock()
     except IOError, err:
         if err.errno != errno.EACCES:
             raise
@@ -63,9 +78,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         # We do not abort the push, but just disable the local phase
         # synchronisation.
         msg = 'cannot lock source repository: %s\n' % err
-        repo.ui.debug(msg)
+        pushop.repo.ui.debug(msg)
     try:
-        repo.checkpush(force, revs)
+        pushop.repo.checkpush(force, revs)
         lock = None
         unbundle = remote.capable('unbundle')
         if not unbundle:
@@ -109,7 +124,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                 raise util.Abort(_(mst)
                                                  % (ctx.troubles()[0],
                                                     ctx))
-                    newbm = repo.ui.configlist('bookmarks', 'pushing')
+                    newbm = pushop.repo.ui.configlist('bookmarks', 'pushing')
                     discovery.checkheads(unfi, remote, outgoing,
                                          remoteheads, newbranch,
                                          bool(inc), newbm)
@@ -118,16 +133,17 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 bundlecaps = None
                 # create a changegroup from local
                 if revs is None and not (outgoing.excluded
-                                         or repo.changelog.filteredrevs):
+                                        or pushop.repo.changelog.filteredrevs):
                     # push everything,
                     # use the fast path, no race possible on push
-                    bundler = changegroup.bundle10(repo, bundlecaps)
-                    cg = repo._changegroupsubset(outgoing,
-                                                 bundler,
-                                                 'push',
-                                                 fastpath=True)
+                    bundler = changegroup.bundle10(pushop.repo, bundlecaps)
+                    cg = pushop.repo._changegroupsubset(outgoing,
+                                                        bundler,
+                                                        'push',
+                                                        fastpath=True)
                 else:
-                    cg = repo.getlocalbundle('push', outgoing, bundlecaps)
+                    cg = pushop.repo.getlocalbundle('push', outgoing,
+                                                    bundlecaps)
 
                 # apply changegroup to remote
                 if unbundle:
@@ -143,7 +159,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 else:
                     # we return an integer indicating remote head count
                     # change
-                    ret = remote.addchangegroup(cg, 'push', repo.url())
+                    ret = remote.addchangegroup(cg, 'push', pushop.repo.url())
 
             if ret:
                 # push succeed, synchronize target of the push
@@ -167,7 +183,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 # We can pick:
                 # * missingheads part of common (::commonheads)
                 common = set(outgoing.common)
-                nm = repo.changelog.nodemap
+                nm = pushop.repo.changelog.nodemap
                 cheads = [node for node in revs if nm[node] in common]
                 # and
                 # * commonheads parents on missing
@@ -177,7 +193,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 cheads.extend(c.node() for c in revset)
             # even when we don't push, exchanging phase data is useful
             remotephases = remote.listkeys('phases')
-            if (repo.ui.configbool('ui', '_usedassubrepo', False)
+            if (pushop.repo.ui.configbool('ui', '_usedassubrepo', False)
                 and remotephases    # server supports phases
                 and ret is None # nothing was pushed
                 and remotephases.get('publishing', False)):
@@ -195,7 +211,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 localphasemove(cheads)
                 # don't push any phase data as there is nothing to push
             else:
-                ana = phases.analyzeremotephases(repo, cheads, remotephases)
+                ana = phases.analyzeremotephases(pushop.repo, cheads,
+                                                 remotephases)
                 pheads, droots = ana
                 ### Apply remote phase on local
                 if remotephases.get('publishing', False):
@@ -216,10 +233,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                        str(phases.draft),
                                        str(phases.public))
                     if not r:
-                        repo.ui.warn(_('updating %s to public failed!\n')
+                        pushop.repo.ui.warn(_('updating %s to public failed!\n')
                                         % newremotehead)
-            repo.ui.debug('try to push obsolete markers to remote\n')
-            obsolete.syncpush(repo, remote)
+            pushop.repo.ui.debug('try to push obsolete markers to remote\n')
+            obsolete.syncpush(pushop.repo, remote)
         finally:
             if lock is not None:
                 lock.release()
@@ -227,5 +244,5 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    bookmarks.updateremote(repo.ui, unfi, remote, revs)
+    bookmarks.updateremote(pushop.repo.ui, unfi, remote, revs)
     return ret
