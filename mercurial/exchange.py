@@ -8,7 +8,7 @@
 from i18n import _
 from node import hex, nullid
 import errno
-import util, scmutil, changegroup
+import util, scmutil, changegroup, base85
 import discovery, phases, obsolete, bookmarks
 
 
@@ -393,7 +393,7 @@ class pulloperation(object):
         self.force = force
 
 def pull(repo, remote, heads=None, force=False):
-    pullop = pulloperation(repo, remote, heads)
+    pullop = pulloperation(repo, remote, heads, force)
     if pullop.remote.local():
         missing = set(pullop.remote.requirements) - pullop.repo.supported
         if missing:
@@ -470,7 +470,7 @@ def pull(repo, remote, heads=None, force=False):
                 return pullop.repo.transaction(trname)
             return tr
 
-        obstr = obsolete.syncpull(pullop.repo, pullop.remote, gettransaction)
+        obstr = _pullobsolete(pullop.repo, pullop.remote, gettransaction)
         if obstr is not None:
             tr = obstr
 
@@ -482,3 +482,25 @@ def pull(repo, remote, heads=None, force=False):
         lock.release()
 
     return result
+
+def _pullobsolete(repo, remote, gettransaction):
+    """utility function to pull obsolete markers from a remote
+
+    The `gettransaction` is function that return the pull transaction, creating
+    one if necessary. We return the transaction to inform the calling code that
+    a new transaction have been created (when applicable).
+
+    Exists mostly to allow overriding for experimentation purpose"""
+    tr = None
+    if obsolete._enabled:
+        repo.ui.debug('fetching remote obsolete markers\n')
+        remoteobs = remote.listkeys('obsolete')
+        if 'dump0' in remoteobs:
+            tr = gettransaction()
+            for key in sorted(remoteobs, reverse=True):
+                if key.startswith('dump'):
+                    data = base85.b85decode(remoteobs[key])
+                    repo.obsstore.mergemarkers(tr, data)
+            repo.invalidatevolatilesets()
+    return tr
+
