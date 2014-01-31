@@ -162,8 +162,12 @@ class dirstate(object):
         else:
             return fallback
 
+    @propertycache
+    def _cwd(self):
+        return os.getcwd()
+
     def getcwd(self):
-        cwd = os.getcwd()
+        cwd = self._cwd
         if cwd == self._root:
             return ''
         # self._root ends with a path separator if self._root is '/' or 'C:\'
