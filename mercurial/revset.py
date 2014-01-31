@@ -1202,7 +1202,7 @@ def public(repo, subset, x):
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
     pc = repo._phasecache
-    return baseset([r for r in subset if pc.phase(repo, r) == phases.public])
+    return lazyset(subset, lambda r: pc.phase(repo, r) == phases.public)
 
 def remote(repo, subset, x):
     """``remote([id [,path]])``
