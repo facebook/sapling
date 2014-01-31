@@ -48,6 +48,8 @@ class pushoperation(object):
         self.remoteheads = None
         # testable as a boolean indicating if any nodes are missing locally.
         self.incoming = None
+        # set of all heads common after changeset bundle push
+        self.commonheads = None
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -238,6 +240,7 @@ def _pushsyncphase(pushop):
                          pushop.outgoing.commonheads,
                          pushop.outgoing.missing)
         cheads.extend(c.node() for c in revset)
+    pushop.commonheads = cheads
     # even when we don't push, exchanging phase data is useful
     remotephases = pushop.remote.listkeys('phases')
     if (pushop.ui.configbool('ui', '_usedassubrepo', False)
