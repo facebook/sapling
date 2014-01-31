@@ -473,23 +473,7 @@ def pull(repo, remote, heads=None, force=False):
             subset = pullop.heads
         pullop.pulledsubset = subset
 
-        # Get remote phases data from remote
-        remotephases = pullop.remote.listkeys('phases')
-        publishing = bool(remotephases.get('publishing', False))
-        if remotephases and not publishing:
-            # remote is new and unpublishing
-            pheads, _dr = phases.analyzeremotephases(pullop.repo,
-                                                     pullop.pulledsubset,
-                                                     remotephases)
-            phases.advanceboundary(pullop.repo, phases.public, pheads)
-            phases.advanceboundary(pullop.repo, phases.draft,
-                                   pullop.pulledsubset)
-        else:
-            # Remote is old or publishing all common changesets
-            # should be seen as public
-            phases.advanceboundary(pullop.repo, phases.public,
-                                   pullop.pulledsubset)
-
+        _pullphase(pullop)
         _pullobsolete(pullop)
         pullop.closetransaction()
     finally:
@@ -497,6 +481,24 @@ def pull(repo, remote, heads=None, force=False):
         lock.release()
 
     return result
+
+def _pullphase(pullop):
+    # Get remote phases data from remote
+    remotephases = pullop.remote.listkeys('phases')
+    publishing = bool(remotephases.get('publishing', False))
+    if remotephases and not publishing:
+        # remote is new and unpublishing
+        pheads, _dr = phases.analyzeremotephases(pullop.repo,
+                                                 pullop.pulledsubset,
+                                                 remotephases)
+        phases.advanceboundary(pullop.repo, phases.public, pheads)
+        phases.advanceboundary(pullop.repo, phases.draft,
+                               pullop.pulledsubset)
+    else:
+        # Remote is old or publishing all common changesets
+        # should be seen as public
+        phases.advanceboundary(pullop.repo, phases.public,
+                               pullop.pulledsubset)
 
 def _pullobsolete(pullop):
     """utility function to pull obsolete markers from a remote
