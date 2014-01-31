@@ -21,7 +21,7 @@ class pushoperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote, force=False, revs=None):
+    def __init__(self, repo, remote, force=False, revs=None, newbranch=False):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
@@ -31,6 +31,8 @@ class pushoperation(object):
         self.force = force
         # revs to be pushed (None is "all")
         self.revs = revs
+        # allow push of new branch
+        self.newbranch = newbranch
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -41,7 +43,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
-    pushop = pushoperation(repo, remote, force, revs)
+    pushop = pushoperation(repo, remote, force, revs, newbranch)
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
@@ -134,7 +136,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                                     ctx))
                     newbm = pushop.ui.configlist('bookmarks', 'pushing')
                     discovery.checkheads(unfi, pushop.remote, outgoing,
-                                         remoteheads, newbranch,
+                                         remoteheads, pushop.newbranch,
                                          bool(inc), newbm)
 
                 # TODO: get bundlecaps from remote
