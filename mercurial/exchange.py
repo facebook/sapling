@@ -46,6 +46,8 @@ class pushoperation(object):
         self.outgoing = None
         # all remote heads before the push
         self.remoteheads = None
+        # testable as a boolean indicating if any nodes are missing locally.
+        self.incoming = None
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -107,6 +109,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                            commoninc=commoninc, force=pushop.force)
             pushop.outgoing = outgoing
             pushop.remoteheads = remoteheads
+            pushop.incoming = inc
 
 
             if not outgoing.missing:
@@ -140,7 +143,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                     newbm = pushop.ui.configlist('bookmarks', 'pushing')
                     discovery.checkheads(unfi, pushop.remote, outgoing,
                                          remoteheads, pushop.newbranch,
-                                         bool(inc), newbm)
+                                         bool(pushop.incoming), newbm)
                 _pushchangeset(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
