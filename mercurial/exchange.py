@@ -255,5 +255,22 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    bookmarks.updateremote(pushop.ui, unfi, pushop.remote, pushop.revs)
+    _pushbookmark(pushop.ui, unfi, pushop.remote, pushop.revs)
     return ret
+
+def _pushbookmark(ui, repo, remote, revs):
+    """Update bookmark position on remote"""
+    ui.debug("checking for updated bookmarks\n")
+    revnums = map(repo.changelog.rev, revs or [])
+    ancestors = [a for a in repo.changelog.ancestors(revnums, inclusive=True)]
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
+     ) = bookmarks.compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
+                           srchex=hex)
+
+    for b, scid, dcid in advsrc:
+        if ancestors and repo[scid].rev() not in ancestors:
+            continue
+        if remote.pushkey('bookmarks', b, dcid, scid):
+            ui.status(_("updating bookmark %s\n") % b)
+        else:
+            ui.warn(_('updating bookmark %s failed!\n') % b)
