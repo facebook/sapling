@@ -21,12 +21,14 @@ class pushoperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote):
+    def __init__(self, repo, remote, force=False):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
         # repo we push to
         self.remote = remote
+        # force option provided
+        self.force = force
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -37,7 +39,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
-    pushop = pushoperation(repo, remote)
+    pushop = pushoperation(repo, remote, force)
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
@@ -84,7 +86,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
     try:
-        pushop.repo.checkpush(force, revs)
+        pushop.repo.checkpush(pushop.force, revs)
         lock = None
         unbundle = pushop.remote.capable('unbundle')
         if not unbundle:
@@ -92,11 +94,11 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         try:
             # discovery
             fci = discovery.findcommonincoming
-            commoninc = fci(unfi, pushop.remote, force=force)
+            commoninc = fci(unfi, pushop.remote, force=pushop.force)
             common, inc, remoteheads = commoninc
             fco = discovery.findcommonoutgoing
             outgoing = fco(unfi, pushop.remote, onlyheads=revs,
-                           commoninc=commoninc, force=force)
+                           commoninc=commoninc, force=pushop.force)
 
 
             if not outgoing.missing:
@@ -105,7 +107,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 ret = None
             else:
                 # something to push
-                if not force:
+                if not pushop.force:
                     # if repo.obsstore == False --> no obsolete
                     # then, save the iteration
                     if unfi.obsstore:
@@ -155,7 +157,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                     # revs it must push. once revs transferred, if server
                     # finds it has different heads (someone else won
                     # commit/push race), server aborts.
-                    if force:
+                    if pushop.force:
                         remoteheads = ['force']
                     # ssh: return remote's addchangegroup()
                     # http: return remote's addchangegroup() or 0 for error
