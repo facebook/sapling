@@ -35,6 +35,13 @@ class pushoperation(object):
         self.newbranch = newbranch
         # did a local lock get acquired?
         self.locallocked = None
+        # Integer version of the push result
+        # - None means nothing to push
+        # - 0 means HTTP error
+        # - 1 means we pushed and remote head count is unchanged *or*
+        #   we have outgoing changesets but refused to push
+        # - other values as described by addchangegroup()
+        self.ret = None
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -99,7 +106,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             if not outgoing.missing:
                 # nothing to push
                 scmutil.nochangesfound(unfi.ui, unfi, outgoing.excluded)
-                ret = None
             else:
                 # something to push
                 if not pushop.force:
@@ -156,14 +162,15 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                         remoteheads = ['force']
                     # ssh: return remote's addchangegroup()
                     # http: return remote's addchangegroup() or 0 for error
-                    ret = pushop.remote.unbundle(cg, remoteheads, 'push')
+                    pushop.ret = pushop.remote.unbundle(cg, remoteheads,
+                                                        'push')
                 else:
                     # we return an integer indicating remote head count
                     # change
-                    ret = pushop.remote.addchangegroup(cg, 'push',
-                                                       pushop.repo.url())
+                    pushop.ret = pushop.remote.addchangegroup(cg, 'push',
+                                                              pushop.repo.url())
 
-            if ret:
+            if pushop.ret:
                 # push succeed, synchronize target of the push
                 cheads = outgoing.missingheads
             elif pushop.revs is None:
@@ -197,7 +204,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             remotephases = pushop.remote.listkeys('phases')
             if (pushop.ui.configbool('ui', '_usedassubrepo', False)
                 and remotephases    # server supports phases
-                and ret is None # nothing was pushed
+                and pushop.ret is None # nothing was pushed
                 and remotephases.get('publishing', False)):
                 # When:
                 # - this is a subrepo push
@@ -246,7 +253,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             locallock.release()
 
     _pushbookmark(pushop)
-    return ret
+    return pushop.ret
 
 def _localphasemove(pushop, nodes, phase=phases.public):
     """move <nodes> to <phase> in the local source repo"""
