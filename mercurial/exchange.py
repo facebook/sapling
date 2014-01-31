@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-from node import hex
+from node import hex, nullid
 import errno
 import util, scmutil, changegroup
 import discovery, phases, obsolete, bookmarks
@@ -372,3 +372,89 @@ def _pushbookmark(pushop):
             ui.status(_("updating bookmark %s\n") % b)
         else:
             ui.warn(_('updating bookmark %s failed!\n') % b)
+
+
+def pull(repo, remote, heads=None, force=False):
+    if remote.local():
+        missing = set(remote.requirements) - repo.supported
+        if missing:
+            msg = _("required features are not"
+                    " supported in the destination:"
+                    " %s") % (', '.join(sorted(missing)))
+            raise util.Abort(msg)
+
+    # don't open transaction for nothing or you break future useful
+    # rollback call
+    tr = None
+    trname = 'pull\n' + util.hidepassword(remote.url())
+    lock = repo.lock()
+    try:
+        tmp = discovery.findcommonincoming(repo.unfiltered(), remote,
+                                           heads=heads, force=force)
+        common, fetch, rheads = tmp
+        if not fetch:
+            repo.ui.status(_("no changes found\n"))
+            result = 0
+        else:
+            tr = repo.transaction(trname)
+            if heads is None and list(common) == [nullid]:
+                repo.ui.status(_("requesting all changes\n"))
+            elif heads is None and remote.capable('changegroupsubset'):
+                # issue1320, avoid a race if remote changed after discovery
+                heads = rheads
+
+            if remote.capable('getbundle'):
+                # TODO: get bundlecaps from remote
+                cg = remote.getbundle('pull', common=common,
+                                      heads=heads or rheads)
+            elif heads is None:
+                cg = remote.changegroup(fetch, 'pull')
+            elif not remote.capable('changegroupsubset'):
+                raise util.Abort(_("partial pull cannot be done because "
+                                       "other repository doesn't support "
+                                       "changegroupsubset."))
+            else:
+                cg = remote.changegroupsubset(fetch, heads, 'pull')
+            result = repo.addchangegroup(cg, 'pull', remote.url())
+
+        # compute target subset
+        if heads is None:
+            # We pulled every thing possible
+            # sync on everything common
+            subset = common + rheads
+        else:
+            # We pulled a specific subset
+            # sync on this subset
+            subset = heads
+
+        # Get remote phases data from remote
+        remotephases = remote.listkeys('phases')
+        publishing = bool(remotephases.get('publishing', False))
+        if remotephases and not publishing:
+            # remote is new and unpublishing
+            pheads, _dr = phases.analyzeremotephases(repo, subset,
+                                                     remotephases)
+            phases.advanceboundary(repo, phases.public, pheads)
+            phases.advanceboundary(repo, phases.draft, subset)
+        else:
+            # Remote is old or publishing all common changesets
+            # should be seen as public
+            phases.advanceboundary(repo, phases.public, subset)
+
+        def gettransaction():
+            if tr is None:
+                return repo.transaction(trname)
+            return tr
+
+        obstr = obsolete.syncpull(repo, remote, gettransaction)
+        if obstr is not None:
+            tr = obstr
+
+        if tr is not None:
+            tr.close()
+    finally:
+        if tr is not None:
+            tr.release()
+        lock.release()
+
+    return result
