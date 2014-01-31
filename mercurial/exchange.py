@@ -382,14 +382,16 @@ class pulloperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote):
+    def __init__(self, repo, remote, heads=None):
         # repo we pull from
         self.repo = repo
         # repo we pull to
         self.remote = remote
+        # revision we try to pull (None is "all")
+        self.heads = heads
 
 def pull(repo, remote, heads=None, force=False):
-    pullop = pulloperation(repo, remote)
+    pullop = pulloperation(repo, remote, heads)
     if pullop.remote.local():
         missing = set(pullop.remote.requirements) - pullop.repo.supported
         if missing:
@@ -406,43 +408,46 @@ def pull(repo, remote, heads=None, force=False):
     try:
         tmp = discovery.findcommonincoming(pullop.repo.unfiltered(),
                                            pullop.remote,
-                                           heads=heads, force=force)
+                                           heads=pullop.heads,
+                                           force=force)
         common, fetch, rheads = tmp
         if not fetch:
             pullop.repo.ui.status(_("no changes found\n"))
             result = 0
         else:
             tr = pullop.repo.transaction(trname)
-            if heads is None and list(common) == [nullid]:
+            if pullop.heads is None and list(common) == [nullid]:
                 pullop.repo.ui.status(_("requesting all changes\n"))
-            elif heads is None and pullop.remote.capable('changegroupsubset'):
+            elif (pullop.heads is None
+                  and pullop.remote.capable('changegroupsubset')):
                 # issue1320, avoid a race if remote changed after discovery
-                heads = rheads
+                pullop.heads = rheads
 
             if pullop.remote.capable('getbundle'):
                 # TODO: get bundlecaps from remote
                 cg = pullop.remote.getbundle('pull', common=common,
-                                             heads=heads or rheads)
-            elif heads is None:
+                                             heads=pullop.heads or rheads)
+            elif pullop.heads is None:
                 cg = pullop.remote.changegroup(fetch, 'pull')
             elif not pullop.remote.capable('changegroupsubset'):
                 raise util.Abort(_("partial pull cannot be done because "
                                        "other repository doesn't support "
                                        "changegroupsubset."))
             else:
-                cg = pullop.remote.changegroupsubset(fetch, heads, 'pull')
+                cg = pullop.remote.changegroupsubset(fetch, pullop.heads,
+                                                     'pull')
             result = pullop.repo.addchangegroup(cg, 'pull',
                                                 pullop.remote.url())
 
         # compute target subset
-        if heads is None:
+        if pullop.heads is None:
             # We pulled every thing possible
             # sync on everything common
             subset = common + rheads
         else:
             # We pulled a specific subset
             # sync on this subset
-            subset = heads
+            subset = pullop.heads
 
         # Get remote phases data from remote
         remotephases = pullop.remote.listkeys('phases')
