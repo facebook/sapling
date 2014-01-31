@@ -24,6 +24,7 @@ class pushoperation(object):
     def __init__(self, repo):
         # repo we push from
         self.repo = repo
+        self.ui = repo.ui
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -65,8 +66,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             actualmoves = [n for n in nodes if phase < pushop.repo[n].phase()]
             phasestr = phases.phasenames[phase]
             if actualmoves:
-                pushop.repo.ui.status(_('cannot lock source repo, skipping '
-                                        'local %s phase update\n') % phasestr)
+                pushop.ui.status(_('cannot lock source repo, skipping '
+                                   'local %s phase update\n') % phasestr)
     # get local lock as we might write phase data
     locallock = None
     try:
@@ -78,7 +79,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         # We do not abort the push, but just disable the local phase
         # synchronisation.
         msg = 'cannot lock source repository: %s\n' % err
-        pushop.repo.ui.debug(msg)
+        pushop.ui.debug(msg)
     try:
         pushop.repo.checkpush(force, revs)
         lock = None
@@ -124,7 +125,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                 raise util.Abort(_(mst)
                                                  % (ctx.troubles()[0],
                                                     ctx))
-                    newbm = pushop.repo.ui.configlist('bookmarks', 'pushing')
+                    newbm = pushop.ui.configlist('bookmarks', 'pushing')
                     discovery.checkheads(unfi, remote, outgoing,
                                          remoteheads, newbranch,
                                          bool(inc), newbm)
@@ -193,7 +194,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 cheads.extend(c.node() for c in revset)
             # even when we don't push, exchanging phase data is useful
             remotephases = remote.listkeys('phases')
-            if (pushop.repo.ui.configbool('ui', '_usedassubrepo', False)
+            if (pushop.ui.configbool('ui', '_usedassubrepo', False)
                 and remotephases    # server supports phases
                 and ret is None # nothing was pushed
                 and remotephases.get('publishing', False)):
@@ -233,9 +234,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                        str(phases.draft),
                                        str(phases.public))
                     if not r:
-                        pushop.repo.ui.warn(_('updating %s to public failed!\n')
-                                        % newremotehead)
-            pushop.repo.ui.debug('try to push obsolete markers to remote\n')
+                        pushop.ui.warn(_('updating %s to public failed!\n')
+                                       % newremotehead)
+            pushop.ui.debug('try to push obsolete markers to remote\n')
             obsolete.syncpush(pushop.repo, remote)
         finally:
             if lock is not None:
@@ -244,5 +245,5 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    bookmarks.updateremote(pushop.repo.ui, unfi, remote, revs)
+    bookmarks.updateremote(pushop.ui, unfi, remote, revs)
     return ret
