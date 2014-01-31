@@ -484,8 +484,7 @@ def pull(repo, remote, heads=None, force=False):
             # should be seen as public
             phases.advanceboundary(pullop.repo, phases.public, subset)
 
-        _pullobsolete(pullop.repo, pullop.remote,
-                      pullop.gettransaction)
+        _pullobsolete(pullop)
         pullop.closetransaction()
     finally:
         pullop.releasetransaction()
@@ -493,7 +492,7 @@ def pull(repo, remote, heads=None, force=False):
 
     return result
 
-def _pullobsolete(repo, remote, gettransaction):
+def _pullobsolete(pullop):
     """utility function to pull obsolete markers from a remote
 
     The `gettransaction` is function that return the pull transaction, creating
@@ -503,14 +502,14 @@ def _pullobsolete(repo, remote, gettransaction):
     Exists mostly to allow overriding for experimentation purpose"""
     tr = None
     if obsolete._enabled:
-        repo.ui.debug('fetching remote obsolete markers\n')
-        remoteobs = remote.listkeys('obsolete')
+        pullop.repo.ui.debug('fetching remote obsolete markers\n')
+        remoteobs = pullop.remote.listkeys('obsolete')
         if 'dump0' in remoteobs:
-            tr = gettransaction()
+            tr = pullop.gettransaction()
             for key in sorted(remoteobs, reverse=True):
                 if key.startswith('dump'):
                     data = base85.b85decode(remoteobs[key])
-                    repo.obsstore.mergemarkers(tr, data)
-            repo.invalidatevolatilesets()
+                    pullop.repo.obsstore.mergemarkers(tr, data)
+            pullop.repo.invalidatevolatilesets()
     return tr
 
