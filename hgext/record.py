@@ -601,12 +601,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
             # it is important to first chdir to repo root -- we'll call
             # a highlevel command with list of pathnames relative to
             # repo root
-            cwd = os.getcwd()
-            os.chdir(repo.root)
-            try:
-                commitfunc(ui, repo, *newfiles, **opts)
-            finally:
-                os.chdir(cwd)
+            newfiles = [repo.wjoin(nf) for nf in newfiles]
+            commitfunc(ui, repo, *newfiles, **opts)
 
             return 0
         finally:
