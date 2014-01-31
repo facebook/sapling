@@ -246,7 +246,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                     if not r:
                         pushop.ui.warn(_('updating %s to public failed!\n')
                                        % newremotehead)
-            pushop.ui.debug('try to push obsolete markers to remote\n')
             _pushobsolete(pushop)
         finally:
             if lock is not None:
@@ -260,6 +259,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
 def _pushobsolete(pushop):
     """utility function to push obsolete markers to a remote"""
+    pushop.ui.debug('try to push obsolete markers to remote\n')
     repo = pushop.repo
     remote = pushop.remote
     if (obsolete._enabled and repo.obsstore and
