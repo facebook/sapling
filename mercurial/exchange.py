@@ -141,43 +141,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                     discovery.checkheads(unfi, pushop.remote, outgoing,
                                          remoteheads, pushop.newbranch,
                                          bool(inc), newbm)
-
-                # TODO: get bundlecaps from remote
-                bundlecaps = None
-                # create a changegroup from local
-                if pushop.revs is None and not (outgoing.excluded
-                                        or pushop.repo.changelog.filteredrevs):
-                    # push everything,
-                    # use the fast path, no race possible on push
-                    bundler = changegroup.bundle10(pushop.repo, bundlecaps)
-                    cg = pushop.repo._changegroupsubset(outgoing,
-                                                        bundler,
-                                                        'push',
-                                                        fastpath=True)
-                else:
-                    cg = pushop.repo.getlocalbundle('push', outgoing,
-                                                    bundlecaps)
-
-                # apply changegroup to remote
-                if unbundle:
-                    # local repo finds heads on server, finds out what
-                    # revs it must push. once revs transferred, if server
-                    # finds it has different heads (someone else won
-                    # commit/push race), server aborts.
-                    if pushop.force:
-                        remoteheads = ['force']
-                    else:
-                        remoteheads = pushop.remoteheads
-                    # ssh: return remote's addchangegroup()
-                    # http: return remote's addchangegroup() or 0 for error
-                    pushop.ret = pushop.remote.unbundle(cg, remoteheads,
-                                                        'push')
-                else:
-                    # we return an integer indicating remote head count
-                    # change
-                    pushop.ret = pushop.remote.addchangegroup(cg, 'push',
-                                                              pushop.repo.url())
-
+                _pushchangeset(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
         finally:
@@ -189,6 +153,45 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     _pushbookmark(pushop)
     return pushop.ret
+
+def _pushchangeset(pushop):
+    """Make the actual push of changeset bundle to remote repo"""
+    outgoing = pushop.outgoing
+    unbundle = pushop.remote.capable('unbundle')
+    # TODO: get bundlecaps from remote
+    bundlecaps = None
+    # create a changegroup from local
+    if pushop.revs is None and not (outgoing.excluded
+                            or pushop.repo.changelog.filteredrevs):
+        # push everything,
+        # use the fast path, no race possible on push
+        bundler = changegroup.bundle10(pushop.repo, bundlecaps)
+        cg = pushop.repo._changegroupsubset(outgoing,
+                                            bundler,
+                                            'push',
+                                            fastpath=True)
+    else:
+        cg = pushop.repo.getlocalbundle('push', outgoing, bundlecaps)
+
+    # apply changegroup to remote
+    if unbundle:
+        # local repo finds heads on server, finds out what
+        # revs it must push. once revs transferred, if server
+        # finds it has different heads (someone else won
+        # commit/push race), server aborts.
+        if pushop.force:
+            remoteheads = ['force']
+        else:
+            remoteheads = pushop.remoteheads
+        # ssh: return remote's addchangegroup()
+        # http: return remote's addchangegroup() or 0 for error
+        pushop.ret = pushop.remote.unbundle(cg, remoteheads,
+                                            'push')
+    else:
+        # we return an integer indicating remote head count
+        # change
+        pushop.ret = pushop.remote.addchangegroup(cg, 'push',
+                                                              pushop.repo.url())
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotly"""
