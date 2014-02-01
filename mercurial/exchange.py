@@ -382,13 +382,15 @@ class pulloperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote, heads=None):
+    def __init__(self, repo, remote, heads=None, force=False):
         # repo we pull from
         self.repo = repo
         # repo we pull to
         self.remote = remote
         # revision we try to pull (None is "all")
         self.heads = heads
+        # do we force pull?
+        self.force = force
 
 def pull(repo, remote, heads=None, force=False):
     pullop = pulloperation(repo, remote, heads)
