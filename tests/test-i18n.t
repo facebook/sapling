@@ -30,7 +30,7 @@ Different encoding:
 Test keyword search in translated help text:
 
   $ HGENCODING=UTF-8 LANGUAGE=de hg help -k blättern
-  Topics:
+  Themen:
   
    extensions Benutzung erweiterter Funktionen
   

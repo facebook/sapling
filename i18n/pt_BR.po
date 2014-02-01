@@ -8554,6 +8554,9 @@ msgstr "incapaz de colapsar sobre %s, há mais de um pai externo: %s"
 msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr "não se pode usar a revisão %d como base, o resultado teria 3 pais"
 
+msgid ".hg/rebasestate is incomplete"
+msgstr ".hg/rebasestate está incompleto"
+
 msgid "no rebase in progress"
 msgstr "nenhum rebaseamento em andamento"
 
@@ -22297,12 +22300,11 @@ msgstr ""
 
 msgid ""
 "All patterns, except for ``glob:`` specified in command line (not for\n"
-"``-I`` or ``-X`` options) or ``.hgignore`` file, can match also\n"
-"against directories: files under matched directories are treated as\n"
-"matched."
+"``-I`` or ``-X`` options), can match also against directories: files\n"
+"under matched directories are treated as matched."
 msgstr ""
 "Todos os padrões, exceto ``glob:`` especificado na linha de comando (não para\n"
-"opções ``-I`` ou ``-X``) ou arquivo ``.hgignore``, podem casar também\n"
+"opções ``-I`` ou ``-X``), podem casar também\n"
 "com diretórios: arquivos sob diretórios casados são tratados como\n"
 "casados."
 
@@ -25683,14 +25685,17 @@ msgstr "aviso: removendo .hg/hgrc potencialmente hostil em '%s'"
 msgid "unknown subrepo type %s"
 msgstr "tipo de sub-repositório %s desconhecido"
 
+#, python-format
 msgid "invalid phases.checksubrepos configuration: %s"
 msgstr "configuração phases.checksubrepos inválida: %s"
 
+#, python-format
 msgid "can't commit in %s phase conflicting %s from subrepository %s"
 msgstr ""
 "não é possível consolidar na fase \"%s\" com a fase conflitante \"%s\" no "
 "sub-repositório %s"
 
+#, python-format
 msgid "warning: changes are committed in %s phase from subrepository %s\n"
 msgstr "aviso: mudanças consolidadas na fase \"%s\" do sub-repositório %s\n"
 
@@ -25714,6 +25719,7 @@ msgstr "clonando sub-repositório %s de %s\n"
 msgid "pulling subrepo %s from %s\n"
 msgstr "trazendo sub-repositório %s de %s\n"
 
+#, python-format
 msgid "revision %s in subrepo %s is hidden\n"
 msgstr "a revisão %s no sub-repositório %s é oculta\n"
 
@@ -26338,9 +26344,11 @@ msgstr "senha: "
 msgid "cannot create new union repository"
 msgstr "não é possível criar novo repositório de união"
 
+#, python-format
 msgid "http authorization required for %s"
 msgstr "autorização http requerida para %s"
 
+#, python-format
 msgid "http authorization required for %s\n"
 msgstr "autorização http requerida para %s\n"
 
