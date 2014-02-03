@@ -20,7 +20,7 @@ INDEX linkrevs (repo, linkrev),
 PRIMARY KEY (repo, path, rev, chunk)
 );
 
-CREATE TABLE pushkeys(
+CREATE TABLE revision_references(
 autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 repo CHAR(32) BINARY NOT NULL,
 namespace CHAR(32) BINARY NOT NULL,

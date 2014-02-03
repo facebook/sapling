@@ -22,7 +22,7 @@ INDEX linkrevs (repo, linkrev),
 PRIMARY KEY (repo, path, rev, chunk)
 );
 
-CREATE TABLE pushkeys(
+CREATE TABLE revision_references(
 autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 repo CHAR(32) BINARY NOT NULL,
 namespace CHAR(32) BINARY NOT NULL,
@@ -195,7 +195,7 @@ def wraprepo(repo):
             If it returns False, the heads and bookmarks match the database.
             """
             self.sqlcursor.execute("""SELECT namespace, name, value
-                FROM pushkeys WHERE repo = %s""", (self.sqlreponame))
+                FROM revision_references WHERE repo = %s""", (self.sqlreponame))
             sqlheads = set()
             sqlbookmarks = {}
             tip = -1
@@ -268,7 +268,7 @@ def wraprepo(repo):
                 try:
                     bm = self._bookmarks
                     bm.clear()
-                    self.sqlcursor.execute("""SELECT name, value FROM pushkeys
+                    self.sqlcursor.execute("""SELECT name, value FROM revision_references
                         WHERE namespace = 'bookmarks' AND repo = %s""",
                         (self.sqlreponame))
                     for name, node in self.sqlcursor:
@@ -388,15 +388,15 @@ def wraprepo(repo):
                             self.sqlconn.commit()
                             datasize = 0
 
-                cursor.execute("""DELETE FROM pushkeys WHERE repo = %s
+                cursor.execute("""DELETE FROM revision_references WHERE repo = %s
                                AND namespace IN ('heads', 'tip')""", (reponame))
 
                 for head in self.heads():
-                    cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
+                    cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
                                    VALUES(%s, 'heads', %s)""",
                                    (reponame, hex(head)))
 
-                cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
+                cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
                                VALUES(%s, 'tip', %s)""",
                                (reponame, len(self) - 1))
 
@@ -415,7 +415,7 @@ def wraprepo(repo):
             cursor = self.sqlcursor
 
             # Validate that we are appending to the correct linkrev
-            cursor.execute("""SELECT value FROM pushkeys WHERE repo = %s AND
+            cursor.execute("""SELECT value FROM revision_references WHERE repo = %s AND
                 namespace = 'tip'""", reponame)
             tipresults = cursor.fetchall()
             if len(tipresults) == 0:
@@ -834,11 +834,11 @@ def bookmarkwrite(orig, self):
     def commitbookmarks():
         try:
             cursor = repo.sqlcursor
-            cursor.execute("""DELETE FROM pushkeys WHERE repo = %s AND
+            cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
                            namespace = 'bookmarks'""", (repo.sqlreponame))
 
             for k, v in self.iteritems():
-                cursor.execute("""INSERT INTO pushkeys(repo, namespace, name, value)
+                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
                                VALUES(%s, 'bookmarks', %s, %s)""",
                                (repo.sqlreponame, k, hex(v)))
             repo.sqlconn.commit()
