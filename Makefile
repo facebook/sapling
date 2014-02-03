@@ -71,7 +71,7 @@ install-doc: doc
 install-home: install-home-bin install-home-doc
 
 install-home-bin: build
-	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --force
+	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-home-doc: doc
 	cd doc && $(MAKE) $(MFLAGS) PREFIX="$(HOME)" install
