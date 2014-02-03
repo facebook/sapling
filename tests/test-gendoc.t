@@ -3,7 +3,7 @@ Test document extraction
   $ "$TESTDIR/hghave" docutils || exit 80
   $ HGENCODING=UTF-8
   $ export HGENCODING
-  $ { echo C; find "$TESTDIR/../i18n" -name "*.po" | sort; } | while read PO; do
+  $ { echo C; ls "$TESTDIR/../i18n"/*.po | sort; } | while read PO; do
   >     LOCALE=`basename "$PO" .po`
   >     echo
   >     echo "% extracting documentation from $LOCALE"
