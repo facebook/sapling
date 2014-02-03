@@ -27,7 +27,8 @@ def runcmd(cmd, env):
     # trust warnings since the .hg/hgrc file is untrusted. That is
     # fine, we don't want to load it anyway.
     err = [e for e in err.splitlines()
-           if not e.startswith('Not trusting file')]
+           if not (e.startswith('Not trusting file')
+                   or e.startswith('obsolete feature not enabled'))]
     if err:
         return ''
     return out
