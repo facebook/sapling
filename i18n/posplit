@@ -59,6 +59,14 @@ if __name__ == "__main__":
                         # only directive, nothing to translate here
                         continue
                     directive = mdirective.group(1)
+                    if directive in ('container', 'include'):
+                        if msgid.rstrip('\n').count('\n') == 0:
+                            # only rst syntax, nothing to translate
+                            continue
+                        else:
+                            # lines following directly, unexpected
+                            print 'Warning: text follows line with directive' \
+                                  ' %s' % directive
                     comment = 'do not translate: .. %s::' % directive
                     if not newentry.comment:
                         newentry.comment = comment
