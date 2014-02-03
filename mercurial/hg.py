@@ -92,8 +92,9 @@ def islocal(repo):
 
 def openpath(ui, path):
     '''open path with open if local, url.open if remote'''
-    if islocal(path):
-        return util.posixfile(util.urllocalpath(path), 'rb')
+    pathurl = util.url(path, parsequery=False, parsefragment=False)
+    if pathurl.islocal():
+        return util.posixfile(pathurl.localpath(), 'rb')
     else:
         return url.open(ui, path)
 
