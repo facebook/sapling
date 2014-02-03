@@ -6,6 +6,7 @@ from mercurial import node
 from mercurial import context
 from mercurial import util as hgutil
 
+import compathacks
 import svnexternals
 import util
 
@@ -133,7 +134,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             tag = meta.get_path_tag(meta.remotename(branch))
             if (tag and tag not in meta.tags
                 and branch not in meta.branches
-                and branch not in meta.repo.branchtags()
+                and branch not in compathacks.branchset(meta.repo)
                 and not files):
                 continue
 

@@ -8,6 +8,7 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
+from hgsubversion import compathacks
 from hgsubversion import svncommands
 from hgsubversion import svnrepo
 
@@ -47,7 +48,7 @@ rename a tag
 
     def test_branch_from_tag(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump')
-        self.assert_('branch_from_tag' in repo.branchtags())
+        self.assert_('branch_from_tag' in compathacks.branchset(repo))
         self.assertEqual(repo[1], repo['tag_r3'])
         self.assertEqual(repo['branch_from_tag'].parents()[0], repo['copied_tag'])
 

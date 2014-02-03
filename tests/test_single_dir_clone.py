@@ -10,6 +10,8 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
+from hgsubversion import compathacks
+
 class TestSingleDirClone(test_util.TestBase):
     stupid_mode_tests = True
 
@@ -17,7 +19,8 @@ class TestSingleDirClone(test_util.TestBase):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
                                             layout='single',
                                             subdir='')
-        self.assertEqual(repo.branchtags().keys(), ['default'])
+        self.assertEqual(compathacks.branchset(repo),
+                         set(['default']))
         self.assertEqual(repo['tip'].manifest().keys(),
                          ['trunk/beta',
                           'tags/copied_tag/alpha',
@@ -31,8 +34,8 @@ class TestSingleDirClone(test_util.TestBase):
     def test_auto_detect_single(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
                                             layout='auto')
-        self.assertEqual(repo.branchtags().keys(), ['default',
-                                                    'branch_from_tag'])
+        self.assertEqual(compathacks.branchset(repo),
+                         set(['default', 'branch_from_tag']))
         oldmanifest = test_util.filtermanifest(repo['default'].manifest().keys())
         # remove standard layout
         shutil.rmtree(self.wc_path)
@@ -40,7 +43,7 @@ class TestSingleDirClone(test_util.TestBase):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
                                             layout='auto',
                                             subdir='trunk')
-        self.assertEqual(repo.branchtags().keys(), ['default', ])
+        self.assertEqual(compathacks.branchset(repo), set(['default', ]))
         self.assertEqual(repo['default'].manifest().keys(), oldmanifest)
 
     def test_clone_subdir_is_file_prefix(self):
@@ -48,7 +51,7 @@ class TestSingleDirClone(test_util.TestBase):
         repo = self._load_fixture_and_fetch(FIXTURE,
                                             layout='single',
                                             subdir=test_util.subdir[FIXTURE])
-        self.assertEqual(repo.branchtags().keys(), ['default'])
+        self.assertEqual(compathacks.branchset(repo), set(['default']))
         self.assertEqual(repo['tip'].manifest().keys(), ['flaf.txt'])
 
     def test_externals_single(self):

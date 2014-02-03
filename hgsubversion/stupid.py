@@ -8,6 +8,7 @@ from mercurial import patch
 from mercurial import revlog
 from mercurial import util as hgutil
 
+import compathacks
 import svnwrap
 import svnexternals
 import util
@@ -773,7 +774,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             # svnmeta.committag(), we can skip the whole branch for now
             if (tag and tag not in meta.tags and
                 b not in meta.branches
-                and b not in meta.repo.branchtags()
+                and b not in compathacks.branchset(meta.repo)
                 and not files_touched):
                 continue
 

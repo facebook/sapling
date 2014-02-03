@@ -16,6 +16,7 @@ from mercurial import extensions
 from mercurial import hg
 from mercurial import ui
 
+from hgsubversion import compathacks
 from hgsubversion import svncommands
 from hgsubversion import svnmeta
 
@@ -119,7 +120,11 @@ def _run_assertions(self, name, single, src, dest, u):
                                 'rebuildmeta unexpected match on youngest rev!')
             continue
         self.assertMultiLineEqual(old, new, tf + ' differs')
-        self.assertEqual(src.branchtags(), dest.branchtags())
+        try:
+          self.assertEqual(src.branchmap(), dest.branchmap())
+        except AttributeError:
+          # hg 2.8 and earlier
+          self.assertEqual(src.branchtags(), dest.branchtags())
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
     destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))

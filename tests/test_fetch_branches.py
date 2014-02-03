@@ -6,6 +6,8 @@ from mercurial import error
 from mercurial import hg
 from mercurial import node
 
+from hgsubversion import compathacks
+
 class TestFetchBranches(test_util.TestBase):
     stupid_mode_tests = True
 
@@ -88,7 +90,7 @@ class TestFetchBranches(test_util.TestBase):
                           'unorderedbranch.svndump', 'NaN')
         repo = self._load_fixture_and_fetch_with_anchor(
             'unorderedbranch.svndump', '4')
-        self.assertTrue('c' not in repo.branchtags())
+        self.assertTrue('c' not in compathacks.branchset(repo))
 
     def test_branches_weird_moves(self):
         repo = self._load_fixture_and_fetch('renamedproject.svndump',

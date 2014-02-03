@@ -10,6 +10,8 @@ from mercurial import hg
 from mercurial import node
 from mercurial import ui
 
+from hgsubversion import compathacks
+
 class TestSingleDirPush(test_util.TestBase):
     stupid_mode_tests = True
     obsolete_mode_tests = True
@@ -149,7 +151,7 @@ class TestSingleDirPush(test_util.TestBase):
         self.pushrevisions()
         repo = self.repo # repo is outdated after the rebase happens, refresh
         self.assertTrue('foo' in test_util.svnls(repo_path, ''))
-        self.assertEqual(repo.branchtags().keys(), ['default'])
+        self.assertEqual(compathacks.branchset(repo), set(['default']))
         # Have to cross to another branch head, so hg.update doesn't work
         commands.update(ui.ui(),
                         self.repo,
