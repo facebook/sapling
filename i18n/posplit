@@ -5,6 +5,7 @@
 # license: MIT/X11/Expat
 #
 
+import re
 import sys
 import polib
 
@@ -30,6 +31,7 @@ if __name__ == "__main__":
     cache = {}
     entries = po[:]
     po[:] = []
+    findd = re.compile(r' *\.\. (\w+)::') # for finding directives
     for entry in entries:
         msgids = entry.msgid.split(u'\n\n')
         if entry.msgstr:
@@ -51,6 +53,14 @@ if __name__ == "__main__":
         for msgid, msgstr in zip(msgids, msgstrs):
             if msgid:
                 newentry = mkentry(entry, delta, msgid, msgstr)
+                mdirective = findd.match(msgid)
+                if mdirective:
+                    directive = mdirective.group(1)
+                    comment = 'do not translate: .. %s::' % directive
+                    if not newentry.comment:
+                        newentry.comment = comment
+                    elif comment not in newentry.comment:
+                        newentry.comment += '\n' + comment
                 addentry(po, newentry, cache)
             delta += 2 + msgid.count('\n')
     po.save()
