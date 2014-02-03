@@ -82,7 +82,7 @@ def _peerlookup(path):
         return thing
 
 def islocal(repo):
-    '''return true if repo or path is local'''
+    '''return true if repo (or path pointing to repo) is local'''
     if isinstance(repo, str):
         try:
             return _peerlookup(repo).islocal(repo)
