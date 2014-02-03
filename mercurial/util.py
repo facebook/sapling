@@ -1875,6 +1875,11 @@ class url(object):
             return path
         return self._origpath
 
+    def islocal(self):
+        '''whether localpath will return something that posixfile can open'''
+        return (not self.scheme or self.scheme == 'file'
+                or self.scheme == 'bundle')
+
 def hasscheme(path):
     return bool(url(path).scheme)
 
