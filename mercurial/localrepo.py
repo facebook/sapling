@@ -1579,7 +1579,7 @@ class localrepository(object):
         r = modified, added, removed, deleted, unknown, ignored, clean
 
         if listsubrepos:
-            for subpath, sub in subrepo.itersubrepos(ctx1, ctx2):
+            for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
                 if working:
                     rev2 = None
                 else:

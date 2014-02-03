@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, graphmod, revset, phases, obsolete, pathutil
+import context, repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
 import lock as lockmod
@@ -629,7 +629,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
     if listsubrepos:
         ctx1 = repo[node1]
         ctx2 = repo[node2]
-        for subpath, sub in subrepo.itersubrepos(ctx1, ctx2):
+        for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
             tempnode2 = node2
             try:
                 if node2 is not None:

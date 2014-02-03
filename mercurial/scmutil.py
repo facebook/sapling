@@ -20,6 +20,16 @@ else:
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
 
+def itersubrepos(ctx1, ctx2):
+    """find subrepos in ctx1 or ctx2"""
+    # Create a (subpath, ctx) mapping where we prefer subpaths from
+    # ctx1. The subpaths from ctx2 are important when the .hgsub file
+    # has been modified (in ctx2) but not yet committed (in ctx1).
+    subpaths = dict.fromkeys(ctx2.substate, ctx2)
+    subpaths.update(dict.fromkeys(ctx1.substate, ctx1))
+    for subpath, ctx in sorted(subpaths.iteritems()):
+        yield subpath, ctx.sub(subpath)
+
 def nochangesfound(ui, repo, excluded=None):
     '''Report no changes for push/pull, excluded is None or a list of
     nodes excluded from the push/pull.
