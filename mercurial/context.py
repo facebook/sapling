@@ -12,6 +12,7 @@ import match as matchmod
 import os, errno, stat
 import obsolete as obsmod
 import repoview
+import fileset
 
 propertycache = util.propertycache
 
@@ -78,6 +79,9 @@ class basectx(object):
         return phases.phasenames[self.phase()]
     def mutable(self):
         return self.phase() > phases.public
+
+    def getfileset(self, expr):
+        return fileset.getfileset(self, expr)
 
     def obsolete(self):
         """True if the changeset is obsolete"""
