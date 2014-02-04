@@ -535,23 +535,21 @@ def contains(repo, subset, x):
     """
     # i18n: "contains" is a keyword
     pat = getstring(x, _("contains requires a pattern"))
-    s = []
-    if not matchmod.patkind(pat):
-        pat = pathutil.canonpath(repo.root, repo.getcwd(), pat)
-        for r in subset:
-            if pat in repo[r]:
-                s.append(r)
-    else:
-        m = None
-        for r in subset:
-            c = repo[r]
-            if not m or matchmod.patkind(pat) == 'set':
-                m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+
+    def matches(x):
+        if not matchmod.patkind(pat):
+            pats = pathutil.canonpath(repo.root, repo.getcwd(), pat)
+            if pats in repo[x]:
+                return True
+        else:
+            c = repo[x]
+            m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
             for f in c.manifest():
                 if m(f):
-                    s.append(r)
-                    break
-    return baseset(s)
+                    return True
+        return False
+
+    return lazyset(subset, matches)
 
 def converted(repo, subset, x):
     """``converted([id])``
