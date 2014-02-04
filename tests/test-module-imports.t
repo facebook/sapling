@@ -38,5 +38,4 @@ these may expose other cycles.
   mercurial/ui.py mixed imports
      stdlib:    formatter
      relative:  config, error, scmutil, util
-  Import cycle: mercurial.repoview -> mercurial.revset -> mercurial.repoview
   Import cycle: mercurial.cmdutil -> mercurial.context -> mercurial.subrepo -> mercurial.cmdutil -> mercurial.cmdutil
