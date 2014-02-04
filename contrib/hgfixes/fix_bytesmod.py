@@ -33,9 +33,10 @@ class FixBytesmod(fixer_base.BaseFix):
               '''
 
     def transform(self, node, results):
-        if self.filename in blacklist:
-            return
-        elif self.filename == 'mercurial/util.py':
+        for bfn in blacklist:
+            if self.filename.endswith(bfn):
+                return
+        if not self.filename.endswith('mercurial/py3kcompat.py'):
             touch_import('.', 'py3kcompat', node=node)
 
         formatstr = results['formatstr'].clone()
@@ -60,4 +61,3 @@ class FixBytesmod(fixer_base.BaseFix):
 
         call = Call(Name('bytesformatter', prefix=' '), args)
         return call
-
