@@ -857,10 +857,10 @@ def _matchfiles(repo, subset, x):
             hasset = True
     if not default:
         default = 'glob'
-    m = None
-    s = []
-    for r in subset:
-        c = repo[r]
+
+    def matches(x):
+        m = None
+        c = repo[x]
         if not m or (hasset and rev is None):
             ctx = c
             if rev is not None:
@@ -869,9 +869,10 @@ def _matchfiles(repo, subset, x):
                                exclude=exc, ctx=ctx, default=default)
         for f in c.files():
             if m(f):
-                s.append(r)
-                break
-    return baseset(s)
+                return True
+        return False
+
+    return lazyset(subset, matches)
 
 def hasfile(repo, subset, x):
     """``file(pattern)``
