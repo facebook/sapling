@@ -1401,7 +1401,7 @@ def secret(repo, subset, x):
     # i18n: "secret" is a keyword
     getargs(x, 0, 0, _("secret takes no arguments"))
     pc = repo._phasecache
-    return baseset([r for r in subset if pc.phase(repo, r) == phases.secret])
+    return lazyset(subset, lambda x: pc.phase(repo, x) == phases.secret)
 
 def sort(repo, subset, x):
     """``sort(set[, [-]key...])``
