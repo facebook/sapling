@@ -37,7 +37,7 @@ class FixBytesmod(fixer_base.BaseFix):
             if self.filename.endswith(bfn):
                 return
         if not self.filename.endswith('mercurial/py3kcompat.py'):
-            touch_import('.', 'py3kcompat', node=node)
+            touch_import('mercurial', 'py3kcompat', node=node)
 
         formatstr = results['formatstr'].clone()
         data = results['data'].clone()
