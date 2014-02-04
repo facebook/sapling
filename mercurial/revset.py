@@ -674,7 +674,7 @@ def draft(repo, subset, x):
     # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
     pc = repo._phasecache
-    return baseset([r for r in subset if pc.phase(repo, r) == phases.draft])
+    return lazyset(subset, lambda r: pc.phase(repo, r) == phases.draft)
 
 def extinct(repo, subset, x):
     """``extinct()``
