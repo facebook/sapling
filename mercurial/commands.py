@@ -1943,7 +1943,7 @@ def debugfileset(ui, repo, expr, **opts):
         tree = fileset.parse(expr)[0]
         ui.note(tree, "\n")
 
-    for f in fileset.getfileset(ctx, expr):
+    for f in ctx.getfileset(expr):
         ui.write("%s\n" % f)
 
 @command('debugfsinfo', [], _('[PATH]'))
