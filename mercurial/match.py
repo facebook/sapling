@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import util, fileset, pathutil
+import util, pathutil
 from i18n import _
 
 def _rematcher(pat):
@@ -26,7 +26,7 @@ def _expandsets(pats, ctx):
         if kind == 'set':
             if not ctx:
                 raise util.Abort("fileset expression with no context")
-            s = fileset.getfileset(ctx, expr)
+            s = ctx.getfileset(expr)
             fset.update(s)
             continue
         other.append((kind, expr))
