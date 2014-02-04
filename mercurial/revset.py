@@ -1365,18 +1365,18 @@ def matching(repo, subset, x):
     # is only one field to match)
     getinfo = lambda r: [f(r) for f in getfieldfuncs]
 
-    matches = set()
-    for rev in revs:
-        target = getinfo(rev)
-        for r in subset:
+    def matches(x):
+        for rev in revs:
+            target = getinfo(rev)
             match = True
             for n, f in enumerate(getfieldfuncs):
-                if target[n] != f(r):
+                if target[n] != f(x):
                     match = False
-                    break
             if match:
-                matches.add(r)
-    return baseset([r for r in subset if r in matches])
+                return True
+        return False
+
+    return lazyset(subset, matches)
 
 def reverse(repo, subset, x):
     """``reverse(set)``
