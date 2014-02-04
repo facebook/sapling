@@ -582,7 +582,7 @@ def date(repo, subset, x):
     # i18n: "date" is a keyword
     ds = getstring(x, _("date requires a string"))
     dm = util.matchdate(ds)
-    return baseset([r for r in subset if dm(repo[r].date()[0])])
+    return lazyset(subset, lambda x: dm(repo[x].date()[0]))
 
 def desc(repo, subset, x):
     """``desc(string)``
