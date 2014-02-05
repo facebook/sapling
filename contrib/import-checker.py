@@ -11,12 +11,15 @@ import zlib
 def dotted_name_of_path(path):
     """Given a relative path to a source file, return its dotted module name.
 
-
     >>> dotted_name_of_path('mercurial/error.py')
     'mercurial.error'
+    >>> dotted_name_of_path('zlibmodule.so')
+    'zlib'
     """
     parts = path.split('/')
     parts[-1] = parts[-1][:-3] # remove .py
+    if parts[-1].endswith('module'):
+        parts[-1] = parts[-1][:-6]
     return '.'.join(parts)
 
 
