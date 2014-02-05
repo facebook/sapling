@@ -139,7 +139,7 @@ def verify_stdlib_on_own_line(source):
     http://bugs.python.org/issue19510.
 
     >>> list(verify_stdlib_on_own_line('import sys, foo'))
-    ['mixed stdlib and relative imports:\\n   foo, sys']
+    ['mixed imports\\n   stdlib:    sys\\n   relative:  foo']
     >>> list(verify_stdlib_on_own_line('import sys, os'))
     []
     >>> list(verify_stdlib_on_own_line('import foo, bar'))
@@ -147,13 +147,13 @@ def verify_stdlib_on_own_line(source):
     """
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
-            from_stdlib = {}
+            from_stdlib = {False: [], True: []}
             for n in node.names:
-                from_stdlib[n.name] = n.name in stdlib_modules
-            num_std = len([x for x in from_stdlib.values() if x])
-            if num_std not in (len(from_stdlib.values()), 0):
-                yield ('mixed stdlib and relative imports:\n   %s' %
-                       ', '.join(sorted(from_stdlib.iterkeys())))
+                from_stdlib[n.name in stdlib_modules].append(n.name)
+            if from_stdlib[True] and from_stdlib[False]:
+                yield ('mixed imports\n   stdlib:    %s\n   relative:  %s' %
+                       (', '.join(sorted(from_stdlib[True])),
+                        ', '.join(sorted(from_stdlib[False]))))
 
 class CircularImport(Exception):
     pass

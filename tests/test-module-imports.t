@@ -23,16 +23,21 @@ hidden by deduplication algorithm in the cycle detector, so fixing
 these may expose other cycles.
 
   $ hg locate 'mercurial/**.py' | xargs python "$import_checker"
-  mercurial/dispatch.py mixed stdlib and relative imports:
-     commands, error, extensions, fancyopts, hg, hook, util
-  mercurial/fileset.py mixed stdlib and relative imports:
-     error, merge, parser, util
-  mercurial/revset.py mixed stdlib and relative imports:
-     discovery, error, hbisect, parser, phases, util
-  mercurial/templater.py mixed stdlib and relative imports:
-     config, error, parser, templatefilters, util
-  mercurial/ui.py mixed stdlib and relative imports:
-     config, error, formatter, scmutil, util
+  mercurial/dispatch.py mixed imports
+     stdlib:    commands
+     relative:  error, extensions, fancyopts, hg, hook, util
+  mercurial/fileset.py mixed imports
+     stdlib:    parser
+     relative:  error, merge, util
+  mercurial/revset.py mixed imports
+     stdlib:    parser
+     relative:  discovery, error, hbisect, phases, util
+  mercurial/templater.py mixed imports
+     stdlib:    parser
+     relative:  config, error, templatefilters, util
+  mercurial/ui.py mixed imports
+     stdlib:    formatter
+     relative:  config, error, scmutil, util
   Import cycle: mercurial.cmdutil -> mercurial.subrepo -> mercurial.cmdutil
   Import cycle: mercurial.repoview -> mercurial.revset -> mercurial.repoview
   Import cycle: mercurial.fileset -> mercurial.merge -> mercurial.subrepo -> mercurial.match -> mercurial.fileset
