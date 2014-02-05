@@ -2176,6 +2176,37 @@ class lazyset(object):
     def set(self):
         return set([r for r in self])
 
+class generatorset(object):
+    """Wrapper structure for generators that provides lazy membership."""
+    def __init__(self, gen):
+        self._gen = gen
+        self._iter = iter(gen)
+        self._cache = {}
+
+    def __contains__(self, x):
+        if x in self._cache:
+            return self._cache[x]
+
+        while True:
+            try:
+                l = self._iter.next()
+                self._cache[l] = True
+                if l == x:
+                    return True
+            except (StopIteration):
+                break
+
+        self._cache[x] = False
+        return False
+
+    def __iter__(self):
+        for item in self._gen:
+            self._cache[item] = True
+            yield item
+
+    def set(self):
+        return self
+
 class spanset(object):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
