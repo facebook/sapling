@@ -322,7 +322,20 @@ def create_server(ui, app):
         cls = MercurialHTTPServer
 
     # ugly hack due to python issue5853 (for threaded use)
-    import mimetypes; mimetypes.init()
+    try:
+        import mimetypes
+        mimetypes.init()
+    except UnicodeDecodeError:
+        # Python 2.x's mimetypes module attempts to decode strings
+        # from Windows' ANSI APIs as ascii (fail), then re-encode them
+        # as ascii (clown fail), because the default Python Unicode
+        # codec is hardcoded as ascii.
+
+        reload(sys) # resurrect sys.setdefaultencoding()
+        oldenc = sys.getdefaultencoding()
+        sys.setdefaultencoding("latin1") # or any full 8-bit encoding
+        mimetypes.init()
+        sys.setdefaultencoding(oldenc)
 
     address = ui.config('web', 'address', '')
     port = util.getport(ui.config('web', 'port', 8000))
