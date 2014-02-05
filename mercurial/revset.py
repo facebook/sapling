@@ -2210,6 +2210,14 @@ class lazyset(object):
     def set(self):
         return set([r for r in self])
 
+class orderedlazyset(lazyset):
+    """Subclass of lazyset which subset can be ordered either ascending or
+    descendingly
+    """
+    def __init__(self, subset, condition, ascending=True):
+        super(orderedlazyset, self).__init__(subset, condition)
+        self._ascending = ascending
+
 class generatorset(object):
     """Wrapper structure for generators that provides lazy membership and can
     be iterated more than once.
