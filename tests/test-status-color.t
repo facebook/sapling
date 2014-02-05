@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" tic || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "color=" >> $HGRCPATH
   $ echo "[color]" >> $HGRCPATH
@@ -186,7 +184,10 @@ hg status -A:
   \x1b[0;0mC \x1b[0m\x1b[0;0m.hgignore\x1b[0m (esc)
   \x1b[0;0mC \x1b[0m\x1b[0;0mmodified\x1b[0m (esc)
 
+
 hg status -A (with terminfo color):
+
+#if tic
 
   $ mkdir "$TESTTMP/terminfo"
   $ TERMINFO="$TESTTMP/terminfo" tic "$TESTDIR/hgterm.ti"
@@ -200,6 +201,8 @@ hg status -A (with terminfo color):
   \x1b[30m\x1b[30m\x1b[1mI \x1b[30m\x1b[30m\x1b[30m\x1b[1mignored\x1b[30m (esc)
   \x1b[30m\x1b[30mC \x1b[30m\x1b[30m\x1b[30m.hgignore\x1b[30m (esc)
   \x1b[30m\x1b[30mC \x1b[30m\x1b[30m\x1b[30mmodified\x1b[30m (esc)
+
+#endif
 
 
   $ echo "^ignoreddir$" > .hgignore
