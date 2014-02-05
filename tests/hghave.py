@@ -248,6 +248,9 @@ def has_pygments():
     except ImportError:
         return False
 
+def has_python243():
+    return sys.version_info >= (2, 4, 3)
+
 def has_outer_repo():
     # failing for other reasons than 'no repo' imply that there is a repo
     return not matchoutput('hg root 2>&1',
@@ -320,6 +323,7 @@ checks = {
     "p4": (has_p4, "Perforce server and client"),
     "pyflakes": (has_pyflakes, "Pyflakes python linter"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
+    "python243": (has_python243, "python >= 2.4.3"),
     "root": (has_root, "root permissions"),
     "serve": (has_serve, "platform and python can manage 'hg serve -d'"),
     "ssl": (has_ssl, "python >= 2.6 ssl module and python OpenSSL"),

@@ -163,6 +163,7 @@ test http authentication
   > getpass.getpass = newgetpass
   > EOF
 
+#if python243
   $ hg id http://localhost:$HGPORT2/
   abort: http authorization required for http://localhost:$HGPORT2/
   [255]
@@ -176,6 +177,7 @@ test http authentication
   password: 5fed3813f7f5
   $ hg id http://user:pass@localhost:$HGPORT2/
   5fed3813f7f5
+#endif
   $ echo '[auth]' >> .hg/hgrc
   $ echo 'l.schemes=http' >> .hg/hgrc
   $ echo 'l.prefix=lo' >> .hg/hgrc
@@ -187,6 +189,7 @@ test http authentication
   5fed3813f7f5
   $ hg id http://user@localhost:$HGPORT2/
   5fed3813f7f5
+#if python243
   $ hg clone http://user:pass@localhost:$HGPORT2/ dest 2>&1
   streaming all changes
   7 files to transfer, 916 bytes of data
@@ -200,6 +203,7 @@ test http authentication
   $ hg id http://user:pass2@localhost:$HGPORT2/
   abort: HTTP Error 403: no
   [255]
+#endif
 
   $ cd ..
 
