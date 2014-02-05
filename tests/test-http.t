@@ -153,7 +153,8 @@ test http authentication
   >     common.permhooks.insert(0, perform_authentication)
   > EOT
   $ hg --config extensions.x=userpass.py serve -p $HGPORT2 -d --pid-file=pid \
-  >    --config server.preferuncompressed=True
+  >    --config server.preferuncompressed=True \
+  >    --config web.push_ssl=False --config web.allow_push=* -A ../access.log
   $ cat pid >> $DAEMON_PIDS
 
   $ cat << EOF > get_pass.py
@@ -203,8 +204,83 @@ test http authentication
   $ hg id http://user:pass2@localhost:$HGPORT2/
   abort: HTTP Error 403: no
   [255]
-#endif
 
+  $ hg -R dest tag -r tip top
+  $ hg -R dest push http://user:pass@localhost:$HGPORT2/
+  pushing to http://user:***@localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  $ hg rollback -q
+
+  $ cut -c38- ../access.log
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=branchmap HTTP/1.1" 200 -
+  "GET /?cmd=stream_out HTTP/1.1" 401 -
+  "GET /?cmd=stream_out HTTP/1.1" 200 -
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=listkeys HTTP/1.1" 403 - x-hgarg-1:namespace=namespaces
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D7f4e523d01f2cc3765ac8934da3d14db775ff872
+  "GET /?cmd=branchmap HTTP/1.1" 200 -
+  "GET /?cmd=branchmap HTTP/1.1" 200 -
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "POST /?cmd=unbundle HTTP/1.1" 401 - x-hgarg-1:heads=686173686564+5eb5abfefeea63c80dd7553bcc3783f37e0c5524
+  "POST /?cmd=unbundle HTTP/1.1" 200 - x-hgarg-1:heads=686173686564+5eb5abfefeea63c80dd7553bcc3783f37e0c5524
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=phases
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
+  "POST /?cmd=pushkey HTTP/1.1" 401 - x-hgarg-1:key=7f4e523d01f2cc3765ac8934da3d14db775ff872&namespace=phases&new=0&old=1
+  "POST /?cmd=pushkey HTTP/1.1" 200 - x-hgarg-1:key=7f4e523d01f2cc3765ac8934da3d14db775ff872&namespace=phases&new=0&old=1
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+
+#endif
   $ cd ..
 
 clone of serve with repo in root and unserved subrepo (issue2970)
