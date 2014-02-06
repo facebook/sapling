@@ -708,7 +708,7 @@ def extra(repo, subset, x):
         extra = repo[r].extra()
         return label in extra and (value is None or matcher(extra[label]))
 
-    return baseset([r for r in subset if _matchvalue(r)])
+    return lazyset(subset, lambda r: _matchvalue(r))
 
 def filelog(repo, subset, x):
     """``filelog(pattern)``
