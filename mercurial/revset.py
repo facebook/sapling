@@ -571,7 +571,7 @@ def converted(repo, subset, x):
         source = repo[r].extra().get('convert_revision', None)
         return source is not None and (rev is None or source.startswith(rev))
 
-    return baseset([r for r in subset if _matchvalue(r)])
+    return lazyset(subset, lambda r: _matchvalue(r))
 
 def date(repo, subset, x):
     """``date(interval)``
