@@ -2067,5 +2067,10 @@ class baseset(list):
             x = x.set()
         return baseset([y for y in self if y in x])
 
+    def __add__(self, x):
+        s = self.set()
+        l = [r for r in x if r not in s]
+        return baseset(list(self) + l)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
