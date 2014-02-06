@@ -118,7 +118,7 @@ def executewithsql(repo, action, lock=None, *args, **kwargs):
     success = False
     try:
         if connected:
-            repo.syncdb()
+            repo.syncdb(readonly=not lock)
         result = action(*args, **kwargs)
         success = True
     finally:
@@ -213,22 +213,32 @@ def wraprepo(repo):
             outofsync = heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
             return outofsync, sqlheads, sqlbookmarks, tip
 
-        def syncdb(self):
+        def syncdb(self, readonly=True):
             if not self.needsync()[0]:
                 return
 
             ui = self.ui
             ui.debug("syncing with mysql\n")
 
-            lock = self.lock()
+            try:
+                lock = self.lock(wait=not readonly)
+            except error.LockHeld:
+                # Oh well. Don't block read only operations.
+                ui.debug("skipping sync for readonly operation\n")
+                return
+
             try:
 
-                # someone else may have synced us while we were waiting
+                # Someone else may have synced us while we were waiting.
+                # Restart the transaction so we have access to the latest rows.
+                self.sqlconn.rollback()
                 outofsync, sqlheads, sqlbookmarks, fetchend = self.needsync()
                 if not outofsync:
                     return
 
                 transaction = self.transaction("syncdb")
+
+                self.hook('presyncdb', throw=True)
 
                 try:
                     # Inspect the changelog now that we have the lock
