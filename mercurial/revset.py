@@ -430,16 +430,16 @@ def branch(repo, subset, x):
             # note: falls through to the revspec case if no branch with
             # this name exists
             if pattern in repo.branchmap():
-                return baseset([r for r in subset if matcher(repo[r].branch())])
+                return lazyset(subset, lambda r: matcher(repo[r].branch()))
         else:
-            return baseset([r for r in subset if matcher(repo[r].branch())])
+            return lazyset(subset, lambda r: matcher(repo[r].branch()))
 
     s = getset(repo, baseset(repo), x)
     b = set()
     for r in s:
         b.add(repo[r].branch())
     s = s.set()
-    return baseset([r for r in subset if r in s or repo[r].branch() in b])
+    return lazyset(subset, lambda r: r in s or repo[r].branch() in b)
 
 def bumped(repo, subset, x):
     """``bumped()``
