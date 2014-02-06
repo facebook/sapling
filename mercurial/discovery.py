@@ -268,7 +268,6 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
     error = None
-    unsynced = False
     allmissing = set(outgoing.missing)
     allfuturecommon = set(c.node() for c in repo.set('%ld', outgoing.common))
     allfuturecommon.update(allmissing)
@@ -312,8 +311,15 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                         newhs.add(nh)
         else:
             newhs = candidate_newhs
-        if [h for h in unsyncedheads if h not in discardedheads]:
-            unsynced = True
+        unsynced = sorted(h for h in unsyncedheads if h not in discardedheads)
+        if unsynced:
+            heads = ' '.join(short(h) for h in unsynced)
+            if branch is None:
+                repo.ui.warn(_("remote has heads that are not known locally: "
+                               "%s\n") % heads)
+            else:
+                repo.ui.warn(_("remote has heads on branch '%s' that are "
+                               "not known locally: %s\n") % (branch, heads))
         if remoteheads is None:
             if len(newhs) > 1:
                 dhs = list(newhs)
@@ -350,7 +356,3 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                 repo.ui.note((" %s\n") % short(h))
     if error:
         raise util.Abort(error, hint=hint)
-
-    # 6. Check for unsynced changes on involved branches.
-    if unsynced:
-        repo.ui.warn(_("note: unsynced remote changes!\n"))
