@@ -2159,5 +2159,27 @@ class spanset(object):
         l = baseset(self)
         return l + baseset(x)
 
+    def __len__(self):
+        return abs(self._end - self._start)
+
+    def __getitem__(self, x):
+        # Basic implementation to be changed in future patches.
+        l = baseset([r for r in self])
+        return l[x]
+
+    def sort(self, reverse=False):
+        # Basic implementation to be changed in future patches.
+        if reverse:
+            self.reverse()
+
+    def reverse(self):
+        if self._start <= self._end:
+            self._start, self._end = self._end - 1, self._start - 1
+        else:
+            self._start, self._end = self._end + 1, self._start + 1
+
+    def set(self):
+        return self
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
