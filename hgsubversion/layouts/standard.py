@@ -57,7 +57,12 @@ class StandardLayout(base.BaseLayout):
 
     def taglocations(self, meta_data_dir):
         # import late to avoid trouble when running the test suite
-        from hgext_hgsubversion import util
+        try:
+            # newer versions of mercurial >= 2.8 will import this because the
+            # hgext_ logic is already being done in core
+            from hgsubversion import util
+        except ImportError:
+            from hgext_hgsubversion import util
 
         if self._tag_locations is None:
 
