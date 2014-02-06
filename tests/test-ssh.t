@@ -223,7 +223,7 @@ push should succeed even though it has an unexpected response
   $ hg push
   pushing to ssh://user@dummy/remote
   searching for changes
-  note: unsynced remote changes!
+  remote has heads on branch 'default' that are not known locally: 6c0482d977a3
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes

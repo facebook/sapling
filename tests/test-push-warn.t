@@ -22,6 +22,7 @@
   $ hg push ../a
   pushing to ../a
   searching for changes
+  remote has heads on branch 'default' that are not known locally: 1c9246a22a0a
   abort: push creates new remote head 1e108cc5548c!
   (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
@@ -35,6 +36,7 @@
   query 2; still undecided: 1, sample size is: 1
   2 total queries
   listing keys for "bookmarks"
+  remote has heads on branch 'default' that are not known locally: 1c9246a22a0a
   new remote heads on branch 'default':
    1e108cc5548c
   abort: push creates new remote head 1e108cc5548c!
@@ -405,6 +407,7 @@ multiple new heads:
   $ hg -R i push h
   pushing to h
   searching for changes
+  remote has heads on branch 'default' that are not known locally: ce4212fc8847
   abort: push creates new remote head 97bd0c84d346!
   (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
