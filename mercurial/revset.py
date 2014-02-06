@@ -244,7 +244,7 @@ def dagrange(repo, subset, x, y):
     r = spanset(repo)
     xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
     s = subset.set()
-    return baseset([r for r in xs if r in s])
+    return xs.filter(lambda r: r in s)
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
@@ -312,7 +312,7 @@ def _ancestors(repo, subset, x, followfirst=False):
     if not args:
         return baseset([])
     s = set(_revancestors(repo, args, followfirst)) | set(args)
-    return baseset([r for r in subset if r in s])
+    return subset.filter(lambda r: r in s)
 
 def ancestors(repo, subset, x):
     """``ancestors(set)``
@@ -340,7 +340,7 @@ def ancestorspec(repo, subset, x, n):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
-    return baseset([r for r in subset if r in ps])
+    return subset.filter(lambda r: r in ps)
 
 def author(repo, subset, x):
     """``author(string)``
@@ -349,7 +349,7 @@ def author(repo, subset, x):
     # i18n: "author" is a keyword
     n = encoding.lower(getstring(x, _("author requires a string")))
     kind, pattern, matcher = _substringmatcher(n)
-    return lazyset(subset, lambda x: matcher(encoding.lower(repo[x].user())))
+    return subset.filter(lambda x: matcher(encoding.lower(repo[x].user())))
 
 def bisect(repo, subset, x):
     """``bisect(string)``
@@ -366,7 +366,7 @@ def bisect(repo, subset, x):
     # i18n: "bisect" is a keyword
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))
-    return baseset([r for r in subset if r in state])
+    return subset.filter(lambda r: r in state)
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
@@ -393,7 +393,7 @@ def bookmark(repo, subset, x):
             if not bmrev:
                 raise util.Abort(_("bookmark '%s' does not exist") % bm)
             bmrev = repo[bmrev].rev()
-            return lazyset(subset, lambda r: r == bmrev)
+            return subset.filter(lambda r: r == bmrev)
         else:
             matchrevs = set()
             for name, bmrev in repo._bookmarks.iteritems():
@@ -409,7 +409,7 @@ def bookmark(repo, subset, x):
 
     bms = set([repo[r].rev()
                for r in repo._bookmarks.values()])
-    return lazyset(subset, lambda r: r in bms)
+    return subset.filter(lambda r: r in bms)
 
 def branch(repo, subset, x):
     """``branch(string or set)``
@@ -431,16 +431,16 @@ def branch(repo, subset, x):
             # note: falls through to the revspec case if no branch with
             # this name exists
             if pattern in repo.branchmap():
-                return lazyset(subset, lambda r: matcher(repo[r].branch()))
+                return subset.filter(lambda r: matcher(repo[r].branch()))
         else:
-            return lazyset(subset, lambda r: matcher(repo[r].branch()))
+            return subset.filter(lambda r: matcher(repo[r].branch()))
 
     s = getset(repo, spanset(repo), x)
     b = set()
     for r in s:
         b.add(repo[r].branch())
     s = s.set()
-    return lazyset(subset, lambda r: r in s or repo[r].branch() in b)
+    return subset.filter(lambda r: r in s or repo[r].branch() in b)
 
 def bumped(repo, subset, x):
     """``bumped()``
@@ -494,7 +494,7 @@ def checkstatus(repo, subset, pat, field):
                 if m(f):
                     return True
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def _children(repo, narrow, parentset):
     cs = set()
@@ -524,7 +524,7 @@ def closed(repo, subset, x):
     """
     # i18n: "closed" is a keyword
     getargs(x, 0, 0, _("closed takes no arguments"))
-    return lazyset(subset, lambda r: repo[r].closesbranch())
+    return subset.filter(lambda r: repo[r].closesbranch())
 
 def contains(repo, subset, x):
     """``contains(pattern)``
@@ -551,7 +551,7 @@ def contains(repo, subset, x):
                     return True
         return False
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def converted(repo, subset, x):
     """``converted([id])``
@@ -573,7 +573,7 @@ def converted(repo, subset, x):
         source = repo[r].extra().get('convert_revision', None)
         return source is not None and (rev is None or source.startswith(rev))
 
-    return lazyset(subset, lambda r: _matchvalue(r))
+    return subset.filter(lambda r: _matchvalue(r))
 
 def date(repo, subset, x):
     """``date(interval)``
@@ -582,7 +582,7 @@ def date(repo, subset, x):
     # i18n: "date" is a keyword
     ds = getstring(x, _("date requires a string"))
     dm = util.matchdate(ds)
-    return lazyset(subset, lambda x: dm(repo[x].date()[0]))
+    return subset.filter(lambda x: dm(repo[x].date()[0]))
 
 def desc(repo, subset, x):
     """``desc(string)``
@@ -595,7 +595,7 @@ def desc(repo, subset, x):
         c = repo[x]
         return ds in encoding.lower(c.description())
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def _descendants(repo, subset, x, followfirst=False):
     args = getset(repo, spanset(repo), x)
@@ -657,7 +657,7 @@ def destination(repo, subset, x):
             r = src
             src = _getrevsource(repo, r)
 
-    return baseset([r for r in subset if r in dests])
+    return subset.filter(lambda r: r in dests)
 
 def divergent(repo, subset, x):
     """``divergent()``
@@ -666,7 +666,7 @@ def divergent(repo, subset, x):
     # i18n: "divergent" is a keyword
     getargs(x, 0, 0, _("divergent takes no arguments"))
     divergent = obsmod.getrevs(repo, 'divergent')
-    return baseset([r for r in subset if r in divergent])
+    return subset.filter(lambda r: r in divergent)
 
 def draft(repo, subset, x):
     """``draft()``
@@ -674,7 +674,7 @@ def draft(repo, subset, x):
     # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
     pc = repo._phasecache
-    return lazyset(subset, lambda r: pc.phase(repo, r) == phases.draft)
+    return subset.filter(lambda r: pc.phase(repo, r) == phases.draft)
 
 def extinct(repo, subset, x):
     """``extinct()``
@@ -710,7 +710,7 @@ def extra(repo, subset, x):
         extra = repo[r].extra()
         return label in extra and (value is None or matcher(extra[label]))
 
-    return lazyset(subset, lambda r: _matchvalue(r))
+    return subset.filter(lambda r: _matchvalue(r))
 
 def filelog(repo, subset, x):
     """``filelog(pattern)``
@@ -742,7 +742,7 @@ def filelog(repo, subset, x):
                 for fr in fl:
                     s.add(fl.linkrev(fr))
 
-    return baseset([r for r in subset if r in s])
+    return subset.filter(lambda r: r in s)
 
 def first(repo, subset, x):
     """``first(set, [n])``
@@ -765,7 +765,7 @@ def _follow(repo, subset, x, name, followfirst=False):
     else:
         s = set(_revancestors(repo, [c.rev()], followfirst)) | set([c.rev()])
 
-    return baseset([r for r in subset if r in s])
+    return subset.filter(lambda r: r in s)
 
 def follow(repo, subset, x):
     """``follow([file])``
@@ -808,7 +808,7 @@ def grep(repo, subset, x):
                 return True
         return False
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def _matchfiles(repo, subset, x):
     # _matchfiles takes a revset list of prefixed arguments:
@@ -872,7 +872,7 @@ def _matchfiles(repo, subset, x):
                 return True
         return False
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def hasfile(repo, subset, x):
     """``file(pattern)``
@@ -896,7 +896,7 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
-    return baseset([r for r in subset if r in hs])
+    return subset.filter(lambda r: r in hs)
 
 def heads(repo, subset, x):
     """``heads(set)``
@@ -928,7 +928,7 @@ def keyword(repo, subset, x):
         return util.any(kw in encoding.lower(t) for t in c.files() + [c.user(),
             c.description()])
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def limit(repo, subset, x):
     """``limit(set, [n])``
@@ -1003,7 +1003,7 @@ def merge(repo, subset, x):
     # i18n: "merge" is a keyword
     getargs(x, 0, 0, _("merge takes no arguments"))
     cl = repo.changelog
-    return lazyset(subset, lambda r: cl.parentrevs(r)[1] != -1)
+    return subset.filter(lambda r: cl.parentrevs(r)[1] != -1)
 
 def branchpoint(repo, subset, x):
     """``branchpoint()``
@@ -1020,7 +1020,7 @@ def branchpoint(repo, subset, x):
         for p in cl.parentrevs(r):
             if p >= baserev:
                 parentscount[p - baserev] += 1
-    return baseset([r for r in subset if (parentscount[r - baserev] > 1)])
+    return subset.filter(lambda r: parentscount[r - baserev] > 1)
 
 def minrev(repo, subset, x):
     """``min(set)``
@@ -1071,7 +1071,7 @@ def node_(repo, subset, x):
         if pm is not None:
             rn = repo.changelog.rev(pm)
 
-    return baseset([r for r in subset if r == rn])
+    return subset.filter(lambda r: r == rn)
 
 def obsolete(repo, subset, x):
     """``obsolete()``
@@ -1107,7 +1107,7 @@ def origin(repo, subset, x):
             src = prev
 
     o = set([_firstsrc(r) for r in args])
-    return baseset([r for r in subset if r in o])
+    return subset.filter(lambda r: r in o)
 
 def outgoing(repo, subset, x):
     """``outgoing([path])``
@@ -1130,7 +1130,7 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in outgoing.missing])
-    return baseset([r for r in subset if r in o])
+    return subset.filter(lambda r: r in o)
 
 def p1(repo, subset, x):
     """``p1([set])``
@@ -1138,7 +1138,7 @@ def p1(repo, subset, x):
     """
     if x is None:
         p = repo[x].p1().rev()
-        return baseset([r for r in subset if r == p])
+        return subset.filter(lambda r: r == p)
 
     ps = set()
     cl = repo.changelog
@@ -1154,7 +1154,7 @@ def p2(repo, subset, x):
         ps = repo[x].parents()
         try:
             p = ps[1].rev()
-            return baseset([r for r in subset if r == p])
+            return subset.filter(lambda r: r == p)
         except IndexError:
             return baseset([])
 
@@ -1223,7 +1223,7 @@ def public(repo, subset, x):
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
     pc = repo._phasecache
-    return lazyset(subset, lambda r: pc.phase(repo, r) == phases.public)
+    return subset.filter(lambda r: pc.phase(repo, r) == phases.public)
 
 def remote(repo, subset, x):
     """``remote([id [,path]])``
@@ -1284,7 +1284,7 @@ def rev(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
-    return baseset([r for r in subset if r == l])
+    return subset.filter(lambda r: r == l)
 
 def matching(repo, subset, x):
     """``matching(revision [, field])``
@@ -1396,7 +1396,7 @@ def matching(repo, subset, x):
                 return True
         return False
 
-    return lazyset(subset, matches)
+    return subset.filter(matches)
 
 def reverse(repo, subset, x):
     """``reverse(set)``
@@ -1421,7 +1421,7 @@ def secret(repo, subset, x):
     # i18n: "secret" is a keyword
     getargs(x, 0, 0, _("secret takes no arguments"))
     pc = repo._phasecache
-    return lazyset(subset, lambda x: pc.phase(repo, x) == phases.secret)
+    return subset.filter(lambda x: pc.phase(repo, x) == phases.secret)
 
 def sort(repo, subset, x):
     """``sort(set[, [-]key...])``
