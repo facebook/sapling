@@ -38,7 +38,7 @@ class lock(object):
         self.desc = desc
         self.postrelease  = []
         self.pid = os.getpid()
-        self.lock()
+        self.delay = self.lock()
 
     def __del__(self):
         if self.held:
@@ -57,7 +57,7 @@ class lock(object):
         while True:
             try:
                 self.trylock()
-                return 1
+                return self.timeout - timeout
             except error.LockHeld, inst:
                 if timeout != 0:
                     time.sleep(1)

@@ -1005,6 +1005,7 @@ class localrepository(object):
             l = lockmod.lock(vfs, lockname,
                              int(self.ui.config("ui", "timeout", "600")),
                              releasefn, desc=desc)
+            self.ui.warn(_("got lock after %s seconds\n") % l.delay)
         if acquirefn:
             acquirefn()
         return l
