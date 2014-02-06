@@ -2072,5 +2072,23 @@ class baseset(list):
         l = [r for r in x if r not in s]
         return baseset(list(self) + l)
 
+class lazyset(object):
+    """Duck type for baseset class which iterates lazily over the revisions in
+    the subset and contains a function which tests for membership in the
+    revset
+    """
+    def __init__(self, subset, condition):
+        self._subset = subset
+        self._condition = condition
+
+    def __contains__(self, x):
+        return x in self._subset and self._condition(x)
+
+    def __iter__(self):
+        cond = self._condition
+        for x in self._subset:
+            if cond(x):
+                yield x
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
