@@ -722,10 +722,16 @@ class ui(object):
             f.write(text)
             f.close()
 
+            environ = {'HGUSER': user}
+            for label in ('source', 'rebase_source'):
+                if label in extra:
+                    environ.update({'HGREVISION': extra[label]})
+                    break
+
             editor = self.geteditor()
 
             util.system("%s \"%s\"" % (editor, name),
-                        environ={'HGUSER': user},
+                        environ=environ,
                         onerr=util.Abort, errprefix=_("edit failed"),
                         out=self.fout)
 
