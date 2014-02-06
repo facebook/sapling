@@ -2043,6 +2043,9 @@ def funcsused(tree):
         return funcs
 
 class baseset(list):
+    """Basic data structure that represents a revset and contains the basic
+    operation that it should be able to perform.
+    """
     def __init__(self, data):
         super(baseset, self).__init__(data)
         self._set = None
