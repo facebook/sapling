@@ -2090,5 +2090,15 @@ class lazyset(object):
             if cond(x):
                 yield x
 
+    def __and__(self, x):
+        return lazyset(self, lambda r: r in x)
+
+    def __sub__(self, x):
+        return lazyset(self, lambda r: r not in x)
+
+    def __add__(self, x):
+        l = baseset([r for r in self])
+        return l + baseset(x)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
