@@ -2008,7 +2008,7 @@ def commitforceeditor(repo, ctx, subs):
     # run editor in the repository root
     olddir = os.getcwd()
     os.chdir(repo.root)
-    text = repo.ui.edit("\n".join(edittext), ctx.user())
+    text = repo.ui.edit("\n".join(edittext), ctx.user(), ctx.extra())
     text = re.sub("(?m)^HG:.*(\n|$)", "", text)
     os.chdir(olddir)
 
