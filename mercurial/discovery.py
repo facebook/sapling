@@ -154,7 +154,7 @@ def _headssummary(repo, remote, outgoing):
 
     - branch: the branch name
     - remoteheads: the list of remote heads known locally
-                   None is the branch is new
+                   None if the branch is new
     - newheads: the new remote heads (known locally) with outgoing pushed
     - unsyncedheads: the list of remote heads unknown locally.
     """
@@ -250,8 +250,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                          hint=_("use 'hg push --new-branch' to create"
                                 " new remote branches"))
 
-    # 2 compute newly pushed bookmarks. We
-    # we don't warned about bookmarked heads.
+    # 2. Compute newly pushed bookmarks. We don't warn about bookmarked heads.
     localbookmarks = repo._bookmarks
     remotebookmarks = remote.listkeys('bookmarks')
     bookmarkedheads = set()
@@ -274,18 +273,19 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
     allfuturecommon = set(c.node() for c in repo.set('%ld', outgoing.common))
     allfuturecommon.update(allmissing)
     for branch, heads in sorted(headssum.iteritems()):
-        candidate_newhs = set(heads[1])
+        remoteheads, newheads, unsyncedheads = heads
+        candidate_newhs = set(newheads)
         # add unsynced data
-        if heads[0] is None:
+        if remoteheads is None:
             oldhs = set()
         else:
-            oldhs = set(heads[0])
-        oldhs.update(heads[2])
-        candidate_newhs.update(heads[2])
-        dhs = None
+            oldhs = set(remoteheads)
+        oldhs.update(unsyncedheads)
+        candidate_newhs.update(unsyncedheads)
+        dhs = None # delta heads, the new heads on branch
         discardedheads = set()
         if repo.obsstore:
-            # remove future heads which are actually obsolete by another
+            # remove future heads which are actually obsoleted by another
             # pushed element:
             #
             # XXX as above, There are several cases this case does not handle
@@ -297,8 +297,8 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             # (2) if the new heads have ancestors which are not obsolete and
             #     not ancestors of any other heads we will have a new head too.
             #
-            # This two case will be easy to handle for know changeset but much
-            # more tricky for unsynced changes.
+            # These two cases will be easy to handle for known changeset but
+            # much more tricky for unsynced changes.
             newhs = set()
             for nh in candidate_newhs:
                 if nh in repo and repo[nh].phase() <= phases.public:
@@ -312,10 +312,10 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                         newhs.add(nh)
         else:
             newhs = candidate_newhs
-        if [h for h in heads[2] if h not in discardedheads]:
+        if [h for h in unsyncedheads if h not in discardedheads]:
             unsynced = True
-        if heads[0] is None:
-            if 1 < len(newhs):
+        if remoteheads is None:
+            if len(newhs) > 1:
                 dhs = list(newhs)
                 if error is None:
                     error = (_("push creates new branch '%s' "
@@ -324,7 +324,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                              " see \"hg help push\" for details about"
                              " pushing new heads")
         elif len(newhs) > len(oldhs):
-            # strip updates to existing remote heads from the new heads list
+            # remove bookmarked or existing remote heads from the new heads list
             dhs = sorted(newhs - bookmarkedheads - oldhs)
         if dhs:
             if error is None:
@@ -334,7 +334,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                 else:
                     error = _("push creates new remote head %s!"
                               ) % short(dhs[0])
-                if heads[2]: # unsynced
+                if unsyncedheads:
                     hint = _("pull and merge or"
                              " see \"hg help push\" for details about"
                              " pushing new heads")
