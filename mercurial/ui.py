@@ -714,7 +714,7 @@ class ui(object):
         if self.debugflag:
             opts['label'] = opts.get('label', '') + ' ui.debug'
             self.write(*msg, **opts)
-    def edit(self, text, user):
+    def edit(self, text, user, extra={}):
         (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt",
                                       text=True)
         try:
