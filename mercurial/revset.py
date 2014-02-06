@@ -250,7 +250,7 @@ def andset(repo, subset, x, y):
 def orset(repo, subset, x, y):
     xl = getset(repo, subset, x)
     yl = getset(repo, subset - xl, y)
-    return baseset(xl + yl)
+    return xl + yl
 
 def notset(repo, subset, x):
     return subset - getset(repo, subset, x)
