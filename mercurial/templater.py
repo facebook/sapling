@@ -368,7 +368,14 @@ def shortest(context, mapping, args):
     cl = mapping['ctx']._repo.changelog
     def isvalid(test):
         try:
-            cl.index.partialmatch(test)
+            try:
+                cl.index.partialmatch(test)
+            except AttributeError:
+                # Pure mercurial doesn't support partialmatch on the index.
+                # Fallback to the slow way.
+                if cl._partialmatch(test) is None:
+                    return False
+
             try:
                 int(test)
                 return False
