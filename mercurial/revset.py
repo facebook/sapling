@@ -2100,5 +2100,26 @@ class lazyset(object):
         l = baseset([r for r in self])
         return l + baseset(x)
 
+    def __len__(self):
+        # Basic implementation to be changed in future patches.
+        l = baseset([r for r in self])
+        return len(l)
+
+    def __getitem__(self, x):
+        # Basic implementation to be changed in future patches.
+        l = baseset([r for r in self])
+        return l[x]
+
+    def sort(self, reverse=False):
+        # Basic implementation to be changed in future patches.
+        self._subset = baseset(self._subset)
+        self._subset.sort(reverse=reverse)
+
+    def reverse(self):
+        self._subset.reverse()
+
+    def set(self):
+        return set([r for r in self])
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
