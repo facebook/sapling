@@ -414,6 +414,16 @@ ancestor can accept 0 or more arguments
   2
   1
   0
+  $ log '1:: and reverse(all())'
+  9
+  8
+  7
+  6
+  5
+  4
+  3
+  2
+  1
   $ log 'rev(5)'
   5
   $ log 'sort(limit(reverse(all()), 3))'

@@ -310,8 +310,7 @@ def _ancestors(repo, subset, x, followfirst=False):
     if not args:
         return baseset([])
     s = set(_revancestors(repo, args, followfirst)) | set(args)
-    ss = subset.set()
-    return baseset([r for r in ss if r in s])
+    return baseset([r for r in subset if r in s])
 
 def ancestors(repo, subset, x):
     """``ancestors(set)``
@@ -339,8 +338,7 @@ def ancestorspec(repo, subset, x, n):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
-    s = subset.set()
-    return baseset([r for r in s if r in ps])
+    return baseset([r for r in subset if r in ps])
 
 def author(repo, subset, x):
     """``author(string)``
@@ -367,8 +365,7 @@ def bisect(repo, subset, x):
     # i18n: "bisect" is a keyword
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))
-    s = subset.set()
-    return baseset([r for r in s if r in state])
+    return baseset([r for r in subset if r in state])
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
@@ -411,8 +408,7 @@ def bookmark(repo, subset, x):
 
     bms = set([repo[r].rev()
                for r in repo._bookmarks.values()])
-    s = subset.set()
-    return baseset([r for r in s if r in bms])
+    return baseset([r for r in subset if r in bms])
 
 def branch(repo, subset, x):
     """``branch(string or set)``
@@ -607,8 +603,7 @@ def _descendants(repo, subset, x, followfirst=False):
     if not args:
         return baseset([])
     s = set(_revdescendants(repo, args, followfirst)) | set(args)
-    ss = subset.set()
-    return baseset([r for r in ss if r in s])
+    return baseset([r for r in subset if r in s])
 
 def descendants(repo, subset, x):
     """``descendants(set)``
@@ -748,8 +743,7 @@ def filelog(repo, subset, x):
                 for fr in fl:
                     s.add(fl.linkrev(fr))
 
-    ss = subset.set()
-    return baseset([r for r in ss if r in s])
+    return baseset([r for r in subset if r in s])
 
 def first(repo, subset, x):
     """``first(set, [n])``
@@ -772,8 +766,7 @@ def _follow(repo, subset, x, name, followfirst=False):
     else:
         s = set(_revancestors(repo, [c.rev()], followfirst)) | set([c.rev()])
 
-    ss = subset.set()
-    return baseset([r for r in ss if r in s])
+    return baseset([r for r in subset if r in s])
 
 def follow(repo, subset, x):
     """``follow([file])``
@@ -902,8 +895,7 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
-    s = subset.set()
-    return baseset([r for r in s if r in hs])
+    return baseset([r for r in subset if r in hs])
 
 def heads(repo, subset, x):
     """``heads(set)``
@@ -1085,8 +1077,7 @@ def origin(repo, subset, x):
             src = prev
 
     o = set([_firstsrc(r) for r in args])
-    s = subset.set()
-    return baseset([r for r in s if r in o])
+    return baseset([r for r in subset if r in o])
 
 def outgoing(repo, subset, x):
     """``outgoing([path])``
@@ -1109,8 +1100,7 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in outgoing.missing])
-    s = subset.set()
-    return baseset([r for r in s if r in o])
+    return baseset([r for r in subset if r in o])
 
 def p1(repo, subset, x):
     """``p1([set])``
@@ -2070,10 +2060,9 @@ class baseset(list):
         return baseset(self.set() - s)
 
     def __and__(self, x):
-        s = self.set()
         if isinstance(x, baseset):
             x = x.set()
-        return baseset([y for y in s if y in x])
+        return baseset([y for y in self if y in x])
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
