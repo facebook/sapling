@@ -78,10 +78,6 @@ class mercurial_sink(converter_sink):
     def authorfile(self):
         return self.repo.join("authormap")
 
-    def getheads(self):
-        h = self.repo.changelog.heads()
-        return [hex(x) for x in h]
-
     def setbranch(self, branch, pbranches):
         if not self.clonebranches:
             return

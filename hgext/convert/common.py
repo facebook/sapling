@@ -192,10 +192,6 @@ class converter_sink(object):
         self.path = path
         self.created = []
 
-    def getheads(self):
-        """Return a list of this repository's heads"""
-        raise NotImplementedError
-
     def revmapfile(self):
         """Path to a file that will contain lines
         source_rev_id sink_rev_id
