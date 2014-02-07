@@ -41,13 +41,30 @@ class SvnPathNotFound(Exception):
     pass
 
 def revsplit(rev):
-    """Parse a revision string and return (uuid, path, revnum)."""
-    url, revnum = rev.rsplit('@', 1)
-    parts = url.split('/', 1)
-    mod = ''
+    """Parse a revision string and return (uuid, path, revnum).
+    >>> revsplit('svn:a2147622-4a9f-4db4-a8d3-13562ff547b2'
+    ...          '/proj%20B/mytrunk/mytrunk@1')
+    ('a2147622-4a9f-4db4-a8d3-13562ff547b2', '/proj%20B/mytrunk/mytrunk', 1)
+    >>> revsplit('svn:8af66a51-67f5-4354-b62c-98d67cc7be1d@1')
+    ('', '', 1)
+    >>> revsplit('@7')
+    ('', '', 7)
+    >>> revsplit('7')
+    ('', '', 0)
+    >>> revsplit('bad')
+    ('', '', 0)
+    """
+    parts = rev.rsplit('@', 1)
+    revnum = 0
     if len(parts) > 1:
+        revnum = int(parts[1])
+    parts = parts[0].split('/', 1)
+    uuid = ''
+    mod = ''
+    if len(parts) > 1 and parts[0].startswith('svn:'):
+        uuid = parts[0][4:]
         mod = '/' + parts[1]
-    return parts[0][4:], mod, int(revnum)
+    return uuid, mod, revnum
 
 def quote(s):
     # As of svn 1.7, many svn calls expect "canonical" paths. In
