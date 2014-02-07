@@ -198,11 +198,12 @@ This is also the only place testing more than one extra field in a revision.
   extra:       convert_revision=svn:........-....-....-....-............/proj B/mytrunk@1 (re)
   $ cd ..
 
-Test converting empty heads (issue3347)
+Test converting empty heads (issue3347).
+Also tests getting logs directly without debugsvnlog.
 
   $ svnadmin create svn-empty
   $ svnadmin load -q svn-empty < "$TESTDIR/svn/empty.svndump"
-  $ hg --config convert.svn.trunk= convert svn-empty
+  $ hg --config convert.svn.trunk= --config convert.svn.debugsvnlog=0 convert svn-empty
   assuming destination svn-empty-hg
   initializing destination svn-empty-hg repository
   scanning source...

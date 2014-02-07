@@ -174,6 +174,30 @@ class logstream(object):
             self._stdout.close()
             self._stdout = None
 
+class directlogstream(list):
+    """Direct revision log iterator.
+    This can be used for debugging and development but it will probably leak
+    memory and is not suitable for real conversions."""
+    def __init__(self, url, paths, start, end, limit=0,
+                  discover_changed_paths=True, strict_node_history=False):
+
+        def receiver(orig_paths, revnum, author, date, message, pool):
+            paths = {}
+            if orig_paths is not None:
+                for k, v in orig_paths.iteritems():
+                    paths[k] = changedpath(v)
+            self.append((paths, revnum, author, date, message))
+
+        # Use an ra of our own so that our parent can consume
+        # our results without confusing the server.
+        t = transport.SvnRaTransport(url=url)
+        svn.ra.get_log(t.ra, paths, start, end, limit,
+                       discover_changed_paths,
+                       strict_node_history,
+                       receiver)
+
+    def close(self):
+        pass
 
 # Check to see if the given path is a local Subversion repo. Verify this by
 # looking for several svn-specific files and directories in the given
@@ -992,6 +1016,9 @@ class svn_source(converter_source):
             relpaths.append(p.strip('/'))
         args = [self.baseurl, relpaths, start, end, limit,
                 discover_changed_paths, strict_node_history]
+        # undocumented feature: debugsvnlog can be disabled
+        if not self.ui.configbool('convert', 'svn.debugsvnlog', True):
+            return directlogstream(*args)
         arg = encodeargs(args)
         hgexe = util.hgexecutable()
         cmd = '%s debugsvnlog' % util.shellquote(hgexe)
