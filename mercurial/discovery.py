@@ -315,11 +315,11 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
         if unsynced:
             heads = ' '.join(short(h) for h in unsynced)
             if branch is None:
-                repo.ui.warn(_("remote has heads that are "
-                               "not known locally: %s\n") % heads)
+                repo.ui.status(_("remote has heads that are "
+                                 "not known locally: %s\n") % heads)
             else:
-                repo.ui.warn(_("remote has heads on branch '%s' that are "
-                               "not known locally: %s\n") % (branch, heads))
+                repo.ui.status(_("remote has heads on branch '%s' that are "
+                                 "not known locally: %s\n") % (branch, heads))
         if remoteheads is None:
             if len(newhs) > 1:
                 dhs = list(newhs)
