@@ -2146,6 +2146,12 @@ class baseset(list):
         super(baseset, self).__init__(data)
         self._set = None
 
+    def ascending(self):
+        self.sort()
+
+    def descending(self):
+        self.sort(reverse=True)
+
     def set(self):
         if not self._set:
             self._set = set(self)
@@ -2180,6 +2186,12 @@ class lazyset(object):
         self._subset = subset
         self._condition = condition
         self._cache = {}
+
+    def ascending(self):
+        self._subset.sort()
+
+    def descending(self):
+        self._subset.sort(reverse=True)
 
     def __contains__(self, x):
         c = self._cache
@@ -2249,6 +2261,14 @@ class orderedlazyset(lazyset):
     def filter(self, l):
         return orderedlazyset(self, l, ascending=self._ascending)
 
+    def ascending(self):
+        if not self._ascending:
+            self.reverse()
+
+    def descending(self):
+        if self._ascending:
+            self.reverse()
+
     def __and__(self, x):
         return orderedlazyset(self, lambda r: r in x,
                 ascending=self._ascending)
@@ -2256,6 +2276,10 @@ class orderedlazyset(lazyset):
     def __sub__(self, x):
         return orderedlazyset(self, lambda r: r not in x,
                 ascending=self._ascending)
+
+    def reverse(self):
+        self._subset.reverse()
+        self._ascending = not self._ascending
 
 class generatorset(object):
     """Wrapper structure for generators that provides lazy membership and can
@@ -2341,6 +2365,14 @@ class spanset(object):
         else:
             self._end = len(repo)
         self._hiddenrevs = repo.changelog.filteredrevs
+
+    def ascending(self):
+        if self._start > self._end:
+            self.reverse()
+
+    def descending(self):
+        if self._start < self._end:
+            self.reverse()
 
     def _contained(self, rev):
         return (rev <= self._start and rev > self._end) or (rev >= self._start
