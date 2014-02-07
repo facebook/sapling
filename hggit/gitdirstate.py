@@ -1,4 +1,4 @@
-import os, stat, re
+import os, stat, re, errno
 
 from mercurial import dirstate
 from mercurial import hg
