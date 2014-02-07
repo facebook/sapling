@@ -8,6 +8,7 @@
 import re
 import parser, util, error, discovery, hbisect, phases
 import node
+import heapq
 import match as matchmod
 import ancestor as ancestormod
 from i18n import _
@@ -20,14 +21,24 @@ def _revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
     cut = followfirst and 1 or None
     cl = repo.changelog
-    visit = util.deque(revs)
+
+    # Implementation to be changed in later patches based on revs order.
+    h = list(revs)
+    for i in xrange(len(h)):
+        h[i] = -h[i]
+    heapq.heapify(h)
     seen = set([node.nullrev])
-    while visit:
-        for parent in cl.parentrevs(visit.popleft())[:cut]:
-            if parent not in seen:
-                visit.append(parent)
-                seen.add(parent)
-                yield parent
+    def iterate():
+        while h:
+            current = -heapq.heappop(h)
+            if current not in seen:
+                seen.add(current)
+                yield current
+                for parent in cl.parentrevs(current)[:cut]:
+                    if parent != node.nullrev:
+                        heapq.heappush(h, -parent)
+
+    return descgeneratorset(iterate())
 
 def _revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
@@ -312,7 +323,7 @@ def _ancestors(repo, subset, x, followfirst=False):
     args = getset(repo, spanset(repo), x)
     if not args:
         return baseset([])
-    s = set(_revancestors(repo, args, followfirst)) | set(args)
+    s = _revancestors(repo, args, followfirst)
     return subset.filter(lambda r: r in s)
 
 def ancestors(repo, subset, x):
@@ -784,7 +795,7 @@ def _follow(repo, subset, x, name, followfirst=False):
         else:
             return baseset([])
     else:
-        s = set(_revancestors(repo, [c.rev()], followfirst)) | set([c.rev()])
+        s = _revancestors(repo, baseset([c.rev()]), followfirst)
 
     return subset.filter(lambda r: r in s)
 
