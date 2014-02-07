@@ -2146,6 +2146,9 @@ class baseset(list):
         l = [r for r in x if r not in s]
         return baseset(list(self) + l)
 
+    def filter(self, l):
+        return lazyset(self, l)
+
 class lazyset(object):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
@@ -2210,6 +2213,9 @@ class lazyset(object):
     def set(self):
         return set([r for r in self])
 
+    def filter(self, l):
+        return lazyset(self, l)
+
 class orderedlazyset(lazyset):
     """Subclass of lazyset which subset can be ordered either ascending or
     descendingly
@@ -2217,6 +2223,9 @@ class orderedlazyset(lazyset):
     def __init__(self, subset, condition, ascending=True):
         super(orderedlazyset, self).__init__(subset, condition)
         self._ascending = ascending
+
+    def filter(self, l):
+        return orderedlazyset(self, l, ascending=self._ascending)
 
 class generatorset(object):
     """Wrapper structure for generators that provides lazy membership and can
@@ -2356,6 +2365,12 @@ class spanset(object):
 
     def set(self):
         return self
+
+    def filter(self, l):
+        if self._start <= self._end:
+            return orderedlazyset(self, l)
+        else:
+            return orderedlazyset(self, l, ascending=False)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
