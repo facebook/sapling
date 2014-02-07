@@ -22,16 +22,24 @@ def _revancestors(repo, revs, followfirst):
     cut = followfirst and 1 or None
     cl = repo.changelog
 
-    # Implementation to be changed in later patches based on revs order.
-    h = list(revs)
-    for i in xrange(len(h)):
-        h[i] = -h[i]
-    heapq.heapify(h)
-    seen = set([node.nullrev])
     def iterate():
+        revqueue, revsnode = None, None
+        h = []
+
+        revs.descending()
+        revqueue = util.deque(revs)
+        if revqueue:
+            revsnode = revqueue.popleft()
+            heapq.heappush(h, -revsnode)
+
+        seen = set([node.nullrev])
         while h:
             current = -heapq.heappop(h)
             if current not in seen:
+                if revsnode and current == revsnode:
+                    if revqueue:
+                        revsnode = revqueue.popleft()
+                        heapq.heappush(h, -revsnode)
                 seen.add(current)
                 yield current
                 for parent in cl.parentrevs(current)[:cut]:
