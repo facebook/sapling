@@ -17,7 +17,7 @@ def dotted_name_of_path(path):
     'zlib'
     """
     parts = path.split('/')
-    parts[-1] = parts[-1][:-3] # remove .py
+    parts[-1] = parts[-1].split('.', 1)[0] # remove .py and .so and .ARCH.so
     if parts[-1].endswith('module'):
         parts[-1] = parts[-1][:-6]
     return '.'.join(parts)
