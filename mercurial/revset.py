@@ -2227,6 +2227,14 @@ class orderedlazyset(lazyset):
     def filter(self, l):
         return orderedlazyset(self, l, ascending=self._ascending)
 
+    def __and__(self, x):
+        return orderedlazyset(self, lambda r: r in x,
+                ascending=self._ascending)
+
+    def __sub__(self, x):
+        return orderedlazyset(self, lambda r: r not in x,
+                ascending=self._ascending)
+
 class generatorset(object):
     """Wrapper structure for generators that provides lazy membership and can
     be iterated more than once.
