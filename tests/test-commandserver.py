@@ -267,7 +267,10 @@ def obsolete(server):
 
     runcommand(server, ['up', 'null'])
     runcommand(server, ['phase', '-df', 'tip'])
-    os.system('hg debugobsolete `hg log -r tip --template {node}`')
+    cmd = 'hg debugobsolete `hg log -r tip --template {node}`'
+    if os.name == 'nt':
+        cmd = 'sh -c "%s"' % cmd # run in sh, not cmd.exe
+    os.system(cmd)
     runcommand(server, ['log', '--hidden'])
     runcommand(server, ['log'])
 
