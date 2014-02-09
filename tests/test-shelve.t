@@ -530,4 +530,133 @@ unshelve should keep a copy of unknown files
   $ cat e.orig
   z
 
+
+unshelve and conflicts with untracked files
+
+ preparing:
+
+  $ rm *.orig
+  $ hg ci -qm 'commit stuff'
+  $ hg phase -p null:
+
+ no other changes - no merge:
+
+  $ echo f > f
+  $ hg add f
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo gold > f
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg st
+  A f
+  ? f.orig
+  $ cat f
+  f
+  $ cat f.orig
+  gold
+
+ other uncommitted changes - merge:
+
+  $ hg st
+  A f
+  ? f.orig
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G --template '{rev}  {desc|firstline}  {author}' -R bundle:.hg/shelved/default.hg -r 'bundle()'
+  o  4  changes to 'commit stuff'  shelve@localhost
+  |
+  $ hg log -G --template '{rev}  {desc|firstline}  {author}'
+  @  3  commit stuff  test
+  |
+  | o  2  c  test
+  |/
+  o  0  a  test
+  
+  $ mv f.orig f
+  $ echo other change >> a
+  $ hg unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  merging f
+  warning: conflicts during merge.
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+  $ hg log -G --template '{rev}  {desc|firstline}  {author}'
+  @  5  changes to 'commit stuff'  shelve@localhost
+  |
+  | @  4  pending changes temporary commit  shelve@localhost
+  |/
+  o  3  commit stuff  test
+  |
+  | o  2  c  test
+  |/
+  o  0  a  test
+  
+  $ hg st
+  M f
+  ? f.orig
+  $ cat f
+  <<<<<<< local
+  gold
+  =======
+  f
+  >>>>>>> other
+  $ cat f.orig
+  gold
+  $ hg unshelve --abort
+  rebase aborted
+  unshelve of 'default' aborted
+  $ hg st
+  M a
+  ? f.orig
+  $ cat f.orig
+  gold
+  $ hg unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  $ hg st
+  M a
+  A f
+  ? f.orig
+
+ other committed changes - merge:
+
+  $ hg shelve f
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg ci a -m 'intermediate other change'
+  $ mv f.orig f
+  $ hg unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  merging f
+  warning: conflicts during merge.
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+  $ hg st
+  M f
+  ? f.orig
+  $ cat f
+  <<<<<<< local
+  gold
+  =======
+  f
+  >>>>>>> other
+  $ cat f.orig
+  gold
+  $ hg unshelve --abort
+  rebase aborted
+  no changes needed to a
+  no changes needed to d
+  no changes needed to e
+  unshelve of 'default' aborted
+  $ hg shelve --delete default
+
   $ cd ..
