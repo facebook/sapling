@@ -81,11 +81,11 @@ the common case - no options or filenames
 ensure that our shelved changes exist
 
   $ hg shelve -l
-  default-01      (*)    [mq]: second.patch (glob)
-  default         (*)    [mq]: second.patch (glob)
+  default-01      (*)    changes to '[mq]: second.patch' (glob)
+  default         (*)    changes to '[mq]: second.patch' (glob)
 
   $ hg shelve -l -p default
-  default         (*)    [mq]: second.patch (glob)
+  default         (*)    changes to '[mq]: second.patch' (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -400,7 +400,7 @@ test keep and cleanup
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --list
-  default         (*)    create conflict (glob)
+  default         (*)    changes to 'create conflict' (glob)
   $ hg unshelve --keep
   unshelving change 'default'
   adding changesets
@@ -408,7 +408,7 @@ test keep and cleanup
   adding file changes
   added 1 changesets with 1 changes to 7 files
   $ hg shelve --list
-  default         (*)    create conflict (glob)
+  default         (*)    changes to 'create conflict' (glob)
   $ hg shelve --cleanup
   $ hg shelve --list
 
@@ -437,7 +437,7 @@ shelve should still work even if mq is disabled
   shelved as test
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --config extensions.mq=! shelve --list
-  test            (1s ago)    create conflict
+  test            (*)    changes to 'create conflict' (glob)
   $ hg --config extensions.mq=! unshelve
   unshelving change 'test'
   adding changesets
