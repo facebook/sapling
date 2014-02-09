@@ -23,7 +23,7 @@ shelve".
 
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
-from mercurial import changegroup, cmdutil, scmutil, phases
+from mercurial import changegroup, cmdutil, scmutil, phases, commands
 from mercurial import error, hg, mdiff, merge, patch, repair, util
 from mercurial import templatefilters
 from mercurial import lock as lockmod
@@ -631,8 +631,8 @@ def unshelve(ui, repo, *shelved, **opts):
           ('p', 'patch', None,
            _('show patch')),
           ('', 'stat', None,
-           _('output diffstat-style summary of changes'))],
-         _('hg shelve'))
+           _('output diffstat-style summary of changes'))] + commands.walkopts,
+         _('hg shelve [OPTION]...'))
 def shelvecmd(ui, repo, *pats, **opts):
     '''save and set aside changes from the working directory
 
