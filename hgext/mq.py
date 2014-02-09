@@ -1986,10 +1986,11 @@ class queue(object):
                     raise util.Abort(_('-e is incompatible with import from -'))
                 filename = normname(filename)
                 self.checkreservedname(filename)
-                if util.url(filename).local():
+                if util.url(filename).islocal():
                     originpath = self.join(filename)
                     if not os.path.isfile(originpath):
-                        raise util.Abort(_("patch %s does not exist") % filename)
+                        raise util.Abort(
+                            _("patch %s does not exist") % filename)
 
                 if patchname:
                     self.checkpatchname(patchname, force)
