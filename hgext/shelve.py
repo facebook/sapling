@@ -632,7 +632,7 @@ def unshelve(ui, repo, *shelved, **opts):
            _('show patch')),
           ('', 'stat', None,
            _('output diffstat-style summary of changes'))] + commands.walkopts,
-         _('hg shelve [OPTION]...'))
+         _('hg shelve [OPTION]... [FILE]...'))
 def shelvecmd(ui, repo, *pats, **opts):
     '''save and set aside changes from the working directory
 
