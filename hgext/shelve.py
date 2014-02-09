@@ -22,7 +22,7 @@ shelve".
 """
 
 from mercurial.i18n import _
-from mercurial.node import nullid, bin, hex
+from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases
 from mercurial import error, hg, mdiff, merge, patch, repair, util
 from mercurial import templatefilters
@@ -125,7 +125,7 @@ def createcmd(ui, repo, pats, opts):
         """Compute the heads of the public ancestors of a commit.
 
         Much faster than the revset heads(ancestors(ctx) - draft())"""
-        seen = set()
+        seen = set([nullrev])
         visit = util.deque()
         visit.append(ctx)
         while visit:
