@@ -23,10 +23,6 @@ shelving in an empty repo should be possible
 
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 5 changes to 5 files
 
   $ hg commit -q -m 'initial commit'
 
@@ -104,10 +100,6 @@ local edits should not prevent a shelved change from applying
   $ printf "z\na\n" > a/a
   $ hg unshelve --keep
   unshelving change 'default-01'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 3 changes to 8 files (+1 heads)
   merging a/a
 
   $ hg revert --all -q
@@ -117,10 +109,6 @@ apply it and make sure our state is as expected
 
   $ hg unshelve
   unshelving change 'default-01'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 3 changes to 8 files
   $ hg status -C
   M a/a
   A b.rename/b
@@ -192,10 +180,6 @@ force a conflicted merge to occur
 
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 3 changes to 8 files (+1 heads)
   merging a/a
   warning: conflicts during merge.
   merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -379,10 +363,6 @@ if we resolve a conflict while unshelving, the unshelve should succeed
 
   $ HGMERGE=true hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 6 files (+1 heads)
   merging a/a
   $ hg parents -q
   4:33f7f61e6c5e
@@ -403,10 +383,6 @@ test keep and cleanup
   default         (*)    changes to 'create conflict' (glob)
   $ hg unshelve --keep
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 7 files
   $ hg shelve --list
   default         (*)    changes to 'create conflict' (glob)
   $ hg shelve --cleanup
@@ -424,10 +400,6 @@ test bookmarks
    * test                      4:33f7f61e6c5e
   $ hg unshelve
   unshelving change 'test'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 7 files
   $ hg bookmark
    * test                      4:33f7f61e6c5e
 
@@ -440,10 +412,6 @@ shelve should still work even if mq is disabled
   test            (*)    changes to 'create conflict' (glob)
   $ hg --config extensions.mq=! unshelve
   unshelving change 'test'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 7 files
 
 shelve should leave dirstate clean (issue 4055)
 
@@ -468,10 +436,6 @@ shelve should leave dirstate clean (issue 4055)
   saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-backup.hg (glob)
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files (+1 heads)
   $ hg status
   M z
 
@@ -497,10 +461,6 @@ shelve should only unshelve pending changes (issue 4068)
   $ hg up -q 1
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 3 files
   $ hg status
   A d
 
@@ -513,10 +473,6 @@ unshelve should work on an ancestor of the original commit
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 3 files
   $ hg status
   A d
 
@@ -534,10 +490,6 @@ test bug 4073 we need to enable obsolete markers for it
   $ hg debugobsolete `hg --debug id -i -r 1`
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 2 files (+1 heads)
 
 unshelve should leave unknown files alone (issue4113)
 
@@ -549,10 +501,6 @@ unshelve should leave unknown files alone (issue4113)
   ? e
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 2 files (+1 heads)
   $ hg status
   A d
   ? e
@@ -568,10 +516,6 @@ unshelve should keep a copy of unknown files
   $ echo z > e
   $ hg unshelve
   unshelving change 'default'
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 2 changes to 3 files (+1 heads)
   $ cat e
   e
   $ cat e.orig

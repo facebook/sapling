@@ -517,6 +517,7 @@ def unshelve(ui, repo, *shelved, **opts):
     if not shelvedfile(repo, basename, 'files').exists():
         raise util.Abort(_("shelved change '%s' not found") % basename)
 
+    oldquiet = ui.quiet
     wlock = lock = tr = None
     try:
         lock = repo.lock()
@@ -550,15 +551,12 @@ def unshelve(ui, repo, *shelved, **opts):
 
             tempopts = {}
             tempopts['message'] = "pending changes temporary commit"
-            oldquiet = ui.quiet
-            try:
-                ui.quiet = True
-                node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
-            finally:
-                ui.quiet = oldquiet
+            ui.quiet = True
+            node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
             tmpwctx = repo[node]
 
         try:
+            ui.quiet = True
             fp = shelvedfile(repo, basename, 'hg').opener()
             gen = changegroup.readbundle(fp, fp.name)
             repo.addchangegroup(gen, 'unshelve', 'bundle:' + fp.name)
@@ -566,6 +564,8 @@ def unshelve(ui, repo, *shelved, **opts):
             phases.retractboundary(repo, phases.secret, nodes)
         finally:
             fp.close()
+
+        ui.quiet = oldquiet
 
         shelvectx = repo['tip']
 
@@ -609,6 +609,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
         unshelvecleanup(ui, repo, basename, opts)
     finally:
+        ui.quiet = oldquiet
         if tr:
             tr.release()
         lockmod.release(lock, wlock)
