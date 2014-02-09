@@ -122,22 +122,21 @@ def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
 
     def publicancestors(ctx):
-        """Compute the heads of the public ancestors of a commit.
+        """Compute the public ancestors of a commit.
 
-        Much faster than the revset heads(ancestors(ctx) - draft())"""
+        Much faster than the revset ancestors(ctx) & draft()"""
         seen = set([nullrev])
         visit = util.deque()
         visit.append(ctx)
         while visit:
             ctx = visit.popleft()
+            yield ctx.node()
             for parent in ctx.parents():
                 rev = parent.rev()
                 if rev not in seen:
                     seen.add(rev)
                     if parent.mutable():
                         visit.append(parent)
-                    else:
-                        yield parent.node()
 
     wctx = repo[None]
     parents = wctx.parents()
