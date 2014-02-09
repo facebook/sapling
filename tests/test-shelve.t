@@ -100,6 +100,8 @@ local edits should not prevent a shelved change from applying
   $ printf "z\na\n" > a/a
   $ hg unshelve --keep
   unshelving change 'default-01'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
   merging a/a
 
   $ hg revert --all -q
@@ -180,6 +182,8 @@ force a conflicted merge to occur
 
   $ hg unshelve
   unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
   merging a/a
   warning: conflicts during merge.
   merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -363,6 +367,8 @@ if we resolve a conflict while unshelving, the unshelve should succeed
 
   $ HGMERGE=true hg unshelve
   unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
   merging a/a
   $ hg parents -q
   4:33f7f61e6c5e
@@ -436,6 +442,7 @@ shelve should leave dirstate clean (issue 4055)
   saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-backup.hg (glob)
   $ hg unshelve
   unshelving change 'default'
+  rebasing shelved changes
   $ hg status
   M z
 
@@ -461,6 +468,7 @@ shelve should only unshelve pending changes (issue 4068)
   $ hg up -q 1
   $ hg unshelve
   unshelving change 'default'
+  rebasing shelved changes
   $ hg status
   A d
 
@@ -473,6 +481,7 @@ unshelve should work on an ancestor of the original commit
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg unshelve
   unshelving change 'default'
+  rebasing shelved changes
   $ hg status
   A d
 

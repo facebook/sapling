@@ -537,6 +537,8 @@ def unshelve(ui, repo, *shelved, **opts):
         # Store pending changes in a commit
         m, a, r, d = repo.status()[:4]
         if m or a or r or d:
+            ui.status(_("temporarily committing pending changes "
+                        "(restore with 'hg unshelve --abort')\n"))
             def commitfunc(ui, repo, message, match, opts):
                 hasmq = util.safehasattr(repo, 'mq')
                 if hasmq:
@@ -572,6 +574,7 @@ def unshelve(ui, repo, *shelved, **opts):
         # If the shelve is not immediately on top of the commit
         # we'll be merging with, rebase it to be on top.
         if tmpwctx.node() != shelvectx.parents()[0].node():
+            ui.status(_('rebasing shelved changes\n'))
             try:
                 rebase.rebase(ui, repo, **{
                     'rev' : [shelvectx.rev()],
