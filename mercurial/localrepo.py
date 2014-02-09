@@ -1761,9 +1761,9 @@ class localrepository(object):
             for node in nodes:
                 self.ui.debug("%s\n" % hex(node))
 
-    def changegroupsubset(self, bases, heads, source):
+    def changegroupsubset(self, roots, heads, source):
         """Compute a changegroup consisting of all the nodes that are
-        descendants of any of the bases and ancestors of any of the heads.
+        descendants of any of the roots and ancestors of any of the heads.
         Return a chunkbuffer object whose read() method will return
         successive changegroup chunks.
 
@@ -1775,12 +1775,12 @@ class localrepository(object):
         the changegroup a particular filenode or manifestnode belongs to.
         """
         cl = self.changelog
-        if not bases:
-            bases = [nullid]
+        if not roots:
+            roots = [nullid]
         # TODO: remove call to nodesbetween.
-        csets, bases, heads = cl.nodesbetween(bases, heads)
+        csets, roots, heads = cl.nodesbetween(roots, heads)
         discbases = []
-        for n in bases:
+        for n in roots:
             discbases.extend([p for p in cl.parents(n) if p != nullid])
         outgoing = discovery.outgoing(cl, discbases, heads)
         bundler = changegroup.bundle10(self)
