@@ -343,7 +343,12 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 else:
                     actions.append((f, "g", (fl2,), "remote created"))
         elif n2 and n2 != ma[f]:
-            prompts.append((f, "dc")) # prompt deleted/changed
+            different = _checkunknownfile(repo, wctx, p2, f)
+            if not force and different:
+                aborts.append((f, "ud"))
+            else:
+                # if different: old untracked f may be overwritten and lost
+                prompts.append((f, "dc")) # prompt deleted/changed
 
     for f, m in sorted(aborts):
         if m == "ud":
