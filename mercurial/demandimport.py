@@ -162,6 +162,9 @@ ignore = [
     'mimetools',
     ]
 
+def isenabled():
+    return __builtin__.__import__ == _demandimport
+
 def enable():
     "enable global demand-loading of modules"
     __builtin__.__import__ = _demandimport
