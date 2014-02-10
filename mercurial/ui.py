@@ -8,6 +8,7 @@
 from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
 import config, scmutil, util, error, formatter
+from node import hex
 
 class ui(object):
     def __init__(self, src=None):
@@ -723,6 +724,8 @@ class ui(object):
             f.close()
 
             environ = {'HGUSER': user}
+            if 'transplant_source' in extra:
+                environ.update({'HGREVISION': hex(extra['transplant_source'])})
             for label in ('source', 'rebase_source'):
                 if label in extra:
                     environ.update({'HGREVISION': extra[label]})
