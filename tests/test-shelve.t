@@ -565,7 +565,7 @@ unshelve and conflicts with untracked files
   $ hg shelve
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg log -G --template '{rev}  {desc|firstline}  {author}' -R bundle:.hg/shelved/default.hg -r 'bundle()'
+  $ hg log -G --template '{rev}  {desc|firstline}  {author}' -R bundle://.hg/shelved/default.hg -r 'bundle()'
   o  4  changes to 'commit stuff'  shelve@localhost
   |
   $ hg log -G --template '{rev}  {desc|firstline}  {author}'
