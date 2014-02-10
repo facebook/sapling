@@ -51,23 +51,26 @@ def _revancestors(repo, revs, followfirst):
 def _revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
     cut = followfirst and 1 or None
-    cl = repo.changelog
-    first = min(revs)
-    nullrev = node.nullrev
-    if first == nullrev:
-        # Are there nodes with a null first parent and a non-null
-        # second one? Maybe. Do we care? Probably not.
-        for i in cl:
-            yield i
-        return
 
-    seen = set(revs)
-    for i in cl.revs(first + 1):
-        for x in cl.parentrevs(i)[:cut]:
-            if x != nullrev and x in seen:
-                seen.add(i)
+    def iterate():
+        cl = repo.changelog
+        first = min(revs)
+        nullrev = node.nullrev
+        if first == nullrev:
+            # Are there nodes with a null first parent and a non-null
+            # second one? Maybe. Do we care? Probably not.
+            for i in cl:
                 yield i
-                break
+        else:
+            seen = set(revs)
+            for i in cl.revs(first + 1):
+                for x in cl.parentrevs(i)[:cut]:
+                    if x != nullrev and x in seen:
+                        seen.add(i)
+                        yield i
+                        break
+
+    return ascgeneratorset(iterate())
 
 def _revsbetween(repo, roots, heads):
     """Return all paths between roots and heads, inclusive of both endpoint
@@ -641,8 +644,9 @@ def _descendants(repo, subset, x, followfirst=False):
     args = getset(repo, spanset(repo), x)
     if not args:
         return baseset([])
-    s = set(_revdescendants(repo, args, followfirst)) | set(args)
-    return subset & s
+    s = _revdescendants(repo, args, followfirst)
+    a = set(args)
+    return subset.filter(lambda r: r in s or r in a)
 
 def descendants(repo, subset, x):
     """``descendants(set)``
