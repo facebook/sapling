@@ -2166,21 +2166,33 @@ class spanset(object):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
     """
-    def __init__(self, start, end):
+    def __init__(self, start, end, hiddenrevs=set()):
         self._start = start
         self._end = end
+        self._hiddenrevs = hiddenrevs
+
+    def _contained(self, rev):
+        return (rev <= self._start and rev > self._end) or (rev >= self._start
+                and rev < self._end)
 
     def __iter__(self):
         if self._start <= self._end:
-            for r in xrange(self._start, self._end):
-                yield r
+            iterrange = xrange(self._start, self._end)
         else:
-            for r in xrange(self._start, self._end, -1):
+            iterrange = xrange(self._start, self._end, -1)
+
+        if self._hiddenrevs:
+            s = self._hiddenrevs
+            for r in iterrange:
+                if r not in s:
+                    yield r
+        else:
+            for r in iterrange:
                 yield r
 
     def __contains__(self, x):
-        return (x <= self._start and x > self._end) or (x >= self._start and x<
-                self._end)
+        return self._contained(x) and not (self._hiddenrevs and rev in
+                self._hiddenrevs)
 
     def __and__(self, x):
         return lazyset(self, lambda r: r in x)
@@ -2193,7 +2205,14 @@ class spanset(object):
         return l + baseset(x)
 
     def __len__(self):
-        return abs(self._end - self._start)
+        if not self._hiddenrevs:
+            return abs(self._end - self._start)
+        else:
+            count = 0
+            for rev in self._hiddenrevs:
+                if self._contained(rev):
+                    count += 1
+            return abs(self._end - self._start) - count
 
     def __getitem__(self, x):
         # Basic implementation to be changed in future patches.
