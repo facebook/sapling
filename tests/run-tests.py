@@ -800,7 +800,7 @@ def tsttest(test, wd, options, replacements, env):
                     r = False
                 elif r == '-glob':
                     log('\ninfo, unnecessary glob in %s (after line %d):'
-                        ' %s (glob)\n' % (test, pos, el[-1]))
+                        ' %s (glob)\n' % (test, pos, el[:-1]))
                     r = True # pass on unnecessary glob
                 else:
                     log('\ninfo, unknown linematch result: %r\n' % r)
