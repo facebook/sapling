@@ -218,7 +218,7 @@ def wraprepo(repo):
                         fnode = ctx.filenode(fname)
                         files.append((fname, hex(fnode)))
 
-            fileserverclient.client.prefetch(repo, files)
+            repo.fileservice.prefetch(files)
 
         return (lookup, modified, added, removed, deleted, unknown, \
                 ignored, clean)
@@ -228,6 +228,7 @@ def wraprepo(repo):
     repo.__class__ = shallowrepository
 
     repo.shallowmatch = match.always(repo.root, '')
+    repo.fileservice = fileserverclient.fileserverclient(repo)
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
     repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)

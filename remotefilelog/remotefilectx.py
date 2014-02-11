@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial import revlog, mdiff, filelog, context, util, error, ancestor
@@ -181,7 +180,7 @@ class remotefilectx(context.filectx):
         for ancestor in ancestors:
             fetch.append((ancestor.path(), hex(ancestor.filenode())))
 
-        fileserverclient.client.prefetch(self._repo, fetch)
+        self._repo.fileservice.prefetch(fetch)
 
         return super(remotefilectx, self).annotate(follow, linenumber, diffopts)
 

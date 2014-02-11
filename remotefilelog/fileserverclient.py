@@ -17,8 +17,6 @@ fetchmisses = 0
 
 _downloading = _('downloading')
 
-client = None
-
 def makedirs(root, path, owner):
     os.makedirs(path)
 
@@ -90,7 +88,9 @@ class cacheconnection(object):
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
-    def __init__(self, ui):
+    def __init__(self, repo):
+        ui = repo.ui
+        self.repo = repo
         self.ui = ui
         self.cachepath = ui.config("remotefilelog", "cachepath")
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
@@ -112,7 +112,7 @@ class fileserverclient(object):
             finally:
                 os.umask(oldumask)
 
-    def request(self, repo, fileids):
+    def request(self, fileids):
         """Takes a list of filename/node pairs and fetches them from the
         server. Files are stored in the self.cachepath.
         A list of nodes that the server couldn't find is returned.
@@ -122,6 +122,7 @@ class fileserverclient(object):
             self.connect()
         cache = self.remotecache
 
+        repo = self.repo
         count = len(fileids)
         request = "get\n%d\n" % count
         idmap = {}
@@ -295,9 +296,10 @@ class fileserverclient(object):
         if self.remotecache.connected:
             self.remotecache.close()
 
-    def prefetch(self, repo, fileids, force=False):
+    def prefetch(self, fileids, force=False):
         """downloads the given file versions to the cache
         """
+        repo = self.repo
         storepath = repo.sopener.vfs.base
         reponame = repo.name
         missingids = []
@@ -325,7 +327,7 @@ class fileserverclient(object):
             fetches += 1
             fetched += len(missingids)
             start = time.time()
-            missingids = self.request(repo, missingids)
+            missingids = self.request(missingids)
             if missingids:
                 raise util.Abort(_("unable to download %d files") % len(missingids))
             fetchcost += time.time() - start

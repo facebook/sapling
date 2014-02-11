@@ -258,7 +258,7 @@ class remotefilelog(object):
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""
         cachekey = fileserverclient.getcachekey(self.repo.name, self.filename, id)
-        cachepath = os.path.join(fileserverclient.client.cachepath, cachekey)
+        cachepath = os.path.join(self.repo.fileservice.cachepath, cachekey)
         try:
             return _readfile(cachepath)
         except IOError:
@@ -271,7 +271,7 @@ class remotefilelog(object):
         except IOError:
             pass
 
-        fileserverclient.client.prefetch(self.repo, [(self.filename, id)])
+        self.repo.fileservice.prefetch([(self.filename, id)])
         try:
             return _readfile(cachepath)
         except IOError:
@@ -298,7 +298,7 @@ class remotefilelog(object):
         reponame = self.repo.name
         for i in range(0,2):
             cachekey = fileserverclient.getcachekey(reponame, self.filename, hexnode)
-            cachepath = os.path.join(fileserverclient.client.cachepath, cachekey)
+            cachepath = os.path.join(self.repo.fileservice.cachepath, cachekey)
             mapping = self._ancestormap(node, cachepath, relativeto)
             if mapping:
                 return mapping
@@ -327,8 +327,8 @@ class remotefilelog(object):
                 pass
 
             # Fallback to the server cache
-            fileserverclient.client.prefetch(self.repo,
-                [(self.filename, hexnode)], force=True)
+            self.repo.fileservice.prefetch([(self.filename, hexnode)],
+                force=True)
             mapping = self._ancestormap(node, cachepath, relativeto)
             if mapping:
                 return mapping
@@ -375,7 +375,7 @@ class remotefilelog(object):
                 common = cl.ancestor(linknode, relativeto)
                 if common != linknode:
                     # Invalid key, unless it's from the server
-                    return path.startswith(fileserverclient.client.cachepath)
+                    return path.startswith(self.repo.fileservice.cachepath)
 
             # Also check that the linknodes actually exist.
             while queue:

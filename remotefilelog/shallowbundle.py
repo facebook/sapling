@@ -110,7 +110,7 @@ class shallowbundle(changegroup.bundle10):
                         else:
                             files.append((fname, hex(fnode)))
 
-                fileserverclient.client.prefetch(repo, files)
+                repo.fileservice.prefetch(files)
 
                 # Prefetch the revisions that are going to be diffed against
                 prevfiles = []
@@ -123,7 +123,7 @@ class shallowbundle(changegroup.bundle10):
                         if p1 != nullid:
                             prevfiles.append((copyfrom or fname, hex(p1)))
 
-                fileserverclient.client.prefetch(repo, prevfiles)
+                repo.fileservice.prefetch(prevfiles)
 
         return super(shallowbundle, self).generatefiles(changedfiles,
                      linknodes, commonrevs, source)

@@ -55,7 +55,9 @@ def uisetup(ui):
 
 def cloneshallow(orig, ui, repo, *args, **opts):
     if opts.get('shallow'):
+        repos = []
         def stream_in_shallow(orig, self, remote, requirements):
+            repos.append(self.unfiltered())
             # set up the client hooks so the post-clone update works
             setupclient(self.ui, self.unfiltered())
 
@@ -87,8 +89,9 @@ def cloneshallow(orig, ui, repo, *args, **opts):
     try:
         orig(ui, repo, *args, **opts)
     finally:
-        if opts.get('shallow') and fileserverclient.client:
-            fileserverclient.client.close()
+        if opts.get('shallow'):
+            for r in repos:
+                r.fileservice.close()
 
 def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
@@ -126,8 +129,6 @@ def onetimeclientsetup(ui):
         return
     clientonetime = True
 
-    fileserverclient.client = fileserverclient.fileserverclient(ui)
-
     changegroup.bundle10 = shallowbundle.shallowbundle
 
     def storewrapper(orig, requirements, path, vfstype):
@@ -146,7 +147,7 @@ def onetimeclientsetup(ui):
             for f, m, args, msg in [a for a in actions if a[1] == 'g']:
                 files.append((f, hex(manifest[f])))
             # batch fetch the needed files from the server
-            fileserverclient.client.prefetch(repo, files)
+            repo.fileservice.prefetch(files)
         return orig(repo, actions, wctx, mctx, actx, overwrite)
     wrapfunction(merge, 'applyupdates', applyupdates)
 
@@ -170,7 +171,7 @@ def onetimeclientsetup(ui):
                 files.append((f, hex(m2[f])))
 
             # batch fetch the needed files from the server
-            fileserverclient.client.prefetch(repo, files)
+            repo.fileservice.prefetch(files)
         return orig(repo, c1, c2, ca)
     wrapfunction(copies, 'mergecopies', mergecopies)
 
@@ -187,16 +188,16 @@ def onetimeclientsetup(ui):
                 files.append((f, hex(mb[f])))
 
             # batch fetch the needed files from the server
-            fileserverclient.client.prefetch(repo, files)
+            repo.fileservice.prefetch(files)
         return orig(a, b)
     wrapfunction(copies, '_forwardcopies', forwardcopies)
 
     # close cache miss server connection after the command has finished
-    def runcommand(orig, *args, **kwargs):
+    def runcommand(orig, lui, repo, *args, **kwargs):
         try:
-            return orig(*args, **kwargs)
+            return orig(lui, repo, *args, **kwargs)
         finally:
-            fileserverclient.client.close()
+            repo.fileservice.close()
     wrapfunction(dispatch, 'runcommand', runcommand)
 
     # disappointing hacks below
@@ -276,7 +277,7 @@ def onetimeclientsetup(ui):
                     if fnode:
                         prefetch.append((fname, hex(fnode)))
 
-            fileserverclient.client.prefetch(repo, prefetch)
+            repo.fileservice.prefetch(prefetch)
 
         return orig(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix)
@@ -560,7 +561,7 @@ def revert(orig, ui, repo, ctx, parents, *pats, **opts):
         m.bad = lambda x, y: False
         for path in ctx.walk(m):
             files.append((path, hex(mf[path])))
-        fileserverclient.client.prefetch(repo, files)
+        repo.fileservice.prefetch(files)
 
     return orig(ui, repo, ctx, parents, *pats, **opts)
 
@@ -627,4 +628,4 @@ def prefetch(ui, repo, *pats, **opts):
 
         visited.add(rev)
 
-    fileserverclient.client.prefetch(repo, files)
+    repo.fileservice.prefetch(files)
