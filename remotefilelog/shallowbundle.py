@@ -133,7 +133,7 @@ class shallowbundle(changegroup.bundle10):
         if not "remotefilelog" in repo.requirements:
             return AllFiles
 
-        if source == "push":
+        if source == "push" or source == "bundle":
             return AllFiles
 
         caps = self._bundlecaps or []

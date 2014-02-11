@@ -117,3 +117,33 @@
   $ clearcache
   $ hg revert -r .~2 y z
   3 files fetched over 2 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  $ hg checkout -C -r . -q
+
+# explicit bundle should produce full bundle file
+
+  $ hg bundle -r 2 --base 1 ../local.bundle
+  1 changesets found
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.10s
+  $ cd ..
+
+  $ hgcloneshallow ssh://user@dummy/master shallow2 -q
+  $ cd shallow2
+  $ hg unbundle ../local.bundle
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 3 changes to 3 files
+  (run 'hg update' to get a working copy)
+
+  $ hg log -r 2 --stat
+  changeset:   2:19edf50f4de7
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+   a |  1 +
+   x |  2 +-
+   y |  2 +-
+   3 files changed, 3 insertions(+), 2 deletions(-)
+  
