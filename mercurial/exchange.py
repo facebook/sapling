@@ -399,6 +399,8 @@ class pulloperation(object):
         self.common = None
         # set of pulled head
         self.rheads = None
+        # list of missing changeset to fetch remotly
+        self.fetch = None
 
     @util.propertycache
     def pulledsubset(self):
@@ -445,8 +447,8 @@ def pull(repo, remote, heads=None, force=False):
                                            pullop.remote,
                                            heads=pullop.heads,
                                            force=force)
-        pullop.common, fetch, pullop.rheads = tmp
-        if not fetch:
+        pullop.common, pullop.fetch, pullop.rheads = tmp
+        if not pullop.fetch:
             pullop.repo.ui.status(_("no changes found\n"))
             result = 0
         else:
@@ -468,13 +470,14 @@ def pull(repo, remote, heads=None, force=False):
                                              heads=(pullop.heads
                                                    or pullop.rheads))
             elif pullop.heads is None:
-                cg = pullop.remote.changegroup(fetch, 'pull')
+                cg = pullop.remote.changegroup(pullop.fetch, 'pull')
             elif not pullop.remote.capable('changegroupsubset'):
                 raise util.Abort(_("partial pull cannot be done because "
                                        "other repository doesn't support "
                                        "changegroupsubset."))
             else:
-                cg = pullop.remote.changegroupsubset(fetch, pullop.heads,
+                cg = pullop.remote.changegroupsubset(pullop.fetch,
+                                                     pullop.heads,
                                                      'pull')
             result = pullop.repo.addchangegroup(cg, 'pull',
                                                 pullop.remote.url())
