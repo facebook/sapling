@@ -670,7 +670,8 @@ def revsettransplanted(repo, subset, x):
         s = revset.getset(repo, subset, x)
     else:
         s = subset
-    return [r for r in s if repo[r].extra().get('transplant_source')]
+    return revset.baseset([r for r in s if
+        repo[r].extra().get('transplant_source')])
 
 def kwtransplanted(repo, ctx, **args):
     """:transplanted: String. The node identifier of the transplanted

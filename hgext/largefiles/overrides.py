@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
-    node, archival, error, merge, discovery, pathutil
+        node, archival, error, merge, discovery, pathutil, revset
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
@@ -752,7 +752,7 @@ def pulledrevsetsymbol(repo, subset, x):
         firstpulled = repo.firstpulled
     except AttributeError:
         raise util.Abort(_("pulled() only available in --lfrev"))
-    return [r for r in subset if r >= firstpulled]
+    return revset.baseset([r for r in subset if r >= firstpulled])
 
 def overrideclone(orig, ui, source, dest=None, **opts):
     d = dest
