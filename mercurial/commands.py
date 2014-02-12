@@ -2227,14 +2227,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
             l.release()
     else:
         for m in obsolete.allmarkers(repo):
-            ui.write(hex(m.precnode()))
-            for repl in m.succnodes():
-                ui.write(' ')
-                ui.write(hex(repl))
-            ui.write(' %X ' % m._data[2])
-            ui.write('{%s}' % (', '.join('%r: %r' % t for t in
-                                         sorted(m.metadata().items()))))
-            ui.write('\n')
+            cmdutil.showmarker(ui, m)
 
 @command('debugpathcomplete',
          [('f', 'full', None, _('complete an entire path')),

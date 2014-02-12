@@ -974,6 +974,19 @@ def show_changeset(ui, repo, opts, buffered=False):
         t.use_template(tmpl)
     return t
 
+def showmarker(ui, marker):
+    """utility function to display obsolescence marker in a readable way
+
+    To be used by debug function."""
+    ui.write(hex(marker.precnode()))
+    for repl in marker.succnodes():
+        ui.write(' ')
+        ui.write(hex(repl))
+    ui.write(' %X ' % marker._data[2])
+    ui.write('{%s}' % (', '.join('%r: %r' % t for t in
+                                 sorted(marker.metadata().items()))))
+    ui.write('\n')
+
 def finddate(ui, repo, date):
     """Find the tipmost changeset that matches the given date spec"""
 
