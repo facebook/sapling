@@ -2129,5 +2129,25 @@ class lazyset(object):
     def set(self):
         return set([r for r in self])
 
+class spanset(object):
+    """Duck type for baseset class which represents a range of revisions and
+    can work lazily and without having all the range in memory
+    """
+    def __init__(self, start, end):
+        self._start = start
+        self._end = end
+
+    def __iter__(self):
+        if self._start <= self._end:
+            for r in xrange(self._start, self._end):
+                yield r
+        else:
+            for r in xrange(self._start, self._end, -1):
+                yield r
+
+    def __contains__(self, x):
+        return (x <= self._start and x > self._end) or (x >= self._start and x<
+                self._end)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
