@@ -1676,3 +1676,10 @@ Test revset function
   Rev: 0
   Ancestor: 0
   
+Test current bookmark templating
+
+  $ hg book foo
+  $ hg book bar
+  $ hg log --template "{rev} {bookmarks % '{bookmark}{ifeq(bookmark, current, \"*\")} '}\n"
+  1 bar* foo 
+  0 

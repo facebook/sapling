@@ -195,8 +195,12 @@ def showbookmarks(**args):
     """:bookmarks: List of strings. Any bookmarks associated with the
     changeset.
     """
+    repo = args['ctx']._repo
     bookmarks = args['ctx'].bookmarks()
-    return showlist('bookmark', bookmarks, **args)
+    hybrid = showlist('bookmark', bookmarks, **args)
+    for value in hybrid.values:
+        value['current'] = repo._bookmarkcurrent
+    return hybrid
 
 def showchildren(**args):
     """:children: List of strings. The children of the changeset."""
