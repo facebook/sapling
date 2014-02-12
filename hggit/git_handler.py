@@ -529,7 +529,7 @@ class GitHandler(object):
             part = ctx
             while is_octopus_part(part):
                 (p1, p2) = part.parents()
-                assert not is_octopus_part(p1)
+                assert ctx.extra().get('hg-git', None) != 'octopus'
                 parents.append(p1)
                 part = p2
             parents.append(p2)
