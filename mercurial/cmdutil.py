@@ -542,6 +542,131 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     if runfn:
         return runfn()
 
+def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
+    """Utility function used by commands.import to import a single patch
+
+    This function is explicitly defined here to help the evolve extension to
+    wrap this part of the import logic.
+
+    The API is currently a bit ugly because it a simple code translation from
+    the import command. Feel free to make it better.
+
+    :hunk: a patch (as a binary string)
+    :parents: nodes that will be parent of the created commit
+    :opts: the full dict of option passed to the import command
+    :msgs: list to save commit message to.
+           (used in case we need to save it when failing)
+    :updatefunc: a function that update a repo to a given node
+                 updatefunc(<repo>, <node>)
+    """
+    tmpname, message, user, date, branch, nodeid, p1, p2 = \
+        patch.extract(ui, hunk)
+
+    editor = commiteditor
+    if opts.get('edit'):
+        editor = commitforceeditor
+    update = not opts.get('bypass')
+    strip = opts["strip"]
+    sim = float(opts.get('similarity') or 0)
+    if not tmpname:
+        return (None, None)
+    msg = _('applied to working directory')
+
+    try:
+        cmdline_message = logmessage(ui, opts)
+        if cmdline_message:
+            # pickup the cmdline msg
+            message = cmdline_message
+        elif message:
+            # pickup the patch msg
+            message = message.strip()
+        else:
+            # launch the editor
+            message = None
+        ui.debug('message:\n%s\n' % message)
+
+        if len(parents) == 1:
+            parents.append(repo[nullid])
+        if opts.get('exact'):
+            if not nodeid or not p1:
+                raise util.Abort(_('not a Mercurial patch'))
+            p1 = repo[p1]
+            p2 = repo[p2 or nullid]
+        elif p2:
+            try:
+                p1 = repo[p1]
+                p2 = repo[p2]
+                # Without any options, consider p2 only if the
+                # patch is being applied on top of the recorded
+                # first parent.
+                if p1 != parents[0]:
+                    p1 = parents[0]
+                    p2 = repo[nullid]
+            except error.RepoError:
+                p1, p2 = parents
+        else:
+            p1, p2 = parents
+
+        n = None
+        if update:
+            if p1 != parents[0]:
+                updatefunc(repo, p1.node())
+            if p2 != parents[1]:
+                repo.setparents(p1.node(), p2.node())
+
+            if opts.get('exact') or opts.get('import_branch'):
+                repo.dirstate.setbranch(branch or 'default')
+
+            files = set()
+            patch.patch(ui, repo, tmpname, strip=strip, files=files,
+                        eolmode=None, similarity=sim / 100.0)
+            files = list(files)
+            if opts.get('no_commit'):
+                if message:
+                    msgs.append(message)
+            else:
+                if opts.get('exact') or p2:
+                    # If you got here, you either use --force and know what
+                    # you are doing or used --exact or a merge patch while
+                    # being updated to its first parent.
+                    m = None
+                else:
+                    m = scmutil.matchfiles(repo, files or [])
+                n = repo.commit(message, opts.get('user') or user,
+                                opts.get('date') or date, match=m,
+                                editor=editor)
+        else:
+            if opts.get('exact') or opts.get('import_branch'):
+                branch = branch or 'default'
+            else:
+                branch = p1.branch()
+            store = patch.filestore()
+            try:
+                files = set()
+                try:
+                    patch.patchrepo(ui, repo, p1, store, tmpname, strip,
+                                    files, eolmode=None)
+                except patch.PatchError, e:
+                    raise util.Abort(str(e))
+                memctx = context.makememctx(repo, (p1.node(), p2.node()),
+                                            message,
+                                            opts.get('user') or user,
+                                            opts.get('date') or date,
+                                            branch, files, store,
+                                            editor=commiteditor)
+                repo.savecommitmessage(memctx.description())
+                n = memctx.commit()
+            finally:
+                store.close()
+        if opts.get('exact') and hex(n) != nodeid:
+            raise util.Abort(_('patch is damaged or loses information'))
+        if n:
+            # i18n: refers to a short changeset id
+            msg = _('created %s') % short(n)
+        return (msg, n)
+    finally:
+        os.unlink(tmpname)
+
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None):
     '''export changesets as hg patches.'''
