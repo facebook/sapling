@@ -92,35 +92,22 @@ class fileserverclient(object):
         ui = repo.ui
         self.repo = repo
         self.ui = ui
-        self.cachepath = ui.config("remotefilelog", "cachepath")
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
+        self.localcache = localcache(repo)
         self.remotecache = cacheconnection()
-
-        if not os.path.exists(self.cachepath):
-            oldumask = os.umask(0o002)
-            try:
-                os.makedirs(self.cachepath)
-
-                groupname = ui.config("remotefilelog", "cachegroup")
-                if groupname:
-                    gid = grp.getgrnam(groupname).gr_gid
-                    if gid:
-                        os.chown(self.cachepath, os.getuid(), gid)
-                        os.chmod(self.cachepath, 0o2775)
-            finally:
-                os.umask(oldumask)
 
     def request(self, fileids):
         """Takes a list of filename/node pairs and fetches them from the
-        server. Files are stored in the self.cachepath.
+        server. Files are stored in the local cache.
         A list of nodes that the server couldn't find is returned.
         If the connection fails, an exception is raised.
         """
         if not self.remotecache.connected:
             self.connect()
         cache = self.remotecache
+        localcache = self.localcache
 
         repo = self.repo
         count = len(fileids)
@@ -170,7 +157,6 @@ class fileserverclient(object):
         count = total - len(missed)
         self.ui.progress(_downloading, count, total=total)
 
-        uid = os.getuid()
         oldumask = os.umask(0o002)
         try:
             # receive cache misses from master
@@ -203,7 +189,7 @@ class fileserverclient(object):
 
                     # receive batch results
                     for j in range(start, end):
-                        self.receivemissing(remote.pipei, missed[j], uid)
+                        self.receivemissing(remote.pipei, missed[j])
                         count += 1
                         self.ui.progress(_downloading, count, total=total)
 
@@ -218,19 +204,13 @@ class fileserverclient(object):
             self.ui.progress(_downloading, None)
 
             # mark ourselves as a user of this cache
-            repospath = os.path.join(self.cachepath, "repos")
-            reposfile = open(repospath, 'a')
-            reposfile.write(os.path.dirname(repo.path) + "\n")
-            reposfile.close()
-            stat = os.stat(repospath)
-            if stat.st_uid == uid:
-                os.chmod(repospath, 0o0664)
+            localcache.markrepo()
         finally:
             os.umask(oldumask)
 
         return missing
 
-    def receivemissing(self, pipe, missingid, uid):
+    def receivemissing(self, pipe, missingid):
         line = pipe.readline()[:-1]
         if not line:
             raise error.ResponseError(_("error downloading file " +
@@ -238,23 +218,11 @@ class fileserverclient(object):
         size = int(line)
         data = pipe.read(size)
 
-        idcachepath = os.path.join(self.cachepath, missingid)
-        dirpath = os.path.dirname(idcachepath)
-        if not os.path.exists(dirpath):
-            makedirs(self.cachepath, dirpath, uid)
-        f = open(idcachepath, "w")
-        try:
-            f.write(lz4.decompress(data))
-        finally:
-            f.close()
-
-        stat = os.stat(idcachepath)
-        if stat.st_uid == uid:
-            os.chmod(idcachepath, 0o0664)
+        self.localcache.write(missingid, lz4.decompress(data))
 
     def connect(self):
         if self.cacheprocess:
-            cmd = "%s %s" % (self.cacheprocess, self.cachepath)
+            cmd = "%s %s" % (self.cacheprocess, self.localcache.cachepath)
             self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always
@@ -300,6 +268,7 @@ class fileserverclient(object):
         """downloads the given file versions to the cache
         """
         repo = self.repo
+        localcache = self.localcache
         storepath = repo.sopener.vfs.base
         reponame = repo.name
         missingids = []
@@ -313,9 +282,8 @@ class fileserverclient(object):
 
             cachekey = getcachekey(reponame, file, id)
             localkey = getlocalkey(file, id)
-            idcachepath = os.path.join(self.cachepath, cachekey)
             idlocalpath = os.path.join(storepath, 'data', localkey)
-            if os.path.exists(idcachepath):
+            if cachekey in localcache:
                 continue
             if not force and os.path.exists(idlocalpath):
                 continue
@@ -331,3 +299,121 @@ class fileserverclient(object):
             if missingids:
                 raise util.Abort(_("unable to download %d files") % len(missingids))
             fetchcost += time.time() - start
+
+class localcache(object):
+    def __init__(self, repo):
+        self.ui = repo.ui
+        self.repo = repo
+        self.cachepath = self.ui.config("remotefilelog", "cachepath")
+        self.uid = os.getuid()
+
+        if not os.path.exists(self.cachepath):
+            oldumask = os.umask(0o002)
+            try:
+                os.makedirs(self.cachepath)
+
+                groupname = self.ui.config("remotefilelog", "cachegroup")
+                if groupname:
+                    gid = grp.getgrnam(groupname).gr_gid
+                    if gid:
+                        os.chown(self.cachepath, os.getuid(), gid)
+                        os.chmod(self.cachepath, 0o2775)
+            finally:
+                os.umask(oldumask)
+
+    def __contains__(self, key):
+        path = os.path.join(self.cachepath, key)
+        return os.path.exists(path)
+
+    def write(self, key, data):
+        path = os.path.join(self.cachepath, key)
+        dirpath = os.path.dirname(path)
+        if not os.path.exists(dirpath):
+            makedirs(self.cachepath, dirpath, self.uid)
+
+        with open(path, "w") as f:
+            f.write(data)
+
+        stat = os.stat(path)
+        if stat.st_uid == self.uid:
+            os.chmod(path, 0o0664)
+
+    def read(self, key):
+        try:
+            path = os.path.join(self.cachepath, key)
+            with open(path, "r") as f:
+                result = f.read()
+
+            # we should never have empty files
+            if not result:
+                os.remove(path)
+                raise KeyError("empty local cache file")
+
+            return result
+        except IOError:
+            raise KeyError("key not in local cache")
+
+    def markrepo(self):
+        repospath = os.path.join(self.cachepath, "repos")
+        with open(repospath, 'a') as reposfile:
+            reposfile.write(os.path.dirname(self.repo.path) + "\n")
+
+        stat = os.stat(repospath)
+        if stat.st_uid == self.uid:
+            os.chmod(repospath, 0o0664)
+
+    def gc(self, keepkeys):
+        ui = self.ui
+        cachepath = self.cachepath
+        _removing = _("removing unnecessary files")
+        _truncating = _("enforcing cache limit")
+
+        # prune cache
+        import Queue
+        queue = Queue.PriorityQueue()
+        originalsize = 0
+        size = 0
+        count = 0
+        removed = 0
+
+        # keep files newer than a day even if they aren't needed
+        limit = time.time() - (60 * 60 * 24)
+
+        ui.progress(_removing, count, unit="files")
+        for root, dirs, files in os.walk(cachepath):
+            for file in files:
+                if file == 'repos':
+                    continue
+
+                ui.progress(_removing, count, unit="files")
+                path = os.path.join(root, file)
+                key = os.path.relpath(path, cachepath)
+                count += 1
+                stat = os.stat(path)
+                originalsize += stat.st_size
+
+                if key in keepkeys or stat.st_atime > limit:
+                    queue.put((stat.st_atime, path, stat))
+                    size += stat.st_size
+                else:
+                    os.remove(path)
+                    removed += 1
+        ui.progress(_removing, None)
+
+        # remove oldest files until under limit
+        limit = ui.configbytes("remotefilelog", "cachelimit", "1000 GB")
+        if size > limit:
+            excess = size - limit
+            removedexcess = 0
+            while queue and size > limit and size > 0:
+                ui.progress(_truncating, removedexcess, unit="bytes", total=excess)
+                atime, oldpath, stat = queue.get()
+                os.remove(oldpath)
+                size -= stat.st_size
+                removed += 1
+                removedexcess += stat.st_size
+        ui.progress(_truncating, None)
+
+        ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
+                  (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
+                  float(size) / 1024.0 / 1024.0 / 1024.0))

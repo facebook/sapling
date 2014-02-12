@@ -257,11 +257,12 @@ class remotefilelog(object):
 
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""
+        fileservice = self.repo.fileservice
+        localcache = fileservice.localcache
         cachekey = fileserverclient.getcachekey(self.repo.name, self.filename, id)
-        cachepath = os.path.join(self.repo.fileservice.cachepath, cachekey)
         try:
-            return _readfile(cachepath)
-        except IOError:
+            return localcache.read(cachekey)
+        except KeyError:
             pass
 
         localkey = fileserverclient.getlocalkey(self.filename, id)
@@ -271,10 +272,10 @@ class remotefilelog(object):
         except IOError:
             pass
 
-        self.repo.fileservice.prefetch([(self.filename, id)])
+        fileservice.prefetch([(self.filename, id)])
         try:
-            return _readfile(cachepath)
-        except IOError:
+            return localcache.read(cachekey)
+        except KeyError:
             pass
 
         raise error.LookupError(id, self.filename, _('no node'))
@@ -295,19 +296,27 @@ class remotefilelog(object):
 
         hexnode = hex(node)
 
+        localcache = self.repo.fileservice.localcache
         reponame = self.repo.name
         for i in range(0,2):
             cachekey = fileserverclient.getcachekey(reponame, self.filename, hexnode)
-            cachepath = os.path.join(self.repo.fileservice.cachepath, cachekey)
-            mapping = self._ancestormap(node, cachepath, relativeto)
-            if mapping:
-                return mapping
+            try:
+                raw = localcache.read(cachekey)
+                mapping = self._ancestormap(node, raw, relativeto, fromserver=True)
+                if mapping:
+                    return mapping
+            except KeyError:
+                pass
 
             localkey = fileserverclient.getlocalkey(self.filename, hexnode)
             localpath = os.path.join(self.localpath, localkey)
-            mapping = self._ancestormap(node, localpath, relativeto)
-            if mapping:
-                return mapping
+            try:
+                raw = _readfile(localpath)
+                mapping = self._ancestormap(node, raw, relativeto)
+                if mapping:
+                    return mapping
+            except IOError:
+                pass
 
             # past versions may contain valid linknodes
             try:
@@ -319,9 +328,13 @@ class remotefilelog(object):
 
                 for alternate in alternates:
                     alternatepath = os.path.join(directory, alternate)
-                    mapping = self._ancestormap(node, alternatepath, relativeto)
-                    if mapping:
-                        return mapping
+                    try:
+                        raw = _readfile(alternatepath)
+                        mapping = self._ancestormap(node, raw, relativeto)
+                        if mapping:
+                            return mapping
+                    except IOError:
+                        pass
             except OSError:
                 # Directory doesn't exist. Oh well
                 pass
@@ -329,18 +342,17 @@ class remotefilelog(object):
             # Fallback to the server cache
             self.repo.fileservice.prefetch([(self.filename, hexnode)],
                 force=True)
-            mapping = self._ancestormap(node, cachepath, relativeto)
-            if mapping:
-                return mapping
+            try:
+                raw = localcache.read(cachekey)
+                mapping = self._ancestormap(node, raw, relativeto, fromserver=True)
+                if mapping:
+                    return mapping
+            except KeyError:
+                pass
 
         raise error.LookupError(node, self.filename, _('no valid file history'))
 
-    def _ancestormap(self, node, path, relativeto):
-        try:
-            raw = _readfile(path)
-        except IOError:
-            return None
-
+    def _ancestormap(self, node, raw, relativeto, fromserver=False):
         index = raw.index('\0')
         size = int(raw[:index])
         start = index + 1 + size
@@ -375,7 +387,7 @@ class remotefilelog(object):
                 common = cl.ancestor(linknode, relativeto)
                 if common != linknode:
                     # Invalid key, unless it's from the server
-                    return path.startswith(self.repo.fileservice.cachepath)
+                    return fromserver
 
             # Also check that the linknodes actually exist.
             while queue:

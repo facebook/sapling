@@ -448,11 +448,11 @@ def gcclient(ui, cachepath):
 
     # build list of useful files
     validrepos = []
-    keepfiles = set()
+    keepkeys = set()
 
     _analyzing = _("analyzing repositories")
-    _removing = _("removing unnecessary files")
-    _truncating = _("enforcing cache limit")
+
+    localcache = None
 
     count = 0
     for path in repos:
@@ -467,13 +467,15 @@ def gcclient(ui, cachepath):
         validrepos.append(path)
 
         reponame = peer._repo.name
+        if not localcache:
+            localcache = peer._repo.fileservice.localcache
         keep = peer._repo.revs("(parents(draft()) + heads(all())) & public()")
         for r in keep:
             m = peer._repo[r].manifest()
             for filename, filenode in m.iteritems():
                 key = fileserverclient.getcachekey(reponame, filename,
                     hex(filenode))
-                keepfiles.add(key)
+                keepkeys.add(key)
 
     ui.progress(_analyzing, None)
 
@@ -487,54 +489,7 @@ def gcclient(ui, cachepath):
         os.umask(oldumask)
 
     # prune cache
-    import Queue
-    queue = Queue.PriorityQueue()
-    originalsize = 0
-    size = 0
-    count = 0
-    removed = 0
-
-    # keep files newer than a day even if they aren't needed
-    limit = time.time() - (60 * 60 * 24)
-
-    ui.progress(_removing, count, unit="files")
-    for root, dirs, files in os.walk(cachepath):
-        for file in files:
-            if file == 'repos':
-                continue
-
-            ui.progress(_removing, count, unit="files")
-            path = os.path.join(root, file)
-            key = os.path.relpath(path, cachepath)
-            count += 1
-            stat = os.stat(path)
-            originalsize += stat.st_size
-
-            if key in keepfiles or stat.st_atime > limit:
-                queue.put((stat.st_atime, path, stat))
-                size += stat.st_size
-            else:
-                os.remove(path)
-                removed += 1
-    ui.progress(_removing, None)
-
-    # remove oldest files until under limit
-    limit = ui.configbytes("remotefilelog", "cachelimit", "1000 GB")
-    if size > limit:
-        excess = size - limit
-        removedexcess = 0
-        while queue and size > limit and size > 0:
-            ui.progress(_truncating, removedexcess, unit="bytes", total=excess)
-            atime, oldpath, stat = queue.get()
-            os.remove(oldpath)
-            size -= stat.st_size
-            removed += 1
-            removedexcess += stat.st_size
-    ui.progress(_truncating, None)
-
-    ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
-              (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
-              float(size) / 1024.0 / 1024.0 / 1024.0))
+    localcache.gc(keepkeys)
 
 def log(orig, ui, repo, *pats, **opts):
     if pats and not opts.get("follow"):
