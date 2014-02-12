@@ -499,7 +499,7 @@ def revrange(repo, revs):
         try:
             if isinstance(spec, int):
                 seen.add(spec)
-                l.append(spec)
+                l = l + [spec]
                 continue
 
             if _revrangesep in spec:
@@ -520,7 +520,7 @@ def revrange(repo, revs):
                     seen.update(newrevs)
                 else:
                     seen = newrevs
-                l.extend(sorted(newrevs, reverse=start > end))
+                l = l + sorted(newrevs, reverse=start > end)
                 continue
             elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
@@ -534,11 +534,14 @@ def revrange(repo, revs):
 
         # fall through to new-style queries if old-style fails
         m = revset.match(repo.ui, spec)
-        dl = [r for r in m(repo, revset.spanset(repo)) if r not in seen]
-        l.extend(dl)
-        seen.update(dl)
+        if seen or l:
+            dl = [r for r in m(repo, revset.spanset(repo)) if r not in seen]
+            l = l + dl
+            seen.update(dl)
+        else:
+            l = m(repo, revset.spanset(repo))
 
-    return revset.baseset(l)
+    return l
 
 def expandpats(pats):
     if not util.expandglobs:
