@@ -34,7 +34,7 @@ these may expose other cycles.
      relative:  discovery, error, hbisect, phases, util
   mercurial/templater.py mixed imports
      stdlib:    parser
-     relative:  config, error, templatefilters, util
+     relative:  config, error, templatefilters, templatekw, util
   mercurial/ui.py mixed imports
      stdlib:    formatter
      relative:  config, error, scmutil, util

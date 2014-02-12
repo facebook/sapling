@@ -1657,3 +1657,22 @@ Test ifcontains function
   $ hg log --template '{rev} {ifcontains("a", file_adds, "added a", "did not add a")}\n'
   1 did not add a
   0 added a
+
+Test revset function
+
+  $ hg log --template '{rev} {ifcontains(rev, revset("."), "current rev", "not current rev")}\n'
+  1 current rev
+  0 not current rev
+
+  $ hg log --template '{rev} Parents: {revset("parents(%s)", rev)}\n'
+  1 Parents: 0
+  0 Parents: 
+
+  $ hg log --template 'Rev: {rev}\n{revset("::%s", rev) % "Ancestor: {revision}\n"}\n'
+  Rev: 1
+  Ancestor: 0
+  Ancestor: 1
+  
+  Rev: 0
+  Ancestor: 0
+  
