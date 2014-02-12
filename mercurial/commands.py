@@ -3905,6 +3905,12 @@ def log(ui, repo, *pats, **opts):
     each commit. When the -v/--verbose switch is used, the list of
     changed files and full commit message are shown.
 
+    With --graph the revisions are shown as an ASCII art DAG with the most
+    recent changeset at the top.
+    'o' is a changeset, '@' is a working directory parent, 'x' is obsolete,
+    and '+' represents a fork where the changeset from the lines below is a
+    parent of the 'o' merge on the same same line.
+
     .. note::
 
        log -p/--patch may generate unexpected diff output for merge
