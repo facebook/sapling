@@ -282,7 +282,15 @@ class SubversionPrompt(object):
         else:
             msg += '(R)eject or accept (t)emporarily? '
             choices = (('&Reject'), ('&Temporarily'))
-        choice = self.ui.promptchoice(msg, choices, default=0)
+        try:
+            choice = self.ui.promptchoice(msg, choices, default=0)
+        except TypeError:
+            # mercurial version >2.6 use a different syntax and method signature
+            msg += '$$ &Reject $$ &Temporarily '
+            if may_save:
+                msg += '$$ &Permanently '
+            choice = self.ui.promptchoice(msg, default=0)
+
         if choice == 1:
             creds = (failures, False)
         elif may_save and choice == 2:
