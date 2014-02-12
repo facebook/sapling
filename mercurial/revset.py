@@ -2149,5 +2149,15 @@ class spanset(object):
         return (x <= self._start and x > self._end) or (x >= self._start and x<
                 self._end)
 
+    def __and__(self, x):
+        return lazyset(self, lambda r: r in x)
+
+    def __sub__(self, x):
+        return lazyset(self, lambda r: r not in x)
+
+    def __add__(self, x):
+        l = baseset(self)
+        return l + baseset(x)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
