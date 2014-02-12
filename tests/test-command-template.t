@@ -1651,3 +1651,9 @@ Test pad function
   $ hg log --template '{pad(rev, 20, "-", False)} {author|user}\n'
   1------------------- test
   0------------------- test
+
+Test ifcontains function
+
+  $ hg log --template '{rev} {ifcontains("a", file_adds, "added a", "did not add a")}\n'
+  1 did not add a
+  0 added a

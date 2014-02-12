@@ -301,6 +301,19 @@ def if_(context, mapping, args):
     elif len(args) == 3:
         yield _evalifliteral(args[2], context, mapping)
 
+def ifcontains(context, mapping, args):
+    if not (3 <= len(args) <= 4):
+        # i18n: "ifcontains" is a keyword
+        raise error.ParseError(_("ifcontains expects three or four arguments"))
+
+    item = stringify(args[0][0](context, mapping, args[0][1]))
+    items = args[1][0](context, mapping, args[1][1])
+
+    if item in items:
+        yield _evalifliteral(args[2], context, mapping)
+    elif len(args) == 4:
+        yield _evalifliteral(args[3], context, mapping)
+
 def ifeq(context, mapping, args):
     if not (3 <= len(args) <= 4):
         # i18n: "ifeq" is a keyword
@@ -436,6 +449,7 @@ funcs = {
     "fill": fill,
     "get": get,
     "if": if_,
+    "ifcontains": ifcontains,
     "ifeq": ifeq,
     "join": join,
     "label": label,
