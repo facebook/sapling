@@ -426,6 +426,16 @@ def extsetup(ui):
          _("when to colorize (boolean, always, auto, or never)"),
          _('TYPE')))
 
+def debugcolor(ui, repo, **opts):
+    global _styles
+    _styles = {}
+    for effect in _effects.keys():
+        _styles[effect] = effect
+    ui.write(('colormode: %s\n') % ui._colormode)
+    ui.write(_('available colors:\n'))
+    for label, colors in _styles.items():
+        ui.write(('%s\n') % colors, label=label)
+
 if os.name != 'nt':
     w32effects = None
 else:
@@ -555,3 +565,8 @@ else:
         finally:
             # Explicitly reset original attributes
             _kernel32.SetConsoleTextAttribute(stdout, origattr)
+
+cmdtable = {
+    'debugcolor':
+        (debugcolor, [], ('hg debugcolor'))
+}
