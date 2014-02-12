@@ -21,7 +21,7 @@ if os.name =='nt':
         handle = ctypes.windll.kernel32.OpenProcess(
                 PROCESS_TERMINATE|SYNCHRONIZE, False, pid)
         if handle == 0:
-            # TODO: call _check(0, expected) to check if "process not found"
+            _check(0, 87) # err 87 when process not found
             return # process not found, already finished
         try:
             _check(ctypes.windll.kernel32.TerminateProcess(handle, -1), 5)
