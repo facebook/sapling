@@ -1167,6 +1167,8 @@ def runtests(options, tests):
 
     if failed:
         return 1
+    if warned:
+        return 80
 
 testtypes = [('.py', pytest, '.out'),
              ('.t', tsttest, '')]
