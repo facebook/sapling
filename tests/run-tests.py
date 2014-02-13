@@ -1074,7 +1074,7 @@ def _checkhglib(verb):
                          '         (expected %s)\n'
                          % (verb, actualhg, expecthg))
 
-results = {'.':[], '!':[], 's':[], 'i':[]}
+results = {'.':[], '!':[], '~': [], 's':[], 'i':[]}
 times = []
 iolock = threading.Lock()
 abort = False
@@ -1138,7 +1138,8 @@ def runtests(options, tests):
         scheduletests(options, tests)
 
         failed = len(results['!'])
-        tested = len(results['.']) + failed
+        warned = len(results['~'])
+        tested = len(results['.']) + failed + warned
         skipped = len(results['s'])
         ignored = len(results['i'])
 
@@ -1146,11 +1147,13 @@ def runtests(options, tests):
         if not options.noskips:
             for s in results['s']:
                 print "Skipped %s: %s" % s
+        for s in results['~']:
+            print "Warned %s: %s" % s
         for s in results['!']:
             print "Failed %s: %s" % s
         _checkhglib("Tested")
-        print "# Ran %d tests, %d skipped, %d failed." % (
-            tested, skipped + ignored, failed)
+        print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
+            tested, skipped + ignored, warned, failed)
         if results['!']:
             print 'python hash seed:', os.environ['PYTHONHASHSEED']
         if options.time:
