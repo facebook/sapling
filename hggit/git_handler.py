@@ -1378,7 +1378,15 @@ class GitHandler(object):
             else:
                 auth_handler = urllib2.HTTPBasicAuthHandler(AuthManager(self.ui))
                 opener = urllib2.build_opener(auth_handler)
-                return client.HttpGitClient(uri, opener=opener, thin_packs=False), uri
+                try:
+                    return client.HttpGitClient(uri, opener=opener, thin_packs=False), uri
+                except TypeError as e:
+                    if e.message.find("unexpected keyword argument 'opener'") >= 0:
+                        # using a version of dulwich that doesn't support
+                        # http(s) authentication -- try without authentication
+                        return client.HttpGitClient(uri, thin_packs=False), uri
+                    else:
+                        raise
 
         # if its not git or git+ssh, try a local url..
         return client.SubprocessGitClient(thin_packs=False), uri
