@@ -7,6 +7,7 @@ import stat
 
 import dulwich.objects as dulobjs
 import mercurial.node
+import mercurial.context
 
 import util
 
@@ -52,8 +53,8 @@ class IncrementalChangesetExporter(object):
         """Create an instance against a mercurial.localrepo."""
         self._hg = hg_repo
 
-        # Our current revision.
-        self._rev = mercurial.node.nullrev
+        # Our current revision's context.
+        self._ctx = mercurial.context.changectx(hg_repo, 'null')
 
         # Path to dulwich.objects.Tree.
         self._dirs = {}
@@ -104,7 +105,7 @@ class IncrementalChangesetExporter(object):
         # The only reliable way to get the full set of changes is by looking at
         # the full manifest. And, the easy way to compare two manifests is
         # localrepo.status().
-        modified, added, removed = self._hg.status(self._rev, newctx.rev())[0:3]
+        modified, added, removed = self._hg.status(self._ctx, newctx.rev())[0:3]
 
         # We track which directories/trees have modified in this update and we
         # only export those.
@@ -160,7 +161,7 @@ class IncrementalChangesetExporter(object):
         for obj in self._populate_tree_entries(dirty_trees):
             yield (obj, None)
 
-        self._rev = newctx.rev()
+        self._ctx = newctx
 
     def _remove_tree(self, path):
         """Remove a (presumably empty) tree from the current changeset.
