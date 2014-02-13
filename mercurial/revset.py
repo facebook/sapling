@@ -2151,7 +2151,7 @@ class lazyset(object):
     the subset and contains a function which tests for membership in the
     revset
     """
-    def __init__(self, subset, condition):
+    def __init__(self, subset, condition=lambda x: True):
         self._subset = subset
         self._condition = condition
         self._cache = {}
@@ -2175,8 +2175,14 @@ class lazyset(object):
         return lazyset(self, lambda r: r not in x)
 
     def __add__(self, x):
-        l = baseset([r for r in self])
-        return l + baseset(x)
+        def iterates():
+            for r in self:
+                yield r
+            for r in x:
+                if r not in self:
+                    yield r
+
+        return lazyset(generatorset(iterates()))
 
     def __nonzero__(self):
         for r in self:
