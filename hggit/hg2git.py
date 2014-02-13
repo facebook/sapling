@@ -113,20 +113,7 @@ class IncrementalChangesetExporter(object):
 
         # We first process file removals so we can prune dead trees.
         for path in removed:
-            d = os.path.dirname(path)
-            tree = self._dirs.get(d, dulobjs.Tree())
-
-            del tree[os.path.basename(path)]
-            dirty_trees.add(d)
-
-            # If removing this file made the tree empty, we should delete this
-            # tree. This could result in parent trees losing their only child
-            # and so on.
-            if not len(tree):
-                self._remove_tree(d)
-                continue
-
-            self._dirs[d] = tree
+            self._remove_path(path, dirty_trees)
 
         # For every file that changed or was added, we need to calculate the
         # corresponding Git blob and its tree entry. We emit the blob
@@ -162,6 +149,24 @@ class IncrementalChangesetExporter(object):
             yield (obj, None)
 
         self._ctx = newctx
+
+    def _remove_path(self, path, dirty_trees):
+        """Remove a path (file or git link) from the current changeset.
+
+        If the tree containing this path is empty, it might be removed."""
+        d = os.path.dirname(path)
+        tree = self._dirs.get(d, dulobjs.Tree())
+
+        del tree[os.path.basename(path)]
+        dirty_trees.add(d)
+
+        # If removing this file made the tree empty, we should delete this
+        # tree. This could result in parent trees losing their only child
+        # and so on.
+        if not len(tree):
+            self._remove_tree(d)
+        else:
+            self._dirs[d] = tree
 
     def _remove_tree(self, path):
         """Remove a (presumably empty) tree from the current changeset.
