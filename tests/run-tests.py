@@ -881,8 +881,9 @@ def runone(options, test, count):
         return 's', test, msg
 
     def fail(msg, ret):
+        warned = ret is False
         if not options.nodiff:
-            log("\nERROR: %s %s" % (testpath, msg))
+            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', test, msg))
         if (not ret and options.interactive
             and os.path.exists(testpath + ".err")):
             iolock.acquire()
@@ -895,7 +896,7 @@ def runone(options, test, count):
                 else:
                     rename(testpath + ".err", testpath + ".out")
                 return '.', test, ''
-        return '!', test, msg
+        return warned and '~' or '!', test, msg
 
     def success():
         return '.', test, ''
