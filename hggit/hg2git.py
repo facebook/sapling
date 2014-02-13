@@ -261,7 +261,7 @@ class IncrementalChangesetExporter(object):
             # trees, this should hold true.
             parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
 
-    def _handle_subrepos(self, ctx, dirty_trees):
+    def _handle_subrepos(self, newctx, dirty_trees):
         def parse_subrepos(ctx):
             sub = util.OrderedDict()
             if '.hgsub' in ctx:
@@ -272,11 +272,11 @@ class IncrementalChangesetExporter(object):
                     ctx['.hgsubstate'].data().splitlines())
             return sub, substate
 
-        sub, substate = parse_subrepos(ctx)
+        newsub, newsubstate = parse_subrepos(newctx)
 
-        for path, sha in substate.iteritems():
+        for path, sha in newsubstate.iteritems():
             # Ignore non-Git repositories keeping state in .hgsubstate.
-            if path in sub and not sub[path].startswith('[git]'):
+            if path in newsub and not newsub[path].startswith('[git]'):
                 continue
 
             d = os.path.dirname(path)
