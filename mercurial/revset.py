@@ -2177,20 +2177,32 @@ class lazyset(object):
         return set([r for r in self])
 
 class generatorset(object):
-    """Wrapper structure for generators that provides lazy membership."""
+    """Wrapper structure for generators that provides lazy membership and can
+    be iterated more than once.
+    When asked for membership it generates values until either it finds the
+    requested one or has gone through all the elements in the generator
+    """
     def __init__(self, gen):
         self._gen = gen
         self._iter = iter(gen)
         self._cache = {}
+        self._genlist = baseset([])
+        self._iterated = False
+
+    def _nextitem(self):
+        l = self._iter.next()
+        self._cache[l] = True
+        self._genlist.append(l)
+        return l
 
     def __contains__(self, x):
         if x in self._cache:
             return self._cache[x]
 
+        self._iterated = True
         while True:
             try:
-                l = self._iter.next()
-                self._cache[l] = True
+                l = self._nextitem()
                 if l == x:
                     return True
             except (StopIteration):
@@ -2200,9 +2212,21 @@ class generatorset(object):
         return False
 
     def __iter__(self):
-        for item in self._gen:
-            self._cache[item] = True
-            yield item
+        if self._iterated:
+            for l in self._genlist:
+                yield l
+            while True:
+                try:
+                    item = self._nextitem()
+                    yield item
+                except (StopIteration):
+                    break
+        else:
+            self._iterated = True
+            for item in self._gen:
+                self._cache[item] = True
+                self._genlist.append(item)
+                yield item
 
     def set(self):
         return self
