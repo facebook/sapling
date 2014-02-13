@@ -799,9 +799,8 @@ def tsttest(test, wd, options, replacements, env):
                     lout = el[:-1] + ' (glob)\n'
                     r = 0 # warn only
                 elif r == '-glob':
-                    log('\ninfo, unnecessary glob in %s (after line %d):'
-                        ' %s (glob)\n' % (test, pos, el[:-1]))
-                    r = True # pass on unnecessary glob
+                    lout = ''.join(el.rsplit(' (glob)', 1))
+                    r = 0 # warn only
                 else:
                     log('\ninfo, unknown linematch result: %r\n' % r)
                     r = False
