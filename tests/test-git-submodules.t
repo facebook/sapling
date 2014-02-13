@@ -100,6 +100,15 @@ same name has existed at any point historically, so use alpha instead of subrepo
    delete mode 160000 alpha
    delete mode 160000 subrepo2
 
+  $ git log --pretty=oneline
+  d3c472800f9d11baa6615971a3179fd441869173 remove all subrepos
+  88171163bf4795b5570924e51d5f8ede33f8bc28 replace file with subrepo
+  f6436a472da00f581d8d257e9bbaf3c358a5e88c replace subrepo with file
+  6e219527869fa40eb6ffbdd013cd86d576b26b01 add another subrepo
+  a000567ceefbd9a2ce364e0dea6e298010b02b6d change subrepo commit
+  e42b08b3cb7069b4594a4ee1d9cb641ee47b2355 add subrepo
+  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 add alpha
+
   $ cd ..
 
   $ hg clone gitrepo2 hgrepo | grep -v '^updating'
@@ -192,3 +201,15 @@ same name has existed at any point historically, so use alpha instead of subrepo
   .hgsubstate: no such file in rev 827c0345b7d1
   [1]
 
+  $ hg gclear
+  clearing out the git cache data
+  $ hg gexport
+  $ cd .hg/git
+  $ git log --pretty=oneline
+  d3c472800f9d11baa6615971a3179fd441869173 remove all subrepos
+  88171163bf4795b5570924e51d5f8ede33f8bc28 replace file with subrepo
+  f6436a472da00f581d8d257e9bbaf3c358a5e88c replace subrepo with file
+  6e219527869fa40eb6ffbdd013cd86d576b26b01 add another subrepo
+  a000567ceefbd9a2ce364e0dea6e298010b02b6d change subrepo commit
+  e42b08b3cb7069b4594a4ee1d9cb641ee47b2355 add subrepo
+  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 add alpha

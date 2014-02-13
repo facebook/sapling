@@ -112,6 +112,13 @@ class IncrementalChangesetExporter(object):
 
         # We first process file removals so we can prune dead trees.
         for path in removed:
+            if path == '.hgsubstate':
+                self._handle_subrepos(newctx, dirty_trees)
+                continue
+
+            if path == '.hgsub':
+                continue
+
             self._remove_path(path, dirty_trees)
 
         # For every file that changed or was added, we need to calculate the
