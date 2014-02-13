@@ -516,6 +516,12 @@ def rebasenode(repo, rev, p1, state, collapse):
             if state.get(p.rev()) == repo[p1].rev():
                 base = p.node()
                 break
+        else: # fallback when base not found
+            base = None
+
+            # Raise because this function is called wrong (see issue 4106)
+            raise AssertionError('no base found to rebase on '
+                                 '(rebasenode called wrong)')
     if base is not None:
         repo.ui.debug("   detach base %d:%s\n" % (repo[base].rev(), repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
