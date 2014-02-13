@@ -2311,8 +2311,14 @@ class spanset(object):
         return lazyset(self, lambda r: r not in x)
 
     def __add__(self, x):
-        l = baseset(self)
-        return l + baseset(x)
+        def iterates():
+            for r in self:
+                yield r
+            for r in x:
+                if r not in self:
+                    yield r
+
+        return lazyset(generatorset(iterates()))
 
     def __len__(self):
         if not self._hiddenrevs:
