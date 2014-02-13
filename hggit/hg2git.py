@@ -70,7 +70,7 @@ class IncrementalChangesetExporter(object):
         """
         return self._dirs[''].id
 
-    def update_changeset(self, ctx):
+    def update_changeset(self, newctx):
         """Set the tree to track a new Mercurial changeset.
 
         This is a generator of 2-tuples. The first item in each tuple is a
@@ -104,7 +104,7 @@ class IncrementalChangesetExporter(object):
         # The only reliable way to get the full set of changes is by looking at
         # the full manifest. And, the easy way to compare two manifests is
         # localrepo.status().
-        modified, added, removed = self._hg.status(self._rev, ctx.rev())[0:3]
+        modified, added, removed = self._hg.status(self._rev, newctx.rev())[0:3]
 
         # We track which directories/trees have modified in this update and we
         # only export those.
@@ -133,7 +133,7 @@ class IncrementalChangesetExporter(object):
         for path in set(modified) | set(added):
             # Handle special Mercurial paths.
             if path == '.hgsubstate':
-                self._handle_subrepos(ctx, dirty_trees)
+                self._handle_subrepos(newctx, dirty_trees)
                 continue
 
             if path == '.hgsub':
@@ -143,7 +143,7 @@ class IncrementalChangesetExporter(object):
             tree = self._dirs.setdefault(d, dulobjs.Tree())
             dirty_trees.add(d)
 
-            fctx = ctx[path]
+            fctx = newctx[path]
 
             entry, blob = IncrementalChangesetExporter.tree_entry(fctx,
                 self._blob_cache)
@@ -160,7 +160,7 @@ class IncrementalChangesetExporter(object):
         for obj in self._populate_tree_entries(dirty_trees):
             yield (obj, None)
 
-        self._rev = ctx.rev()
+        self._rev = newctx.rev()
 
     def _remove_tree(self, path):
         """Remove a (presumably empty) tree from the current changeset.
