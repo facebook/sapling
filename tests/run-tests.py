@@ -778,7 +778,6 @@ def tsttest(test, wd, options, replacements, env):
 
     pos = -1
     postout = []
-    ret = 0
     for l in output:
         lout, lcmd = l, None
         if salt in l:
