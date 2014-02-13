@@ -776,6 +776,7 @@ def tsttest(test, wd, options, replacements, env):
 
     # Merge the script output back into a unified test
 
+    warnonly = True
     pos = -1
     postout = []
     for l in output:
@@ -796,7 +797,7 @@ def tsttest(test, wd, options, replacements, env):
             if isinstance(r, str):
                 if r == '+glob':
                     lout = el[:-1] + ' (glob)\n'
-                    r = False
+                    r = 0 # warn only
                 elif r == '-glob':
                     log('\ninfo, unnecessary glob in %s (after line %d):'
                         ' %s (glob)\n' % (test, pos, el[:-1]))
@@ -810,6 +811,8 @@ def tsttest(test, wd, options, replacements, env):
                 if needescape(lout):
                     lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
                 postout.append("  " + lout) # let diff deal with it
+                if r != 0: # != warn only
+                    warnonly = False
 
         if lcmd:
             # add on last return code
@@ -824,6 +827,8 @@ def tsttest(test, wd, options, replacements, env):
     if pos in after:
         postout += after.pop(pos)
 
+    if warnonly and exitcode == 0:
+        exitcode = False
     return exitcode, postout
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
