@@ -1163,7 +1163,7 @@ def runtests(options, tests):
         print "\ninterrupted!"
 
     if failed:
-        sys.exit(1)
+        return 1
 
 testtypes = [('.py', pytest, '.out'),
              ('.t', tsttest, '')]
@@ -1273,7 +1273,7 @@ def main():
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        runtests(options, tests)
+        sys.exit(runtests(options, tests) or 0)
     finally:
         time.sleep(.1)
         cleanup(options)
