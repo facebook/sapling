@@ -2548,8 +2548,10 @@ def debugrevlog(ui, repo, file_=None, **opts):
             ui.write(('deltas against other : ') + fmt % pcfmt(numother,
                                                              numdeltas))
 
-@command('debugrevspec', [], ('REVSPEC'))
-def debugrevspec(ui, repo, expr):
+@command('debugrevspec',
+    [('', 'optimize', None, _('print parsed tree after optimizing'))],
+    ('REVSPEC'))
+def debugrevspec(ui, repo, expr, **opts):
     """parse and apply a revision specification
 
     Use --verbose to print the parsed tree before and after aliases
@@ -2561,6 +2563,9 @@ def debugrevspec(ui, repo, expr):
         newtree = revset.findaliases(ui, tree)
         if newtree != tree:
             ui.note(revset.prettyformat(newtree), "\n")
+        if opts["optimize"]:
+            weight, optimizedtree = revset.optimize(newtree, True)
+            ui.note("* optimized:\n", revset.prettyformat(optimizedtree), "\n")
     func = revset.match(ui, expr)
     for c in func(repo, revset.baseset(range(len(repo)))):
         ui.write("%s\n" % c)

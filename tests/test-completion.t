@@ -250,7 +250,7 @@ Show all commands + options
   debugrebuilddirstate: rev
   debugrename: rev
   debugrevlog: changelog, manifest, dump
-  debugrevspec: 
+  debugrevspec: optimize
   debugsetparents: 
   debugsub: rev
   debugsuccessorssets: 
