@@ -1133,19 +1133,11 @@ def finddate(ui, repo, date):
 
     raise util.Abort(_("revision matching date not found"))
 
-def increasingwindows(start, end, windowsize=8, sizelimit=512):
-    if start < end:
-        while start < end:
-            yield start, min(windowsize, end - start)
-            start += windowsize
-            if windowsize < sizelimit:
-                windowsize *= 2
-    else:
-        while start > end:
-            yield start, min(windowsize, start - end - 1)
-            start -= windowsize
-            if windowsize < sizelimit:
-                windowsize *= 2
+def increasingwindows(windowsize=8, sizelimit=512):
+    while True:
+        yield windowsize
+        if windowsize < sizelimit:
+            windowsize *= 2
 
 class FileWalkError(Exception):
     pass
@@ -1278,7 +1270,6 @@ def walkchangerevs(repo, match, opts, prepare):
     slowpath = match.anypats() or (match.files() and opts.get('removed'))
     fncache = {}
     change = repo.changectx
-    revs = revset.baseset(revs)
 
     # First step is to fill wanted, the set of revisions that we want to yield.
     # When it does not induce extra cost, we also fill fncache for revisions in
@@ -1287,7 +1278,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
     if not slowpath and not match.files():
         # No files, no patterns.  Display all revs.
-        wanted = set(revs)
+        wanted = revs
 
     if not slowpath and match.files():
         # We only have to read through the filelog to find wanted revisions
@@ -1389,14 +1380,7 @@ def walkchangerevs(repo, match, opts, prepare):
         stop = min(revs[0], revs[-1])
         for x in xrange(rev, stop - 1, -1):
             if ff.match(x):
-                wanted.discard(x)
-
-    # Choose a small initial window if we will probably only visit a
-    # few commits.
-    limit = loglimit(opts)
-    windowsize = 8
-    if limit:
-        windowsize = min(limit, windowsize)
+                wanted = wanted - [x]
 
     # Now that wanted is correctly initialized, we can iterate over the
     # revision range, yielding only revisions in wanted.
@@ -1409,8 +1393,18 @@ def walkchangerevs(repo, match, opts, prepare):
             def want(rev):
                 return rev in wanted
 
-        for i, window in increasingwindows(0, len(revs), windowsize):
-            nrevs = [rev for rev in revs[i:i + window] if want(rev)]
+        it = iter(revs)
+        stopiteration = False
+        for windowsize in increasingwindows():
+            nrevs = []
+            for i in xrange(windowsize):
+                try:
+                    rev = it.next()
+                    if want(rev):
+                        nrevs.append(rev)
+                except (StopIteration):
+                    stopiteration = True
+                    break
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
                 ctx = change(rev)
@@ -1423,6 +1417,10 @@ def walkchangerevs(repo, match, opts, prepare):
                 prepare(ctx, fns)
             for rev in nrevs:
                 yield change(rev)
+
+            if stopiteration:
+                break
+
     return iterate()
 
 def _makegraphfilematcher(repo, pats, followfirst):
