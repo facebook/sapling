@@ -272,13 +272,41 @@ class IncrementalChangesetExporter(object):
                     ctx['.hgsubstate'].data().splitlines())
             return sub, substate
 
+        sub, substate = parse_subrepos(self._ctx)
         newsub, newsubstate = parse_subrepos(newctx)
 
+        # For each path, the logic is described by the following table. 'no'
+        # stands for 'the subrepo doesn't exist', 'git' stands for 'git
+        # subrepo', and 'hg' stands for 'hg or other subrepo'.
+        #
+        #  old  new  |  action
+        #   *   git  |   link    (1)
+        #  git   hg  |  delete   (2)
+        #  git   no  |  delete   (3)
+        #
+        # All other combinations are 'do nothing'.
+        #
+        # git links without corresponding submodule paths are stored as subrepos
+        # with a substate but without an entry in .hgsub.
+
+        def isgit(sub, path):
+            return path not in sub or sub[path].startswith('[git]')
+
+        for path, sha in substate.iteritems():
+            if not isgit(sub, path):
+                # old = hg -- will be handled in next loop
+                continue
+            # old = git
+            if path not in newsubstate or not isgit(newsub, path):
+                # new = hg or no, case (2) or (3)
+                self._remove_path(path, dirty_trees)
+
         for path, sha in newsubstate.iteritems():
-            # Ignore non-Git repositories keeping state in .hgsubstate.
-            if path in newsub and not newsub[path].startswith('[git]'):
+            if not isgit(newsub, path):
+                # new = hg or no; the only cases we care about are handled above
                 continue
 
+            # case (1)
             d = os.path.dirname(path)
             dirty_trees.add(d)
             tree = self._dirs.setdefault(d, dulobjs.Tree())
