@@ -444,6 +444,70 @@ ancestor can accept 0 or more arguments
   $ log 'tag(tip)'
   9
 
+check that conversion to _missingancestors works
+  $ try --optimize '::3 - ::1'
+  (minus
+    (dagrangepre
+      ('symbol', '3'))
+    (dagrangepre
+      ('symbol', '1')))
+  * optimized:
+  (func
+    ('symbol', '_missingancestors')
+    (list
+      ('symbol', '3')
+      ('symbol', '1')))
+  3
+  $ try --optimize 'ancestors(1) - ancestors(3)'
+  (minus
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '1'))
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '3')))
+  * optimized:
+  (func
+    ('symbol', '_missingancestors')
+    (list
+      ('symbol', '1')
+      ('symbol', '3')))
+  $ try --optimize 'not ::2 and ::6'
+  (and
+    (not
+      (dagrangepre
+        ('symbol', '2')))
+    (dagrangepre
+      ('symbol', '6')))
+  * optimized:
+  (func
+    ('symbol', '_missingancestors')
+    (list
+      ('symbol', '6')
+      ('symbol', '2')))
+  3
+  4
+  5
+  6
+  $ try --optimize 'ancestors(6) and not ancestors(4)'
+  (and
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '6'))
+    (not
+      (func
+        ('symbol', 'ancestors')
+        ('symbol', '4'))))
+  * optimized:
+  (func
+    ('symbol', '_missingancestors')
+    (list
+      ('symbol', '6')
+      ('symbol', '4')))
+  3
+  5
+  6
+
 we can use patterns when searching for tags
 
   $ log 'tag("1..*")'
