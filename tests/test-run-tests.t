@@ -65,7 +65,7 @@ Windows: \r\n is handled like \n and can be escaped:
 Combining esc with other markups - and handling lines ending with \r instead of \n:
 
   $ printf 'foo/bar\r'
-  foo/bar\r (no-eol) (glob) (esc)
+  fo?/bar\r (no-eol) (glob) (esc)
 #if windows
   $ printf 'foo\\bar\r'
   foo/bar\r (no-eol) (glob) (esc)
