@@ -675,6 +675,8 @@ class GitHandler(object):
         (strip_message, hg_renames,
          hg_branch, extra) = self.extract_hg_metadata(commit.message)
 
+        gparents = map(self.map_hg_get, commit.parents)
+
         # get a list of the changed, added, removed files and gitlinks
         files, gitlinks = self.get_files_changed(commit)
 
@@ -786,7 +788,6 @@ class GitHandler(object):
 
             return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
 
-        gparents = map(self.map_hg_get, commit.parents)
         p1, p2 = (nullid, nullid)
         octopus = False
 
