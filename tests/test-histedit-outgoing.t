@@ -43,10 +43,12 @@ show the edit commands offered by outgoing
   
   # Edit history between 055a42cdd887 and 652413bf663e
   #
+  # Commits are listed from least to most recent
+  #
   # Commands:
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
-  #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+  #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #
@@ -72,10 +74,12 @@ show the error from unrelated repos
   
   # Edit history between 2a4042b45417 and 51281e65ba79
   #
+  # Commits are listed from least to most recent
+  #
   # Commands:
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
-  #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+  #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #
@@ -93,10 +97,12 @@ test sensitivity to branch in URL:
   
   # Edit history between f26599ee3441 and f26599ee3441
   #
+  # Commits are listed from least to most recent
+  #
   # Commands:
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
-  #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+  #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #

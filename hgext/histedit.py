@@ -30,10 +30,12 @@ file open in your editor::
 
  # Edit history between c561b4e977df and 7c2fd3b9020c
  #
+ # Commits are listed from least to most recent
+ #
  # Commands:
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
- #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+ #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -49,10 +51,12 @@ would reorganize the file to look like this::
 
  # Edit history between c561b4e977df and 7c2fd3b9020c
  #
+ # Commits are listed from least to most recent
+ #
  # Commands:
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
- #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+ #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -170,10 +174,12 @@ testedwith = 'internal'
 # i18n: command names and abbreviations must remain untranslated
 editcomment = _("""# Edit history between %s and %s
 #
+# Commits are listed from least to most recent
+#
 # Commands:
 #  p, pick = use commit
 #  e, edit = use commit, but stop for amending
-#  f, fold = use commit, but fold into previous commit (combines N and N-1)
+#  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
 #  d, drop = remove commit from history
 #  m, mess = edit message without changing commit content
 #

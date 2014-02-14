@@ -51,10 +51,12 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   
   # Edit history between eb57da33312f and 08d98a8350f3
   #
+  # Commits are listed from least to most recent
+  #
   # Commands:
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
-  #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+  #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #
