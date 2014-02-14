@@ -256,6 +256,9 @@ class obsstore(object):
         * ensuring it is hashable
         * check mandatory metadata
         * encode metadata
+
+        If you are a human writing code creating marker you want to use the
+        `createmarkers` function in this module instead.
         """
         if metadata is None:
             metadata = {}
