@@ -685,25 +685,39 @@ class GitHandler(object):
         # get a list of the changed, added, removed files and gitlinks
         files, gitlinks = self.get_files_changed(commit)
 
-        # Handle gitlinks: collect
-        gitlinks = self.collect_gitlinks(commit.tree)
         git_commit_tree = self.git[commit.tree]
 
-        # Analyze hgsubstate and build an updated version
-        # using SHAs from gitlinks
-        hgsubstate = None
-        if gitlinks:
-            hgsubstate = util.parse_hgsubstate(self.git_file_readlines(git_commit_tree, '.hgsubstate'))
-            for path, sha in gitlinks:
+        # Analyze hgsubstate and build an updated version using SHAs from
+        # gitlinks. Order of application:
+        # - preexisting .hgsubstate in git tree
+        # - .hgsubstate from hg parent
+        # - changes in gitlinks
+        hgsubstate = util.parse_hgsubstate(
+            self.git_file_readlines(git_commit_tree, '.hgsubstate'))
+        parentsubdata = ''
+        if gparents:
+            p1ctx = self.repo.changectx(gparents[0])
+            if '.hgsubstate' in p1ctx:
+                parentsubdata = p1ctx.filectx('.hgsubstate').data().splitlines()
+                parentsubstate = util.parse_hgsubstate(parentsubdata)
+                for path, sha in parentsubstate.iteritems():
+                    hgsubstate[path] = sha
+        for path, sha in gitlinks.iteritems():
+            if sha is None:
+                hgsubstate.pop(path, None)
+            else:
                 hgsubstate[path] = sha
-            # in case .hgsubstate wasn't among changed files
-            # force its inclusion
-            files['.hgsubstate'] = (False, 0100644, None)
+        # in case .hgsubstate wasn't among changed files
+        # force its inclusion
+        if not hgsubstate and parentsubdata:
+            files['.hgsubstate'] = True, None, None
+        elif util.serialize_hgsubstate(hgsubstate) != parentsubdata:
+            files['.hgsubstate'] = False, 0100644, None
 
         # Analyze .hgsub and merge with .gitmodules
         hgsub = None
         gitmodules = self.parse_gitmodules(git_commit_tree)
-        if gitmodules or gitlinks:
+        if gitmodules:
             hgsub = util.parse_hgsub(self.git_file_readlines(git_commit_tree, '.hgsub'))
             for (sm_path, sm_url, sm_name) in gitmodules:
                 hgsub[sm_path] = '[git]' + sm_url
