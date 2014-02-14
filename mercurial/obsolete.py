@@ -811,8 +811,10 @@ def _computedivergentset(repo):
 def createmarkers(repo, relations, flag=0, metadata=None):
     """Add obsolete markers between changesets in a repo
 
-    <relations> must be an iterable of (<old>, (<new>, ...)) tuple.
-    `old` and `news` are changectx.
+    <relations> must be an iterable of (<old>, (<new>, ...)[,{metadata}])
+    tuple. `old` and `news` are changectx. metadata is an optional dictionnary
+    containing metadata for this marker only. It is merged with the global
+    metadata specified through the `metadata` argument of this function,
 
     Trying to obsolete a public changeset will raise an exception.
 
@@ -831,7 +833,13 @@ def createmarkers(repo, relations, flag=0, metadata=None):
         metadata['user'] = repo.ui.username()
     tr = repo.transaction('add-obsolescence-marker')
     try:
-        for prec, sucs in relations:
+        for rel in relations:
+            prec = rel[0]
+            sucs = rel[1]
+            localmetadata = metadata.copy()
+            if 2 < len(rel):
+                localmetadata.update(rel[2])
+
             if not prec.mutable():
                 raise util.Abort("cannot obsolete immutable changeset: %s"
                                  % prec)
@@ -839,7 +847,7 @@ def createmarkers(repo, relations, flag=0, metadata=None):
             nsucs = tuple(s.node() for s in sucs)
             if nprec in nsucs:
                 raise util.Abort("changeset %s cannot obsolete itself" % prec)
-            repo.obsstore.create(tr, nprec, nsucs, flag, metadata)
+            repo.obsstore.create(tr, nprec, nsucs, flag, localmetadata)
             repo.filteredrevcache.clear()
         tr.close()
     finally:
