@@ -10,3 +10,8 @@ def branchset(repo):
         return set(repo.branchmap())
     except AttributeError:
         return set(repo.branchtags())
+
+def pickle_load(f):
+    import cPickle as pickle
+    f.seek(0)
+    return pickle.load(f)

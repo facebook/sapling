@@ -1,4 +1,4 @@
-import cPickle as pickle
+import compathacks
 import errno
 import re
 import os
@@ -192,8 +192,7 @@ def load(file_path):
         f.close()
     except ValueError:
         # Ok, JSON couldn't be loaded, so we'll try the old way of using pickle
-        f.seek(0)
-        data = pickle.load(f)
+        data = compathacks.pickle_load(f)
 
         # convert the file to json immediately
         f.close()
