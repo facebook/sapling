@@ -1264,8 +1264,9 @@ def main():
 
     # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
     # can run .../tests/run-tests.py test-foo where test-foo
-    # adds an extension to HGRC
-    pypath = [PYTHONDIR, TESTDIR]
+    # adds an extension to HGRC. Also include run-test.py directory to import
+    # modules like heredoctest.
+    pypath = [PYTHONDIR, TESTDIR, os.path.abspath(os.path.dirname(__file__))]
     # We have to augment PYTHONPATH, rather than simply replacing
     # it, in case external libraries are only available via current
     # PYTHONPATH.  (In particular, the Subversion bindings on OS X
