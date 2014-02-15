@@ -19,9 +19,6 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     unmodified commands (e.g. mercurial.commands.update) can
     be run as hooks without wrappers to convert return values.'''
 
-    ui.note(_("calling hook %s: %s\n") % (hname, funcname))
-    starttime = time.time()
-
     obj = funcname
     if not util.safehasattr(obj, '__call__'):
         d = funcname.rfind('.')
@@ -75,6 +72,10 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             raise util.Abort(_('%s hook is invalid '
                                '("%s" is not callable)') %
                              (hname, funcname))
+
+    ui.note(_("calling hook %s: %s\n") % (hname, funcname))
+    starttime = time.time()
+
     try:
         try:
             # redirect IO descriptors to the ui descriptors so hooks
