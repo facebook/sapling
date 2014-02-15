@@ -88,6 +88,24 @@ def taildoublecolons(pe):
     if pe.msgid.endswith('::') != pe.msgstr.endswith('::'):
         yield "tail '::'-ness differs between msgid and msgstr"
 
+@warningchecker()
+def indentation(pe):
+    """Check equality of initial indentation between msgid and msgstr
+
+    This may report unexpected warning, because this doesn't aware
+    the syntax of rst document and the context of msgstr.
+
+    >>> pe = polib.POEntry(
+    ...     msgid ='    indented text',
+    ...     msgstr='  narrowed indentation')
+    >>> for e in indentation(pe): print e
+    initial indentation width differs betweeen msgid and msgstr
+    """
+    idindent = len(pe.msgid) - len(pe.msgid.lstrip())
+    strindent = len(pe.msgstr) - len(pe.msgstr.lstrip())
+    if idindent != strindent:
+        yield "initial indentation width differs betweeen msgid and msgstr"
+
 ####################
 
 def check(pofile, fatal=True, warning=False):
