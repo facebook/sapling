@@ -3,6 +3,7 @@ import errno
 import re
 import os
 import urllib
+import json
 
 from mercurial import cmdutil
 from mercurial import error
@@ -179,13 +180,20 @@ def dump(data, file_path):
     f.close()
 
 def load(file_path):
-    """pickle load some data from a path.
+    """Deserialize some data from a path.
     """
     data = None
-    if os.path.exists(file_path):
-        f = open(file_path)
+    if not os.path.exists(file_path):
+        return data
+
+    f = open(file_path)
+    try:
+        data = _convert(json.load(f), _descrub)
+    except ValueError:
+        # Ok, JSON couldn't be loaded, so we'll try the old way of using pickle
+        f.seek(0)
         data = pickle.load(f)
-        f.close()
+    f.close()
     return data
 
 def parseurl(url, heads=[]):
