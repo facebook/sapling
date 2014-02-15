@@ -210,7 +210,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
      summary:     added default.txt
   
   $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
-  rebase onto 2 starting from [<changectx e31216eec445>]
+  rebase onto 2 starting from e31216eec445
   rebasing: 9:e31216eec445 5/6 changesets (83.33%)
    future parents are 2 and -1
   rebase status stored
