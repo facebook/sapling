@@ -188,6 +188,13 @@ extendeddateformats = defaultdateformats + (
 def cachefunc(func):
     '''cache the result of function calls'''
     # XXX doesn't handle keywords args
+    if func.func_code.co_argcount == 0:
+        cache = []
+        def f():
+            if len(cache) == 0:
+                cache.append(func())
+            return cache[0]
+        return f
     cache = {}
     if func.func_code.co_argcount == 1:
         # we gain a small amount of time because
