@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os, sys, time, types
+import os, sys, time
 import extensions, util, demandimport
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
@@ -19,8 +19,10 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     unmodified commands (e.g. mercurial.commands.update) can
     be run as hooks without wrappers to convert return values.'''
 
-    obj = funcname
-    if not util.safehasattr(obj, '__call__'):
+    if util.safehasattr(funcname, '__call__'):
+        obj = funcname
+        funcname = obj.__module__ + "." + obj.__name__
+    else:
         d = funcname.rfind('.')
         if d == -1:
             raise util.Abort(_('%s hook is invalid ("%s" not in '
@@ -101,11 +103,8 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     finally:
         sys.stdout, sys.stderr, sys.stdin = old
         duration = time.time() - starttime
-        readablefunc = funcname
-        if isinstance(funcname, types.FunctionType):
-            readablefunc = funcname.__module__ + "." + funcname.__name__
         ui.log('pythonhook', 'pythonhook-%s: %s finished in %0.2f seconds\n',
-               name, readablefunc, duration)
+               name, funcname, duration)
     if r:
         if throw:
             raise util.Abort(_('%s hook failed') % hname)

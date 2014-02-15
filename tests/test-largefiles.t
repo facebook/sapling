@@ -900,7 +900,7 @@ redo pull with --lfrev and check it pulls largefiles for the right revs
   adding manifests
   adding file changes
   added 6 changesets with 16 changes to 8 files
-  calling hook changegroup.lfiles: <function checkrequireslfiles at *> (glob)
+  calling hook changegroup.lfiles: hgext.largefiles.reposetup.checkrequireslfiles
   (run 'hg update' to get a working copy)
   pulling largefiles for revision 7
   found 971fb41e78fea4f8e0ba5244784239371cb00591 in store
