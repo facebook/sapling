@@ -1,4 +1,4 @@
-"""Functions to work around API changes inside Mercurial."""
+"""Functions to work around API changes."""
 
 
 def branchset(repo):
