@@ -3344,6 +3344,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
         filerevmatches = {}
+        @util.cachefunc
         def binary():
             flog = getfile(fn)
             return util.binary(flog.read(ctx.filenode(fn)))
