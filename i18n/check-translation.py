@@ -66,6 +66,28 @@ def promptchoice(pe):
 def warningchecker(msgidpat=None):
     return checker('warning', msgidpat)
 
+@warningchecker()
+def taildoublecolons(pe):
+    """Check equality of tail '::'-ness between msgid and msgstr
+
+    >>> pe = polib.POEntry(
+    ...     msgid ='ends with ::',
+    ...     msgstr='ends with ::')
+    >>> for e in taildoublecolons(pe): print e
+    >>> pe = polib.POEntry(
+    ...     msgid ='ends with ::',
+    ...     msgstr='ends without double-colons')
+    >>> for e in taildoublecolons(pe): print e
+    tail '::'-ness differs between msgid and msgstr
+    >>> pe = polib.POEntry(
+    ...     msgid ='ends without double-colons',
+    ...     msgstr='ends with ::')
+    >>> for e in taildoublecolons(pe): print e
+    tail '::'-ness differs between msgid and msgstr
+    """
+    if pe.msgid.endswith('::') != pe.msgstr.endswith('::'):
+        yield "tail '::'-ness differs between msgid and msgstr"
+
 ####################
 
 def check(pofile, fatal=True, warning=False):
