@@ -189,11 +189,15 @@ def load(file_path):
     f = open(file_path)
     try:
         data = _convert(json.load(f), _descrub)
+        f.close()
     except ValueError:
         # Ok, JSON couldn't be loaded, so we'll try the old way of using pickle
         f.seek(0)
         data = pickle.load(f)
-    f.close()
+
+        # convert the file to json immediately
+        f.close()
+        dump(data, file_path)
     return data
 
 def parseurl(url, heads=[]):
