@@ -404,6 +404,9 @@ def rebase(ui, repo, **opts):
 
         if currentbookmarks:
             updatebookmarks(repo, targetnode, nstate, currentbookmarks)
+            if activebookmark not in repo._bookmarks:
+                # active bookmark was divergent one and has been deleted
+                activebookmark = None
 
         clearstatus(repo)
         ui.note(_("rebase completed\n"))
