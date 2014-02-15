@@ -3343,7 +3343,6 @@ def grep(ui, repo, pattern, *pats, **opts):
         rev = ctx.rev()
         datefunc = ui.quiet and util.shortdate or util.datestr
         found = False
-        filerevmatches = {}
         @util.cachefunc
         def binary():
             flog = getfile(fn)
@@ -3366,10 +3365,8 @@ def grep(ui, repo, pattern, *pats, **opts):
             if opts.get('date'):
                 cols.append((datefunc(ctx.date()), 'grep.date'))
             if opts.get('files_with_matches'):
-                c = (fn, rev)
-                if c in filerevmatches:
+                if found:
                     continue
-                filerevmatches[c] = 1
             else:
                 before = l.line[:l.colstart]
                 match = l.line[l.colstart:l.colend]
