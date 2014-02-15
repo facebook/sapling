@@ -92,7 +92,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             youngestpath = os.path.join(svnmetadir, 'lastpulled')
             foundpartialinfo = False
             if os.path.exists(youngestpath):
-                youngest = int(util.load_string(youngestpath).strip())
+                youngest = util.load(youngestpath)
                 sofar = list(maps.RevMap.readmapfile(repo))
                 if sofar and len(sofar[-1].split(' ', 2)) > 1:
                     lasthash = sofar[-1].split(' ', 2)[1]

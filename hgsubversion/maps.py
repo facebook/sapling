@@ -203,8 +203,7 @@ class RevMap(dict):
         # file to svnmeta itself rather than leaving it here.
         # must load youngest file first, or else self._load() can
         # clobber the info
-        _yonngest_str = util.load_string(self.ypath, '0')
-        self._youngest = int(_yonngest_str.strip())
+        self._youngest = util.load(self.ypath, 0)
         self.oldest = 0
         if os.path.isfile(self.path):
             self._load()
