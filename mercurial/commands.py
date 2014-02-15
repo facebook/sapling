@@ -3364,10 +3364,7 @@ def grep(ui, repo, pattern, *pats, **opts):
                 cols.append((ui.shortuser(ctx.user()), 'grep.user'))
             if opts.get('date'):
                 cols.append((datefunc(ctx.date()), 'grep.date'))
-            if opts.get('files_with_matches'):
-                if found:
-                    continue
-            else:
+            if not opts.get('files_with_matches'):
                 before = l.line[:l.colstart]
                 match = l.line[l.colstart:l.colend]
                 after = l.line[l.colend:]
@@ -3385,6 +3382,8 @@ def grep(ui, repo, pattern, *pats, **opts):
                     ui.write(after)
             ui.write(eol)
             found = True
+            if before is None:
+                break
         return found
 
     skip = {}
