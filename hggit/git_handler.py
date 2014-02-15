@@ -677,6 +677,11 @@ class GitHandler(object):
 
         gparents = map(self.map_hg_get, commit.parents)
 
+        for parent in gparents:
+            if parent not in self.repo:
+                raise hgutil.Abort(_('you appear to have run strip - '
+                                     'please run hg git-cleanup'))
+
         # get a list of the changed, added, removed files and gitlinks
         files, gitlinks = self.get_files_changed(commit)
 
@@ -835,16 +840,6 @@ class GitHandler(object):
         if octopus:
             extra['hg-git'] ='octopus-done'
 
-        # TODO use 'n in self.repo' when we require hg 1.5
-        def repo_contains(n):
-            try:
-                return bool(self.repo.lookup(n))
-            except error.RepoLookupError:
-                return False
-
-        if not (repo_contains(p1) and repo_contains(p2)):
-            raise hgutil.Abort(_('you appear to have run strip - '
-                                 'please run hg git-cleanup'))
         ctx = context.memctx(self.repo, (p1, p2), text,
                              list(files) + findconvergedfiles(p1, p2),
                              getfilectx, author, date, extra)
