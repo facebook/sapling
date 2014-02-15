@@ -170,13 +170,13 @@ def _convert(input, visitor):
     return input
 
 def dump(data, file_path):
-    """pickle some data to a path atomically.
+    """Serialize some data to a path atomically.
 
     This is present because I kept corrupting my revmap by managing to hit ^C
-    during the pickle of that file.
+    during the serialization of that file.
     """
     f = hgutil.atomictempfile(file_path, 'w+b', 0644)
-    pickle.dump(data, f)
+    json.dump(_convert(data, _scrub), f)
     f.close()
 
 def load(file_path):
