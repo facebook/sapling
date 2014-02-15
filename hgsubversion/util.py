@@ -121,13 +121,6 @@ def normalize_url(url):
         url = '%s#%s' % (url, checkout)
     return url
 
-def save_string(file_path, string):
-    if string is None:
-        string = ""
-    f = open(file_path, 'wb')
-    f.write(str(string))
-    f.close()
-
 def _scrub(data):
     if not data and not isinstance(data, list):
         return ''
