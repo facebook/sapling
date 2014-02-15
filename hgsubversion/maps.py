@@ -212,7 +212,7 @@ class RevMap(dict):
 
     def _set_youngest(self, rev):
         self._youngest = max(self._youngest, rev)
-        util.save_string(self.ypath, str(self._youngest) + '\n')
+        util.dump(self._youngest, self.ypath)
 
     def _get_youngest(self):
         return self._youngest
