@@ -179,10 +179,10 @@ def dump(data, file_path):
     json.dump(_convert(data, _scrub), f)
     f.close()
 
-def load(file_path):
+def load(file_path, default=None):
     """Deserialize some data from a path.
     """
-    data = None
+    data = default
     if not os.path.exists(file_path):
         return data
 
