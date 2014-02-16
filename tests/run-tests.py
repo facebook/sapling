@@ -776,7 +776,9 @@ def tsttest(test, wd, options, replacements, env):
 
     # Merge the script output back into a unified test
 
-    warnonly = True
+    warnonly = 1 # 1: not yet, 2: yes, 3: for sure not
+    if exitcode != 0: # failure has been reported
+        warnonly = 3 # set to "for sure not"
     pos = -1
     postout = []
     for l in output:
@@ -811,7 +813,9 @@ def tsttest(test, wd, options, replacements, env):
                     lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
                 postout.append("  " + lout) # let diff deal with it
                 if r != '': # if line failed
-                    warnonly = False
+                    warnonly = 3 # set to "for sure not"
+                elif warnonly == 1: # is "not yet" (and line is warn only)
+                    warnonly = 2 # set to "yes" do warn
 
         if lcmd:
             # add on last return code
@@ -826,8 +830,8 @@ def tsttest(test, wd, options, replacements, env):
     if pos in after:
         postout += after.pop(pos)
 
-    if warnonly and exitcode == 0:
-        exitcode = False
+    if warnonly == 2:
+        exitcode = False # set exitcode to warned
     return exitcode, postout
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
