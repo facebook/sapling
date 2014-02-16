@@ -1282,23 +1282,6 @@ class GitHandler(object):
 
         return files, gitlinks
 
-    def collect_gitlinks(self, tree_id):
-        """Walk the tree and collect all gitlink entries
-          :param tree_id: sha of the commit tree
-          :return: list of tuples (commit sha, full entry path)
-        """
-        queue = [(tree_id, '')]
-        gitlinks = []
-        while queue:
-            e, path = queue.pop(0)
-            o = self.git.object_store[e]
-            for (name, mode, sha) in o.iteritems():
-                if mode == S_IFGITLINK:
-                    gitlinks.append((posixpath.join(path, name), sha))
-                elif stat.S_ISDIR(mode):
-                    queue.append((sha, posixpath.join(path, name)))
-        return gitlinks
-
     def parse_gitmodules(self, tree_obj):
         """Parse .gitmodules from a git tree specified by tree_obj
 
