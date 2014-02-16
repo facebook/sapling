@@ -64,7 +64,7 @@ class CustomLayout(base.BaseLayout):
             subdir += '/'
         return subdir + self.remotename(branch)
 
-    def taglocations(self, meta_data_dir):
+    def taglocations(self, metapath):
         return []
 
     def get_path_tag(self, path, taglocations):

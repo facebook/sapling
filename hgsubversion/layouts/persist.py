@@ -7,10 +7,10 @@ to do it.
 
 import os.path
 
-def layout_to_file(meta_data_dir, layout):
-    """Save the given layout to a file under the given meta_data_dir"""
+def layout_to_file(metapath, layout):
+    """Save the given layout to a file under the given metapath"""
 
-    layoutfile = os.path.join(meta_data_dir, 'layout')
+    layoutfile = os.path.join(metapath, 'layout')
     f = open(layoutfile, 'w')
     f.write(layout)
     f.close()

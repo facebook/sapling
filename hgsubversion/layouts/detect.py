@@ -58,7 +58,7 @@ def layout_from_config(ui, allow_auto=False):
         raise hgutil.Abort("unknown layout '%s'" % layout)
     return layout
 
-def layout_from_file(meta_data_dir, ui=None):
+def layout_from_file(metapath, ui=None):
     """ Load the layout in use from the metadata file.
 
     If you pass the ui arg, we will also write the layout to the
@@ -67,7 +67,7 @@ def layout_from_file(meta_data_dir, ui=None):
     """
 
     layout = None
-    layoutfile = os.path.join(meta_data_dir, 'layout')
+    layoutfile = os.path.join(metapath, 'layout')
     if os.path.exists(layoutfile):
         f = open(layoutfile)
         layout = f.read().strip()

@@ -54,7 +54,7 @@ class StandardLayout(base.BaseLayout):
 
         return '%s/%s' % (subdir or '', branchpath)
 
-    def taglocations(self, meta_data_dir):
+    def taglocations(self, metapath):
         # import late to avoid trouble when running the test suite
         try:
             # newer versions of mercurial >= 2.8 will import this because the
@@ -65,7 +65,7 @@ class StandardLayout(base.BaseLayout):
 
         if self._tag_locations is None:
 
-            tag_locations_file = os.path.join(meta_data_dir, 'tag_locations')
+            tag_locations_file = os.path.join(metapath, 'tag_locations')
             self._tag_locations = util.load(tag_locations_file)
 
             if not self._tag_locations:

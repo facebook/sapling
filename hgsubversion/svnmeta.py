@@ -25,8 +25,8 @@ class SVNMeta(object):
         self.repo = repo
         self.path = os.path.normpath(repo.join('..'))
 
-        if not os.path.isdir(self.meta_data_dir):
-            os.makedirs(self.meta_data_dir)
+        if not os.path.isdir(self.metapath):
+            os.makedirs(self.metapath)
         self.uuid = uuid
         self.subdir = subdir
         self.revmap = maps.RevMap(repo)
@@ -42,7 +42,7 @@ class SVNMeta(object):
         self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
         self.tags = maps.Tags(repo)
-        self._layout = layouts.detect.layout_from_file(self.meta_data_dir,
+        self._layout = layouts.detect.layout_from_file(self.metapath,
                                                        ui=self.repo.ui)
         self._layoutobj = None
 
@@ -73,7 +73,7 @@ class SVNMeta(object):
         # gets called
         if not self._layout or self._layout == 'auto':
             self._layout = layouts.detect.layout_from_config(self.repo.ui)
-            layouts.persist.layout_to_file(self.meta_data_dir, self._layout)
+            layouts.persist.layout_to_file(self.metapath, self._layout)
         return self._layout
 
     @property
@@ -95,7 +95,7 @@ class SVNMeta(object):
         if subdir:
             subdir = '/'.join(p for p in subdir.split('/') if p)
 
-        subdirfile = os.path.join(self.meta_data_dir, 'subdir')
+        subdirfile = os.path.join(self.metapath, 'subdir')
 
         if os.path.isfile(subdirfile):
             stored_subdir = util.load(subdirfile)
@@ -122,7 +122,7 @@ class SVNMeta(object):
         return self.__uuid
 
     def _set_uuid(self, uuid):
-        uuidfile = os.path.join(self.meta_data_dir, 'uuid')
+        uuidfile = os.path.join(self.metapath, 'uuid')
         if os.path.isfile(uuidfile):
             stored_uuid = util.load(uuidfile)
             assert stored_uuid
@@ -140,29 +140,29 @@ class SVNMeta(object):
                     'Error-checked UUID of source Subversion repository.')
 
     @property
-    def meta_data_dir(self):
+    def metapath(self):
         return os.path.join(self.path, '.hg', 'svn')
 
     @property
     def branch_info_file(self):
-        return os.path.join(self.meta_data_dir, 'branch_info')
+        return os.path.join(self.metapath, 'branch_info')
 
     @property
     def authors_file(self):
-        return os.path.join(self.meta_data_dir, 'authors')
+        return os.path.join(self.metapath, 'authors')
 
     @property
     def filemap_file(self):
-        return os.path.join(self.meta_data_dir, 'filemap')
+        return os.path.join(self.metapath, 'filemap')
 
     @property
     def branchmapfile(self):
-        return os.path.join(self.meta_data_dir, 'branchmap')
+        return os.path.join(self.metapath, 'branchmap')
 
     @property
     def tagmapfile(self):
         # called tag-renames for backwards compatibility
-        return os.path.join(self.meta_data_dir, 'tag-renames')
+        return os.path.join(self.metapath, 'tag-renames')
 
     def fixdate(self, date):
         if date is not None:
@@ -237,7 +237,7 @@ class SVNMeta(object):
 
     @property
     def taglocations(self):
-        return self.layoutobj.taglocations(self.meta_data_dir)
+        return self.layoutobj.taglocations(self.metapath)
 
     def get_path_tag(self, path):
         """If path could represent the path to a tag, returns the
