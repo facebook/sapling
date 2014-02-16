@@ -346,7 +346,8 @@ class GitHandler(object):
     def export_git_objects(self):
         self.init_if_missing()
 
-        nodes = [self.repo.lookup(n) for n in self.repo]
+        clnode = self.repo.changelog.node
+        nodes = [clnode(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
         if total:
