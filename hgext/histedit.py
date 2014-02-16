@@ -35,7 +35,7 @@ file open in your editor::
  # Commands:
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
- #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
+ #  f, fold = use commit, but combine it with the one above
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -56,7 +56,7 @@ would reorganize the file to look like this::
  # Commands:
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
- #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
+ #  f, fold = use commit, but combine it with the one above
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -179,7 +179,7 @@ editcomment = _("""# Edit history between %s and %s
 # Commands:
 #  p, pick = use commit
 #  e, edit = use commit, but stop for amending
-#  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
+#  f, fold = use commit, but combine it with the one above
 #  d, drop = remove commit from history
 #  m, mess = edit message without changing commit content
 #

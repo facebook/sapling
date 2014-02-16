@@ -66,7 +66,7 @@ show the edit commands offered
   # Commands:
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
-  #  f, fold = use commit, but fold into previous commit (combines this commit with the one above)
+  #  f, fold = use commit, but combine it with the one above
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #
