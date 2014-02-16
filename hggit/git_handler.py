@@ -367,7 +367,7 @@ class GitHandler(object):
                               "of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev, exporter)
-        util.progress(self.ui, 'importing', None, total=total)
+        util.progress(self.ui, 'exporting', None, total=total)
 
 
     # convert this commit into git objects
