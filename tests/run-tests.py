@@ -797,10 +797,10 @@ def tsttest(test, wd, options, replacements, env):
             if isinstance(r, str):
                 if r == '+glob':
                     lout = el[:-1] + ' (glob)\n'
-                    r = 0 # warn only
+                    r = '' # warn only this line
                 elif r == '-glob':
                     lout = ''.join(el.rsplit(' (glob)', 1))
-                    r = 0 # warn only
+                    r = '' # warn only this line
                 else:
                     log('\ninfo, unknown linematch result: %r\n' % r)
                     r = False
@@ -810,7 +810,7 @@ def tsttest(test, wd, options, replacements, env):
                 if needescape(lout):
                     lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
                 postout.append("  " + lout) # let diff deal with it
-                if r != 0: # != warn only
+                if r != '': # if line failed
                     warnonly = False
 
         if lcmd:
