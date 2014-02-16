@@ -29,15 +29,6 @@ Both are empty:
   $ hg init empty1
   $ hg init empty2
   $ tstart empty2
-check if process of pid looks reasonable ('hg' normally, 'python' for run-tests.py -l)
-#if windows
-ps of mingw does not support -p, tasklist is on any windows machine since XP
-  $ tasklist //NH //fi "pid eq `cat hg.pid`" | grep '  '
-  (.* )?(hg|python)\.exe( .*)? (re)
-#else
-  $ ps --no-heading -p `cat hg.pid`
-  (.* )?(hg|python)( .*)? (re)
-#endif
   $ hg incoming -R empty1 $remote
   comparing with http://localhost:$HGPORT/
   no changes found
