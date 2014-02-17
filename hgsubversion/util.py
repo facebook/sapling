@@ -142,6 +142,32 @@ def save_string(file_path, string):
     f.write(str(string))
     f.close()
 
+def _scrub(data):
+    if not data and not isinstance(data, list):
+        return ''
+    return data
+
+def _descrub(data):
+    if isinstance(data, list):
+        return tuple(data)
+    if data == '':
+        return None
+    return data
+
+def _convert(input, visitor):
+    if isinstance(input, dict):
+        scrubbed = {}
+        d = dict([(_convert(key, visitor), _convert(value, visitor))
+                  for key, value in input.iteritems()])
+        for key, val in d.iteritems():
+            scrubbed[visitor(key)] = visitor(val)
+        return scrubbed
+    elif isinstance(input, list):
+        return [_convert(element, visitor) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode('utf-8')
+    return input
+
 def dump(data, file_path):
     """pickle some data to a path atomically.
 
