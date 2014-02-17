@@ -184,4 +184,14 @@ same again, but emulate an old client that doesn't write undo.desc
   $ cat a
   a
 
-  $ cd ..
+corrupt journal test
+  $ echo "foo" > .hg/store/journal
+  $ hg recover
+  rolling back interrupted transaction
+  couldn't read journal entry 'foo\n'!
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 2 changesets, 2 total revisions
+

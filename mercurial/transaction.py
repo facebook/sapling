@@ -174,7 +174,10 @@ def rollback(opener, file, report):
     lines = fp.readlines()
     fp.close()
     for l in lines:
-        f, o = l.split('\0')
-        entries.append((f, int(o), None))
+        try:
+            f, o = l.split('\0')
+            entries.append((f, int(o), None))
+        except ValueError:
+            report(_("couldn't read journal entry %r!\n") % l)
 
     _playback(file, report, opener, entries)
