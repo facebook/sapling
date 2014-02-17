@@ -30,7 +30,7 @@ class SVNMeta(object):
             os.makedirs(self.metapath)
         self.uuid = uuid
         self.subdir = subdir
-        self.revmap = maps.RevMap(repo)
+        self._revmap = None
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = util.configpath(self.ui, 'authormap')
@@ -170,6 +170,12 @@ class SVNMeta(object):
     @property
     def revmap_file(self):
         return os.path.join(self.metapath, 'rev_map')
+
+    @property
+    def revmap(self):
+        if self._revmap is None:
+            self._revmap = maps.RevMap(self.repo)
+        return self._revmap
 
     def fixdate(self, date):
         if date is not None:
