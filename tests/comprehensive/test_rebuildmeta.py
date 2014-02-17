@@ -1,5 +1,4 @@
 import os
-import pickle
 import unittest
 import sys
 
@@ -19,6 +18,7 @@ from mercurial import ui
 from hgsubversion import compathacks
 from hgsubversion import svncommands
 from hgsubversion import svnmeta
+from hgsubversion import util
 
 # These test repositories have harmless skew in rebuildmeta for the
 # last-pulled-rev because the last rev in svn causes absolutely no
@@ -125,8 +125,8 @@ def _run_assertions(self, name, single, src, dest, u):
         except AttributeError:
           # hg 2.8 and earlier
           self.assertEqual(src.branchtags(), dest.branchtags())
-    srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
-    destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
+    srcbi = util.load(os.path.join(src.path, 'svn', 'branch_info'))
+    destbi = util.load(os.path.join(dest.path, 'svn', 'branch_info'))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))
     revkeys = svnmeta.SVNMeta(dest).revmap.keys()
     for branch in destbi:
