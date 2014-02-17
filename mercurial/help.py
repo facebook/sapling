@@ -41,7 +41,7 @@ def optrst(options, verbose):
             shortopt, longopt, default, desc = option
             optlabel = _("VALUE") # default label
 
-        if _("DEPRECATED") in desc and not verbose:
+        if not verbose and ("DEPRECATED" in desc or _("DEPRECATED") in desc):
             continue
 
         so = ''

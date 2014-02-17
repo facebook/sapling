@@ -649,6 +649,7 @@ Test command without options
   use "hg help" for the full list of commands or "hg -v" for details
   [255]
 
+
   $ cat > helpext.py <<EOF
   > import os
   > from mercurial import commands
@@ -657,6 +658,7 @@ Test command without options
   >     pass
   > 
   > cmdtable = {
+  >     "debugoptDEP": (nohelp, [('', 'dopt', None, 'option is DEPRECATED')],),
   >     "nohelp": (nohelp, [('', 'longdesc', 3, 'x'*90),
   >                         ('n', '', None, 'normal desc'),
   >                         ('', 'newline', '', 'line1\nline2'),
@@ -791,6 +793,33 @@ Test list of commands with command with no help text
    nohelp        (no help text available)
   
   use "hg -v help helpext" to show builtin aliases and global options
+
+
+test deprecated option is hidden in command help
+  $ hg help debugoptDEP
+  hg debugoptDEP
+  
+  (no help text available)
+  
+  options:
+  
+  use "hg -v help debugoptDEP" to show the global options
+
+test deprecated option is shown with -v
+  $ hg help -v debugoptDEP | grep dopt
+    --dopt option is DEPRECATED
+
+test deprecated option is hidden with translation with untranslated description
+(use many globy for not failing on changed transaction)
+  $ LANGUAGE=sv hg help debugoptDEP
+  hg debugoptDEP
+  
+  (*) (glob)
+  
+  flaggor:
+  
+  *"hg -v help debugoptDEP"* (glob)
+
 
 Test a help topic
 
