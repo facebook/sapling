@@ -167,6 +167,10 @@ class SVNMeta(object):
         # called tag-renames for backwards compatibility
         return os.path.join(self.metapath, 'tag-renames')
 
+    @property
+    def revmap_file(self):
+        return os.path.join(self.metapath, 'rev_map')
+
     def fixdate(self, date):
         if date is not None:
             date = date.replace('T', ' ').replace('Z', '').split('.')[0]
