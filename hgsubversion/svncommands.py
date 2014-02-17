@@ -87,9 +87,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     startrev = 0
     sofar = []
     branchinfo = {}
+    youngestpath = os.path.join(svnmetadir, 'lastpulled')
     if partial:
         try:
-            youngestpath = os.path.join(svnmetadir, 'lastpulled')
             foundpartialinfo = False
             if os.path.exists(youngestpath):
                 youngest = util.load(youngestpath)
@@ -111,7 +111,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             ui.status('no metadata available -- doing a full rebuild\n')
 
 
-    lastpulled = open(os.path.join(svnmetadir, 'lastpulled'), 'wb')
     revmap = open(os.path.join(svnmetadir, 'rev_map'), 'w')
     revmap.write('1\n')
     revmap.writelines(sofar)
@@ -163,7 +162,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             else:
                 closed.add(parentctx.rev())
 
-    lastpulled.write(str(youngest) + '\n')
+    util.dump(youngest, youngestpath)
     ui.progress('prepare', None, total=numrevs)
 
     for rev in xrange(startrev, len(repo)):
