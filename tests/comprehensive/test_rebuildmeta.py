@@ -113,13 +113,13 @@ def _run_assertions(self, name, single, src, dest, u):
         self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
         dtf = os.path.join(dest.path, 'svn', tf)
         self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
-        old, new = open(stf).read(), open(dtf).read()
+        old, new = util.load(stf, resave=False), util.load(dtf, resave=False)
         if tf == 'lastpulled' and (name,
                                    self.stupid, single) in expect_youngest_skew:
             self.assertNotEqual(old, new,
                                 'rebuildmeta unexpected match on youngest rev!')
             continue
-        self.assertMultiLineEqual(old, new, tf + ' differs')
+        self.assertEqual(old, new, tf + ' differs')
         try:
           self.assertEqual(src.branchmap(), dest.branchmap())
         except AttributeError:
