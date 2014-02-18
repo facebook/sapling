@@ -195,7 +195,10 @@ def getargs(x, min, max, err):
 def getset(repo, subset, x):
     if not x:
         raise error.ParseError(_("missing argument"))
-    return methods[x[0]](repo, subset, *x[1:])
+    s = methods[x[0]](repo, subset, *x[1:])
+    if util.safehasattr(s, 'set'):
+        return s
+    return baseset(s)
 
 def _getrevsource(repo, r):
     extra = repo[r].extra()
@@ -1949,7 +1952,9 @@ def match(ui, spec):
         tree = findaliases(ui, tree)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
-        return getset(repo, subset, tree)
+        if util.safehasattr(subset, 'set'):
+            return getset(repo, subset, tree)
+        return getset(repo, baseset(subset), tree)
     return mfunc
 
 def formatspec(expr, *args):
