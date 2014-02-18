@@ -198,6 +198,14 @@ but configured, it'll do the expected thing:
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     add d
   | |
+  $ hg log --limit 2 --graph -r 'heads(upstream())'
+  o  changeset:   2:95cb4ab9fe1d
+  |  branch:      stable
+  |  tag:         alpha/stable
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add c
+  |
 
 Test remotebranches revset and keyword
 
