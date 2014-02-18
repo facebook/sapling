@@ -157,7 +157,7 @@ def dump(data, file_path):
     json.dump(_convert(data, _scrub), f)
     f.close()
 
-def load(file_path, default=None):
+def load(file_path, default=None, resave=True):
     """Deserialize some data from a path.
     """
     data = default
@@ -174,7 +174,8 @@ def load(file_path, default=None):
 
         # convert the file to json immediately
         f.close()
-        dump(data, file_path)
+        if resave:
+            dump(data, file_path)
     return data
 
 def parseurl(url, heads=[]):
