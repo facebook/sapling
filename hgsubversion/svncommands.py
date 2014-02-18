@@ -38,22 +38,6 @@ def rebuildmeta(ui, repo, args, unsafe_skip_uuid_check=False, **opts):
     return _buildmeta(ui, repo, args, partial=False,
                       skipuuid=unsafe_skip_uuid_check)
 
-def read_if_exists(path):
-     try:
-        fp = open(path, 'rb')
-        d = fp.read()
-        fp.close()
-        return d
-     except IOError, err:
-         if err.errno != errno.ENOENT:
-             raise
-
-def write_if_needed(path, content):
-    if read_if_exists(path) != content:
-        fp = open(path, 'wb')
-        fp.write(content)
-        fp.close()
-
 def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     if repo is None:
