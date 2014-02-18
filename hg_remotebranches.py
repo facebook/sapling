@@ -176,6 +176,11 @@ def reposetup(ui, repo):
 
     repo.__class__ = remotebranchesrepo
 
+try:
+    baseset = revset.baseset
+except AttributeError:
+    baseset = lambda x: x
+
 def upstream_revs(filt, repo, subset, x):
     nodes = [node.hex(n) for name, n in
              repo._remotebranches.iteritems() if filt(name)]
@@ -184,7 +189,7 @@ def upstream_revs(filt, repo, subset, x):
                       map(lambda x: set(revset.ancestors(repo, subset, x)),
                           [('string', n) for n in nodes]),
                       set())
-    return [r for r in subset if r in upstream]
+    return baseset([r for r in subset if r in upstream])
 
 def upstream(repo, subset, x):
     '''``upstream()``
@@ -212,7 +217,7 @@ def remotebranchesrevset(repo, subset, x):
     """
     args = revset.getargs(x, 0, 0, "remotebranches takes no arguments")
     remoterevs = set(repo[n].rev() for n in repo._remotebranches.itervalues())
-    return [r for r in subset if r in remoterevs]
+    return baseset([r for r in subset if r in remoterevs])
 
 if revset is not None:
     revset.symbols.update({'upstream': upstream,
