@@ -64,6 +64,9 @@ def uisetup(ui):
 
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
         """records each revlog write to the repo's pendingrev list"""
+        if not util.safehasattr(transaction, "repo"):
+            return orig(self, transaction, ifh, dfh, entry, data, link, offset)
+
         e = struct.unpack(revlog.indexformatng, entry)
         node = hex(e[7])
         data0 = data[0] or ''
@@ -84,17 +87,21 @@ def reposetup(ui, repo):
             def noop():
                 pass
             executewithsql(repo, noop)
-    else:
-        raise Exception("hgsql extension installed but not enabled")
 
 # Incoming commits are only allowed via push and pull
 def unbundle(orig, *args, **kwargs):
     repo = args[0]
-    return executewithsql(repo, orig, commitlock, *args, **kwargs)
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, commitlock, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
 
 def pull(orig, *args, **kwargs):
     repo = args[1]
-    return executewithsql(repo, orig, commitlock, *args, **kwargs)
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, commitlock, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
 
 def executewithsql(repo, action, lock=None, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
@@ -346,6 +353,12 @@ def wraprepo(repo):
                 clrev += chunksize
 
             queue.put(False)
+
+        def addchangegroup(self, source, srctype, url, emptyok=False):
+            def _addchangegroup():
+                return super(sqllocalrepo, self).addchangegroup(source, srctype, url, emptyok)
+
+            return executewithsql(self, _addchangegroup, commitlock)
 
         def committodb(self):
             """Commits all pending revisions to the database
@@ -693,6 +706,9 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
     """Copy paste of revlog.addgroup, but we ensure that the revisions are
     added in linkrev order.
     """
+    if not util.safehasattr(transaction, "repo"):
+        return orig(self, bundle, linkmapper, transaction)
+
     # track the base of the current delta log
     content = []
     node = None
@@ -860,11 +876,14 @@ def bookmarkwrite(orig, self):
     return executewithsql(repo, commitbookmarks, bookmarklock)
 
 def pushkey(orig, repo, proto, namespace, key, old, new):
-    def commitpushkey():
-        return orig(repo, proto, namespace, key, old, new)
+    if repo.ui.configbool("hgsql", "enabled"):
+        def commitpushkey():
+            return orig(repo, proto, namespace, key, old, new)
 
-    lock = "%s_lock" % namespace
-    return executewithsql(repo, commitpushkey, lock)
+        lock = "%s_lock" % namespace
+        return executewithsql(repo, commitpushkey, lock)
+    else:
+        return orig(repo, proto, namespace, key, old, new)
 
 # recover must be a norepo command because loading the repo fails
 commands.norepo += " sqlrecover"

@@ -35,6 +35,7 @@ function initserver() {
   cat >> $1/.hg/hgrc <<EOF
 [extensions]
 hgsql=$TESTDIR/../hgsql.py
+strip=
 
 [hgsql]
 enabled = True
@@ -54,5 +55,8 @@ function initclient() {
   cat >> $1/.hg/hgrc <<EOF
 [ui]
 ssh=python "$TESTDIR/dummyssh"
+
+[extensions]
+strip=
 EOF
 }
