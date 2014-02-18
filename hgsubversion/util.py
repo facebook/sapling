@@ -169,8 +169,14 @@ def load(file_path, default=None, resave=True):
         data = _convert(json.load(f), _descrub)
         f.close()
     except ValueError:
-        # Ok, JSON couldn't be loaded, so we'll try the old way of using pickle
-        data = compathacks.pickle_load(f)
+        try:
+            # Ok, JSON couldn't be loaded, so we'll try the old way of using pickle
+            data = compathacks.pickle_load(f)
+        except:
+            # well, pickle didn't work either, so we reset the file pointer and
+            # read the string
+            f.seek(0)
+            data = f.read()
 
         # convert the file to json immediately
         f.close()
