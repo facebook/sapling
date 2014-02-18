@@ -1035,7 +1035,7 @@ def maxrev(repo, subset, x):
     """
     os = getset(repo, spanset(repo), x)
     if os:
-        m = max(os)
+        m = os.max()
         if m in subset:
             return baseset([m])
     return baseset([])
@@ -1072,7 +1072,7 @@ def minrev(repo, subset, x):
     """
     os = getset(repo, spanset(repo), x)
     if os:
-        m = min(os)
+        m = os.min()
         if m in subset:
             return baseset([m])
     return baseset([])

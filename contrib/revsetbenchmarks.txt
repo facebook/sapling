@@ -3,3 +3,6 @@ draft() and ::tip
 roots(0::tip)
 author(lmoscovicz)
 author(lmoscovicz) or author(mpm)
+max(tip:0)
+min(0:tip)
+min(0::)
