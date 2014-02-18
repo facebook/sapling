@@ -52,13 +52,19 @@ In addition to filters, there are some basic built-in functions:
 
 - if(expr, then[, else])
 
+- ifcontains(expr, expr, then[, else])
+
 - ifeq(expr, expr, then[, else])
 
 - join(list, sep)
 
 - label(label, expr)
 
+- revset(query[, formatargs])
+
 - rstdoc(text, style)
+
+- shortest(node)
 
 - strip(text[, chars])
 
@@ -106,3 +112,11 @@ Some sample command line templates:
 - Display the contents of the 'extra' field, one per line::
 
    $ hg log -r 0 --template "{join(extras, '\n')}\n"
+
+- Mark the current bookmark with '*'::
+
+   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, current, \"*\")} '}\n"
+
+- Mark the working copy parent with '@'::
+
+   $ hg log --template "{ifcontains(rev, revset('.'), '@')}\n"
