@@ -2409,12 +2409,18 @@ class spanset(object):
     def __and__(self, x):
         if isinstance(x, baseset):
             x = x.set()
-        return lazyset(self, lambda r: r in x)
+        if self._start <= self._end:
+            return orderedlazyset(self, lambda r: r in x)
+        else:
+            return orderedlazyset(self, lambda r: r in x, ascending=False)
 
     def __sub__(self, x):
         if isinstance(x, baseset):
             x = x.set()
-        return lazyset(self, lambda r: r not in x)
+        if self._start <= self._end:
+            return orderedlazyset(self, lambda r: r not in x)
+        else:
+            return orderedlazyset(self, lambda r: r not in x, ascending=False)
 
     def __add__(self, x):
         def iterates():
