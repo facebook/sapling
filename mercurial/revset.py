@@ -2166,10 +2166,13 @@ class spanset(object):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
     """
-    def __init__(self, start, end, hiddenrevs=set()):
+    def __init__(self, repo, start=0, end=None):
         self._start = start
-        self._end = end
-        self._hiddenrevs = hiddenrevs
+        if end is not None:
+            self._end = end
+        else:
+            self._end = len(repo)
+        self._hiddenrevs = repo.changelog.filteredrevs
 
     def _contained(self, rev):
         return (rev <= self._start and rev > self._end) or (rev >= self._start
