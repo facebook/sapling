@@ -225,8 +225,7 @@ def gitnodekw(**args):
     """:gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal digit string."""
     node = args['ctx']
     repo = args['repo']
-    git = GitHandler(repo, repo.ui)
-    gitnode = git.map_git_get(node.hex())
+    gitnode = repo.githandler.map_git_get(node.hex())
     if gitnode is None:
         gitnode = ''
     return gitnode
