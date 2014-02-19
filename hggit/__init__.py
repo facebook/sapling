@@ -213,7 +213,7 @@ def revset_gitnode(repo, subset, x):
     args = revset.getargs(x, 1, 1, "gitnode takes one argument")
     rev = revset.getstring(args[0],
                            "the argument to gitnode() must be a hash")
-    git = GitHandler(repo, repo.ui)
+    git = repo.githandler
     def matches(r):
         gitnode = git.map_git_get(repo[r].hex())
         if gitnode is None:
