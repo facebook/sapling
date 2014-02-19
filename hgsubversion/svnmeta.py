@@ -15,7 +15,7 @@ import editor
 
 class SVNMeta(object):
 
-    def __init__(self, repo, uuid=None, subdir=None):
+    def __init__(self, repo, uuid=None, subdir=None, skiperrorcheck=False):
         """path is the path to the target hg repo.
 
         subdir is the subdirectory of the edits *on the svn server*.
@@ -24,6 +24,7 @@ class SVNMeta(object):
         self.ui = repo.ui
         self.repo = repo
         self.path = os.path.normpath(repo.join('..'))
+        self._skiperror = skiperrorcheck
 
         if not os.path.isdir(self.metapath):
             os.makedirs(self.metapath)
@@ -95,6 +96,7 @@ class SVNMeta(object):
         if subdir:
             subdir = '/'.join(p for p in subdir.split('/') if p)
 
+        self.__subdir = None
         subdirfile = os.path.join(self.metapath, 'subdir')
 
         if os.path.isfile(subdirfile):
@@ -110,7 +112,7 @@ class SVNMeta(object):
         elif subdir is not None:
             util.dump(subdir, subdirfile)
             self.__subdir = subdir
-        else:
+        elif not self._skiperror:
             raise hgutil.Abort("hgsubversion metadata unavailable; "
                                "please run 'hg svn rebuildmeta'")
 
@@ -122,6 +124,7 @@ class SVNMeta(object):
         return self.__uuid
 
     def _set_uuid(self, uuid):
+        self.__uuid = None
         uuidfile = os.path.join(self.metapath, 'uuid')
         if os.path.isfile(uuidfile):
             stored_uuid = util.load(uuidfile)
@@ -132,7 +135,7 @@ class SVNMeta(object):
         elif uuid:
             util.dump(uuid, uuidfile)
             self.__uuid = uuid
-        else:
+        elif not self._skiperror:
             raise hgutil.Abort("hgsubversion metadata unavailable; "
                                "please run 'hg svn rebuildmeta'")
 
