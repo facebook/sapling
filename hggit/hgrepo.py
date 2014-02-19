@@ -38,8 +38,7 @@ def generate_repo_subclass(baseclass):
         def _findtags(self):
             (tags, tagtypes) = super(hgrepo, self)._findtags()
 
-            git = GitHandler(self, self.ui)
-            for tag, rev in git.tags.iteritems():
+            for tag, rev in self.githandler.tags.iteritems():
                 tags[tag] = bin(rev)
                 tagtypes[tag] = 'git'
 
