@@ -41,3 +41,27 @@
   $ hg log --template '{rev} {desc}\n'
   1 y
   0 x
+
+# Verify local bookmark pull
+
+  $ cd ../master
+  $ hg book foo -r 0
+  $ hg book
+     foo                       0:b292c1e3311f
+  $ cd ../client
+  $ hg pull -q ../master
+  $ hg book
+     foo                       0:b292c1e3311f
+
+# Verify local bookmark push
+
+  $ hg book -r tip foo
+  moving bookmark 'foo' forward from b292c1e3311f
+  $ hg push ../master
+  pushing to ../master
+  searching for changes
+  no changes found
+  updating bookmark foo
+  [1]
+  $ hg book -R ../master
+     foo                       1:d34c38483be9

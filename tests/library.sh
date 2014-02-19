@@ -57,6 +57,7 @@ function initclient() {
 ssh=python "$TESTDIR/dummyssh"
 
 [extensions]
+hgsql=$TESTDIR/../hgsql.py
 strip=
 EOF
 }

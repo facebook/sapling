@@ -62,6 +62,8 @@ def uisetup(ui):
     wrapfunction(wireproto, 'pushkey', pushkey)
     wireproto.commands['pushkey'] = (wireproto.pushkey, 'namespace key old new')
 
+    wrapcommand(commands.table, 'bookmark', bookmarkcommand)
+
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
         """records each revlog write to the repo's pendingrev list"""
         if not util.safehasattr(transaction, "repo"):
@@ -76,7 +78,9 @@ def uisetup(ui):
     wrapfunction(revlog.revlog, '_writeentry', writeentry)
 
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
+
     wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
+    wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
 
 def reposetup(ui, repo):
     if repo.ui.configbool("hgsql", "enabled"):
@@ -100,6 +104,13 @@ def pull(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
         return executewithsql(repo, orig, commitlock, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
+
+def updatefromremote(orig, *args, **kwargs):
+    repo = args[1]
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, bookmarklock, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
@@ -359,6 +370,13 @@ def wraprepo(repo):
                 return super(sqllocalrepo, self).addchangegroup(source, srctype, url, emptyok)
 
             return executewithsql(self, _addchangegroup, commitlock)
+
+        def pushkey(self, namespace, key, old, new):
+            def _pushkey():
+                return super(sqllocalrepo, self).pushkey(namespace, key, old, new)
+
+            lock = "%s_lock" % namespace
+            return executewithsql(repo, _pushkey, lock)
 
         def committodb(self):
             """Commits all pending revisions to the database
@@ -852,28 +870,45 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
 
     return content
 
+def bookmarkcommand(orig, ui, repo, *names, **opts):
+    if not repo.ui.configbool("hgsql", "enabled"):
+        return orig(ui, repo, *names, **opts)
+
+    write = (opts.get('delete') or opts.get('rename')
+             or opts.get('inactive') or names)
+
+    def _bookmarkcommand():
+        return orig(ui, repo, *names, **opts)
+
+    if write:
+        return executewithsql(repo, _bookmarkcommand, bookmarklock)
+    else:
+        return _bookmarkcommand()
+
 def bookmarkwrite(orig, self):
     repo = self._repo
-    if repo.disablesync:
+    if not repo.ui.configbool("hgsql", "enabled") or repo.disablesync:
         return orig(self)
 
-    def commitbookmarks():
-        try:
-            cursor = repo.sqlcursor
-            cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
-                           namespace = 'bookmarks'""", (repo.sqlreponame))
+    if not repo.sqlconn:
+        raise util.Abort("attempted bookmark write without sql connection")
+    elif not bookmarklock in repo.heldlocks:
+        raise util.Abort("attempted bookmark write without bookmark lock")
 
-            for k, v in self.iteritems():
-                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
-                               VALUES(%s, 'bookmarks', %s, %s)""",
-                               (repo.sqlreponame, k, hex(v)))
-            repo.sqlconn.commit()
-            return orig(self)
-        except:
-            repo.sqlconn.rollback()
-            raise
+    try:
+        cursor = repo.sqlcursor
+        cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
+                       namespace = 'bookmarks'""", (repo.sqlreponame))
 
-    return executewithsql(repo, commitbookmarks, bookmarklock)
+        for k, v in self.iteritems():
+            cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                           VALUES(%s, 'bookmarks', %s, %s)""",
+                           (repo.sqlreponame, k, hex(v)))
+        repo.sqlconn.commit()
+        return orig(self)
+    except:
+        repo.sqlconn.rollback()
+        raise
 
 def pushkey(orig, repo, proto, namespace, key, old, new):
     if repo.ui.configbool("hgsql", "enabled"):
