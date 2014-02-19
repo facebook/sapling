@@ -173,11 +173,7 @@ def getremotechanges(orig, ui, repo, other, *args, **opts):
             cleanup = None
         return r, c, cleanup
     return orig(ui, repo, other, *args, **opts)
-try:
-    extensions.wrapfunction(bundlerepo, 'getremotechanges', getremotechanges)
-except AttributeError:
-    # 1.7+
-    pass
+extensions.wrapfunction(bundlerepo, 'getremotechanges', getremotechanges)
 
 def peer(orig, uiorrepo, *args, **opts):
     newpeer = orig(uiorrepo, *args, **opts)
