@@ -610,7 +610,8 @@ class GitHandler(object):
 
         todo.sort(key=commitdate, reverse=True)
 
-        # traverse the heads getting a list of all the unique commits
+        # traverse the heads getting a list of all the unique commits in
+        # topological order
         commits = []
         seen = set(todo)
         while todo:
@@ -624,6 +625,8 @@ class GitHandler(object):
             for p in obj.parents:
                 if p not in done:
                     todo.append(p)
+                    # process parents of a commit before processing the
+                    # commit itself, and come back to this commit later
                     break
             else:
                 commits.append(sha)
