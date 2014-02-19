@@ -70,10 +70,9 @@ def generate_repo_subclass(baseclass):
                 # Mercurial 1.5 and later.
                 return self._tags
 
-            git = GitHandler(self, self.ui)
             tagscache = super(hgrepo, self).tags()
             tagscache.update(self.gitrefs())
-            for tag, rev in git.tags.iteritems():
+            for tag, rev in self.githandler.tags.iteritems():
                 if tag in tagscache:
                     continue
 
