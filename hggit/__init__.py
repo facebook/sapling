@@ -119,8 +119,7 @@ def reposetup(ui, repo):
         repo.__class__ = klass
 
 def gimport(ui, repo, remote_name=None):
-    git = GitHandler(repo, ui)
-    git.import_commits(remote_name)
+    repo.githandler.import_commits(remote_name)
 
 def gexport(ui, repo):
     git = GitHandler(repo, ui)
