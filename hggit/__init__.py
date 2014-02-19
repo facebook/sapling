@@ -122,8 +122,7 @@ def gimport(ui, repo, remote_name=None):
     repo.githandler.import_commits(remote_name)
 
 def gexport(ui, repo):
-    git = GitHandler(repo, ui)
-    git.export_commits()
+    repo.githandler.export_commits()
 
 def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
