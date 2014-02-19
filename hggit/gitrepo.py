@@ -10,8 +10,6 @@ try:
 except ImportError:
     from mercurial.repo import repository as peerrepository
 
-from git_handler import GitHandler
-
 from overlay import overlayrepo
 
 from mercurial.node import bin
@@ -28,12 +26,6 @@ class gitrepo(peerrepository):
         self.ui = ui
         self.path = path
         self.localrepo = None
-        self.handler = None
-
-    def _initializehandler(self):
-        if self.handler is None and self.localrepo is not None:
-            self.handler = GitHandler(self.localrepo, self.localrepo.ui)
-        return self.handler
 
     def url(self):
         return self.path
