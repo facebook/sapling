@@ -107,11 +107,7 @@ def extsetup():
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
     entry = (['git'], _("Working with Git Repositories"),
         lambda: open(os.path.join(helpdir, 'git.rst')).read())
-    # in 1.6 and earler the help table is a tuple
-    if getattr(help.helptable, 'extend', None):
-        insort(help.helptable, entry)
-    else:
-        help.helptable = help.helptable + (entry,)
+    insort(help.helptable, entry)
 
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
