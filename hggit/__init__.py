@@ -203,7 +203,7 @@ def revset_fromgit(repo, subset, x):
     Select changesets that originate from Git.
     '''
     args = revset.getargs(x, 0, 0, "fromgit takes no arguments")
-    git = GitHandler(repo, repo.ui)
+    git = repo.githandler
     return [r for r in subset if git.map_git_get(repo[r].hex()) is not None]
 
 def revset_gitnode(repo, subset, x):
