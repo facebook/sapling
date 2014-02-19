@@ -53,8 +53,8 @@ class gitrepo(peerrepository):
         if namespace == 'namespaces':
             return {'bookmarks':''}
         elif namespace == 'bookmarks':
-            handler = self._initializehandler()
-            if handler:
+            if self.localrepo is not None:
+                handler = self.localrepo.githandler
                 handler.export_commits()
                 refs = handler.fetch_pack(self.path)
                 reqrefs = refs
