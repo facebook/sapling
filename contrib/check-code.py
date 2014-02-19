@@ -121,6 +121,7 @@ testpats = [
     (r'^( *)\t', "don't use tabs to indent"),
     (r'sed (-e )?\'(\d+|/[^/]*/)i(?!\\\n)',
      "put a backslash-escaped newline after sed 'i' command"),
+    (r'^diff *-\w*u.*$\n(^  \$ |^$)', "prefix diff -u with cmp"),
   ],
   # warnings
   [

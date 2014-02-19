@@ -522,7 +522,7 @@ hgweb fileannotate, raw
   $ echo "" >> b
   $ echo "" >> b
   $ echo "" >> b
-  $ diff -u b a
+  $ cmp b a || diff -u b a
 
 hgweb filerevision, raw
 
@@ -531,7 +531,7 @@ hgweb filerevision, raw
   $ echo "200 Script output follows" > b
   $ echo "" >> b
   $ hg cat primes.py >> b
-  $ diff -u b a
+  $ cmp b a || diff -u b a
 
 hgweb highlightcss friendly
 

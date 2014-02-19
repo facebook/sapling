@@ -102,7 +102,7 @@ compare timestamps
   >   > ../bzr-timestamps
   $ cd ..
   $ hg -R source-hg log --template "{date|isodate}\n" > hg-timestamps
-  $ diff -u bzr-timestamps hg-timestamps
+  $ cmp bzr-timestamps hg-timestamps || diff -u bzr-timestamps hg-timestamps
   $ cd ..
 
 merge
