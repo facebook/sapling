@@ -2190,6 +2190,12 @@ class baseset(list):
         This is part of the mandatory API for smartset."""
         self.sort(reverse=True)
 
+    def min(self):
+        return min(self)
+
+    def max(self):
+        return max(self)
+
     def set(self):
         """Returns a set or a smartset containing all the elements.
 
@@ -2267,6 +2273,12 @@ class lazyset(object):
 
     def descending(self):
         self._subset.sort(reverse=True)
+
+    def min(self):
+        return min(self)
+
+    def max(self):
+        return max(self)
 
     def __contains__(self, x):
         c = self._cache
