@@ -98,19 +98,17 @@ class SVNMeta(object):
         subdirfile = os.path.join(self.meta_data_dir, 'subdir')
 
         if os.path.isfile(subdirfile):
-            stored_subdir = open(subdirfile).read()
+            stored_subdir = util.load(subdirfile)
             assert stored_subdir is not None
             if subdir is None:
                 self.__subdir = stored_subdir
-            elif subdir != stored_subdir:
+            elif subdir and subdir != stored_subdir:
                 raise hgutil.Abort('unable to work on a different path in the '
                                    'repository')
             else:
                 self.__subdir = subdir
         elif subdir is not None:
-            f = open(subdirfile, 'w')
-            f.write(subdir)
-            f.close()
+            util.dump(subdir, subdirfile)
             self.__subdir = subdir
         else:
             raise hgutil.Abort("hgsubversion metadata unavailable; "

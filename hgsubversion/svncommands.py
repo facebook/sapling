@@ -65,7 +65,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     if subdir is None:
         svn = svnrepo.svnremoterepo(ui, url).svn
         subdir = svn.subdir
-        open(subdirpath, 'wb').write(subdir.strip('/'))
+        util.dump(subdir.strip('/'), subdirpath)
 
     youngest = 0
     startrev = 0
