@@ -16,16 +16,11 @@ def generate_repo_subclass(baseclass):
                 return super(hgrepo, self).pull(remote, heads, force)
 
         # TODO figure out something useful to do with the newbranch param
-        def push(self, remote, force=False, revs=None, newbranch=None):
+        def push(self, remote, force=False, revs=None, newbranch=False):
             if isinstance(remote, gitrepo):
                 return self.githandler.push(remote.path, revs, force)
             else: #pragma: no cover
-                # newbranch was added in 1.6
-                if newbranch is None:
-                    return super(hgrepo, self).push(remote, force, revs)
-                else:
-                    return super(hgrepo, self).push(remote, force, revs,
-                                                    newbranch)
+                return super(hgrepo, self).push(remote, force, revs, newbranch)
 
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             if isinstance(remote, gitrepo):
