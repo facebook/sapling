@@ -178,8 +178,7 @@ def getremotechanges(orig, ui, repo, other, *args, **opts):
             revs = args[0]
         else:
             revs = opts.get('onlyheads', opts.get('revs'))
-        git = GitHandler(repo, ui)
-        r, c, cleanup = git.getremotechanges(other, revs)
+        r, c, cleanup = repo.githandler.getremotechanges(other, revs)
         # ugh. This is ugly even by mercurial API compatibility standards
         if 'onlyheads' not in orig.func_code.co_varnames:
             cleanup = None
