@@ -44,7 +44,7 @@ demandimport.ignore.extend([
 import gitrepo, hgrepo
 from git_handler import GitHandler
 
-testedwith = '1.9.3 2.0.2 2.1.2 2.2.3 2.8.1'
+testedwith = '2.0.2 2.1.2 2.2.3 2.8.1'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
