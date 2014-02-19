@@ -620,7 +620,11 @@ class GitHandler(object):
                 todo.pop()
                 continue
             assert isinstance(sha, str)
-            obj = self.git.get_object(sha)
+            if sha in convert_list:
+                obj = convert_list[sha]
+            else:
+                obj = self.git.get_object(sha)
+                convert_list[sha] = obj
             assert isinstance(obj, Commit)
             for p in obj.parents:
                 if p not in done:
@@ -630,7 +634,6 @@ class GitHandler(object):
                     break
             else:
                 commits.append(sha)
-                convert_list[sha] = obj
                 done.add(sha)
                 todo.pop()
 
