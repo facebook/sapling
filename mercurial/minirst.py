@@ -697,6 +697,10 @@ def maketable(data, indent=0, header=False):
     for row in data:
         l = []
         for w, v in zip(widths, row):
+            if '\n' in v:
+                # only remove line breaks and indentation, long lines are
+                # handled by the next tool
+                v = ' '.join(e.lstrip() for e in v.split('\n'))
             pad = ' ' * (w - encoding.colwidth(v))
             l.append(v + pad)
         out.append(indent + ' '.join(l) + "\n")

@@ -657,7 +657,10 @@ Test command without options
   >     pass
   > 
   > cmdtable = {
-  >     "nohelp": (nohelp, [], "hg nohelp"),
+  >     "nohelp": (nohelp, [('', 'longdesc', 3, 'x'*90),
+  >                         ('n', '', None, 'normal desc'),
+  >                         ('', 'newline', '', 'line1\nline2'),
+  >                        ], "hg nohelp"),
   > }
   > 
   > commands.norepo += ' nohelp'
@@ -671,6 +674,13 @@ Test command with no help text
   hg nohelp
   
   (no help text available)
+  
+  options:
+  
+      --longdesc VALUE xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                       xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (default: 3)
+   -n --               normal desc
+      --newline VALUE  line1 line2
   
   use "hg -v help nohelp" to show the global options
 

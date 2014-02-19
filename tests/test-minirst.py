@@ -244,3 +244,14 @@ table = ''.join(rst)
 print table
 
 debugformats('table', table)
+
+data = [['s', 'long', 'line\ngoes on here'],
+        ['', 'xy', 'tried to fix here\n        by indenting']]
+
+rst = minirst.maketable(data, 1, False)
+table = ''.join(rst)
+
+print table
+
+debugformats('table+nl', table)
+
