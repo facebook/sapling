@@ -156,8 +156,7 @@ extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
 
 def findcommonoutgoing(orig, repo, other, *args, **kwargs):
     if isinstance(other, gitrepo.gitrepo):
-        git = GitHandler(repo, repo.ui)
-        heads = git.get_refs(other.path)[0]
+        heads = repo.githandler.get_refs(other.path)[0]
         kw = {}
         kw.update(kwargs)
         for val, k in zip(args,
