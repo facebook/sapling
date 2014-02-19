@@ -972,8 +972,18 @@ def last(repo, subset, x):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
     ss = subset.set()
-    os = getset(repo, spanset(repo), l[0])[-lim:]
-    return baseset([r for r in os if r in ss])
+    os = getset(repo, spanset(repo), l[0])
+    os.reverse()
+    bs = baseset([])
+    it = iter(os)
+    for x in xrange(lim):
+        try:
+            y = it.next()
+            if y in ss:
+                bs.append(y)
+        except (StopIteration):
+            break
+    return bs
 
 def maxrev(repo, subset, x):
     """``max(set)``
