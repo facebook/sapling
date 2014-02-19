@@ -73,6 +73,7 @@ Mercurial uses these rules when deciding which merge tool to use:
 8. The merge of the file fails and must be resolved before commit.
 
 .. note::
+
    After selecting a merge program, Mercurial will by default attempt
    to merge the files using a simple merge algorithm first. Only if it doesn't
    succeed because of conflicting changes Mercurial will actually execute the

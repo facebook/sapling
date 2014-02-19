@@ -42,6 +42,7 @@ Normally, all servers are ``publishing`` by default. This means::
  - secret changesets are neither pushed, pulled, or cloned
 
 .. note::
+
   Pulling a draft changeset from a publishing server does not mark it
   as public on the server side due to the read-only nature of pull.
 
@@ -55,10 +56,12 @@ repository to disable publishing in its configuration file::
 See :hg:`help config` for more information on configuration files.
 
 .. note::
+
   Servers running older versions of Mercurial are treated as
   publishing.
 
 .. note::
+
    Changesets in secret phase are not exchanged with the server. This
    applies to their content: file names, file contents, and changeset
    metadata. For technical reasons, the identifier (e.g. d825e4025e39)

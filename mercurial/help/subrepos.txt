@@ -39,6 +39,7 @@ Subrepositories are made of three components:
    repositories states when committing in the parent repository.
 
    .. note::
+
       The ``.hgsubstate`` file should not be edited manually.
 
 

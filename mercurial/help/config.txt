@@ -85,7 +85,9 @@ ones.
     be read.  Mercurial checks each of these locations in the specified
     order until one or more configuration files are detected.
 
-.. note:: The registry key ``HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Mercurial``
+.. note::
+
+   The registry key ``HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Mercurial``
    is used when running 32-bit Python on 64-bit Windows.
 
 Syntax
@@ -204,7 +206,9 @@ changesets. You can define subsequent aliases using earlier ones::
 
     stable5 = latest -b stable
 
-.. note:: It is possible to create aliases with the same names as
+.. note::
+
+   It is possible to create aliases with the same names as
    existing commands, which will then override the original
    definitions. This is almost always a bad idea!
 
@@ -235,7 +239,9 @@ alias, as was done above for the purge alias. In addition,
 ``$HG_ARGS`` expands to the arguments given to Mercurial. In the ``hg
 echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 
-.. note:: Some global configuration options such as ``-R`` are
+.. note::
+
+   Some global configuration options such as ``-R`` are
    processed before shell aliases and will thus not be passed to
    aliases.
 
@@ -362,7 +368,9 @@ filtered by the command. The string ``OUTFILE`` is replaced with the name
 of an empty temporary file, where the filtered data must be written by
 the command.
 
-.. note:: The tempfile mechanism is recommended for Windows systems,
+.. note::
+
+   The tempfile mechanism is recommended for Windows systems,
    where the standard shell I/O redirection operators often have
    strange effects and may corrupt the contents of your files.
 
@@ -708,13 +716,17 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   in ``$HG_PARENT2``. If the update succeeded, ``$HG_ERROR=0``. If the
   update failed (e.g. because conflicts not resolved), ``$HG_ERROR=1``.
 
-.. note:: It is generally better to use standard hooks rather than the
+.. note::
+
+   It is generally better to use standard hooks rather than the
    generic pre- and post- command hooks as they are guaranteed to be
    called in the appropriate contexts for influencing transactions.
    Also, hooks like "commit" will be called in all contexts that
    generate a commit (e.g. tag) and not just the commit command.
 
-.. note:: Environment variables with empty values may not be passed to
+.. note::
+
+   Environment variables with empty values may not be passed to
    hooks on platforms such as Windows. As an example, ``$HG_PARENT2``
    will have an empty value under Unix-like platforms for non-merge
    changesets, while it will not be available at all under Windows.
