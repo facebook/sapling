@@ -63,10 +63,6 @@ class gitrepo(peerrepository):
     def pushkey(self, namespace, key, old, new):
         return False
 
-    # used by incoming in hg <= 1.6
-    def branches(self, nodes):
-        return []
-
 instance = gitrepo
 
 def islocal(path):
