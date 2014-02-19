@@ -549,4 +549,13 @@ test hidden changeset are not cloned as public (issue3935)
   o  0 public A
   
 
+test verify repo containing hidden changesets, which should not abort just
+because repo.cancopy() is False
 
+  $ cd ../initialrepo
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  7 files, 8 changesets, 7 total revisions

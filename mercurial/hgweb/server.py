@@ -331,6 +331,7 @@ def create_server(ui, app):
         # as ascii (clown fail), because the default Python Unicode
         # codec is hardcoded as ascii.
 
+        sys.argv # unwrap demand-loader so that reload() works
         reload(sys) # resurrect sys.setdefaultencoding()
         oldenc = sys.getdefaultencoding()
         sys.setdefaultencoding("latin1") # or any full 8-bit encoding

@@ -85,6 +85,24 @@ Test deleting divergent bookmarks from dest (issue3685)
   |/
   o  0: 'A' bookmarks: Y@diverge
   
+Do not try to keep active but deleted divergent bookmark
+
+  $ cd ..
+  $ hg clone -q a a4
+
+  $ cd a4
+  $ hg up -q 2
+  $ hg book W@diverge
+
+  $ hg rebase -s W -d .
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg bookmarks
+     W                         3:0d3554f74897
+     X                         1:6c81ed0049f8
+     Y                         2:49cb3485fa0c
+     Z                         2:49cb3485fa0c
+
 Keep bookmarks to the correct rebased changeset
 
   $ cd ..
