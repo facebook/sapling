@@ -38,7 +38,7 @@ def _verify(repo):
     mf = repo.manifest
     lrugetctx = util.lrucachefunc(repo.changectx)
 
-    if not repo.cancopy():
+    if not repo.url().startswith('file:'):
         raise util.Abort(_("cannot verify bundle or remote repos"))
 
     def err(linkrev, msg, filename=None):
