@@ -143,13 +143,6 @@ def git_cleanup(ui, repo):
     map(f.write, new_map)
     ui.status(_('git commit map cleaned\n'))
 
-# drop this when we're 1.6-only, this just backports new behavior
-def sortednodetags(orig, *args, **kwargs):
-    ret = orig(*args, **kwargs)
-    ret.sort()
-    return ret
-extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
-
 def findcommonoutgoing(orig, repo, other, *args, **kwargs):
     if isinstance(other, gitrepo.gitrepo):
         heads = repo.githandler.get_refs(other.path)[0]
