@@ -126,8 +126,7 @@ def gexport(ui, repo):
 
 def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
-    git = GitHandler(repo, ui)
-    git.clear()
+    repo.githandler.clear()
 
 from mercurial import dirstate
 from mercurial import ignore
