@@ -18,8 +18,7 @@ def generate_repo_subclass(baseclass):
         # TODO figure out something useful to do with the newbranch param
         def push(self, remote, force=False, revs=None, newbranch=None):
             if isinstance(remote, gitrepo):
-                git = GitHandler(self, self.ui)
-                return git.push(remote.path, revs, force)
+                return self.githandler.push(remote.path, revs, force)
             else: #pragma: no cover
                 # newbranch was added in 1.6
                 if newbranch is None:
