@@ -1,6 +1,7 @@
 import os
 
 from mercurial.node import bin
+from mercurial import util
 
 from git_handler import GitHandler
 from gitrepo import gitrepo
@@ -47,6 +48,14 @@ def generate_repo_subclass(baseclass):
 
             tags.update(self.gitrefs())
             return (tags, tagtypes)
+
+        @util.propertycache
+        def githandler(self):
+            '''get the GitHandler for an hg repo
+
+            This only makes sense if the repo talks to at least one git remote.
+            '''
+            return GitHandler(self, self.ui)
 
         def gitrefs(self):
             tagfile = self.join(os.path.join('git-remote-refs'))
