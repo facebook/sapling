@@ -616,7 +616,7 @@ class GitHandler(object):
         seen = set(todo)
         while todo:
             sha = todo[-1]
-            if sha in done:
+            if sha in done or sha in self._map_git:
                 todo.pop()
                 continue
             assert isinstance(sha, str)
@@ -627,7 +627,7 @@ class GitHandler(object):
                 convert_list[sha] = obj
             assert isinstance(obj, Commit)
             for p in obj.parents:
-                if p not in done:
+                if p not in done and p not in self._map_git:
                     todo.append(p)
                     # process parents of a commit before processing the
                     # commit itself, and come back to this commit later
@@ -637,7 +637,7 @@ class GitHandler(object):
                 done.add(sha)
                 todo.pop()
 
-        return convert_list, [commit for commit in commits if not commit in self._map_git]
+        return convert_list, commits
 
     def import_git_objects(self, remote_name=None, refs=None):
         convert_list, commits = self.getnewgitcommits(refs)
