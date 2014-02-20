@@ -416,7 +416,12 @@ def shortest(context, mapping, args):
                     return False
 
             try:
-                int(test)
+                i = int(test)
+                # if we are a pure int, then starting with zero will not be
+                # confused as a rev; or, obviously, if the int is larger than
+                # the value of the tip rev
+                if test[0] == '0' or i > len(cl):
+                    return True
                 return False
             except ValueError:
                 return True
