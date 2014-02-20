@@ -184,10 +184,8 @@ class GitHandler(object):
         for name, sha in sorted(self.tags.iteritems()):
             if not self.repo.tagtype(name) == 'global':
                 file.write("%s %s\n" % (sha, name))
-        # If this complains that NoneType is not callable, then
-        # atomictempfile no longer has either of rename (pre-1.9) or
-        # close (post-1.9)
-        getattr(file, 'rename', getattr(file, 'close', None))()
+        # If this complains, atomictempfile no longer has close
+        file.close()
 
     ## END FILE LOAD AND SAVE METHODS
 
