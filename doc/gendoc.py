@@ -50,6 +50,9 @@ def get_opts(opts):
             allopts[-1] += " <%s[+]>" % optlabel
         elif (default is not None) and not isinstance(default, bool):
             allopts[-1] += " <%s>" % optlabel
+        if '\n' in desc:
+            # only remove line breaks and indentation
+            desc = ' '.join(l.lstrip() for l in desc.split('\n'))
         desc += default and _(" (default: %s)") % default or ""
         yield (", ".join(allopts), desc)
 
