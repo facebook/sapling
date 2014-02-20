@@ -1989,12 +1989,14 @@ class hooks(object):
         for source, hook in self._hooks:
             hook(*args)
 
-def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr):
+def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
-    Skips the 'skip' last entries.
+    Skips the 'skip' last entries. By default it will flush stdout first.
     It can be used everywhere and do intentionally not require an ui object.
     Not be used in production code but very convenient while developing.
     '''
+    if otherf:
+        otherf.flush()
     f.write('%s at:\n' % msg)
     entries = [('%s:%s' % (fn, ln), func)
         for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]]
@@ -2002,6 +2004,7 @@ def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr):
         fnmax = max(len(entry[0]) for entry in entries)
         for fnln, func in entries:
             f.write(' %-*s in %s\n' % (fnmax, fnln, func))
+    f.flush()
 
 # convenient shortcut
 dst = debugstacktrace
