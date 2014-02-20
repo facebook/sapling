@@ -232,11 +232,6 @@ class overlayrevlog(object):
              return self.base.rev(n)
         return gitrev
 
-    def nodesbetween(self, nodelist, revs):
-        # this is called by pre-1.9 incoming with the nodelist we returned from
-        # getremotechanges. Just return it back.
-        return [nodelist]
-
     def __len__(self):
         return len(self.repo.handler.repo) + len(self.repo.revmap)
 
