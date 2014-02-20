@@ -258,7 +258,7 @@ class phasecache(object):
         filtered = False
         nodemap = repo.changelog.nodemap # to filter unknown nodes
         for phase, nodes in enumerate(self.phaseroots):
-            missing = [node for node in nodes if node not in nodemap]
+            missing = sorted(node for node in nodes if node not in nodemap)
             if missing:
                 for mnode in missing:
                     repo.ui.debug(
