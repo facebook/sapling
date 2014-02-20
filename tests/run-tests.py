@@ -434,7 +434,7 @@ def usecorrectpython():
     if getattr(os, 'symlink', None):
         vlog("# Making python executable in test path a symlink to '%s'" %
              sys.executable)
-        mypython = os.path.join(BINDIR, pyexename)
+        mypython = os.path.join(TMPBINDIR, pyexename)
         try:
             if os.readlink(mypython) == sys.executable:
                 return
@@ -1215,7 +1215,7 @@ def main():
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
+    global TESTDIR, HGTMP, INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1244,6 +1244,8 @@ def main():
     if options.with_hg:
         INST = None
         BINDIR = os.path.dirname(os.path.realpath(options.with_hg))
+        TMPBINDIR = os.path.join(HGTMP, 'install', 'bin')
+        os.makedirs(TMPBINDIR)
 
         # This looks redundant with how Python initializes sys.path from
         # the location of the script being executed.  Needed because the
@@ -1254,12 +1256,15 @@ def main():
     else:
         INST = os.path.join(HGTMP, "install")
         BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
+        TMPBINDIR = BINDIR
         PYTHONDIR = os.path.join(INST, "lib", "python")
 
     os.environ["BINDIR"] = BINDIR
     os.environ["PYTHON"] = PYTHON
 
     path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
+    if TMPBINDIR != BINDIR:
+        path = [TMPBINDIR] + path
     os.environ["PATH"] = os.pathsep.join(path)
 
     # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
