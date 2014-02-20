@@ -530,7 +530,7 @@ static Py_ssize_t auxencode(char *dest, size_t destsize,
 	static const uint32_t twobytes[8];
 
 	static const uint32_t onebyte[8] = {
-		~0, 0xffff3ffe, ~0, ~0, ~0, ~0, ~0, ~0,
+		~0U, 0xffff3ffe, ~0U, ~0U, ~0U, ~0U, ~0U, ~0U,
 	};
 
 	return _encode(twobytes, onebyte, dest, 0, destsize, src, len, 0);
