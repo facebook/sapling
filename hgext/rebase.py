@@ -703,7 +703,8 @@ def restorestatus(repo):
                 if new != nullrev and new in seen:
                     skipped.add(old)
                 seen.add(new)
-        repo.ui.debug('computed skipped revs: %s\n' % skipped)
+        repo.ui.debug('computed skipped revs: %s\n' %
+                      (' '.join(str(r) for r in sorted(skipped)) or None))
         repo.ui.debug('rebase status resumed\n')
         return (originalwd, target, state, skipped,
                 collapse, keep, keepbranches, external, activebookmark)
