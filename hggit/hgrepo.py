@@ -58,13 +58,7 @@ def generate_repo_subclass(baseclass):
             return {}
 
         def tags(self):
-            if hasattr(self, 'tagscache') and self.tagscache:
-                # Mercurial 1.4 and earlier.
-                return self.tagscache
-            elif hasattr(self, '_tags') and self._tags:
-                # Mercurial 1.5 and later.
-                return self._tags
-
+            # TODO consider using self._tagscache
             tagscache = super(hgrepo, self).tags()
             tagscache.update(self.gitrefs())
             for tag, rev in self.githandler.tags.iteritems():
@@ -72,9 +66,6 @@ def generate_repo_subclass(baseclass):
                     continue
 
                 tagscache[tag] = bin(rev)
-                if hasattr(self, '_tagstypecache'):
-                    # Only present in Mercurial 1.3 and earlier.
-                    self._tagstypecache[tag] = 'git'
 
             return tagscache
 
