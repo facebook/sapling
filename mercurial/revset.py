@@ -2155,6 +2155,11 @@ class lazyset(object):
         l = baseset([r for r in self])
         return l + baseset(x)
 
+    def __nonzero__(self):
+        for r in self:
+            return True
+        return False
+
     def __len__(self):
         # Basic implementation to be changed in future patches.
         l = baseset([r for r in self])
