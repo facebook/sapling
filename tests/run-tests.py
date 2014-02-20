@@ -52,15 +52,24 @@ import signal
 import sys
 import tempfile
 import time
+import random
 import re
 import threading
+import killdaemons as killmod
+import Queue as queue
 
 processlock = threading.Lock()
 
+# subprocess._cleanup can race with any Popen.wait or Popen.poll on py24
+# http://bugs.python.org/issue1731717 for details. We shouldn't be producing
+# zombies but it's pretty harmless even if we do.
+if sys.version_info < (2, 5):
+    subprocess._cleanup = lambda: None
+
 closefds = os.name == 'posix'
-def Popen4(cmd, wd, timeout):
+def Popen4(cmd, wd, timeout, env=None):
     processlock.acquire()
-    p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=wd,
+    p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=wd, env=env,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
@@ -92,7 +101,9 @@ IMPL_PATH = 'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = 'JYTHONPATH'
 
-requiredtools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
+requiredtools = [os.path.basename(sys.executable), "diff", "grep", "unzip",
+                 "gunzip", "bunzip2", "sed"]
+createdfiles = []
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
@@ -132,8 +143,6 @@ def parseargs():
         help="always run tests listed in the specified whitelist file")
     parser.add_option("-C", "--annotate", action="store_true",
         help="output files annotated with coverage")
-    parser.add_option("--child", type="int",
-        help="run as child process, summary to given fd")
     parser.add_option("-c", "--cover", action="store_true",
         help="print a test coverage report")
     parser.add_option("-d", "--debug", action="store_true",
@@ -156,11 +165,15 @@ def parseargs():
         help="run tests matching keywords")
     parser.add_option("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg")
+    parser.add_option("--loop", action="store_true",
+        help="loop tests repeatedly")
     parser.add_option("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
     parser.add_option("-p", "--port", type="int",
         help="port on which servers should listen"
              " (default: $%s or %d)" % defaults['port'])
+    parser.add_option("--compiler", type="string",
+        help="compiler to build with")
     parser.add_option("--pure", action="store_true",
         help="use pure Python code instead of C extensions")
     parser.add_option("-R", "--restart", action="store_true",
@@ -174,6 +187,8 @@ def parseargs():
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
+    parser.add_option("--time", action="store_true",
+        help="time how long each test takes")
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
@@ -189,6 +204,8 @@ def parseargs():
         help="enable Py3k warnings on Python 2.6+")
     parser.add_option('--extra-config-opt', action="append",
                       help='set the given config opt in the test hgrc')
+    parser.add_option('--random', action="store_true",
+                      help='run tests in random order')
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -229,32 +246,15 @@ def parseargs():
         parser.error("sorry, coverage options do not work when --local "
                      "is specified")
 
-    global vlog
+    global verbose
     if options.verbose:
-        if options.jobs > 1 or options.child is not None:
-            pid = "[%d]" % os.getpid()
-        else:
-            pid = None
-        def vlog(*msg):
-            iolock.acquire()
-            if pid:
-                print pid,
-            for m in msg:
-                print m,
-            print
-            sys.stdout.flush()
-            iolock.release()
-    else:
-        vlog = lambda *msg: None
+        verbose = ''
 
     if options.tmpdir:
         options.tmpdir = os.path.expanduser(options.tmpdir)
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
-    if options.interactive and options.jobs > 1:
-        print '(--interactive overrides --jobs)'
-        options.jobs = 1
     if options.interactive and options.debug:
         parser.error("-i/--interactive and -d/--debug are incompatible")
     if options.debug:
@@ -268,8 +268,7 @@ def parseargs():
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, 'blacklist')
     if options.whitelist:
-        options.whitelisted = parselistfiles(options.whitelist, 'whitelist',
-                                             warn=options.child is None)
+        options.whitelisted = parselistfiles(options.whitelist, 'whitelist')
     else:
         options.whitelisted = {}
 
@@ -281,21 +280,6 @@ def rename(src, dst):
     """
     shutil.copy(src, dst)
     os.remove(src)
-
-def splitnewlines(text):
-    '''like str.splitlines, but only split on newlines.
-    keep line endings.'''
-    i = 0
-    lines = []
-    while True:
-        n = text.find('\n', i)
-        if n == -1:
-            last = text[i:]
-            if last:
-                lines.append(last)
-            return lines
-        lines.append(text[i:n + 1])
-        i = n + 1
 
 def parsehghaveoutput(lines):
     '''Parse hghave log lines.
@@ -319,6 +303,28 @@ def showdiff(expected, output, ref, err):
     for line in difflib.unified_diff(expected, output, ref, err):
         sys.stdout.write(line)
 
+verbose = False
+def vlog(*msg):
+    if verbose is not False:
+        iolock.acquire()
+        if verbose:
+            print verbose,
+        for m in msg:
+            print m,
+        print
+        sys.stdout.flush()
+        iolock.release()
+
+def log(*msg):
+    iolock.acquire()
+    if verbose:
+        print verbose,
+    for m in msg:
+        print m,
+    print
+    sys.stdout.flush()
+    iolock.release()
+
 def findprogram(program):
     """Search PATH for a executable program"""
     for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
@@ -327,11 +333,71 @@ def findprogram(program):
             return name
     return None
 
+def createhgrc(path, options):
+    # create a fresh hgrc
+    hgrc = open(path, 'w')
+    hgrc.write('[ui]\n')
+    hgrc.write('slash = True\n')
+    hgrc.write('interactive = False\n')
+    hgrc.write('[defaults]\n')
+    hgrc.write('backout = -d "0 0"\n')
+    hgrc.write('commit = -d "0 0"\n')
+    hgrc.write('shelve = --date "0 0"\n')
+    hgrc.write('tag = -d "0 0"\n')
+    if options.inotify:
+        hgrc.write('[extensions]\n')
+        hgrc.write('inotify=\n')
+        hgrc.write('[inotify]\n')
+        hgrc.write('pidfile=daemon.pids')
+        hgrc.write('appendpid=True\n')
+    if options.extra_config_opt:
+        for opt in options.extra_config_opt:
+            section, key = opt.split('.', 1)
+            assert '=' in key, ('extra config opt %s must '
+                                'have an = for assignment' % opt)
+            hgrc.write('[%s]\n%s\n' % (section, key))
+    hgrc.close()
+
+def createenv(options, testtmp, threadtmp, port):
+    env = os.environ.copy()
+    env['TESTTMP'] = testtmp
+    env['HOME'] = testtmp
+    env["HGPORT"] = str(port)
+    env["HGPORT1"] = str(port + 1)
+    env["HGPORT2"] = str(port + 2)
+    env["HGRCPATH"] = os.path.join(threadtmp, '.hgrc')
+    env["DAEMON_PIDS"] = os.path.join(threadtmp, 'daemon.pids')
+    env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+    env["HGMERGE"] = "internal:merge"
+    env["HGUSER"]   = "test"
+    env["HGENCODING"] = "ascii"
+    env["HGENCODINGMODE"] = "strict"
+
+    # Reset some environment variables to well-known values so that
+    # the tests produce repeatable output.
+    env['LANG'] = env['LC_ALL'] = env['LANGUAGE'] = 'C'
+    env['TZ'] = 'GMT'
+    env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
+    env['COLUMNS'] = '80'
+    env['TERM'] = 'xterm'
+
+    for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
+              'NO_PROXY').split():
+        if k in env:
+            del env[k]
+
+    # unset env related to hooks
+    for k in env.keys():
+        if k.startswith('HG_'):
+            del env[k]
+
+    return env
+
 def checktools():
     # Before we go any further, check for pre-requisite tools
     # stuff from coreutils (cat, rm, etc) are not tested
     for p in requiredtools:
-        if os.name == 'nt':
+        if os.name == 'nt' and not p.endswith('.exe'):
             p += '.exe'
         found = findprogram(p)
         if found:
@@ -347,59 +413,64 @@ def terminate(proc):
     except OSError:
         pass
 
-def killdaemons():
-    # Kill off any leftover daemon processes
-    try:
-        fp = open(DAEMON_PIDS)
-        for line in fp:
-            try:
-                pid = int(line)
-            except ValueError:
-                continue
-            try:
-                os.kill(pid, 0)
-                vlog('# Killing daemon process %d' % pid)
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(0.1)
-                os.kill(pid, 0)
-                vlog('# Daemon process %d is stuck - really killing it' % pid)
-                os.kill(pid, signal.SIGKILL)
-            except OSError, err:
-                if err.errno != errno.ESRCH:
-                    raise
-        fp.close()
-        os.unlink(DAEMON_PIDS)
-    except IOError:
-        pass
+def killdaemons(pidfile):
+    return killmod.killdaemons(pidfile, tryhard=False, remove=True,
+                               logfn=vlog)
 
 def cleanup(options):
     if not options.keep_tmpdir:
         vlog("# Cleaning up HGTMP", HGTMP)
         shutil.rmtree(HGTMP, True)
+        for f in createdfiles:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
 def usecorrectpython():
     # some tests run python interpreter. they must use same
     # interpreter we use or bad things will happen.
-    exedir, exename = os.path.split(sys.executable)
-    if exename in ('python', 'python.exe'):
-        path = findprogram(exename)
-        if os.path.dirname(path) == exedir:
-            return
+    pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
+    if getattr(os, 'symlink', None):
+        vlog("# Making python executable in test path a symlink to '%s'" %
+             sys.executable)
+        mypython = os.path.join(TMPBINDIR, pyexename)
+        try:
+            if os.readlink(mypython) == sys.executable:
+                return
+            os.unlink(mypython)
+        except OSError, err:
+            if err.errno != errno.ENOENT:
+                raise
+        if findprogram(pyexename) != sys.executable:
+            try:
+                os.symlink(sys.executable, mypython)
+                createdfiles.append(mypython)
+            except OSError, err:
+                # child processes may race, which is harmless
+                if err.errno != errno.EEXIST:
+                    raise
     else:
-        exename = 'python'
-    vlog('# Making python executable in test path use correct Python')
-    mypython = os.path.join(BINDIR, exename)
-    try:
-        os.symlink(sys.executable, mypython)
-    except AttributeError:
-        # windows fallback
-        shutil.copyfile(sys.executable, mypython)
-        shutil.copymode(sys.executable, mypython)
+        exedir, exename = os.path.split(sys.executable)
+        vlog("# Modifying search path to find %s as %s in '%s'" %
+             (exename, pyexename, exedir))
+        path = os.environ['PATH'].split(os.pathsep)
+        while exedir in path:
+            path.remove(exedir)
+        os.environ['PATH'] = os.pathsep.join([exedir] + path)
+        if not findprogram(pyexename):
+            print "WARNING: Cannot find %s in search path" % pyexename
 
 def installhg(options):
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
+    compiler = ''
+    if options.compiler:
+        compiler = '--compiler ' + options.compiler
     pure = options.pure and "--pure" or ""
+    py3 = ''
+    if sys.version_info[0] == 3:
+        py3 = '--c2to3'
 
     # Run installer in hg root
     script = os.path.realpath(sys.argv[0])
@@ -412,12 +483,14 @@ def installhg(options):
         # least on Windows for now, deal with .pydistutils.cfg bugs
         # when they happen.
         nohome = ''
-    cmd = ('%s setup.py %s clean --all'
-           ' build --build-base="%s"'
-           ' install --force --prefix="%s" --install-lib="%s"'
-           ' --install-scripts="%s" %s >%s 2>&1'
-           % (sys.executable, pure, os.path.join(HGTMP, "build"),
-              INST, PYTHONDIR, BINDIR, nohome, installerrs))
+    cmd = ('%(exe)s setup.py %(py3)s %(pure)s clean --all'
+           ' build %(compiler)s --build-base="%(base)s"'
+           ' install --force --prefix="%(prefix)s" --install-lib="%(libdir)s"'
+           ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
+           % dict(exe=sys.executable, py3=py3, pure=pure, compiler=compiler,
+                  base=os.path.join(HGTMP, "build"),
+                  prefix=INST, libdir=PYTHONDIR, bindir=BINDIR,
+                  nohome=nohome, logfile=installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not options.verbose:
@@ -431,18 +504,6 @@ def installhg(options):
     os.chdir(TESTDIR)
 
     usecorrectpython()
-
-    vlog("# Installing dummy diffstat")
-    f = open(os.path.join(BINDIR, 'diffstat'), 'w')
-    f.write('#!' + sys.executable + '\n'
-            'import sys\n'
-            'files = 0\n'
-            'for line in sys.stdin:\n'
-            '    if line.startswith("diff "):\n'
-            '        files += 1\n'
-            'sys.stdout.write("files patched: %d\\n" % files)\n')
-    f.close()
-    os.chmod(os.path.join(BINDIR, 'diffstat'), 0700)
 
     if options.py3k_warnings and not options.anycoverage:
         vlog("# Updating hg command to enable Py3k Warnings switch")
@@ -482,6 +543,14 @@ def installhg(options):
         fn = os.path.join(INST, '..', '.coverage')
         os.environ['COVERAGE_FILE'] = fn
 
+def outputtimes(options):
+    vlog('# Producing time report')
+    times.sort(key=lambda t: (t[1], t[0]), reverse=True)
+    cols = '%7.3f   %s'
+    print '\n%-7s   %s' % ('Time', 'Test')
+    for test, timetaken in times:
+        print cols % (timetaken, test)
+
 def outputcoverage(options):
 
     vlog('# Producing coverage report')
@@ -491,9 +560,6 @@ def outputcoverage(options):
         cmd = 'coverage %s' % ' '.join(args)
         vlog('# Running: %s' % cmd)
         os.system(cmd)
-
-    if options.child:
-        return
 
     covrun('-c')
     omit = ','.join(os.path.join(x, '*') for x in [BINDIR, TESTDIR])
@@ -507,16 +573,13 @@ def outputcoverage(options):
             os.mkdir(adir)
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
-def pytest(test, wd, options, replacements):
+def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
-    return run(cmd, wd, options, replacements)
-
-def shtest(test, wd, options, replacements):
-    cmd = '%s "%s"' % (options.shell, test)
-    vlog("# Running", cmd)
-    return run(cmd, wd, options, replacements)
+    if os.name == 'nt':
+        replacements.append((r'\r\n', '\n'))
+    return run(cmd, wd, options, replacements, env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
@@ -529,8 +592,10 @@ def stringescape(s):
 
 def rematch(el, l):
     try:
-        # ensure that the regex matches to the end of the string
-        return re.match(el + r'\Z', l)
+        # use \Z to ensure that the regex matches to the end of the string
+        if os.name == 'nt':
+            return re.match(el + r'\r?\n\Z', l)
+        return re.match(el + r'\n\Z', l)
     except re.error:
         # el is an invalid regex
         return False
@@ -538,6 +603,11 @@ def rematch(el, l):
 def globmatch(el, l):
     # The only supported special characters are * and ? plus / which also
     # matches \ on windows. Escaping of these caracters is supported.
+    if el + '\n' == l:
+        if os.altsep:
+            # matching on "/" is not needed for this line
+            return '-glob'
+        return True
     i, n = 0, len(el)
     res = ''
     while i < n:
@@ -550,7 +620,7 @@ def globmatch(el, l):
             res += '.*'
         elif c == '?':
             res += '.'
-        elif c == '/' and os.name == 'nt':
+        elif c == '/' and os.altsep:
             res += '[/\\\\]'
         else:
             res += re.escape(c)
@@ -559,17 +629,20 @@ def globmatch(el, l):
 def linematch(el, l):
     if el == l: # perfect match (fast)
         return True
-    if (el and
-        (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
-         el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l) or
-         el.endswith(" (esc)\n") and
-             (el[:-7].decode('string-escape') + '\n' == l or
-              el[:-7].decode('string-escape').replace('\r', '') +
-                  '\n' == l and os.name == 'nt'))):
-        return True
+    if el:
+        if el.endswith(" (esc)\n"):
+            el = el[:-7].decode('string-escape') + '\n'
+        if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+            return True
+        if el.endswith(" (re)\n"):
+            return rematch(el[:-6], l)
+        if el.endswith(" (glob)\n"):
+            return globmatch(el[:-8], l)
+        if os.altsep and l.replace('\\', '/') == el:
+            return '+glob'
     return False
 
-def tsttest(test, wd, options, replacements):
+def tsttest(test, wd, options, replacements, env):
     # We generate a shell script which outputs unique markers to line
     # up script results with our source. These markers include input
     # line number and the last return code
@@ -602,10 +675,13 @@ def tsttest(test, wd, options, replacements):
         tdir = TESTDIR.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (options.shell, tdir, ' '.join(reqs)), wd, 0)
-        proc.communicate()
+        stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
+        if ret == 2:
+            print stdout
+            sys.exit(1)
         return ret == 0
 
     f = open(test)
@@ -617,6 +693,7 @@ def tsttest(test, wd, options, replacements):
         script.append('set -x\n')
     if os.getenv('MSYSTEM'):
         script.append('alias pwd="pwd -W"\n')
+    n = 0
     for n, l in enumerate(t):
         if not l.endswith('\n'):
             l += '\n'
@@ -683,35 +760,32 @@ def tsttest(test, wd, options, replacements):
     addsalt(n + 1, False)
 
     # Write out the script and execute it
-    fd, name = tempfile.mkstemp(suffix='hg-tst')
-    try:
-        for l in script:
-            os.write(fd, l)
-        os.close(fd)
+    name = wd + '.sh'
+    f = open(name, 'w')
+    for l in script:
+        f.write(l)
+    f.close()
 
-        cmd = '%s "%s"' % (options.shell, name)
-        vlog("# Running", cmd)
-        exitcode, output = run(cmd, wd, options, replacements)
-        # do not merge output if skipped, return hghave message instead
-        # similarly, with --debug, output is None
-        if exitcode == SKIPPED_STATUS or output is None:
-            return exitcode, output
-    finally:
-        os.remove(name)
+    cmd = '%s "%s"' % (options.shell, name)
+    vlog("# Running", cmd)
+    exitcode, output = run(cmd, wd, options, replacements, env)
+    # do not merge output if skipped, return hghave message instead
+    # similarly, with --debug, output is None
+    if exitcode == SKIPPED_STATUS or output is None:
+        return exitcode, output
 
     # Merge the script output back into a unified test
 
+    warnonly = True
     pos = -1
     postout = []
-    ret = 0
-    for n, l in enumerate(output):
+    for l in output:
         lout, lcmd = l, None
         if salt in l:
             lout, lcmd = l.split(salt, 1)
 
         if lout:
-            if lcmd:
-                # output block had no trailing newline, clean up
+            if not lout.endswith('\n'):
                 lout += ' (no-eol)\n'
 
             # find the expected output at the current position
@@ -719,12 +793,25 @@ def tsttest(test, wd, options, replacements):
             if pos in expected and expected[pos]:
                 el = expected[pos].pop(0)
 
-            if linematch(el, lout):
+            r = linematch(el, lout)
+            if isinstance(r, str):
+                if r == '+glob':
+                    lout = el[:-1] + ' (glob)\n'
+                    r = 0 # warn only
+                elif r == '-glob':
+                    lout = ''.join(el.rsplit(' (glob)', 1))
+                    r = 0 # warn only
+                else:
+                    log('\ninfo, unknown linematch result: %r\n' % r)
+                    r = False
+            if r:
                 postout.append("  " + el)
             else:
                 if needescape(lout):
                     lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
                 postout.append("  " + lout) # let diff deal with it
+                if r != 0: # != warn only
+                    warnonly = False
 
         if lcmd:
             # add on last return code
@@ -739,25 +826,27 @@ def tsttest(test, wd, options, replacements):
     if pos in after:
         postout += after.pop(pos)
 
+    if warnonly and exitcode == 0:
+        exitcode = False
     return exitcode, postout
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, options, replacements):
+def run(cmd, wd, options, replacements, env):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
     if options.debug:
-        proc = subprocess.Popen(cmd, shell=True, cwd=wd)
+        proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
         ret = proc.wait()
         return (ret, None)
 
-    proc = Popen4(cmd, wd, options.timeout)
+    proc = Popen4(cmd, wd, options.timeout, env)
     def cleanup():
         terminate(proc)
         ret = proc.wait()
         if ret == 0:
             ret = signal.SIGTERM << 8
-        killdaemons()
+        killdaemons(env['DAEMON_PIDS'])
         return ret
 
     output = ''
@@ -778,41 +867,27 @@ def run(cmd, wd, options, replacements):
         ret = 'timeout'
 
     if ret:
-        killdaemons()
+        killdaemons(env['DAEMON_PIDS'])
+
+    if abort:
+        raise KeyboardInterrupt()
 
     for s, r in replacements:
         output = re.sub(s, r, output)
-    return ret, splitnewlines(output)
+    return ret, output.splitlines(True)
 
-def runone(options, test):
-    '''tristate output:
-    None -> skipped
-    True -> passed
-    False -> failed'''
-
-    global results, resultslock, iolock
-
-    testpath = os.path.join(TESTDIR, test)
-
-    def result(l, e):
-        resultslock.acquire()
-        results[l].append(e)
-        resultslock.release()
+def runone(options, test, count):
+    '''returns a result element: (code, test, msg)'''
 
     def skip(msg):
-        if not options.verbose:
-            result('s', (test, msg))
-        else:
-            iolock.acquire()
-            print "\nSkipping %s: %s" % (testpath, msg)
-            iolock.release()
-        return None
+        if options.verbose:
+            log("\nSkipping %s: %s" % (testpath, msg))
+        return 's', test, msg
 
     def fail(msg, ret):
+        warned = ret is False
         if not options.nodiff:
-            iolock.acquire()
-            print "\nERROR: %s %s" % (testpath, msg)
-            iolock.release()
+            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', test, msg))
         if (not ret and options.interactive
             and os.path.exists(testpath + ".err")):
             iolock.acquire()
@@ -824,34 +899,33 @@ def runone(options, test):
                     rename(testpath + ".err", testpath)
                 else:
                     rename(testpath + ".err", testpath + ".out")
-                result('p', test)
-                return
-        result('f', (test, msg))
+                return '.', test, ''
+        return warned and '~' or '!', test, msg
 
     def success():
-        result('p', test)
+        return '.', test, ''
 
     def ignore(msg):
-        result('i', (test, msg))
+        return 'i', test, msg
 
-    if (os.path.basename(test).startswith("test-") and '~' not in test and
-        ('.' not in test or test.endswith('.py') or
-         test.endswith('.bat') or test.endswith('.t'))):
-        if not os.path.exists(test):
-            skip("doesn't exist")
-            return None
-    else:
-        vlog('# Test file', test, 'not supported, ignoring')
-        return None # not a supported test, don't record
+    def describe(ret):
+        if ret < 0:
+            return 'killed by signal %d' % -ret
+        return 'returned error code %d' % ret
+
+    testpath = os.path.join(TESTDIR, test)
+    err = os.path.join(TESTDIR, test + ".err")
+    lctest = test.lower()
+
+    if not os.path.exists(testpath):
+            return skip("doesn't exist")
 
     if not (options.whitelisted and test in options.whitelisted):
         if options.blacklist and test in options.blacklist:
-            skip("blacklisted")
-            return None
+            return skip("blacklisted")
 
         if options.retest and not os.path.exists(test + ".err"):
-            ignore("not retesting")
-            return None
+            return ignore("not retesting")
 
         if options.keywords:
             fp = open(test)
@@ -861,67 +935,36 @@ def runone(options, test):
                 if k in t:
                     break
                 else:
-                    ignore("doesn't match keyword")
-                    return None
+                    return ignore("doesn't match keyword")
+
+    if not lctest.startswith("test-"):
+        return skip("not a test file")
+    for ext, func, out in testtypes:
+        if lctest.endswith(ext):
+            runner = func
+            ref = os.path.join(TESTDIR, test + out)
+            break
+    else:
+        return skip("unknown test type")
 
     vlog("# Test", test)
 
-    # create a fresh hgrc
-    hgrc = open(HGRCPATH, 'w+')
-    hgrc.write('[ui]\n')
-    hgrc.write('slash = True\n')
-    hgrc.write('[defaults]\n')
-    hgrc.write('backout = -d "0 0"\n')
-    hgrc.write('commit = -d "0 0"\n')
-    hgrc.write('tag = -d "0 0"\n')
-    if options.inotify:
-        hgrc.write('[extensions]\n')
-        hgrc.write('inotify=\n')
-        hgrc.write('[inotify]\n')
-        hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
-        hgrc.write('appendpid=True\n')
-    if options.extra_config_opt:
-        for opt in options.extra_config_opt:
-            section, key = opt.split('.', 1)
-            assert '=' in key, ('extra config opt %s must '
-                                'have an = for assignment' % opt)
-            hgrc.write('[%s]\n%s\n' % (section, key))
-    hgrc.close()
-
-    ref = os.path.join(TESTDIR, test+".out")
-    err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
-    try:
-        tf = open(testpath)
-        firstline = tf.readline().rstrip()
-        tf.close()
-    except IOError:
-        firstline = ''
-    lctest = test.lower()
-
-    if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
-        runner = pytest
-    elif lctest.endswith('.t'):
-        runner = tsttest
-        ref = testpath
-    else:
-        # do not try to run non-executable programs
-        if not os.access(testpath, os.X_OK):
-            return skip("not executable")
-        runner = shtest
 
     # Make a tmp subdirectory to work in
-    testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
-        os.path.join(HGTMP, os.path.basename(test))
+    threadtmp = os.path.join(HGTMP, "child%d" % count)
+    testtmp = os.path.join(threadtmp, os.path.basename(test))
+    os.mkdir(threadtmp)
+    os.mkdir(testtmp)
 
+    port = options.port + count * 3
     replacements = [
-        (r':%s\b' % options.port, ':$HGPORT'),
-        (r':%s\b' % (options.port + 1), ':$HGPORT1'),
-        (r':%s\b' % (options.port + 2), ':$HGPORT2'),
+        (r':%s\b' % port, ':$HGPORT'),
+        (r':%s\b' % (port + 1), ':$HGPORT1'),
+        (r':%s\b' % (port + 2), ':$HGPORT2'),
         ]
     if os.name == 'nt':
-        replacements.append((r'\r\n', '\n'))
         replacements.append(
             (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
                      c in '/\\' and r'[/\\]' or
@@ -931,11 +974,21 @@ def runone(options, test):
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
-    os.mkdir(testtmp)
-    ret, out = runner(testpath, testtmp, options, replacements)
+    env = createenv(options, testtmp, threadtmp, port)
+    createhgrc(env['HGRCPATH'], options)
+
+    starttime = time.time()
+    try:
+        ret, out = runner(testpath, testtmp, options, replacements, env)
+    except KeyboardInterrupt:
+        endtime = time.time()
+        log('INTERRUPTED: %s (after %d seconds)' % (test, endtime - starttime))
+        raise
+    endtime = time.time()
+    times.append((test, endtime - starttime))
     vlog("# Ret was:", ret)
 
-    mark = '.'
+    killdaemons(env['DAEMON_PIDS'])
 
     skipped = (ret == SKIPPED_STATUS)
 
@@ -945,7 +998,7 @@ def runone(options, test):
         refout = None                   # to match "out is None"
     elif os.path.exists(ref):
         f = open(ref, "r")
-        refout = list(splitnewlines(f.read()))
+        refout = f.read().splitlines(True)
         f.close()
     else:
         refout = []
@@ -958,7 +1011,6 @@ def runone(options, test):
         f.close()
 
     if skipped:
-        mark = 's'
         if out is None:                 # debug mode: nothing to parse
             missing = ['unknown']
             failed = None
@@ -967,15 +1019,13 @@ def runone(options, test):
         if not missing:
             missing = ['irrelevant']
         if failed:
-            fail("hghave failed checking for %s" % failed[-1], ret)
+            result = fail("hghave failed checking for %s" % failed[-1], ret)
             skipped = False
         else:
-            skip(missing[-1])
+            result = skip(missing[-1])
     elif ret == 'timeout':
-        mark = 't'
-        fail("timed out", ret)
+        result = fail("timed out", ret)
     elif out != refout:
-        mark = '!'
         if not options.nodiff:
             iolock.acquire()
             if options.view:
@@ -984,29 +1034,23 @@ def runone(options, test):
                 showdiff(refout, out, ref, err)
             iolock.release()
         if ret:
-            fail("output changed and returned error code %d" % ret, ret)
+            result = fail("output changed and " + describe(ret), ret)
         else:
-            fail("output changed", ret)
-        ret = 1
+            result = fail("output changed", ret)
     elif ret:
-        mark = '!'
-        fail("returned error code %d" % ret, ret)
+        result = fail(describe(ret), ret)
     else:
-        success()
+        result = success()
 
     if not options.verbose:
         iolock.acquire()
-        sys.stdout.write(mark)
+        sys.stdout.write(result[0])
         sys.stdout.flush()
         iolock.release()
 
-    killdaemons()
-
     if not options.keep_tmpdir:
-        shutil.rmtree(testtmp, True)
-    if skipped:
-        return None
-    return ret == 0
+        shutil.rmtree(threadtmp, True)
+    return result
 
 _hgpath = None
 
@@ -1017,7 +1061,7 @@ def _gethgpath():
     if _hgpath is not None:
         return _hgpath
 
-    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
+    cmd = '%s -c "import mercurial; print (mercurial.__path__[0])"'
     pipe = os.popen(cmd % PYTHON)
     try:
         _hgpath = pipe.read().strip()
@@ -1035,125 +1079,56 @@ def _checkhglib(verb):
                          '         (expected %s)\n'
                          % (verb, actualhg, expecthg))
 
-def runchildren(options, tests):
-    if INST:
-        installhg(options)
-        _checkhglib("Testing")
-
-    optcopy = dict(options.__dict__)
-    optcopy['jobs'] = 1
-
-    # Because whitelist has to override keyword matches, we have to
-    # actually load the whitelist in the children as well, so we allow
-    # the list of whitelist files to pass through and be parsed in the
-    # children, but not the dict of whitelisted tests resulting from
-    # the parse, used here to override blacklisted tests.
-    whitelist = optcopy['whitelisted'] or []
-    del optcopy['whitelisted']
-
-    blacklist = optcopy['blacklist'] or []
-    del optcopy['blacklist']
-    blacklisted = []
-
-    if optcopy['with_hg'] is None:
-        optcopy['with_hg'] = os.path.join(BINDIR, "hg")
-    optcopy.pop('anycoverage', None)
-
-    opts = []
-    for opt, value in optcopy.iteritems():
-        name = '--' + opt.replace('_', '-')
-        if value is True:
-            opts.append(name)
-        elif isinstance(value, list):
-            for v in value:
-                opts.append(name + '=' + str(v))
-        elif value is not None:
-            opts.append(name + '=' + str(value))
-
-    tests.reverse()
-    jobs = [[] for j in xrange(options.jobs)]
-    while tests:
-        for job in jobs:
-            if not tests:
-                break
-            test = tests.pop()
-            if test not in whitelist and test in blacklist:
-                blacklisted.append(test)
-            else:
-                job.append(test)
-    fps = {}
-
-    for j, job in enumerate(jobs):
-        if not job:
-            continue
-        rfd, wfd = os.pipe()
-        childopts = ['--child=%d' % wfd, '--port=%d' % (options.port + j * 3)]
-        childtmp = os.path.join(HGTMP, 'child%d' % j)
-        childopts += ['--tmpdir', childtmp]
-        cmdline = [PYTHON, sys.argv[0]] + opts + childopts + job
-        vlog(' '.join(cmdline))
-        fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'r')
-        os.close(wfd)
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    failures = 0
-    tested, skipped, failed = 0, 0, 0
-    skips = []
-    fails = []
-    while fps:
-        pid, status = os.wait()
-        fp = fps.pop(pid)
-        l = fp.read().splitlines()
-        try:
-            test, skip, fail = map(int, l[:3])
-        except ValueError:
-            test, skip, fail = 0, 0, 0
-        split = -fail or len(l)
-        for s in l[3:split]:
-            skips.append(s.split(" ", 1))
-        for s in l[split:]:
-            fails.append(s.split(" ", 1))
-        tested += test
-        skipped += skip
-        failed += fail
-        vlog('pid %d exited, status %d' % (pid, status))
-        failures |= status
-    print
-    skipped += len(blacklisted)
-    if not options.noskips:
-        for s in skips:
-            print "Skipped %s: %s" % (s[0], s[1])
-        for s in blacklisted:
-            print "Skipped %s: blacklisted" % s
-    for s in fails:
-        print "Failed %s: %s" % (s[0], s[1])
-
-    _checkhglib("Tested")
-    print "# Ran %d tests, %d skipped, %d failed." % (
-        tested, skipped, failed)
-
-    if options.anycoverage:
-        outputcoverage(options)
-    sys.exit(failures != 0)
-
-results = dict(p=[], f=[], s=[], i=[])
-resultslock = threading.Lock()
+results = {'.':[], '!':[], '~': [], 's':[], 'i':[]}
+times = []
 iolock = threading.Lock()
+abort = False
 
-def runqueue(options, tests, results):
-    for test in tests:
-        ret = runone(options, test)
-        if options.first and ret is not None and not ret:
-            break
+def scheduletests(options, tests):
+    jobs = options.jobs
+    done = queue.Queue()
+    running = 0
+    count = 0
+    global abort
+
+    def job(test, count):
+        try:
+            done.put(runone(options, test, count))
+        except KeyboardInterrupt:
+            pass
+        except: # re-raises
+            done.put(('!', test, 'run-test raised an error, see traceback'))
+            raise
+
+    try:
+        while tests or running:
+            if not done.empty() or running == jobs or not tests:
+                try:
+                    code, test, msg = done.get(True, 1)
+                    results[code].append((test, msg))
+                    if options.first and code not in '.si':
+                        break
+                except queue.Empty:
+                    continue
+                running -= 1
+            if tests and not running == jobs:
+                test = tests.pop(0)
+                if options.loop:
+                    tests.append(test)
+                t = threading.Thread(target=job, name=test, args=(test, count))
+                t.start()
+                running += 1
+                count += 1
+    except KeyboardInterrupt:
+        abort = True
 
 def runtests(options, tests):
-    global DAEMON_PIDS, HGRCPATH
-    DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
-    HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
-
     try:
         if INST:
             installhg(options)
             _checkhglib("Testing")
+        else:
+            usecorrectpython()
 
         if options.restart:
             orig = list(tests)
@@ -1165,30 +1140,29 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
-        runqueue(options, tests, results)
+        scheduletests(options, tests)
 
-        failed = len(results['f'])
-        tested = len(results['p']) + failed
+        failed = len(results['!'])
+        warned = len(results['~'])
+        tested = len(results['.']) + failed + warned
         skipped = len(results['s'])
         ignored = len(results['i'])
 
-        if options.child:
-            fp = os.fdopen(options.child, 'w')
-            fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
-            for s in results['s']:
-                fp.write("%s %s\n" % s)
-            for s in results['f']:
-                fp.write("%s %s\n" % s)
-            fp.close()
-        else:
-            print
+        print
+        if not options.noskips:
             for s in results['s']:
                 print "Skipped %s: %s" % s
-            for s in results['f']:
-                print "Failed %s: %s" % s
-            _checkhglib("Tested")
-            print "# Ran %d tests, %d skipped, %d failed." % (
-                tested, skipped + ignored, failed)
+        for s in results['~']:
+            print "Warned %s: %s" % s
+        for s in results['!']:
+            print "Failed %s: %s" % s
+        _checkhglib("Tested")
+        print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
+            tested, skipped + ignored, warned, failed)
+        if results['!']:
+            print 'python hash seed:', os.environ['PYTHONHASHSEED']
+        if options.time:
+            outputtimes(options)
 
         if options.anycoverage:
             outputcoverage(options)
@@ -1197,42 +1171,51 @@ def runtests(options, tests):
         print "\ninterrupted!"
 
     if failed:
-        sys.exit(1)
+        return 1
+    if warned:
+        return 80
+
+testtypes = [('.py', pytest, '.out'),
+             ('.t', tsttest, '')]
 
 def main():
     (options, args) = parseargs()
-    if not options.child:
-        os.umask(022)
+    os.umask(022)
 
-        checktools()
+    checktools()
 
     if len(args) == 0:
-        args = os.listdir(".")
-    args.sort()
+        args = [t for t in os.listdir(".")
+                if t.startswith("test-")
+                and (t.endswith(".py") or t.endswith(".t"))]
 
     tests = args
 
-    # Reset some environment variables to well-known values so that
-    # the tests produce repeatable output.
-    os.environ['LANG'] = os.environ['LC_ALL'] = os.environ['LANGUAGE'] = 'C'
-    os.environ['TZ'] = 'GMT'
-    os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
-    os.environ['CDPATH'] = ''
-    os.environ['COLUMNS'] = '80'
-    os.environ['GREP_OPTIONS'] = ''
-    os.environ['http_proxy'] = ''
-    os.environ['no_proxy'] = ''
-    os.environ['NO_PROXY'] = ''
-    os.environ['TERM'] = 'xterm'
+    if options.random:
+        random.shuffle(tests)
+    else:
+        # keywords for slow tests
+        slow = 'svn gendoc check-code-hg'.split()
+        def sortkey(f):
+            # run largest tests first, as they tend to take the longest
+            try:
+                val = -os.stat(f).st_size
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    raise
+                return -1e9 # file does not exist, tell early
+            for kw in slow:
+                if kw in f:
+                    val *= 10
+            return val
+        tests.sort(key=sortkey)
 
-    # unset env related to hooks
-    for k in os.environ.keys():
-        if k.startswith('HG_'):
-            # can't remove on solaris
-            os.environ[k] = ''
-            del os.environ[k]
+    if 'PYTHONHASHSEED' not in os.environ:
+        # use a random python hash seed all the time
+        # we do the randomness ourself to know what seed is used
+        os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
+    global TESTDIR, HGTMP, INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1257,21 +1240,12 @@ def main():
             d = os.getenv('TMP')
         tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
     HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
-    DAEMON_PIDS = None
-    HGRCPATH = None
-
-    os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-    os.environ["HGMERGE"] = "internal:merge"
-    os.environ["HGUSER"]   = "test"
-    os.environ["HGENCODING"] = "ascii"
-    os.environ["HGENCODINGMODE"] = "strict"
-    os.environ["HGPORT"] = str(options.port)
-    os.environ["HGPORT1"] = str(options.port + 1)
-    os.environ["HGPORT2"] = str(options.port + 2)
 
     if options.with_hg:
         INST = None
         BINDIR = os.path.dirname(os.path.realpath(options.with_hg))
+        TMPBINDIR = os.path.join(HGTMP, 'install', 'bin')
+        os.makedirs(TMPBINDIR)
 
         # This looks redundant with how Python initializes sys.path from
         # the location of the script being executed.  Needed because the
@@ -1282,27 +1256,30 @@ def main():
     else:
         INST = os.path.join(HGTMP, "install")
         BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
+        TMPBINDIR = BINDIR
         PYTHONDIR = os.path.join(INST, "lib", "python")
 
     os.environ["BINDIR"] = BINDIR
     os.environ["PYTHON"] = PYTHON
 
-    if not options.child:
-        path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
-        os.environ["PATH"] = os.pathsep.join(path)
+    path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
+    if TMPBINDIR != BINDIR:
+        path = [TMPBINDIR] + path
+    os.environ["PATH"] = os.pathsep.join(path)
 
-        # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
-        # can run .../tests/run-tests.py test-foo where test-foo
-        # adds an extension to HGRC
-        pypath = [PYTHONDIR, TESTDIR]
-        # We have to augment PYTHONPATH, rather than simply replacing
-        # it, in case external libraries are only available via current
-        # PYTHONPATH.  (In particular, the Subversion bindings on OS X
-        # are in /opt/subversion.)
-        oldpypath = os.environ.get(IMPL_PATH)
-        if oldpypath:
-            pypath.append(oldpypath)
-        os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+    # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
+    # can run .../tests/run-tests.py test-foo where test-foo
+    # adds an extension to HGRC. Also include run-test.py directory to import
+    # modules like heredoctest.
+    pypath = [PYTHONDIR, TESTDIR, os.path.abspath(os.path.dirname(__file__))]
+    # We have to augment PYTHONPATH, rather than simply replacing
+    # it, in case external libraries are only available via current
+    # PYTHONPATH.  (In particular, the Subversion bindings on OS X
+    # are in /opt/subversion.)
+    oldpypath = os.environ.get(IMPL_PATH)
+    if oldpypath:
+        pypath.append(oldpypath)
+    os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
@@ -1312,10 +1289,7 @@ def main():
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        if len(tests) > 1 and options.jobs > 1:
-            runchildren(options, tests)
-        else:
-            runtests(options, tests)
+        sys.exit(runtests(options, tests) or 0)
     finally:
         time.sleep(.1)
         cleanup(options)
