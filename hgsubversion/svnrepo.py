@@ -103,8 +103,8 @@ def generate_repo_class(ui, repo):
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             return wrappers.findoutgoing(repo, remote, heads, force)
 
-        def svnmeta(self, uuid=None, subdir=None):
-            return svnmeta.SVNMeta(self, uuid, subdir)
+        def svnmeta(self, uuid=None, subdir=None, skiperrorcheck=False):
+            return svnmeta.SVNMeta(self, uuid, subdir, skiperrorcheck)
 
     repo.__class__ = svnlocalrepo
 
