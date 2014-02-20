@@ -11,6 +11,16 @@ import mercurial.context
 
 import util
 
+def parse_subrepos(ctx):
+    sub = util.OrderedDict()
+    if '.hgsub' in ctx:
+        sub = util.parse_hgsub(ctx['.hgsub'].data().splitlines())
+    substate = util.OrderedDict()
+    if '.hgsubstate' in ctx:
+        substate = util.parse_hgsubstate(
+            ctx['.hgsubstate'].data().splitlines())
+    return sub, substate
+
 class IncrementalChangesetExporter(object):
     """Incrementally export Mercurial changesets to Git trees.
 
@@ -269,16 +279,6 @@ class IncrementalChangesetExporter(object):
             parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
 
     def _handle_subrepos(self, newctx, dirty_trees):
-        def parse_subrepos(ctx):
-            sub = util.OrderedDict()
-            if '.hgsub' in ctx:
-                sub = util.parse_hgsub(ctx['.hgsub'].data().splitlines())
-            substate = util.OrderedDict()
-            if '.hgsubstate' in ctx:
-                substate = util.parse_hgsubstate(
-                    ctx['.hgsubstate'].data().splitlines())
-            return sub, substate
-
         sub, substate = parse_subrepos(self._ctx)
         newsub, newsubstate = parse_subrepos(newctx)
 
