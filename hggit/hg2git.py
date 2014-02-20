@@ -120,27 +120,34 @@ class IncrementalChangesetExporter(object):
         # only export those.
         dirty_trees = set()
 
-        # We first process file removals so we can prune dead trees.
-        for path in removed:
-            if path == '.hgsubstate':
-                self._handle_subrepos(newctx, dirty_trees)
-                continue
+        subadded, subremoved = [], []
 
-            if path == '.hgsub':
+        for s in modified, added, removed:
+            if '.hgsub' in s or '.hgsubstate' in s:
+                subadded, subremoved = self._handle_subrepos(newctx)
+                break
+
+        # We first process subrepo and file removals so we can prune dead trees.
+        for path in subremoved:
+            self._remove_path(path, dirty_trees)
+
+        for path in removed:
+            if path == '.hgsubstate' or path == '.hgsub':
                 continue
 
             self._remove_path(path, dirty_trees)
+
+        for path, sha in subadded:
+            d = os.path.dirname(path)
+            tree = self._dirs.setdefault(d, dulobjs.Tree())
+            dirty_trees.add(d)
+            tree.add(os.path.basename(path), dulobjs.S_IFGITLINK, sha)
 
         # For every file that changed or was added, we need to calculate the
         # corresponding Git blob and its tree entry. We emit the blob
         # immediately and update trees to be aware of its presence.
         for path in set(modified) | set(added):
-            # Handle special Mercurial paths.
-            if path == '.hgsubstate':
-                self._handle_subrepos(newctx, dirty_trees)
-                continue
-
-            if path == '.hgsub':
+            if path == '.hgsubstate' or path == '.hgsub':
                 continue
 
             d = os.path.dirname(path)
@@ -278,7 +285,7 @@ class IncrementalChangesetExporter(object):
             # trees, this should hold true.
             parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
 
-    def _handle_subrepos(self, newctx, dirty_trees):
+    def _handle_subrepos(self, newctx):
         sub, substate = parse_subrepos(self._ctx)
         newsub, newsubstate = parse_subrepos(newctx)
 
@@ -296,6 +303,9 @@ class IncrementalChangesetExporter(object):
         # git links without corresponding submodule paths are stored as subrepos
         # with a substate but without an entry in .hgsub.
 
+        # 'added' is both modified and added
+        added, removed = [], []
+
         def isgit(sub, path):
             return path not in sub or sub[path].startswith('[git]')
 
@@ -306,7 +316,7 @@ class IncrementalChangesetExporter(object):
             # old = git
             if path not in newsubstate or not isgit(newsub, path):
                 # new = hg or no, case (2) or (3)
-                self._remove_path(path, dirty_trees)
+                removed.append(path)
 
         for path, sha in newsubstate.iteritems():
             if not isgit(newsub, path):
@@ -314,10 +324,9 @@ class IncrementalChangesetExporter(object):
                 continue
 
             # case (1)
-            d = os.path.dirname(path)
-            dirty_trees.add(d)
-            tree = self._dirs.setdefault(d, dulobjs.Tree())
-            tree.add(os.path.basename(path), dulobjs.S_IFGITLINK, sha)
+            added.append((path, sha))
+
+        return added, removed
 
     @staticmethod
     def tree_entry(fctx, blob_cache):
