@@ -77,13 +77,13 @@ class GitProgress(object):
                 self.lasttopic = topic
 
                 pos, total = map(int, m.group(1, 2))
-                util.progress(self.ui, topic, pos, total=total)
+                self.ui.progress(topic, pos, total=total)
             else:
                 self.flush(msg)
 
     def flush(self, msg=None):
         if self.lasttopic:
-            util.progress(self.ui, self.lasttopic, None)
+            self.ui.progress(self.ui, self.lasttopic, None)
         self.lasttopic = None
         if msg:
             self.ui.note(msg + '\n')
@@ -355,7 +355,7 @@ class GitHandler(object):
         exporter = hg2git.IncrementalChangesetExporter(self.repo)
 
         for i, rev in enumerate(export):
-            util.progress(self.ui, 'exporting', i, total=total)
+            self.ui.progress('exporting', i, total=total)
             ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
@@ -363,7 +363,7 @@ class GitHandler(object):
                               "of octopus explosion\n" % ctx.rev())
                 continue
             self.export_hg_commit(rev, exporter)
-        util.progress(self.ui, 'exporting', None, total=total)
+        self.ui.progress('exporting', None, total=total)
 
 
     # convert this commit into git objects
@@ -643,10 +643,10 @@ class GitHandler(object):
             self.ui.status(_("importing git objects into hg\n"))
 
         for i, csha in enumerate(commits):
-            util.progress(self.ui, 'importing', i, total=total, unit='commits')
+            self.ui.progress('importing', i, total=total, unit='commits')
             commit = convert_list[csha]
             self.import_git_commit(commit)
-        util.progress(self.ui, 'importing', None, total=total, unit='commits')
+        self.ui.progress('importing', None, total=total, unit='commits')
 
         # TODO if the tags cache is used, remove any dangling tag references
 
