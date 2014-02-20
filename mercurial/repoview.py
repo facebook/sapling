@@ -96,7 +96,7 @@ def computeimpactable(repo):
 
 # function to compute filtered set
 #
-# When addding a new filter you MUST update the table at:
+# When adding a new filter you MUST update the table at:
 #     mercurial.branchmap.subsettable
 # Otherwise your filter will have to recompute all its branches cache
 # from scratch (very slow).

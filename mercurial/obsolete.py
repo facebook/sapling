@@ -766,7 +766,7 @@ def _computeextinctset(repo):
 def _computebumpedset(repo):
     """the set of revs trying to obsolete public revisions"""
     bumped = set()
-    # utils function (avoid attribut lookup in the loop)
+    # utils function (avoid attribute lookup in the loop)
     phase = repo._phasecache.phase # would be faster to grab the full list
     public = phases.public
     cl = repo.changelog

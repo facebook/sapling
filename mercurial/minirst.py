@@ -109,7 +109,7 @@ def findliteralblocks(blocks):
             elif len(blocks[i]['lines']) == 1 and \
                  blocks[i]['lines'][0].lstrip(' ').startswith('.. ') and \
                  blocks[i]['lines'][0].find(' ', 3) == -1:
-                # directive on its onw line, not a literal block
+                # directive on its own line, not a literal block
                 i += 1
                 continue
             else:
@@ -382,7 +382,7 @@ def addmargins(blocks):
             blocks[i]['type'] in ('bullet', 'option', 'field')):
             i += 1
         elif not blocks[i - 1]['lines']:
-            # no lines in previous block, do not seperate
+            # no lines in previous block, do not separate
             i += 1
         else:
             blocks.insert(i, dict(lines=[''], indent=0, type='margin'))
