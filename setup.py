@@ -11,6 +11,6 @@ setup(
     long_description="",
     keywords='fb hg mercurial',
     license='',
-    py_modules=['fbamend', 'smartlog', 'phrevset', 'githelp'],
+    py_modules=['fbamend', 'smartlog', 'phrevset', 'githelp', 'backups'],
     packages=['crecord']
 )
