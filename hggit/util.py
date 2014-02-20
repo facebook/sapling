@@ -4,10 +4,6 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
-def progress(ui, *args, **kwargs):
-    """Shim for progress on hg < 1.4. Remove when 1.3 is dropped."""
-    getattr(ui, 'progress', lambda *x, **kw: None)(*args, **kwargs)
-
 def parse_hgsub(lines):
     """Fills OrderedDict with hgsub file content passed as list of lines"""
     rv = OrderedDict()
