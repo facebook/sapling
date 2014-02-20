@@ -169,10 +169,8 @@ class GitHandler(object):
         file = self.repo.opener(self.mapfile, 'w+', atomictemp=True)
         for hgsha, gitsha in sorted(self._map_hg.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
-        # If this complains that NoneType is not callable, then
-        # atomictempfile no longer has either of rename (pre-1.9) or
-        # close (post-1.9)
-        getattr(file, 'rename', getattr(file, 'close', None))()
+        # If this complains, atomictempfile no longer has close
+        file.close()
 
     def load_tags(self):
         self.tags = {}
