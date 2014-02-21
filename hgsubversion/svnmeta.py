@@ -163,6 +163,11 @@ class SVNMeta(object):
         return os.path.join(self.metapath, 'branchmap')
 
     @property
+    def tagfile(self):
+        # called tagmap for backwards compatibility
+        return os.path.join(self.metapath, 'tagmap')
+
+    @property
     def tagmapfile(self):
         # called tag-renames for backwards compatibility
         return os.path.join(self.metapath, 'tag-renames')
