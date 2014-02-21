@@ -2243,9 +2243,13 @@ class spanset(object):
                 self._hiddenrevs)
 
     def __and__(self, x):
+        if isinstance(x, baseset):
+            x = x.set()
         return lazyset(self, lambda r: r in x)
 
     def __sub__(self, x):
+        if isinstance(x, baseset):
+            x = x.set()
         return lazyset(self, lambda r: r not in x)
 
     def __add__(self, x):
