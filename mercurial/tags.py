@@ -12,6 +12,7 @@
 
 from node import nullid, bin, hex, short
 from i18n import _
+import util
 import encoding
 import error
 import errno
@@ -81,7 +82,7 @@ def _readtags(ui, repo, lines, fn, recode=None):
     ids previously associated with it (in file order).  All node ids are
     binary, not hex.'''
 
-    filetags = {}               # map tag name to (node, hist)
+    filetags = util.sortdict()  # map tag name to (node, hist)
     count = 0
 
     def warn(msg):
