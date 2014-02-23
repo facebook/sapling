@@ -110,10 +110,16 @@ def _run_assertions(self, name, single, src, dest, u):
     for tf in ('lastpulled', 'rev_map', 'uuid', 'tagmap', 'layout', 'subdir',):
 
         stf = os.path.join(src.path, 'svn', tf)
-        self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
+        # the generation of tagmap is lazy so it doesn't strictly need to exist
+        # if it's not being used
+        if not stf.endswith('tagmap'):
+            self.assertTrue(os.path.isfile(stf), '%r is missing!' % stf)
         dtf = os.path.join(dest.path, 'svn', tf)
-        self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
-        old, new = util.load(stf, resave=False), util.load(dtf, resave=False)
+        old, new = None, None
+        if not dtf.endswith('tagmap'):
+            self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
+        if os.path.isfile(stf) and os.path.isfile(dtf):
+            old, new = util.load(stf, resave=False), util.load(dtf, resave=False)
         if tf == 'lastpulled' and (name,
                                    self.stupid, single) in expect_youngest_skew:
             self.assertNotEqual(old, new,
