@@ -223,6 +223,37 @@ except AttributeError:
                     del self[i]
                     break
 
+class sortdict(dict):
+    '''a simple sorted dictionary'''
+    def __init__(self, data=None):
+        self._list = []
+        if data:
+            self.update(data)
+    def copy(self):
+        return sortdict(self)
+    def __setitem__(self, key, val):
+        if key in self:
+            self._list.remove(key)
+        self._list.append(key)
+        dict.__setitem__(self, key, val)
+    def __iter__(self):
+        return self._list.__iter__()
+    def update(self, src):
+        for k in src:
+            self[k] = src[k]
+    def clear(self):
+        dict.clear(self)
+        self._list = []
+    def items(self):
+        return [(k, self[k]) for k in self._list]
+    def __delitem__(self, key):
+        dict.__delitem__(self, key)
+        self._list.remove(key)
+    def keys(self):
+        return self._list
+    def iterkeys(self):
+        return self._list.__iter__()
+
 class lrucachedict(object):
     '''cache most recent gets from or sets to this dictionary'''
     def __init__(self, maxsize):

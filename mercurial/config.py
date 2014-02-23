@@ -9,37 +9,6 @@ from i18n import _
 import error, util
 import os, errno
 
-class sortdict(dict):
-    'a simple sorted dictionary'
-    def __init__(self, data=None):
-        self._list = []
-        if data:
-            self.update(data)
-    def copy(self):
-        return sortdict(self)
-    def __setitem__(self, key, val):
-        if key in self:
-            self._list.remove(key)
-        self._list.append(key)
-        dict.__setitem__(self, key, val)
-    def __iter__(self):
-        return self._list.__iter__()
-    def update(self, src):
-        for k in src:
-            self[k] = src[k]
-    def clear(self):
-        dict.clear(self)
-        self._list = []
-    def items(self):
-        return [(k, self[k]) for k in self._list]
-    def __delitem__(self, key):
-        dict.__delitem__(self, key)
-        self._list.remove(key)
-    def keys(self):
-        return self._list
-    def iterkeys(self):
-        return self._list.__iter__()
-
 class config(object):
     def __init__(self, data=None):
         self._data = {}
@@ -65,7 +34,7 @@ class config(object):
                 del self._source[(s, n)]
         for s in src:
             if s not in self:
-                self._data[s] = sortdict()
+                self._data[s] = util.sortdict()
             self._data[s].update(src._data[s])
         self._source.update(src._source)
     def get(self, section, item, default=None):
@@ -91,7 +60,7 @@ class config(object):
         return self._data.get(section, {}).items()
     def set(self, section, item, value, source=""):
         if section not in self:
-            self._data[section] = sortdict()
+            self._data[section] = util.sortdict()
         self._data[section][item] = value
         if source:
             self._source[(section, item)] = source
@@ -162,7 +131,7 @@ class config(object):
                 if remap:
                     section = remap.get(section, section)
                 if section not in self:
-                    self._data[section] = sortdict()
+                    self._data[section] = util.sortdict()
                 continue
             m = itemre.match(l)
             if m:
