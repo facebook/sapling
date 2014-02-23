@@ -42,7 +42,7 @@ class SVNMeta(object):
 
         self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
-        self.tags = maps.Tags(repo)
+        self._tags = None
         self._layout = layouts.detect.layout_from_file(self.metapath,
                                                        ui=self.repo.ui)
         self._layoutobj = None
@@ -166,6 +166,12 @@ class SVNMeta(object):
     def tagfile(self):
         # called tagmap for backwards compatibility
         return os.path.join(self.metapath, 'tagmap')
+
+    @property
+    def tags(self):
+        if self._tags is None:
+            self._tags = maps.Tags(self.repo)
+        return self._tags
 
     @property
     def tagmapfile(self):

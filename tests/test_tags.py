@@ -175,6 +175,8 @@ rename a tag
         repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')
         tm = os.path.join(repo.path, 'svn', 'tagmap')
         open(tm, 'w').write('1\n')
+        # force tags to load since it is lazily loaded when needed
+        repo.svnmeta().tags
         commands.pull(repo.ui, repo)
         self.assertEqual(open(tm).read().splitlines()[0], '2')
 
