@@ -1074,6 +1074,7 @@ class GitHandler(object):
         keys = refs.keys()
         if not keys:
             return
+        repotags = self.repo.tags()
         for k in keys[:]:
             ref_name = k
             parts = k.split('/')
@@ -1085,7 +1086,7 @@ class GitHandler(object):
                     continue
                 if ref_name[-3:] == '^{}':
                     ref_name = ref_name[:-3]
-                if not ref_name in self.repo.tags():
+                if not ref_name in repotags:
                     obj = self.git.get_object(refs[k])
                     sha = None
                     if isinstance (obj, Commit): # lightweight
