@@ -439,7 +439,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     op1, op2 = repo.dirstate.parents()
     a = repo.changelog.ancestor(op1, node)
     if a != node:
-        raise util.Abort(_('cannot backout change on a different branch'))
+        raise util.Abort(_('cannot backout change that is not an ancestor'))
 
     p1, p2 = repo.changelog.parents(node)
     if p1 == nullid:

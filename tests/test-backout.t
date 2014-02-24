@@ -92,7 +92,7 @@ across branch
 should fail
 
   $ hg backout 1
-  abort: cannot backout change on a different branch
+  abort: cannot backout change that is not an ancestor
   [255]
   $ echo c > c
   $ hg ci -Am2
@@ -108,7 +108,7 @@ should fail
 should fail
 
   $ hg backout 1
-  abort: cannot backout change on a different branch
+  abort: cannot backout change that is not an ancestor
   [255]
   $ hg summary
   parent: 2:db815d6d32e6 tip
