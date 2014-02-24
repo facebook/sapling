@@ -396,7 +396,7 @@ class changectx(basectx):
 
     def ancestor(self, c2):
         """
-        return the ancestor context of self and c2
+        return the "best" ancestor context of self and c2
         """
         # deal with workingctxs
         n2 = c2._node
@@ -408,10 +408,19 @@ class changectx(basectx):
         elif len(cahs) == 1:
             anc = cahs[0]
         else:
-            anc = self._repo.changelog.ancestor(self._node, n2)
+            for r in self._repo.ui.configlist('merge', 'preferancestor'):
+                ctx = changectx(self._repo, r)
+                anc = ctx.node()
+                if anc in cahs:
+                    break
+            else:
+                anc = self._repo.changelog.ancestor(self._node, n2)
             self._repo.ui.status(
                 (_("note: using %s as ancestor of %s and %s\n") %
-                 (short(anc), short(self._node), short(n2))))
+                 (short(anc), short(self._node), short(n2))) +
+                ''.join(_("      alternatively, use --config "
+                          "merge.preferancestor=%s\n") %
+                        short(n) for n in sorted(cahs) if n != anc))
         return changectx(self._repo, anc)
 
     def descendant(self, other):

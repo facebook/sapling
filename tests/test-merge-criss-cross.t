@@ -25,6 +25,7 @@ Criss cross merging
 
   $ hg up -r3
   note: using 0f6b37dbe527 as ancestor of adfe50279922 and cf89f02107e5
+        alternatively, use --config merge.preferancestor=40663881a6dd
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '6 second change' > f2
   $ hg ci -m '6 second change f2'
@@ -75,6 +76,7 @@ Criss cross merging
 
   $ hg merge -v --debug --tool internal:dump 5
   note: using 0f6b37dbe527 as ancestor of 3b08d01b0ab5 and adfe50279922
+        alternatively, use --config merge.preferancestor=40663881a6dd
     searching for copies back to rev 3
   resolving manifests
    branchmerge: True, force: False, partial: False
@@ -110,5 +112,15 @@ Criss cross merging
   
   ==> f2.other <==
   2 first change
+
+  $ hg up -qC .
+  $ hg merge -v --tool internal:dump 5 --config merge.preferancestor="null 40663881 3b08d"
+  note: using 40663881a6dd as ancestor of 3b08d01b0ab5 and adfe50279922
+        alternatively, use --config merge.preferancestor=0f6b37dbe527
+  resolving manifests
+  merging f1
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ cd ..
