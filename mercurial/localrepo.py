@@ -1123,6 +1123,8 @@ class localrepository(object):
                 self.ui.warn(_("warning: can't find ancestor for '%s' "
                                "copied from '%s'!\n") % (fname, cfname))
 
+        elif fparent1 == nullid:
+            fparent1, fparent2 = fparent2, nullid
         elif fparent2 != nullid:
             # is one parent an ancestor of the other?
             fparentancestor = flog.ancestor(fparent1, fparent2)
