@@ -1544,6 +1544,103 @@ bail:
 }
 
 /*
+ * Given a (possibly overlapping) set of revs, return all the
+ * common ancestors heads: heads(::args[0] and ::a[1] and ...)
+ */
+static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
+{
+	PyObject *ret = NULL, *gca = NULL;
+	Py_ssize_t argcount, i, len;
+	bitmask repeat = 0;
+	int revcount = 0;
+	int *revs;
+
+	argcount = PySequence_Length(args);
+	revs = malloc(argcount * sizeof(*revs));
+	if (argcount > 0 && revs == NULL)
+		return PyErr_NoMemory();
+	len = index_length(self) - 1;
+
+	for (i = 0; i < argcount; i++) {
+		static const int capacity = 24;
+		PyObject *obj = PySequence_GetItem(args, i);
+		bitmask x;
+		long val;
+
+		if (!PyInt_Check(obj)) {
+			PyErr_SetString(PyExc_TypeError,
+					"arguments must all be ints");
+			goto bail;
+		}
+		val = PyInt_AsLong(obj);
+		if (val == -1) {
+			ret = PyList_New(0);
+			goto done;
+		}
+		if (val < 0 || val >= len) {
+			PyErr_SetString(PyExc_IndexError,
+					"index out of range");
+			goto bail;
+		}
+		/* this cheesy bloom filter lets us avoid some more
+		 * expensive duplicate checks in the common set-is-disjoint
+		 * case */
+		x = 1ull << (val & 0x3f);
+		if (repeat & x) {
+			int k;
+			for (k = 0; k < revcount; k++) {
+				if (val == revs[k])
+					goto duplicate;
+			}
+		}
+		else repeat |= x;
+		if (revcount >= capacity) {
+			PyErr_Format(PyExc_OverflowError,
+				     "bitset size (%d) > capacity (%d)",
+				     revcount, capacity);
+			goto bail;
+		}
+		revs[revcount++] = (int)val;
+	duplicate:;
+	}
+
+	if (revcount == 0) {
+		ret = PyList_New(0);
+		goto done;
+	}
+	if (revcount == 1) {
+		PyObject *obj;
+		ret = PyList_New(1);
+		if (ret == NULL)
+			goto bail;
+		obj = PyInt_FromLong(revs[0]);
+		if (obj == NULL)
+			goto bail;
+		PyList_SET_ITEM(ret, 0, obj);
+		goto done;
+	}
+
+	gca = find_gca_candidates(self, revs, revcount);
+	if (gca == NULL)
+		goto bail;
+
+	ret = gca;
+	Py_INCREF(gca);
+
+done:
+	free(revs);
+	Py_XDECREF(gca);
+
+	return ret;
+
+bail:
+	free(revs);
+	Py_XDECREF(gca);
+	Py_XDECREF(ret);
+	return NULL;
+}
+
+/*
  * Invalidate any trie entries introduced by added revs.
  */
 static void nt_invalidate_added(indexObject *self, Py_ssize_t start)
@@ -1787,6 +1884,9 @@ static PyMappingMethods index_mapping_methods = {
 static PyMethodDef index_methods[] = {
 	{"ancestors", (PyCFunction)index_ancestors, METH_VARARGS,
 	 "return the gca set of the given revs"},
+	{"commonancestorsheads", (PyCFunction)index_commonancestorsheads,
+	  METH_VARARGS,
+	  "return the heads of the common ancestors of the given revs"},
 	{"clearcaches", (PyCFunction)index_clearcaches, METH_NOARGS,
 	 "clear the index caches"},
 	{"get", (PyCFunction)index_m_get, METH_VARARGS,
