@@ -31,7 +31,7 @@ def ancestors(pfunc, *orignodes):
         poison = 1 << (i + 1)
 
         gca = set()
-        interesting = left = len(nodes)
+        interesting = len(nodes)
         nv = len(seen) - 1
         while nv >= 0 and interesting:
             v = nv
@@ -45,10 +45,8 @@ def ancestors(pfunc, *orignodes):
                     gca.add(v)
                     sv |= poison
                     if v in nodes:
-                        left -= 1
-                        if left <= 1:
-                            # history is linear
-                            return set([v])
+                        # history is linear
+                        return set([v])
             if sv < poison:
                 for p in pfunc(v):
                     sp = seen[p]
