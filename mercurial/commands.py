@@ -4620,7 +4620,15 @@ def push(ui, repo, dest=None, **opts):
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    other = hg.peer(repo, opts, dest)
+    try:
+        other = hg.peer(repo, opts, dest)
+    except error.RepoError:
+        if dest == "default-push":
+            raise util.Abort(_("default repository not configured!"),
+                    hint=_('see the "path" section in "hg help config"'))
+        else:
+            raise
+
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
 
