@@ -490,7 +490,7 @@ def revrange(repo, revs):
             return defval
         return repo[val].rev()
 
-    seen, l = set(), []
+    seen, l = set(), revset.baseset([])
     for spec in revs:
         if l and not seen:
             seen = set(l)
@@ -511,7 +511,7 @@ def revrange(repo, revs):
                 rangeiter = repo.changelog.revs(start, end)
                 if not seen and not l:
                     # by far the most common case: revs = ["-1:0"]
-                    l = list(rangeiter)
+                    l = revset.baseset(rangeiter)
                     # defer syncing seen until next iteration
                     continue
                 newrevs = set(rangeiter)
@@ -527,7 +527,7 @@ def revrange(repo, revs):
                 if rev in seen:
                     continue
                 seen.add(rev)
-                l.append(rev)
+                l = l + [rev]
                 continue
         except error.RepoLookupError:
             pass
