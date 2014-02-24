@@ -83,7 +83,7 @@ class GitProgress(object):
 
     def flush(self, msg=None):
         if self.lasttopic:
-            self.ui.progress(self.ui, self.lasttopic, None)
+            self.ui.progress(self.lasttopic, None)
         self.lasttopic = None
         if msg:
             self.ui.note(msg + '\n')
