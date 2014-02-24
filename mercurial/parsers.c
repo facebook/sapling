@@ -1529,10 +1529,6 @@ static PyObject *index_ancestors(indexObject *self, PyObject *args)
 		ret = gca;
 		Py_INCREF(gca);
 	}
-	else if (PyList_GET_SIZE(gca) == 1) {
-		ret = PyList_GET_ITEM(gca, 0);
-		Py_INCREF(ret);
-	}
 	else ret = find_deepest(self, gca);
 
 done:
