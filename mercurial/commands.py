@@ -4605,47 +4605,50 @@ def pull(ui, repo, source="default", **opts):
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.peer(repo, opts, source)
-    ui.status(_('pulling from %s\n') % util.hidepassword(source))
-    revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
-
-    remotebookmarks = other.listkeys('bookmarks')
-
-    if opts.get('bookmark'):
-        if not revs:
-            revs = []
-        for b in opts['bookmark']:
-            if b not in remotebookmarks:
-                raise util.Abort(_('remote bookmark %s not found!') % b)
-            revs.append(remotebookmarks[b])
-
-    if revs:
-        try:
-            revs = [other.lookup(rev) for rev in revs]
-        except error.CapabilityError:
-            err = _("other repository doesn't support revision lookup, "
-                    "so a rev cannot be specified.")
-            raise util.Abort(err)
-
-    modheads = repo.pull(other, heads=revs, force=opts.get('force'))
-    bookmarks.updatefromremote(ui, repo, remotebookmarks, source)
-    if checkout:
-        checkout = str(repo.changelog.rev(other.lookup(checkout)))
-    repo._subtoppath = source
     try:
-        ret = postincoming(ui, repo, modheads, opts.get('update'), checkout)
+        ui.status(_('pulling from %s\n') % util.hidepassword(source))
+        revs, checkout = hg.addbranchrevs(repo, other, branches,
+                                          opts.get('rev'))
 
+        remotebookmarks = other.listkeys('bookmarks')
+
+        if opts.get('bookmark'):
+            if not revs:
+                revs = []
+            for b in opts['bookmark']:
+                if b not in remotebookmarks:
+                    raise util.Abort(_('remote bookmark %s not found!') % b)
+                revs.append(remotebookmarks[b])
+
+        if revs:
+            try:
+                revs = [other.lookup(rev) for rev in revs]
+            except error.CapabilityError:
+                err = _("other repository doesn't support revision lookup, "
+                        "so a rev cannot be specified.")
+                raise util.Abort(err)
+
+        modheads = repo.pull(other, heads=revs, force=opts.get('force'))
+        bookmarks.updatefromremote(ui, repo, remotebookmarks, source)
+        if checkout:
+            checkout = str(repo.changelog.rev(other.lookup(checkout)))
+        repo._subtoppath = source
+        try:
+            ret = postincoming(ui, repo, modheads, opts.get('update'), checkout)
+
+        finally:
+            del repo._subtoppath
+
+        # update specified bookmarks
+        if opts.get('bookmark'):
+            marks = repo._bookmarks
+            for b in opts['bookmark']:
+                # explicit pull overrides local bookmark if any
+                ui.status(_("importing bookmark %s\n") % b)
+                marks[b] = repo[remotebookmarks[b]].node()
+            marks.write()
     finally:
-        del repo._subtoppath
-
-    # update specified bookmarks
-    if opts.get('bookmark'):
-        marks = repo._bookmarks
-        for b in opts['bookmark']:
-            # explicit pull overrides local bookmark if any
-            ui.status(_("importing bookmark %s\n") % b)
-            marks[b] = repo[remotebookmarks[b]].node()
-        marks.write()
-
+        other.close()
     return ret
 
 @command('^push',
