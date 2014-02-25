@@ -1457,7 +1457,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
     return iterate()
 
-def _makegraphfilematcher(repo, pats, followfirst):
+def _makelogfilematcher(repo, pats, followfirst):
     # When displaying a revision with --patch --follow FILE, we have
     # to know which file of the revision must be diffed. With
     # --follow, we want the names of the ancestors of FILE in the
@@ -1485,7 +1485,7 @@ def _makegraphfilematcher(repo, pats, followfirst):
 
     return filematcher
 
-def _makegraphlogrevset(repo, pats, opts, revs):
+def _makelogrevset(repo, pats, opts, revs):
     """Return (expr, filematcher) where expr is a revset string built
     from log options and file patterns or None. If --stat or --patch
     are not passed filematcher is None. Otherwise it is a callable
@@ -1596,7 +1596,7 @@ def _makegraphlogrevset(repo, pats, opts, revs):
     filematcher = None
     if opts.get('patch') or opts.get('stat'):
         if follow:
-            filematcher = _makegraphfilematcher(repo, pats, followfirst)
+            filematcher = _makelogfilematcher(repo, pats, followfirst)
         else:
             filematcher = lambda rev: match
 
@@ -1639,7 +1639,7 @@ def getgraphlogrevs(repo, pats, opts):
     possiblyunsorted = False # whether revs might need sorting
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
-        # Don't sort here because _makegraphlogrevset might depend on the
+        # Don't sort here because _makelogrevset might depend on the
         # order of revs
         possiblyunsorted = True
     else:
@@ -1650,7 +1650,7 @@ def getgraphlogrevs(repo, pats, opts):
             revs.reverse()
     if not revs:
         return revset.baseset(), None, None
-    expr, filematcher = _makegraphlogrevset(repo, pats, opts, revs)
+    expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if possiblyunsorted:
         revs.sort(reverse=True)
     if expr:
