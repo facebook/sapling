@@ -268,6 +268,7 @@ h: l vs l, different
   merging b
   warning: conflicts during merge.
   merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: cannot merge flags for c
   merging d
   warning: internal:merge cannot merge symlinks for d
   merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -328,6 +329,7 @@ h: l vs l, different
   merging b
   warning: conflicts during merge.
   merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: cannot merge flags for c
   merging d
   warning: internal:merge cannot merge symlinks for d
   merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -355,7 +357,7 @@ h: l vs l, different
   2
   >>>>>>> other
   $ tellmeabout c
-  c is a plain file with content:
+  c is an executable file with content:
   x
   $ tellmeabout d
   d is an executable file with content:
