@@ -247,6 +247,9 @@ class obsstore(object):
     def __iter__(self):
         return iter(self._all)
 
+    def __len__(self):
+        return len(self._all)
+
     def __nonzero__(self):
         return bool(self._all)
 
