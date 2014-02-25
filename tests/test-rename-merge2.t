@@ -752,3 +752,198 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
   
 
   $ cd ..
+
+
+Systematic and terse testing of merge merges and ancestor calculation:
+
+Excpected result:
+
+\  a  m1  m2  dst
+0  -   f   f   f   "versions differ"
+1  f   g   g   g   "versions differ"
+2  f   f   f   f   "versions differ"
+3  f   f   g  f+g  "remote copied to " + f
+4  f   f   g   g   "remote moved to " + f
+5  f   g   f  f+g  "local copied to " + f2
+6  f   g   f   g   "local moved to " + f2
+7  -  (f)  f   f   "remote differs from untracked local"
+8  f  (f)  f   f   "remote differs from untracked local"
+
+  $ hg init ancestortest
+  $ cd ancestortest
+  $ for x in 1 2 3 4 5 6 8; do mkdir $x; echo a > $x/f; done
+  $ hg ci -Aqm "a"
+  $ mkdir 0
+  $ touch 0/f
+  $ hg mv 1/f 1/g
+  $ hg cp 5/f 5/g
+  $ hg mv 6/f 6/g
+  $ hg rm 8/f
+  $ for x in */*; do echo m1 > $x; done
+  $ hg ci -Aqm "m1"
+  $ hg up -qr0
+  $ mkdir 0 7
+  $ touch 0/f 7/f
+  $ hg mv 1/f 1/g
+  $ hg cp 3/f 3/g
+  $ hg mv 4/f 4/g
+  $ for x in */*; do echo m2 > $x; done
+  $ hg ci -Aqm "m2"
+  $ hg up -qr1
+  $ mkdir 7 8
+  $ echo m > 7/f
+  $ echo m > 8/f
+  $ hg merge -f --tool internal:dump -v --debug -r2 | sed '/^updating:/,$d' 2> /dev/null
+    searching for copies back to rev 1
+    unmatched files in local:
+     5/g
+     6/g
+    unmatched files in other:
+     3/g
+     4/g
+     7/f
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     src: '3/f' -> dst: '3/g' *
+     src: '4/f' -> dst: '4/g' *
+     src: '5/f' -> dst: '5/g' *
+     src: '6/f' -> dst: '6/g' *
+    checking for directory renames
+  resolving manifests
+   branchmerge: True, force: True, partial: False
+   ancestor: e6cb3cf11019, local: ec44bf929ab5+, remote: c62e34d0b898
+  remote changed 8/f which local deleted
+  use (c)hanged version or leave (d)eleted? c
+   0/f: versions differ -> m
+    preserving 0/f for resolve of 0/f
+   1/g: versions differ -> m
+    preserving 1/g for resolve of 1/g
+   2/f: versions differ -> m
+    preserving 2/f for resolve of 2/f
+   3/f: versions differ -> m
+    preserving 3/f for resolve of 3/f
+   3/f: remote copied to 3/g -> m
+    preserving 3/f for resolve of 3/g
+   4/f: remote moved to 4/g -> m
+    preserving 4/f for resolve of 4/g
+   5/f: versions differ -> m
+    preserving 5/f for resolve of 5/f
+   5/g: local copied/moved to 5/f -> m
+    preserving 5/g for resolve of 5/g
+   6/g: local copied/moved to 6/f -> m
+    preserving 6/g for resolve of 6/g
+   7/f: remote differs from untracked local -> m
+    preserving 7/f for resolve of 7/f
+   8/f: prompt recreating -> g
+  removing 4/f
+  getting 8/f
+  $ hg mani
+  0/f
+  1/g
+  2/f
+  3/f
+  4/f
+  5/f
+  5/g
+  6/g
+  $ for f in */*; do echo $f:; cat $f; done
+  0/f:
+  m1
+  0/f.base:
+  0/f.local:
+  m1
+  0/f.orig:
+  m1
+  0/f.other:
+  m2
+  1/g:
+  m1
+  1/g.base:
+  a
+  1/g.local:
+  m1
+  1/g.orig:
+  m1
+  1/g.other:
+  m2
+  2/f:
+  m1
+  2/f.base:
+  a
+  2/f.local:
+  m1
+  2/f.orig:
+  m1
+  2/f.other:
+  m2
+  3/f:
+  m1
+  3/f.base:
+  a
+  3/f.local:
+  m1
+  3/f.orig:
+  m1
+  3/f.other:
+  m2
+  3/g:
+  m1
+  3/g.base:
+  a
+  3/g.local:
+  m1
+  3/g.orig:
+  m1
+  3/g.other:
+  m2
+  4/g:
+  m1
+  4/g.base:
+  a
+  4/g.local:
+  m1
+  4/g.orig:
+  m1
+  4/g.other:
+  m2
+  5/f:
+  m1
+  5/f.base:
+  a
+  5/f.local:
+  m1
+  5/f.orig:
+  m1
+  5/f.other:
+  m2
+  5/g:
+  m1
+  5/g.base:
+  a
+  5/g.local:
+  m1
+  5/g.orig:
+  m1
+  5/g.other:
+  m2
+  6/g:
+  m1
+  6/g.base:
+  a
+  6/g.local:
+  m1
+  6/g.orig:
+  m1
+  6/g.other:
+  m2
+  7/f:
+  m
+  7/f.base:
+  7/f.local:
+  m
+  7/f.orig:
+  m
+  7/f.other:
+  m2
+  8/f:
+  m2
+  $ cd ..
