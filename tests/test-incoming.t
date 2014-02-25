@@ -9,6 +9,15 @@ Load commonly used test logic
   $ fn_git_commit -m "add alpha"
 
   $ cd ..
+  $ hg init hgrepo-empty
+  $ hg -R hgrepo-empty incoming gitrepo | grep -v 'no changes found' | grep -v 'bookmark:'
+  comparing with gitrepo
+  changeset:   0:7eeab2ea75ec
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:10 2007 +0000
+  summary:     add alpha
+  
+
   $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

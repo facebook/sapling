@@ -192,6 +192,9 @@ class overlayrevlog(object):
             return self.base.parents(n)
         commit = self.repo.handler.git.get_object(_maybehex(n))
 
+        if not commit.parents:
+            return [nullid, nullid]
+
         def gitorhg(n):
             hn = self.repo.handler.map_hg_get(hex(n))
             if hn is not None:
