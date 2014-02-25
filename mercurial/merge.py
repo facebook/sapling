@@ -388,9 +388,14 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         if partial and not partial(f):
             continue
         if n1 and n2:
-            fla = ma.flags(f)
-            nol = 'l' not in fl1 + fl2 + fla
+            fa = f
             a = ma.get(f, nullid)
+            if a == nullid:
+                fa = copy.get(f, f)
+                # Note: f as default is wrong - we can't really make a 3-way
+                # merge without an ancestor file.
+            fla = ma.flags(fa)
+            nol = 'l' not in fl1 + fl2 + fla
             if n2 == a and fl2 == fla:
                 pass # remote unchanged - keep local
             elif n1 == a and fl1 == fla: # local unchanged - use remote
