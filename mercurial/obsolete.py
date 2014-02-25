@@ -259,6 +259,9 @@ class obsstore(object):
 
         If you are a human writing code creating marker you want to use the
         `createmarkers` function in this module instead.
+
+        return True if a new marker have been added, False if the markers
+        already existed (no op).
         """
         if metadata is None:
             metadata = {}
@@ -270,7 +273,7 @@ class obsstore(object):
             if len(succ) != 20:
                 raise ValueError(succ)
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
-        self.add(transaction, [marker])
+        return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
         """Add new markers to the store
