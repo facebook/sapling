@@ -56,7 +56,7 @@ def uisetup(ui):
 def cloneshallow(orig, ui, repo, *args, **opts):
     if opts.get('shallow'):
         repos = []
-        def stream_in_shallow(orig, self, remote, requirements):
+        def clone_shallow(orig, self, *args, **kwargs):
             repos.append(self.unfiltered())
             # set up the client hooks so the post-clone update works
             setupclient(self.ui, self.unfiltered())
@@ -66,7 +66,12 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             if isinstance(self, repoview.repoview):
                 self.__class__.__bases__ = (self.__class__.__bases__[0],
                                             self.unfiltered().__class__)
+            self.requirements.add(shallowrepo.requirement)
+            self._writerequirements()
+            return orig(self, *args, **kwargs)
+        wrapfunction(localrepo.localrepository, 'clone', clone_shallow)
 
+        def stream_in_shallow(orig, self, remote, requirements):
             requirements.add(shallowrepo.requirement)
 
             # Replace remote.stream_out with a version that sends file

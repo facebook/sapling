@@ -63,4 +63,22 @@
   remote: abort: Cannot clone from a shallow repo to a full repo.
   [255]
 
-  $ cd ..
+# getbundle full clone
+
+  $ printf '[server]\npreferuncompressed=False\n' >> master/.hg/hgrc
+  $ hgcloneshallow ssh://user@dummy/master shallow3
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ ls shallow3/.hg/store/data
+  $ cat shallow3/.hg/requires
+  dotencode
+  fncache
+  remotefilelog
+  revlogv1
+  store
