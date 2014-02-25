@@ -2348,6 +2348,7 @@ class generatorset(object):
         self._cache = {}
         self._genlist = baseset([])
         self._iterated = False
+        self._finished = False
 
     def __contains__(self, x):
         if x in self._cache:
@@ -2357,6 +2358,7 @@ class generatorset(object):
             if l == x:
                 return True
 
+        self._finished = True
         self._cache[x] = False
         return False
 
@@ -2372,8 +2374,17 @@ class generatorset(object):
             self._genlist.append(item)
             yield item
 
+        self._finished = True
+
     def set(self):
         return self
+
+    def sort(self, reverse=False):
+        # Basic implementation to be changed in future patches
+        if not self._finished:
+            for i in self:
+                continue
+        self._genlist.sort(reverse=reverse)
 
 class ascgeneratorset(generatorset):
     """ Same structure as generatorset but stops iterating after it goes past
