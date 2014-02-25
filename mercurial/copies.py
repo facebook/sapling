@@ -228,9 +228,6 @@ def mergecopies(repo, c1, c2, ca):
     fullcopy = {}
     diverge = {}
 
-    def _checkcopies(f, m1, m2):
-        checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
-
     repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
     u1 = _nonoverlap(m1, m2, ma)
@@ -244,9 +241,10 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(u2))
 
     for f in u1:
-        _checkcopies(f, m1, m2)
+        checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
+
     for f in u2:
-        _checkcopies(f, m2, m1)
+        checkcopies(ctx, f, m2, m1, ca, limit, diverge, copy, fullcopy)
 
     renamedelete = {}
     renamedelete2 = set()
