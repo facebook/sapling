@@ -2277,6 +2277,15 @@ class orderedlazyset(lazyset):
         return orderedlazyset(self, lambda r: r not in x,
                 ascending=self._ascending)
 
+    def sort(self, reverse=False):
+        if reverse:
+            if self._ascending:
+                self._subset.sort(reverse=reverse)
+        else:
+            if not self._ascending:
+                self._subset.sort(reverse=reverse)
+        self._ascending = not reverse
+
     def reverse(self):
         self._subset.reverse()
         self._ascending = not self._ascending
