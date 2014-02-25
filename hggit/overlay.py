@@ -187,7 +187,7 @@ class overlayrevlog(object):
 
     def parents(self, n):
         gitrev = self.repo.revmap.get(n)
-        if not gitrev:
+        if gitrev is None:
             # we've reached a revision we have
             return self.base.parents(n)
         commit = self.repo.handler.git.get_object(_maybehex(n))
