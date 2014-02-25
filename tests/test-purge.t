@@ -21,7 +21,7 @@ setup
 delete an empty directory
 
   $ mkdir empty_dir
-  $ hg purge -p
+  $ hg purge -p -v
   empty_dir
   $ hg purge -v
   removing directory empty_dir
