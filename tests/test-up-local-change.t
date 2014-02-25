@@ -176,6 +176,8 @@ create a second head
   [255]
   $ hg --debug merge -f
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: c19d34741b0a, local: 1e71731e6fbb+, remote: 83c51d0caff4

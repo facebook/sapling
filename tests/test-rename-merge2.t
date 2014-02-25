@@ -335,6 +335,8 @@ $4 = expected result
   test L:um a b R:um a b W:       - 9  do merge with ancestor in a
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
@@ -403,6 +405,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:nc a b R:up b   W:       - 12 merge b no ancestor
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
@@ -431,6 +435,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:up b   R:nm a b W:       - 13 merge b no ancestor
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
@@ -461,6 +467,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:nc a b R:up a b W:       - 14 merge b no ancestor
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
@@ -492,6 +500,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
@@ -522,6 +532,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
@@ -553,6 +565,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
@@ -581,6 +595,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:nm a b R:up a b W:       - 18 merge b no ancestor
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
@@ -614,6 +630,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
   --------------
     searching for copies back to rev 1
+    unmatched files new in both:
+     b
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
@@ -802,6 +820,9 @@ Excpected result:
      3/g
      4/g
      7/f
+    unmatched files new in both:
+     0/f
+     1/g
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      src: '3/f' -> dst: '3/g' *
      src: '4/f' -> dst: '4/g' *
