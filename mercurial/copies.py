@@ -272,7 +272,7 @@ def mergecopies(repo, c1, c2, ca):
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
 
-    if fullcopy:
+    if fullcopy and repo.ui.debugflag:
         repo.ui.debug("  all copies found (* = to merge, ! = divergent, "
                       "% = renamed and deleted):\n")
         for f in sorted(fullcopy):
