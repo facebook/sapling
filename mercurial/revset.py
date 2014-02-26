@@ -1580,6 +1580,15 @@ def _list(repo, subset, x):
     s = subset.set()
     return baseset([r for r in ls if r in s])
 
+# for internal use
+def _intlist(repo, subset, x):
+    s = getstring(x, "internal error")
+    if not s:
+        return baseset([])
+    ls = [int(r) for r in s.split('\0')]
+    s = subset.set()
+    return baseset([r for r in ls if r in s])
+
 symbols = {
     "adds": adds,
     "all": getall,
@@ -1647,6 +1656,7 @@ symbols = {
     "user": user,
     "unstable": unstable,
     "_list": _list,
+    "_intlist": _intlist,
 }
 
 # symbols which can't be used for a DoS attack for any given input
@@ -1717,6 +1727,7 @@ safesymbols = set([
     "user",
     "unstable",
     "_list",
+    "_intlist",
 ])
 
 methods = {
@@ -2023,7 +2034,7 @@ def formatspec(expr, *args):
         elif l == 1:
             return argtype(t, s[0])
         elif t == 'd':
-            return "_list('%s')" % "\0".join(str(int(a)) for a in s)
+            return "_intlist('%s')" % "\0".join(str(int(a)) for a in s)
         elif t == 's':
             return "_list('%s')" % "\0".join(s)
         elif t == 'n':
