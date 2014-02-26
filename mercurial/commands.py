@@ -4961,7 +4961,6 @@ def resolve(ui, repo, *pats, **opts):
                 ms.mark(f, "u")
             else:
                 wctx = repo[None]
-                mctx = wctx.parents()[-1]
 
                 # backup pre-resolve (merge uses .orig for its own purposes)
                 a = repo.wjoin(f)
@@ -4970,7 +4969,7 @@ def resolve(ui, repo, *pats, **opts):
                 try:
                     # resolve file
                     ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                    if ms.resolve(f, wctx, mctx):
+                    if ms.resolve(f, wctx):
                         ret = 1
                 finally:
                     ui.setconfig('ui', 'forcemerge', '')

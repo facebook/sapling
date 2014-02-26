@@ -186,11 +186,12 @@ class mergestate(object):
     def mark(self, dfile, state):
         self._state[dfile][0] = state
         self._dirty = True
-    def resolve(self, dfile, wctx, octx):
+    def resolve(self, dfile, wctx):
         if self[dfile] == 'r':
             return 0
         stateentry = self._state[dfile]
         state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
+        octx = self._repo[self._other]
         fcd = wctx[dfile]
         fco = octx[ofile]
         fca = self._repo.filectx(afile, fileid=anode)
@@ -641,7 +642,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
                                  overwrite)
                 continue
             audit(fd)
-            r = ms.resolve(fd, wctx, mctx)
+            r = ms.resolve(fd, wctx)
             if r is not None and r > 0:
                 unresolved += 1
             else:
