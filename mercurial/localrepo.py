@@ -1881,9 +1881,9 @@ class localrepository(object):
             added = [cl.node(r) for r in xrange(clstart, clend)]
             publishing = self.ui.configbool('phases', 'publish', True)
             if srctype == 'push':
-                # Old server can not push the boundary themself.
-                # New server won't push the boundary if changeset already
-                # existed locally as secrete
+                # Old servers can not push the boundary themselves.
+                # New servers won't push the boundary if changeset already
+                # exists locally as secret
                 #
                 # We should not use added here but the list of all change in
                 # the bundle
