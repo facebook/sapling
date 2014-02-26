@@ -16,6 +16,12 @@ import errno, os, shutil
 _pack = struct.pack
 _unpack = struct.unpack
 
+def _droponode(data):
+    # used for compatibility for v1
+    bits = data.split("\0")
+    bits = bits[:-2] + bits[-1:]
+    return "\0".join(bits)
+
 class mergestate(object):
     '''track 3-way merge state of individual files
 
@@ -70,14 +76,28 @@ class mergestate(object):
     def _readrecords(self):
         v1records = self._readrecordsv1()
         v2records = self._readrecordsv2()
-        allv2 = set(v2records)
-        for rev in v1records:
-            if rev not in allv2:
+        oldv2 = set() # old format version of v2 record
+        for rec in v2records:
+            if rec[0] == 'L':
+                oldv2.add(rec)
+            elif rec[0] == 'F':
+                # drop the onode data (not contained in v1)
+                oldv2.add(('F', _droponode(rec[1])))
+        for rec in v1records:
+            if rec not in oldv2:
                 # v1 file is newer than v2 file, use it
                 # we have to infer the "other" changeset of the merge
                 # we cannot do better than that with v1 of the format
                 mctx = self._repo[None].parents()[-1]
                 v1records.append(('O', mctx.hex()))
+                # add place holder "other" file node information
+                # nobody is using it yet so we do no need to fetch the data
+                # if mctx was wrong `mctx[bits[-2]]` may fails.
+                for idx, r in enumerate(v1records):
+                    if r[0] == 'F':
+                        bits = r[1].split("\0")
+                        bits.insert(-2, '')
+                        v1records[idx] = (r[0], "\0".join(bits))
                 return v1records
         else:
             return v2records
@@ -135,7 +155,7 @@ class mergestate(object):
         f.write(hex(self._local) + "\n")
         for rtype, data in irecords:
             if rtype == "F":
-                f.write("%s\n" % data)
+                f.write("%s\n" % _droponode(data))
         f.close()
     def _writerecordsv2(self, records):
         f = self._repo.opener(self.statepathv2, "w")
@@ -147,8 +167,10 @@ class mergestate(object):
     def add(self, fcl, fco, fca, fd):
         hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener.write("merge/" + hash, fcl.data())
-        self._state[fd] = ['u', hash, fcl.path(), fca.path(),
-                           hex(fca.filenode()), fco.path(), fcl.flags()]
+        self._state[fd] = ['u', hash, fcl.path(),
+                           fca.path(), hex(fca.filenode()),
+                           fco.path(), hex(fco.filenode()),
+                           fcl.flags()]
         self._dirty = True
     def __contains__(self, dfile):
         return dfile in self._state
@@ -167,7 +189,8 @@ class mergestate(object):
     def resolve(self, dfile, wctx, octx):
         if self[dfile] == 'r':
             return 0
-        state, hash, lfile, afile, anode, ofile, flags = self._state[dfile]
+        stateentry = self._state[dfile]
+        state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
         fcd = wctx[dfile]
         fco = octx[ofile]
         fca = self._repo.filectx(afile, fileid=anode)
