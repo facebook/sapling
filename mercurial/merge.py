@@ -36,6 +36,7 @@ class mergestate(object):
     Currently known record:
 
     L: the node of the "local" part of the merge (hexified version)
+    O: the node of the "other" part of the merge (hexified version)
     F: a file to be merged entry
     '''
     statepathv1 = "merge/state"
@@ -44,10 +45,11 @@ class mergestate(object):
         self._repo = repo
         self._dirty = False
         self._read()
-    def reset(self, node=None):
+    def reset(self, node=None, other=None):
         self._state = {}
         if node:
             self._local = node
+            self._other = other
         shutil.rmtree(self._repo.join("merge"), True)
         self._dirty = False
     def _read(self):
@@ -56,6 +58,8 @@ class mergestate(object):
         for rtype, record in records:
             if rtype == 'L':
                 self._local = bin(record)
+            elif rtype == 'O':
+                self._other = bin(record)
             elif rtype == "F":
                 bits = record.split("\0")
                 self._state[bits[0]] = bits[1:]
@@ -111,6 +115,7 @@ class mergestate(object):
         if self._dirty:
             records = []
             records.append(("L", hex(self._local)))
+            records.append(("O", hex(self._other)))
             for d, v in self._state.iteritems():
                 records.append(("F", "\0".join([d] + v)))
             self._writerecords(records)
@@ -529,7 +534,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
     ms = mergestate(repo)
-    ms.reset(wctx.p1().node())
+    ms.reset(wctx.p1().node(), mctx.node())
     moves = []
     actions.sort(key=actionkey)
 
