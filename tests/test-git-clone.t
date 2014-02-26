@@ -33,3 +33,5 @@ Load commonly used test logic
 we should have some bookmarks
   $ hg -R hgrepo book
    * master                    1:7bcd915dc873
+  $ hg -R hgrepo gverify
+  verifying rev 7bcd915dc873 against git commit 9497a4ee62e16ee641860d7677cdb2589ea15554

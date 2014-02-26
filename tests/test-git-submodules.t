@@ -161,12 +161,16 @@ same name has existed at any point historically, so use alpha instead of subrepo
   6e4ad8da50204560c00fa25e4987eb2e239029ba subrepo
   $ hg cat -r 1 .hgsub
   subrepo = [git]../gitsubrepo
+  $ hg gverify -r 1
+  verifying rev 2f69b1b8a6f8 against git commit e42b08b3cb7069b4594a4ee1d9cb641ee47b2355
 
 (change subrepo commit)
   $ hg cat -r 2 .hgsubstate
   aa2ead20c29b5cc6256408e1d9ef704870033afb subrepo
   $ hg cat -r 2 .hgsub
   subrepo = [git]../gitsubrepo
+  $ hg gverify -r 2
+  verifying rev 914937cccdbe against git commit a000567ceefbd9a2ce364e0dea6e298010b02b6d
 
 (add another subrepo)
   $ hg cat -r 3 .hgsubstate
@@ -175,6 +179,8 @@ same name has existed at any point historically, so use alpha instead of subrepo
   $ hg cat -r 3 .hgsub
   subrepo = [git]../gitsubrepo
   subrepo2 = [git]../gitsubrepo
+  $ hg gverify -r 3
+  verifying rev 6264517ddb98 against git commit 6e219527869fa40eb6ffbdd013cd86d576b26b01
 
 (replace subrepo with file)
   $ hg cat -r 4 .hgsubstate
@@ -183,6 +189,8 @@ same name has existed at any point historically, so use alpha instead of subrepo
   subrepo2 = [git]../gitsubrepo
   $ hg cat -r 4 subrepo
   subrepo
+  $ hg gverify -r 4
+  verifying rev e233b0858578 against git commit f6436a472da00f581d8d257e9bbaf3c358a5e88c
 
 (replace file with subrepo)
   $ hg cat -r 5 .hgsubstate
@@ -194,12 +202,16 @@ same name has existed at any point historically, so use alpha instead of subrepo
   $ hg cat -r 5 alpha
   alpha: no such file in rev 97f89374a0ce
   [1]
+  $ hg gverify -r 5
+  verifying rev 97f89374a0ce against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
 
 (remove all subrepos)
   $ hg cat -r 6 .hgsub .hgsubstate
   .hgsub: no such file in rev 827c0345b7d1
   .hgsubstate: no such file in rev 827c0345b7d1
   [1]
+  $ hg gverify -r 6
+  verifying rev 827c0345b7d1 against git commit d3c472800f9d11baa6615971a3179fd441869173
 
   $ hg gclear
   clearing out the git cache data

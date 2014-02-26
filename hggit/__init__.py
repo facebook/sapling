@@ -43,6 +43,7 @@ demandimport.ignore.extend([
 
 import gitrepo, hgrepo
 from git_handler import GitHandler
+import verify
 
 testedwith = '2.0.2 2.1.2 2.2.3 2.8.1'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
@@ -223,5 +224,7 @@ cmdtable = {
   "gclear":
       (gclear, [], _('Clears out the Git cached data')),
   "git-cleanup": (git_cleanup, [], _(
-        "Cleans up git repository after history editing"))
+        "Cleans up git repository after history editing")),
+  "gverify": (verify.verify,
+    [('r', 'rev', '', _('revision to verify'), _('REV'))], _('[-r REV]')),
 }

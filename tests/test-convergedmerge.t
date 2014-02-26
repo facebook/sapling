@@ -75,3 +75,5 @@ expect the same revision ids as above
   o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
        origin
   
+  $ hg -R hgrepo2 gverify
+  verifying rev eaa21d002113 against git commit efe74cc1e0ede609e3ab5983e61d780a10177ef3

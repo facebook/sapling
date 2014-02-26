@@ -97,6 +97,12 @@ Load commonly used test logic
   o  0   3442585be8a6   2007-01-01 00:00 +0000   test
        add alpha
   
+  $ hg gverify -r 9
+  verifying rev 9c1d2aac0643 against git commit b32ff845df61df998206b630e4370a44f9b36845
+  $ hg gverify -r 8
+  abort: no git commit found for rev c5ea839ce0aa
+  (if this is an octopus merge, verify against the last rev)
+  [255]
 
   $ hg gclear
   clearing out the git cache data

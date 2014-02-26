@@ -16,6 +16,8 @@ Load commonly used test logic
   $ cd hgrepo
   $ hg log -r tip --template 'files: {files}\n'
   files: 
+  $ hg gverify
+  verifying rev 2c7bb41124ca against git commit 678256865a8c85ae925bf834369264193c88f8de
 
   $ hg gclear
   clearing out the git cache data
