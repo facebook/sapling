@@ -123,13 +123,17 @@ class GitHandler(object):
         self.load_map()
       return self._map_hg_real
 
-    # make the git data directory
-    def init_if_missing(self):
+    @hgutil.propertycache
+    def git(self):
+        # make the git data directory
         if os.path.exists(self.gitdir):
-            self.git = Repo(self.gitdir)
+            return Repo(self.gitdir)
         else:
             os.mkdir(self.gitdir)
-            self.git = Repo.init_bare(self.gitdir)
+            return Repo.init_bare(self.gitdir)
+
+    def init_if_missing(self):
+        pass
 
     def init_author_file(self):
         self.author_map = {}
