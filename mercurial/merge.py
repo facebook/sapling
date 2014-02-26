@@ -5,15 +5,41 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import struct
+
 from node import nullid, nullrev, hex, bin
 from i18n import _
 from mercurial import obsolete
 import error, util, filemerge, copies, subrepo, worker, dicthelpers
 import errno, os, shutil
 
+_pack = struct.pack
+_unpack = struct.unpack
+
 class mergestate(object):
-    '''track 3-way merge state of individual files'''
-    statepath = "merge/state"
+    '''track 3-way merge state of individual files
+
+    it is stored on disk when needed. Two file are used, one with an old
+    format, one with a new format. Both contains similar data, but the new
+    format can store new kind of field.
+
+    Current new format is a list of arbitrary record of the form:
+
+        [type][length][content]
+
+    Type is a single character, length is a 4 bytes integer, content is an
+    arbitrary suites of bytes of lenght `length`.
+
+    Type should be a letter. Capital letter are mandatory record, Mercurial
+    should abort if they are unknown. lower case record can be safely ignored.
+
+    Currently known record:
+
+    L: the node of the "local" part of the merge (hexified version)
+    F: a file to be merged entry
+    '''
+    statepathv1 = "merge/state"
+    statepathv2 = "merge/state2"
     def __init__(self, repo):
         self._repo = repo
         self._dirty = False
@@ -38,14 +64,44 @@ class mergestate(object):
                                    % rtype))
         self._dirty = False
     def _readrecords(self):
+        v1records = self._readrecordsv1()
+        v2records = self._readrecordsv2()
+        allv2 = set(v2records)
+        for rev in v1records:
+            if rev not in allv2:
+                # v1 file is newer than v2 file, use it
+                return v1records
+        else:
+            return v2records
+    def _readrecordsv1(self):
         records = []
         try:
-            f = self._repo.opener(self.statepath)
+            f = self._repo.opener(self.statepathv1)
             for i, l in enumerate(f):
                 if i == 0:
                     records.append(('L', l[:-1]))
                 else:
                     records.append(('F', l[:-1]))
+            f.close()
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+        return records
+    def _readrecordsv2(self):
+        records = []
+        try:
+            f = self._repo.opener(self.statepathv2)
+            data = f.read()
+            off = 0
+            end = len(data)
+            while off < end:
+                rtype = data[off]
+                off += 1
+                lenght = _unpack('>I', data[off:(off + 4)])[0]
+                off += 4
+                record = data[off:(off + lenght)]
+                off += lenght
+                records.append((rtype, record))
             f.close()
         except IOError, err:
             if err.errno != errno.ENOENT:
@@ -60,7 +116,10 @@ class mergestate(object):
             self._writerecords(records)
             self._dirty = False
     def _writerecords(self, records):
-        f = self._repo.opener(self.statepath, "w")
+        self._writerecordsv1(records)
+        self._writerecordsv2(records)
+    def _writerecordsv1(self, records):
+        f = self._repo.opener(self.statepathv1, "w")
         irecords = iter(records)
         lrecords = irecords.next()
         assert lrecords[0] == 'L'
@@ -68,6 +127,13 @@ class mergestate(object):
         for rtype, data in irecords:
             if rtype == "F":
                 f.write("%s\n" % data)
+        f.close()
+    def _writerecordsv2(self, records):
+        f = self._repo.opener(self.statepathv2, "w")
+        for key, data in records:
+            assert len(key) == 1
+            format = ">sI%is" % len(data)
+            f.write(_pack(format, key, len(data), data))
         f.close()
     def add(self, fcl, fco, fca, fd):
         hash = util.sha1(fcl.path()).hexdigest()
