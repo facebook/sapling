@@ -13,6 +13,7 @@ import errno, os, shutil
 
 class mergestate(object):
     '''track 3-way merge state of individual files'''
+    statepath = "merge/state"
     def __init__(self, repo):
         self._repo = repo
         self._dirty = False
@@ -26,7 +27,7 @@ class mergestate(object):
     def _read(self):
         self._state = {}
         try:
-            f = self._repo.opener("merge/state")
+            f = self._repo.opener(self.statepath)
             for i, l in enumerate(f):
                 if i == 0:
                     self._local = bin(l[:-1])
@@ -40,7 +41,7 @@ class mergestate(object):
         self._dirty = False
     def commit(self):
         if self._dirty:
-            f = self._repo.opener("merge/state", "w")
+            f = self._repo.opener(self.statepath, "w")
             f.write(hex(self._local) + "\n")
             for d, v in self._state.iteritems():
                 f.write("\0".join([d] + v) + "\n")
