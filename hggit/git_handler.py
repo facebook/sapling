@@ -132,9 +132,6 @@ class GitHandler(object):
             os.mkdir(self.gitdir)
             return Repo.init_bare(self.gitdir)
 
-    def init_if_missing(self):
-        pass
-
     def init_author_file(self):
         self.author_map = {}
         if self.ui.config('git', 'authors'):
@@ -344,8 +341,6 @@ class GitHandler(object):
     ## CHANGESET CONVERSION METHODS
 
     def export_git_objects(self):
-        self.init_if_missing()
-
         clnode = self.repo.changelog.node
         nodes = [clnode(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
@@ -579,8 +574,6 @@ class GitHandler(object):
         return message
 
     def getnewgitcommits(self, refs=None):
-        self.init_if_missing()
-
         # import heads and fetched tags as remote references
         todo = []
         done = set()
