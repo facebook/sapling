@@ -254,9 +254,7 @@ Test extension help:
        eol           automatically manage newlines in repository files
        extdiff       command to allow external programs to compare revisions
        factotum      http authentication with factotum
-       fetch         pull, update and merge in one command (DEPRECATED)
        gpg           commands to sign and verify changesets
-       graphlog      command to view revision graphs from a shell (DEPRECATED)
        hgcia         hooks for integrating with the CIA.vc notification service
        hgk           browse the repository in a graphical way
        highlight     syntax highlighting for hgweb (requires Pygments)
