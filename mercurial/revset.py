@@ -1589,6 +1589,16 @@ def _intlist(repo, subset, x):
     s = subset.set()
     return baseset([r for r in ls if r in s])
 
+# for internal use
+def _hexlist(repo, subset, x):
+    s = getstring(x, "internal error")
+    if not s:
+        return baseset([])
+    cl = repo.changelog
+    ls = [cl.rev(node.bin(r)) for r in s.split('\0')]
+    s = subset.set()
+    return baseset([r for r in ls if r in s])
+
 symbols = {
     "adds": adds,
     "all": getall,
@@ -1657,6 +1667,7 @@ symbols = {
     "unstable": unstable,
     "_list": _list,
     "_intlist": _intlist,
+    "_hexlist": _hexlist,
 }
 
 # symbols which can't be used for a DoS attack for any given input
@@ -1728,6 +1739,7 @@ safesymbols = set([
     "unstable",
     "_list",
     "_intlist",
+    "_hexlist",
 ])
 
 methods = {
@@ -2038,7 +2050,7 @@ def formatspec(expr, *args):
         elif t == 's':
             return "_list('%s')" % "\0".join(s)
         elif t == 'n':
-            return "_list('%s')" % "\0".join(node.hex(a) for a in s)
+            return "_hexlist('%s')" % "\0".join(node.hex(a) for a in s)
         elif t == 'b':
             return "_list('%s')" % "\0".join(a.branch() for a in s)
 
