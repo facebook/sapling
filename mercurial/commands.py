@@ -1489,6 +1489,22 @@ def config(ui, repo, *values, **opts):
                 break
         else:
             f = paths[0]
+            fp = open(f, "w")
+            fp.write(
+                '# example config (see "hg help config" for more info)\n'
+                '\n'
+                '[ui]\n'
+                '# set this to your full email address\n'
+                'username =\n'
+                '\n'
+                '[extensions]\n'
+                '# uncomment these lines to enable some popular extensions\n'
+                '# (see "hg help extensions" for more info)\n'
+                '# pager =\n'
+                '# progress =\n'
+                '# color =\n')
+            fp.close()
+
         editor = ui.geteditor()
         util.system("%s \"%s\"" % (editor, f),
                     onerr=util.Abort, errprefix=_("edit failed"),
