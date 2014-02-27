@@ -251,7 +251,8 @@ Modify end of plain file with username unset
   $ echo 11 >> plain
   $ unset HGUSER
   $ hg record --config ui.username= -d '8 0' -m end plain
-  abort: no username supplied (see "hg help config")
+  abort: no username supplied
+  (use "hg config --edit"  to set your username)
   [255]
 
 
