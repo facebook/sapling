@@ -26,27 +26,49 @@ class mergestate(object):
         self._dirty = False
     def _read(self):
         self._state = {}
+        records = self._readrecords()
+        for rtype, record in records:
+            if rtype == 'L':
+                self._local = bin(record)
+            elif rtype == "F":
+                bits = record.split("\0")
+                self._state[bits[0]] = bits[1:]
+            elif not rtype.islower():
+                raise util.Abort(_('unsupported merge state record:'
+                                   % rtype))
+        self._dirty = False
+    def _readrecords(self):
+        records = []
         try:
             f = self._repo.opener(self.statepath)
             for i, l in enumerate(f):
                 if i == 0:
-                    self._local = bin(l[:-1])
+                    records.append(('L', l[:-1]))
                 else:
-                    bits = l[:-1].split("\0")
-                    self._state[bits[0]] = bits[1:]
+                    records.append(('F', l[:-1]))
             f.close()
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
-        self._dirty = False
+        return records
     def commit(self):
         if self._dirty:
-            f = self._repo.opener(self.statepath, "w")
-            f.write(hex(self._local) + "\n")
+            records = []
+            records.append(("L", hex(self._local)))
             for d, v in self._state.iteritems():
-                f.write("\0".join([d] + v) + "\n")
-            f.close()
+                records.append(("F", "\0".join([d] + v)))
+            self._writerecords(records)
             self._dirty = False
+    def _writerecords(self, records):
+        f = self._repo.opener(self.statepath, "w")
+        irecords = iter(records)
+        lrecords = irecords.next()
+        assert lrecords[0] == 'L'
+        f.write(hex(self._local) + "\n")
+        for rtype, data in irecords:
+            if rtype == "F":
+                f.write("%s\n" % data)
+        f.close()
     def add(self, fcl, fco, fca, fd):
         hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener.write("merge/" + hash, fcl.data())
