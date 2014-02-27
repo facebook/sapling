@@ -74,6 +74,10 @@ class mergestate(object):
         for rev in v1records:
             if rev not in allv2:
                 # v1 file is newer than v2 file, use it
+                # we have to infer the "other" changeset of the merge
+                # we cannot do better than that with v1 of the format
+                mctx = self._repo[None].parents()[-1]
+                v1records.append(('O', mctx.hex()))
                 return v1records
         else:
             return v2records
