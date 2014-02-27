@@ -84,6 +84,11 @@ Pull full.hg into test (using --cwd)
   searching for changes
   no changes found
 
+Verify that there are no leaked temporary files after pull (issue2797)
+
+  $ ls test/.hg | grep .hg10un
+  [1]
+
 Pull full.hg into empty (using --cwd)
 
   $ hg --cwd empty pull ../full.hg

@@ -365,7 +365,8 @@ class hgwebdir(object):
                            description_sort=description.upper() or "unknown",
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
-                           archives=archivelist(u, "tip", url))
+                           archives=archivelist(u, "tip", url),
+                           isdirectory=None)
 
                 seenrepos.add(name)
                 yield row

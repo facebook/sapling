@@ -214,6 +214,13 @@ h3 {
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
 
+.sourcelines > div {
+  display: inline-block;
+  width: 100%;
+  padding: 1px 0px;
+  counter-increment: lineno;
+}
+
 .fileline { font-family: monospace; }
 .fileline img { border: 0; }
 
