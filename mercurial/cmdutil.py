@@ -2195,54 +2195,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         handle(revert, False)
                 else:
                     handle(remove, False)
-
         if not opts.get('dry_run'):
-            def checkout(f):
-                fc = ctx[f]
-                repo.wwrite(f, fc.data(), fc.flags())
-
-            audit_path = pathutil.pathauditor(repo.root)
-            for f in remove[0]:
-                if repo.dirstate[f] == 'a':
-                    repo.dirstate.drop(f)
-                    continue
-                audit_path(f)
-                try:
-                    util.unlinkpath(repo.wjoin(f))
-                except OSError:
-                    pass
-                repo.dirstate.remove(f)
-
-            normal = None
-            if node == parent:
-                # We're reverting to our parent. If possible, we'd like status
-                # to report the file as clean. We have to use normallookup for
-                # merges to avoid losing information about merged/dirty files.
-                if p2 != nullid:
-                    normal = repo.dirstate.normallookup
-                else:
-                    normal = repo.dirstate.normal
-            for f in revert[0]:
-                checkout(f)
-                if normal:
-                    normal(f)
-
-            for f in add[0]:
-                checkout(f)
-                repo.dirstate.add(f)
-
-            normal = repo.dirstate.normallookup
-            if node == parent and p2 == nullid:
-                normal = repo.dirstate.normal
-            for f in undelete[0]:
-                checkout(f)
-                normal(f)
-
-            copied = copies.pathcopies(repo[parent], ctx)
-
-            for f in add[0] + undelete[0] + revert[0]:
-                if f in copied:
-                    repo.dirstate.copy(copied[f], f)
+            _performrevert(repo, parents, ctx, revert, add, remove, undelete)
 
             if targetsubs:
                 # Revert the subrepos on the revert list
@@ -2250,6 +2204,63 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     ctx.sub(sub).revert(ui, ctx.substate[sub], *pats, **opts)
     finally:
         wlock.release()
+
+def _performrevert(repo, parents, ctx, revert, add, remove, undelete):
+    """function that actually perform all the action computed for revert
+
+    This is an independent function to let extension to plug in and react to
+    the imminent revert.
+
+    Make sure you have the working directory locked when caling this function.
+    """
+    parent, p2 = parents
+    node = ctx.node()
+    def checkout(f):
+        fc = ctx[f]
+        repo.wwrite(f, fc.data(), fc.flags())
+
+    audit_path = pathutil.pathauditor(repo.root)
+    for f in remove[0]:
+        if repo.dirstate[f] == 'a':
+            repo.dirstate.drop(f)
+            continue
+        audit_path(f)
+        try:
+            util.unlinkpath(repo.wjoin(f))
+        except OSError:
+            pass
+        repo.dirstate.remove(f)
+
+    normal = None
+    if node == parent:
+        # We're reverting to our parent. If possible, we'd like status
+        # to report the file as clean. We have to use normallookup for
+        # merges to avoid losing information about merged/dirty files.
+        if p2 != nullid:
+            normal = repo.dirstate.normallookup
+        else:
+            normal = repo.dirstate.normal
+    for f in revert[0]:
+        checkout(f)
+        if normal:
+            normal(f)
+
+    for f in add[0]:
+        checkout(f)
+        repo.dirstate.add(f)
+
+    normal = repo.dirstate.normallookup
+    if node == parent and p2 == nullid:
+        normal = repo.dirstate.normal
+    for f in undelete[0]:
+        checkout(f)
+        normal(f)
+
+    copied = copies.pathcopies(repo[parent], ctx)
+
+    for f in add[0] + undelete[0] + revert[0]:
+        if f in copied:
+            repo.dirstate.copy(copied[f], f)
 
 def command(table):
     '''returns a function object bound to table which can be used as
