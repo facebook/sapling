@@ -449,7 +449,9 @@ class ui(object):
             except KeyError:
                 pass
         if not user:
-            raise util.Abort(_('no username supplied (see "hg help config")'))
+            raise util.Abort(_('no username supplied'),
+                             hint=_('use "hg config --edit" '
+                                    ' to set your username'))
         if "\n" in user:
             raise util.Abort(_("username %s contains a newline\n") % repr(user))
         return user

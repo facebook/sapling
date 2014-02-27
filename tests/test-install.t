@@ -16,7 +16,7 @@ hg debuginstall with no username
   checking templates (*mercurial?templates)... (glob)
   checking commit editor...
   checking username...
-   no username supplied (see "hg help config")
+   no username supplied
    (specify a username in your configuration file)
   1 problems detected, please check your install!
   [1]
