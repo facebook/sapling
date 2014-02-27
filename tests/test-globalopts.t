@@ -297,6 +297,7 @@ Testing -h/--help:
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
+   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
@@ -326,7 +327,6 @@ Testing -h/--help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
-   showconfig    show combined config settings from all hgrc files
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -379,6 +379,7 @@ Testing -h/--help:
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
+   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
@@ -408,7 +409,6 @@ Testing -h/--help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
-   showconfig    show combined config settings from all hgrc files
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision

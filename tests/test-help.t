@@ -62,6 +62,7 @@ Short help:
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
+   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
@@ -91,7 +92,6 @@ Short help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
-   showconfig    show combined config settings from all hgrc files
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -138,6 +138,7 @@ Short help:
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
+   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
@@ -167,7 +168,6 @@ Short help:
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
-   showconfig    show combined config settings from all hgrc files
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -623,6 +623,7 @@ Test that default list of commands omits extension commands
    cat           output the current or given revision of files
    clone         make a copy of an existing repository
    commit        commit the specified files or all outstanding changes
+   config        show combined config settings from all hgrc files
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
@@ -652,7 +653,6 @@ Test that default list of commands omits extension commands
    revert        restore files to their checkout state
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
-   showconfig    show combined config settings from all hgrc files
    status        show changed files in the working directory
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
@@ -1259,6 +1259,13 @@ Dish up an empty repo; serve it cold.
   output the current or given revision of files
   </td></tr>
   <tr><td>
+  <a href="/help/config">
+  config
+  </a>
+  </td><td>
+  show combined config settings from all hgrc files
+  </td></tr>
+  <tr><td>
   <a href="/help/copy">
   copy
   </a>
@@ -1397,13 +1404,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   print the root (top) of the current working directory
-  </td></tr>
-  <tr><td>
-  <a href="/help/showconfig">
-  showconfig
-  </a>
-  </td><td>
-  show combined config settings from all hgrc files
   </td></tr>
   <tr><td>
   <a href="/help/tag">

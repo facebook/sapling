@@ -1461,6 +1461,52 @@ def commit(ui, repo, *pats, **opts):
 
     cmdutil.commitstatus(repo, node, branch, bheads, opts)
 
+@command('config|showconfig|debugconfig',
+    [('u', 'untrusted', None, _('show untrusted configuration options'))],
+    _('[-u] [NAME]...'))
+def config(ui, repo, *values, **opts):
+    """show combined config settings from all hgrc files
+
+    With no arguments, print names and values of all config items.
+
+    With one argument of the form section.name, print just the value
+    of that config item.
+
+    With multiple arguments, print names and values of all config
+    items with matching section names.
+
+    With --debug, the source (filename and line number) is printed
+    for each config item.
+
+    Returns 0 on success.
+    """
+
+    for f in scmutil.rcpath():
+        ui.debug('read config from: %s\n' % f)
+    untrusted = bool(opts.get('untrusted'))
+    if values:
+        sections = [v for v in values if '.' not in v]
+        items = [v for v in values if '.' in v]
+        if len(items) > 1 or items and sections:
+            raise util.Abort(_('only one config item permitted'))
+    for section, name, value in ui.walkconfig(untrusted=untrusted):
+        value = str(value).replace('\n', '\\n')
+        sectname = section + '.' + name
+        if values:
+            for v in values:
+                if v == section:
+                    ui.debug('%s: ' %
+                             ui.configsource(section, name, untrusted))
+                    ui.write('%s=%s\n' % (sectname, value))
+                elif v == sectname:
+                    ui.debug('%s: ' %
+                             ui.configsource(section, name, untrusted))
+                    ui.write(value, '\n')
+        else:
+            ui.debug('%s: ' %
+                     ui.configsource(section, name, untrusted))
+            ui.write('%s=%s\n' % (sectname, value))
+
 @command('copy|cp',
     [('A', 'after', None, _('record a copy that has already occurred')),
     ('f', 'force', None, _('forcibly copy over an existing managed file')),
@@ -5161,52 +5207,6 @@ class httpservice(object):
     def run(self):
         self.httpd.serve_forever()
 
-
-@command('showconfig|debugconfig',
-    [('u', 'untrusted', None, _('show untrusted configuration options'))],
-    _('[-u] [NAME]...'))
-def showconfig(ui, repo, *values, **opts):
-    """show combined config settings from all hgrc files
-
-    With no arguments, print names and values of all config items.
-
-    With one argument of the form section.name, print just the value
-    of that config item.
-
-    With multiple arguments, print names and values of all config
-    items with matching section names.
-
-    With --debug, the source (filename and line number) is printed
-    for each config item.
-
-    Returns 0 on success.
-    """
-
-    for f in scmutil.rcpath():
-        ui.debug('read config from: %s\n' % f)
-    untrusted = bool(opts.get('untrusted'))
-    if values:
-        sections = [v for v in values if '.' not in v]
-        items = [v for v in values if '.' in v]
-        if len(items) > 1 or items and sections:
-            raise util.Abort(_('only one config item permitted'))
-    for section, name, value in ui.walkconfig(untrusted=untrusted):
-        value = str(value).replace('\n', '\\n')
-        sectname = section + '.' + name
-        if values:
-            for v in values:
-                if v == section:
-                    ui.debug('%s: ' %
-                             ui.configsource(section, name, untrusted))
-                    ui.write('%s=%s\n' % (sectname, value))
-                elif v == sectname:
-                    ui.debug('%s: ' %
-                             ui.configsource(section, name, untrusted))
-                    ui.write(value, '\n')
-        else:
-            ui.debug('%s: ' %
-                     ui.configsource(section, name, untrusted))
-            ui.write('%s=%s\n' % (sectname, value))
 
 @command('^status|st',
     [('A', 'all', None, _('show status of all files')),

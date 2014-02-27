@@ -13,6 +13,7 @@ Show all commands except debug commands
   cat
   clone
   commit
+  config
   copy
   diff
   export
@@ -43,7 +44,6 @@ Show all commands except debug commands
   rollback
   root
   serve
-  showconfig
   status
   summary
   tag
@@ -222,6 +222,7 @@ Show all commands + options
   branches: active, closed
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude
+  config: untrusted
   copy: after, force, include, exclude, dry-run
   debugancestor: 
   debugbuilddag: mergeable-file, overwritten-file, new-file
@@ -275,7 +276,6 @@ Show all commands + options
   revert: all, date, rev, no-backup, include, exclude, dry-run
   rollback: dry-run, force
   root: 
-  showconfig: untrusted
   tag: force, local, rev, remove, edit, message, date, user
   tags: 
   tip: patch, git, style, template
