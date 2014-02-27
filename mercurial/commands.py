@@ -1462,7 +1462,8 @@ def commit(ui, repo, *pats, **opts):
     cmdutil.commitstatus(repo, node, branch, bheads, opts)
 
 @command('config|showconfig|debugconfig',
-    [('u', 'untrusted', None, _('show untrusted configuration options'))],
+    [('u', 'untrusted', None, _('show untrusted configuration options')),
+     ('e', 'edit', None, _('start editor'))],
     _('[-u] [NAME]...'))
 def config(ui, repo, *values, **opts):
     """show combined config settings from all hgrc files
@@ -1480,6 +1481,19 @@ def config(ui, repo, *values, **opts):
 
     Returns 0 on success.
     """
+
+    if opts.get('edit'):
+        paths = scmutil.userrcpath()
+        for f in paths:
+            if os.path.exists(f):
+                break
+        else:
+            f = paths[0]
+        editor = ui.geteditor()
+        util.system("%s \"%s\"" % (editor, f),
+                    onerr=util.Abort, errprefix=_("edit failed"),
+                    out=ui.fout)
+        return
 
     for f in scmutil.rcpath():
         ui.debug('read config from: %s\n' % f)
