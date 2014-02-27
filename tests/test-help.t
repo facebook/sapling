@@ -198,6 +198,91 @@ Short help:
    templating    Template Usage
    urls          URL Paths
 
+Test extension help:
+  $ hg help extensions --config extensions.rebase= --config extensions.children=
+  Using Additional Features
+  """""""""""""""""""""""""
+  
+      Mercurial has the ability to add new features through the use of
+      extensions. Extensions may add new commands, add options to existing
+      commands, change the default behavior of commands, or implement hooks.
+  
+      To enable the "foo" extension, either shipped with Mercurial or in the
+      Python search path, create an entry for it in your configuration file,
+      like this:
+  
+        [extensions]
+        foo =
+  
+      You may also specify the full path to an extension:
+  
+        [extensions]
+        myfeature = ~/.hgext/myfeature.py
+  
+      See "hg help config" for more information on configuration files.
+  
+      Extensions are not loaded by default for a variety of reasons: they can
+      increase startup overhead; they may be meant for advanced usage only; they
+      may provide potentially dangerous abilities (such as letting you destroy
+      or modify history); they might not be ready for prime time; or they may
+      alter some usual behaviors of stock Mercurial. It is thus up to the user
+      to activate extensions as needed.
+  
+      To explicitly disable an extension enabled in a configuration file of
+      broader scope, prepend its path with !:
+  
+        [extensions]
+        # disabling extension bar residing in /path/to/extension/bar.py
+        bar = !/path/to/extension/bar.py
+        # ditto, but no path was supplied for extension baz
+        baz = !
+  
+      enabled extensions:
+  
+       children      command to display child changesets (DEPRECATED)
+       rebase        command to move sets of revisions to a different ancestor
+  
+      disabled extensions:
+  
+       acl           hooks for controlling repository access
+       blackbox      log repository events to a blackbox for debugging
+       bugzilla      hooks for integrating with the Bugzilla bug tracker
+       churn         command to display statistics about repository history
+       color         colorize output from some commands
+       convert       import revisions from foreign VCS repositories into
+                     Mercurial
+       eol           automatically manage newlines in repository files
+       extdiff       command to allow external programs to compare revisions
+       factotum      http authentication with factotum
+       fetch         pull, update and merge in one command (DEPRECATED)
+       gpg           commands to sign and verify changesets
+       graphlog      command to view revision graphs from a shell (DEPRECATED)
+       hgcia         hooks for integrating with the CIA.vc notification service
+       hgk           browse the repository in a graphical way
+       highlight     syntax highlighting for hgweb (requires Pygments)
+       histedit      interactive history editing
+       inotify       accelerate status report using Linux's inotify service
+       interhg       expand expressions into changelog and summaries
+       keyword       expand keywords in tracked files
+       largefiles    track large binary files
+       mq            manage a stack of patches
+       notify        hooks for sending email push notifications
+       pager         browse command output with an external pager
+       patchbomb     command to send changesets as (a series of) patch emails
+       progress      show progress bars for some actions
+       purge         command to delete untracked files from the working
+                     directory
+       record        commands to interactively select changes for
+                     commit/qrefresh
+       relink        recreates hardlinks between repository clones
+       schemes       extend schemes with shortcuts to repository swarms
+       share         share a common history between several working directories
+       shelve        save and restore changes to the working directory
+       strip         strip changesets and their descendents from history
+       transplant    command to transplant changesets from another branch
+       win32mbcs     allow the use of MBCS paths with problematic encodings
+       win32text     perform automatic newline conversion
+       zeroconf      discover and advertise repositories on the local network
 Test short command list with verbose option
 
   $ hg -v help shortlist
