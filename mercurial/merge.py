@@ -271,6 +271,7 @@ class mergestate(object):
         if r is None:
             # no real conflict
             del self._state[dfile]
+            self._dirty = True
         elif not r:
             self.mark(dfile, 'r')
         return r
