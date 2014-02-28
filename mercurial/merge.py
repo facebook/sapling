@@ -34,7 +34,7 @@ class mergestate(object):
         [type][length][content]
 
     Type is a single character, length is a 4 bytes integer, content is an
-    arbitrary suites of bytes of lenght `length`.
+    arbitrary suites of bytes of length `length`.
 
     Type should be a letter. Capital letter are mandatory record, Mercurial
     should abort if they are unknown. lower case record can be safely ignored.
@@ -125,10 +125,10 @@ class mergestate(object):
             while off < end:
                 rtype = data[off]
                 off += 1
-                lenght = _unpack('>I', data[off:(off + 4)])[0]
+                length = _unpack('>I', data[off:(off + 4)])[0]
                 off += 4
-                record = data[off:(off + lenght)]
-                off += lenght
+                record = data[off:(off + length)]
+                off += length
                 records.append((rtype, record))
             f.close()
         except IOError, err:
