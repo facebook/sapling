@@ -100,7 +100,7 @@ def safebranchrevs(orig, lrepo, repo, branches, revs):
 if getattr(hg, 'addbranchrevs', False):
     extensions.wrapfunction(hg, 'addbranchrevs', safebranchrevs)
 
-def extsetup():
+def extsetup(ui):
     templatekw.keywords.update({'gitnode': gitnodekw})
     revset.symbols.update({
         'fromgit': revset_fromgit, 'gitnode': revset_gitnode
