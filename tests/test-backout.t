@@ -408,3 +408,93 @@ on branch1, so no file1 and file2:
   update: (current)
 
   $ cd ..
+
+
+Test usage of `hg resolve` in case of conflict
+(issue4163)
+
+  $ hg init issue4163
+  $ cd issue4163
+  $ touch foo
+  $ hg add foo
+  $ cat > foo << EOF
+  > one
+  > two
+  > three
+  > four
+  > five
+  > six
+  > seven
+  > height
+  > nine
+  > ten
+  > EOF
+  $ hg ci -m 'initial'
+  $ cat > foo << EOF
+  > one
+  > two
+  > THREE
+  > four
+  > five
+  > six
+  > seven
+  > height
+  > nine
+  > ten
+  > EOF
+  $ hg ci -m 'capital three'
+  $ cat > foo << EOF
+  > one
+  > two
+  > THREE
+  > four
+  > five
+  > six
+  > seven
+  > height
+  > nine
+  > TEN
+  > EOF
+  $ hg ci -m 'capital ten'
+  $ hg backout -r 'desc("capital three")' --tool internal:fail
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg status
+  $ hg resolve -l  # still unresolved
+  U foo
+  $ hg summary
+  parent: 2:b71750c4b0fd tip
+   capital ten
+  branch: default
+  commit: 1 unresolved (clean)
+  update: (current)
+  $ hg resolve --all --debug
+  picked tool 'internal:merge' for foo (binary False symlink False)
+  merging foo
+  my foo@b71750c4b0fd+ other foo@a30dd8addae3 ancestor foo@913609522437
+   premerge successful
+  $ hg status
+  M foo
+  ? foo.orig
+  $ hg resolve -l
+  R foo
+  $ hg summary
+  parent: 2:b71750c4b0fd tip
+   capital ten
+  branch: default
+  commit: 1 modified, 1 unknown
+  update: (current)
+  $ cat foo
+  one
+  two
+  three
+  four
+  five
+  six
+  seven
+  height
+  nine
+  TEN
+
+
