@@ -5877,7 +5877,7 @@ def version_(ui):
 norepo = ("clone init version help debugcommands debugcomplete"
           " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
           " debugknown debuggetbundle debugbundle")
-optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
+optionalrepo = ("identify paths serve config showconfig debugancestor debugdag"
                 " debugdata debugindex debugindexdot debugrevlog")
 inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
              " remove resolve status debugwalk")
