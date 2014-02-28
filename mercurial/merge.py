@@ -423,7 +423,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                             "local copied/moved to " + f2))
         elif n1 and f in ma: # clean, a different, no remote
             if n1 != ma[f]:
-                prompts.append((f, "cd")) # prompt changed/deleted
+                if acceptremote:
+                    actions.append((f, "r", None, "remote delete"))
+                else:
+                    prompts.append((f, "cd")) # prompt changed/deleted
             elif n1[20:] == "a": # added, no remote
                 actions.append((f, "f", None, "remote deleted"))
             else:
@@ -470,7 +473,11 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 aborts.append((f, "ud"))
             else:
                 # if different: old untracked f may be overwritten and lost
-                prompts.append((f, "dc")) # prompt deleted/changed
+                if acceptremote:
+                    actions.append((f, "g", (m2.flags(f),),
+                                   "remote recreating"))
+                else:
+                    prompts.append((f, "dc")) # prompt deleted/changed
 
     for f, m in sorted(aborts):
         if m == "ud":
@@ -490,9 +497,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     for f, m in sorted(prompts):
         if m == "cd":
-            if acceptremote:
-                actions.append((f, "r", None, "remote delete"))
-            elif repo.ui.promptchoice(
+            if repo.ui.promptchoice(
                 _("local changed %s which remote deleted\n"
                   "use (c)hanged version or (d)elete?"
                   "$$ &Changed $$ &Delete") % f, 0):
@@ -500,9 +505,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             else:
                 actions.append((f, "a", None, "prompt keep"))
         elif m == "dc":
-            if acceptremote:
-                actions.append((f, "g", (m2.flags(f),), "remote recreating"))
-            elif repo.ui.promptchoice(
+            if repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?"
                   "$$ &Changed $$ &Deleted") % f, 0) == 0:
