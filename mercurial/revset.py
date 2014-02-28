@@ -2296,6 +2296,40 @@ class generatorset(object):
     def set(self):
         return self
 
+class ascgeneratorset(generatorset):
+    """ Same structure as generatorset but stops iterating after it goes past
+    the value when asked for membership and the element is not contained
+    """
+    def __contains__(self, x):
+        if x in self._cache:
+            return self._cache[x]
+
+        for l in self:
+            if l == x:
+                return True
+            if l > x:
+                break
+
+        self._cache[x] = False
+        return False
+
+class descgeneratorset(generatorset):
+    """ Same structure as generatorset but stops iterating after it goes past
+    the value when asked for membership and the element is not contained
+    """
+    def __contains__(self, x):
+        if x in self._cache:
+            return self._cache[x]
+
+        for l in self:
+            if l == x:
+                return True
+            if l < x:
+                break
+
+        self._cache[x] = False
+        return False
+
 class spanset(object):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
