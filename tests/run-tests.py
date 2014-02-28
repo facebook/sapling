@@ -141,6 +141,8 @@ def parseargs():
         help="skip tests listed in the specified blacklist file")
     parser.add_option("--whitelist", action="append",
         help="always run tests listed in the specified whitelist file")
+    parser.add_option("--changed", type="string",
+        help="run tests that are changed in parent rev or working directory")
     parser.add_option("-C", "--annotate", action="store_true",
         help="output files annotated with coverage")
     parser.add_option("-c", "--cover", action="store_true",
@@ -1181,7 +1183,13 @@ def main():
     checktools()
 
     if not args:
-        args = os.listdir(".")
+        if options.changed:
+            proc = Popen4('hg st --rev "%s" -man0 .' % options.changed,
+                          None, 0)
+            stdout, stderr = proc.communicate()
+            args = stdout.strip('\0').split('\0')
+        else:
+            args = os.listdir(".")
 
     tests = [t for t in args
              if t.startswith("test-")
