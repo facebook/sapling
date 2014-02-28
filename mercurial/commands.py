@@ -4082,55 +4082,22 @@ def log(ui, repo, *pats, **opts):
     if opts.get('graph'):
         return cmdutil.graphlog(ui, repo, *pats, **opts)
 
-    matchfn = scmutil.match(repo[None], pats, opts)
+    revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
     limit = cmdutil.loglimit(opts)
     count = 0
 
-    getrenamed, endrev = None, None
+    getrenamed = None
     if opts.get('copies'):
+        endrev = None
         if opts.get('rev'):
-            endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
+            endrev = scmutil.revrange(repo, opts.get('rev')).max() + 1
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
 
-    df = False
-    if opts.get("date"):
-        df = util.matchdate(opts["date"])
-
-    branches = opts.get('branch', []) + opts.get('only_branch', [])
-    opts['branch'] = [repo.lookupbranch(b) for b in branches]
-
-    displayer = cmdutil.show_changeset(ui, repo, opts, True)
-    def prep(ctx, fns):
-        rev = ctx.rev()
-        parents = [p for p in repo.changelog.parentrevs(rev)
-                   if p != nullrev]
-        if opts.get('no_merges') and len(parents) == 2:
-            return
-        if opts.get('only_merges') and len(parents) != 2:
-            return
-        if opts.get('branch') and ctx.branch() not in opts['branch']:
-            return
-        if df and not df(ctx.date()[0]):
-            return
-
-        lower = encoding.lower
-        if opts.get('user'):
-            luser = lower(ctx.user())
-            for k in [lower(x) for x in opts['user']]:
-                if (k in luser):
-                    break
-            else:
-                return
-        if opts.get('keyword'):
-            luser = lower(ctx.user())
-            ldesc = lower(ctx.description())
-            lfiles = lower(" ".join(ctx.files()))
-            for k in [lower(x) for x in opts['keyword']]:
-                if (k in luser or k in ldesc or k in lfiles):
-                    break
-            else:
-                return
-
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+    for rev in revs:
+        if count == limit:
+            break
+        ctx = repo[rev]
         copies = None
         if getrenamed is not None and rev:
             copies = []
@@ -4138,22 +4105,11 @@ def log(ui, repo, *pats, **opts):
                 rename = getrenamed(fn, rev)
                 if rename:
                     copies.append((fn, rename[0]))
-
-        revmatchfn = None
-        if opts.get('patch') or opts.get('stat'):
-            if opts.get('follow') or opts.get('follow_first'):
-                # note: this might be wrong when following through merges
-                revmatchfn = scmutil.match(repo[None], fns, default='path')
-            else:
-                revmatchfn = matchfn
-
+        revmatchfn = filematcher and filematcher(ctx.rev()) or None
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
-
-    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
-        if displayer.flush(ctx.rev()):
+        if displayer.flush(rev):
             count += 1
-        if count == limit:
-            break
+
     displayer.close()
 
 @command('manifest',

@@ -1673,6 +1673,54 @@ def getgraphlogrevs(repo, pats, opts):
 
     return revs, expr, filematcher
 
+def getlogrevs(repo, pats, opts):
+    """Return (revs, expr, filematcher) where revs is an iterable of
+    revision numbers, expr is a revset string built from log options
+    and file patterns or None, and used to filter 'revs'. If --stat or
+    --patch are not passed filematcher is None. Otherwise it is a
+    callable taking a revision number and returning a match objects
+    filtering the files to be detailed when displaying the revision.
+    """
+    limit = loglimit(opts)
+    # Default --rev value depends on --follow but --follow behaviour
+    # depends on revisions resolved from --rev...
+    follow = opts.get('follow') or opts.get('follow_first')
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts['rev'])
+    elif follow:
+        revs = revset.baseset(repo.revs('reverse(:.)'))
+    else:
+        revs = revset.spanset(repo)
+        revs.reverse()
+    if not revs:
+        return revset.baseset([]), None, None
+    expr, filematcher = _makelogrevset(repo, pats, opts, revs)
+    if expr:
+        # Revset matchers often operate faster on revisions in changelog
+        # order, because most filters deal with the changelog.
+        if not opts.get('rev'):
+            revs.reverse()
+        matcher = revset.match(repo.ui, expr)
+        # Revset matches can reorder revisions. "A or B" typically returns
+        # returns the revision matching A then the revision matching B. Sort
+        # again to fix that.
+        revs = matcher(repo, revs)
+        if not opts.get('rev'):
+            revs.sort(reverse=True)
+    if limit is not None:
+        count = 0
+        limitedrevs = revset.baseset([])
+        it = iter(revs)
+        while count < limit:
+            try:
+                limitedrevs.append(it.next())
+            except (StopIteration):
+                break
+            count += 1
+        revs = limitedrevs
+
+    return revs, expr, filematcher
+
 def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
                  filematcher=None):
     seen, state = [], graphmod.asciistate()
