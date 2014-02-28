@@ -352,14 +352,15 @@ def _encodeonemarker(marker):
 # - the base85 encoding
 _maxpayload = 5300
 
-def listmarkers(repo):
-    """List markers over pushkey"""
-    if not repo.obsstore:
-        return {}
+def _pushkeyescape(markers):
+    """encode markers into a dict suitable for pushkey exchange
+
+    - binary data is base86 encoded
+    - splitted in chunks less than 5300 bytes"""
     keys = {}
     parts = []
     currentlen = _maxpayload * 2  # ensure we create a new part
-    for marker in  repo.obsstore:
+    for marker in markers:
         nextdata = _encodeonemarker(marker)
         if (len(nextdata) + currentlen > _maxpayload):
             currentpart = []
@@ -371,6 +372,12 @@ def listmarkers(repo):
         data = ''.join([_pack('>B', _fmversion)] + part)
         keys['dump%i' % idx] = base85.b85encode(data)
     return keys
+
+def listmarkers(repo):
+    """List markers over pushkey"""
+    if not repo.obsstore:
+        return {}
+    return _pushkeyescape(repo.obsstore)
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
