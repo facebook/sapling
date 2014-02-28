@@ -378,14 +378,14 @@ class pulloperation(object):
 
     It purpose is to carry push related state and very common operation.
 
-    A new should be created at the begining of each push and discarded
+    A new should be created at the begining of each pull and discarded
     afterward.
     """
 
     def __init__(self, repo, remote, heads=None, force=False):
-        # repo we pull from
+        # repo we pull into
         self.repo = repo
-        # repo we pull to
+        # repo we pull from
         self.remote = remote
         # revision we try to pull (None is "all")
         self.heads = heads
