@@ -123,4 +123,145 @@ Criss cross merging
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
+Redo merge with merge.preferancestor="*" to enable bid merge
+
+  $ rm f*
+  $ hg up -qC .
+  $ hg merge -v --debug --tool internal:dump 5 --config merge.preferancestor="*"
+  
+  calculating bids for ancestor 0f6b37dbe527
+    searching for copies back to rev 3
+  resolving manifests
+   branchmerge: True, force: False, partial: False
+   ancestor: 0f6b37dbe527, local: 3b08d01b0ab5+, remote: adfe50279922
+   f1: g
+   f2: m
+  
+  calculating bids for ancestor 40663881a6dd
+    searching for copies back to rev 3
+  resolving manifests
+   branchmerge: True, force: False, partial: False
+   ancestor: 40663881a6dd, local: 3b08d01b0ab5+, remote: adfe50279922
+   f1: m
+   f2: k
+  
+  auction for merging merge bids
+   f1: picking 'get' action
+   f2: picking 'keep' action
+  end of auction
+  
+   f1: remote is newer -> g
+   f2: keep -> k
+  getting f1
+  updating: f1 1/1 files (100.00%)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ head *
+  ==> f1 <==
+  5 second change
+  
+  ==> f2 <==
+  6 second change
+
+
+The other way around:
+
+  $ hg up -C -r5
+  note: using 0f6b37dbe527 as ancestor of 3b08d01b0ab5 and adfe50279922
+        alternatively, use --config merge.preferancestor=40663881a6dd
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge -v --debug --config merge.preferancestor="*"
+  
+  calculating bids for ancestor 0f6b37dbe527
+    searching for copies back to rev 3
+  resolving manifests
+   branchmerge: True, force: False, partial: False
+   ancestor: 0f6b37dbe527, local: adfe50279922+, remote: 3b08d01b0ab5
+   f1: k
+   f2: m
+  
+  calculating bids for ancestor 40663881a6dd
+    searching for copies back to rev 3
+  resolving manifests
+   branchmerge: True, force: False, partial: False
+   ancestor: 40663881a6dd, local: adfe50279922+, remote: 3b08d01b0ab5
+   f1: m
+   f2: g
+  
+  auction for merging merge bids
+   f1: picking 'keep' action
+   f2: picking 'get' action
+  end of auction
+  
+   f1: keep -> k
+   f2: remote is newer -> g
+  getting f2
+  updating: f2 1/1 files (100.00%)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ head *
+  ==> f1 <==
+  5 second change
+  
+  ==> f2 <==
+  6 second change
+
+Verify how the output looks and and how verbose it is:
+
+  $ hg up -qC
+  $ hg merge --config merge.preferancestor="*"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg up -qC
+  $ hg merge -v --config merge.preferancestor="*"
+  
+  calculating bids for ancestor 0f6b37dbe527
+  resolving manifests
+  
+  calculating bids for ancestor 40663881a6dd
+  resolving manifests
+  
+  auction for merging merge bids
+   f1: picking 'get' action
+   f2: picking 'keep' action
+  end of auction
+  
+  getting f1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg up -qC
+  $ hg merge -v --debug --config merge.preferancestor="*"
+  
+  calculating bids for ancestor 0f6b37dbe527
+    searching for copies back to rev 3
+  resolving manifests
+   branchmerge: True, force: False, partial: False
+   ancestor: 0f6b37dbe527, local: 3b08d01b0ab5+, remote: adfe50279922
+   f1: g
+   f2: m
+  
+  calculating bids for ancestor 40663881a6dd
+    searching for copies back to rev 3
+  resolving manifests
+   branchmerge: True, force: False, partial: False
+   ancestor: 40663881a6dd, local: 3b08d01b0ab5+, remote: adfe50279922
+   f1: m
+   f2: k
+  
+  auction for merging merge bids
+   f1: picking 'get' action
+   f2: picking 'keep' action
+  end of auction
+  
+   f1: remote is newer -> g
+   f2: keep -> k
+  getting f1
+  updating: f1 1/1 files (100.00%)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
   $ cd ..

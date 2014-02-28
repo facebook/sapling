@@ -723,12 +723,69 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                      acceptremote, followcopies):
     "Calculate the actions needed to merge mctx into wctx using ancestors"
 
-    ancestor = ancestors[0]
+    if len(ancestors) == 1: # default
+        actions = manifestmerge(repo, wctx, mctx, ancestors[0],
+                                branchmerge, force,
+                                partial, acceptremote, followcopies)
 
-    actions = manifestmerge(repo, wctx, mctx,
-                             ancestor,
-                             branchmerge, force,
-                             partial, acceptremote, followcopies)
+    else: # only when merge.preferancestor=* - experimentalish code
+        # Call for bids
+        fbids = {} # mapping filename to list af action bids
+        for ancestor in ancestors:
+            repo.ui.note(_('\ncalculating bids for ancestor %s\n') % ancestor)
+            actions = manifestmerge(repo, wctx, mctx, ancestor,
+                                    branchmerge, force,
+                                    partial, acceptremote, followcopies)
+            for a in sorted(actions):
+                repo.ui.debug(' %s: %s\n' % (a[0], a[1]))
+                f = a[0]
+                if f in fbids:
+                    fbids[f].append(a)
+                else:
+                    fbids[f] = [a]
+
+        # Pick the best bid for each file
+        repo.ui.note(_('\nauction for merging merge bids\n'))
+        actions = []
+        for f, bidsl in sorted(fbids.items()):
+            # Consensus?
+            a0 = bidsl[0]
+            if util.all(a == a0 for a in bidsl[1:]): # len(bidsl) is > 1
+                repo.ui.note(" %s: consensus for %s\n" % (f, a0[1]))
+                actions.append(a0)
+                continue
+            # Group bids by kind of action
+            bids = {}
+            for a in bidsl:
+                m = a[1]
+                if m in bids:
+                    bids[m].append(a)
+                else:
+                    bids[m] = [a]
+            # If keep is an option, just do it.
+            if "k" in bids:
+                repo.ui.note(" %s: picking 'keep' action\n" % f)
+                actions.append(bids["k"][0])
+                continue
+            # If all gets agree [how could they not?], just do it.
+            if "g" in bids:
+                ga0 = bids["g"][0]
+                if util.all(a == ga0 for a in bids["g"][1:]):
+                    repo.ui.note(" %s: picking 'get' action\n" % f)
+                    actions.append(ga0)
+                    continue
+            # TODO: Consider other simple actions such as mode changes
+            # Handle inefficient democrazy.
+            repo.ui.note(_(' %s: multiple merge bids:\n') % (f, m))
+            for a in bidsl:
+                repo.ui.note('  %s: %s\n' % (f, a[1]))
+            # Pick random action. TODO: Instead, prompt user when resolving
+            a0 = bidsl[0]
+            repo.ui.warn(_(' %s: ambiguous merge - picked %s action)\n') %
+                         (f, a0[1]))
+            actions.append(a0)
+            continue
+        repo.ui.note(_('end of auction\n\n'))
 
     # Filter out prompts.
     newactions, prompts = [], []
@@ -926,7 +983,11 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
         p2 = repo[node]
         if pas[0] is None:
-            pas = [p1.ancestor(p2)]
+            if repo.ui.config("merge", "preferancestor") == '*':
+                cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
+                pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
+            else:
+                pas = [p1.ancestor(p2)]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
