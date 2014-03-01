@@ -467,20 +467,6 @@ class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
 
 cygwinccompiler.Mingw32CCompiler = HackedMingw32CCompiler
 
-if sys.platform.startswith('linux') and os.uname()[2] > '2.6':
-    # The inotify extension is only usable with Linux 2.6 kernels.
-    # You also need a reasonably recent C library.
-    # In any case, if it fails to build the error will be skipped ('optional').
-    cc = new_compiler()
-    if hasfunction(cc, 'inotify_add_watch'):
-        inotify = Extension('hgext.inotify.linux._inotify',
-                            ['hgext/inotify/linux/_inotify.c'],
-                            ['mercurial'],
-                            depends=common_depends)
-        inotify.optional = True
-        extmodules.append(inotify)
-        packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
-
 packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
                              'help/*.txt']}
 

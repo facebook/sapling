@@ -11,7 +11,7 @@ from i18n import _, gettext
 
 _extensions = {}
 _order = []
-_ignore = ['hbisect', 'bookmarks', 'parentrevspec', 'interhg']
+_ignore = ['hbisect', 'bookmarks', 'parentrevspec', 'interhg', 'inotify']
 
 def extensions(ui=None):
     if ui:

@@ -96,21 +96,6 @@ def has_icasefs():
     finally:
         os.remove(path)
 
-def has_inotify():
-    try:
-        import hgext.inotify.linux.watcher
-    except ImportError:
-        return False
-    name = tempfile.mktemp(dir='.', prefix=tempprefix)
-    sock = socket.socket(socket.AF_UNIX)
-    try:
-        sock.bind(name)
-    except socket.error:
-        return False
-    sock.close()
-    os.unlink(name)
-    return True
-
 def has_fifo():
     if getattr(os, "mkfifo", None) is None:
         return False
@@ -315,7 +300,6 @@ checks = {
     "gpg": (has_gpg, "gpg client"),
     "hardlink": (has_hardlink, "hardlinks"),
     "icasefs": (has_icasefs, "case insensitive file system"),
-    "inotify": (has_inotify, "inotify extension support"),
     "killdaemons": (has_killdaemons, 'killdaemons.py support'),
     "lsprof": (has_lsprof, "python lsprof module"),
     "mtn": (has_mtn, "monotone client (>= 1.0)"),

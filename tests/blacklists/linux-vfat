@@ -8,14 +8,6 @@ test-walk.t
 
 # no sockets or fifos
 test-hup.t
-test-inotify-debuginotify.t
-test-inotify-dirty-dirstate.t
-test-inotify-issue1208.t
-test-inotify-issue1371.t
-test-inotify-issue1542.t
-test-inotify-lookup.t
-test-inotify.t
-test-inotify-issue1556.t
 
 # no hardlinks
 test-hardlinks.t

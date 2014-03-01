@@ -152,8 +152,6 @@ def parseargs():
         help="exit on the first test failure")
     parser.add_option("-H", "--htmlcov", action="store_true",
         help="create an HTML report of the coverage of the files")
-    parser.add_option("--inotify", action="store_true",
-        help="enable inotify extension when running tests")
     parser.add_option("-i", "--interactive", action="store_true",
         help="prompt to accept changed output")
     parser.add_option("-j", "--jobs", type="int",
@@ -344,12 +342,6 @@ def createhgrc(path, options):
     hgrc.write('commit = -d "0 0"\n')
     hgrc.write('shelve = --date "0 0"\n')
     hgrc.write('tag = -d "0 0"\n')
-    if options.inotify:
-        hgrc.write('[extensions]\n')
-        hgrc.write('inotify=\n')
-        hgrc.write('[inotify]\n')
-        hgrc.write('pidfile=daemon.pids')
-        hgrc.write('appendpid=True\n')
     if options.extra_config_opt:
         for opt in options.extra_config_opt:
             section, key = opt.split('.', 1)

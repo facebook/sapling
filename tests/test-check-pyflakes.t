@@ -16,6 +16,5 @@ run pyflakes on all tracked files ending in .py or without a file ending
   tests/hghave.py:*: 'pygments' imported but unused (glob)
   tests/hghave.py:*: 'ssl' imported but unused (glob)
   contrib/win32/hgwebdir_wsgi.py:*: 'from isapi.install import *' used; unable to detect undefined names (glob)
-  hgext/inotify/linux/__init__.py:*: 'from _inotify import *' used; unable to detect undefined names (glob)
   
 

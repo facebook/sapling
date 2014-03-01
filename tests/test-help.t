@@ -199,7 +199,7 @@ Short help:
    urls          URL Paths
 
 Test extension help:
-  $ hg help extensions --config extensions.rebase= --config extensions.children= | grep -v inotify
+  $ hg help extensions --config extensions.rebase= --config extensions.children=
   Using Additional Features
   """""""""""""""""""""""""
   
