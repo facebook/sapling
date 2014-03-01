@@ -7,7 +7,6 @@
 
 import stat
 
-from mercurial import command
 from mercurial import error
 from mercurial import util as hgutil
 from mercurial.node import hex, bin, nullid
