@@ -199,7 +199,7 @@ Short help:
    urls          URL Paths
 
 Test extension help:
-  $ hg help extensions --config extensions.rebase= --config extensions.children=
+  $ hg help extensions --config extensions.rebase= --config extensions.children= | grep -v inotify
   Using Additional Features
   """""""""""""""""""""""""
   
@@ -259,7 +259,6 @@ Test extension help:
        hgk           browse the repository in a graphical way
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
-       inotify       accelerate status report using Linux's inotify service
        interhg       expand expressions into changelog and summaries
        keyword       expand keywords in tracked files
        largefiles    track large binary files
