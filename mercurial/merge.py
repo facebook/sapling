@@ -263,7 +263,7 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
     return actions
 
-def _checkcollision(repo, wmf, actions, prompts):
+def _checkcollision(repo, wmf, actions):
     # build provisional merged manifest up
     pmmf = set(wmf)
 
@@ -295,20 +295,13 @@ def _checkcollision(repo, wmf, actions, prompts):
         "m": mergeop,
         "r": removeop,
         "rd": nop,
+        "cd": addop,
+        "dc": addop,
     }
     for f, m, args, msg in actions:
         op = opmap.get(m)
         assert op, m
         op(f, args)
-
-    opmap = {
-        "cd": addop,
-        "dc": addop,
-    }
-    for f, m in prompts:
-        op = opmap.get(m)
-        assert op, m
-        op(f, None)
 
     # check case-folding collision in provisional merged manifest
     foldmap = {}
@@ -370,7 +363,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 m1['.hgsubstate'] += "+"
                 break
 
-    aborts, prompts = [], []
+    aborts = []
     # Compare manifests
     fdiff = dicthelpers.diff(m1, m2)
     flagsdiff = m1.flagsdiff(m2)
@@ -426,7 +419,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 if acceptremote:
                     actions.append((f, "r", None, "remote delete"))
                 else:
-                    prompts.append((f, "cd")) # prompt changed/deleted
+                    actions.append((f, "cd", None, "prompt changed/deleted"))
             elif n1[20:] == "a": # added, no remote
                 actions.append((f, "f", None, "remote deleted"))
             else:
@@ -477,7 +470,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     actions.append((f, "g", (m2.flags(f),),
                                    "remote recreating"))
                 else:
-                    prompts.append((f, "dc")) # prompt deleted/changed
+                    actions.append((f, "dc", (m2.flags(f),),
+                                   "prompt deleted/changed"))
 
     for f, m in sorted(aborts):
         if m == "ud":
@@ -491,26 +485,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         # check collision between files only in p2 for clean update
         if (not branchmerge and
             (force or not wctx.dirty(missing=True, branch=False))):
-            _checkcollision(repo, m2, [], [])
+            _checkcollision(repo, m2, [])
         else:
-            _checkcollision(repo, m1, actions, prompts)
+            _checkcollision(repo, m1, actions)
 
-    for f, m in sorted(prompts):
-        if m == "cd":
-            if repo.ui.promptchoice(
-                _("local changed %s which remote deleted\n"
-                  "use (c)hanged version or (d)elete?"
-                  "$$ &Changed $$ &Delete") % f, 0):
-                actions.append((f, "r", None, "prompt delete"))
-            else:
-                actions.append((f, "a", None, "prompt keep"))
-        elif m == "dc":
-            if repo.ui.promptchoice(
-                _("remote changed %s which local deleted\n"
-                  "use (c)hanged version or leave (d)eleted?"
-                  "$$ &Changed $$ &Deleted") % f, 0) == 0:
-                actions.append((f, "g", (m2.flags(f),), "prompt recreating"))
-        else: assert False, m
     return actions
 
 def actionkey(a):
@@ -694,9 +672,37 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial,
                              ancestor,
                              branchmerge, force,
                              partial, acceptremote)
+
+    # Filter out prompts.
+    newactions, prompts = [], []
+    for a in actions:
+        if a[1] in ("cd", "dc"):
+            prompts.append(a)
+        else:
+            newactions.append(a)
+    # Prompt and create actions. TODO: Move this towards resolve phase.
+    for f, m, args, msg in sorted(prompts):
+        if m == "cd":
+            if repo.ui.promptchoice(
+                _("local changed %s which remote deleted\n"
+                  "use (c)hanged version or (d)elete?"
+                  "$$ &Changed $$ &Delete") % f, 0):
+                newactions.append((f, "r", None, "prompt delete"))
+            else:
+                newactions.append((f, "a", None, "prompt keep"))
+        elif m == "dc":
+            flags, = args
+            if repo.ui.promptchoice(
+                _("remote changed %s which local deleted\n"
+                  "use (c)hanged version or leave (d)eleted?"
+                  "$$ &Changed $$ &Deleted") % f, 0) == 0:
+                newactions.append((f, "g", (flags,), "prompt recreating"))
+        else: assert False, m
+
     if tctx.rev() is None:
-        actions += _forgetremoved(tctx, mctx, branchmerge)
-    return actions
+        newactions += _forgetremoved(tctx, mctx, branchmerge)
+
+    return newactions
 
 def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
