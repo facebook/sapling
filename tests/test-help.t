@@ -277,7 +277,6 @@ Test extension help:
        strip         strip changesets and their descendents from history
        transplant    command to transplant changesets from another branch
        win32mbcs     allow the use of MBCS paths with problematic encodings
-       win32text     perform automatic newline conversion
        zeroconf      discover and advertise repositories on the local network
 Test short command list with verbose option
 

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''perform automatic newline conversion
+'''perform automatic newline conversion (DEPRECATED)
 
   Deprecation: The win32text extension requires each user to configure
   the extension again and again for each clone since the configuration
