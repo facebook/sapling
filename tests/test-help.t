@@ -259,7 +259,6 @@ Test extension help:
        hgk           browse the repository in a graphical way
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
-       interhg       expand expressions into changelog and summaries
        keyword       expand keywords in tracked files
        largefiles    track large binary files
        mq            manage a stack of patches
