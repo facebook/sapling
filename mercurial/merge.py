@@ -334,11 +334,13 @@ def _checkcollision(repo, wmf, actions):
     def nop(f, args):
         pass
 
-    def renameop(f, args):
-        f2, fd, flags = args
-        if f:
-            pmmf.discard(f)
-        pmmf.add(fd)
+    def renamemoveop(f, args):
+        f2, flags = args
+        pmmf.discard(f2)
+        pmmf.add(f)
+    def renamegetop(f, args):
+        f2, flags = args
+        pmmf.add(f)
     def mergeop(f, args):
         f2, fa, fd, move, anc = args
         if move:
@@ -347,7 +349,8 @@ def _checkcollision(repo, wmf, actions):
 
     opmap = {
         "a": addop,
-        "d": renameop,
+        "dm": renamemoveop,
+        "dg": renamegetop,
         "dr": nop,
         "e": nop,
         "f": addop, # untracked file should be kept in working directory
@@ -472,10 +475,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                                "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
-        elif n1 and f in movewithdir: # directory rename
+        elif n1 and f in movewithdir: # directory rename, move local
             f2 = movewithdir[f]
-            actions.append((f, "d", (None, f2, fl1),
-                            "remote renamed directory to " + f2))
+            actions.append((f2, "dm", (f, fl1),
+                            "remote directory rename - move from " + f))
         elif n1 and f in copy:
             f2 = copy[f]
             actions.append((f, "m", (f2, f2, f, False, pa.node()),
@@ -492,8 +495,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 actions.append((f, "r", None, "other deleted"))
         elif n2 and f in movewithdir:
             f2 = movewithdir[f]
-            actions.append((None, "d", (f, f2, fl2),
-                            "local renamed directory to " + f2))
+            actions.append((f2, "dg", (f, fl2),
+                            "local directory rename - get from " + f))
         elif n2 and f in copy:
             f2 = copy[f]
             if f2 in m2:
@@ -693,16 +696,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
                     updated += 1
                 else:
                     merged += 1
-        elif m == "d": # directory rename
-            f2, fd, flags = args
-            if f:
-                repo.ui.note(_("moving %s to %s\n") % (f, fd))
-                audit(fd)
-                repo.wwrite(fd, wctx.filectx(f).data(), flags)
-                util.unlinkpath(repo.wjoin(f))
-            if f2:
-                repo.ui.note(_("getting %s to %s\n") % (f2, fd))
-                repo.wwrite(fd, mctx.filectx(f2).data(), flags)
+        elif m == "dm": # directory rename, move local
+            f0, flags = args
+            repo.ui.note(_("moving %s to %s\n") % (f0, f))
+            audit(f)
+            repo.wwrite(f, wctx.filectx(f0).data(), flags)
+            util.unlinkpath(repo.wjoin(f0))
+            updated += 1
+        elif m == "dg": # local directory rename, get
+            f0, flags = args
+            repo.ui.note(_("getting %s to %s\n") % (f0, f))
+            repo.wwrite(f, mctx.filectx(f0).data(), flags)
             updated += 1
         elif m == "dr": # divergent renames
             fl, = args
@@ -811,22 +815,25 @@ def recordupdates(repo, actions, branchmerge):
                     repo.dirstate.normallookup(fd)
                 if move:
                     repo.dirstate.drop(f)
-        elif m == "d": # directory rename
-            f2, fd, flag = args
-            if not f2 and f not in repo.dirstate:
+        elif m == "dm": # directory rename, move local
+            f0, flag = args
+            if f0 not in repo.dirstate:
                 # untracked file moved
                 continue
             if branchmerge:
-                repo.dirstate.add(fd)
-                if f:
-                    repo.dirstate.remove(f)
-                    repo.dirstate.copy(f, fd)
-                if f2:
-                    repo.dirstate.copy(f2, fd)
+                repo.dirstate.add(f)
+                repo.dirstate.remove(f0)
+                repo.dirstate.copy(f0, f)
             else:
-                repo.dirstate.normal(fd)
-                if f:
-                    repo.dirstate.drop(f)
+                repo.dirstate.normal(f)
+                repo.dirstate.drop(f0)
+        elif m == "dg": # directory rename, get
+            f0, flag = args
+            if branchmerge:
+                repo.dirstate.add(f)
+                repo.dirstate.copy(f0, f)
+            else:
+                repo.dirstate.normal(f)
 
 def update(repo, node, branchmerge, force, partial, ancestor=None,
            mergeancestor=False):
