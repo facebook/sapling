@@ -65,7 +65,7 @@ http://mercurial.selenic.com/bts/issue672
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c64f439569a9, local: e327dca35ac8+, remote: 746e9549ea96
-   1a: local copied/moved to 1 -> m
+   1a: local copied/moved from 1 -> m
     preserving 1a for resolve of 1a
   updating: 1a 1/1 files (100.00%)
   picked tool 'internal:merge' for 1a (binary False symlink False)
@@ -88,10 +88,10 @@ http://mercurial.selenic.com/bts/issue672
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c64f439569a9, local: 746e9549ea96+, remote: e327dca35ac8
-   1: remote moved to 1a -> m
+   1a: remote moved from 1 -> m
     preserving 1 for resolve of 1a
   removing 1
-  updating: 1 1/1 files (100.00%)
+  updating: 1a 1/1 files (100.00%)
   picked tool 'internal:merge' for 1a (binary False symlink False)
   merging 1 and 1a to 1a
   my 1a@746e9549ea96+ other 1a@e327dca35ac8 ancestor 1@81f4b099af3d

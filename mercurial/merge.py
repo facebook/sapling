@@ -342,10 +342,10 @@ def _checkcollision(repo, wmf, actions):
         f2, flags = args
         pmmf.add(f)
     def mergeop(f, args):
-        f2, fa, fd, move, anc = args
+        f1, f2, fa, move, anc = args
         if move:
-            pmmf.discard(f)
-        pmmf.add(fd)
+            pmmf.discard(f1)
+        pmmf.add(f)
 
     opmap = {
         "a": addop,
@@ -471,7 +471,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             elif nol and n1 == a: # local only changed 'x'
                 actions.append((f, "g", (fl1,), "remote is newer"))
             else: # both changed something
-                actions.append((f, "m", (f, fa, f, False, pa.node()),
+                actions.append((f, "m", (f, f, fa, False, pa.node()),
                                "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
@@ -481,8 +481,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                             "remote directory rename - move from " + f))
         elif n1 and f in copy:
             f2 = copy[f]
-            actions.append((f, "m", (f2, f2, f, False, pa.node()),
-                            "local copied/moved to " + f2))
+            actions.append((f, "m", (f, f2, f2, False, pa.node()),
+                            "local copied/moved from " + f2))
         elif n1 and f in ma: # clean, a different, no remote
             if n1 != ma[f]:
                 if acceptremote:
@@ -500,11 +500,11 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         elif n2 and f in copy:
             f2 = copy[f]
             if f2 in m2:
-                actions.append((f2, "m", (f, f2, f, False, pa.node()),
-                                "remote copied to " + f))
+                actions.append((f, "m", (f2, f, f2, False, pa.node()),
+                                "remote copied from " + f2))
             else:
-                actions.append((f2, "m", (f, f2, f, True, pa.node()),
-                                "remote moved to " + f))
+                actions.append((f, "m", (f2, f, f2, True, pa.node()),
+                                "remote moved from " + f2))
         elif n2 and f not in ma:
             # local unknown, remote created: the logic is described by the
             # following table:
@@ -621,20 +621,20 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
         f, m, args, msg = a
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         if m == "m": # merge
-            f2, fa, fd, move, anc = args
-            if fd == '.hgsubstate': # merged internally
+            f1, f2, fa, move, anc = args
+            if f == '.hgsubstate': # merged internally
                 continue
-            repo.ui.debug("  preserving %s for resolve of %s\n" % (f, fd))
-            fcl = wctx[f]
+            repo.ui.debug("  preserving %s for resolve of %s\n" % (f1, f))
+            fcl = wctx[f1]
             fco = mctx[f2]
             actx = repo[anc]
             if fa in actx:
                 fca = actx[fa]
             else:
-                fca = repo.filectx(f, fileid=nullrev)
-            ms.add(fcl, fco, fca, fd)
-            if f != fd and move:
-                moves.append(f)
+                fca = repo.filectx(f1, fileid=nullrev)
+            ms.add(fcl, fco, fca, f)
+            if f1 != f and move:
+                moves.append(f1)
 
     audit = repo.wopener.audit
 
@@ -682,13 +682,13 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
         f, m, args, msg = a
         progress(_updating, z + i + 1, item=f, total=numupdates, unit=_files)
         if m == "m": # merge
-            f2, fa, fd, move, anc = args
-            if fd == '.hgsubstate': # subrepo states need updating
+            f1, f2, fa, move, anc = args
+            if f == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
                                  overwrite)
                 continue
-            audit(fd)
-            r = ms.resolve(fd, wctx)
+            audit(f)
+            r = ms.resolve(f, wctx)
             if r is not None and r > 0:
                 unresolved += 1
             else:
@@ -793,28 +793,28 @@ def recordupdates(repo, actions, branchmerge):
             else:
                 repo.dirstate.normal(f)
         elif m == "m": # merge
-            f2, fa, fd, move, anc = args
+            f1, f2, fa, move, anc = args
             if branchmerge:
                 # We've done a branch merge, mark this file as merged
                 # so that we properly record the merger later
-                repo.dirstate.merge(fd)
-                if f != f2: # copy/rename
+                repo.dirstate.merge(f)
+                if f1 != f2: # copy/rename
                     if move:
-                        repo.dirstate.remove(f)
-                    if f != fd:
-                        repo.dirstate.copy(f, fd)
+                        repo.dirstate.remove(f1)
+                    if f1 != f:
+                        repo.dirstate.copy(f1, f)
                     else:
-                        repo.dirstate.copy(f2, fd)
+                        repo.dirstate.copy(f2, f)
             else:
                 # We've update-merged a locally modified file, so
                 # we set the dirstate to emulate a normal checkout
                 # of that file some time in the past. Thus our
                 # merge will appear as a normal local file
                 # modification.
-                if f2 == fd: # file not locally copied/moved
-                    repo.dirstate.normallookup(fd)
+                if f2 == f: # file not locally copied/moved
+                    repo.dirstate.normallookup(f)
                 if move:
-                    repo.dirstate.drop(f)
+                    repo.dirstate.drop(f1)
         elif m == "dm": # directory rename, move local
             f0, flag = args
             if f0 not in repo.dirstate:

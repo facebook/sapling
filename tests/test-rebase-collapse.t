@@ -632,8 +632,8 @@ Rebase, collapse and copies
   merging a and d to d
   merging b and e to e
   merging c and f to f
-  merging e and g to g
   merging f and c to c
+  merging e and g to g
   saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
   $ hg st
   $ hg st --copies --change tip

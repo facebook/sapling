@@ -86,11 +86,11 @@ $4 = expected result
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
-   a: remote copied to b -> m
+   b: remote copied from a -> m
     preserving a for resolve of b
    rev: versions differ -> m
     preserving rev for resolve of rev
-  updating: a 1/2 files (50.00%)
+  updating: b 1/2 files (50.00%)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging a and b to b
   my b@e300d1c794ec+ other b@4ce40f5aca24 ancestor a@924404dff337
@@ -122,7 +122,7 @@ $4 = expected result
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: f4db7e329e71
    a: remote is newer -> g
-   b: local copied/moved to a -> m
+   b: local copied/moved from a -> m
     preserving b for resolve of b
    rev: versions differ -> m
     preserving rev for resolve of rev
@@ -159,12 +159,12 @@ $4 = expected result
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: bdb19105162a
-   a: remote moved to b -> m
+   b: remote moved from a -> m
     preserving a for resolve of b
    rev: versions differ -> m
     preserving rev for resolve of rev
   removing a
-  updating: a 1/2 files (50.00%)
+  updating: b 1/2 files (50.00%)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging a and b to b
   my b@e300d1c794ec+ other b@bdb19105162a ancestor a@924404dff337
@@ -194,7 +194,7 @@ $4 = expected result
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
-   b: local copied/moved to a -> m
+   b: local copied/moved from a -> m
     preserving b for resolve of b
    rev: versions differ -> m
     preserving rev for resolve of rev
@@ -672,12 +672,12 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 49b6d8032493
-   a: remote moved to b -> m
+   b: remote moved from a -> m
     preserving a for resolve of b
    rev: versions differ -> m
     preserving rev for resolve of rev
   removing a
-  updating: a 1/2 files (50.00%)
+  updating: b 1/2 files (50.00%)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging a and b to b
   my b@e300d1c794ec+ other b@49b6d8032493 ancestor a@924404dff337
@@ -706,7 +706,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
-   b: local copied/moved to a -> m
+   b: local copied/moved from a -> m
     preserving b for resolve of b
    rev: versions differ -> m
     preserving rev for resolve of rev
@@ -744,7 +744,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 2b958612230f
-   b: local copied/moved to a -> m
+   b: local copied/moved from a -> m
     preserving b for resolve of b
    c: remote created -> g
    rev: versions differ -> m
@@ -842,15 +842,15 @@ Excpected result:
     preserving 2/f for resolve of 2/f
    3/f: versions differ -> m
     preserving 3/f for resolve of 3/f
-   3/f: remote copied to 3/g -> m
+   3/g: remote copied from 3/f -> m
     preserving 3/f for resolve of 3/g
-   4/f: remote moved to 4/g -> m
+   4/g: remote moved from 4/f -> m
     preserving 4/f for resolve of 4/g
    5/f: versions differ -> m
     preserving 5/f for resolve of 5/f
-   5/g: local copied/moved to 5/f -> m
+   5/g: local copied/moved from 5/f -> m
     preserving 5/g for resolve of 5/g
-   6/g: local copied/moved to 6/f -> m
+   6/g: local copied/moved from 6/f -> m
     preserving 6/g for resolve of 6/g
    7/f: remote differs from untracked local -> m
     preserving 7/f for resolve of 7/f
