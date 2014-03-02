@@ -654,7 +654,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
             f2, fd, flags = args
             if f:
                 repo.ui.note(_("moving %s to %s\n") % (f, fd))
-                audit(f)
+                audit(fd)
                 repo.wwrite(fd, wctx.filectx(f).data(), flags)
                 util.unlinkpath(repo.wjoin(f))
             if f2:
