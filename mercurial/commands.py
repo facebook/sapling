@@ -4483,7 +4483,7 @@ def phase(ui, repo, *revs, **opts):
 
         public < draft < secret
 
-    Return 0 on success, 1 if no phases were changed or some could not
+    Returns 0 on success, 1 if no phases were changed or some could not
     be changed.
     """
     # search for a unique phase argument
