@@ -168,7 +168,7 @@ pre { margin: 0; }
 h2 { font-size: 120%; border-bottom: 1px solid #999; }
 h2 a { color: #000; }
 h3 {
-  margin-top: -.7em;
+  margin-top: +.7em;
   font-size: 100%;
 }
 
