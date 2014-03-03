@@ -142,6 +142,7 @@ testing rollback:
 
  runcommand phase -r . -p
 no phases changed
+ [1]
  runcommand commit -Am.
  runcommand rollback
 repository tip rolled back to revision 3 (undo commit)

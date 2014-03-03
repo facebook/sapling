@@ -51,7 +51,10 @@ def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
         elif ch == 'L':
             writeblock(server, input.readline(data))
         elif ch == 'r':
-            return struct.unpack('>i', data)[0]
+            ret, = struct.unpack('>i', data)
+            if ret != 0:
+                print ' [%d]' % ret
+            return ret
         else:
             print "unexpected channel %c: %r" % (ch, data)
             if ch.isupper():
