@@ -2270,24 +2270,13 @@ class generatorset(object):
         self._genlist = baseset([])
         self._iterated = False
 
-    def _nextitem(self):
-        l = self._iter.next()
-        self._cache[l] = True
-        self._genlist.append(l)
-        return l
-
     def __contains__(self, x):
         if x in self._cache:
             return self._cache[x]
 
-        self._iterated = True
-        while True:
-            try:
-                l = self._nextitem()
-                if l == x:
-                    return True
-            except (StopIteration):
-                break
+        for l in self:
+            if l == x:
+                return True
 
         self._cache[x] = False
         return False
@@ -2296,18 +2285,13 @@ class generatorset(object):
         if self._iterated:
             for l in self._genlist:
                 yield l
-            while True:
-                try:
-                    item = self._nextitem()
-                    yield item
-                except (StopIteration):
-                    break
         else:
             self._iterated = True
-            for item in self._gen:
-                self._cache[item] = True
-                self._genlist.append(item)
-                yield item
+
+        for item in self._gen:
+            self._cache[item] = True
+            self._genlist.append(item)
+            yield item
 
     def set(self):
         return self
