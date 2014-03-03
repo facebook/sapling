@@ -294,6 +294,11 @@ def mqoutsidechanges(server):
     # repo.mq should be recreated to point to new queue
     runcommand(server, ['qqueue', '--active'])
 
+def startwithoutrepo(server):
+    readchannel(server)
+    runcommand(server, ['init', 'repo2'])
+    runcommand(server, ['id', '-R', 'repo2'])
+
 if __name__ == '__main__':
     os.system('hg init repo')
     os.chdir('repo')
@@ -329,3 +334,7 @@ if __name__ == '__main__':
     hgrc.write('[extensions]\nmq=\n')
     hgrc.close()
     check(mqoutsidechanges)
+
+    os.chdir('..')
+    check(hellomessage)
+    check(startwithoutrepo)

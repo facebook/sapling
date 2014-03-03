@@ -5168,7 +5168,6 @@ def serve(ui, repo, **opts):
         s.serve_forever()
 
     if opts["cmdserver"]:
-        checkrepo()
         s = commandserver.server(ui, repo, opts["cmdserver"])
         return s.serve()
 

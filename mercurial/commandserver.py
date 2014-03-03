@@ -142,11 +142,15 @@ class server(object):
             else:
                 logfile = open(logpath, 'a')
 
-        # the ui here is really the repo ui so take its baseui so we don't end
-        # up with its local configuration
-        self.ui = repo.baseui
-        self.repo = repo
-        self.repoui = repo.ui
+        if repo:
+            # the ui here is really the repo ui so take its baseui so we don't
+            # end up with its local configuration
+            self.ui = repo.baseui
+            self.repo = repo
+            self.repoui = repo.ui
+        else:
+            self.ui = ui
+            self.repo = self.repoui = None
 
         if mode == 'pipe':
             self.cerr = channeledoutput(sys.stderr, sys.stdout, 'e')
@@ -183,12 +187,13 @@ class server(object):
         # copy the uis so changes (e.g. --config or --verbose) don't
         # persist between requests
         copiedui = self.ui.copy()
-        self.repo.baseui = copiedui
-        # clone ui without using ui.copy because this is protected
-        repoui = self.repoui.__class__(self.repoui)
-        repoui.copy = copiedui.copy # redo copy protection
-        self.repo.ui = self.repo.dirstate._ui = repoui
-        self.repo.invalidateall()
+        if self.repo:
+            self.repo.baseui = copiedui
+            # clone ui without using ui.copy because this is protected
+            repoui = self.repoui.__class__(self.repoui)
+            repoui.copy = copiedui.copy # redo copy protection
+            self.repo.ui = self.repo.dirstate._ui = repoui
+            self.repo.invalidateall()
 
         req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)

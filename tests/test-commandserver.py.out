@@ -237,3 +237,16 @@ popping 0.diff
 patch queue now empty
  runcommand qqueue --active
 foo
+
+testing hellomessage:
+
+o, 'capabilities: getencoding runcommand\nencoding: ***'
+ runcommand id
+abort: there is no Mercurial repository here (.hg not found)
+ [255]
+
+testing startwithoutrepo:
+
+ runcommand init repo2
+ runcommand id -R repo2
+000000000000 tip
