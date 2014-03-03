@@ -73,7 +73,7 @@ testing cwd:
 testing localhgrc:
 
  runcommand showconfig
-bundle.mainreporoot=$TESTTMP
+bundle.mainreporoot=$TESTTMP/repo
 defaults.backout=-d "0 0"
 defaults.commit=-d "0 0"
 defaults.shelve=--date "0 0"

@@ -295,7 +295,8 @@ def mqoutsidechanges(server):
     runcommand(server, ['qqueue', '--active'])
 
 if __name__ == '__main__':
-    os.system('hg init')
+    os.system('hg init repo')
+    os.chdir('repo')
 
     check(hellomessage)
     check(unknowncommand)
