@@ -3269,6 +3269,11 @@ def reposetup(ui, repo):
         def mq(self):
             return queue(self.ui, self.baseui, self.path)
 
+        def invalidateall(self):
+            super(mqrepo, self).invalidateall()
+            if localrepo.hasunfilteredcache(self, 'mq'):
+                self.mq.invalidate()
+
         def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and self.mq.checkapplied and not force:
                 parents = self.dirstate.parents()

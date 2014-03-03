@@ -274,6 +274,15 @@ def obsolete(server):
     runcommand(server, ['log', '--hidden'])
     runcommand(server, ['log'])
 
+def mqoutsidechanges(server):
+    readchannel(server)
+
+    # load repo.mq
+    runcommand(server, ['qapplied'])
+    os.system('hg qnew 0.diff')
+    # repo.mq should be invalidated
+    runcommand(server, ['qapplied'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -304,3 +313,7 @@ if __name__ == '__main__':
     hgrc.write('[extensions]\nobs=obs.py\n')
     hgrc.close()
     check(obsolete)
+    hgrc = open('.hg/hgrc', 'a')
+    hgrc.write('[extensions]\nmq=\n')
+    hgrc.close()
+    check(mqoutsidechanges)
