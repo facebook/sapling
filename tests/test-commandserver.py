@@ -283,6 +283,11 @@ def mqoutsidechanges(server):
     # repo.mq should be invalidated
     runcommand(server, ['qapplied'])
 
+    runcommand(server, ['qpop', '--all'])
+    os.system('hg qqueue --create foo')
+    # repo.mq should be recreated to point to new queue
+    runcommand(server, ['qqueue', '--active'])
+
 if __name__ == '__main__':
     os.system('hg init')
 

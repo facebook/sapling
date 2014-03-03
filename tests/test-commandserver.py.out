@@ -228,3 +228,8 @@ testing mqoutsidechanges:
  runcommand qapplied
  runcommand qapplied
 0.diff
+ runcommand qpop --all
+popping 0.diff
+patch queue now empty
+ runcommand qqueue --active
+foo

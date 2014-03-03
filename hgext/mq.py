@@ -3272,7 +3272,8 @@ def reposetup(ui, repo):
         def invalidateall(self):
             super(mqrepo, self).invalidateall()
             if localrepo.hasunfilteredcache(self, 'mq'):
-                self.mq.invalidate()
+                # recreate mq in case queue path was changed
+                delattr(self.unfiltered(), 'mq')
 
         def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and self.mq.checkapplied and not force:
