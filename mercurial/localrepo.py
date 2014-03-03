@@ -993,6 +993,13 @@ class localrepository(object):
                 pass
         self.invalidatecaches()
 
+    def invalidateall(self):
+        '''Fully invalidates both store and non-store parts, causing the
+        subsequent operation to reread any outside changes.'''
+        # extension should hook this to invalidate its caches
+        self.invalidate()
+        self.invalidatedirstate()
+
     def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lockmod.lock(vfs, lockname, 0, releasefn, desc=desc)

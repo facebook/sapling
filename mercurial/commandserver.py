@@ -188,8 +188,7 @@ class server(object):
         repoui = self.repoui.__class__(self.repoui)
         repoui.copy = copiedui.copy # redo copy protection
         self.repo.ui = self.repo.dirstate._ui = repoui
-        self.repo.invalidate()
-        self.repo.invalidatedirstate()
+        self.repo.invalidateall()
 
         req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
