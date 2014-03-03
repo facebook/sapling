@@ -193,7 +193,7 @@ class server(object):
         req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
 
-        ret = dispatch.dispatch(req) or 0 # might return None
+        ret = (dispatch.dispatch(req) or 0) & 255 # might return None
 
         # restore old cwd
         if '--cwd' in args:

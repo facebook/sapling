@@ -43,6 +43,9 @@ use "hg help" for the full list of commands or "hg -v" for details
 000000000000
  runcommand id
 000000000000 tip
+ runcommand id -runknown
+abort: unknown revision 'unknown'!
+ [255]
 
 testing inputeof:
 

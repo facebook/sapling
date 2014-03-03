@@ -104,6 +104,9 @@ def checkruncommand(server):
     # make sure --config doesn't stick
     runcommand(server, ['id'])
 
+    # negative return code should be masked
+    runcommand(server, ['id', '-runknown'])
+
 def inputeof(server):
     readchannel(server)
     server.stdin.write('runcommand\n')
