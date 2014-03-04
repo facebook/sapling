@@ -1126,9 +1126,10 @@ class GitHandler(object):
             for head, sha in heads.iteritems():
                 # refs contains all the refs in the server, not just
                 # the ones we are pulling
-                if sha not in self.git.object_store:
+                hgsha = self.map_hg_get(sha)
+                if hgsha is None:
                     continue
-                hgsha = bin(self.map_hg_get(sha))
+                hgsha = bin(hgsha)
                 if not head in bms:
                     # new branch
                     bms[head + suffix] = hgsha
