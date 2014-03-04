@@ -427,7 +427,8 @@ class GitHandler(object):
             commit.encoding = extra['encoding']
 
         for obj, nodeid in exporter.update_changeset(ctx):
-            self.git.object_store.add_object(obj)
+            if obj.id not in self.git.object_store:
+                self.git.object_store.add_object(obj)
 
         tree_sha = exporter.root_tree_sha
 
@@ -437,7 +438,8 @@ class GitHandler(object):
 
         commit.tree = tree_sha
 
-        self.git.object_store.add_object(commit)
+        if commit.id not in self.git.object_store:
+            self.git.object_store.add_object(commit)
         self.map_set(commit.id, ctx.hex())
 
         self.swap_out_encoding(oldenc)
