@@ -1165,9 +1165,9 @@ class GitHandler(object):
         store = self.git.object_store
         for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
-                if sha not in store:
-                    continue
                 hgsha = self.map_hg_get(sha)
+                if hgsha is None or hgsha not in self.repo:
+                    continue
                 head = ref_name[11:]
                 tags['/'.join((remote_name, head))] = hgsha
                 # TODO(durin42): what is this doing?
