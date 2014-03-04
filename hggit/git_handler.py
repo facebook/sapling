@@ -1099,14 +1099,16 @@ class GitHandler(object):
                     sha = None
                     if isinstance (obj, Commit): # lightweight
                         sha = self.map_hg_get(refs[k])
-                        self.tags[ref_name] = sha
+                        if sha is not None:
+                            self.tags[ref_name] = sha
                     elif isinstance (obj, Tag): # annotated
                         (obj_type, obj_sha) = obj.object
                         obj = self.git.get_object(obj_sha)
                         if isinstance (obj, Commit):
                             sha = self.map_hg_get(obj_sha)
                             # TODO: better handling for annotated tags
-                            self.tags[ref_name] = sha
+                            if sha is not None:
+                                self.tags[ref_name] = sha
         self.save_tags()
 
     def update_hg_bookmarks(self, refs):
