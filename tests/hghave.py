@@ -1,4 +1,4 @@
-import os, stat, socket
+import os, stat
 import re
 import sys
 import tempfile

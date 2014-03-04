@@ -64,7 +64,6 @@ from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
 from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
-from distutils.ccompiler import new_compiler
 from distutils import cygwinccompiler
 from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.sysconfig import get_python_inc

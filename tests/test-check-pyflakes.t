@@ -10,11 +10,10 @@ run pyflakes on all tracked files ending in .py or without a file ending
   setup.py:*: 'zlib' imported but unused (glob)
   setup.py:*: 'bz2' imported but unused (glob)
   setup.py:*: 'py2exe' imported but unused (glob)
-  tests/hghave.py:*: 'hgext' imported but unused (glob)
   tests/hghave.py:*: '_lsprof' imported but unused (glob)
   tests/hghave.py:*: 'publish_cmdline' imported but unused (glob)
   tests/hghave.py:*: 'pygments' imported but unused (glob)
   tests/hghave.py:*: 'ssl' imported but unused (glob)
-  contrib/win32/hgwebdir_wsgi.py:*: 'from isapi.install import *' used; unable to detect undefined names (glob)
+  contrib/win32/hgwebdir_wsgi.py:93: 'from isapi.install import *' used; unable to detect undefined names (glob)
   
 
