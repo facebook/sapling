@@ -973,33 +973,14 @@ class GitHandler(object):
 
         return new_refs
 
-
     def fetch_pack(self, remote_name, heads=None):
         client, path = self.get_transport_and_path(remote_name)
         graphwalker = self.git.get_graph_walker()
-        def determine_wants(refs):
-            if heads:
-                want = []
-                # contains pairs of ('refs/(heads|tags|...)/foo', 'foo')
-                # if ref is just '<foo>', then we get ('foo', 'foo')
-                stripped_refs = [
-                    (r, r[r.find('/', r.find('/')+1)+1:])
-                        for r in refs]
-                for h in heads:
-                    r = [pair[0] for pair in stripped_refs if pair[1] == h]
-                    if not r:
-                        raise hgutil.Abort("ref %s not found on remote server" % h)
-                    elif len(r) == 1:
-                        want.append(refs[r[0]])
-                    else:
-                        raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
-            else:
-                want = [sha for ref, sha in refs.iteritems()
-                        if not ref.endswith('^{}')
-                        and ( ref.startswith('refs/heads/') or ref.startswith('refs/tags/') ) ]
-            want = [x for x in want if x not in self.git]
 
-            return want
+        def determine_wants(refs):
+            filteredrefs = self.filter_refs(refs, heads)
+            return [x for x in filteredrefs.itervalues() if x not in self.git]
+
         try:
             progress = GitProgress(self.ui)
             f = StringIO.StringIO()
@@ -1017,6 +998,34 @@ class GitHandler(object):
             raise hgutil.Abort(_("git remote error: ") + str(e))
 
     ## REFERENCES HANDLING
+
+    def filter_refs(self, refs, heads):
+        '''For a dictionary of refs: shas, if heads has any elements then return refs
+        that match the heads. Otherwise, return refs that are heads or tags.
+
+        '''
+        filteredrefs = {}
+        if heads:
+            # contains pairs of ('refs/(heads|tags|...)/foo', 'foo')
+            # if ref is just '<foo>', then we get ('foo', 'foo')
+            stripped_refs = [
+                (r, r[r.find('/', r.find('/')+1)+1:])
+                    for r in refs]
+            for h in heads:
+                r = [pair[0] for pair in stripped_refs if pair[1] == h]
+                if not r:
+                    raise hgutil.Abort("ref %s not found on remote server" % h)
+                elif len(r) == 1:
+                    filteredrefs[r[0]] = refs[r[0]]
+                else:
+                    raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
+        else:
+            for ref, sha in refs.iteritems():
+                if (not ref.endswith('^{}')
+                    and (ref.startswith('refs/heads/')
+                         or ref.startswith('refs/tags/'))):
+                    filteredrefs[ref] = sha
+        return filteredrefs
 
     def update_references(self):
         heads = self.local_heads()
