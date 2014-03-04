@@ -227,9 +227,6 @@ class GitHandler(object):
                     and not k.endswith('^{}')
                     and refs[k] != oldrefs.get(remoteref(k))]
 
-        if not modheads:
-            self.ui.status(_("no changes found\n"))
-
         self.save_map()
 
         return len(modheads)
@@ -640,6 +637,8 @@ class GitHandler(object):
         total = len(commits)
         if total:
             self.ui.status(_("importing git objects into hg\n"))
+        else:
+            self.ui.status(_("no changes found\n"))
 
         for i, csha in enumerate(commits):
             self.ui.progress('importing', i, total=total, unit='commits')

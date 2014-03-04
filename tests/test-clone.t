@@ -55,6 +55,5 @@ clone empty repo
   $ git init empty
   Initialized empty Git repository in $TESTTMP/empty/.git/
   $ hg clone empty emptyhg
-  no changes found
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
