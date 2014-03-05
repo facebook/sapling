@@ -94,7 +94,7 @@ hg.defaultdest = defaultdest
 # defend against tracebacks if we specify -r in 'hg pull'
 def safebranchrevs(orig, lrepo, repo, branches, revs):
     revs, co = orig(lrepo, repo, branches, revs)
-    if getattr(lrepo, 'changelog', False) and co not in lrepo.changelog:
+    if hgutil.safehasattr(lrepo, 'changelog') and co not in lrepo.changelog:
         co = None
     return revs, co
 if getattr(hg, 'addbranchrevs', False):

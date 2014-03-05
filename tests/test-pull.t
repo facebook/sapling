@@ -18,14 +18,15 @@ set up a git repo with some commits, branches and a tag
   $ fn_git_commit -m 'add delta'
   $ cd ..
 
-clone a tag (ideally we'd want to pull it, but that seems broken for now)
-#  $ hg init hgrepo
-#  $ echo "[paths]" >> hgrepo/.hg/hgrc
-#  $ echo "default=$TESTTMP/gitrepo" >> hgrepo/.hg/hgrc
-#  $ hg -R hgrepo pull -r t_alpha
-  $ hg clone -r t_alpha gitrepo hgrepo
+pull a tag
+  $ hg init hgrepo
+  $ echo "[paths]" >> hgrepo/.hg/hgrc
+  $ echo "default=$TESTTMP/gitrepo" >> hgrepo/.hg/hgrc
+  $ hg -R hgrepo pull -r t_alpha
+  pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  updating to branch default
+  (run 'hg update' to get a working copy)
+  $ hg -R hgrepo update t_alpha
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo log --graph
   @  changeset:   0:3442585be8a6
