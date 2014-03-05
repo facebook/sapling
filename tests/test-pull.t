@@ -37,6 +37,19 @@ clone a tag (ideally we'd want to pull it, but that seems broken for now)
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
+no-op pull
+  $ hg -R hgrepo pull -r t_alpha
+  pulling from $TESTTMP/gitrepo
+  no changes found
+
+no-op pull with added bookmark
+  $ cd gitrepo
+  $ git checkout -qb epsilon t_alpha
+  $ cd ..
+  $ hg -R hgrepo pull -r epsilon
+  pulling from $TESTTMP/gitrepo
+  no changes found
+
 pull a branch
   $ hg -R hgrepo pull -r beta
   pulling from $TESTTMP/gitrepo
@@ -52,7 +65,9 @@ pull a branch
   |  summary:     add beta
   |
   @  changeset:   0:3442585be8a6
+     bookmark:    epsilon
      bookmark:    master
+     tag:         default/epsilon
      tag:         default/master
      tag:         t_alpha
      user:        test <test@example.org>
@@ -101,6 +116,8 @@ pull everything else
   |    summary:     add beta
   |
   @  changeset:   0:3442585be8a6
+     bookmark:    epsilon
+     tag:         default/epsilon
      tag:         t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -154,6 +171,8 @@ pull the merge
   |    summary:     add beta
   |
   @  changeset:   0:3442585be8a6
+     bookmark:    epsilon
+     tag:         default/epsilon
      tag:         t_alpha
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
