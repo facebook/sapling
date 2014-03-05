@@ -206,7 +206,8 @@ class GitHandler(object):
         oldheads = self.repo.changelog.heads()
         imported = 0
         if refs:
-            imported = self.import_git_objects(remote_name, refs)
+            filteredrefs = self.filter_refs(refs, heads)
+            imported = self.import_git_objects(remote_name, filteredrefs)
             self.import_tags(refs)
             self.update_hg_bookmarks(refs)
             if remote_name:

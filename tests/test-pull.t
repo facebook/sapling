@@ -12,6 +12,10 @@ set up a git repo with some commits, branches and a tag
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'
+  $ git checkout -qb delta master
+  $ echo delta > delta
+  $ git add delta
+  $ fn_git_commit -m 'add delta'
   $ cd ..
 
 clone a tag (ideally we'd want to pull it, but that seems broken for now)
@@ -57,6 +61,7 @@ pull a branch
   
 add another commit and tag to the git repo
   $ cd gitrepo
+  $ git checkout -q beta
   $ git tag t_beta
   $ git checkout -q master
   $ echo gamma > gamma
@@ -70,14 +75,22 @@ pull everything else
   importing git objects into hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo log --graph
-  o  changeset:   2:37c124f2d0a0
+  o  changeset:   3:56cabe48c4b0
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  parent:      0:3442585be8a6
   |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:12 2007 +0000
+  |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
+  |
+  | o  changeset:   2:4d41070bf840
+  |/   bookmark:    delta
+  |    tag:         default/delta
+  |    parent:      0:3442585be8a6
+  |    user:        test <test@example.org>
+  |    date:        Mon Jan 01 00:00:12 2007 +0000
+  |    summary:     add delta
   |
   | o  changeset:   1:7bcd915dc873
   |/   bookmark:    beta
@@ -108,21 +121,29 @@ pull the merge
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg -R hgrepo log --graph
-  o    changeset:   3:b8668fddf56c
+  o    changeset:   4:892d20308ddf
   |\   bookmark:    master
   | |  tag:         default/master
   | |  tag:         tip
-  | |  parent:      2:37c124f2d0a0
+  | |  parent:      3:56cabe48c4b0
   | |  parent:      1:7bcd915dc873
   | |  user:        test <test@example.org>
-  | |  date:        Mon Jan 01 00:00:12 2007 +0000
+  | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
-  | o  changeset:   2:37c124f2d0a0
+  | o  changeset:   3:56cabe48c4b0
   | |  parent:      0:3442585be8a6
   | |  user:        test <test@example.org>
-  | |  date:        Mon Jan 01 00:00:12 2007 +0000
+  | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
+  | |
+  | | o  changeset:   2:4d41070bf840
+  | |/   bookmark:    delta
+  | |    tag:         default/delta
+  | |    parent:      0:3442585be8a6
+  | |    user:        test <test@example.org>
+  | |    date:        Mon Jan 01 00:00:12 2007 +0000
+  | |    summary:     add delta
   | |
   o |  changeset:   1:7bcd915dc873
   |/   bookmark:    beta
