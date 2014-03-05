@@ -203,8 +203,10 @@ class GitHandler(object):
         remote_name = self.remote_name(remote)
 
         oldrefs = self.git.get_refs()
+        oldheads = self.repo.changelog.heads()
+        imported = 0
         if refs:
-            self.import_git_objects(remote_name, refs)
+            imported = self.import_git_objects(remote_name, refs)
             self.import_tags(refs)
             self.update_hg_bookmarks(refs)
             if remote_name:
@@ -223,13 +225,24 @@ class GitHandler(object):
             rn = remote_name or 'default'
             return 'refs/remotes/' + rn + ref[10:]
 
-        modheads = [refs[k] for k in refs if k.startswith('refs/heads/')
-                    and not k.endswith('^{}')
-                    and refs[k] != oldrefs.get(remoteref(k))]
-
         self.save_map()
 
-        return len(modheads)
+        if imported == 0:
+            return 0
+
+        # code taken from localrepo.py:addchangegroup
+        dh = 0
+        if oldheads:
+            heads = self.repo.changelog.heads()
+            dh = len(heads) - len(oldheads)
+            for h in heads:
+                if h not in oldheads and self.repo[h].closesbranch():
+                    dh -= 1
+
+        if dh < 0:
+            return dh - 1
+        else:
+            return dh + 1
 
     def export_commits(self):
         try:

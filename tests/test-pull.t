@@ -68,7 +68,7 @@ pull everything else
   $ hg -R hgrepo pull
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
-  (run 'hg update' to get a working copy)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo log --graph
   o  changeset:   2:37c124f2d0a0
   |  bookmark:    master
