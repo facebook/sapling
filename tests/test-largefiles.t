@@ -760,8 +760,8 @@ Test graph log
   $ hg log -qf sub2/large7
   7:daea875e9014
   $ hg log -Gqf sub2/large7
-  abort: cannot follow file not in parent revision: "sub2/large7"
-  [255]
+  @  7:daea875e9014
+  |
   $ cd ..
   $ hg clone a -r 3 c
   adding changesets
@@ -1143,6 +1143,8 @@ Log on largefiles
   $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' sub
   @  9:598410d3eb9a  modify normal file largefile in repo d
   |
+  o  8:a381d2c8c80e  modify normal file and largefile in repo b
+  |
   o  6:4355d653f84f  edit files yet again
   |
   o  5:9d5af5072dbd  edit files again
@@ -1164,6 +1166,8 @@ Log on largefiles
   0:30d30fe6a5be  add files
   $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' 'glob:sub/*'
   @  9:598410d3eb9a  modify normal file largefile in repo d
+  |
+  o  8:a381d2c8c80e  modify normal file and largefile in repo b
   |
   o  6:4355d653f84f  edit files yet again
   |
@@ -2203,6 +2207,12 @@ Test actions on largefiles using relative paths from subdir
   summary:     anotherlarge
   
   $ hg log -G anotherlarge
+  @  changeset:   1:9627a577c5e9
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     anotherlarge
+  |
   $ echo more >> anotherlarge
   $ hg st .
   M anotherlarge

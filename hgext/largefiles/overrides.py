@@ -55,6 +55,22 @@ def restorematchfn():
     restore matchfn to reverse'''
     scmutil.match = getattr(scmutil.match, 'oldmatch')
 
+def installmatchandpatsfn(f):
+    oldmatchandpats = scmutil.matchandpats
+    setattr(f, 'oldmatchandpats', oldmatchandpats)
+    scmutil.matchandpats = f
+    return oldmatchandpats
+
+def restorematchandpatsfn():
+    '''restores scmutil.matchandpats to what it was before
+    installnormalfilesmatchandpatsfn was called.  no-op if scmutil.matchandpats
+    is its original function.
+
+    Note that n calls to installnormalfilesmatchandpatsfn will require n calls
+    to restore matchfn to reverse'''
+    scmutil.matchandpats = getattr(scmutil.matchandpats, 'oldmatchandpats',
+            scmutil.matchandpats)
+
 def addlargefiles(ui, repo, *pats, **opts):
     large = opts.pop('large', None)
     lfsize = lfutil.getminsize(
@@ -241,19 +257,30 @@ def overridedirty(orig, repo, ignoreupdate=False):
         repo._repo.lfstatus = False
 
 def overridelog(orig, ui, repo, *pats, **opts):
-    def overridematch(ctx, pats=[], opts={}, globbed=False,
+    def overridematchandpats(ctx, pats=[], opts={}, globbed=False,
             default='relpath'):
         """Matcher that merges root directory with .hglf, suitable for log.
         It is still possible to match .hglf directly.
         For any listed files run log on the standin too.
         matchfn tries both the given filename and with .hglf stripped.
         """
-        match = oldmatch(ctx, pats, opts, globbed, default)
-        m = copy.copy(match)
+        matchandpats = oldmatchandpats(ctx, pats, opts, globbed, default)
+        m, p = copy.copy(matchandpats)
+
+        pats = set(p)
+        # TODO: handling of patterns in both cases below
+        if m._cwd:
+            back = (m._cwd.count('/') + 1) * '../'
+            pats.update(back + lfutil.standin(m._cwd + '/' + f) for f in p)
+        else:
+            pats.update(lfutil.standin(f) for f in p)
+
         for i in range(0, len(m._files)):
             standin = lfutil.standin(m._files[i])
             if standin in repo[ctx.node()]:
                 m._files[i] = standin
+            pats.add(standin)
+
         m._fmap = set(m._files)
         m._always = False
         origmatchfn = m.matchfn
@@ -264,14 +291,16 @@ def overridelog(orig, ui, repo, *pats, **opts):
             r = origmatchfn(f)
             return r
         m.matchfn = lfmatchfn
-        return m
-    oldmatch = installmatchfn(overridematch)
+
+        return m, pats
+
+    oldmatchandpats = installmatchandpatsfn(overridematchandpats)
     try:
         repo.lfstatus = True
         return orig(ui, repo, *pats, **opts)
     finally:
         repo.lfstatus = False
-        restorematchfn()
+        restorematchandpatsfn()
 
 def overrideverify(orig, ui, repo, *pats, **opts):
     large = opts.pop('large', False)
