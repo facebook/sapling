@@ -647,6 +647,7 @@ class GitHandler(object):
         self.ui.progress('importing', None, total=total, unit='commits')
 
         # TODO if the tags cache is used, remove any dangling tag references
+        return total
 
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
