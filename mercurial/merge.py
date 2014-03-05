@@ -62,6 +62,11 @@ class mergestate(object):
         self._dirty = False
 
     def _read(self):
+        """Analyse each record content to restore a serialized state from disk
+
+        This function process "record" entry produced by the de-serialization
+        of on disk file.
+        """
         self._state = {}
         records = self._readrecords()
         for rtype, record in records:
@@ -78,6 +83,19 @@ class mergestate(object):
         self._dirty = False
 
     def _readrecords(self):
+        """Read merge state from disk and return a list of record (TYPE, data)
+
+        We read data from both V1 and Ve files decide which on to use.
+
+        V1 have been used by version prior to 2.9.1 and contains less data than
+        v2. We read both version and check if no data in v2 contradict one in
+        v1. If there is not contradiction we can safely assume that both v1
+        and v2 were written at the same time and use the extract data in v2. If
+        there is contradiction we ignore v2 content as we assume an old version
+        of Mercurial have over written the mergstate file and left an old v2
+        file around.
+
+        returns list of record [(TYPE, data), ...]"""
         v1records = self._readrecordsv1()
         v2records = self._readrecordsv2()
         oldv2 = set() # old format version of v2 record
@@ -107,6 +125,13 @@ class mergestate(object):
             return v2records
 
     def _readrecordsv1(self):
+        """read on disk merge state for version 1 file
+
+        returns list of record [(TYPE, data), ...]
+
+        Note: the "F" data from this file are one entry short
+              (no "other file node" entry)
+        """
         records = []
         try:
             f = self._repo.opener(self.statepathv1)
@@ -122,6 +147,10 @@ class mergestate(object):
         return records
 
     def _readrecordsv2(self):
+        """read on disk merge state for version 2 file
+
+        returns list of record [(TYPE, data), ...]
+        """
         records = []
         try:
             f = self._repo.opener(self.statepathv2)
@@ -143,6 +172,7 @@ class mergestate(object):
         return records
 
     def commit(self):
+        """Write current state on disk (if necessary)"""
         if self._dirty:
             records = []
             records.append(("L", hex(self._local)))
@@ -153,10 +183,12 @@ class mergestate(object):
             self._dirty = False
 
     def _writerecords(self, records):
+        """Write current state on disk (both v1 and v2)"""
         self._writerecordsv1(records)
         self._writerecordsv2(records)
 
     def _writerecordsv1(self, records):
+        """Write current state on disk in a version 1 file"""
         f = self._repo.opener(self.statepathv1, "w")
         irecords = iter(records)
         lrecords = irecords.next()
@@ -168,6 +200,7 @@ class mergestate(object):
         f.close()
 
     def _writerecordsv2(self, records):
+        """Write current state on disk in a version 2 file"""
         f = self._repo.opener(self.statepathv2, "w")
         for key, data in records:
             assert len(key) == 1
@@ -176,6 +209,14 @@ class mergestate(object):
         f.close()
 
     def add(self, fcl, fco, fca, fd):
+        """add a new (potentially?) conflicting file the merge state
+        fcl: file context for local,
+        fco: file context for remote,
+        fca: file context for ancestors,
+        fd:  file path of the resulting merge.
+
+        note: also write the local version to the `.hg/merge` directory.
+        """
         hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener.write("merge/" + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(),
@@ -204,6 +245,7 @@ class mergestate(object):
         self._dirty = True
 
     def resolve(self, dfile, wctx):
+        """rerun merge process for file path `dfile`"""
         if self[dfile] == 'r':
             return 0
         stateentry = self._state[dfile]
