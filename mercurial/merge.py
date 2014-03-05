@@ -47,10 +47,12 @@ class mergestate(object):
     '''
     statepathv1 = "merge/state"
     statepathv2 = "merge/state2"
+
     def __init__(self, repo):
         self._repo = repo
         self._dirty = False
         self._read()
+
     def reset(self, node=None, other=None):
         self._state = {}
         if node:
@@ -58,6 +60,7 @@ class mergestate(object):
             self._other = other
         shutil.rmtree(self._repo.join("merge"), True)
         self._dirty = False
+
     def _read(self):
         self._state = {}
         records = self._readrecords()
@@ -73,6 +76,7 @@ class mergestate(object):
                 raise util.Abort(_('unsupported merge state record:'
                                    % rtype))
         self._dirty = False
+
     def _readrecords(self):
         v1records = self._readrecordsv1()
         v2records = self._readrecordsv2()
@@ -101,6 +105,7 @@ class mergestate(object):
                 return v1records
         else:
             return v2records
+
     def _readrecordsv1(self):
         records = []
         try:
@@ -115,6 +120,7 @@ class mergestate(object):
             if err.errno != errno.ENOENT:
                 raise
         return records
+
     def _readrecordsv2(self):
         records = []
         try:
@@ -135,6 +141,7 @@ class mergestate(object):
             if err.errno != errno.ENOENT:
                 raise
         return records
+
     def commit(self):
         if self._dirty:
             records = []
@@ -144,9 +151,11 @@ class mergestate(object):
                 records.append(("F", "\0".join([d] + v)))
             self._writerecords(records)
             self._dirty = False
+
     def _writerecords(self, records):
         self._writerecordsv1(records)
         self._writerecordsv2(records)
+
     def _writerecordsv1(self, records):
         f = self._repo.opener(self.statepathv1, "w")
         irecords = iter(records)
@@ -157,6 +166,7 @@ class mergestate(object):
             if rtype == "F":
                 f.write("%s\n" % _droponode(data))
         f.close()
+
     def _writerecordsv2(self, records):
         f = self._repo.opener(self.statepathv2, "w")
         for key, data in records:
@@ -164,6 +174,7 @@ class mergestate(object):
             format = ">sI%is" % len(data)
             f.write(_pack(format, key, len(data), data))
         f.close()
+
     def add(self, fcl, fco, fca, fd):
         hash = util.sha1(fcl.path()).hexdigest()
         self._repo.opener.write("merge/" + hash, fcl.data())
@@ -172,20 +183,26 @@ class mergestate(object):
                            fco.path(), hex(fco.filenode()),
                            fcl.flags()]
         self._dirty = True
+
     def __contains__(self, dfile):
         return dfile in self._state
+
     def __getitem__(self, dfile):
         return self._state[dfile][0]
+
     def __iter__(self):
         l = self._state.keys()
         l.sort()
         for f in l:
             yield f
+
     def files(self):
         return self._state.keys()
+
     def mark(self, dfile, state):
         self._state[dfile][0] = state
         self._dirty = True
+
     def resolve(self, dfile, wctx):
         if self[dfile] == 'r':
             return 0
