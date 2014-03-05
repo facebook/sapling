@@ -156,7 +156,6 @@ from mercurial import error
 from mercurial import copies
 from mercurial import context
 from mercurial import hg
-from mercurial import lock as lockmod
 from mercurial import node
 from mercurial import repair
 from mercurial import scmutil
@@ -901,7 +900,7 @@ def cleanupnode(ui, repo, name, nodes):
             # This would reduce bundle overhead
             repair.strip(ui, repo, c)
     finally:
-        lockmod.release(lock)
+        release(lock)
 
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('histedit-state')):
