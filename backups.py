@@ -61,7 +61,7 @@ def backups(ui, repo, *pats, **opts):
             ui.warn("%s already exists in the repo\n" % recovernode)
             return
     else:
-        ui.status("Recover commits using: hg backups <commit hash>\n", label="status.removed")
+        ui.status("Recover commits using: hg backups --recover <commit hash>\n", label="status.removed")
 
     for backup in backups:
         # Much of this is copied from the hg incoming logic
