@@ -729,6 +729,26 @@ Clone a largefiles repo.
   0:30d30fe6a5be  add files
   $ cat normal3
   normal33
+
+Test graph log
+
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n'
+  @  7:daea875e9014  add/edit more largefiles
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
+  o  3:9e8fbc4bce62  copy files
+  |
+  o  2:51a0ae4d5864  remove files
+  |
+  o  1:ce8896473775  edit files
+  |
+  o  0:30d30fe6a5be  add files
+  
   $ cat sub/normal4
   normal44
   $ cat sub/large4
@@ -739,6 +759,9 @@ Clone a largefiles repo.
   large7
   $ hg log -qf sub2/large7
   7:daea875e9014
+  $ hg log -Gqf sub2/large7
+  abort: cannot follow file not in parent revision: "sub2/large7"
+  [255]
   $ cd ..
   $ hg clone a -r 3 c
   adding changesets
@@ -989,6 +1012,27 @@ rebased or not.
   2:51a0ae4d5864  remove files
   1:ce8896473775  edit files
   0:30d30fe6a5be  add files
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n'
+  @  9:598410d3eb9a  modify normal file largefile in repo d
+  |
+  o  8:a381d2c8c80e  modify normal file and largefile in repo b
+  |
+  o  7:daea875e9014  add/edit more largefiles
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
+  o  3:9e8fbc4bce62  copy files
+  |
+  o  2:51a0ae4d5864  remove files
+  |
+  o  1:ce8896473775  edit files
+  |
+  o  0:30d30fe6a5be  add files
+  
   $ cat normal3
   normal3-modified
   $ cat sub/normal4
@@ -1043,11 +1087,29 @@ Log on largefiles
   6:4355d653f84f  edit files yet again
   5:9d5af5072dbd  edit files again
   4:74c02385b94c  move files
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub/large4
+  o  8:a381d2c8c80e  modify normal file and largefile in repo b
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' sub/large4
   8:a381d2c8c80e  modify normal file and largefile in repo b
   6:4355d653f84f  edit files yet again
   5:9d5af5072dbd  edit files again
   4:74c02385b94c  move files
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub/large4
+  o  8:a381d2c8c80e  modify normal file and largefile in repo b
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
 
 - .hglf only matches largefiles, without .hglf it matches 9 bco sub/normal
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub
@@ -1057,6 +1119,19 @@ Log on largefiles
   4:74c02385b94c  move files
   1:ce8896473775  edit files
   0:30d30fe6a5be  add files
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub
+  o  8:a381d2c8c80e  modify normal file and largefile in repo b
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
+  o  1:ce8896473775  edit files
+  |
+  o  0:30d30fe6a5be  add files
+  
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' sub
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
@@ -1065,7 +1140,19 @@ Log on largefiles
   4:74c02385b94c  move files
   1:ce8896473775  edit files
   0:30d30fe6a5be  add files
-
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' sub
+  @  9:598410d3eb9a  modify normal file largefile in repo d
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
+  o  1:ce8896473775  edit files
+  |
+  o  0:30d30fe6a5be  add files
+  
 - globbing gives same result
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' 'glob:sub/*'
   9:598410d3eb9a  modify normal file largefile in repo d
@@ -1075,7 +1162,19 @@ Log on largefiles
   4:74c02385b94c  move files
   1:ce8896473775  edit files
   0:30d30fe6a5be  add files
-
+  $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' 'glob:sub/*'
+  @  9:598410d3eb9a  modify normal file largefile in repo d
+  |
+  o  6:4355d653f84f  edit files yet again
+  |
+  o  5:9d5af5072dbd  edit files again
+  |
+  o  4:74c02385b94c  move files
+  |
+  o  1:ce8896473775  edit files
+  |
+  o  0:30d30fe6a5be  add files
+  
 Rollback on largefiles.
 
   $ echo large4-modified-again > sub/large4
@@ -2103,6 +2202,7 @@ Test actions on largefiles using relative paths from subdir
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     anotherlarge
   
+  $ hg log -G anotherlarge
   $ echo more >> anotherlarge
   $ hg st .
   M anotherlarge
