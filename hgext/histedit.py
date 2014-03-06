@@ -646,23 +646,28 @@ def _histedit(ui, repo, *freeargs, **opts):
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
 
-
-def bootstrapcontinue(ui, repo, parentctx, rules, opts):
-    action, currentnode = rules.pop(0)
-    ctx = repo[currentnode]
+def gatherchildren(repo, ctx):
     # is there any new commit between the expected parent and "."
     #
     # note: does not take non linear new change in account (but previous
     #       implementation didn't used them anyway (issue3655)
-    newchildren = [c.node() for c in repo.set('(%d::.)', parentctx)]
-    if parentctx.node() != node.nullid:
+    newchildren = [c.node() for c in repo.set('(%d::.)', ctx)]
+    if ctx.node() != node.nullid:
         if not newchildren:
-            # `parentctxnode` should match but no result. This means that
-            # currentnode is not a descendant from parentctxnode.
+            # `ctx` should match but no result. This means that
+            # currentnode is not a descendant from ctx.
             msg = _('%s is not an ancestor of working directory')
             hint = _('use "histedit --abort" to clear broken state')
-            raise util.Abort(msg % parentctx, hint=hint)
-        newchildren.pop(0)  # remove parentctxnode
+            raise util.Abort(msg % ctx, hint=hint)
+        newchildren.pop(0)  # remove ctx
+    return newchildren
+
+def bootstrapcontinue(ui, repo, parentctx, rules, opts):
+    action, currentnode = rules.pop(0)
+    ctx = repo[currentnode]
+
+    newchildren = gatherchildren(repo, parentctx)
+
     # Commit dirty working directory if necessary
     new = None
     m, a, r, d = repo.status()[:4]
