@@ -5,6 +5,40 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""
+Algorithm works in the following way. You have two repository: local and
+remote. They both contains a DAG of changelists.
+
+The goal of the discovery protocol is to find one set of node *common*,
+the set of nodes shared by local and remote.
+
+One of the issue with the original protocol was latency, it could
+potentially require lots of roundtrips to discover that the local repo was a
+subset of remote (which is a very common case, you usually have few changes
+compared to upstream, while upstream probably had lots of development).
+
+The new protocol only requires one interface for the remote repo: `known()`,
+which given a set of changelists tells you if they are present in the DAG.
+
+The algorithm then works as follow:
+
+ - We will be using three sets, `common`, `missing`, `unknown`. Originally
+ all nodes are in `unknown`.
+ - Take a sample from `unknown`, call `remote.known(sample)`
+   - For each node that remote knows, move it and all its ancestors to `common`
+   - For each node that remote doesn't know, move it and all its descendants
+   to `missing`
+ - Iterate until `unknown` is empty
+
+There are a couple optimizations, first is instead of starting with a random
+sample of missing, start by sending all heads, in the case where the local
+repo is a subset, you computed the answer in one round trip.
+
+Then you can do something similar to the bisecting strategy used when
+finding faulty changesets. Instead of random samples, you can try picking
+nodes that will maximize the number of nodes that will be
+classified with it (since all ancestors or descendants will be marked as well).
+"""
 
 from node import nullid
 from i18n import _
