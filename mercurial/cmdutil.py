@@ -1296,7 +1296,7 @@ def walkchangerevs(repo, match, opts, prepare):
     elif follow:
         revs = repo.revs('reverse(:.)')
     else:
-        revs = revset.baseset(repo)
+        revs = revset.spanset(repo)
         revs.reverse()
     if not revs:
         return []
