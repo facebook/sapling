@@ -2253,8 +2253,8 @@ class lazyset(object):
         return l[x]
 
     def sort(self, reverse=False):
-        # Basic implementation to be changed in future patches.
-        self._subset = baseset(self._subset)
+        if not util.safehasattr(self._subset, 'sort'):
+            self._subset = baseset(self._subset)
         self._subset.sort(reverse=reverse)
 
     def reverse(self):
