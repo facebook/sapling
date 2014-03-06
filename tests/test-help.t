@@ -563,7 +563,7 @@ Test command without options
         ! = missing (deleted by non-hg command, but still tracked)
         ? = not tracked
         I = ignored
-          = origin of the previous file listed as A (added)
+          = origin of the previous file (with --copies)
   
       Returns 0 on success.
   

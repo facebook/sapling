@@ -5289,7 +5289,7 @@ def status(ui, repo, *pats, **opts):
       ! = missing (deleted by non-hg command, but still tracked)
       ? = not tracked
       I = ignored
-        = origin of the previous file listed as A (added)
+        = origin of the previous file (with --copies)
 
     .. container:: verbose
 
