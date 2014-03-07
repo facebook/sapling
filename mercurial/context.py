@@ -1178,6 +1178,25 @@ class workingctx(committablectx):
             finally:
                 wlock.release()
 
+    def _filtersuspectsymlink(self, files):
+        if not files or self._repo.dirstate._checklink:
+            return files
+
+        # Symlink placeholders may get non-symlink-like contents
+        # via user error or dereferencing by NFS or Samba servers,
+        # so we filter out any placeholders that don't look like a
+        # symlink
+        sane = []
+        for f in files:
+            if self.flags(f) == 'l':
+                d = self[f].data()
+                if d == '' or len(d) >= 1024 or '\n' in d or util.binary(d):
+                    self._repo.ui.debug('ignoring suspect symlink placeholder'
+                                        ' "%s"\n' % f)
+                    continue
+            sane.append(f)
+        return sane
+
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context
     that wants the ability to commit, e.g. workingfilectx or memfilectx."""

@@ -1609,21 +1609,8 @@ class localrepository(object):
                     added.append(fn)
             removed = mf1.keys()
 
-        if working and modified and not self.dirstate._checklink:
-            # Symlink placeholders may get non-symlink-like contents
-            # via user error or dereferencing by NFS or Samba servers,
-            # so we filter out any placeholders that don't look like a
-            # symlink
-            sane = []
-            for f in modified:
-                if ctx2.flags(f) == 'l':
-                    d = ctx2[f].data()
-                    if d == '' or len(d) >= 1024 or '\n' in d or util.binary(d):
-                        self.ui.debug('ignoring suspect symlink placeholder'
-                                      ' "%s"\n' % f)
-                        continue
-                sane.append(f)
-            modified = sane
+        if working:
+            modified = ctx2._filtersuspectsymlink(modified)
 
         r = modified, added, removed, deleted, unknown, ignored, clean
 
