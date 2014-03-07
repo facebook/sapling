@@ -2236,14 +2236,7 @@ class lazyset(object):
         return lazyset(self, lambda r: r not in x)
 
     def __add__(self, x):
-        def iterates():
-            for r in self:
-                yield r
-            for r in x:
-                if r not in self:
-                    yield r
-
-        return lazyset(generatorset(iterates()))
+        return lazyset(addset(self, x))
 
     def __nonzero__(self):
         for r in self:
@@ -2476,14 +2469,7 @@ class spanset(object):
             return orderedlazyset(self, lambda r: r not in x, ascending=False)
 
     def __add__(self, x):
-        def iterates():
-            for r in self:
-                yield r
-            for r in x:
-                if r not in self:
-                    yield r
-
-        return lazyset(generatorset(iterates()))
+        return lazyset(addset(self, x))
 
     def __len__(self):
         if not self._hiddenrevs:
