@@ -2314,6 +2314,35 @@ class orderedlazyset(lazyset):
         self._subset.reverse()
         self._ascending = not self._ascending
 
+class addset(object):
+    """Wrapper structure for lazily adding two structures without losing much
+    performance on the __contains__ method
+    """
+    def __init__(self, revs1, revs2):
+        self._r1 = revs1
+        self._r2 = revs2
+        self._iter = None
+
+    def _iterator(self):
+        if not self._iter:
+            def gen():
+                for r in self._r1:
+                    yield r
+                s = self._r1.set()
+                for r in self._r2:
+                    if r not in s:
+                        yield r
+            self._iter = generatorset(gen())
+
+        return self._iter
+
+    def __iter__(self):
+        for r in self._iterator():
+            yield r
+
+    def __contains__(self, x):
+        return x in self._r1 or x in self._r2
+
 class generatorset(object):
     """Wrapper structure for generators that provides lazy membership and can
     be iterated more than once.
