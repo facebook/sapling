@@ -163,7 +163,9 @@ def wraprepo(repo):
                 raise Exception("SQL cursor already open without connection")
             self.sqlconn = MySQLdb.connect(**self.sqlargs)
             self.sqlconn.autocommit(False)
-            self.sqlconn.query("SET wait_timeout=300")
+            waittimeout = self.ui.config('hgsql', 'waittimeout', '300')
+            waittimeout = self.sqlconn.escape_string("%s" % (waittimeout,))
+            self.sqlconn.query("SET wait_timeout=%s" % waittimeout)
             self.sqlcursor = self.sqlconn.cursor()
 
         def sqlclose(self):
