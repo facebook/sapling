@@ -1059,6 +1059,7 @@ def gettemplate(ui, tmpl, style):
                 tmpl = templater.parsestring(tmpl)
             except SyntaxError:
                 tmpl = templater.parsestring(tmpl, quoted=False)
+            return tmpl, None
         else:
             style = util.expandpath(ui.config('ui', 'style', ''))
 
@@ -1071,6 +1072,38 @@ def gettemplate(ui, tmpl, style):
                 mapfile = mapname
         return None, mapfile
 
+    if not tmpl:
+        return None, None
+
+    # looks like a literal template?
+    if '{' in tmpl:
+        return tmpl, None
+
+    # perhaps a stock style?
+    if not os.path.split(tmpl)[0]:
+        mapname = (templater.templatepath('map-cmdline.' + tmpl)
+                   or templater.templatepath(tmpl))
+        if mapname and os.path.isfile(mapname):
+            return None, mapname
+
+    # perhaps it's a reference to [templates]
+    t = ui.config('templates', tmpl)
+    if t:
+        try:
+            tmpl = templater.parsestring(t)
+        except SyntaxError:
+            tmpl = templater.parsestring(t, quoted=False)
+        return tmpl, None
+
+    # perhaps it's a path to a map or a template
+    if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):
+        # is it a mapfile for a style?
+        if os.path.basename(tmpl).startswith("map-"):
+            return None, os.path.realpath(tmpl)
+        tmpl = open(tmpl).read()
+        return tmpl, None
+
+    # constant string?
     return tmpl, None
 
 def show_changeset(ui, repo, opts, buffered=False):

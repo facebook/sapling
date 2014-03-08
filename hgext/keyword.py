@@ -218,7 +218,7 @@ class kwtemplater(object):
         '''Replaces keywords in data with expanded template.'''
         def kwsub(mobj):
             kw = mobj.group(1)
-            ct = cmdutil.changeset_templater(self.ui, self.repo, False, None
+            ct = cmdutil.changeset_templater(self.ui, self.repo, False, None,
                                              self.templates[kw], '', False)
             self.ui.pushbuffer()
             ct.show(ctx, root=self.repo.root, file=path)

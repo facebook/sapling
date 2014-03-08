@@ -63,6 +63,29 @@ Make sure user/global hgrc does not affect tests
   $ echo 'logtemplate =' >> .hg/hgrc
   $ echo 'style =' >> .hg/hgrc
 
+Add some simple styles to settings
+
+  $ echo '[templates]' >> .hg/hgrc
+  $ printf 'simple = "{rev}\\n"\n' >> .hg/hgrc
+  $ printf 'simple2 = {rev}\\n\n' >> .hg/hgrc
+
+  $ hg log -l1 -Tsimple
+  8
+  $ hg log -l1 -Tsimple2
+  8
+
+Test templates and style maps in files:
+
+  $ echo "{rev}" > tmpl
+  $ hg log -l1 -T./tmpl
+  8
+  $ hg log -l1 -Tblah/blah
+  blah/blah (no-eol)
+
+  $ printf 'changeset = "{rev}\\n"\n' > map-simple
+  $ hg log -l1 -T./map-simple
+  8
+
 Default style is like normal output:
 
   $ hg log > log.out
@@ -84,7 +107,7 @@ Revision with no copies (used to print a traceback):
 
 Compact style works:
 
-  $ hg log --style compact
+  $ hg log -Tcompact
   8[tip]   95c24699272e   2020-01-01 10:01 +0000   test
     third
   
