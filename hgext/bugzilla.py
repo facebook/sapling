@@ -879,14 +879,13 @@ class bugzilla(object):
 
         mapfile = self.ui.config('bugzilla', 'style')
         tmpl = self.ui.config('bugzilla', 'template')
-        t = cmdutil.changeset_templater(self.ui, self.repo,
-                                        False, None, mapfile, False)
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')
         if tmpl:
             tmpl = templater.parsestring(tmpl, quoted=False)
-            t.use_template(tmpl)
+        t = cmdutil.changeset_templater(self.ui, self.repo,
+                                        False, None, tmpl, mapfile, False)
         self.ui.pushbuffer()
         t.show(ctx, changes=ctx.changeset(),
                bug=str(bugid),

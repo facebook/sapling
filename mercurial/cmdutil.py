@@ -948,7 +948,7 @@ class changeset_printer(object):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, patch, diffopts, mapfile, buffered):
+    def __init__(self, ui, repo, patch, diffopts, tmpl, mapfile, buffered):
         changeset_printer.__init__(self, ui, repo, patch, diffopts, buffered)
         formatnode = ui.debugflag and (lambda x: x) or (lambda x: x[:12])
         defaulttempl = {
@@ -961,11 +961,10 @@ class changeset_templater(changeset_printer):
         defaulttempl['filecopy'] = defaulttempl['file_copy']
         self.t = templater.templater(mapfile, {'formatnode': formatnode},
                                      cache=defaulttempl)
-        self.cache = {}
+        if tmpl:
+            self.t.cache['changeset'] = tmpl
 
-    def use_template(self, t):
-        '''set template string to use'''
-        self.t.cache['changeset'] = t
+        self.cache = {}
 
     def _meaningful_parentrevs(self, ctx):
         """Return list of meaningful (or all if debug) parentrevs for rev.
@@ -1096,11 +1095,9 @@ def show_changeset(ui, repo, opts, buffered=False):
         return changeset_printer(ui, repo, patch, opts, buffered)
 
     try:
-        t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
+        t = changeset_templater(ui, repo, patch, opts, tmpl, mapfile, buffered)
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
-    if tmpl:
-        t.use_template(tmpl)
     return t
 
 def showmarker(ui, marker):

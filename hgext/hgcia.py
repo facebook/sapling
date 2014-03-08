@@ -202,8 +202,7 @@ class hgcia(object):
             template = self.diffstat and self.dstemplate or self.deftemplate
         template = templater.parsestring(template, quoted=False)
         t = cmdutil.changeset_templater(self.ui, self.repo, False, None,
-                                        style, False)
-        t.use_template(template)
+                                        template, style, False)
         self.templater = t
 
     def strip(self, path):

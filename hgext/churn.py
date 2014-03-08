@@ -18,10 +18,10 @@ testedwith = 'internal'
 def maketemplater(ui, repo, tmpl):
     tmpl = templater.parsestring(tmpl, quoted=False)
     try:
-        t = cmdutil.changeset_templater(ui, repo, False, None, None, False)
+        t = cmdutil.changeset_templater(ui, repo, False, None, tmpl,
+                                        None, False)
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
-    t.use_template(tmpl)
     return t
 
 def changedlines(ui, repo, ctx1, ctx2, fns):
