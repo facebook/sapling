@@ -416,7 +416,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
-    Returns 0 on success.
+    Returns 0 on success, 1 if there are unresolved files.
     '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
