@@ -204,8 +204,8 @@ class bundlerepository(localrepo.localrepository):
         f = util.posixfile(bundlename, "rb")
         self.bundle = changegroup.readbundle(f, bundlename)
         if self.bundle.compressed():
-            fdtemp, temp = tempfile.mkstemp(prefix="hg-bundle-",
-                                            suffix=".hg10un", dir=self.path)
+            fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
+                                            suffix=".hg10un")
             self.tempfile = temp
             fptemp = os.fdopen(fdtemp, 'wb')
 
@@ -219,8 +219,8 @@ class bundlerepository(localrepo.localrepository):
             finally:
                 fptemp.close()
 
-            f = util.posixfile(self.tempfile, "rb")
-            self.bundle = changegroup.readbundle(f, bundlename)
+            f = self.vfs.open(self.tempfile, mode="rb")
+            self.bundle = changegroup.readbundle(f, bundlename, self.vfs)
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
@@ -280,7 +280,7 @@ class bundlerepository(localrepo.localrepository):
         """Close assigned bundle file immediately."""
         self.bundle.close()
         if self.tempfile is not None:
-            os.unlink(self.tempfile)
+            self.vfs.unlink(self.tempfile)
         if self._tempparent:
             shutil.rmtree(self._tempparent, True)
 
