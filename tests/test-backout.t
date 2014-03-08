@@ -409,6 +409,22 @@ on branch1, so no file1 and file2:
 
   $ cd ..
 
+backout of empty changeset (issue4190)
+
+  $ hg init emptycommit
+  $ cd emptycommit
+
+  $ touch file1
+  $ hg ci -Aqm file1
+  $ hg branch -q branch1
+  $ hg ci -qm branch1
+  $ hg backout -v 1
+  resolving manifests
+  nothing changed
+  [1]
+
+  $ cd ..
+
 
 Test usage of `hg resolve` in case of conflict
 (issue4163)

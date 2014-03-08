@@ -416,7 +416,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
-    Returns 0 on success, 1 if there are unresolved files.
+    Returns 0 on success, 1 if nothing to backout or there are unresolved
+    files.
     '''
     if rev and node:
         raise util.Abort(_("please specify just one revision"))
@@ -495,6 +496,9 @@ def backout(ui, repo, node=None, rev=None, **opts):
             return repo.commit(message, opts.get('user'), opts.get('date'),
                                match, editor=e)
         newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
+        if not newnode:
+            ui.status(_("nothing changed\n"))
+            return 1
         cmdutil.commitstatus(repo, newnode, branch, bheads)
 
         def nice(node):
