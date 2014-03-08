@@ -45,7 +45,7 @@ Second branch starting at nullrev:
 
   $ hg log --template '{join(file_copies, ",\n")}\n' -r .
   fourth (second)
-  $ hg log --template '{file_copies % "{source} -> {name}\n"}' -r .
+  $ hg log -T '{file_copies % "{source} -> {name}\n"}' -r .
   second -> fourth
 
 Quoting for ui.logtemplate
