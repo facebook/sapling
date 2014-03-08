@@ -157,12 +157,13 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
                 os.unlink(chgrpfile)
 
         # remove undo files
-        for undofile in repo.undofiles():
+        for undovfs, undofile in repo.undofiles():
             try:
-                os.unlink(undofile)
+                undovfs.unlink(undofile)
             except OSError, e:
                 if e.errno != errno.ENOENT:
-                    ui.warn(_('error removing %s: %s\n') % (undofile, str(e)))
+                    ui.warn(_('error removing %s: %s\n') %
+                            (undovfs.join(undofile), str(e)))
 
         for m in updatebm:
             bm[m] = repo[newbmtarget].node()

@@ -862,7 +862,7 @@ class localrepository(object):
                 (self.svfs, 'journal.phaseroots'))
 
     def undofiles(self):
-        return [vfs.join(undoname(x)) for vfs, x in self._journalfiles()]
+        return [(vfs, undoname(x)) for vfs, x in self._journalfiles()]
 
     def _writejournal(self, desc):
         self.opener.write("journal.dirstate",
