@@ -77,6 +77,9 @@ class shelvedfile(object):
         finally:
             fp.close()
 
+    def writebundle(self, cg):
+        changegroup.writebundle(cg, self.fname, 'HG10UN', self.vfs)
+
 class shelvedstate(object):
     """Handle persistence during unshelving operations.
 
@@ -237,8 +240,7 @@ def createcmd(ui, repo, pats, opts):
 
         bases = list(publicancestors(repo[node]))
         cg = changegroup.changegroupsubset(repo, bases, [node], 'shelve')
-        changegroup.writebundle(cg, shelvedfile(repo, name, 'hg').filename(),
-                                'HG10UN')
+        shelvedfile(repo, name, 'hg').writebundle(cg)
         cmdutil.export(repo, [node],
                        fp=shelvedfile(repo, name, 'patch').opener('wb'),
                        opts=mdiff.diffopts(git=True))
