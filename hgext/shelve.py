@@ -68,6 +68,15 @@ class shelvedfile(object):
                 raise
             raise util.Abort(_("shelved change '%s' not found") % self.name)
 
+    def applybundle(self):
+        fp = self.opener()
+        try:
+            gen = changegroup.readbundle(fp, self.fname, self.vfs)
+            changegroup.addchangegroup(self.repo, gen, 'unshelve',
+                                       'bundle:' + self.vfs.join(self.fname))
+        finally:
+            fp.close()
+
 class shelvedstate(object):
     """Handle persistence during unshelving operations.
 
@@ -560,16 +569,10 @@ def unshelve(ui, repo, *shelved, **opts):
             node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
             tmpwctx = repo[node]
 
-        try:
-            ui.quiet = True
-            fp = shelvedfile(repo, basename, 'hg').opener()
-            gen = changegroup.readbundle(fp, fp.name)
-            changegroup.addchangegroup(repo, gen, 'unshelve',
-                                       'bundle:' + fp.name)
-            nodes = [ctx.node() for ctx in repo.set('%d:', oldtiprev)]
-            phases.retractboundary(repo, phases.secret, nodes)
-        finally:
-            fp.close()
+        ui.quiet = True
+        shelvedfile(repo, basename, 'hg').applybundle()
+        nodes = [ctx.node() for ctx in repo.set('%d:', oldtiprev)]
+        phases.retractboundary(repo, phases.secret, nodes)
 
         ui.quiet = oldquiet
 
