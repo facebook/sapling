@@ -1047,6 +1047,33 @@ class changeset_templater(changeset_printer):
         except SyntaxError, inst:
             raise util.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
 
+def gettemplate(ui, tmpl, style):
+    """
+    Find the template matching the given template spec or style.
+    """
+
+    # ui settings
+    if not tmpl and not style:
+        tmpl = ui.config('ui', 'logtemplate')
+        if tmpl:
+            try:
+                tmpl = templater.parsestring(tmpl)
+            except SyntaxError:
+                tmpl = templater.parsestring(tmpl, quoted=False)
+        else:
+            style = util.expandpath(ui.config('ui', 'style', ''))
+
+    if style:
+        mapfile = style
+        if not os.path.split(mapfile)[0]:
+            mapname = (templater.templatepath('map-cmdline.' + mapfile)
+                       or templater.templatepath(mapfile))
+            if mapname:
+                mapfile = mapname
+        return None, mapfile
+
+    return tmpl, None
+
 def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.
 
@@ -1063,33 +1090,10 @@ def show_changeset(ui, repo, opts, buffered=False):
     if opts.get('patch') or opts.get('stat'):
         patch = scmutil.matchall(repo)
 
-    tmpl = opts.get('template')
-    style = None
-    if not tmpl:
-        style = opts.get('style')
+    tmpl, mapfile = gettemplate(ui, opts.get('template'), opts.get('style'))
 
-    # ui settings
-    if not (tmpl or style):
-        tmpl = ui.config('ui', 'logtemplate')
-        if tmpl:
-            try:
-                tmpl = templater.parsestring(tmpl)
-            except SyntaxError:
-                tmpl = templater.parsestring(tmpl, quoted=False)
-        else:
-            style = util.expandpath(ui.config('ui', 'style', ''))
-
-    if not (tmpl or style):
+    if not tmpl and not mapfile:
         return changeset_printer(ui, repo, patch, opts, buffered)
-
-    mapfile = None
-    if style and not tmpl:
-        mapfile = style
-        if not os.path.split(mapfile)[0]:
-            mapname = (templater.templatepath('map-cmdline.' + mapfile)
-                       or templater.templatepath(mapfile))
-            if mapname:
-                mapfile = mapname
 
     try:
         t = changeset_templater(ui, repo, patch, opts, mapfile, buffered)
