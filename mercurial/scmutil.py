@@ -10,7 +10,7 @@ from mercurial.node import nullrev
 import util, error, osutil, revset, similar, encoding, phases, parsers
 import pathutil
 import match as matchmod
-import os, errno, re, glob
+import os, errno, re, glob, tempfile
 
 if os.name == 'nt':
     import scmwindows as scmplatform
@@ -192,6 +192,15 @@ class abstractvfs(object):
 
     def mkdir(self, path=None):
         return os.mkdir(self.join(path))
+
+    def mkstemp(self, suffix='', prefix='tmp', dir=None, text=False):
+        fd, name = tempfile.mkstemp(suffix=suffix, prefix=prefix,
+                                    dir=self.join(dir), text=text)
+        dname, fname = util.split(name)
+        if dir:
+            return fd, os.path.join(dir, fname)
+        else:
+            return fd, fname
 
     def readdir(self, path=None, stat=None, skip=None):
         return osutil.listdir(self.join(path), stat, skip)
