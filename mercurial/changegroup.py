@@ -59,7 +59,7 @@ bundletypes = {
 # hgweb uses this list to communicate its preferred type
 bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
 
-def writebundle(cg, filename, bundletype):
+def writebundle(cg, filename, bundletype, vfs=None):
     """Write a bundle file and return its filename.
 
     Existing files will not be overwritten.
@@ -72,7 +72,10 @@ def writebundle(cg, filename, bundletype):
     cleanup = None
     try:
         if filename:
-            fh = open(filename, "wb")
+            if vfs:
+                fh = vfs.open(filename, "wb")
+            else:
+                fh = open(filename, "wb")
         else:
             fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
             fh = os.fdopen(fd, "wb")
@@ -112,7 +115,10 @@ def writebundle(cg, filename, bundletype):
         if fh is not None:
             fh.close()
         if cleanup is not None:
-            os.unlink(cleanup)
+            if filename and vfs:
+                vfs.unlink(cleanup)
+            else:
+                os.unlink(cleanup)
 
 def decompressor(fh, alg):
     if alg == 'UN':
