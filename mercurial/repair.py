@@ -15,15 +15,16 @@ import errno
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
     cg = changegroup.changegroupsubset(repo, bases, heads, 'strip')
-    backupdir = repo.join("strip-backup")
-    if not os.path.isdir(backupdir):
-        os.mkdir(backupdir)
-    name = os.path.join(backupdir, "%s-%s.hg" % (short(node), suffix))
+    backupdir = "strip-backup"
+    vfs = repo.vfs
+    if not vfs.isdir(backupdir):
+        vfs.mkdir(backupdir)
+    name = "%s/%s-%s.hg" % (backupdir, short(node), suffix)
     if compress:
         bundletype = "HG10BZ"
     else:
         bundletype = "HG10UN"
-    return changegroup.writebundle(cg, name, bundletype)
+    return vfs.join(changegroup.writebundle(cg, name, bundletype, vfs))
 
 def _collectfiles(repo, striprev):
     """find out the filelogs affected by the strip"""
