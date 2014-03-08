@@ -214,7 +214,7 @@ class headerlessfixup(object):
             return d
         return readexactly(self._fh, n)
 
-def readbundle(fh, fname):
+def readbundle(fh, fname, vfs=None):
     header = readexactly(fh, 6)
 
     if not fname:
@@ -222,6 +222,8 @@ def readbundle(fh, fname):
         if not header.startswith('HG') and header.startswith('\0'):
             fh = headerlessfixup(fh, header)
             header = "HG10UN"
+    elif vfs:
+        fname = vfs.join(fname)
 
     magic, version, alg = header[0:2], header[2:4], header[4:6]
 
