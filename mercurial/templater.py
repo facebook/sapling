@@ -21,6 +21,7 @@ elements = {
     ")": (0, None, None),
     "symbol": (0, ("symbol",), None),
     "string": (0, ("string",), None),
+    "rawstring": (0, ("rawstring",), None),
     "end": (0, None, None),
 }
 
@@ -50,7 +51,7 @@ def tokenizer(data):
                     continue
                 if d == c:
                     if not decode:
-                        yield ('string', program[s:pos].replace('\\', r'\\'), s)
+                        yield ('rawstring', program[s:pos], s)
                         break
                     yield ('string', program[s:pos], s)
                     break
@@ -76,23 +77,22 @@ def tokenizer(data):
         pos += 1
     yield ('end', None, pos)
 
-def compiletemplate(tmpl, context):
+def compiletemplate(tmpl, context, strtoken="string"):
     parsed = []
     pos, stop = 0, len(tmpl)
     p = parser.parser(tokenizer, elements)
     while pos < stop:
         n = tmpl.find('{', pos)
         if n < 0:
-            parsed.append(("string", tmpl[pos:].decode("string-escape")))
+            parsed.append((strtoken, tmpl[pos:]))
             break
         if n > 0 and tmpl[n - 1] == '\\':
             # escaped
-            parsed.append(("string",
-                           (tmpl[pos:n - 1] + "{").decode("string-escape")))
+            parsed.append((strtoken, (tmpl[pos:n - 1] + "{")))
             pos = n + 1
             continue
         if n > pos:
-            parsed.append(("string", tmpl[pos:n].decode("string-escape")))
+            parsed.append((strtoken, tmpl[pos:n]))
 
         pd = [tmpl, n + 1, stop]
         parseres, pos = p.parse(pd)
@@ -127,13 +127,16 @@ def getfilter(exp, context):
     return context._filters[f]
 
 def gettemplate(exp, context):
-    if exp[0] == 'string':
-        return compiletemplate(exp[1], context)
+    if exp[0] == 'string' or exp[0] == 'rawstring':
+        return compiletemplate(exp[1], context, strtoken=exp[0])
     if exp[0] == 'symbol':
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
 
 def runstring(context, mapping, data):
+    return data.decode("string-escape")
+
+def runrawstring(context, mapping, data):
     return data
 
 def runsymbol(context, mapping, key):
@@ -256,8 +259,9 @@ def get(context, mapping, args):
 
 def _evalifliteral(arg, context, mapping):
     t = stringify(arg[0](context, mapping, arg[1]))
-    if arg[0] == runstring:
-        yield runtemplate(context, mapping, compiletemplate(t, context))
+    if arg[0] == runstring or arg[0] == runrawstring:
+        yield runtemplate(context, mapping,
+                          compiletemplate(t, context, strtoken='rawstring'))
     else:
         yield t
 
@@ -346,6 +350,7 @@ def sub(context, mapping, args):
 
 methods = {
     "string": lambda e, c: (runstring, e[1]),
+    "rawstring": lambda e, c: (runrawstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
     "group": lambda e, c: compileexp(e[1], c),
 #    ".": buildmember,
