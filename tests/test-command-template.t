@@ -1622,6 +1622,39 @@ Test recursive evaluation:
   $ hg log -r 0 --template '{if(rev, "{author} {rev}")}\n'
   test 0
 
+  $ hg branch -q 'text.{rev}'
+  $ echo aa >> aa
+  $ hg ci -u '{node|short}' -m 'desc to be wrapped desc to be wrapped'
+
+  $ hg log -r 1 --template '{fill(desc, "20", author, branch)}'
+  {node|short}desc to
+  text.{rev}be wrapped
+  text.{rev}desc to be
+  text.{rev}wrapped (no-eol)
+  $ hg log -r 1 --template '{fill(desc, "20", "{node|short}:", "text.{rev}:")}'
+  bcc7ff960b8e:desc to
+  text.1:be wrapped
+  text.1:desc to be
+  text.1:wrapped (no-eol)
+
+  $ hg log -r 1 --template '{sub(r"[0-9]", "-", author)}'
+  {node|short} (no-eol)
+  $ hg log -r 1 --template '{sub(r"[0-9]", "-", "{node|short}")}'
+  bcc-ff---b-e (no-eol)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > color=
+  > [color]
+  > mode=ansi
+  > text.{rev} = red
+  > text.1 = green
+  > EOF
+  $ hg log --color=always -r 1 --template '{label(branch, "text\n")}'
+  \x1b[0;31mtext\x1b[0m (esc)
+  $ hg log --color=always -r 1 --template '{label("text.{rev}", "text\n")}'
+  \x1b[0;32mtext\x1b[0m (esc)
+
 Test branches inside if statement:
 
   $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'

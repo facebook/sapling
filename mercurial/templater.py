@@ -234,12 +234,8 @@ def fill(context, mapping, args):
         except ValueError:
             raise error.ParseError(_("fill expects an integer width"))
         try:
-            initindent = stringify(args[2][0](context, mapping, args[2][1]))
-            initindent = stringify(runtemplate(context, mapping,
-                                     compiletemplate(initindent, context)))
-            hangindent = stringify(args[3][0](context, mapping, args[3][1]))
-            hangindent = stringify(runtemplate(context, mapping,
-                                     compiletemplate(hangindent, context)))
+            initindent = stringify(_evalifliteral(args[2], context, mapping))
+            hangindent = stringify(_evalifliteral(args[3], context, mapping))
         except IndexError:
             pass
 
@@ -345,9 +341,7 @@ def sub(context, mapping, args):
 
     pat = stringify(args[0][0](context, mapping, args[0][1]))
     rpl = stringify(args[1][0](context, mapping, args[1][1]))
-    src = stringify(args[2][0](context, mapping, args[2][1]))
-    src = stringify(runtemplate(context, mapping,
-                                compiletemplate(src, context)))
+    src = stringify(_evalifliteral(args[2], context, mapping))
     yield re.sub(pat, rpl, src)
 
 methods = {
