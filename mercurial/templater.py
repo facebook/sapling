@@ -296,7 +296,7 @@ def join(context, mapping, args):
 
     joiner = " "
     if len(args) > 1:
-        joiner = args[1][0](context, mapping, args[1][1])
+        joiner = stringify(args[1][0](context, mapping, args[1][1]))
 
     first = True
     for x in joinset:
@@ -328,9 +328,9 @@ def strip(context, mapping, args):
     if not (1 <= len(args) <= 2):
         raise error.ParseError(_("strip expects one or two arguments"))
 
-    text = args[0][0](context, mapping, args[0][1])
+    text = stringify(args[0][0](context, mapping, args[0][1]))
     if len(args) == 2:
-        chars = args[1][0](context, mapping, args[1][1])
+        chars = stringify(args[1][0](context, mapping, args[1][1]))
         return text.strip(chars)
     return text.strip()
 

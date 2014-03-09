@@ -1659,3 +1659,12 @@ Test branches inside if statement:
 
   $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'
   no
+
+  $ cd ..
+
+Test stringify on sub expressions
+
+  $ hg log -R a -r 8 --template '{join(files, if("1", if("1", ", ")))}\n'
+  fourth, second, third
+  $ hg log -R a -r 8 --template '{strip(if("1", if("1", "-abc-")), if("1", if("1", "-")))}\n'
+  abc
