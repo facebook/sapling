@@ -186,11 +186,21 @@ def upstream_revs(filt, repo, subset, x):
     upstream_tips = [node.hex(n) for name, n in
              repo._remotebranches.iteritems() if filt(name)]
     if not upstream_tips: []
+
+    ls = getattr(revset, 'lazyset', False)
+    if ls:
+        # If revset.lazyset exists (hg 3.0), use lazysets instead for
+        # speed.
+        tipancestors = repo.revs('::%ln', map(node.bin, upstream_tips))
+        def cond(n):
+            return n in tipancestors
+        return ls(subset, cond)
+    # 2.9 and earlier codepath
     upstream = reduce(lambda x, y: x.update(y) or x,
                       map(lambda x: set(revset.ancestors(repo, subset, x)),
                           [('string', n) for n in upstream_tips]),
                       set())
-    return baseset([r for r in subset if r in upstream])
+    return [r for r in subset if r in upstream]
 
 def upstream(repo, subset, x):
     '''``upstream()``
