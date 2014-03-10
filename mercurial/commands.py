@@ -89,7 +89,7 @@ commitopts2 = [
 
 templateopts = [
     ('', 'style', '',
-     _('display using template map file'), _('STYLE')),
+     _('display using template map file (DEPRECATED)'), _('STYLE')),
     ('T', 'template', '',
      _('display with template'), _('TEMPLATE')),
 ]
