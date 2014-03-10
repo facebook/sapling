@@ -39,6 +39,10 @@ def backups(ui, repo, *args, **kwargs):
 
     Usage: hg githelp -- <git command>
     '''
+
+    if len(args) == 0:
+        raise util.Abort(_('missing git command - usage: hg githelp -- <git command>'))
+
     if args[0] == 'git':
         args = args[1:]
 
