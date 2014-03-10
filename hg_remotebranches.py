@@ -177,6 +177,7 @@ def reposetup(ui, repo):
     repo.__class__ = remotebranchesrepo
 
 try:
+    # Mercurial 3.0 adds laziness for revsets, which breaks returning lists.
     baseset = revset.baseset
 except AttributeError:
     baseset = lambda x: x
