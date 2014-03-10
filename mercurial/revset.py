@@ -2340,6 +2340,9 @@ class _addset(object):
     def __contains__(self, x):
         return x in self._r1 or x in self._r2
 
+    def set(self):
+        return self
+
 class _generatorset(object):
     """Wrap a generator for lazy iteration
 
