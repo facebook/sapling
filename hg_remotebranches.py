@@ -183,12 +183,12 @@ except AttributeError:
     baseset = lambda x: x
 
 def upstream_revs(filt, repo, subset, x):
-    nodes = [node.hex(n) for name, n in
+    upstream_tips = [node.hex(n) for name, n in
              repo._remotebranches.iteritems() if filt(name)]
-    if not nodes: []
+    if not upstream_tips: []
     upstream = reduce(lambda x, y: x.update(y) or x,
                       map(lambda x: set(revset.ancestors(repo, subset, x)),
-                          [('string', n) for n in nodes]),
+                          [('string', n) for n in upstream_tips]),
                       set())
     return baseset([r for r in subset if r in upstream])
 
