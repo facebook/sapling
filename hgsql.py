@@ -502,13 +502,13 @@ def wraprepo(repo):
             if not expectedrevs:
                 return
 
-            expectedwhere = ["('%s','%s',0)" %
+            expectedwhere = ["(path, rev, chunk) = ('%s', %s, 0)" %
                 (self.sqlconn.escape_string(path), rev) for path, rev
                 in expectedrevs]
-            expectedwhere = ','.join(expectedwhere)
+            expectedwhere = ' OR '.join(expectedwhere)
 
             cursor.execute("""SELECT path, rev, node FROM revisions WHERE
-                repo = %s AND (path, rev, chunk) IN (""" + expectedwhere + ")",
+                repo = %s AND (""" + expectedwhere + ")",
                 (reponame,))
 
             for path, rev, node in cursor:
@@ -523,8 +523,8 @@ def wraprepo(repo):
                     rl = revlog.revlog(self.sopener, path)
                 localnode = hex(rl.node(rev))
                 if localnode != node:
-                    raise CorruptionException("expected node %s at rev %d of " +
-                    "%s but found %s" % (node, rev, path, localnode))
+                    raise CorruptionException(("expected node %s at rev %d of " +
+                    "%s but found %s") % (node, rev, path, localnode))
 
             if len(expectedrevs) > 0:
                 raise CorruptionException(("unable to verify %d dependent " +

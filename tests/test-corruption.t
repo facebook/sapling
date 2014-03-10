@@ -1,0 +1,63 @@
+  $ . "$TESTDIR/library.sh"
+
+# Populate the db with an initial commit
+
+  $ initclient client
+  $ cd client
+  $ echo x > x
+  $ hg commit -qAm x
+  $ echo y > y
+  $ hg commit -qAm y
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo z > z
+  $ hg commit -qAm z
+  $ cd ..
+
+  $ initserver master masterrepo
+  $ cd master
+  $ hg log
+  $ hg pull -q ../client
+
+# Strip middle commit, verify sync fails
+
+  $ hg strip -r 1 --config extensions.hgsql=!
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/d34c38483be9-backup.hg
+  $ hg log -l 1 2>&1 | egrep 'Corruption'
+  hgext_hgsql.CorruptionException: revision offset doesn't match prior length (4295032832 offset vs 3 length): data/z.i
+
+# Recover middle commit, but on top, then try syncing (succeeds)
+
+  $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/d34c38483be9-backup.hg --config extensions.hgsql=!
+  $ hg log -l 1
+  changeset:   2:d34c38483be9
+  tag:         tip
+  parent:      0:b292c1e3311f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     y
+  
+  $ cd ..
+
+# Attempt to pull new commit should fail because base rev is wrong due to reordering
+
+  $ cd client
+  $ echo a > a
+  $ hg commit -qAm a
+  $ cd ../master
+  $ hg pull ../client 2>&1 | egrep 'Corruption'
+  hgext_hgsql.CorruptionException: expected node d34c38483be9d08f205eaae60c380a29b48e0189 at rev 1 of 00changelog.i but found bc3a71defa4a8fb6e8e5c192c02a26d94853d281
+
+# Fix ordering, can pull now
+
+  $ hg strip -r 1 --config extensions.hgsql=!
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-backup.hg
+  $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-backup.hg --config extensions.hgsql=!
+  $ hg pull ../client
+  pulling from ../client
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
