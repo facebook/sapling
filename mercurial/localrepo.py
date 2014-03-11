@@ -1550,32 +1550,12 @@ class localrepository(object):
 
             # check for any possibly clean files
             if parentworking and cmp:
-                fixup = []
-                # do a full compare of any files that might have changed
-                for f in sorted(cmp):
-                    if (f not in ctx1 or ctx2.flags(f) != ctx1.flags(f)
-                        or ctx1[f].cmp(ctx2[f])):
-                        modified.append(f)
-                    else:
-                        fixup.append(f)
+                modified2, fixup = ctx2._checklookup(cmp)
+                modified += modified2
 
                 # update dirstate for files that are actually clean
-                if fixup:
-                    if listclean:
-                        clean += fixup
-
-                    try:
-                        # updating the dirstate is optional
-                        # so we don't wait on the lock
-                        normal = self.dirstate.normal
-                        wlock = self.wlock(False)
-                        try:
-                            for f in fixup:
-                                normal(f)
-                        finally:
-                            wlock.release()
-                    except error.LockError:
-                        pass
+                if fixup and listclean:
+                    clean += fixup
 
         if not parentworking:
             mf1 = mfmatches(ctx1)

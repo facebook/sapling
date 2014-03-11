@@ -1197,6 +1197,39 @@ class workingctx(committablectx):
             sane.append(f)
         return sane
 
+    def _checklookup(self, files):
+        # check for any possibly clean files
+        if not files:
+            return [], []
+
+        modified = []
+        fixup = []
+        pctx = self._parents[0]
+        # do a full compare of any files that might have changed
+        for f in sorted(files):
+            if (f not in pctx or self.flags(f) != pctx.flags(f)
+                or pctx[f].cmp(self[f])):
+                modified.append(f)
+            else:
+                fixup.append(f)
+
+        # update dirstate for files that are actually clean
+        if fixup:
+            try:
+                # updating the dirstate is optional
+                # so we don't wait on the lock
+                normal = self._repo.dirstate.normal
+                wlock = self._repo.wlock(False)
+                try:
+                    for f in fixup:
+                        normal(f)
+                finally:
+                    wlock.release()
+            except error.LockError:
+                pass
+        return modified, fixup
+
+
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context
     that wants the ability to commit, e.g. workingfilectx or memfilectx."""
