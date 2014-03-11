@@ -2331,6 +2331,13 @@ class _addset(object):
         self._r2 = revs2
         self._iter = None
         self._ascending = ascending
+        self._genlist = None
+
+    @util.propertycache
+    def _list(self):
+        if not self._genlist:
+            self._genlist = baseset(self._iterator())
+        return self._genlist
 
     def _iterator(self):
         if not self._iter:
