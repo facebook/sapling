@@ -931,22 +931,6 @@ class committablectx(basectx):
     def _date(self):
         return util.makedate()
 
-    def status(self, ignored=False, clean=False, unknown=False):
-        """Explicit status query
-        Unless this method is used to query the working copy status, the
-        _status property will implicitly read the status using its default
-        arguments."""
-        stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
-        self._unknown = self._ignored = self._clean = None
-        if unknown:
-            self._unknown = stat[4]
-        if ignored:
-            self._ignored = stat[5]
-        if clean:
-            self._clean = stat[6]
-        self._status = stat[:4]
-        return stat
-
     def user(self):
         return self._user or self._repo.ui.username()
     def date(self):
@@ -1228,6 +1212,22 @@ class workingctx(committablectx):
             except error.LockError:
                 pass
         return modified, fixup
+
+    def status(self, ignored=False, clean=False, unknown=False):
+        """Explicit status query
+        Unless this method is used to query the working copy status, the
+        _status property will implicitly read the status using its default
+        arguments."""
+        stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
+        self._unknown = self._ignored = self._clean = None
+        if unknown:
+            self._unknown = stat[4]
+        if ignored:
+            self._ignored = stat[5]
+        if clean:
+            self._clean = stat[6]
+        self._status = stat[:4]
+        return stat
 
 
 class committablefilectx(basefilectx):
