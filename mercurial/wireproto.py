@@ -414,9 +414,12 @@ def branches(repo, proto, nodes):
         r.append(encodelist(b) + "\n")
     return "".join(r)
 
+
+wireprotocaps = ['lookup', 'changegroupsubset', 'branchmap', 'pushkey',
+                 'known', 'getbundle', 'unbundlehash', 'batch']
 def capabilities(repo, proto):
-    caps = ('lookup changegroupsubset branchmap pushkey known getbundle '
-            'unbundlehash batch').split()
+    # copy to prevent modification of the global list
+    caps = list(wireprotocaps)
     if _allowstream(repo.ui):
         if repo.ui.configbool('server', 'preferuncompressed', False):
             caps.append('stream-preferred')
