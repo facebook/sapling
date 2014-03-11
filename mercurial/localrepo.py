@@ -1511,15 +1511,6 @@ class localrepository(object):
         If node2 is None, compare node1 with working directory.
         """
 
-        def mfmatches(ctx):
-            mf = ctx.manifest().copy()
-            if match.always():
-                return mf
-            for fn in mf.keys():
-                if not match(fn):
-                    del mf[fn]
-            return mf
-
         ctx1 = self[node1]
         ctx2 = self[node2]
 
@@ -1566,11 +1557,11 @@ class localrepository(object):
         modified, added, removed, deleted, unknown, ignored, clean = r
 
         if not parentworking:
-            mf1 = mfmatches(ctx1)
+            mf1 = ctx1._manifestmatches(match, r)
             if working:
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
-                mf2 = mfmatches(self['.'])
+                mf2 = self['.']._manifestmatches(match, r)
                 for f in modified + added:
                     mf2[f] = None
                     mf2.set(f, ctx2.flags(f))
@@ -1580,7 +1571,7 @@ class localrepository(object):
             else:
                 # we are comparing two revisions
                 deleted, unknown, ignored = [], [], []
-                mf2 = mfmatches(ctx2)
+                mf2 = ctx2._manifestmatches(match, r)
 
             modified, added, clean = [], [], []
             withflags = mf1.withflags() | mf2.withflags()
