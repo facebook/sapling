@@ -2312,13 +2312,18 @@ class _addset(object):
     Wrapper structure for lazily adding two structures without losing much
     performance on the __contains__ method
 
+    If the ascending attribute is set, that means the two structures are
+    ordered in either an ascending or descending way. Therefore, we can add
+    them mantaining the order by iterating over both at the same time
+
     This class does not duck-type baseset and it's only supposed to be used
     internally
     """
-    def __init__(self, revs1, revs2):
+    def __init__(self, revs1, revs2, ascending=None):
         self._r1 = revs1
         self._r2 = revs2
         self._iter = None
+        self._ascending = ascending
 
     def _iterator(self):
         if not self._iter:
