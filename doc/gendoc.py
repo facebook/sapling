@@ -156,6 +156,8 @@ def commandprinter(ui, cmdtable, sectionfunc):
             continue
         d = get_cmd(h[f], cmdtable)
         ui.write(sectionfunc(d['cmd']))
+        # short description
+        ui.write(d['desc'][0])
         # synopsis
         ui.write("::\n\n")
         synopsislines = d['synopsis'].splitlines()
