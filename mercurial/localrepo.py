@@ -1567,10 +1567,11 @@ class localrepository(object):
                     try:
                         # updating the dirstate is optional
                         # so we don't wait on the lock
+                        normal = self.dirstate.normal
                         wlock = self.wlock(False)
                         try:
                             for f in fixup:
-                                self.dirstate.normal(f)
+                                normal(f)
                         finally:
                             wlock.release()
                     except error.LockError:
