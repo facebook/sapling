@@ -393,9 +393,7 @@ def templatelabel(context, mapping, args):
     if isinstance(repo, str):
         return thing
 
-    label = templater.stringify(args[0][0](context, mapping, args[0][1]))
-    label = templater.runtemplate(context, mapping,
-                                  templater.compiletemplate(label, context))
+    label = templater._evalifliteral(args[0], context, mapping)
 
     thing = templater.stringify(thing)
     label = templater.stringify(label)
