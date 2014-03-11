@@ -1541,21 +1541,9 @@ class localrepository(object):
             match.bad = bad
 
         if working: # we need to scan the working dir
-            subrepos = []
-            if '.hgsub' in self.dirstate:
-                subrepos = sorted(ctx2.substate)
-            s = self.dirstate.status(match, subrepos, listignored,
-                                     listclean, listunknown)
-            cmp, modified, added, removed, deleted, unknown, ignored, clean = s
-
-            # check for any possibly clean files
-            if parentworking and cmp:
-                modified2, fixup = ctx2._checklookup(cmp)
-                modified += modified2
-
-                # update dirstate for files that are actually clean
-                if fixup and listclean:
-                    clean += fixup
+            r = ctx2._dirstatestatus(match=match, ignored=listignored,
+                                     clean=listclean, unknown=listunknown)
+            modified, added, removed, deleted, unknown, ignored, clean = r
 
         if not parentworking:
             mf1 = mfmatches(ctx1)
@@ -1563,7 +1551,7 @@ class localrepository(object):
                 # we are comparing working dir against non-parent
                 # generate a pseudo-manifest for the working dir
                 mf2 = mfmatches(self['.'])
-                for f in cmp + modified + added:
+                for f in modified + added:
                     mf2[f] = None
                     mf2.set(f, ctx2.flags(f))
                 for f in removed:
