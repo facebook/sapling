@@ -96,27 +96,28 @@ def reposetup(ui, repo):
 def unbundle(orig, *args, **kwargs):
     repo = args[0]
     if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, commitlock, *args, **kwargs)
+        return executewithsql(repo, orig, [commitlock], *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def pull(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, commitlock, *args, **kwargs)
+        return executewithsql(repo, orig, [commitlock, bookmarklock],
+            *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def updatefromremote(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, bookmarklock, *args, **kwargs)
+        return executewithsql(repo, orig, [bookmarklock], *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
-def executewithsql(repo, action, lock=None, *args, **kwargs):
+def executewithsql(repo, action, locks=[], *args, **kwargs):
     """Executes the given action while having a SQL connection open.
-    If a lock is specified, that lock is held for the duration of the
+    If a locks are specified, those locks are held for the duration of the
     action.
     """
     # executewithsql can be executed in a nested scenario (ex: writing
@@ -127,21 +128,23 @@ def executewithsql(repo, action, lock=None, *args, **kwargs):
         repo.sqlconnect()
         connected = True
 
-    locked = False
-    if lock and not lock in repo.heldlocks:
-        repo.sqllock(lock)
-        locked = True
+    locked = []
+    for lock in locks:
+        if not lock in repo.heldlocks:
+            repo.sqllock(lock)
+            locked.append(lock)
 
     result = None
     success = False
     try:
         if connected:
-            repo.syncdb(readonly=not lock)
+            repo.syncdb(readonly=not locks)
         result = action(*args, **kwargs)
         success = True
     finally:
         try:
-            if locked:
+            # Release the locks in the reverse order they were obtained
+            for lock in reverse(locked):
                 repo.sqlunlock(lock)
             if connected:
                 repo.sqlclose()
@@ -371,14 +374,14 @@ def wraprepo(repo):
             def _addchangegroup():
                 return super(sqllocalrepo, self).addchangegroup(source, srctype, url, emptyok)
 
-            return executewithsql(self, _addchangegroup, commitlock)
+            return executewithsql(self, _addchangegroup, [commitlock])
 
         def pushkey(self, namespace, key, old, new):
             def _pushkey():
                 return super(sqllocalrepo, self).pushkey(namespace, key, old, new)
 
             lock = "%s_lock" % namespace
-            return executewithsql(repo, _pushkey, lock)
+            return executewithsql(repo, _pushkey, [lock])
 
         def committodb(self):
             """Commits all pending revisions to the database
@@ -883,7 +886,7 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
         return orig(ui, repo, *names, **opts)
 
     if write:
-        return executewithsql(repo, _bookmarkcommand, bookmarklock)
+        return executewithsql(repo, _bookmarkcommand, [bookmarklock])
     else:
         return _bookmarkcommand()
 
@@ -918,7 +921,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
             return orig(repo, proto, namespace, key, old, new)
 
         lock = "%s_lock" % namespace
-        return executewithsql(repo, commitpushkey, lock)
+        return executewithsql(repo, commitpushkey, [lock])
     else:
         return orig(repo, proto, namespace, key, old, new)
 

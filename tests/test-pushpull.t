@@ -65,3 +65,25 @@
   [1]
   $ hg book -R ../master
      foo                       1:d34c38483be9
+
+# Verify explicit bookmark pulls work
+
+  $ hg up tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo z > z
+  $ hg commit -qAm z
+  $ hg book foo
+  moving bookmark 'foo' forward from d34c38483be9
+  $ cd ../master
+  $ hg pull -B foo ../client
+  pulling from ../client
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark foo
+  (run 'hg update' to get a working copy)
+  importing bookmark foo
+  $ hg log -l 1 --template '{rev} {bookmarks}\n'
+  2 foo
