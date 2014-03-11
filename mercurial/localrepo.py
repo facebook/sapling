@@ -1558,10 +1558,12 @@ class localrepository(object):
                     self.ui.warn('%s: %s\n' % (self.dirstate.pathto(f), msg))
             match.bad = bad
 
+        r = [[], [], [], [], [], [], []]
         if working: # we need to scan the working dir
             r = ctx2._dirstatestatus(match=match, ignored=listignored,
                                      clean=listclean, unknown=listunknown)
-            modified, added, removed, deleted, unknown, ignored, clean = r
+
+        modified, added, removed, deleted, unknown, ignored, clean = r
 
         if not parentworking:
             mf1 = mfmatches(ctx1)
