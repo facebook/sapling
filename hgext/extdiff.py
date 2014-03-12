@@ -207,10 +207,10 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         # Function to quote file/dir names in the argument string.
         # When not operating in 3-way mode, an empty string is
         # returned for parent2
-        replace = dict(parent=dir1a, parent1=dir1a, parent2=dir1b,
-                       plabel1=label1a, plabel2=label1b,
-                       clabel=label2, child=dir2,
-                       root=repo.root)
+        replace = {'parent': dir1a, 'parent1': dir1a, 'parent2': dir1b,
+                   'plabel1': label1a, 'plabel2': label1b,
+                   'clabel': label2, 'child': dir2,
+                   'root': repo.root}
         def quote(match):
             key = match.group()[1:]
             if not do3way and key == 'parent2':
@@ -316,7 +316,7 @@ use %(path)s to diff repository (or selected files)
     that revision is compared to the working directory, and, when no
     revisions are specified, the working directory files are compared
     to its parent.\
-''') % dict(path=util.uirepr(path))
+''') % {'path': util.uirepr(path)}
 
             # We must translate the docstring right away since it is
             # used as a format string. The string will unfortunately
