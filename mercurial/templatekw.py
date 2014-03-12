@@ -301,8 +301,8 @@ def showlatesttagdistance(repo, ctx, templ, cache, **args):
 def showmanifest(**args):
     repo, ctx, templ = args['repo'], args['ctx'], args['templ']
     args = args.copy()
-    args.update(dict(rev=repo.manifest.rev(ctx.changeset()[0]),
-                     node=hex(ctx.changeset()[0])))
+    args.update({'rev': repo.manifest.rev(ctx.changeset()[0]),
+                 'node': hex(ctx.changeset()[0])})
     return templ('manifest', **args)
 
 def shownode(repo, ctx, templ, **args):
