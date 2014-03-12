@@ -483,7 +483,6 @@ test when sorting a reversed collection in the same way it is
   1
   0
 
-
 test when sorting a reversed collection
 
   $ log 'sort(reverse(all()), rev)'
@@ -514,6 +513,20 @@ test sorting two sorted collections in different orders backwards
   8
   6
   2
+
+test substracting something from an addset
+
+  $ log '(outgoing() or removes(a)) - removes(a)'
+  8
+  9
+
+test intersecting something with an addset
+
+  $ log 'parents(outgoing() or removes(a))'
+  1
+  4
+  5
+  8
 
 check that conversion to _missingancestors works
   $ try --optimize '::3 - ::1'
