@@ -5,7 +5,7 @@ def check(a, b):
         print (a, b)
 
 def cert(cn):
-    return dict(subject=((('commonName', cn),),))
+    return {'subject': ((('commonName', cn),),)}
 
 from mercurial.sslutil import _verifycert
 
