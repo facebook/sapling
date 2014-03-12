@@ -1018,26 +1018,26 @@ def graph(web, req, tmpl):
                              [cgi.escape(x) for x in ctx.tags()],
                              [cgi.escape(x) for x in ctx.bookmarks()]))
             else:
-                edgedata = [dict(col=edge[0], nextcol=edge[1],
-                                 color=(edge[2] - 1) % 6 + 1,
-                                 width=edge[3], bcolor=edge[4])
+                edgedata = [{'col': edge[0], 'nextcol': edge[1],
+                             'color': (edge[2] - 1) % 6 + 1,
+                             'width': edge[3], 'bcolor': edge[4]}
                             for edge in edges]
 
                 data.append(
-                    dict(node=node,
-                         col=vtx[0],
-                         color=(vtx[1] - 1) % 6 + 1,
-                         edges=edgedata,
-                         row=row,
-                         nextrow=row + 1,
-                         desc=desc,
-                         user=user,
-                         age=age,
-                         bookmarks=webutil.nodebookmarksdict(
-                            web.repo, ctx.node()),
-                         branches=webutil.nodebranchdict(web.repo, ctx),
-                         inbranch=webutil.nodeinbranch(web.repo, ctx),
-                         tags=webutil.nodetagsdict(web.repo, ctx.node())))
+                    {'node': node,
+                     'col': vtx[0],
+                     'color': (vtx[1] - 1) % 6 + 1,
+                     'edges': edgedata,
+                     'row': row,
+                     'nextrow': row + 1,
+                     'desc': desc,
+                     'user': user,
+                     'age': age,
+                     'bookmarks': webutil.nodebookmarksdict(
+                         web.repo, ctx.node()),
+                     'branches': webutil.nodebranchdict(web.repo, ctx),
+                     'inbranch': webutil.nodeinbranch(web.repo, ctx),
+                     'tags': webutil.nodetagsdict(web.repo, ctx.node())})
 
             row += 1
 
