@@ -417,7 +417,17 @@ def branches(repo, proto, nodes):
 
 wireprotocaps = ['lookup', 'changegroupsubset', 'branchmap', 'pushkey',
                  'known', 'getbundle', 'unbundlehash', 'batch']
-def capabilities(repo, proto):
+
+def _capabilities(repo, proto):
+    """return a list of capabilities for a repo
+
+    This function exists to allow extensions to easily wrap capabilities
+    computation
+
+    - returns a lists: easy to alter
+    - change done here will be propagated to both `capabilities` and `hello`
+      command without any other effort. without any other action needed.
+    """
     # copy to prevent modification of the global list
     caps = list(wireprotocaps)
     if _allowstream(repo.ui):
@@ -432,7 +442,12 @@ def capabilities(repo, proto):
             caps.append('streamreqs=%s' % ','.join(requiredformats))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     caps.append('httpheader=1024')
-    return ' '.join(caps)
+    return caps
+
+# If you are writting and extension and consider wrapping this function. Wrap
+# `_capabilities` instead.
+def capabilities(repo, proto):
+    return ' '.join(_capabilities(repo, proto))
 
 def changegroup(repo, proto, roots):
     nodes = decodelist(roots)
