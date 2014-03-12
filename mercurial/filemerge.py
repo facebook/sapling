@@ -248,20 +248,21 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
         tool, toolpath, binary, symlink = toolconf
         a, b, c, back = files
         out = ""
-        env = dict(HG_FILE=fcd.path(),
-                   HG_MY_NODE=short(mynode),
-                   HG_OTHER_NODE=str(fco.changectx()),
-                   HG_BASE_NODE=str(fca.changectx()),
-                   HG_MY_ISLINK='l' in fcd.flags(),
-                   HG_OTHER_ISLINK='l' in fco.flags(),
-                   HG_BASE_ISLINK='l' in fca.flags())
+        env = {'HG_FILE': fcd.path(),
+               'HG_MY_NODE': short(mynode),
+               'HG_OTHER_NODE': str(fco.changectx()),
+               'HG_BASE_NODE': str(fca.changectx()),
+               'HG_MY_ISLINK': 'l' in fcd.flags(),
+               'HG_OTHER_ISLINK': 'l' in fco.flags(),
+               'HG_BASE_ISLINK': 'l' in fca.flags(),
+               }
 
         ui = repo.ui
 
         args = _toolstr(ui, tool, "args", '$local $base $other')
         if "$output" in args:
             out, a = a, back # read input from backup, write to original
-        replace = dict(local=a, base=b, other=c, output=out)
+        replace = {'local': a, 'base': b, 'other': c, 'output': out}
         args = util.interpolate(r'\$', replace, args,
                                 lambda s: util.shellquote(util.localpath(s)))
         r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env,
