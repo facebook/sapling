@@ -2409,6 +2409,19 @@ class _addset(object):
     def set(self):
         return self
 
+    def sort(self, reverse=False):
+        """Sort the added set
+
+        For this we use the cached list with all the generated values and if we
+        know they are ascending or descending we can sort them in a smart way.
+        """
+        if self._ascending is None:
+            self._list.sort(reverse=reverse)
+            self._ascending = not reverse
+        else:
+            if bool(self._ascending) == bool(reverse):
+                self.reverse()
+
     def reverse(self):
         self._list.reverse()
         if self._ascending is not None:
