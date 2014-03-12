@@ -2254,6 +2254,37 @@ class baseset(list):
         This is part of the mandatory API for smartset."""
         return lazyset(self, condition)
 
+class _orderedsetmixin(object):
+    """Mixin class with utility methods for smartsets
+
+    This should be extended by smartsets which have the isascending(),
+    isdescending() and reverse() methods"""
+
+    def _first(self):
+        """return the first revision in the set"""
+        for r in self:
+            return r
+        return None
+
+    def _last(self):
+        """return the last revision in the set"""
+        self.reverse()
+        m = self._first()
+        self.reverse()
+        return m
+
+    def min(self):
+        """return the smallest element in the set"""
+        if self.isascending():
+            return self._first()
+        return self._last()
+
+    def max(self):
+        """return the largest element in the set"""
+        if self.isascending():
+            return self._last()
+        return self._first()
+
 class lazyset(object):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
