@@ -18,7 +18,7 @@ class clientpeer(wireproto.wirepeer):
     @wireproto.batchable
     def greet(self, name):
         f = wireproto.future()
-        yield wireproto.todict(name=mangle(name)), f
+        yield {'name': mangle(name)}, f
         yield unmangle(f.value)
 
 class serverrepo(object):
