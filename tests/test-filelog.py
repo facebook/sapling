@@ -13,7 +13,7 @@ fl = repo.file('foobar')
 def addrev(text, renamed=False):
     if renamed:
         # data doesn't matter. Just make sure filelog.renamed() returns True
-        meta = dict(copyrev=hex(nullid), copy='bar')
+        meta = {'copyrev': hex(nullid), 'copy': 'bar'}
     else:
         meta = {}
 
