@@ -184,6 +184,23 @@ def wraprepo(repo):
                 raise Exception("unable to obtain %s lock" % escapedname)
             self.heldlocks.add(name)
 
+        def hassqllock(self, name):
+            if not name in self.heldlocks:
+                return False
+
+            escapedname = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
+            self.sqlconn.query("SELECT IS_USED_LOCK('%s')" % (escapedname,))
+            lockheldby = self.sqlconn.store_result().fetch_row()[0][0]
+            if lockheldby == None:
+                raise Exception("unable to check %s lock" % escapedname)
+
+            self.sqlconn.query("SELECT CONNECTION_ID()")
+            myconnectid = self.sqlconn.store_result().fetch_row()[0][0]
+            if myconnectid == None:
+                raise Exception("unable to read connection id")
+
+            return lockheldby == myconnectid
+
         def sqlunlock(self, name):
             escapedname = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
             self.sqlconn.query("SELECT RELEASE_LOCK('%s')" % (escapedname,))
@@ -431,16 +448,21 @@ def wraprepo(repo):
                             datasize = 0
 
                 cursor.execute("""DELETE FROM revision_references WHERE repo = %s
-                               AND namespace IN ('heads', 'tip')""", (reponame))
+                               AND namespace = 'heads'""", (reponame,))
 
                 for head in self.heads():
                     cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
                                    VALUES(%s, 'heads', %s)""",
                                    (reponame, hex(head)))
 
-                cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
-                               VALUES(%s, 'tip', %s)""",
-                               (reponame, len(self) - 1))
+                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                               VALUES(%s, 'tip', 'tip', %s) ON DUPLICATE KEY UPDATE value=%s""",
+                               (reponame, len(self) - 1, len(self) - 1))
+
+                # Just to be super sure, check the write lock before doing the final commit
+                if not self.hassqllock(writelock):
+                    raise Exception("attempting to write to sql without holding %s (precommit)"
+                        % writelock)
 
                 self.sqlconn.commit()
             except:
@@ -455,6 +477,11 @@ def wraprepo(repo):
             """
             reponame = self.sqlreponame
             cursor = self.sqlcursor
+
+            # Ensure we hold the write lock
+            if not self.hassqllock(writelock):
+                raise Exception("attempting to write to sql without holding %s (prevalidate)"
+                    % writelock)
 
             # Validate that we are appending to the correct linkrev
             cursor.execute("""SELECT value FROM revision_references WHERE repo = %s AND
@@ -893,7 +920,7 @@ def bookmarkwrite(orig, self):
 
     if not repo.sqlconn:
         raise util.Abort("attempted bookmark write without sql connection")
-    elif not writelock in repo.heldlocks:
+    elif not repo.hassqllock(writelock):
         raise util.Abort("attempted bookmark write without write lock")
 
     try:
