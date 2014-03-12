@@ -496,7 +496,7 @@ def revrange(repo, revs):
                 start, end = spec.split(_revrangesep, 1)
                 start = revfix(repo, start, 0)
                 end = revfix(repo, end, len(repo) - 1)
-                if end == nullrev and start <= 0:
+                if end == nullrev and start < 0:
                     start = nullrev
                 rangeiter = repo.changelog.revs(start, end)
                 if not seen and not l:

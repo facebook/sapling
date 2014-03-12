@@ -2111,6 +2111,11 @@ The almost-empty template should do something sane too ...
 issue3772
 
   $ hg log -G -r :null
+  o  changeset:   0:f8035bb17114
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add a
+  |
   o  changeset:   -1:000000000000
      user:
      date:        Thu Jan 01 00:00:00 1970 +0000
