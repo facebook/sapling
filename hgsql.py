@@ -45,8 +45,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-bookmarklock = 'bookmarks_lock'
-commitlock = 'commit_lock'
+writelock = 'write_lock'
 
 disableinitialsync = False
 
@@ -96,26 +95,25 @@ def reposetup(ui, repo):
 def unbundle(orig, *args, **kwargs):
     repo = args[0]
     if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, [commitlock], *args, **kwargs)
+        return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def pull(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, [commitlock, bookmarklock],
-            *args, **kwargs)
+        return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def updatefromremote(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, [bookmarklock], *args, **kwargs)
+        return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
-def executewithsql(repo, action, locks=[], *args, **kwargs):
+def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
     If a locks are specified, those locks are held for the duration of the
     action.
@@ -128,24 +126,23 @@ def executewithsql(repo, action, locks=[], *args, **kwargs):
         repo.sqlconnect()
         connected = True
 
-    locked = []
-    for lock in locks:
-        if not lock in repo.heldlocks:
-            repo.sqllock(lock)
-            locked.append(lock)
+    locked = False
+    if sqllock and not writelock in repo.heldlocks:
+            repo.sqllock(writelock)
+            locked = True
 
     result = None
     success = False
     try:
         if connected:
-            repo.syncdb(readonly=not locks)
+            repo.syncdb(readonly=not sqllock)
         result = action(*args, **kwargs)
         success = True
     finally:
         try:
             # Release the locks in the reverse order they were obtained
-            for lock in reverse(locked):
-                repo.sqlunlock(lock)
+            if locked:
+                repo.sqlunlock(writelock)
             if connected:
                 repo.sqlclose()
         except _mysql_exceptions.ProgrammingError, ex:
@@ -374,14 +371,13 @@ def wraprepo(repo):
             def _addchangegroup():
                 return super(sqllocalrepo, self).addchangegroup(source, srctype, url, emptyok)
 
-            return executewithsql(self, _addchangegroup, [commitlock])
+            return executewithsql(self, _addchangegroup, True)
 
         def pushkey(self, namespace, key, old, new):
             def _pushkey():
                 return super(sqllocalrepo, self).pushkey(namespace, key, old, new)
 
-            lock = "%s_lock" % namespace
-            return executewithsql(repo, _pushkey, [lock])
+            return executewithsql(self, _pushkey, namespace == 'bookmarks')
 
         def committodb(self):
             """Commits all pending revisions to the database
@@ -886,7 +882,7 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
         return orig(ui, repo, *names, **opts)
 
     if write:
-        return executewithsql(repo, _bookmarkcommand, [bookmarklock])
+        return executewithsql(repo, _bookmarkcommand, True)
     else:
         return _bookmarkcommand()
 
@@ -897,8 +893,8 @@ def bookmarkwrite(orig, self):
 
     if not repo.sqlconn:
         raise util.Abort("attempted bookmark write without sql connection")
-    elif not bookmarklock in repo.heldlocks:
-        raise util.Abort("attempted bookmark write without bookmark lock")
+    elif not writelock in repo.heldlocks:
+        raise util.Abort("attempted bookmark write without write lock")
 
     try:
         cursor = repo.sqlcursor
@@ -920,8 +916,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
         def commitpushkey():
             return orig(repo, proto, namespace, key, old, new)
 
-        lock = "%s_lock" % namespace
-        return executewithsql(repo, commitpushkey, [lock])
+        return executewithsql(repo, commitpushkey, namespace == 'bookmarks')
     else:
         return orig(repo, proto, namespace, key, old, new)
 
