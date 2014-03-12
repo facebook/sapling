@@ -1198,11 +1198,11 @@ def matchdate(date):
     """
 
     def lower(date):
-        d = dict(mb="1", d="1")
+        d = {'mb': "1", 'd': "1"}
         return parsedate(date, extendeddateformats, d)[0]
 
     def upper(date):
-        d = dict(mb="12", HI="23", M="59", S="59")
+        d = {'mb': "12", 'HI': "23", 'M': "59", 'S': "59"}
         for days in ("31", "30", "29"):
             try:
                 d["d"] = days
