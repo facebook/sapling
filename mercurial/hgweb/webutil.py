@@ -146,7 +146,7 @@ def children(ctx, hide=None):
 def renamelink(fctx):
     r = fctx.renamed()
     if r:
-        return [dict(file=r[0], node=hex(r[1]))]
+        return [{'file': r[0], 'node': hex(r[1])}]
     return []
 
 def nodetagsdict(repo, node):
