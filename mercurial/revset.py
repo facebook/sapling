@@ -2204,6 +2204,12 @@ class baseset(list):
         l = [r for r in x if r not in s]
         return baseset(list(self) + l)
 
+    def isascending(self):
+        return False
+
+    def isdescending(self):
+        return False
+
     def filter(self, l):
         return lazyset(self, l)
 
@@ -2270,6 +2276,12 @@ class lazyset(object):
     def set(self):
         return set([r for r in self])
 
+    def isascending(self):
+        return False
+
+    def isdescending(self):
+        return False
+
     def filter(self, l):
         return lazyset(self, l)
 
@@ -2308,6 +2320,12 @@ class orderedlazyset(lazyset):
             if not self._ascending:
                 self._subset.sort(reverse=reverse)
         self._ascending = not reverse
+
+    def isascending(self):
+        return self._ascending
+
+    def isdescending(self):
+        return not self._ascending
 
     def reverse(self):
         self._subset.reverse()
@@ -2620,6 +2638,12 @@ class spanset(object):
 
     def set(self):
         return self
+
+    def isascending(self):
+        return self._start < self._end
+
+    def isdescending(self):
+        return self._start > self._end
 
     def filter(self, l):
         if self._start <= self._end:
