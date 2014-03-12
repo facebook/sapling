@@ -2283,7 +2283,7 @@ class lazyset(object):
         return lazyset(self, lambda r: r not in x)
 
     def __add__(self, x):
-        return lazyset(_addset(self, x))
+        return _addset(self, x)
 
     def __nonzero__(self):
         for r in self:
@@ -2346,6 +2346,14 @@ class orderedlazyset(lazyset):
     def __sub__(self, x):
         return orderedlazyset(self, lambda r: r not in x,
                 ascending=self._ascending)
+
+    def __add__(self, x):
+        kwargs = {}
+        if self.isascending() and x.isascending():
+            kwargs['ascending'] = True
+        if self.isdescending() and x.isdescending():
+            kwargs['ascending'] = False
+        return _addset(self, x, **kwargs)
 
     def sort(self, reverse=False):
         if reverse:
@@ -2694,7 +2702,12 @@ class spanset(object):
             return orderedlazyset(self, lambda r: r not in x, ascending=False)
 
     def __add__(self, x):
-        return lazyset(_addset(self, x))
+        kwargs = {}
+        if self.isascending() and x.isascending():
+            kwargs['ascending'] = True
+        if self.isdescending() and x.isdescending():
+            kwargs['ascending'] = False
+        return _addset(self, x, **kwargs)
 
     def __len__(self):
         if not self._hiddenrevs:
