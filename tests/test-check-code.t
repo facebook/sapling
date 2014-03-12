@@ -123,6 +123,7 @@
   $ cat > python3-compat.py << EOF
   > foo <> bar
   > reduce(lambda a, b: a + b, [1, 2, 3, 4])
+  > dict(key=value)
   > EOF
   $ "$check_code" python3-compat.py
   python3-compat.py:1:
@@ -131,6 +132,9 @@
   python3-compat.py:2:
    > reduce(lambda a, b: a + b, [1, 2, 3, 4])
    reduce is not available in Python 3+
+  python3-compat.py:3:
+   > dict(key=value)
+   dict() is different in Py2 and 3 and is slower than {}
   [1]
 
   $ cat > is-op.py <<EOF
