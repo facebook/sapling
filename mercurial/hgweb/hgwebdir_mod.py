@@ -308,17 +308,17 @@ class hgwebdir(object):
 
                     # add '/' to the name to make it obvious that
                     # the entry is a directory, not a regular repository
-                    row = dict(contact="",
-                               contact_sort="",
-                               name=name + '/',
-                               name_sort=name,
-                               url=url,
-                               description="",
-                               description_sort="",
-                               lastchange=d,
-                               lastchange_sort=d[1]-d[0],
-                               archives=[],
-                               isdirectory=True)
+                    row = {'contact': "",
+                           'contact_sort': "",
+                           'name': name + '/',
+                           'name_sort': name,
+                           'url': url,
+                           'description': "",
+                           'description_sort': "",
+                           'lastchange': d,
+                           'lastchange_sort': d[1]-d[0],
+                           'archives': [],
+                           'isdirectory': True}
 
                     seendirs.add(name)
                     yield row
@@ -356,17 +356,18 @@ class hgwebdir(object):
                 contact = get_contact(get)
                 description = get("web", "description", "")
                 name = get("web", "name", name)
-                row = dict(contact=contact or "unknown",
-                           contact_sort=contact.upper() or "unknown",
-                           name=name,
-                           name_sort=name,
-                           url=url,
-                           description=description or "unknown",
-                           description_sort=description.upper() or "unknown",
-                           lastchange=d,
-                           lastchange_sort=d[1]-d[0],
-                           archives=archivelist(u, "tip", url),
-                           isdirectory=None)
+                row = {'contact': contact or "unknown",
+                       'contact_sort': contact.upper() or "unknown",
+                       'name': name,
+                       'name_sort': name,
+                       'url': url,
+                       'description': description or "unknown",
+                       'description_sort': description.upper() or "unknown",
+                       'lastchange': d,
+                       'lastchange_sort': d[1]-d[0],
+                       'archives': archivelist(u, "tip", url),
+                       'isdirectory': None,
+                       }
 
                 seenrepos.add(name)
                 yield row
