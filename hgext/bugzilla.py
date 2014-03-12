@@ -620,7 +620,7 @@ class bzxmlrpc(bzaccess):
         ver = self.bzproxy.Bugzilla.version()['version'].split('.')
         self.bzvermajor = int(ver[0])
         self.bzverminor = int(ver[1])
-        self.bzproxy.User.login(dict(login=user, password=passwd))
+        self.bzproxy.User.login({'login': user, 'password': passwd})
 
     def transport(self, uri):
         if urlparse.urlparse(uri, "http")[0] == "https":
@@ -630,13 +630,15 @@ class bzxmlrpc(bzaccess):
 
     def get_bug_comments(self, id):
         """Return a string with all comment text for a bug."""
-        c = self.bzproxy.Bug.comments(dict(ids=[id], include_fields=['text']))
+        c = self.bzproxy.Bug.comments({'ids': [id],
+                                       'include_fields': ['text']})
         return ''.join([t['text'] for t in c['bugs'][str(id)]['comments']])
 
     def filter_real_bug_ids(self, bugs):
-        probe = self.bzproxy.Bug.get(dict(ids=sorted(bugs.keys()),
-                                          include_fields=[],
-                                          permissive=True))
+        probe = self.bzproxy.Bug.get({'ids': sorted(bugs.keys()),
+                                      'include_fields': [],
+                                      'permissive': True,
+                                      })
         for badbug in probe['faults']:
             id = badbug['id']
             self.ui.status(_('bug %d does not exist\n') % id)
@@ -717,10 +719,10 @@ class bzxmlrpcemail(bzxmlrpc):
         than the subject line, and leave a blank line after it.
         '''
         user = self.map_committer(committer)
-        matches = self.bzproxy.User.get(dict(match=[user]))
+        matches = self.bzproxy.User.get({'match': [user]})
         if not matches['users']:
             user = self.ui.config('bugzilla', 'user', 'bugs')
-            matches = self.bzproxy.User.get(dict(match=[user]))
+            matches = self.bzproxy.User.get({'match': [user]})
             if not matches['users']:
                 raise util.Abort(_("default bugzilla user %s email not found") %
                                  user)
