@@ -73,7 +73,7 @@ def findblocks(text):
         if lines:
             indent = min((len(l) - len(l.lstrip())) for l in lines)
             lines = [l[indent:] for l in lines]
-            blocks.append(dict(indent=indent, lines=lines))
+            blocks.append({'indent': indent, 'lines': lines})
     return blocks
 
 def findliteralblocks(blocks):
@@ -174,8 +174,8 @@ def splitparagraphs(blocks):
                     items = []
                     for j, line in enumerate(lines):
                         if match(lines, j, itemre, singleline):
-                            items.append(dict(type=type, lines=[],
-                                              indent=blocks[i]['indent']))
+                            items.append({'type': type, 'lines': [],
+                                          'indent': blocks[i]['indent']})
                         items[-1]['lines'].append(line)
                     blocks[i:i + 1] = items
                     break
@@ -385,7 +385,7 @@ def addmargins(blocks):
             # no lines in previous block, do not separate
             i += 1
         else:
-            blocks.insert(i, dict(lines=[''], indent=0, type='margin'))
+            blocks.insert(i, {'lines': [''], 'indent': 0, 'type': 'margin'})
             i += 2
     return blocks
 
