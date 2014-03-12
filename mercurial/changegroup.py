@@ -173,7 +173,7 @@ class unbundle10(object):
         if not l:
             return {}
         fname = readexactly(self._stream, l)
-        return dict(filename=fname)
+        return {'filename': fname}
 
     def _deltaheader(self, headertuple, prevnode):
         node, p1, p2, cs = headertuple
@@ -191,8 +191,8 @@ class unbundle10(object):
         header = struct.unpack(self.deltaheader, headerdata)
         delta = readexactly(self._stream, l - self.deltaheadersize)
         node, p1, p2, deltabase, cs = self._deltaheader(header, prevnode)
-        return dict(node=node, p1=p1, p2=p2, cs=cs,
-                    deltabase=deltabase, delta=delta)
+        return {'node': node, 'p1': p1, 'p2': p2, 'cs': cs,
+                'deltabase': deltabase, 'delta': delta}
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
