@@ -2325,7 +2325,7 @@ class addset(object):
                 for r in self._r2:
                     if r not in s:
                         yield r
-            self._iter = generatorset(gen())
+            self._iter = _generatorset(gen())
 
         return self._iter
 
@@ -2336,11 +2336,16 @@ class addset(object):
     def __contains__(self, x):
         return x in self._r1 or x in self._r2
 
-class generatorset(object):
-    """Wrapper structure for generators that provides lazy membership and can
+class _generatorset(object):
+    """Wrap a generator for lazy iteration
+
+    Wrapper structure for generators that provides lazy membership and can
     be iterated more than once.
     When asked for membership it generates values until either it finds the
     requested one or has gone through all the elements in the generator
+
+    This class does not duck-type baseset and it's only supposed to be used
+    internally
     """
     def __init__(self, gen):
         self._gen = gen
@@ -2386,8 +2391,8 @@ class generatorset(object):
                 continue
         self._genlist.sort(reverse=reverse)
 
-class ascgeneratorset(generatorset):
-    """ Same structure as generatorset but stops iterating after it goes past
+class ascgeneratorset(_generatorset):
+    """ Same structure as _generatorset but stops iterating after it goes past
     the value when asked for membership and the element is not contained
     """
     def __contains__(self, x):
@@ -2403,8 +2408,8 @@ class ascgeneratorset(generatorset):
         self._cache[x] = False
         return False
 
-class descgeneratorset(generatorset):
-    """ Same structure as generatorset but stops iterating after it goes past
+class descgeneratorset(_generatorset):
+    """ Same structure as _generatorset but stops iterating after it goes past
     the value when asked for membership and the element is not contained
     """
     def __contains__(self, x):
