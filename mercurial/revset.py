@@ -2340,14 +2340,60 @@ class _addset(object):
         return self._genlist
 
     def _iterator(self):
+        """Iterate over both collections without repeating elements
+
+        If the ascending attribute is not set, iterate over the first one and
+        then over the second one checking for membership on the first one so we
+        dont yield any duplicates.
+
+        If the ascending attribute is set, iterate over both collections at the
+        same time, yielding only one value at a time in the given order.
+        """
         if not self._iter:
             def gen():
-                for r in self._r1:
-                    yield r
-                s = self._r1.set()
-                for r in self._r2:
-                    if r not in s:
+                if self._ascending is None:
+                    for r in self._r1:
                         yield r
+                    s = self._r1.set()
+                    for r in self._r2:
+                        if r not in s:
+                            yield r
+                else:
+                    iter1 = iter(self._r1)
+                    iter2 = iter(self._r2)
+
+                    val1 = None
+                    val2 = None
+
+                    choice = max
+                    if self._ascending:
+                        choice = min
+                    try:
+                        # Consume both iterators in an ordered way until one is
+                        # empty
+                        while True:
+                            if val1 is None:
+                                val1 = iter1.next()
+                            if val2 is None:
+                                val2 = iter2.next()
+                            next = choice(val1, val2)
+                            yield next
+                            if val1 == next:
+                                val1 = None
+                            if val2 == next:
+                                val2 = None
+                    except StopIteration:
+                        # Flush any remaining values and consume the other one
+                        it = iter2
+                        if val1 is not None:
+                            yield val1
+                            it = iter1
+                        elif val2 is not None:
+                            # might have been equality and both are empty
+                            yield val2
+                        for val in it:
+                            yield val
+
             self._iter = _generatorset(gen())
 
         return self._iter
