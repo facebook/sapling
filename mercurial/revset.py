@@ -70,7 +70,7 @@ def _revdescendants(repo, revs, followfirst):
                         yield i
                         break
 
-    return ascgeneratorset(iterate())
+    return _ascgeneratorset(iterate())
 
 def _revsbetween(repo, roots, heads):
     """Return all paths between roots and heads, inclusive of both endpoint
@@ -2391,9 +2391,14 @@ class _generatorset(object):
                 continue
         self._genlist.sort(reverse=reverse)
 
-class ascgeneratorset(_generatorset):
-    """ Same structure as _generatorset but stops iterating after it goes past
+class _ascgeneratorset(_generatorset):
+    """Wrap a generator of ascending elements for lazy iteration
+
+    Same structure as _generatorset but stops iterating after it goes past
     the value when asked for membership and the element is not contained
+
+    This class does not duck-type baseset and it's only supposed to be used
+    internally
     """
     def __contains__(self, x):
         if x in self._cache:
