@@ -2692,7 +2692,7 @@ class _descgeneratorset(_generatorset):
         self._cache[x] = False
         return False
 
-class spanset(object):
+class spanset(_orderedsetmixin):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
 
