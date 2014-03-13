@@ -2367,7 +2367,7 @@ class lazyset(object):
     def filter(self, l):
         return lazyset(self, l)
 
-class orderedlazyset(lazyset):
+class orderedlazyset(_orderedsetmixin, lazyset):
     """Subclass of lazyset which subset can be ordered either ascending or
     descendingly
     """
