@@ -46,7 +46,7 @@ def _revancestors(repo, revs, followfirst):
                     if parent != node.nullrev:
                         heapq.heappush(h, -parent)
 
-    return descgeneratorset(iterate())
+    return _descgeneratorset(iterate())
 
 def _revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
@@ -2413,9 +2413,14 @@ class _ascgeneratorset(_generatorset):
         self._cache[x] = False
         return False
 
-class descgeneratorset(_generatorset):
-    """ Same structure as _generatorset but stops iterating after it goes past
+class _descgeneratorset(_generatorset):
+    """Wrap a generator of descending elements for lazy iteration
+
+    Same structure as _generatorset but stops iterating after it goes past
     the value when asked for membership and the element is not contained
+
+    This class does not duck-type baseset and it's only supposed to be used
+    internally
     """
     def __contains__(self, x):
         if x in self._cache:
