@@ -1356,6 +1356,12 @@ test hg log on non-existent files and on directories
 issue3772: hg log -r :null showing revision 0 as well
 
   $ hg log -r :null
+  changeset:   0:65624cd9070a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a bunch of weird directories
+  
   changeset:   -1:000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -16,7 +16,7 @@ if os.name =='nt':
         logfn('# Killing daemon process %d' % pid)
         PROCESS_TERMINATE = 1
         PROCESS_QUERY_INFORMATION = 0x400
-        SYNCHRONIZE = 0x00100000L
+        SYNCHRONIZE = 0x00100000
         WAIT_OBJECT_0 = 0
         WAIT_TIMEOUT = 258
         handle = ctypes.windll.kernel32.OpenProcess(
@@ -89,4 +89,3 @@ def killdaemons(pidfile, tryhard=True, remove=False, logfn=None):
 if __name__ == '__main__':
     path, = sys.argv[1:]
     killdaemons(path)
-

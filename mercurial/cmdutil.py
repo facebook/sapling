@@ -1969,7 +1969,11 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
             ph = repo.ui.config('phases', 'new-commit', phases.draft)
             try:
-                repo.ui.setconfig('phases', 'new-commit', old.phase())
+                if opts.get('secret'):
+                    commitphase = 'secret'
+                else:
+                    commitphase = old.phase()
+                repo.ui.setconfig('phases', 'new-commit', commitphase)
                 newid = repo.commitctx(new)
             finally:
                 repo.ui.setconfig('phases', 'new-commit', ph)

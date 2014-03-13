@@ -24,7 +24,7 @@ else:
     def printf(*args, **kwargs):
         f = kwargs.get('file', sys.stdout)
         end = kwargs.get('end', '\n')
-        f.write(b' '.join(args) + end)
+        f.write(b(' ').join(args) + end)
 
 # Solaris Python packaging brain damage
 try:

@@ -1397,6 +1397,7 @@ def commit(ui, repo, *pats, **opts):
         if opts.get('force_editor'):
             e = cmdutil.commitforceeditor
 
+        # commitfunc is used only for temporary amend commit by cmdutil.amend
         def commitfunc(ui, repo, message, match, opts):
             editor = e
             # message contains text from -m or -l, if it's empty,
@@ -1404,18 +1405,12 @@ def commit(ui, repo, *pats, **opts):
             if not message:
                 message = old.description()
                 editor = cmdutil.commitforceeditor
-            try:
-                if opts.get('secret'):
-                    ui.setconfig('phases', 'new-commit', 'secret')
-
-                return repo.commit(message,
-                                   opts.get('user') or old.user(),
-                                   opts.get('date') or old.date(),
-                                   match,
-                                   editor=editor,
-                                   extra=extra)
-            finally:
-                ui.setconfig('phases', 'new-commit', oldcommitphase)
+            return repo.commit(message,
+                               opts.get('user') or old.user(),
+                               opts.get('date') or old.date(),
+                               match,
+                               editor=editor,
+                               extra=extra)
 
         current = repo._bookmarkcurrent
         marks = old.bookmarks()
