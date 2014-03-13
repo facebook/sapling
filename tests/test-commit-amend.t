@@ -765,3 +765,14 @@ This silliness fails:
   $ hg ci --close-branch -m'open and close'
   abort: can only close branch heads
   [255]
+
+Test that amend with --secret creates new secret changeset forcibly
+---------------------------------------------------------------------
+
+  $ hg phase '.^::.'
+  35: draft
+  36: draft
+  $ hg commit --amend --secret -m 'amend as secret' -q
+  $ hg phase '.^::.'
+  35: draft
+  38: secret
