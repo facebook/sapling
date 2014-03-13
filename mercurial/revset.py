@@ -2353,8 +2353,9 @@ class _addset(object):
         return self._iter
 
     def __iter__(self):
-        for r in self._iterator():
-            yield r
+        if self._genlist:
+            return iter(self._genlist)
+        return iter(self._iterator())
 
     def __contains__(self, x):
         return x in self._r1 or x in self._r2
