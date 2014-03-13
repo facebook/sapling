@@ -940,7 +940,7 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
-    return subset.filter(lambda r: r in hs)
+    return baseset(hs).filter(subset.__contains__)
 
 def heads(repo, subset, x):
     """``heads(set)``
