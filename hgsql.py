@@ -54,6 +54,7 @@ class CorruptionException(Exception):
 
 def uisetup(ui):
     wrapcommand(commands.table, 'pull', pull)
+    wrapcommand(commands.table, 'commit', commit)
 
     wrapfunction(wireproto, 'unbundle', unbundle)
     wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
@@ -100,6 +101,13 @@ def unbundle(orig, *args, **kwargs):
         return orig(*args, **kwargs)
 
 def pull(orig, *args, **kwargs):
+    repo = args[1]
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, True, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
+
+def commit(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
         return executewithsql(repo, orig, True, *args, **kwargs)
