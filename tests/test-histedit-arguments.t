@@ -72,6 +72,26 @@ Run on a revision not ancestors of the current working directory.
   [255]
   $ hg up --quiet
 
+
+Test that we pick the minimum of a revrange
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit '2::' --commands - << EOF
+  > pick eb57da33312f 2 three
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up --quiet
+
+  $ HGEDITOR=cat hg histedit 'tip:2' --commands - << EOF
+  > pick eb57da33312f 2 three
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up --quiet
+
 Run on a revision not descendants of the initial parent
 --------------------------------------------------------------------
 
@@ -198,3 +218,12 @@ short hash. This tests issue3893.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg update -q 2
+  $ echo x > x
+  $ hg add x
+  $ hg commit -m'x' x
+  created new head
+  $ hg histedit -r 'heads(all())'
+  abort: The specified revisions must have exactly one common root
+  [255]
