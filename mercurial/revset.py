@@ -540,19 +540,18 @@ def checkstatus(repo, subset, pat, field):
     return subset.filter(matches)
 
 def _children(repo, narrow, parentset):
+    cs = set()
     if not parentset:
-        return baseset([])
+        return baseset(cs)
     pr = repo.changelog.parentrevs
     minrev = min(parentset)
-
-    def matches(x):
-        if x <= minrev:
-            return False
-        for p in pr(x):
+    for r in narrow:
+        if r <= minrev:
+            continue
+        for p in pr(r):
             if p in parentset:
-                return True
-
-    return narrow.filter(matches)
+                cs.add(r)
+    return baseset(cs)
 
 def children(repo, subset, x):
     """``children(set)``
