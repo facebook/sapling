@@ -2236,7 +2236,7 @@ class lazyset(object):
         return lazyset(self, lambda r: r not in x)
 
     def __add__(self, x):
-        return lazyset(addset(self, x))
+        return lazyset(_addset(self, x))
 
     def __nonzero__(self):
         for r in self:
@@ -2307,9 +2307,14 @@ class orderedlazyset(lazyset):
         self._subset.reverse()
         self._ascending = not self._ascending
 
-class addset(object):
-    """Wrapper structure for lazily adding two structures without losing much
+class _addset(object):
+    """Represent the addition of two sets
+
+    Wrapper structure for lazily adding two structures without losing much
     performance on the __contains__ method
+
+    This class does not duck-type baseset and it's only supposed to be used
+    internally
     """
     def __init__(self, revs1, revs2):
         self._r1 = revs1
@@ -2495,7 +2500,7 @@ class spanset(object):
             return orderedlazyset(self, lambda r: r not in x, ascending=False)
 
     def __add__(self, x):
-        return lazyset(addset(self, x))
+        return lazyset(_addset(self, x))
 
     def __len__(self):
         if not self._hiddenrevs:
