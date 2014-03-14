@@ -2409,6 +2409,11 @@ class _addset(object):
     def set(self):
         return self
 
+    def reverse(self):
+        self._list.reverse()
+        if self._ascending is not None:
+            self._ascending = not self._ascending
+
 class _generatorset(object):
     """Wrap a generator for lazy iteration
 
