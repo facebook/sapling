@@ -2530,8 +2530,7 @@ class spanset(object):
         return l[x]
 
     def sort(self, reverse=False):
-        # Basic implementation to be changed in future patches.
-        if reverse:
+        if bool(reverse) != (self._start > self._end):
             self.reverse()
 
     def reverse(self):
