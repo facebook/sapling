@@ -2392,6 +2392,11 @@ class _addset(object):
             self._genlist = baseset(self._iterator())
         return self._genlist
 
+    def filter(self, condition):
+        if self._ascending is not None:
+            return orderedlazyset(self, condition, ascending=self._ascending)
+        return lazyset(self, condition)
+
     def _iterator(self):
         """Iterate over both collections without repeating elements
 
