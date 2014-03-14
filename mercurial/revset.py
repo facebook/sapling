@@ -2490,6 +2490,11 @@ class spanset(object):
         return self._contained(x) and not (self._hiddenrevs and rev in
                 self._hiddenrevs)
 
+    def __nonzero__(self):
+        for r in self:
+            return True
+        return False
+
     def __and__(self, x):
         if isinstance(x, baseset):
             x = x.set()
