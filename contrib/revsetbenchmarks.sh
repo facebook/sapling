@@ -4,8 +4,9 @@
 # defined by parameter. Checkout one by one and run perfrevset with every
 # revset in the list to benchmark its performance.
 #
-# First argument is a revset of mercurial own repo to runs against.
-# Second argument is the file from which the revset array will be taken 
+# - First argument is a revset of mercurial own repo to runs against.
+# - Second argument is the file from which the revset array will be taken
+#   If second argument is omitted read it from standard input
 #
 # You should run this from the root of your mercurial repository.
 #
@@ -17,7 +18,13 @@ PERF="./hg perfrevset"
 BASE_PERF="hg perfrevset"
 
 TARGETS=$1
-readarray REVSETS < $2
+shift
+# read from a file or from standard output
+if [ $# -ne 0 ]; then
+    readarray REVSETS < $1
+else
+    readarray REVSETS
+fi
 
 hg update --quiet
 
