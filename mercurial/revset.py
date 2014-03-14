@@ -2554,6 +2554,9 @@ class _generatorset(object):
     internally
     """
     def __init__(self, gen):
+        """
+        gen: a generator producing the values for the generatorset.
+        """
         self._gen = gen
         self._iter = iter(gen)
         self._cache = {}
@@ -2565,6 +2568,7 @@ class _generatorset(object):
         if x in self._cache:
             return self._cache[x]
 
+        # Use __iter__ which caches values and stores them into self._genlist
         for l in self:
             if l == x:
                 return True
@@ -2575,9 +2579,12 @@ class _generatorset(object):
 
     def __iter__(self):
         if self._iterated:
+            # At least a part of the list should be cached if iteration has
+            # started over the generatorset.
             for l in self._genlist:
                 yield l
         else:
+            # Starting iteration over the generatorset.
             self._iterated = True
 
         for item in self._gen:
@@ -2585,13 +2592,14 @@ class _generatorset(object):
             self._genlist.append(item)
             yield item
 
+        # Iteration over the generator has finished. Whole value list should be
+        # cached in self._genlist
         self._finished = True
 
     def set(self):
         return self
 
     def sort(self, reverse=False):
-        # Basic implementation to be changed in future patches
         if not self._finished:
             for i in self:
                 continue
