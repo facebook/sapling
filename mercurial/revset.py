@@ -2254,6 +2254,10 @@ class lazyset(object):
     revset
     """
     def __init__(self, subset, condition=lambda x: True):
+        """
+        condition: a function that decide whether a revision in the subset
+                   belongs to the revset or not.
+        """
         self._subset = subset
         self._condition = condition
         self._cache = {}
