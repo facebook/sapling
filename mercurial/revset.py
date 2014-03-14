@@ -2421,7 +2421,7 @@ class orderedlazyset(_orderedsetmixin, lazyset):
         self._subset.reverse()
         self._ascending = not self._ascending
 
-class _addset(object):
+class _addset(_orderedsetmixin):
     """Represent the addition of two sets
 
     Wrapper structure for lazily adding two structures without losing much
