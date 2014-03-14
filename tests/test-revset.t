@@ -460,6 +460,61 @@ ancestor can accept 0 or more arguments
   $ log 'tag(tip)'
   9
 
+test sort revset
+--------------------------------------------
+
+test when adding two unordered revsets
+
+  $ log 'sort(keyword(issue) or modifies(b))'
+  4
+  6
+
+test when sorting a reversed collection in the same way it is
+
+  $ log 'sort(reverse(all()), -rev)'
+  9
+  8
+  7
+  6
+  5
+  4
+  3
+  2
+  1
+  0
+
+
+test when sorting a reversed collection
+
+  $ log 'sort(reverse(all()), rev)'
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+
+
+test sorting two sorted collections in different orders
+
+  $ log 'sort(outgoing() or reverse(removes(a)), rev)'
+  2
+  6
+  8
+  9
+
+test sorting two sorted collections in different orders backwards
+
+  $ log 'sort(outgoing() or reverse(removes(a)), -rev)'
+  9
+  8
+  6
+  2
+
 check that conversion to _missingancestors works
   $ try --optimize '::3 - ::1'
   (minus
