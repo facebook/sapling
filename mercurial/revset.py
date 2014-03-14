@@ -1492,7 +1492,14 @@ def sort(repo, subset, x):
     l = []
     def invert(s):
         return "".join(chr(255 - ord(c)) for c in s)
-    for r in getset(repo, subset, s):
+    revs = getset(repo, subset, s)
+    if keys == ["rev"]:
+        revs.sort()
+        return revs
+    elif keys == ["-rev"]:
+        revs.sort(reverse=True)
+        return revs
+    for r in revs:
         c = repo[r]
         e = []
         for k in keys:
