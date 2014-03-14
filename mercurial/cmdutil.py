@@ -1646,7 +1646,7 @@ def getgraphlogrevs(repo, pats, opts):
         if follow and len(repo) > 0:
             revs = repo.revs('reverse(:.)')
         else:
-            revs = revset.baseset(repo.changelog)
+            revs = revset.spanset(repo)
             revs.reverse()
     if not revs:
         return [], None, None
