@@ -2413,6 +2413,12 @@ class _addset(object):
             if self._ascending:
                 self.reverse()
 
+    def __and__(self, other):
+        filterfunc = other.__contains__
+        if self._ascending is not None:
+            return orderedlazyset(self, filterfunc, ascending=self._ascending)
+        return lazyset(self, filterfunc)
+
     def _iterator(self):
         """Iterate over both collections without repeating elements
 
