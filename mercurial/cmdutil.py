@@ -1515,8 +1515,12 @@ def _makegraphlogrevset(repo, pats, opts, revs):
     follow = opts.get('follow') or opts.get('follow_first')
     followfirst = opts.get('follow_first') and 1 or 0
     # --follow with FILE behaviour depends on revs...
-    startrev = revs[0]
-    followdescendants = (len(revs) > 1 and revs[0] < revs[1]) and 1 or 0
+    it = iter(revs)
+    startrev = it.next()
+    try:
+        followdescendants = startrev < it.next()
+    except (StopIteration):
+        followdescendants = False
 
     # branch and only_branch are really aliases and must be handled at
     # the same time
