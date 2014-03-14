@@ -34,10 +34,10 @@ def dagwalker(repo, revs):
         return
 
     cl = repo.changelog
-    lowestrev = min(revs)
+    lowestrev = revs.min()
     gpcache = {}
 
-    knownrevs = set(revs)
+    knownrevs = revs.set()
     for rev in revs:
         ctx = repo[rev]
         parents = sorted(set([p.rev() for p in ctx.parents()
