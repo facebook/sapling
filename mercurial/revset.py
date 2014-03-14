@@ -2171,23 +2171,40 @@ def funcsused(tree):
 class baseset(list):
     """Basic data structure that represents a revset and contains the basic
     operation that it should be able to perform.
+
+    Every method in this class should be implemented by any smartset class.
     """
     def __init__(self, data):
         super(baseset, self).__init__(data)
         self._set = None
 
     def ascending(self):
+        """Sorts the set in ascending order (in place).
+
+        This is part of the mandatory API for smartset."""
         self.sort()
 
     def descending(self):
+        """Sorts the set in descending order (in place).
+
+        This is part of the mandatory API for smartset."""
         self.sort(reverse=True)
 
     def set(self):
+        """Returns a set or a smartset containing all the elements.
+
+        The returned structure should be the fastest option for membership
+        testing.
+
+        This is part of the mandatory API for smartset."""
         if not self._set:
             self._set = set(self)
         return self._set
 
     def __sub__(self, other):
+        """Returns a new object with the substraction of the two collections.
+
+        This is part of the mandatory API for smartset."""
         if isinstance(other, baseset):
             s = other.set()
         else:
@@ -2195,22 +2212,40 @@ class baseset(list):
         return baseset(self.set() - s)
 
     def __and__(self, other):
+        """Returns a new object with the intersection of the two collections.
 
+        This is part of the mandatory API for smartset."""
         if isinstance(other, baseset):
             other = other.set()
         return baseset([y for y in self if y in other])
+
     def __add__(self, other):
+        """Returns a new object with the union of the two collections.
+
+        This is part of the mandatory API for smartset."""
         s = self.set()
         l = [r for r in other if r not in s]
         return baseset(list(self) + l)
 
     def isascending(self):
+        """Returns True if the collection is ascending order, False if not.
+
+        This is part of the mandatory API for smartset."""
         return False
 
     def isdescending(self):
+        """Returns True if the collection is descending order, False if not.
+
+        This is part of the mandatory API for smartset."""
         return False
 
     def filter(self, condition):
+        """Returns this smartset filtered by condition as a new smartset.
+
+        `condition` is a callable which takes a revision number and returns a
+        boolean.
+
+        This is part of the mandatory API for smartset."""
         return lazyset(self, condition)
 
 class lazyset(object):
