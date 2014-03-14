@@ -62,13 +62,13 @@ def unfilteredmethod(orig):
         return orig(repo.unfiltered(), *args, **kwargs)
     return wrapper
 
-MODERNCAPS = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle'))
-LEGACYCAPS = MODERNCAPS.union(set(['changegroupsubset']))
+moderncaps = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle'))
+legacycaps = moderncaps.union(set(['changegroupsubset']))
 
 class localpeer(peer.peerrepository):
     '''peer for a local repo; reflects only the most recent API'''
 
-    def __init__(self, repo, caps=MODERNCAPS):
+    def __init__(self, repo, caps=moderncaps):
         peer.peerrepository.__init__(self)
         self._repo = repo.filtered('served')
         self.ui = repo.ui
@@ -131,7 +131,7 @@ class locallegacypeer(localpeer):
     restricted capabilities'''
 
     def __init__(self, repo):
-        localpeer.__init__(self, repo, caps=LEGACYCAPS)
+        localpeer.__init__(self, repo, caps=legacycaps)
 
     def branches(self, nodes):
         return self._repo.branches(nodes)
