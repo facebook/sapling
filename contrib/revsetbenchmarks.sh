@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# Measure the performance of a list of revsets on a range of revisions defined
-# by parameter. Checkout one by one and run perfrevset with every revset in the
-# list to benchmark its performance.
+# Measure the performance of a list of revsets against multiple revisions
+# defined by parameter. Checkout one by one and run perfrevset with every
+# revset in the list to benchmark its performance.
 #
-# First argument is the starting revision to measure performance
-# Second argument the ending revision to measure performance
-# Third argument is the file from which the revset array will be taken 
+# First argument is a revset of mercurial own repo to runs against.
+# Second argument is the file from which the revset array will be taken 
 #
 # You should run this from the root of your mercurial repository.
 #
@@ -17,9 +16,8 @@ HG="hg update"
 PERF="./hg perfrevset"
 BASE_PERF="hg perfrevset"
 
-START=$1
-END=$2
-readarray REVSETS < $3
+TARGETS=$1
+readarray REVSETS < $2
 
 hg update --quiet
 
@@ -50,7 +48,7 @@ echo
 echo
 
 # Benchmark revisions
-for i in $(seq $START $END);
+for i in $(hg log --template='{rev}\n' --rev $TARGETS);
 do
   echo "----------------------------"
   echo -n "Revision: "
