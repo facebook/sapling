@@ -2519,6 +2519,12 @@ class _addset(object):
             if bool(self._ascending) == bool(reverse):
                 self.reverse()
 
+    def isascending(self):
+        return self._ascending is not None and self._ascending
+
+    def isdescending(self):
+        return self._ascending is not None and not self._ascending
+
     def reverse(self):
         self._list.reverse()
         if self._ascending is not None:
