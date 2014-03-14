@@ -2161,8 +2161,8 @@ def debuginstall(ui):
         problems += 1
 
     # Python
-    ui.status(_("showing Python executable (%s)\n") % sys.executable)
-    ui.status(_("showing Python version (%s)\n")
+    ui.status(_("checking Python executable (%s)\n") % sys.executable)
+    ui.status(_("checking Python version (%s)\n")
               % ("%s.%s.%s" % sys.version_info[:3]))
     ui.status(_("checking Python lib (%s)...\n")
               % os.path.dirname(os.__file__))
