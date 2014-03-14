@@ -2640,8 +2640,22 @@ class _descgeneratorset(_generatorset):
 class spanset(object):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
+
+    Note that spanset(x, y) behave almost like xrange(x, y) except for two
+    notable points:
+    - when x < y it will be automatically descending,
+    - revision filtered with this repoview will be skipped.
+
     """
     def __init__(self, repo, start=0, end=None):
+        """
+        start: first revision included the set
+               (default to 0)
+        end:   first revision excluded (last+1)
+               (default to len(repo)
+
+        Spanset will be descending if `end` < `start`.
+        """
         self._start = start
         if end is not None:
             self._end = end
@@ -2729,6 +2743,7 @@ class spanset(object):
             self.reverse()
 
     def reverse(self):
+        # Just switch the _start and _end parameters
         if self._start <= self._end:
             self._start, self._end = self._end - 1, self._start - 1
         else:
