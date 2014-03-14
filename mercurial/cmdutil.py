@@ -1649,7 +1649,7 @@ def getgraphlogrevs(repo, pats, opts):
             revs = revset.spanset(repo)
             revs.reverse()
     if not revs:
-        return [], None, None
+        return revset.baseset(), None, None
     expr, filematcher = _makegraphlogrevset(repo, pats, opts, revs)
     if possiblyunsorted:
         revs.sort(reverse=True)
