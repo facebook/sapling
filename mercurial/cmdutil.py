@@ -1812,6 +1812,32 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(forget)
     return bad, forgot
 
+def cat(ui, repo, ctx, matcher, **opts):
+    err = 1
+
+    def write(path):
+        fp = makefileobj(repo, opts.get('output'), ctx.node(), pathname=path)
+        data = ctx[path].data()
+        if opts.get('decode'):
+            data = repo.wwritedata(path, data)
+        fp.write(data)
+        fp.close()
+
+    # Automation often uses hg cat on single files, so special case it
+    # for performance to avoid the cost of parsing the manifest.
+    if len(matcher.files()) == 1 and not matcher.anypats():
+        file = matcher.files()[0]
+        mf = repo.manifest
+        mfnode = ctx._changeset[0]
+        if mf.find(mfnode, file)[0]:
+            write(file)
+            return 0
+
+    for abs in ctx.walk(matcher):
+        write(abs)
+        err = 0
+    return err
+
 def duplicatecopies(repo, rev, fromrev):
     '''reproduce copies from fromrev to rev in the dirstate'''
     for dst, src in copies.pathcopies(repo[fromrev], repo[rev]).iteritems():

@@ -1172,32 +1172,9 @@ def cat(ui, repo, file1, *pats, **opts):
     Returns 0 on success.
     """
     ctx = scmutil.revsingle(repo, opts.get('rev'))
-    err = 1
     m = scmutil.match(ctx, (file1,) + pats, opts)
 
-    def write(path):
-        fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
-                                 pathname=path)
-        data = ctx[path].data()
-        if opts.get('decode'):
-            data = repo.wwritedata(path, data)
-        fp.write(data)
-        fp.close()
-
-    # Automation often uses hg cat on single files, so special case it
-    # for performance to avoid the cost of parsing the manifest.
-    if len(m.files()) == 1 and not m.anypats():
-        file = m.files()[0]
-        mf = repo.manifest
-        mfnode = ctx._changeset[0]
-        if mf.find(mfnode, file)[0]:
-            write(file)
-            return 0
-
-    for abs in ctx.walk(m):
-        write(abs)
-        err = 0
-    return err
+    return cmdutil.cat(ui, repo, ctx, m, **opts)
 
 @command('^clone',
     [('U', 'noupdate', None,
