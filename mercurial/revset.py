@@ -2174,7 +2174,7 @@ class baseset(list):
 
     Every method in this class should be implemented by any smartset class.
     """
-    def __init__(self, data):
+    def __init__(self, data=()):
         super(baseset, self).__init__(data)
         self._set = None
 
