@@ -2187,21 +2187,21 @@ class baseset(list):
             self._set = set(self)
         return self._set
 
-    def __sub__(self, x):
-        if isinstance(x, baseset):
-            s = x.set()
+    def __sub__(self, other):
+        if isinstance(other, baseset):
+            s = other.set()
         else:
-            s = set(x)
+            s = set(other)
         return baseset(self.set() - s)
 
-    def __and__(self, x):
-        if isinstance(x, baseset):
-            x = x.set()
-        return baseset([y for y in self if y in x])
+    def __and__(self, other):
 
-    def __add__(self, x):
+        if isinstance(other, baseset):
+            other = other.set()
+        return baseset([y for y in self if y in other])
+    def __add__(self, other):
         s = self.set()
-        l = [r for r in x if r not in s]
+        l = [r for r in other if r not in s]
         return baseset(list(self) + l)
 
     def isascending(self):
@@ -2210,8 +2210,8 @@ class baseset(list):
     def isdescending(self):
         return False
 
-    def filter(self, l):
-        return lazyset(self, l)
+    def filter(self, condition):
+        return lazyset(self, condition)
 
 class lazyset(object):
     """Duck type for baseset class which iterates lazily over the revisions in
