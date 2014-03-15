@@ -73,10 +73,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     if not os.path.exists(svnmetadir):
         os.makedirs(svnmetadir)
     uuidpath = os.path.join(svnmetadir, 'uuid')
-    uuid = read_if_exists(uuidpath)
+    uuid = util.load(uuidpath)
 
     subdirpath = os.path.join(svnmetadir, 'subdir')
-    subdir = read_if_exists(subdirpath)
+    subdir = util.load(subdirpath)
     svn = None
     if subdir is None:
         svn = svnrepo.svnremoterepo(ui, url).svn
@@ -228,7 +228,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if uuid != svn.uuid:
                     raise hgutil.Abort('remote svn repository identifier '
                                        'does not match')
-            write_if_needed(uuidpath, uuid)
+            util.dump(uuid, uuidpath)
 
         # don't reflect closed branches
         if (ctx.extra().get('close') and not ctx.files() or

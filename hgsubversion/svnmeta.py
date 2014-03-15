@@ -126,15 +126,13 @@ class SVNMeta(object):
     def _set_uuid(self, uuid):
         uuidfile = os.path.join(self.meta_data_dir, 'uuid')
         if os.path.isfile(uuidfile):
-            stored_uuid = open(uuidfile).read()
+            stored_uuid = util.load(uuidfile)
             assert stored_uuid
             if uuid and uuid != stored_uuid:
                 raise hgutil.Abort('unable to operate on unrelated repository')
             self.__uuid = uuid or stored_uuid
         elif uuid:
-            f = open(uuidfile, 'w')
-            f.write(uuid)
-            f.close()
+            util.dump(uuid, uuidfile)
             self.__uuid = uuid
         else:
             raise hgutil.Abort("hgsubversion metadata unavailable; "
