@@ -6,6 +6,7 @@ import os
 import stat
 
 import dulwich.objects as dulobjs
+from dulwich import diff_tree
 import mercurial.node
 import mercurial.context
 
@@ -71,6 +72,21 @@ class IncrementalChangesetExporter(object):
         # Mercurial file nodeid to Git blob SHA-1. Used to prevent redundant
         # blob calculation.
         self._blob_cache = {}
+
+    def _init_dirs(self, store, commit):
+        """Initialize self._dirs for a Git object store and commit."""
+        self._dirs = {}
+        if commit is None:
+            return
+        dirkind = stat.S_IFDIR
+        # depth-first order, chosen arbitrarily
+        todo = [('', store[commit.tree])]
+        while todo:
+            path, tree = todo.pop()
+            self._dirs[path] = tree
+            for entry in tree.iteritems():
+                if entry.mode == dirkind:
+                    todo.append((path + '/' + entry.path, store[entry.sha]))
 
     @property
     def root_tree_sha(self):
