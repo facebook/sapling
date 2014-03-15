@@ -1812,11 +1812,12 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(forget)
     return bad, forgot
 
-def cat(ui, repo, ctx, matcher, **opts):
+def cat(ui, repo, ctx, matcher, prefix, **opts):
     err = 1
 
     def write(path):
-        fp = makefileobj(repo, opts.get('output'), ctx.node(), pathname=path)
+        fp = makefileobj(repo, opts.get('output'), ctx.node(),
+                         pathname=os.path.join(prefix, path))
         data = ctx[path].data()
         if opts.get('decode'):
             data = repo.wwritedata(path, data)
@@ -1833,9 +1834,35 @@ def cat(ui, repo, ctx, matcher, **opts):
             write(file)
             return 0
 
+    # Don't warn about "missing" files that are really in subrepos
+    bad = matcher.bad
+
+    def badfn(path, msg):
+        for subpath in ctx.substate:
+            if path.startswith(subpath):
+                return
+        bad(path, msg)
+
+    matcher.bad = badfn
+
     for abs in ctx.walk(matcher):
         write(abs)
         err = 0
+
+    matcher.bad = bad
+
+    for subpath in sorted(ctx.substate):
+        sub = ctx.sub(subpath)
+        try:
+            submatch = matchmod.narrowmatcher(subpath, matcher)
+
+            if not sub.cat(ui, submatch, os.path.join(prefix, sub._path),
+                           **opts):
+                err = 0
+        except error.RepoLookupError:
+            ui.status(_("skipping missing subrepository: %s\n")
+                           % os.path.join(prefix, subpath))
+
     return err
 
 def duplicatecopies(repo, rev, fromrev):

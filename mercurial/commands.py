@@ -1174,7 +1174,7 @@ def cat(ui, repo, file1, *pats, **opts):
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     m = scmutil.match(ctx, (file1,) + pats, opts)
 
-    return cmdutil.cat(ui, repo, ctx, m, **opts)
+    return cmdutil.cat(ui, repo, ctx, m, '', **opts)
 
 @command('^clone',
     [('U', 'noupdate', None,

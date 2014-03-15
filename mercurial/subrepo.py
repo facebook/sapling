@@ -439,6 +439,9 @@ class abstractsubrepo(object):
     def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
         return []
 
+    def cat(self, ui, match, prefix, **opts):
+        return 1
+
     def status(self, rev2, **opts):
         return [], [], [], [], [], [], []
 
@@ -607,6 +610,12 @@ class hgsubrepo(abstractsubrepo):
     def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
         return cmdutil.add(ui, self._repo, match, dryrun, listsubrepos,
                            os.path.join(prefix, self._path), explicitonly)
+
+    @annotatesubrepoerror
+    def cat(self, ui, match, prefix, **opts):
+        rev = self._state[1]
+        ctx = self._repo[rev]
+        return cmdutil.cat(ui, self._repo, ctx, match, prefix, **opts)
 
     @annotatesubrepoerror
     def status(self, rev2, **opts):

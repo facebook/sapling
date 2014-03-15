@@ -792,6 +792,19 @@ Prepare a repo with subrepo
   $ echo test >> sub/repo/foo
   $ hg ci -mtest
   committing subrepository sub/repo (glob)
+  $ hg cat sub/repo/foo
+  test
+  test
+  $ mkdir -p tmp/sub/repo
+  $ hg cat -r 0 --output tmp/%p_p sub/repo/foo
+  $ cat tmp/sub/repo/foo_p
+  test
+  $ mv sub/repo sub_
+  $ hg cat sub/repo/baz
+  skipping missing subrepository: sub/repo
+  [1]
+  $ rm -rf sub/repo
+  $ mv sub_ sub/repo
   $ cd ..
 
 Create repo without default path, pull top repo, and see what happens on update
