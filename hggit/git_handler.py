@@ -363,8 +363,24 @@ class GitHandler(object):
 
         # By only exporting deltas, the assertion is that all previous objects
         # for all other changesets are already present in the Git repository.
-        # This assertion is necessary to prevent redundant work.
-        exporter = hg2git.IncrementalChangesetExporter(self.repo)
+        # This assertion is necessary to prevent redundant work. Here, nodes,
+        # and therefore export, is in topological order. By definition,
+        # export[0]'s parents must be present in Git, so we start the
+        # incremental exporter from there.
+        pctx = self.repo[export[0]].p1()
+        pnode = pctx.node()
+        if pnode == nullid:
+            gitcommit = None
+        else:
+            gitsha = self._map_hg[hex(pnode)]
+            try:
+                gitcommit = self.git[gitsha]
+            except KeyError:
+                raise hgutil.Abort(_('Parent SHA-1 not present in Git'
+                                     'repo: %s' % gitsha))
+
+        exporter = hg2git.IncrementalChangesetExporter(
+            self.repo, pctx, self.git.object_store, gitcommit)
 
         for i, rev in enumerate(export):
             self.ui.progress('exporting', i, total=total)

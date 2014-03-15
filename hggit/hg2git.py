@@ -7,8 +7,6 @@ import stat
 
 import dulwich.objects as dulobjs
 from dulwich import diff_tree
-import mercurial.node
-import mercurial.context
 
 import util
 
@@ -59,15 +57,22 @@ class IncrementalChangesetExporter(object):
     more efficient.
     """
 
-    def __init__(self, hg_repo):
-        """Create an instance against a mercurial.localrepo."""
+    def __init__(self, hg_repo, start_ctx, git_store, git_commit):
+        """Create an instance against a mercurial.localrepo.
+
+        start_ctx is the context for a Mercurial commit that has a Git
+        equivalent, passed in as git_commit. The incremental computation will be
+        started from this commit. git_store is the Git object store the commit
+        comes from. start_ctx can be repo[nullid], in which case git_commit
+        should be None.
+        """
         self._hg = hg_repo
 
         # Our current revision's context.
-        self._ctx = mercurial.context.changectx(hg_repo, 'null')
+        self._ctx = start_ctx
 
         # Path to dulwich.objects.Tree.
-        self._dirs = {}
+        self._init_dirs(git_store, git_commit)
 
         # Mercurial file nodeid to Git blob SHA-1. Used to prevent redundant
         # blob calculation.
