@@ -356,8 +356,10 @@ class GitHandler(object):
         nodes = [clnode(n) for n in self.repo]
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
-        if total:
-            self.ui.note(_("exporting hg objects to git\n"))
+        if not total:
+            return
+
+        self.ui.note(_("exporting hg objects to git\n"))
 
         # By only exporting deltas, the assertion is that all previous objects
         # for all other changesets are already present in the Git repository.
