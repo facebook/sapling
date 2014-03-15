@@ -3893,7 +3893,7 @@ proc mktaggo {} {
 }
 
 proc writecommit {} {
-    global rowmenuid wrcomtop commitinfo wrcomcmd
+    global rowmenuid wrcomtop commitinfo
 
     set top .writecommit
     set wrcomtop $top
@@ -3908,9 +3908,6 @@ proc writecommit {} {
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
     grid x $top.head -sticky w
-    ttk::label $top.clab -text "Command:"
-    ttk::entry $top.cmd -width 60 -textvariable wrcomcmd
-    grid $top.clab $top.cmd -sticky w -pady 10
     ttk::label $top.flab -text "Output file:"
     ttk::entry $top.fname -width 60
     $top.fname insert 0 [file normalize "commit-[string range $rowmenuid 0 6].diff"]
@@ -3931,9 +3928,8 @@ proc wrcomgo {} {
     global wrcomtop
 
     set id [$wrcomtop.sha1 get]
-    set cmd "echo $id | [$wrcomtop.cmd get]"
     set fname [$wrcomtop.fname get]
-    if {[catch {exec sh -c $cmd > $fname &} err]} {
+    if {[catch {exec $::env(HG) --config ui.report_untrusted=false export --git -o [string map {% %%} $fname] $id} err]} {
 	error_popup "Error writing commit: $err"
     }
     catch {destroy $wrcomtop}
@@ -4059,7 +4055,6 @@ proc getconfig {} {
 set datemode 0
 set boldnames 0
 set diffopts "-U 5 -p"
-set wrcomcmd "\"\$HG\" --config ui.report_untrusted=false debug-diff-tree --stdin -p --pretty"
 
 set mainfont {Helvetica 9}
 set curidfont {}
