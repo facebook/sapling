@@ -311,6 +311,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         # list of commands
         if name == "shortlist":
             header = _('basic commands:\n\n')
+        elif name == "debug":
+            header = _('debug commands (internal and unsupported):\n\n')
         else:
             header = _('list of commands:\n\n')
 
@@ -326,7 +328,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             if name == "shortlist" and not f.startswith("^"):
                 continue
             f = f.lstrip("^")
-            if not ui.debugflag and f.startswith("debug"):
+            if not ui.debugflag and f.startswith("debug") and name != "debug":
                 continue
             doc = e[0].__doc__
             if doc and 'DEPRECATED' in doc and not ui.verbose:

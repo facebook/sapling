@@ -782,6 +782,67 @@ Test that default list of commands omits extension commands
   use "hg -v help" to show builtin aliases and global options
 
 
+Test list of internal help commands
+
+  $ hg help debug
+  debug commands (internal and unsupported):
+  
+   debugancestor
+                 find the ancestor revision of two revisions in a given index
+   debugbuilddag
+                 builds a repo with a given DAG from scratch in the current
+                 empty repo
+   debugbundle   lists the contents of a bundle
+   debugcheckstate
+                 validate the correctness of the current dirstate
+   debugcommands
+                 list all available commands and options
+   debugcomplete
+                 returns the completion list associated with the given command
+   debugdag      format the changelog or an index DAG as a concise textual
+                 description
+   debugdata     dump the contents of a data file revision
+   debugdate     parse and display a date
+   debugdirstate
+                 show the contents of the current dirstate
+   debugdiscovery
+                 runs the changeset discovery protocol in isolation
+   debugfileset  parse and apply a fileset specification
+   debugfsinfo   show information detected about current filesystem
+   debuggetbundle
+                 retrieves a bundle from a repo
+   debugignore   display the combined ignore pattern
+   debugindex    dump the contents of an index file
+   debugindexdot
+                 dump an index DAG as a graphviz dot file
+   debuginstall  test Mercurial installation
+   debugknown    test whether node ids are known to a repo
+   debuglabelcomplete
+                 complete "labels" - tags, open branch names, bookmark names
+   debugobsolete
+                 create arbitrary obsolete marker
+   debugoptDEP   (no help text available)
+   debugpathcomplete
+                 complete part or all of a tracked path
+   debugpushkey  access the pushkey key/value protocol
+   debugpvec     (no help text available)
+   debugrebuilddirstate
+                 rebuild the dirstate as it would look like for the given
+                 revision
+   debugrename   dump rename information
+   debugrevlog   show data and statistics about a revlog
+   debugrevspec  parse and apply a revision specification
+   debugsetparents
+                 manually set the parents of the current working directory
+   debugsub      (no help text available)
+   debugsuccessorssets
+                 show set of successors for revision
+   debugwalk     show how files match on given patterns
+   debugwireargs
+                 (no help text available)
+  
+  use "hg -v help debug" to show builtin aliases and global options
+
 
 Test list of commands with command with no help text
 
