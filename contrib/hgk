@@ -208,7 +208,7 @@ proc getcommits {rargs} {
 	exit 1
     }
     set leftover {}
-    fconfigure $commfd -blocking 0 -translation lf
+    fconfigure $commfd -blocking 0 -translation lf -eofchar {}
     fileevent $commfd readable [list getcommitlines $commfd]
     $canv delete all
     $canv create text 3 3 -anchor nw -text "Reading commits..." \
