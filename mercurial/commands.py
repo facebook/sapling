@@ -4161,7 +4161,7 @@ def init(ui, dest=".", **opts):
     ] + walkopts,
     _('[OPTION]... [PATTERN]...'))
 def locate(ui, repo, *pats, **opts):
-    """locate files matching specific patterns
+    """locate files matching specific patterns (DEPRECATED)
 
     Print files under Mercurial control in the working directory whose
     names match the given patterns.
