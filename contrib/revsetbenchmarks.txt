@@ -1,8 +1,14 @@
+all()
 draft()
+::tip
 draft() and ::tip
+0::tip
 roots(0::tip)
 author(lmoscovicz)
+author(mpm)
 author(lmoscovicz) or author(mpm)
+tip:0
 max(tip:0)
 min(0:tip)
+0::
 min(0::)
