@@ -58,6 +58,8 @@ def dispatch(req):
         if len(inst.args) > 1:
             ferr.write(_("hg: parse error at %s: %s\n") %
                              (inst.args[1], inst.args[0]))
+            if (inst.args[0][0] == ' '):
+                ferr.write(_("unexpected leading whitespace\n"))
         else:
             ferr.write(_("hg: parse error: %s\n") % inst.args[0])
         return -1
@@ -155,6 +157,8 @@ def _runcatch(req):
         if len(inst.args) > 1:
             ui.warn(_("hg: parse error at %s: %s\n") %
                              (inst.args[1], inst.args[0]))
+            if (inst.args[0][0] == ' '):
+                ui.warn(_("unexpected leading whitespace\n"))
         else:
             ui.warn(_("hg: parse error: %s\n") % inst.args[0])
         return -1

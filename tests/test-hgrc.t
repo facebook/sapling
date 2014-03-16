@@ -43,6 +43,7 @@ issue1829: wrong indentation
   $ echo '  x = y' >> $HGRC
   $ hg version
   hg: parse error at $TESTTMP/hgrc:2:   x = y
+  unexpected leading whitespace
   [255]
 
   $ python -c "print '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n'" \
