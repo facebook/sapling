@@ -51,11 +51,11 @@ class SVNMeta(object):
                                  defaulthost=author_host)
         if authors: self.authors.load(authors)
 
-        self.branchmap = maps.BranchMap(self.ui, self.branchmapfile)
+        self.branchmap = maps.BranchMap(self.ui, self.branchmap_file)
         if branchmap:
             self.branchmap.load(branchmap)
 
-        self.tagmap = maps.TagMap(self.ui, self.tagmapfile)
+        self.tagmap = maps.TagMap(self.ui, self.tagmap_file)
         if tagmap:
             self.tagmap.load(tagmap)
 
@@ -159,7 +159,7 @@ class SVNMeta(object):
         return os.path.join(self.metapath, 'filemap')
 
     @property
-    def branchmapfile(self):
+    def branchmap_file(self):
         return os.path.join(self.metapath, 'branchmap')
 
     @property
@@ -174,7 +174,7 @@ class SVNMeta(object):
         return self._tags
 
     @property
-    def tagmapfile(self):
+    def tagmap_file(self):
         # called tag-renames for backwards compatibility
         return os.path.join(self.metapath, 'tag-renames')
 
