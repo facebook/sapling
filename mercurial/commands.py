@@ -1436,11 +1436,14 @@ def commit(ui, repo, *pats, **opts):
             try:
                 if opts.get('secret'):
                     ui.setconfig('phases', 'new-commit', 'secret')
+                    # Propagate to subrepos
+                    repo.baseui.setconfig('phases', 'new-commit', 'secret')
 
                 return repo.commit(message, opts.get('user'), opts.get('date'),
                                    match, editor=e, extra=extra)
             finally:
                 ui.setconfig('phases', 'new-commit', oldcommitphase)
+                repo.baseui.setconfig('phases', 'new-commit', oldcommitphase)
 
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
