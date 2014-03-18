@@ -21,7 +21,9 @@ Create an extension to test bundle2 API
   >     """write a bundle2 container on standard ouput"""
   >     bundler = bundle2.bundle20()
   >     for p in opts['param']:
-  >         bundler.addparam(p)
+  >         p = p.split('=', 1)
+  >         bundler.addparam(*p)
+  > 
   >     for chunk in bundler.getchunks():
   >         ui.write(chunk)
   > 
@@ -109,4 +111,12 @@ Test unbundling
   - caution
   - meal
   parts count:   0
+
+advisory parameters, with value
+-------------------------------
+
+Test generation
+
+  $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants'
+  HG20\x00\x1ccaution meal=vegan elephants\x00\x00 (no-eol) (esc)
 

@@ -42,9 +42,8 @@ Binary format is as follow
   A blob of `params size` containing the serialized version of all stream level
   parameters.
 
-  The blob contains a space separated list of parameters.
-
-  Parameter value are not supported yet.
+  The blob contains a space separated list of parameters. parameter with value
+  are stored in the form `<name>=<value>`.
 
   Special character in param name are not supported yet.
 
@@ -116,11 +115,11 @@ class bundle20(object):
     def _paramchunk(self):
         """return a encoded version of all stream parameters"""
         blocks = []
-        for key, value in self._params:
-            # XXX no support for value yet
-            assert value is None
+        for par, value in self._params:
             # XXX no escaping yet
-            blocks.append(key)
+            if value is not None:
+                par = '%s=%s' % (par, value)
+            blocks.append(par)
         return ' '.join(blocks)
 
 class unbundle20(object):
