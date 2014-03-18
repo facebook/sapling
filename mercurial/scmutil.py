@@ -533,7 +533,7 @@ def revrange(repo, revs):
             pass
 
         # fall through to new-style queries if old-style fails
-        m = revset.match(repo.ui, spec)
+        m = revset.match(repo.ui, spec, repo)
         if seen or l:
             dl = [r for r in m(repo, revset.spanset(repo)) if r not in seen]
             l = l + dl

@@ -124,6 +124,7 @@ names that should work without quoting
   [255]
   $ log -a-b-c- # succeeds with fallback
   4
+
   $ try -- -a-b-c--a # complains
   (minus
     (minus
@@ -139,6 +140,13 @@ names that should work without quoting
   $ try é
   ('symbol', '\xc3\xa9')
   9
+
+no quoting needed
+
+  $ log ::a-b-c-
+  0
+  1
+  2
 
 quoting needed
 
