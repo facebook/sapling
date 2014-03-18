@@ -41,7 +41,7 @@ def expush(orig, repo, remote, *args, **kwargs):
                 repo = repo.unfiltered()
                 for branch, nodes in remote.branchmap().iteritems():
                     bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
-                saveremotebranches(repo, path, bmap)
+                saveremotebranches(repo, path, bmap, remote.listkeys('bookmarks'))
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
@@ -56,7 +56,7 @@ def expull(orig, repo, remote, *args, **kwargs):
         try:
             path = activepath(repo.ui, remote)
             if path:
-                saveremotebranches(repo, path, remote.branchmap())
+                saveremotebranches(repo, path, remote.branchmap(), remote.listkeys('bookmarks'))
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
@@ -197,7 +197,7 @@ def expandscheme(ui, uri):
     return uri
 
 
-def saveremotebranches(repo, remote, bm):
+def saveremotebranches(repo, remote, branches, bookmarks):
     bfile = repo.join('remotebranches')
     olddata = []
     existed = os.path.exists(bfile)
@@ -209,11 +209,13 @@ def saveremotebranches(repo, remote, bm):
     f = open(bfile, 'w')
     if existed:
         f.write(''.join(olddata))
-    for branch, nodes in bm.iteritems():
+    for branch, nodes in branches.iteritems():
         for n in nodes:
             f.write('%s %s/%s\n' % (node.hex(n), remote, branch))
             if remote != 'default' and branch == 'default' and alias_default:
                 f.write('%s %s\n' % (node.hex(n), remote))
+    for bookmark, n in bookmarks.iteritems():
+        f.write('%s %s/%s\n' % (n, remote, bookmark))
     f.close()
 
 #########
