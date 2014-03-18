@@ -179,7 +179,6 @@ def reposetup(ui, repo):
             return realpath
 
         def saveremotebranches(self, remote, bm):
-            real = {}
             bfile = self.join('remotebranches')
             olddata = []
             existed = os.path.exists(bfile)
@@ -196,7 +195,6 @@ def reposetup(ui, repo):
                     alias_default = ui.configbool('remotebranches', 'alias.default')
                     if remote != 'default' and branch == 'default' and alias_default:
                         f.write('%s %s\n' % (node.hex(n), remote))
-                real[branch] = [node.hex(x) for x in nodes]
             f.close()
 
     repo.__class__ = remotebranchesrepo
