@@ -1180,12 +1180,12 @@ def main():
 
     checktools()
 
-    if len(args) == 0:
-        args = [t for t in os.listdir(".")
-                if t.startswith("test-")
-                and (t.endswith(".py") or t.endswith(".t"))]
+    if not args:
+        args = os.listdir(".")
 
-    tests = args
+    tests = [t for t in args
+             if t.startswith("test-")
+             and (t.endswith(".py") or t.endswith(".t"))]
 
     if options.random:
         random.shuffle(tests)
