@@ -16,7 +16,8 @@ Create an extension to test bundle2 API
   > command = cmdutil.command(cmdtable)
   > 
   > @command('bundle2',
-  >          [('', 'param', [], 'stream level parameter'),],
+  >          [('', 'param', [], 'stream level parameter'),
+  >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
   >     """write a bundle2 container on standard ouput"""
@@ -27,6 +28,13 @@ Create an extension to test bundle2 API
   >             bundler.addparam(*p)
   >         except ValueError, exc:
   >             raise util.Abort('%s' % exc)
+  > 
+  >     if opts['parts']:
+  >        part = bundle2.part('test:empty')
+  >        bundler.addpart(part)
+  >        # add a second one to make sure we handle multiple parts
+  >        part = bundle2.part('test:empty')
+  >        bundler.addpart(part)
   > 
   >     if path is None:
   >        file = sys.stdout
@@ -178,6 +186,7 @@ bundling debug
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
   start emission of HG20 stream
   bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
+  start of parts
   end of bundle
 
 file content is ok
@@ -215,3 +224,22 @@ bad parameter name
   $ hg bundle2 --param 42babar
   abort: non letter first character: '42babar'
   [255]
+
+
+Test part
+=================
+
+  $ hg bundle2 --parts ../parts.hg2 --debug
+  start emission of HG20 stream
+  bundle parameter: 
+  start of parts
+  bundle part: "test:empty"
+  bundle part: "test:empty"
+  end of bundle
+
+  $ cat ../parts.hg2
+  HG20\x00\x00\x00\r (esc)
+  test:empty\x00\x00\x00\x00\x00\x00\x00\r (esc)
+  test:empty\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+
+

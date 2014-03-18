@@ -21,9 +21,7 @@ The format is architectured as follow
  - payload parts (any number)
  - end of stream marker.
 
-The current implementation accept some stream level option but no part.
-
-Details on the Binary format
+the Binary format
 ============================
 
 All numbers are unsigned and big endian.
@@ -71,7 +69,28 @@ Binary format is as follow
   The total number of Bytes used by the part headers. When the header is empty
   (size = 0) this is interpreted as the end of stream marker.
 
-  Currently forced to 0 in the current state of the implementation
+:header:
+
+    The header defines how to interpret the part. It contains two piece of
+    data: the part type, and the part parameters.
+
+    The part type is used to route an application level handler, that can
+    interpret payload.
+
+    Part parameters are passed to the application level handler.  They are
+    meant to convey information that will help the application level object to
+    interpret the part payload.
+
+    The binary format of the header is has follow
+
+    :typesize: (one byte)
+    :typename: alphanumerical part name
+    :option: we do not support option yet this denoted by two 16 bites zero.
+
+:payload:
+
+    The current payload is a 32bit integer with a value of 0. This is
+    considered an "empty" payload.
 """
 
 import util
@@ -88,15 +107,15 @@ _unpack = struct.unpack
 _magicstring = 'HG20'
 
 _fstreamparamsize = '>H'
+_fpartheadersize = '>H'
+_fparttypesize = '>B'
 
 class bundle20(object):
     """represent an outgoing bundle2 container
 
-    Use the `addparam` method to add stream level parameter. Then call
-    `getchunks` to retrieve all the binary chunks of datathat compose the
-    bundle2 container.
-
-    This object does not support payload part yet."""
+    Use the `addparam` method to add stream level parameter. and `addpart` to
+    populate it. Then call `getchunks` to retrieve all the binary chunks of
+    datathat compose the bundle2 container."""
 
     def __init__(self, ui):
         self.ui = ui
@@ -111,6 +130,12 @@ class bundle20(object):
             raise ValueError('non letter first character: %r' % name)
         self._params.append((name, value))
 
+    def addpart(self, part):
+        """add a new part to the bundle2 container
+
+        Parts contains the actuall applicative payload."""
+        self._parts.append(part)
+
     def getchunks(self):
         self.ui.debug('start emission of %s stream\n' % _magicstring)
         yield _magicstring
@@ -120,9 +145,11 @@ class bundle20(object):
         if param:
             yield param
 
-        # no support for parts
-        # to be obviously fixed soon.
-        assert not self._parts
+        self.ui.debug('start of parts\n')
+        for part in self._parts:
+            self.ui.debug('bundle part: "%s"\n' % part.type)
+            for chunk in part.getchunks():
+                yield chunk
         self.ui.debug('end of bundle\n')
         yield '\0\0'
 
@@ -217,5 +244,26 @@ class unbundle20(object):
         assert headersize == '\0\0'
         return None
 
+class part(object):
+    """A bundle2 part contains application level payload
+
+    The part `type` is used to route the part to the application level
+    handler.
+    """
+
+    def __init__(self, parttype):
+        self.type = parttype
+
+    def getchunks(self):
+        ### header
+        header = [_pack(_fparttypesize, len(self.type)),
+                  self.type,
+                  '\0\0', # No option support for now.
+                 ]
+        headerchunk = ''.join(header)
+        yield _pack(_fpartheadersize, len(headerchunk))
+        yield headerchunk
+        # force empty part for now
+        yield '\0\0\0\0'
 
 
