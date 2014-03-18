@@ -294,6 +294,7 @@ def collapse(repo, first, last, commitopts):
                          date=date,
                          extra=extra)
     new._text = cmdutil.commitforceeditor(repo, new, [])
+    repo.savecommitmessage(new.description())
     return repo.commitctx(new)
 
 def pick(ui, repo, ctx, ha, opts):

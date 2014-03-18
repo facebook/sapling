@@ -105,6 +105,69 @@ check histedit_source
   
   
 
+check saving last-message.txt
+
+  $ cat > $TESTDIR/abortfolding.py <<EOF
+  > from mercurial import util
+  > def abortfolding(ui, repo, hooktype, **kwargs):
+  >     ctx = repo[kwargs.get('node')]
+  >     if set(ctx.files()) == set(['c', 'd', 'f']):
+  >         return True # abort folding commit only
+  >     ui.warn('allow non-folding commit\\n')
+  > EOF
+  $ cat > .hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.abortfolding = python:$TESTDIR/abortfolding.py:abortfolding
+  > EOF
+
+  $ cat > $TESTDIR/editor.sh << EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > echo "check saving last-message.txt" >> \$1
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTDIR/editor.sh" hg histedit 6de59d13424a --commands - 2>&1 <<EOF | fixbundle
+  > pick 6de59d13424a f
+  > fold 9c277da72c9b d
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  allow non-folding commit
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  ==== before editing
+  f
+  ***
+  c
+  ***
+  d
+  
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: changed c
+  HG: changed d
+  HG: changed f
+  ====
+  transaction abort!
+  rollback completed
+  abort: pretxncommit.abortfolding hook failed
+
+  $ cat .hg/last-message.txt
+  f
+  ***
+  c
+  ***
+  d
+  
+  
+  
+  check saving last-message.txt
+
   $ cd ..
 
 folding and creating no new change doesn't break:
