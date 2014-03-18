@@ -128,7 +128,7 @@ elements = {
 
 keywords = set(['and', 'or', 'not'])
 
-def tokenize(program):
+def tokenize(program, lookup=None):
     '''
     Parse a revset statement into a stream of tokens
 
@@ -2023,14 +2023,17 @@ def findaliases(ui, tree):
         aliases[alias.name] = alias
     return _expandaliases(aliases, tree, [], {})
 
-def parse(spec):
+def parse(spec, lookup=None):
     p = parser.parser(tokenize, elements)
-    return p.parse(spec)
+    return p.parse(spec, lookup=lookup)
 
-def match(ui, spec):
+def match(ui, spec, repo=None):
     if not spec:
         raise error.ParseError(_("empty query"))
-    tree, pos = parse(spec)
+    lookup = None
+    if repo:
+        lookup = repo.__contains__
+    tree, pos = parse(spec, lookup)
     if (pos != len(spec)):
         raise error.ParseError(_("invalid token"), pos)
     if ui:
