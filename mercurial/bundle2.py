@@ -60,6 +60,10 @@ Binary format is as follow
   Currently forced to 0 in the current state of the implementation
 """
 
+import util
+import changegroup
+
+
 _magicstring = 'HG20'
 
 class bundle20(object):
@@ -82,3 +86,48 @@ class bundle20(object):
         # to be obviously fixed soon.
         assert not self._parts
         yield '\0\0'
+
+class unbundle20(object):
+    """interpret a bundle2 stream
+
+    (this will eventually yield parts)"""
+
+    def __init__(self, fp):
+        # assume the magic string is ok and drop it
+        # to be obviously fixed soon.
+        self._fp = fp
+        self._readexact(4)
+
+    def _unpack(self, format):
+        """unpack this struct format from the stream"""
+        data = self._readexact(struct.calcsize(format))
+        return _unpack(format, data)
+
+    def _readexact(self, size):
+        """read exactly <size> bytes from the stream"""
+        return changegroup.readexactly(self._fp, size)
+
+    @util.propertycache
+    def params(self):
+        """dictionnary of stream level parameters"""
+        paramsize = self._readexact(2)
+        assert paramsize == '\0\0'
+        return {}
+
+    def __iter__(self):
+        """yield all parts contained in the stream"""
+        # make sure param have been loaded
+        self.params
+        part = self._readpart()
+        while part is not None:
+            yield part
+            part = self._readpart()
+
+    def _readpart(self):
+        """return None when an end of stream markers is reach"""
+        headersize = self._readexact(2)
+        assert headersize == '\0\0'
+        return None
+
+
+
