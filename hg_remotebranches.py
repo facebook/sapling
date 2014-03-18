@@ -112,58 +112,51 @@ def reposetup(ui, repo):
             return olookup(key)
 
         def _activepath(self, remote):
-            conf = config.config()
-            rc = self.join('hgrc')
-            if os.path.exists(rc):
-                fp = open(rc)
-                conf.parse('.hgrc', fp.read())
-                fp.close()
             realpath = ''
-            if 'paths' in conf:
-                for path, uri in conf['paths'].items():
-                    for s in schemes.schemes.iterkeys():
-                        if uri.startswith('%s://' % s):
-                            # TODO: refactor schemes so we don't
-                            # duplicate this logic
-                            ui.note('performing schemes expansion with '
-                                    'scheme %s\n' % s)
-                            scheme = hg.schemes[s]
-                            parts = uri.split('://', 1)[1].split('/',
-                                                                 scheme.parts)
-                            if len(parts) > scheme.parts:
-                                tail = parts[-1]
-                                parts = parts[:-1]
-                            else:
-                                tail = ''
-                            context = dict((str(i+1), v) for i, v in
-                                           enumerate(parts))
-                            uri = ''.join(scheme.templater.process(
-                                scheme.url, context)) + tail
-                    uri = self.ui.expandpath(uri)
-                    if remote.local():
-                        uri = os.path.realpath(uri)
-                        rpath = getattr(remote, 'root', None)
-                        if rpath is None:
-                            # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
-                            rpath = getattr(getattr(remote, '_repo', None),
-                                            'root', None)
-                    else:
-                        rpath = remote._url
-                        if uri.startswith('http'):
+            for path, uri in ui.configitems('paths'):
+                for s in schemes.schemes.iterkeys():
+                    if uri.startswith('%s://' % s):
+                        # TODO: refactor schemes so we don't
+                        # duplicate this logic
+                        ui.note('performing schemes expansion with '
+                                'scheme %s\n' % s)
+                        scheme = hg.schemes[s]
+                        parts = uri.split('://', 1)[1].split('/',
+                                                             scheme.parts)
+                        if len(parts) > scheme.parts:
+                            tail = parts[-1]
+                            parts = parts[:-1]
+                        else:
+                            tail = ''
+                        context = dict((str(i+1), v) for i, v in
+                                       enumerate(parts))
+                        uri = ''.join(scheme.templater.process(
+                            scheme.url, context)) + tail
+                uri = self.ui.expandpath(uri)
+                if remote.local():
+                    uri = os.path.realpath(uri)
+                    rpath = getattr(remote, 'root', None)
+                    if rpath is None:
+                        # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
+                        rpath = getattr(getattr(remote, '_repo', None),
+                                        'root', None)
+                else:
+                    rpath = remote._url
+                    if uri.startswith('http'):
+                        try:
+                            uri = url.url(uri).authinfo()[0]
+                        except AttributeError:
                             try:
-                                uri = url.url(uri).authinfo()[0]
+                                uri = util.url(uri).authinfo()[0]
                             except AttributeError:
-                                try:
-                                    uri = util.url(uri).authinfo()[0]
-                                except AttributeError:
-                                    uri = url.getauthinfo(uri)[0]
-                    uri = uri.rstrip('/')
-                    rpath = rpath.rstrip('/')
-                    if uri == rpath:
-                        realpath = path
-                        # prefer a non-default name to default
-                        if path != 'default':
-                            break
+                                uri = url.getauthinfo(uri)[0]
+                uri = uri.rstrip('/')
+                rpath = rpath.rstrip('/')
+                if uri == rpath:
+                    realpath = path
+                    # prefer a non-default name to default
+                    if path != 'default':
+                        break
             return realpath
 
         def saveremotebranches(self, remote, bm):
