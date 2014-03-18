@@ -140,5 +140,41 @@ Fold regular patch into a git patch, expect git patch:
    b
   +b
 
+Test saving last-message.txt:
+
+  $ hg qrefresh -m "original message"
+
+  $ cat > $TESTDIR/commitfailure.py <<EOF
+  > from mercurial import util
+  > def reposetup(ui, repo):
+  >     class commitfailure(repo.__class__):
+  >         def commit(self, *args, **kwargs):
+  >             raise util.Abort('emulating unexpected abort')
+  >     repo.__class__ = commitfailure
+  > EOF
+
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > commitfailure = $TESTDIR/commitfailure.py
+  > EOF
+
+  $ cat > $TESTDIR/editor.sh << EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > (echo; echo "test saving last-message.txt") >> \$1
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTDIR/editor.sh" hg qfold -e p3
+  ==== before editing
+  original message====
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: emulating unexpected abort
+  [255]
+  $ cat .hg/last-message.txt
+  original message
+  test saving last-message.txt
+
   $ cd ..
 

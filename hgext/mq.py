@@ -2576,6 +2576,7 @@ def fold(ui, repo, *files, **opts):
 
     if opts.get('edit'):
         message = ui.edit(message, user or ui.username())
+        repo.savecommitmessage(message)
 
     diffopts = q.patchopts(q.diffopts(), *patches)
     wlock = repo.wlock()
