@@ -222,7 +222,7 @@ Show all commands + options
   branches: active, closed
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude
-  config: untrusted, edit
+  config: untrusted, edit, local, global
   copy: after, force, include, exclude, dry-run
   debugancestor: 
   debugbuilddag: mergeable-file, overwritten-file, new-file

@@ -1462,8 +1462,10 @@ def commit(ui, repo, *pats, **opts):
 
 @command('config|showconfig|debugconfig',
     [('u', 'untrusted', None, _('show untrusted configuration options')),
-     ('e', 'edit', None, _('start editor'))],
-    _('[-u] [NAME]...'))
+     ('e', 'edit', None, _('edit user config')),
+     ('l', 'local', None, _('edit repository config')),
+     ('g', 'global', None, _('edit global config'))],
+      _('[-u] [NAME]...'))
 def config(ui, repo, *values, **opts):
     """show combined config settings from all hgrc files
 
@@ -1481,8 +1483,19 @@ def config(ui, repo, *values, **opts):
     Returns 0 on success.
     """
 
-    if opts.get('edit'):
-        paths = scmutil.userrcpath()
+    if opts.get('edit') or opts.get('local') or opts.get('global'):
+        if opts.get('local') and opts.get('global'):
+            raise util.Abort(_("can't use --local and --global together"))
+
+        if opts.get('local'):
+            if not repo:
+                raise util.Abort(_("can't use --local outside a repository"))
+            paths = [repo.join('hgrc')]
+        elif opts.get('global'):
+            paths = scmutil.systemrcpath()
+        else:
+            paths = scmutil.userrcpath()
+
         for f in paths:
             if os.path.exists(f):
                 break
