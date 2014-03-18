@@ -165,6 +165,57 @@ Open editor with old commit message if a message isn't given otherwise:
   > cat $1
   > echo "another precious commit message" > "$1"
   > __EOF__
+
+at first, test saving last-message.txt
+
+  $ cat > .hg/hgrc << '__EOF__'
+  > [hooks]
+  > pretxncommit.test-saving-last-message = false
+  > __EOF__
+
+  $ rm -f .hg/last-message.txt
+  $ hg commit --amend -v -m "message given from command line"
+  amending changeset 5f357c7560ab
+  copying changeset 5f357c7560ab to ad120869acf0
+  a
+  running hook pretxncommit.test-saving-last-message: false
+  transaction abort!
+  rollback completed
+  abort: pretxncommit.test-saving-last-message hook exited with status 1
+  [255]
+  $ cat .hg/last-message.txt
+  message given from command line (no-eol)
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -v
+  amending changeset 5f357c7560ab
+  copying changeset 5f357c7560ab to ad120869acf0
+  no changes, new message
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: foo
+  HG: branch 'default'
+  HG: changed a
+  a
+  running hook pretxncommit.test-saving-last-message: false
+  transaction abort!
+  rollback completed
+  abort: pretxncommit.test-saving-last-message hook exited with status 1
+  [255]
+
+  $ cat .hg/last-message.txt
+  another precious commit message
+
+  $ cat > .hg/hgrc << '__EOF__'
+  > [hooks]
+  > pretxncommit.test-saving-last-message =
+  > __EOF__
+
+then, test editing custom commit message
+
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -v
   amending changeset 5f357c7560ab
   copying changeset 5f357c7560ab to ad120869acf0

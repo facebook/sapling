@@ -1782,6 +1782,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  extra=extra)
             if editmsg:
                 new._text = commitforceeditor(repo, new, [])
+            repo.savecommitmessage(new.description())
 
             newdesc =  changelog.stripdesc(new.description())
             if ((not node)
