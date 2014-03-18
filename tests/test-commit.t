@@ -284,6 +284,52 @@ test commit message content
   HG: removed removed
   abort: empty commit message
   [255]
+
+test saving last-message.txt
+
+  $ hg init sub
+  $ echo a > sub/a
+  $ hg -R sub add sub/a
+  $ cat > sub/.hg/hgrc <<EOF
+  > [hooks]
+  > precommit.test-saving-last-message = false
+  > EOF
+
+  $ echo 'sub = sub' > .hgsub
+  $ hg add .hgsub
+
+  $ cat > $TESTDIR/editor.sh <<EOF
+  > echo "==== before editing:"
+  > cat \$1
+  > echo "===="
+  > echo "test saving last-message.txt" >> \$1
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTDIR/editor.sh" hg commit -S -q
+  ==== before editing:
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: bookmark 'currentbookmark'
+  HG: subrepo sub
+  HG: added .hgsub
+  HG: added added
+  HG: changed .hgsubstate
+  HG: changed changed
+  HG: removed removed
+  ====
+  abort: precommit.test-saving-last-message hook exited with status 1 (in subrepo sub)
+  [255]
+  $ cat .hg/last-message.txt
+  
+  
+  test saving last-message.txt
+
   $ cd ..
 
 

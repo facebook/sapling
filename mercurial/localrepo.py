@@ -1270,6 +1270,11 @@ class localrepository(object):
                 cctx._text = editor(self, cctx, subs)
             edited = (text != cctx._text)
 
+            # Save commit message in case this transaction gets rolled back
+            # (e.g. by a pretxncommit hook).  Leave the content alone on
+            # the assumption that the user will use the same editor again.
+            msgfn = self.savecommitmessage(cctx._text)
+
             # commit subs and write new state
             if subs:
                 for s in sorted(commitsubs):
@@ -1279,11 +1284,6 @@ class localrepository(object):
                     sr = sub.commit(cctx._text, user, date)
                     newstate[s] = (newstate[s][0], sr)
                 subrepo.writestate(self, newstate)
-
-            # Save commit message in case this transaction gets rolled back
-            # (e.g. by a pretxncommit hook).  Leave the content alone on
-            # the assumption that the user will use the same editor again.
-            msgfn = self.savecommitmessage(cctx._text)
 
             p1, p2 = self.dirstate.parents()
             hookp1, hookp2 = hex(p1), (p2 != nullid and hex(p2) or '')
