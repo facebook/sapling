@@ -1083,6 +1083,7 @@ class queue(object):
                         p.write("# Date %s %s\n\n" % date)
                 if util.safehasattr(msg, '__call__'):
                     msg = msg()
+                    repo.savecommitmessage(msg)
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
                 n = newcommit(repo, None, commitmsg, user, date, match=match,
                               force=True)
@@ -2577,6 +2578,7 @@ def fold(ui, repo, *files, **opts):
 
     if opts.get('edit'):
         message = ui.edit(message, user or ui.username())
+        repo.savecommitmessage(message)
 
     diffopts = q.patchopts(q.diffopts(), *patches)
     wlock = repo.wlock()

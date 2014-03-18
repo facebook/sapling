@@ -52,14 +52,39 @@ Rebasing B onto H and collapsing changesets with different phases:
 
   $ hg phase --force --secret 3
 
-  $ hg rebase --collapse --keepbranches
+  $ cat > $TESTTMP/editor.sh <<EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > echo "edited manually" >> \$1
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg rebase --collapse --keepbranches -e
+  ==== before editing
+  Collapsed revision
+  * B
+  * C
+  * D
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: Nicolas Dumazet <nicdumz.commits@gmail.com>
+  HG: branch 'default'
+  HG: changed B
+  HG: changed C
+  HG: changed D
+  ====
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglogp
   @  5:secret 'Collapsed revision
   |  * B
   |  * C
-  |  * D'
+  |  * D
+  |
+  |
+  |  edited manually'
   o  4:draft 'H'
   |
   | o  3:draft 'G'

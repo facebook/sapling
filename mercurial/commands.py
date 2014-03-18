@@ -1437,11 +1437,14 @@ def commit(ui, repo, *pats, **opts):
             try:
                 if opts.get('secret'):
                     ui.setconfig('phases', 'new-commit', 'secret')
+                    # Propagate to subrepos
+                    repo.baseui.setconfig('phases', 'new-commit', 'secret')
 
                 return repo.commit(message, opts.get('user'), opts.get('date'),
                                    match, editor=e, extra=extra)
             finally:
                 ui.setconfig('phases', 'new-commit', oldcommitphase)
+                repo.baseui.setconfig('phases', 'new-commit', oldcommitphase)
 
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
@@ -5645,6 +5648,7 @@ def tag(ui, repo, name1, *names, **opts):
 
         if opts.get('edit'):
             message = ui.edit(message, ui.username())
+            repo.savecommitmessage(message)
 
         # don't allow tagging the null rev
         if (not opts.get('remove') and

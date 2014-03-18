@@ -1294,3 +1294,18 @@ configuration
   15: secret
 
   $ cd ..
+
+
+Test that comit --secret works on both repo and subrepo (issue4182)
+
+  $ cd main
+  $ echo secret >> b
+  $ echo secret >> s/b
+  $ hg commit --secret --subrepo -m "secret"
+  committing subrepository s
+  $ hg phase -r .
+  6: secret
+  $ cd s
+  $ hg phase -r .
+  6: secret
+  $ cd ../../

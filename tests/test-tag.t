@@ -222,6 +222,27 @@ test custom commit messages
   > echo "custom tag message" > "$1"
   > echo "second line" >> "$1"
   > __EOF__
+
+at first, test saving last-message.txt
+
+  $ cat > .hg/hgrc << '__EOF__'
+  > [hooks]
+  > pretag.test-saving-lastmessage = false
+  > __EOF__
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
+  abort: pretag.test-saving-lastmessage hook exited with status 1
+  [255]
+  $ cat .hg/last-message.txt
+  custom tag message
+  second line
+  $ cat > .hg/hgrc << '__EOF__'
+  > [hooks]
+  > pretag.test-saving-lastmessage =
+  > __EOF__
+
+then, test custom commit message itself
+
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
   $ hg log -l1 --template "{desc}\n"
   custom tag message

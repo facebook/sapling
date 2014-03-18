@@ -233,3 +233,39 @@ hg headers
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   abort: cannot manage merge changesets
   $ rm -r sandbox
+
+Test saving last-message.txt
+
+  $ hg init repo
+  $ cd repo
+
+  $ cat > $TESTDIR/commitfailure.py <<EOF
+  > from mercurial import util
+  > def reposetup(ui, repo):
+  >     class commitfailure(repo.__class__):
+  >         def commit(self, *args, **kwargs):
+  >             raise util.Abort('emulating unexpected abort')
+  >     repo.__class__ = commitfailure
+  > EOF
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > commitfailure = $TESTDIR/commitfailure.py
+  > EOF
+
+  $ cat > $TESTDIR/editor.sh << EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > echo "test saving last-message.txt" >> \$1
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTDIR/editor.sh" hg qnew -e patch
+  ==== before editing
+  ====
+  abort: emulating unexpected abort
+  [255]
+  $ cat .hg/last-message.txt
+  test saving last-message.txt
+
+  $ cd ..
