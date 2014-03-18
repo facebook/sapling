@@ -51,7 +51,7 @@ class sshpeer(wireproto.wirepeer):
             cmd = '%s %s %s' % (sshcmd, args,
                 util.shellquote("%s init %s" %
                     (_serverquote(remotecmd), _serverquote(self.path))))
-            ui.note(_('running %s\n') % cmd)
+            ui.debug('running %s\n' % cmd)
             res = util.system(cmd)
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
@@ -68,7 +68,7 @@ class sshpeer(wireproto.wirepeer):
         cmd = '%s %s %s' % (sshcmd, args,
             util.shellquote("%s -R %s serve --stdio" %
                 (_serverquote(remotecmd), _serverquote(self.path))))
-        self.ui.note(_('running %s\n') % cmd)
+        self.ui.debug('running %s\n' % cmd)
         cmd = util.quotecommand(cmd)
 
         # while self.subprocess isn't used, having it allows the subprocess to
