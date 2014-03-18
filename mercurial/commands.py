@@ -1477,10 +1477,17 @@ def config(ui, repo, *values, **opts):
     With multiple arguments, print names and values of all config
     items with matching section names.
 
+    With --edit, start an editor on the user-level config file. With
+    --global, edit the system-wide config file. With --local, edit the
+    repository-level config file.
+
     With --debug, the source (filename and line number) is printed
     for each config item.
 
+    See :hg:`help config` for more information about config files.
+
     Returns 0 on success.
+
     """
 
     if opts.get('edit') or opts.get('local') or opts.get('global'):
