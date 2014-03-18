@@ -5694,6 +5694,7 @@ def tag(ui, repo, name1, *names, **opts):
 
         if opts.get('edit'):
             message = ui.edit(message, ui.username())
+            repo.savecommitmessage(message)
 
         # don't allow tagging the null rev
         if (not opts.get('remove') and
