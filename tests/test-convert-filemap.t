@@ -252,6 +252,24 @@ splitrepo tests
   $ hg --cwd foo-copied.repo debugrename copied
   copied renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
 
+verify the top level 'include .' if there is no other includes:
+
+  $ echo "exclude something" > default.fmap
+  $ hg convert -q --filemap default.fmap -r1 source dummydest2
+  $ hg -R dummydest2 log --template '{rev} {node|short} {desc|firstline}\n'
+  1 61e22ca76c3b 1: add bar quux; copy foo to copied
+  0 c085cf2ee7fe 0: add foo baz dir/
+
+  $ echo "include somethingelse" >> default.fmap
+  $ hg convert -q --filemap default.fmap -r1 source dummydest3
+  $ hg -R dummydest3 log --template '{rev} {node|short} {desc|firstline}\n'
+
+  $ echo "include ." >> default.fmap
+  $ hg convert -q --filemap default.fmap -r1 source dummydest4
+  $ hg -R dummydest4 log --template '{rev} {node|short} {desc|firstline}\n'
+  1 61e22ca76c3b 1: add bar quux; copy foo to copied
+  0 c085cf2ee7fe 0: add foo baz dir/
+
 ensure that the filemap contains duplicated slashes (issue3612)
 
   $ cat > renames.fmap <<EOF
