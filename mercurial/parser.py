@@ -75,9 +75,12 @@ class parser(object):
                     if len(infix) == 3:
                         self._match(infix[2], pos)
         return expr
-    def parse(self, message):
+    def parse(self, message, lookup=None):
         'generate a parse tree from a message'
-        self._iter = self._tokenizer(message)
+        if lookup:
+            self._iter = self._tokenizer(message, lookup)
+        else:
+            self._iter = self._tokenizer(message)
         self._advance()
         res = self._parse()
         token, value, pos = self.current
