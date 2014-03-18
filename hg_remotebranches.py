@@ -8,20 +8,8 @@ from mercurial import node
 from mercurial import ui
 from mercurial import url
 from mercurial import util
-
-try:
-    from mercurial import revset
-    # force demandimport to load revset
-    revset.methods
-except ImportError:
-   revset = None
-
-try:
-    from mercurial import templatekw
-    # force demandimport to load templatekw
-    templatekw.keywords
-except ImportError:
-    templatekw = None
+from mercurial import revset
+from mercurial import templatekw
 
 from hgext import schemes
 
@@ -253,10 +241,9 @@ def remotebranchesrevset(repo, subset, x):
     remoterevs = set(repo[n].rev() for n in repo._remotebranches.itervalues())
     return baseset([r for r in subset if r in remoterevs])
 
-if revset is not None:
-    revset.symbols.update({'upstream': upstream,
-                           'pushed': pushed,
-                           'remotebranches': remotebranchesrevset})
+revset.symbols.update({'upstream': upstream,
+                       'pushed': pushed,
+                       'remotebranches': remotebranchesrevset})
 
 def remotebrancheskw(**args):
     """:remotebranches: List of strings. Any remote branch associated
@@ -271,5 +258,4 @@ def remotebrancheskw(**args):
         return templatekw.showlist('remotebranch', names,
                                    plural='remotebranches', **args)
 
-if templatekw is not None:
-    templatekw.keywords['remotebranches'] = remotebrancheskw
+templatekw.keywords['remotebranches'] = remotebrancheskw
