@@ -732,10 +732,10 @@ def readrequires(opener, supported):
     missings.sort()
     if missings:
         raise error.RequirementError(
-            _("unknown repository format: requires features '%s' (upgrade "
-              "Mercurial)") % "', '".join(missings),
+            _("repository requires features unknown to this Mercurial: %s")
+            % " ".join(missings),
             hint=_("see http://mercurial.selenic.com/wiki/MissingRequirement"
-                   " for details"))
+                   " for more information"))
     return requirements
 
 class filecachesubentry(object):

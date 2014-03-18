@@ -2259,8 +2259,8 @@ enabling largefiles extension.
   $ hg -R enabledlocally root
   $TESTTMP/individualenabling/enabledlocally (glob)
   $ hg -R notenabledlocally root
-  abort: unknown repository format: requires features 'largefiles' (upgrade Mercurial)!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for details)
+  abort: repository requires features unknown to this Mercurial: largefiles!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
   [255]
 
   $ hg init push-dst
@@ -2276,8 +2276,8 @@ enabling largefiles extension.
   [255]
 
   $ hg clone enabledlocally clone-dst
-  abort: unknown repository format: requires features 'largefiles' (upgrade Mercurial)!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for details)
+  abort: repository requires features unknown to this Mercurial: largefiles!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
   [255]
   $ test -d clone-dst
   [1]
