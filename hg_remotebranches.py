@@ -155,7 +155,7 @@ def reposetup(ui, repo):
                 if uri == rpath:
                     realpath = path
                     # prefer a non-default name to default
-                    if path != 'default':
+                    if path != 'default' and path != 'default-push':
                         break
             return realpath
 
