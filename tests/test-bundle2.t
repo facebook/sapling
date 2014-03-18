@@ -34,6 +34,9 @@ Create an extension to test bundle2 API
   >     ui.write('options count: %i\n' % len(unbundler.params))
   >     for key in sorted(unbundler.params):
   >         ui.write('- %s\n' % key)
+  >         value = unbundler.params[key]
+  >         if value is not None:
+  >             ui.write('    %s\n' % value)
   >     parts = list(unbundler)
   >     ui.write('parts count:   %i\n' % len(parts))
   > EOF
@@ -120,3 +123,12 @@ Test generation
   $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants'
   HG20\x00\x1ccaution meal=vegan elephants\x00\x00 (no-eol) (esc)
 
+Test unbundling
+
+  $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants' | hg unbundle2
+  options count: 3
+  - caution
+  - elephants
+  - meal
+      vegan
+  parts count:   0

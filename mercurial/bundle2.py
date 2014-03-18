@@ -152,7 +152,10 @@ class unbundle20(object):
         paramssize = self._unpack(_fstreamparamsize)[0]
         if paramssize:
             for p in self._readexact(paramssize).split(' '):
-                params[p] = None
+                p = p.split('=', 1)
+                if len(p) < 2:
+                    p.append(None)
+                params[p[0]] = p[1]
         return params
 
     def __iter__(self):
