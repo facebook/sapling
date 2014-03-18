@@ -62,7 +62,7 @@ Binary format is as follow
 
 import util
 import changegroup
-
+from i18n import _
 
 _magicstring = 'HG20'
 
@@ -93,10 +93,13 @@ class unbundle20(object):
     (this will eventually yield parts)"""
 
     def __init__(self, fp):
-        # assume the magic string is ok and drop it
-        # to be obviously fixed soon.
         self._fp = fp
-        self._readexact(4)
+        header = self._readexact(4)
+        magic, version = header[0:2], header[2:4]
+        if magic != 'HG':
+            raise util.Abort(_('not a Mercurial bundle'))
+        if version != '20':
+            raise util.Abort(_('unknown bundle version %s') % version)
 
     def _unpack(self, format):
         """unpack this struct format from the stream"""

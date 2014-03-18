@@ -38,6 +38,9 @@ The extension requires a repo (currently unused)
 
   $ hg init main
   $ cd main
+  $ touch a
+  $ hg add a
+  $ hg commit -m 'a'
 
 Test simple generation of empty bundle
 
@@ -49,3 +52,11 @@ Test parsing of an empty bundle
   $ hg bundle2 | hg unbundle2
   options count: 0
   parts count:   0
+
+Test old style bundle are detected and refused
+
+  $ hg bundle --all ../bundle.hg
+  1 changesets found
+  $ hg unbundle2 < ../bundle.hg
+  abort: unknown bundle version 10
+  [255]
