@@ -142,9 +142,12 @@ class unbundle20(object):
     @util.propertycache
     def params(self):
         """dictionnary of stream level parameters"""
-        paramsize = self._readexact(2)
-        assert paramsize == '\0\0'
-        return {}
+        params = {}
+        paramssize = self._unpack(_fstreamparamsize)[0]
+        if paramssize:
+            for p in self._readexact(paramssize).split(' '):
+                params[p] = None
+        return params
 
     def __iter__(self):
         """yield all parts contained in the stream"""

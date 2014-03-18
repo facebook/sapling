@@ -30,6 +30,8 @@ Create an extension to test bundle2 API
   >     """read a bundle2 container from standard input"""
   >     unbundler = bundle2.unbundle20(sys.stdin)
   >     ui.write('options count: %i\n' % len(unbundler.params))
+  >     for key in sorted(unbundler.params):
+  >         ui.write('- %s\n' % key)
   >     parts = list(unbundler)
   >     ui.write('parts count:   %i\n' % len(parts))
   > EOF
@@ -83,12 +85,28 @@ advisory parameters, no value
 
 Simplest possible parameters form
 
-Test generation
+Test generation simple option
 
   $ hg bundle2 --param 'caution'
   HG20\x00\x07caution\x00\x00 (no-eol) (esc)
+
+Test unbundling
+
+  $ hg bundle2 --param 'caution' | hg unbundle2
+  options count: 1
+  - caution
+  parts count:   0
 
 Test generation multiple option
 
   $ hg bundle2 --param 'caution' --param 'meal'
   HG20\x00\x0ccaution meal\x00\x00 (no-eol) (esc)
+
+Test unbundling
+
+  $ hg bundle2 --param 'caution' --param 'meal' | hg unbundle2
+  options count: 2
+  - caution
+  - meal
+  parts count:   0
+
