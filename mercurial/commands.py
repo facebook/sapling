@@ -2496,7 +2496,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
 
     if opts.get("dump"):
         numrevs = len(r)
-        ui.write("# rev p1rev p2rev start end deltastart base p1 p2"
+        ui.write("# rev p1rev p2rev start   end deltastart base   p1   p2"
                  " rawsize totalsize compression heads\n")
         ts = 0
         heads = set()
@@ -2510,7 +2510,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
             ts = ts + rs
             heads -= set(r.parentrevs(rev))
             heads.add(rev)
-            ui.write("%d %d %d %d %d %d %d %d %d %d %d %d %d\n" %
+            ui.write("%5d %5d %5d %5d %5d %10d %4d %4d %4d %7d %9d %11d %5d\n" %
                      (rev, p1, p2, r.start(rev), r.end(rev),
                       r.start(dbase), r.start(cbase),
                       r.start(p1), r.start(p2),
