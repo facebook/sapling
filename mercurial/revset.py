@@ -178,7 +178,7 @@ def tokenize(program, lookup=None):
             pos += 1
             while pos < l: # find end of symbol
                 d = program[pos]
-                if not (d.isalnum() or d in "._/@" or ord(d) > 127):
+                if not (d.isalnum() or d in "-._/@" or ord(d) > 127):
                     break
                 if d == '.' and program[pos - 1] == '.': # special case for ..
                     pos -= 1
@@ -187,6 +187,22 @@ def tokenize(program, lookup=None):
             sym = program[s:pos]
             if sym in keywords: # operator keywords
                 yield (sym, None, s)
+            elif '-' in sym:
+                # some jerk gave us foo-bar-baz, try to check if it's a symbol
+                if lookup and lookup(sym):
+                    # looks like a real symbol
+                    yield ('symbol', sym, s)
+                else:
+                    # looks like an expression
+                    parts = sym.split('-')
+                    for p in parts[:-1]:
+                        if p: # possible consecutive -
+                            yield ('symbol', p, s)
+                        s += len(p)
+                        yield ('-', None, pos)
+                        s += 1
+                    if parts[-1]: # possible trailing -
+                        yield ('symbol', parts[-1], s)
             else:
                 yield ('symbol', sym, s)
             pos -= 1
