@@ -1083,6 +1083,7 @@ class queue(object):
                         p.write("# Date %s %s\n\n" % date)
                 if util.safehasattr(msg, '__call__'):
                     msg = msg()
+                    repo.savecommitmessage(msg)
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
                 n = newcommit(repo, None, commitmsg, user, date, match=match,
                               force=True)
