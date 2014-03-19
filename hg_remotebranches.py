@@ -27,7 +27,15 @@ def expush(orig, repo, remote, *args, **kwargs):
         try:
             path = repo._activepath(remote)
             if path:
-                repo.saveremotebranches(path, remote.branchmap())
+                # on a push, we don't want to keep obsolete heads since
+                # they won't show up as heads on the next pull, so we
+                # remove them here otherwise we would require the user
+                # to issue a pull to refresh .hg/remotebranches
+                bmap = {}
+                repo = repo.unfiltered()
+                for branch, nodes in remote.branchmap().iteritems():
+                    bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
+                repo.saveremotebranches(path, bmap)
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
