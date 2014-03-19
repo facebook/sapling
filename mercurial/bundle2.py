@@ -97,7 +97,8 @@ class bundle20(object):
 
     This object does not support payload part yet."""
 
-    def __init__(self):
+    def __init__(self, ui):
+        self.ui = ui
         self._params = []
         self._parts = []
 
@@ -110,8 +111,10 @@ class bundle20(object):
         self._params.append((name, value))
 
     def getchunks(self):
+        self.ui.debug('start emission of %s stream\n' % _magicstring)
         yield _magicstring
         param = self._paramchunk()
+        self.ui.debug('bundle parameter: %s\n' % param)
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
@@ -119,6 +122,7 @@ class bundle20(object):
         # no support for parts
         # to be obviously fixed soon.
         assert not self._parts
+        self.ui.debug('end of bundle\n')
         yield '\0\0'
 
     def _paramchunk(self):

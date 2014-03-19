@@ -20,7 +20,7 @@ Create an extension to test bundle2 API
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
   >     """write a bundle2 container on standard ouput"""
-  >     bundler = bundle2.bundle20()
+  >     bundler = bundle2.bundle20(ui)
   >     for p in opts['param']:
   >         p = p.split('=', 1)
   >         try:
@@ -161,9 +161,11 @@ Test unbundling
 
 Test debug output
 ---------------------------------------------------
-(no debug output yet)
 
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
+  start emission of HG20 stream
+  bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
+  end of bundle
 
 file content is ok
 
