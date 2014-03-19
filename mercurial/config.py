@@ -93,7 +93,8 @@ class config(object):
         if section not in self:
             self._data[section] = sortdict()
         self._data[section][item] = value
-        self._source[(section, item)] = source
+        if source:
+            self._source[(section, item)] = source
 
     def restore(self, data):
         """restore data returned by self.backup"""

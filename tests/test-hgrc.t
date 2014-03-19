@@ -201,3 +201,14 @@ plain mode with exceptions
   --verbose: ui.verbose=False
   --debug: ui.debug=True
   --quiet: ui.quiet=False
+
+source of paths is not mangled
+
+  $ cat >> $HGRCPATH <<EOF
+  > [paths]
+  > foo = bar
+  > EOF
+  $ hg showconfig --debug paths
+  plain: True
+  read config from: $TESTTMP/hgrc
+  $TESTTMP/hgrc:17: paths.foo=$TESTTMP/bar
