@@ -191,6 +191,7 @@ utestfilters = [
 
 pypats = [
   [
+    (r'\([^)]*\*\w[^()]+\w+=', "can't pass varargs with keyword in Py2.5"),
     (r'^\s*def\s*\w+\s*\(.*,\s*\(',
      "tuple parameter unpacking not available in Python 3+"),
     (r'lambda\s*\(.*,.*\)',

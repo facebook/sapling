@@ -103,8 +103,8 @@ def _runcatch(req):
             if req.repo:
                 # copy configs that were passed on the cmdline (--config) to
                 # the repo ui
-                for cfg in cfgs:
-                    req.repo.ui.setconfig(*cfg, source='--config')
+                for sec, name, val in cfgs:
+                    req.repo.ui.setconfig(sec, name, val, source='--config')
 
             # if we are in HGPLAIN mode, then disable custom debugging
             debugger = ui.config("ui", "debugger")
