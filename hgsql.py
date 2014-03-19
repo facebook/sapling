@@ -40,6 +40,7 @@ from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util
 import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
+import warnings
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -463,9 +464,15 @@ def wraprepo(repo):
                                    VALUES(%s, 'heads', %s)""",
                                    (reponame, hex(head)))
 
-                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
-                               VALUES(%s, 'tip', 'tip', %s) ON DUPLICATE KEY UPDATE value=%s""",
-                               (reponame, len(self) - 1, len(self) - 1))
+                # revision_references has multiple keys (primary key, and a unique index), so
+                # mysql gives a warning when using ON DUPLICATE KEY since it would only update one
+                # row despite multiple key duplicates. This doesn't matter for us, since we know
+                # there is only one row that will share the same key. So suppress the warning.
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                                   VALUES(%s, 'tip', 'tip', %s) ON DUPLICATE KEY UPDATE value=%s""",
+                                   (reponame, len(self) - 1, len(self) - 1))
 
                 # Just to be super sure, check the write lock before doing the final commit
                 if not self.hassqllock(writelock):
