@@ -132,3 +132,11 @@ Test unbundling
   - meal
       vegan
   parts count:   0
+
+parameter with special char in value
+---------------------------------------------------
+
+Test generation
+
+  $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple
+  HG20\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)

@@ -43,9 +43,7 @@ Binary format is as follow
   parameters.
 
   The blob contains a space separated list of parameters. parameter with value
-  are stored in the form `<name>=<value>`.
-
-  Special character in param name are not supported yet.
+  are stored in the form `<name>=<value>`. Both name and value are urlquoted.
 
   Stream parameters use a simple textual format for two main reasons:
 
@@ -72,6 +70,7 @@ Binary format is as follow
 
 import util
 import struct
+import urllib
 
 import changegroup
 from i18n import _
@@ -116,8 +115,9 @@ class bundle20(object):
         """return a encoded version of all stream parameters"""
         blocks = []
         for par, value in self._params:
-            # XXX no escaping yet
+            par = urllib.quote(par)
             if value is not None:
+                value = urllib.quote(value)
                 par = '%s=%s' % (par, value)
             blocks.append(par)
         return ' '.join(blocks)
