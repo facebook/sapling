@@ -101,9 +101,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     longest matching path applies, so line order does not matter.
 
     The ``include`` directive causes a file, or all files under a
-    directory, to be included in the destination repository, and the
-    exclusion of all other files and directories not explicitly
-    included. The ``exclude`` directive causes files or directories to
+    directory, to be included in the destination repository. The default
+    if there are no ``include`` statements is to include everything.
+    If there are any ``include`` statements, nothing else is included.
+    The ``exclude`` directive causes files or directories to
     be omitted. The ``rename`` directive renames a file or directory if
     it is converted. To rename from a subdirectory into the root of
     the repository, use ``.`` as the path to rename to.
