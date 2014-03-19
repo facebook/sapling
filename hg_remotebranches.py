@@ -79,7 +79,9 @@ def reposetup(ui, repo):
     class remotebranchesrepo(repo.__class__):
         def _findtags(self):
             (tags, tagtypes) = ofindtags()
-            tags.update(self._remotebranches)
+            for tag, n in self._remotebranches.iteritems():
+                tags[tag] = n
+                tagtypes[tag] = 'remote'
             return (tags, tagtypes)
 
         @util.propertycache
