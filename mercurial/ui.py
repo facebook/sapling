@@ -157,11 +157,9 @@ class ui(object):
         self._tcfg.restore(data[1])
         self._ucfg.restore(data[2])
 
-    def setconfig(self, section, name, value, overlay=True):
-        if overlay:
-            self._ocfg.set(section, name, value)
-        self._tcfg.set(section, name, value)
-        self._ucfg.set(section, name, value)
+    def setconfig(self, section, name, value):
+        for cfg in (self._ocfg, self._tcfg, self._ucfg):
+            cfg.set(section, name, value)
         self.fixconfig(section=section)
 
     def _data(self, untrusted):
