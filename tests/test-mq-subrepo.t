@@ -407,12 +407,12 @@ both into 'revision' and 'patch file under .hg/patches':
   $ cat .hgsubstate
   b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
   $ hg diff -c tip
-  diff -r f499373e340c -r b20ffac88564 .hgsub
+  diff -r f499373e340c -r f69e96d86e75 .hgsub
   --- /dev/null
   +++ b/.hgsub
   @@ -0,0 +1,1 @@
   +sub = sub
-  diff -r f499373e340c -r b20ffac88564 .hgsubstate
+  diff -r f499373e340c -r f69e96d86e75 .hgsubstate
   --- /dev/null
   +++ b/.hgsubstate
   @@ -0,0 +1,1 @@
@@ -423,16 +423,34 @@ both into 'revision' and 'patch file under .hg/patches':
   # User test
   # Date 0 0
   
-  diff -r f499373e340c -r b20ffac88564 .hgsub
+  diff -r f499373e340c -r f69e96d86e75 .hgsub
   --- /dev/null
   +++ b/.hgsub
   @@ -0,0 +1,1 @@
   +sub = sub
-  diff -r f499373e340c -r b20ffac88564 .hgsubstate
+  diff -r f499373e340c -r f69e96d86e75 .hgsubstate
   --- /dev/null
   +++ b/.hgsubstate
   @@ -0,0 +1,1 @@
   +b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  $ hg parents --template '{node}\n'
+  f69e96d86e75a6d4fd88285dc9697acb23951041
+
+check also whether qnew not including ".hgsubstate" explicitly causes
+as same result (in node hash) as one including it.
+
+  $ hg qpop -a -q
+  patch queue now empty
+  $ hg qdelete import-at-qnew
+  $ echo 'sub = sub' > .hgsub
+  $ hg add .hgsub
+  $ rm -f .hgsubstate
+  $ hg qnew -u test -d '0 0' import-at-qnew
+  $ hg parents --template '{node}\n'
+  f69e96d86e75a6d4fd88285dc9697acb23951041
+
+check whether qrefresh imports updated .hgsubstate correctly
+
   $ hg qpop
   popping import-at-qnew
   patch queue now empty
@@ -536,6 +554,31 @@ both into 'revision' and 'patch file under .hg/patches':
   @@ -1,1 +1,1 @@
   -b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
   +88ac1bef5ed43b689d1d200b59886b675dec474b sub
+
+check whether qrefresh not including ".hgsubstate" explicitly causes
+as same result (in node hash) as one including it.
+
+  $ hg update -C -q 0
+  $ hg qpop -a -q
+  patch queue now empty
+  $ hg qnew -u test -d '0 0' add-hgsub-at-qrefresh
+  $ echo 'sub = sub' > .hgsub
+  $ echo > .hgsubstate
+  $ hg add .hgsub .hgsubstate
+  $ hg qrefresh -u test -d '0 0'
+  $ hg parents --template '{node}\n'
+  7c48c35501aae6770ed9c2517014628615821a8e
+
+  $ hg qpop -a -q
+  patch queue now empty
+  $ hg qdelete add-hgsub-at-qrefresh
+  $ hg qnew -u test -d '0 0' add-hgsub-at-qrefresh
+  $ echo 'sub = sub' > .hgsub
+  $ hg add .hgsub
+  $ rm -f .hgsubstate
+  $ hg qrefresh -u test -d '0 0'
+  $ hg parents --template '{node}\n'
+  7c48c35501aae6770ed9c2517014628615821a8e
 
   $ cd ..
 

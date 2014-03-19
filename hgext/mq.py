@@ -1035,7 +1035,6 @@ class queue(object):
             self.checkpatchname(patchfn)
         inclsubs = checksubstate(repo)
         if inclsubs:
-            inclsubs.append('.hgsubstate')
             substatestate = repo.dirstate['.hgsubstate']
         if opts.get('include') or opts.get('exclude') or pats:
             match = scmutil.match(repo[None], pats, opts)
@@ -1045,14 +1044,14 @@ class queue(object):
                     raise util.Abort('%s: %s' % (f, msg))
             match.bad = badfn
             changes = repo.status(match=match)
-            m, a, r, d = changes[:4]
         else:
             changes = self.checklocalchanges(repo, force=True)
-            m, a, r, d = changes
-        match = scmutil.matchfiles(repo, m + a + r + inclsubs)
+        commitfiles = list(inclsubs)
+        for files in changes[:3]:
+            commitfiles.extend([f for f in files if f != '.hgsubstate'])
+        match = scmutil.matchfiles(repo, commitfiles)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
-        commitfiles = m + a + r
         self.checktoppatch(repo)
         insert = self.fullseriesend()
         wlock = repo.wlock()
@@ -1492,7 +1491,6 @@ class queue(object):
 
             inclsubs = checksubstate(repo, hex(patchparent))
             if inclsubs:
-                inclsubs.append('.hgsubstate')
                 substatestate = repo.dirstate['.hgsubstate']
 
             ph = patchheader(self.join(patchfn), self.plainmode)
@@ -1579,7 +1577,7 @@ class queue(object):
 
             files = set(inclsubs)
             for x in refreshchanges:
-                files.update(x)
+                files.update([f for f in x if f != '.hgsubstate'])
             match = scmutil.matchfiles(repo, files)
 
             bmlist = repo[top].bookmarks()
