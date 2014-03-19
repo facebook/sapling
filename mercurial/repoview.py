@@ -35,6 +35,9 @@ def computehidden(repo):
             blockers.append(par.rev())
         for bm in repo._bookmarks.values():
             blockers.append(repo[bm].rev())
+        tags = [n for t, n in repo.tags().iteritems()
+                if (repo.tagtype(t) and repo.tagtype(t) != 'global')]
+        blockers.extend(repo[t].rev() for t in tags)
         blocked = cl.ancestors(blockers, inclusive=True)
         return frozenset(r for r in hideable if r not in blocked)
     return frozenset()

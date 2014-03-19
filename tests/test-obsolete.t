@@ -884,4 +884,20 @@ This test issue 3814
   no changes found
   [1]
 
+Test that a local tag blocks a changeset from being hidden
 
+  $ hg tag -l visible -r 0 --hidden
+  $ hg log -G
+  @  changeset:   2:3816541e5485
+     tag:         tip
+     parent:      -1:000000000000
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+  x  changeset:   0:193e9254ce7e
+     tag:         visible
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
