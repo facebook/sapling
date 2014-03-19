@@ -45,6 +45,8 @@ Binary format is as follow
   The blob contains a space separated list of parameters. parameter with value
   are stored in the form `<name>=<value>`. Both name and value are urlquoted.
 
+  Empty name are obviously forbidden.
+
   Stream parameters use a simple textual format for two main reasons:
 
   - Stream level parameters should remains simple and we want to discourage any
@@ -53,7 +55,6 @@ Binary format is as follow
     troubles.
 
   Any Applicative level options MUST go into a bundle2 part instead.
-
 
 Payload part
 ------------------------
@@ -97,6 +98,8 @@ class bundle20(object):
 
     def addparam(self, name, value=None):
         """add a stream level parameter"""
+        if not name:
+            raise ValueError('empty parameter name')
         self._params.append((name, value))
 
     def getchunks(self):

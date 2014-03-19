@@ -10,6 +10,7 @@ Create an extension to test bundle2 API
   > 
   > import sys
   > from mercurial import cmdutil
+  > from mercurial import util
   > from mercurial import bundle2
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -22,7 +23,10 @@ Create an extension to test bundle2 API
   >     bundler = bundle2.bundle20()
   >     for p in opts['param']:
   >         p = p.split('=', 1)
-  >         bundler.addparam(*p)
+  >         try:
+  >             bundler.addparam(*p)
+  >         except ValueError, exc:
+  >             raise util.Abort('%s' % exc)
   > 
   >     for chunk in bundler.getchunks():
   >         ui.write(chunk)
@@ -149,3 +153,12 @@ Test unbundling
       babar%#==tutu
   - simple
   parts count:   0
+
+Test buggy input
+---------------------------------------------------
+
+empty parameter name
+
+  $ hg bundle2 --param '' --quiet
+  abort: empty parameter name
+  [255]
