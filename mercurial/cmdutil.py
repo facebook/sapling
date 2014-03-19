@@ -1982,10 +1982,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                     commitphase = 'secret'
                 else:
                     commitphase = old.phase()
-                repo.ui.setconfig('phases', 'new-commit', commitphase)
+                repo.ui.setconfig('phases', 'new-commit', commitphase, 'amend')
                 newid = repo.commitctx(new)
             finally:
-                repo.ui.setconfig('phases', 'new-commit', ph)
+                repo.ui.setconfig('phases', 'new-commit', ph, 'amend')
             if newid != old.node():
                 # Reroute the working copy parent to the new changeset
                 repo.setparents(newid, nullid)

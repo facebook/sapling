@@ -546,11 +546,11 @@ def patchbomb(ui, repo, *revs, **opts):
             if not sendmail:
                 verifycert = ui.config('smtp', 'verifycert')
                 if opts.get('insecure'):
-                    ui.setconfig('smtp', 'verifycert', 'loose')
+                    ui.setconfig('smtp', 'verifycert', 'loose', 'patchbomb')
                 try:
                     sendmail = mail.connect(ui, mbox=mbox)
                 finally:
-                    ui.setconfig('smtp', 'verifycert', verifycert)
+                    ui.setconfig('smtp', 'verifycert', verifycert, 'patchbomb')
             ui.status(_('sending '), subj, ' ...\n')
             ui.progress(_('sending'), i, item=subj, total=len(msgs))
             if not mbox:

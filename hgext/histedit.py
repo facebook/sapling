@@ -198,7 +198,8 @@ def commitfuncfor(repo, src):
     def commitfunc(**kwargs):
         phasebackup = repo.ui.backupconfig('phases', 'new-commit')
         try:
-            repo.ui.setconfig('phases', 'new-commit', phasemin)
+            repo.ui.setconfig('phases', 'new-commit', phasemin,
+                              'histedit')
             extra = kwargs.get('extra', {}).copy()
             extra['histedit_source'] = src.hex()
             kwargs['extra'] = extra
@@ -220,11 +221,12 @@ def applychanges(ui, repo, ctx, opts):
     else:
         try:
             # ui.forcemerge is an internal variable, do not document
-            repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                              'histedit')
             stats = mergemod.update(repo, ctx.node(), True, True, False,
                                     ctx.p1().node())
         finally:
-            repo.ui.setconfig('ui', 'forcemerge', '')
+            repo.ui.setconfig('ui', 'forcemerge', '', 'histedit')
         repo.setparents(wcpar, node.nullid)
         repo.dirstate.write()
         # fix up dirstate for copies and renames
@@ -375,7 +377,7 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     phasebackup = repo.ui.backupconfig('phases', 'new-commit')
     try:
         phasemin = max(ctx.phase(), oldctx.phase())
-        repo.ui.setconfig('phases', 'new-commit', phasemin)
+        repo.ui.setconfig('phases', 'new-commit', phasemin, 'histedit')
         n = collapse(repo, ctx, repo[newnode], commitopts)
     finally:
         repo.ui.restoreconfig(phasebackup)

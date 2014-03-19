@@ -304,7 +304,7 @@ def newcommit(repo, phase, *args, **kwargs):
         backup = repo.ui.backupconfig('phases', 'new-commit')
     try:
         if phase is not None:
-            repo.ui.setconfig('phases', 'new-commit', phase)
+            repo.ui.setconfig('phases', 'new-commit', phase, 'mq')
         return repo.commit(*args, **kwargs)
     finally:
         if phase is not None:

@@ -465,7 +465,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
         rctx = scmutil.revsingle(repo, hex(parent))
         if not opts.get('merge') and op1 != node:
             try:
-                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                             'backout')
                 stats = mergemod.update(repo, parent, True, True, False,
                                         node, False)
                 repo.setparents(op1, op2)
@@ -479,7 +480,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
                     ui.status(msg % short(node))
                 return stats[3] > 0
             finally:
-                ui.setconfig('ui', 'forcemerge', '')
+                ui.setconfig('ui', 'forcemerge', '', '')
         else:
             hg.clean(repo, node, show_stats=False)
             repo.dirstate.setbranch(branch)
@@ -507,10 +508,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
             ui.status(_('merging with changeset %s\n')
                       % nice(repo.changelog.tip()))
             try:
-                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                             'backout')
                 return hg.merge(repo, hex(repo.changelog.tip()))
             finally:
-                ui.setconfig('ui', 'forcemerge', '')
+                ui.setconfig('ui', 'forcemerge', '', '')
     finally:
         wlock.release()
     return 0
@@ -1361,7 +1363,7 @@ def commit(ui, repo, *pats, **opts):
         if opts.get('amend'):
             raise util.Abort(_('cannot amend with --subrepos'))
         # Let --subrepos on the command line override config setting.
-        ui.setconfig('ui', 'commitsubrepos', True)
+        ui.setconfig('ui', 'commitsubrepos', True, 'commit')
 
     # Save this for restoring it later
     oldcommitphase = ui.config('phases', 'new-commit')
@@ -1436,15 +1438,17 @@ def commit(ui, repo, *pats, **opts):
         def commitfunc(ui, repo, message, match, opts):
             try:
                 if opts.get('secret'):
-                    ui.setconfig('phases', 'new-commit', 'secret')
+                    ui.setconfig('phases', 'new-commit', 'secret', 'commit')
                     # Propagate to subrepos
-                    repo.baseui.setconfig('phases', 'new-commit', 'secret')
+                    repo.baseui.setconfig('phases', 'new-commit', 'secret',
+                                          'commit')
 
                 return repo.commit(message, opts.get('user'), opts.get('date'),
                                    match, editor=e, extra=extra)
             finally:
-                ui.setconfig('phases', 'new-commit', oldcommitphase)
-                repo.baseui.setconfig('phases', 'new-commit', oldcommitphase)
+                ui.setconfig('phases', 'new-commit', oldcommitphase, 'commit')
+                repo.baseui.setconfig('phases', 'new-commit', oldcommitphase,
+                                      'commit')
 
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
@@ -3196,11 +3200,12 @@ def graft(ui, repo, *revs, **opts):
                 # perform the graft merge with p1(rev) as 'ancestor'
                 try:
                     # ui.forcemerge is an internal variable, do not document
-                    repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                    repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                                      'graft')
                     stats = mergemod.update(repo, ctx.node(), True, True, False,
                                             ctx.p1().node())
                 finally:
-                    repo.ui.setconfig('ui', 'forcemerge', '')
+                    repo.ui.setconfig('ui', 'forcemerge', '', 'graft')
                 # report any conflicts
                 if stats and stats[3] > 0:
                     # write out state for --continue
@@ -4325,10 +4330,10 @@ def merge(ui, repo, node=None, **opts):
 
     try:
         # ui.forcemerge is an internal variable, do not document
-        repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+        repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''), 'merge')
         return hg.merge(repo, node, force=opts.get('force'))
     finally:
-        ui.setconfig('ui', 'forcemerge', '')
+        ui.setconfig('ui', 'forcemerge', '', 'merge')
 
 @command('outgoing|out',
     [('f', 'force', None, _('run even when the destination is unrelated')),
@@ -4708,7 +4713,7 @@ def push(ui, repo, dest=None, **opts):
     """
 
     if opts.get('bookmark'):
-        ui.setconfig('bookmarks', 'pushing', opts['bookmark'])
+        ui.setconfig('bookmarks', 'pushing', opts['bookmark'], 'push')
         for b in opts['bookmark']:
             # translate -B options to -r so changesets get pushed
             if b in repo._bookmarks:
@@ -4984,11 +4989,12 @@ def resolve(ui, repo, *pats, **opts):
 
                 try:
                     # resolve file
-                    ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                    ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                                 'resolve')
                     if ms.resolve(f, wctx):
                         ret = 1
                 finally:
-                    ui.setconfig('ui', 'forcemerge', '')
+                    ui.setconfig('ui', 'forcemerge', '', 'resolve')
                     ms.commit()
 
                 # replace filemerge's .orig file with our resolve file
@@ -5205,9 +5211,9 @@ def serve(ui, repo, **opts):
         val = opts.get(o, '')
         if val in (None, ''): # should check against default options instead
             continue
-        baseui.setconfig("web", o, val)
+        baseui.setconfig("web", o, val, 'serve')
         if repo and repo.ui != baseui:
-            repo.ui.setconfig("web", o, val)
+            repo.ui.setconfig("web", o, val, 'serve')
 
     o = opts.get('web_conf') or opts.get('webdir_conf')
     if not o:

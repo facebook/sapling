@@ -512,8 +512,8 @@ class hgsubrepo(abstractsubrepo):
         for s, k in [('ui', 'commitsubrepos')]:
             v = r.ui.config(s, k)
             if v:
-                self._repo.ui.setconfig(s, k, v)
-        self._repo.ui.setconfig('ui', '_usedassubrepo', 'True')
+                self._repo.ui.setconfig(s, k, v, 'subrepo')
+        self._repo.ui.setconfig('ui', '_usedassubrepo', 'True', 'subrepo')
         self._initrepo(r, state[0], create)
 
     def storeclean(self, path):
@@ -594,7 +594,7 @@ class hgsubrepo(abstractsubrepo):
             def addpathconfig(key, value):
                 if value:
                     fp.write('%s = %s\n' % (key, value))
-                    self._repo.ui.setconfig('paths', key, value)
+                    self._repo.ui.setconfig('paths', key, value, 'subrepo')
 
             defpath = _abssource(self._repo, abort=False)
             defpushpath = _abssource(self._repo, True, abort=False)

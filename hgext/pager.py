@@ -129,8 +129,8 @@ def uisetup(ui):
                 if (always or auto and
                     (cmd in attend or
                      (cmd not in ignore and not attend))):
-                    ui.setconfig('ui', 'formatted', ui.formatted())
-                    ui.setconfig('ui', 'interactive', False)
+                    ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
+                    ui.setconfig('ui', 'interactive', False, 'pager')
                     if util.safehasattr(signal, "SIGPIPE"):
                         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
                     _runpager(ui, p)

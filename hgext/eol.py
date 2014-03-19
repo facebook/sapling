@@ -151,7 +151,7 @@ class eolfile(object):
         self.cfg = config.config()
         # Our files should not be touched. The pattern must be
         # inserted first override a '** = native' pattern.
-        self.cfg.set('patterns', '.hg*', 'BIN')
+        self.cfg.set('patterns', '.hg*', 'BIN', 'eol')
         # We can then parse the user's patterns.
         self.cfg.parse('.hgeol', data)
 
@@ -176,14 +176,14 @@ class eolfile(object):
         for pattern, style in self.cfg.items('patterns'):
             key = style.upper()
             try:
-                ui.setconfig('decode', pattern, self._decode[key])
-                ui.setconfig('encode', pattern, self._encode[key])
+                ui.setconfig('decode', pattern, self._decode[key], 'eol')
+                ui.setconfig('encode', pattern, self._encode[key], 'eol')
             except KeyError:
                 ui.warn(_("ignoring unknown EOL style '%s' from %s\n")
                         % (style, self.cfg.source('patterns', pattern)))
         # eol.only-consistent can be specified in ~/.hgrc or .hgeol
         for k, v in self.cfg.items('eol'):
-            ui.setconfig('eol', k, v)
+            ui.setconfig('eol', k, v, 'eol')
 
     def checkrev(self, repo, ctx, files):
         failed = []
@@ -261,7 +261,7 @@ def preupdate(ui, repo, hooktype, parent1, parent2):
     return False
 
 def uisetup(ui):
-    ui.setconfig('hooks', 'preupdate.eol', preupdate)
+    ui.setconfig('hooks', 'preupdate.eol', preupdate, 'eol')
 
 def extsetup(ui):
     try:
@@ -280,7 +280,7 @@ def reposetup(ui, repo):
     for name, fn in filters.iteritems():
         repo.adddatafilter(name, fn)
 
-    ui.setconfig('patch', 'eol', 'auto')
+    ui.setconfig('patch', 'eol', 'auto', 'eol')
 
     class eolrepo(repo.__class__):
 

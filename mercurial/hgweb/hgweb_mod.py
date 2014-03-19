@@ -64,10 +64,10 @@ class hgweb(object):
             r = repo
 
         r = self._getview(r)
-        r.ui.setconfig('ui', 'report_untrusted', 'off')
-        r.baseui.setconfig('ui', 'report_untrusted', 'off')
-        r.ui.setconfig('ui', 'nontty', 'true')
-        r.baseui.setconfig('ui', 'nontty', 'true')
+        r.ui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
+        r.baseui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
+        r.ui.setconfig('ui', 'nontty', 'true', 'hgweb')
+        r.baseui.setconfig('ui', 'nontty', 'true', 'hgweb')
         self.repo = r
         hook.redirect(True)
         self.mtime = -1

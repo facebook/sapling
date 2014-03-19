@@ -96,8 +96,8 @@ class hgwebdir(object):
             u = self.baseui.copy()
         else:
             u = ui.ui()
-            u.setconfig('ui', 'report_untrusted', 'off')
-            u.setconfig('ui', 'nontty', 'true')
+            u.setconfig('ui', 'report_untrusted', 'off', 'hgwebdir')
+            u.setconfig('ui', 'nontty', 'true', 'hgwebdir')
 
         if not isinstance(self.conf, (dict, list, tuple)):
             map = {'paths': 'hgweb-paths'}

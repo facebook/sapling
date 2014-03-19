@@ -405,7 +405,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             fp.write("default = %s\n" % defaulturl)
             fp.close()
 
-            destrepo.ui.setconfig('paths', 'default', defaulturl)
+            destrepo.ui.setconfig('paths', 'default', defaulturl, 'clone')
 
             if update:
                 if update is not True:
@@ -613,19 +613,19 @@ def remoteui(src, opts):
     for o in 'ssh', 'remotecmd':
         v = opts.get(o) or src.config('ui', o)
         if v:
-            dst.setconfig("ui", o, v)
+            dst.setconfig("ui", o, v, 'copied')
 
     # copy bundle-specific options
     r = src.config('bundle', 'mainreporoot')
     if r:
-        dst.setconfig('bundle', 'mainreporoot', r)
+        dst.setconfig('bundle', 'mainreporoot', r, 'copied')
 
     # copy selected local settings to the remote ui
     for sect in ('auth', 'hostfingerprints', 'http_proxy'):
         for key, val in src.configitems(sect):
-            dst.setconfig(sect, key, val)
+            dst.setconfig(sect, key, val, 'copied')
     v = src.config('web', 'cacerts')
     if v:
-        dst.setconfig('web', 'cacerts', util.expandpath(v))
+        dst.setconfig('web', 'cacerts', util.expandpath(v), 'copied')
 
     return dst

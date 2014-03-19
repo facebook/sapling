@@ -330,14 +330,15 @@ def rebase(ui, repo, **opts):
                     repo.ui.debug('resuming interrupted rebase\n')
                 else:
                     try:
-                        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                                     'rebase')
                         stats = rebasenode(repo, rev, p1, state, collapsef)
                         if stats and stats[3] > 0:
                             raise error.InterventionRequired(
                                 _('unresolved conflicts (see hg '
                                   'resolve, then hg rebase --continue)'))
                     finally:
-                        ui.setconfig('ui', 'forcemerge', '')
+                        ui.setconfig('ui', 'forcemerge', '', 'rebase')
                 cmdutil.duplicatecopies(repo, rev, target)
                 if not collapsef:
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn,

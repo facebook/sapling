@@ -193,7 +193,7 @@ class bundlerepository(localrepo.localrepository):
             self._tempparent = tempfile.mkdtemp()
             localrepo.instance(ui, self._tempparent, 1)
             localrepo.localrepository.__init__(self, ui, self._tempparent)
-        self.ui.setconfig('phases', 'publish', False)
+        self.ui.setconfig('phases', 'publish', False, 'bundlerepo')
 
         if path:
             self._url = 'bundle:' + util.expandpath(path) + '+' + bundlename

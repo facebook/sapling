@@ -170,7 +170,7 @@ class unionpeer(localrepo.localpeer):
 class unionrepository(localrepo.localrepository):
     def __init__(self, ui, path, path2):
         localrepo.localrepository.__init__(self, ui, path)
-        self.ui.setconfig('phases', 'publish', False)
+        self.ui.setconfig('phases', 'publish', False, 'unionrepo')
 
         self._url = 'union:%s+%s' % (util.expandpath(path),
                                      util.expandpath(path2))
