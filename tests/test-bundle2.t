@@ -17,8 +17,8 @@ Create an extension to test bundle2 API
   > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),],
-  >          '')
-  > def cmdbundle2(ui, repo, **opts):
+  >          '[OUTPUTFILE]')
+  > def cmdbundle2(ui, repo, path=None, **opts):
   >     """write a bundle2 container on standard ouput"""
   >     bundler = bundle2.bundle20()
   >     for p in opts['param']:
@@ -28,8 +28,13 @@ Create an extension to test bundle2 API
   >         except ValueError, exc:
   >             raise util.Abort('%s' % exc)
   > 
+  >     if path is None:
+  >        file = sys.stdout
+  >     else:
+  >         file = open(path, 'w')
+  > 
   >     for chunk in bundler.getchunks():
-  >         ui.write(chunk)
+  >         file.write(chunk)
   > 
   > @command('unbundle2', [], '')
   > def cmdunbundle2(ui, repo):
@@ -153,6 +158,17 @@ Test unbundling
       babar%#==tutu
   - simple
   parts count:   0
+
+Test debug output
+---------------------------------------------------
+(no debug output yet)
+
+  $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
+
+file content is ok
+
+  $ cat ../out.hg2
+  HG20\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
 
 Test buggy input
 ---------------------------------------------------
