@@ -94,32 +94,32 @@ fn to create dirty subrepo
 handle subrepos safely on qnew
 
   $ mkrepo repo-2499-qnew
-  $ testadd qnew -m0 0.diff
+  $ testadd qnew -X path:no-effect -m0 0.diff
   adding a
   % abort when adding .hgsub w/dirty subrepo
   A .hgsub
   A sub/a
-  % qnew -m0 0.diff
+  % qnew -X path:no-effect -m0 0.diff
   abort: uncommitted changes in subrepository sub
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
-  % qnew -m0 0.diff
+  % qnew -X path:no-effect -m0 0.diff
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
 
-  $ testmod qnew -m1 1.diff
+  $ testmod qnew --cwd .. -R repo-2499-qnew -X path:no-effect -m1 1.diff
   adding a
   % abort when modifying .hgsub w/dirty subrepo
   M .hgsub
   A sub2/a
-  % qnew -m1 1.diff
+  % qnew --cwd .. -R repo-2499-qnew -X path:no-effect -m1 1.diff
   abort: uncommitted changes in subrepository sub2
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
-  % qnew -m1 1.diff
+  % qnew --cwd .. -R repo-2499-qnew -X path:no-effect -m1 1.diff
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31

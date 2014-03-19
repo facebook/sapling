@@ -1038,8 +1038,6 @@ class queue(object):
             inclsubs.append('.hgsubstate')
             substatestate = repo.dirstate['.hgsubstate']
         if opts.get('include') or opts.get('exclude') or pats:
-            if inclsubs:
-                pats = list(pats or []) + inclsubs
             match = scmutil.match(repo[None], pats, opts)
             # detect missing files in pats
             def badfn(f, msg):
