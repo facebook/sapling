@@ -14,11 +14,15 @@ Create an extension to test bundle2 API
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > 
-  > @command('bundle2', [], '')
-  > def cmdbundle2(ui, repo):
+  > @command('bundle2',
+  >          [('', 'param', [], 'stream level parameter'),],
+  >          '')
+  > def cmdbundle2(ui, repo, **opts):
   >     """write a bundle2 container on standard ouput"""
-  >     bundle = bundle2.bundle20()
-  >     for chunk in bundle.getchunks():
+  >     bundler = bundle2.bundle20()
+  >     for p in opts['param']:
+  >         bundler.addparam(p)
+  >     for chunk in bundler.getchunks():
   >         ui.write(chunk)
   > 
   > @command('unbundle2', [], '')
@@ -42,12 +46,19 @@ The extension requires a repo (currently unused)
   $ hg add a
   $ hg commit -m 'a'
 
-Test simple generation of empty bundle
+
+Empty bundle
+=================
+
+- no option
+- no parts
+
+Test bundling
 
   $ hg bundle2
   HG20\x00\x00\x00\x00 (no-eol) (esc)
 
-Test parsing of an empty bundle
+Test unbundling
 
   $ hg bundle2 | hg unbundle2
   options count: 0
@@ -60,3 +71,24 @@ Test old style bundle are detected and refused
   $ hg unbundle2 < ../bundle.hg
   abort: unknown bundle version 10
   [255]
+
+Test parameters
+=================
+
+- some options
+- no parts
+
+advisory parameters, no value
+-------------------------------
+
+Simplest possible parameters form
+
+Test generation
+
+  $ hg bundle2 --param 'caution'
+  HG20\x00\x07caution\x00\x00 (no-eol) (esc)
+
+Test generation multiple option
+
+  $ hg bundle2 --param 'caution' --param 'meal'
+  HG20\x00\x0ccaution meal\x00\x00 (no-eol) (esc)

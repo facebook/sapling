@@ -21,7 +21,7 @@ The format is architectured as follow
  - payload parts (any number)
  - end of stream marker.
 
-The current implementation is limited to empty bundle.
+The current implementation accept some stream level option but no part.
 
 Details on the Binary format
 ============================
@@ -37,14 +37,18 @@ Binary format is as follow
 
   The total number of Bytes used by the parameters
 
-  Currently force to 0.
-
 :params value: arbitrary number of Bytes
 
   A blob of `params size` containing the serialized version of all stream level
   parameters.
 
-  Currently always empty.
+  The blob contains a space separated list of parameters.
+
+  Parameter value are not supported yet.
+
+  Special character in param name are not supported yet.
+
+
 
 
 Payload part
@@ -61,31 +65,56 @@ Binary format is as follow
 """
 
 import util
+import struct
+
 import changegroup
 from i18n import _
 
+_pack = struct.pack
+_unpack = struct.unpack
+
 _magicstring = 'HG20'
+
+_fstreamparamsize = '>H'
 
 class bundle20(object):
     """represent an outgoing bundle2 container
 
-    People will eventually be able to add param and parts to this object and
-    generated a stream from it."""
+    Use the `addparam` method to add stream level parameter. Then call
+    `getchunks` to retrieve all the binary chunks of datathat compose the
+    bundle2 container.
+
+    This object does not support payload part yet."""
 
     def __init__(self):
         self._params = []
         self._parts = []
 
+    def addparam(self, name, value=None):
+        """add a stream level parameter"""
+        self._params.append((name, value))
+
     def getchunks(self):
         yield _magicstring
-        # no support for any param yet
-        # to be obviously fixed soon.
-        assert not self._params
-        yield '\0\0'
+        param = self._paramchunk()
+        yield _pack(_fstreamparamsize, len(param))
+        if param:
+            yield param
+
         # no support for parts
         # to be obviously fixed soon.
         assert not self._parts
         yield '\0\0'
+
+    def _paramchunk(self):
+        """return a encoded version of all stream parameters"""
+        blocks = []
+        for key, value in self._params:
+            # XXX no support for value yet
+            assert value is None
+            # XXX no escaping yet
+            blocks.append(key)
+        return ' '.join(blocks)
 
 class unbundle20(object):
     """interpret a bundle2 stream
