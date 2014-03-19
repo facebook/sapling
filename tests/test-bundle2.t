@@ -140,3 +140,12 @@ Test generation
 
   $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple
   HG20\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
+
+Test unbundling
+
+  $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple | hg unbundle2
+  options count: 2
+  - e|! 7/
+      babar%#==tutu
+  - simple
+  parts count:   0

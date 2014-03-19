@@ -153,6 +153,7 @@ class unbundle20(object):
         if paramssize:
             for p in self._readexact(paramssize).split(' '):
                 p = p.split('=', 1)
+                p = [urllib.unquote(i) for i in p]
                 if len(p) < 2:
                     p.append(None)
                 params[p[0]] = p[1]
