@@ -141,7 +141,7 @@ customized hgrc
   $ hg showconfig
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:13: alias.log=log -g
-  none: bundle.mainreporoot=$TESTTMP
+  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:11: defaults.identify=-n
   $TESTTMP/hgrc:2: ui.debug=true
   $TESTTMP/hgrc:3: ui.fallbackencoding=ASCII
@@ -157,11 +157,11 @@ plain hgrc
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   read config from: $TESTTMP/hgrc
-  none: bundle.mainreporoot=$TESTTMP
-  none: ui.traceback=True
-  none: ui.verbose=False
-  none: ui.debug=True
-  none: ui.quiet=False
+  repo: bundle.mainreporoot=$TESTTMP
+  --config: ui.traceback=True
+  --verbose: ui.verbose=False
+  --debug: ui.debug=True
+  --quiet: ui.quiet=False
 
 plain mode with exceptions
 
@@ -175,29 +175,29 @@ plain mode with exceptions
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
-  none: bundle.mainreporoot=$TESTTMP
+  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
-  none: ui.traceback=True
-  none: ui.verbose=False
-  none: ui.debug=True
-  none: ui.quiet=False
+  --config: ui.traceback=True
+  --verbose: ui.verbose=False
+  --debug: ui.debug=True
+  --quiet: ui.quiet=False
   $ unset HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
-  none: bundle.mainreporoot=$TESTTMP
+  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
-  none: ui.traceback=True
-  none: ui.verbose=False
-  none: ui.debug=True
-  none: ui.quiet=False
+  --config: ui.traceback=True
+  --verbose: ui.verbose=False
+  --debug: ui.debug=True
+  --quiet: ui.quiet=False
   $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
-  none: bundle.mainreporoot=$TESTTMP
+  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
-  none: ui.traceback=True
-  none: ui.verbose=False
-  none: ui.debug=True
-  none: ui.quiet=False
+  --config: ui.traceback=True
+  --verbose: ui.verbose=False
+  --debug: ui.debug=True
+  --quiet: ui.quiet=False
