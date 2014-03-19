@@ -47,6 +47,10 @@ Binary format is as follow
 
   Empty name are obviously forbidden.
 
+  Name MUST start with a letter. This first character has to be capitalizable.
+  The capitalisation of the first letter will be used to know if an option is
+  advisory or mandatory. This is not implemented yet.
+
   Stream parameters use a simple textual format for two main reasons:
 
   - Stream level parameters should remains simple and we want to discourage any
@@ -72,6 +76,7 @@ Binary format is as follow
 import util
 import struct
 import urllib
+import string
 
 import changegroup
 from i18n import _
@@ -100,6 +105,8 @@ class bundle20(object):
         """add a stream level parameter"""
         if not name:
             raise ValueError('empty parameter name')
+        if name[0] not in string.letters:
+            raise ValueError('non letter first character: %r' % name)
         self._params.append((name, value))
 
     def getchunks(self):

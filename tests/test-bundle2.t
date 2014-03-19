@@ -162,3 +162,9 @@ empty parameter name
   $ hg bundle2 --param '' --quiet
   abort: empty parameter name
   [255]
+
+bad parameter name
+
+  $ hg bundle2 --param 42babar
+  abort: non letter first character: '42babar'
+  [255]
