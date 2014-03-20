@@ -146,9 +146,14 @@ def reposetup(ui, repo):
 
         def _activepath(self, remote):
             realpath = ''
+            local = None
+            try:
+                local = remote.local()
+            except AttributeError:
+                pass
             for path, uri in ui.configitems('paths'):
                 uri = self.ui.expandpath(self._expandscheme(uri))
-                if remote.local():
+                if local:
                     uri = os.path.realpath(uri)
                     rpath = getattr(remote, 'root', None)
                     if rpath is None:
