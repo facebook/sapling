@@ -48,7 +48,14 @@ Binary format is as follow
 
   Special character in param name are not supported yet.
 
+  Stream parameters use a simple textual format for two main reasons:
 
+  - Stream level parameters should remains simple and we want to discourage any
+    crazy usage.
+  - Textual data allow easy human inspection of a the bundle2 header in case of
+    troubles.
+
+  Any Applicative level options MUST go into a bundle2 part instead.
 
 
 Payload part
