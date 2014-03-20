@@ -151,17 +151,24 @@ def reposetup(ui, repo):
                 local = remote.local()
             except AttributeError:
                 pass
+
+            # determine the remote path from the repo, if possible; else just
+            # use the string given to us
+            rpath = remote
+            if local:
+                rpath = getattr(remote, 'root', None)
+                if rpath is None:
+                    # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
+                    rpath = getattr(getattr(remote, '_repo', None),
+                                    'root', None)
+            elif not isinstance(remote, str):
+                rpath = remote._url
+
             for path, uri in ui.configitems('paths'):
                 uri = self.ui.expandpath(self._expandscheme(uri))
                 if local:
                     uri = os.path.realpath(uri)
-                    rpath = getattr(remote, 'root', None)
-                    if rpath is None:
-                        # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
-                        rpath = getattr(getattr(remote, '_repo', None),
-                                        'root', None)
                 else:
-                    rpath = remote._url
                     if uri.startswith('http'):
                         try:
                             uri = url.url(uri).authinfo()[0]
