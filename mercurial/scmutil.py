@@ -499,7 +499,7 @@ def revrange(repo, revs):
         try:
             if isinstance(spec, int):
                 seen.add(spec)
-                l = l + [spec]
+                l = l + revset.baseset([spec])
                 continue
 
             if _revrangesep in spec:
@@ -520,14 +520,14 @@ def revrange(repo, revs):
                     seen.update(newrevs)
                 else:
                     seen = newrevs
-                l = l + sorted(newrevs, reverse=start > end)
+                l = l + revset.baseset(sorted(newrevs, reverse=start > end))
                 continue
             elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
                 if rev in seen:
                     continue
                 seen.add(rev)
-                l = l + [rev]
+                l = l + revset.baseset([rev])
                 continue
         except error.RepoLookupError:
             pass
@@ -536,7 +536,7 @@ def revrange(repo, revs):
         m = revset.match(repo.ui, spec, repo)
         if seen or l:
             dl = [r for r in m(repo, revset.spanset(repo)) if r not in seen]
-            l = l + dl
+            l = l + revset.baseset(dl)
             seen.update(dl)
         else:
             l = m(repo, revset.spanset(repo))

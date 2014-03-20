@@ -734,6 +734,16 @@ parentrevspec
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
 
+multiple revspecs
+
+  $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{rev}\n'
+  8
+  9
+  4
+  5
+  6
+  7
+
 aliases:
 
   $ echo '[revsetalias]' >> .hg/hgrc
