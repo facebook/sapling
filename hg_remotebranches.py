@@ -123,24 +123,25 @@ def reposetup(ui, repo):
 
         def _expandscheme(self, uri):
             '''For a given uri, expand the scheme for it'''
-            for s in schemes.schemes.iterkeys():
-                if uri.startswith('%s://' % s):
-                    # TODO: refactor schemes so we don't
-                    # duplicate this logic
-                    ui.note('performing schemes expansion with '
-                            'scheme %s\n' % s)
-                    scheme = hg.schemes[s]
-                    parts = uri.split('://', 1)[1].split('/',
-                                                         scheme.parts)
-                    if len(parts) > scheme.parts:
-                        tail = parts[-1]
-                        parts = parts[:-1]
-                    else:
-                        tail = ''
-                    context = dict((str(i+1), v) for i, v in
-                                   enumerate(parts))
-                    uri = ''.join(scheme.templater.process(
-                        scheme.url, context)) + tail
+            urischemes = [s for s in schemes.schemes.iterkeys()
+                          if uri.startswith('%s://' % s)]
+            for s in urischemes:
+                # TODO: refactor schemes so we don't
+                # duplicate this logic
+                ui.note('performing schemes expansion with '
+                        'scheme %s\n' % s)
+                scheme = hg.schemes[s]
+                parts = uri.split('://', 1)[1].split('/',
+                                                     scheme.parts)
+                if len(parts) > scheme.parts:
+                    tail = parts[-1]
+                    parts = parts[:-1]
+                else:
+                    tail = ''
+                context = dict((str(i+1), v) for i, v in
+                               enumerate(parts))
+                uri = ''.join(scheme.templater.process(
+                    scheme.url, context)) + tail
             return uri
 
         def _activepath(self, remote):
