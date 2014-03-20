@@ -39,7 +39,7 @@ Create an extension to test bundle2 API
   > @command('unbundle2', [], '')
   > def cmdunbundle2(ui, repo):
   >     """read a bundle2 container from standard input"""
-  >     unbundler = bundle2.unbundle20(sys.stdin)
+  >     unbundler = bundle2.unbundle20(ui, sys.stdin)
   >     ui.write('options count: %i\n' % len(unbundler.params))
   >     for key in sorted(unbundler.params):
   >         ui.write('- %s\n' % key)
@@ -162,6 +162,8 @@ Test unbundling
 Test debug output
 ---------------------------------------------------
 
+bundling debug
+
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
   start emission of HG20 stream
   bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
@@ -171,6 +173,20 @@ file content is ok
 
   $ cat ../out.hg2
   HG20\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
+
+unbundling debug
+
+  $ hg unbundle2 --debug < ../out.hg2
+  start processing of HG20 stream
+  reading bundle2 stream parameters
+  options count: 2
+  - e|! 7/
+      babar%#==tutu
+  - simple
+  start extraction of bundle2 parts
+  end of bundle2 stream
+  parts count:   0
+
 
 Test buggy input
 ---------------------------------------------------

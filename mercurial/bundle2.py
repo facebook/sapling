@@ -141,7 +141,8 @@ class unbundle20(object):
 
     (this will eventually yield parts)"""
 
-    def __init__(self, fp):
+    def __init__(self, ui, fp):
+        self.ui = ui
         self._fp = fp
         header = self._readexact(4)
         magic, version = header[0:2], header[2:4]
@@ -149,6 +150,7 @@ class unbundle20(object):
             raise util.Abort(_('not a Mercurial bundle'))
         if version != '20':
             raise util.Abort(_('unknown bundle version %s') % version)
+        self.ui.debug('start processing of %s stream\n' % header)
 
     def _unpack(self, format):
         """unpack this struct format from the stream"""
@@ -162,6 +164,7 @@ class unbundle20(object):
     @util.propertycache
     def params(self):
         """dictionnary of stream level parameters"""
+        self.ui.debug('reading bundle2 stream parameters\n')
         params = {}
         paramssize = self._unpack(_fstreamparamsize)[0]
         if paramssize:
@@ -177,10 +180,12 @@ class unbundle20(object):
         """yield all parts contained in the stream"""
         # make sure param have been loaded
         self.params
+        self.ui.debug('start extraction of bundle2 parts\n')
         part = self._readpart()
         while part is not None:
             yield part
             part = self._readpart()
+        self.ui.debug('end of bundle2 stream\n')
 
     def _readpart(self):
         """return None when an end of stream markers is reach"""
