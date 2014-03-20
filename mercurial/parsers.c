@@ -1969,18 +1969,22 @@ static struct PyModuleDef parsers_module = {
 
 PyMODINIT_FUNC PyInit_parsers(void)
 {
+	PyObject *mod;
+
 	if (check_python_version() == -1)
 		return;
-	PyObject *mod = PyModule_Create(&parsers_module);
+	mod = PyModule_Create(&parsers_module);
 	module_init(mod);
 	return mod;
 }
 #else
 PyMODINIT_FUNC initparsers(void)
 {
+	PyObject *mod;
+
 	if (check_python_version() == -1)
 		return;
-	PyObject *mod = Py_InitModule3("parsers", methods, parsers_doc);
+	mod = Py_InitModule3("parsers", methods, parsers_doc);
 	module_init(mod);
 }
 #endif
