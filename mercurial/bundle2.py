@@ -240,9 +240,31 @@ class unbundle20(object):
 
     def _readpart(self):
         """return None when an end of stream markers is reach"""
-        headersize = self._readexact(2)
-        assert headersize == '\0\0'
-        return None
+
+        headersize = self._unpack(_fpartheadersize)[0]
+        self.ui.debug('part header size: %i\n' % headersize)
+        if not headersize:
+            return None
+        headerblock = self._readexact(headersize)
+        # some utility to help reading from the header block
+        self._offset = 0 # layer violation to have something easy to understand
+        def fromheader(size):
+            """return the next <size> byte from the header"""
+            offset = self._offset
+            data = headerblock[offset:(offset + size)]
+            self._offset = offset + size
+            return data
+        typesize = _unpack(_fparttypesize, fromheader(1))[0]
+        parttype = fromheader(typesize)
+        self.ui.debug('part type: "%s"\n' % parttype)
+        current = part(parttype)
+        assert fromheader(2) == '\0\0' # no option for now
+        del self._offset # clean up layer, nobody saw anything.
+        self.ui.debug('part parameters: 0\n')
+        assert self._readexact(4) == '\0\0\0\0' #empty payload
+        self.ui.debug('payload chunk size: 0\n')
+        return current
+
 
 class part(object):
     """A bundle2 part contains application level payload
@@ -251,8 +273,9 @@ class part(object):
     handler.
     """
 
-    def __init__(self, parttype):
+    def __init__(self, parttype, data=''):
         self.type = parttype
+        self.data = data
 
     def getchunks(self):
         ### header

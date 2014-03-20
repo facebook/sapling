@@ -60,6 +60,8 @@ Create an extension to test bundle2 API
   >             ui.write('    %s\n' % value)
   >     parts = list(unbundler)
   >     ui.write('parts count:   %i\n' % len(parts))
+  >     for p in parts:
+  >         ui.write('  :%s:\n' % p.type)
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -206,6 +208,7 @@ unbundling debug
       babar%#==tutu
   - simple
   start extraction of bundle2 parts
+  part header size: 0
   end of bundle2 stream
   parts count:   0
 
@@ -243,3 +246,27 @@ Test part
   test:empty\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
+  $ hg unbundle2 < ../parts.hg2
+  options count: 0
+  parts count:   2
+    :test:empty:
+    :test:empty:
+
+  $ hg unbundle2 --debug < ../parts.hg2
+  start processing of HG20 stream
+  reading bundle2 stream parameters
+  options count: 0
+  start extraction of bundle2 parts
+  part header size: 13
+  part type: "test:empty"
+  part parameters: 0
+  payload chunk size: 0
+  part header size: 13
+  part type: "test:empty"
+  part parameters: 0
+  payload chunk size: 0
+  part header size: 0
+  end of bundle2 stream
+  parts count:   2
+    :test:empty:
+    :test:empty:
