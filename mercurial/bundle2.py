@@ -89,8 +89,13 @@ Binary format is as follow
 
 :payload:
 
-    The current payload is a 32bit integer with a value of 0. This is
-    considered an "empty" payload.
+    payload is a series of `<chunksize><chunkdata>`.
+
+    `chunksize` is a 32 bits integer, `chunkdata` are plain bytes (as much as
+    `chunksize` says)` The payload part is concluded by a zero size chunk.
+
+    The current implementation always produces either zero or one chunk.
+    This is an implementation limitation that will ultimatly be lifted.
 """
 
 import util
@@ -109,6 +114,7 @@ _magicstring = 'HG20'
 _fstreamparamsize = '>H'
 _fpartheadersize = '>H'
 _fparttypesize = '>B'
+_fpayloadsize = '>I'
 
 class bundle20(object):
     """represent an outgoing bundle2 container
@@ -257,12 +263,18 @@ class unbundle20(object):
         typesize = _unpack(_fparttypesize, fromheader(1))[0]
         parttype = fromheader(typesize)
         self.ui.debug('part type: "%s"\n' % parttype)
-        current = part(parttype)
         assert fromheader(2) == '\0\0' # no option for now
         del self._offset # clean up layer, nobody saw anything.
         self.ui.debug('part parameters: 0\n')
-        assert self._readexact(4) == '\0\0\0\0' #empty payload
-        self.ui.debug('payload chunk size: 0\n')
+        payload = []
+        payloadsize = self._unpack(_fpayloadsize)[0]
+        self.ui.debug('payload chunk size: %i\n' % payloadsize)
+        while payloadsize:
+            payload.append(self._readexact(payloadsize))
+            payloadsize = self._unpack(_fpayloadsize)[0]
+            self.ui.debug('payload chunk size: %i\n' % payloadsize)
+        payload = ''.join(payload)
+        current = part(parttype, data=payload)
         return current
 
 
@@ -286,7 +298,12 @@ class part(object):
         headerchunk = ''.join(header)
         yield _pack(_fpartheadersize, len(headerchunk))
         yield headerchunk
-        # force empty part for now
-        yield '\0\0\0\0'
+        # we only support fixed size data now.
+        # This will be improved in the future.
+        if len(self.data):
+            yield _pack(_fpayloadsize, len(self.data))
+            yield self.data
+        # end of payload
+        yield _pack(_fpayloadsize, 0)
 
 

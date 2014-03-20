@@ -15,6 +15,11 @@ Create an extension to test bundle2 API
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > 
+  > ELEPHANTSSONG = """Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+  > Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+  > Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko."""
+  > assert len(ELEPHANTSSONG) == 178 # future test say 178 bytes, trust it.
+  > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),],
@@ -34,6 +39,8 @@ Create an extension to test bundle2 API
   >        bundler.addpart(part)
   >        # add a second one to make sure we handle multiple parts
   >        part = bundle2.part('test:empty')
+  >        bundler.addpart(part)
+  >        part = bundle2.part('test:song', data=ELEPHANTSSONG)
   >        bundler.addpart(part)
   > 
   >     if path is None:
@@ -62,6 +69,7 @@ Create an extension to test bundle2 API
   >     ui.write('parts count:   %i\n' % len(parts))
   >     for p in parts:
   >         ui.write('  :%s:\n' % p.type)
+  >         ui.write('    payload: %i bytes\n' % len(p.data))
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -238,19 +246,26 @@ Test part
   start of parts
   bundle part: "test:empty"
   bundle part: "test:empty"
+  bundle part: "test:song"
   end of bundle
 
   $ cat ../parts.hg2
   HG20\x00\x00\x00\r (esc)
   test:empty\x00\x00\x00\x00\x00\x00\x00\r (esc)
-  test:empty\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  test:empty\x00\x00\x00\x00\x00\x00\x00\x0c	test:song\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
+  Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg unbundle2 < ../parts.hg2
   options count: 0
-  parts count:   2
+  parts count:   3
     :test:empty:
+      payload: 0 bytes
     :test:empty:
+      payload: 0 bytes
+    :test:song:
+      payload: 178 bytes
 
   $ hg unbundle2 --debug < ../parts.hg2
   start processing of HG20 stream
@@ -265,8 +280,17 @@ Test part
   part type: "test:empty"
   part parameters: 0
   payload chunk size: 0
+  part header size: 12
+  part type: "test:song"
+  part parameters: 0
+  payload chunk size: 178
+  payload chunk size: 0
   part header size: 0
   end of bundle2 stream
-  parts count:   2
+  parts count:   3
     :test:empty:
+      payload: 0 bytes
     :test:empty:
+      payload: 0 bytes
+    :test:song:
+      payload: 178 bytes
