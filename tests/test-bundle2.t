@@ -40,10 +40,14 @@ Create an extension to test bundle2 API
   > def cmdunbundle2(ui, repo):
   >     """read a bundle2 container from standard input"""
   >     unbundler = bundle2.unbundle20(ui, sys.stdin)
-  >     ui.write('options count: %i\n' % len(unbundler.params))
-  >     for key in sorted(unbundler.params):
+  >     try:
+  >         params = unbundler.params
+  >     except KeyError, exc:
+  >        raise util.Abort('unknown parameters: %s' % exc)
+  >     ui.write('options count: %i\n' % len(params))
+  >     for key in sorted(params):
   >         ui.write('- %s\n' % key)
-  >         value = unbundler.params[key]
+  >         value = params[key]
   >         if value is not None:
   >             ui.write('    %s\n' % value)
   >     parts = list(unbundler)
@@ -159,6 +163,13 @@ Test unbundling
   - simple
   parts count:   0
 
+Test unknown mandatory option
+---------------------------------------------------
+
+  $ hg bundle2 --param 'Gravity' | hg unbundle2
+  abort: unknown parameters: 'Gravity'
+  [255]
+
 Test debug output
 ---------------------------------------------------
 
@@ -179,6 +190,8 @@ unbundling debug
   $ hg unbundle2 --debug < ../out.hg2
   start processing of HG20 stream
   reading bundle2 stream parameters
+  ignoring unknown parameter 'e|! 7/'
+  ignoring unknown parameter 'simple'
   options count: 2
   - e|! 7/
       babar%#==tutu

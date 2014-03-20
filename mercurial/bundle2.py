@@ -47,9 +47,10 @@ Binary format is as follow
 
   Empty name are obviously forbidden.
 
-  Name MUST start with a letter. This first character has to be capitalizable.
-  The capitalisation of the first letter will be used to know if an option is
-  advisory or mandatory. This is not implemented yet.
+  Name MUST start with a letter. If this first letter is lower case, the
+  parameter is advisory and can be safefly ignored. However when the first
+  letter is capital, the parameter is mandatory and the bundling process MUST
+  stop if he is not able to proceed it.
 
   Stream parameters use a simple textual format for two main reasons:
 
@@ -173,8 +174,31 @@ class unbundle20(object):
                 p = [urllib.unquote(i) for i in p]
                 if len(p) < 2:
                     p.append(None)
+                self._processparam(*p)
                 params[p[0]] = p[1]
         return params
+
+    def _processparam(self, name, value):
+        """process a parameter, applying its effect if needed
+
+        Parameter starting with a lower case letter are advisory and will be
+        ignored when unknown.  Those starting with an upper case letter are
+        mandatory and will this function will raise a KeyError when unknown.
+
+        Note: no option are currently supported. Any input will be either
+              ignored or failing.
+        """
+        if not name:
+            raise ValueError('empty parameter name')
+        if name[0] not in string.letters:
+            raise ValueError('non letter first character: %r' % name)
+        # Some logic will be later added here to try to process the option for
+        # a dict of known parameter.
+        if name[0].islower():
+            self.ui.debug("ignoring unknown parameter %r\n" % name)
+        else:
+            raise KeyError(name)
+
 
     def __iter__(self):
         """yield all parts contained in the stream"""
