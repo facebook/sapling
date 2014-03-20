@@ -84,8 +84,31 @@ Binary format is as follow
     The binary format of the header is has follow
 
     :typesize: (one byte)
+
     :typename: alphanumerical part name
-    :option: we do not support option yet this denoted by two 16 bites zero.
+
+    :parameters:
+
+        Part's parameter may have arbitraty content, the binary structure is::
+
+            <mandatory-count><advisory-count><param-sizes><param-data>
+
+        :mandatory-count: 1 byte, number of mandatory parameters
+
+        :advisory-count:  1 byte, number of advisory parameters
+
+        :param-sizes:
+
+            N couple of bytes, where N is the total number of parameters. Each
+            couple contains (<size-of-key>, <size-of-value) for one parameter.
+
+        :param-data:
+
+            A blob of bytes from which each parameter key and value can be
+            retrieved using the list of size couples stored in the previous
+            field.
+
+            Mandatory parameters comes first, then the advisory ones.
 
 :payload:
 
@@ -115,6 +138,15 @@ _fstreamparamsize = '>H'
 _fpartheadersize = '>H'
 _fparttypesize = '>B'
 _fpayloadsize = '>I'
+_fpartparamcount = '>BB'
+
+def _makefpartparamsizes(nbparams):
+    """return a struct format to read part parameter sizes
+
+    The number parameters is variable so we need to build that format
+    dynamically.
+    """
+    return '>'+('BB'*nbparams)
 
 class bundle20(object):
     """represent an outgoing bundle2 container
@@ -263,9 +295,27 @@ class unbundle20(object):
         typesize = _unpack(_fparttypesize, fromheader(1))[0]
         parttype = fromheader(typesize)
         self.ui.debug('part type: "%s"\n' % parttype)
-        assert fromheader(2) == '\0\0' # no option for now
+        ## reading parameters
+        # param count
+        mancount, advcount = _unpack(_fpartparamcount, fromheader(2))
+        self.ui.debug('part parameters: %i\n' % (mancount + advcount))
+        # param size
+        paramsizes = _unpack(_makefpartparamsizes(mancount + advcount),
+                             fromheader(2*(mancount + advcount)))
+        # make it a list of couple again
+        paramsizes = zip(paramsizes[::2], paramsizes[1::2])
+        # split mandatory from advisory
+        mansizes = paramsizes[:mancount]
+        advsizes = paramsizes[mancount:]
+        # retrive param value
+        manparams = []
+        for key, value in mansizes:
+            manparams.append((fromheader(key), fromheader(value)))
+        advparams = []
+        for key, value in advsizes:
+            advparams.append((fromheader(key), fromheader(value)))
         del self._offset # clean up layer, nobody saw anything.
-        self.ui.debug('part parameters: 0\n')
+        ## part payload
         payload = []
         payloadsize = self._unpack(_fpayloadsize)[0]
         self.ui.debug('payload chunk size: %i\n' % payloadsize)
@@ -274,7 +324,7 @@ class unbundle20(object):
             payloadsize = self._unpack(_fpayloadsize)[0]
             self.ui.debug('payload chunk size: %i\n' % payloadsize)
         payload = ''.join(payload)
-        current = part(parttype, data=payload)
+        current = part(parttype, manparams, advparams, data=payload)
         return current
 
 
@@ -285,19 +335,46 @@ class part(object):
     handler.
     """
 
-    def __init__(self, parttype, data=''):
+    def __init__(self, parttype, mandatoryparams=(), advisoryparams=(),
+                 data=''):
         self.type = parttype
         self.data = data
+        self.mandatoryparams = mandatoryparams
+        self.advisoryparams = advisoryparams
 
     def getchunks(self):
-        ### header
+        #### header
+        ## parttype
         header = [_pack(_fparttypesize, len(self.type)),
                   self.type,
-                  '\0\0', # No option support for now.
                  ]
+        ## parameters
+        # count
+        manpar = self.mandatoryparams
+        advpar = self.advisoryparams
+        header.append(_pack(_fpartparamcount, len(manpar), len(advpar)))
+        # size
+        parsizes = []
+        for key, value in manpar:
+            parsizes.append(len(key))
+            parsizes.append(len(value))
+        for key, value in advpar:
+            parsizes.append(len(key))
+            parsizes.append(len(value))
+        paramsizes = _pack(_makefpartparamsizes(len(parsizes) / 2), *parsizes)
+        header.append(paramsizes)
+        # key, value
+        for key, value in manpar:
+            header.append(key)
+            header.append(value)
+        for key, value in advpar:
+            header.append(key)
+            header.append(value)
+        ## finalize header
         headerchunk = ''.join(header)
         yield _pack(_fpartheadersize, len(headerchunk))
         yield headerchunk
+        ## payload
         # we only support fixed size data now.
         # This will be improved in the future.
         if len(self.data):
@@ -305,5 +382,4 @@ class part(object):
             yield self.data
         # end of payload
         yield _pack(_fpayloadsize, 0)
-
 

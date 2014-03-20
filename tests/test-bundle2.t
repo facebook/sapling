@@ -42,6 +42,11 @@ Create an extension to test bundle2 API
   >        bundler.addpart(part)
   >        part = bundle2.part('test:song', data=ELEPHANTSSONG)
   >        bundler.addpart(part)
+  >        part = bundle2.part('test:math',
+  >                            [('pi', '3.14'), ('e', '2.72')],
+  >                            [('cooking', 'raw')],
+  >                            '42')
+  >        bundler.addpart(part)
   > 
   >     if path is None:
   >        file = sys.stdout
@@ -69,6 +74,8 @@ Create an extension to test bundle2 API
   >     ui.write('parts count:   %i\n' % len(parts))
   >     for p in parts:
   >         ui.write('  :%s:\n' % p.type)
+  >         ui.write('    mandatory: %i\n' % len(p.mandatoryparams))
+  >         ui.write('    advisory: %i\n' % len(p.advisoryparams))
   >         ui.write('    payload: %i bytes\n' % len(p.data))
   > EOF
   $ cat >> $HGRCPATH << EOF
@@ -247,6 +254,7 @@ Test part
   bundle part: "test:empty"
   bundle part: "test:empty"
   bundle part: "test:song"
+  bundle part: "test:math"
   end of bundle
 
   $ cat ../parts.hg2
@@ -254,18 +262,28 @@ Test part
   test:empty\x00\x00\x00\x00\x00\x00\x00\r (esc)
   test:empty\x00\x00\x00\x00\x00\x00\x00\x0c	test:song\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00'	test:math\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg unbundle2 < ../parts.hg2
   options count: 0
-  parts count:   3
+  parts count:   4
     :test:empty:
+      mandatory: 0
+      advisory: 0
       payload: 0 bytes
     :test:empty:
+      mandatory: 0
+      advisory: 0
       payload: 0 bytes
     :test:song:
+      mandatory: 0
+      advisory: 0
       payload: 178 bytes
+    :test:math:
+      mandatory: 2
+      advisory: 1
+      payload: 2 bytes
 
   $ hg unbundle2 --debug < ../parts.hg2
   start processing of HG20 stream
@@ -285,12 +303,27 @@ Test part
   part parameters: 0
   payload chunk size: 178
   payload chunk size: 0
+  part header size: 39
+  part type: "test:math"
+  part parameters: 3
+  payload chunk size: 2
+  payload chunk size: 0
   part header size: 0
   end of bundle2 stream
-  parts count:   3
+  parts count:   4
     :test:empty:
+      mandatory: 0
+      advisory: 0
       payload: 0 bytes
     :test:empty:
+      mandatory: 0
+      advisory: 0
       payload: 0 bytes
     :test:song:
+      mandatory: 0
+      advisory: 0
       payload: 178 bytes
+    :test:math:
+      mandatory: 2
+      advisory: 1
+      payload: 2 bytes
