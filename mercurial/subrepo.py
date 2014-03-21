@@ -1119,7 +1119,7 @@ class gitsubrepo(abstractsubrepo):
             out, err = self._gitnodir(['--version'])
         m = re.search(r'^git version (\d+)\.(\d+)', out)
         if not m:
-            self._ui.warn(_('cannot retrieve git version'))
+            self._ui.warn(_('cannot retrieve git version\n'))
             return
         version = (int(m.group(1)), int(m.group(2)))
         # git 1.4.0 can't work at all, but 1.5.X can in at least some cases,
@@ -1128,7 +1128,7 @@ class gitsubrepo(abstractsubrepo):
         if version < (1, 5):
             raise util.Abort(_('git subrepo requires at least 1.6.0 or later'))
         elif version < (1, 6):
-            self._ui.warn(_('git subrepo requires at least 1.6.0 or later'))
+            self._ui.warn(_('git subrepo requires at least 1.6.0 or later\n'))
 
     def _gitcommand(self, commands, env=None, stream=False):
         return self._gitdir(commands, env=env, stream=stream)[0]
