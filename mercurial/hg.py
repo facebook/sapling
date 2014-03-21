@@ -123,7 +123,21 @@ def peer(uiorrepo, opts, path, create=False):
     return _peerorrepo(rui, path, create).peer()
 
 def defaultdest(source):
-    '''return default destination of clone if none is given'''
+    '''return default destination of clone if none is given
+
+    >>> defaultdest('foo')
+    'foo'
+    >>> defaultdest('/foo/bar')
+    'bar'
+    >>> defaultdest('/')
+    ''
+    >>> defaultdest('')
+    '.'
+    >>> defaultdest('http://example.org/')
+    '.'
+    >>> defaultdest('http://example.org/foo/')
+    'foo'
+    '''
     return os.path.basename(os.path.normpath(util.url(source).path or ''))
 
 def share(ui, source, dest=None, update=True):
