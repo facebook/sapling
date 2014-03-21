@@ -41,7 +41,7 @@ def expush(orig, repo, remote, *args, **kwargs):
                 repo = repo.unfiltered()
                 for branch, nodes in remote.branchmap().iteritems():
                     bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
-                repo.saveremotebranches(path, bmap)
+                saveremotebranches(repo, path, bmap)
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
@@ -56,7 +56,7 @@ def expull(orig, repo, remote, *args, **kwargs):
         try:
             path = repo._activepath(remote)
             if path:
-                repo.saveremotebranches(path, remote.branchmap())
+                saveremotebranches(repo, path, remote.branchmap())
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
@@ -192,26 +192,27 @@ def reposetup(ui, repo):
                         break
             return realpath
 
-        def saveremotebranches(self, remote, bm):
-            bfile = self.join('remotebranches')
-            olddata = []
-            existed = os.path.exists(bfile)
-            if existed:
-                f = open(bfile)
-                olddata = [l for l in f
-                           if not l.split(' ', 1)[1].startswith(remote)]
-            f = open(bfile, 'w')
-            if existed:
-                f.write(''.join(olddata))
-            for branch, nodes in bm.iteritems():
-                for n in nodes:
-                    f.write('%s %s/%s\n' % (node.hex(n), remote, branch))
-                    alias_default = ui.configbool('remotebranches', 'alias.default')
-                    if remote != 'default' and branch == 'default' and alias_default:
-                        f.write('%s %s\n' % (node.hex(n), remote))
-            f.close()
 
     repo.__class__ = remotebranchesrepo
+
+def saveremotebranches(repo, remote, bm):
+    bfile = repo.join('remotebranches')
+    olddata = []
+    existed = os.path.exists(bfile)
+    if existed:
+        f = open(bfile)
+        olddata = [l for l in f
+                   if not l.split(' ', 1)[1].startswith(remote)]
+    f = open(bfile, 'w')
+    if existed:
+        f.write(''.join(olddata))
+    for branch, nodes in bm.iteritems():
+        for n in nodes:
+            f.write('%s %s/%s\n' % (node.hex(n), remote, branch))
+            alias_default = repo.ui.configbool('remotebranches', 'alias.default')
+            if remote != 'default' and branch == 'default' and alias_default:
+                f.write('%s %s\n' % (node.hex(n), remote))
+    f.close()
 
 #########
 # revsets
