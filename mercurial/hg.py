@@ -132,13 +132,16 @@ def defaultdest(source):
     >>> defaultdest('/')
     ''
     >>> defaultdest('')
-    '.'
+    ''
     >>> defaultdest('http://example.org/')
-    '.'
+    ''
     >>> defaultdest('http://example.org/foo/')
     'foo'
     '''
-    return os.path.basename(os.path.normpath(util.url(source).path or ''))
+    path = util.url(source).path
+    if not path:
+        return ''
+    return os.path.basename(os.path.normpath(path))
 
 def share(ui, source, dest=None, update=True):
     '''create a shared repository'''
@@ -290,7 +293,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
     if dest is None:
         dest = defaultdest(source)
-        ui.status(_("destination directory: %s\n") % dest)
+        if dest:
+            ui.status(_("destination directory: %s\n") % dest)
     else:
         dest = ui.expandpath(dest)
 
