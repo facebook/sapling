@@ -1107,18 +1107,50 @@ class gitsubrepo(abstractsubrepo):
                 raise
             self._gitexecutable = 'git.cmd'
             out, err = self._gitnodir(['--version'])
+        versionstatus = self._checkversion(out)
+        if versionstatus == 'unknown':
+            self._ui.warn(_('cannot retrieve git version\n'))
+        elif versionstatus == 'abort':
+            raise util.Abort(_('git subrepo requires at least 1.6.0 or later'))
+        elif versionstatus == 'warning':
+            self._ui.warn(_('git subrepo requires at least 1.6.0 or later\n'))
+
+    @staticmethod
+    def _checkversion(out):
+        '''ensure git version is new enough
+
+        >>> _checkversion = gitsubrepo._checkversion
+        >>> _checkversion('git version 1.6.0')
+        'ok'
+        >>> _checkversion('git version 1.8.5')
+        'ok'
+        >>> _checkversion('git version 1.4.0')
+        'abort'
+        >>> _checkversion('git version 1.5.0')
+        'warning'
+        >>> _checkversion('git version 1.9-rc0')
+        'ok'
+        >>> _checkversion('git version 1.9.0.265.g81cdec2')
+        'ok'
+        >>> _checkversion('git version 1.9.0.GIT')
+        'ok'
+        >>> _checkversion('git version 12345')
+        'unknown'
+        >>> _checkversion('no')
+        'unknown'
+        '''
         m = re.search(r'^git version (\d+)\.(\d+)', out)
         if not m:
-            self._ui.warn(_('cannot retrieve git version\n'))
-            return
+            return 'unknown'
         version = (int(m.group(1)), int(m.group(2)))
         # git 1.4.0 can't work at all, but 1.5.X can in at least some cases,
         # despite the docstring comment.  For now, error on 1.4.0, warn on
         # 1.5.0 but attempt to continue.
         if version < (1, 5):
-            raise util.Abort(_('git subrepo requires at least 1.6.0 or later'))
+            return 'abort'
         elif version < (1, 6):
-            self._ui.warn(_('git subrepo requires at least 1.6.0 or later\n'))
+            return 'warning'
+        return 'ok'
 
     def _gitcommand(self, commands, env=None, stream=False):
         return self._gitdir(commands, env=env, stream=stream)[0]
