@@ -470,13 +470,26 @@ def revpair(repo, revs):
 
     l = revrange(repo, revs)
 
-    if len(l) == 0:
+    if not l:
+        first = second = None
+    elif l.isascending():
+        first = l.min()
+        second = l.max()
+    elif l.isdescending():
+        first = l.max()
+        second = l.min()
+    else:
+        l = list(l)
+        first = l[0]
+        second = l[-1]
+
+    if first is None:
         raise util.Abort(_('empty revision range'))
 
-    if len(l) == 1 and len(revs) == 1 and _revrangesep not in revs[0]:
-        return repo.lookup(l[0]), None
+    if first == second and len(revs) == 1 and _revrangesep not in revs[0]:
+        return repo.lookup(first), None
 
-    return repo.lookup(l[0]), repo.lookup(l[-1])
+    return repo.lookup(first), repo.lookup(second)
 
 _revrangesep = ':'
 
