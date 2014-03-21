@@ -1121,7 +1121,7 @@ class gitsubrepo(abstractsubrepo):
         if not m:
             self._ui.warn(_('cannot retrieve git version'))
             return
-        version = (int(m.group(1)), m.group(2))
+        version = (int(m.group(1)), int(m.group(2)))
         # git 1.4.0 can't work at all, but 1.5.X can in at least some cases,
         # despite the docstring comment.  For now, error on 1.4.0, warn on
         # 1.5.0 but attempt to continue.
