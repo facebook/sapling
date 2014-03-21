@@ -471,9 +471,7 @@ def revpair(repo, revs):
     l = revrange(repo, revs)
 
     if len(l) == 0:
-        if revs:
-            raise util.Abort(_('empty revision range'))
-        return repo.dirstate.p1(), None
+        raise util.Abort(_('empty revision range'))
 
     if len(l) == 1 and len(revs) == 1 and _revrangesep not in revs[0]:
         return repo.lookup(l[0]), None
