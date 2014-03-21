@@ -31,7 +31,7 @@ def expush(orig, repo, remote, *args, **kwargs):
     lock = repo.lock()
     try:
         try:
-            path = repo._activepath(remote)
+            path = activepath(repo.ui, remote)
             if path:
                 # on a push, we don't want to keep obsolete heads since
                 # they won't show up as heads on the next pull, so we
@@ -54,7 +54,7 @@ def expull(orig, repo, remote, *args, **kwargs):
     lock = repo.lock()
     try:
         try:
-            path = repo._activepath(remote)
+            path = activepath(repo.ui, remote)
             if path:
                 saveremotebranches(repo, path, remote.branchmap())
         except Exception, e:
@@ -127,51 +127,49 @@ def reposetup(ui, repo):
                 pass
             return olookup(key)
 
-        def _activepath(self, remote):
-            realpath = ''
-            local = None
-            try:
-                local = remote.local()
-            except AttributeError:
-                pass
-
-            # determine the remote path from the repo, if possible; else just
-            # use the string given to us
-            rpath = remote
-            if local:
-                rpath = getattr(remote, 'root', None)
-                if rpath is None:
-                    # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
-                    rpath = getattr(getattr(remote, '_repo', None),
-                                    'root', None)
-            elif not isinstance(remote, str):
-                rpath = remote._url
-
-            for path, uri in ui.configitems('paths'):
-                uri = self.ui.expandpath(expandscheme(ui, uri))
-                if local:
-                    uri = os.path.realpath(uri)
-                else:
-                    if uri.startswith('http'):
-                        try:
-                            uri = url.url(uri).authinfo()[0]
-                        except AttributeError:
-                            try:
-                                uri = util.url(uri).authinfo()[0]
-                            except AttributeError:
-                                uri = url.getauthinfo(uri)[0]
-                uri = uri.rstrip('/')
-                rpath = rpath.rstrip('/')
-                if uri == rpath:
-                    realpath = path
-                    # prefer a non-default name to default
-                    if path != 'default' and path != 'default-push':
-                        break
-            return realpath
-
-
     repo.__class__ = remotebranchesrepo
 
+def activepath(ui, remote):
+    realpath = ''
+    local = None
+    try:
+        local = remote.local()
+    except AttributeError:
+        pass
+
+    # determine the remote path from the repo, if possible; else just
+    # use the string given to us
+    rpath = remote
+    if local:
+        rpath = getattr(remote, 'root', None)
+        if rpath is None:
+            # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
+            rpath = getattr(getattr(remote, '_repo', None),
+                            'root', None)
+    elif not isinstance(remote, str):
+        rpath = remote._url
+
+    for path, uri in ui.configitems('paths'):
+        uri = ui.expandpath(expandscheme(ui, uri))
+        if local:
+            uri = os.path.realpath(uri)
+        else:
+            if uri.startswith('http'):
+                try:
+                    uri = url.url(uri).authinfo()[0]
+                except AttributeError:
+                    try:
+                        uri = util.url(uri).authinfo()[0]
+                    except AttributeError:
+                        uri = url.getauthinfo(uri)[0]
+        uri = uri.rstrip('/')
+        rpath = rpath.rstrip('/')
+        if uri == rpath:
+            realpath = path
+            # prefer a non-default name to default
+            if path != 'default' and path != 'default-push':
+                break
+    return realpath
 
 def expandscheme(ui, uri):
     '''For a given uri, expand the scheme for it'''
