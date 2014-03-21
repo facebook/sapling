@@ -199,6 +199,7 @@ def saveremotebranches(repo, remote, bm):
     bfile = repo.join('remotebranches')
     olddata = []
     existed = os.path.exists(bfile)
+    alias_default = repo.ui.configbool('remotebranches', 'alias.default')
     if existed:
         f = open(bfile)
         olddata = [l for l in f
@@ -209,7 +210,6 @@ def saveremotebranches(repo, remote, bm):
     for branch, nodes in bm.iteritems():
         for n in nodes:
             f.write('%s %s/%s\n' % (node.hex(n), remote, branch))
-            alias_default = repo.ui.configbool('remotebranches', 'alias.default')
             if remote != 'default' and branch == 'default' and alias_default:
                 f.write('%s %s\n' % (node.hex(n), remote))
     f.close()
