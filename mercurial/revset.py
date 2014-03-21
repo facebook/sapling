@@ -2464,6 +2464,9 @@ class _addset(_orderedsetmixin):
         self._ascending = ascending
         self._genlist = None
 
+    def __len__(self):
+        return len(self._list)
+
     @util.propertycache
     def _list(self):
         if not self._genlist:
