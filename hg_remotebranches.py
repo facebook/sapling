@@ -213,6 +213,10 @@ def reposetup(ui, repo):
 
     repo.__class__ = remotebranchesrepo
 
+#########
+# revsets
+#########
+
 def upstream_revs(filt, repo, subset, x):
     upstream_tips = [node.hex(n) for name, n in
              repo._remotebranches.iteritems() if filt(name)]
@@ -264,6 +268,10 @@ def remotebranchesrevset(repo, subset, x):
 revset.symbols.update({'upstream': upstream,
                        'pushed': pushed,
                        'remotebranches': remotebranchesrevset})
+
+###########
+# templates
+###########
 
 def remotebrancheskw(**args):
     """:remotebranches: List of strings. Any remote branch associated
