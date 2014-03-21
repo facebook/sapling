@@ -13,6 +13,12 @@ from mercurial import templatekw
 
 from hgext import schemes
 
+try:
+    # Mercurial 3.0 adds laziness for revsets, which breaks returning lists.
+    baseset = revset.baseset
+except AttributeError:
+    baseset = lambda x: x
+
 hasexchange = False
 try:
     from mercurial import exchange
@@ -206,12 +212,6 @@ def reposetup(ui, repo):
             f.close()
 
     repo.__class__ = remotebranchesrepo
-
-try:
-    # Mercurial 3.0 adds laziness for revsets, which breaks returning lists.
-    baseset = revset.baseset
-except AttributeError:
-    baseset = lambda x: x
 
 def upstream_revs(filt, repo, subset, x):
     upstream_tips = [node.hex(n) for name, n in
