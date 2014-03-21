@@ -292,6 +292,9 @@ Excludes:
 
     revs = sorted(list(revs), reverse=True)
 
+    if len(revs) == 0:
+        return
+
     # Print it!
     global enabled
     try:
