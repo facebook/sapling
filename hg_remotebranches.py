@@ -100,23 +100,25 @@ def reposetup(ui, repo):
 
         @util.propertycache
         def _remotebranches(self):
-            remotebranches = {}
             bfile = self.join('remotebranches')
-            if os.path.exists(bfile):
-                f = open(bfile)
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        hash, name = line.split(' ', 1)
-                        # look up the hash in the changelog directly
-                        # to avoid infinite recursion if the hash is bogus
-                        n = self.changelog._match(hash)
-                        if n:
-                            # we need rev since node will recurse lookup
-                            ctx = context.changectx(self,
-                                                    self.changelog.rev(n))
-                            if not ctx.extra().get('close'):
-                                remotebranches[name] = n
+            if not os.path.exists(bfile):
+                return {}
+
+            remotebranches = {}
+            f = open(bfile)
+            for line in f:
+                line = line.strip()
+                if line:
+                    hash, name = line.split(' ', 1)
+                    # look up the hash in the changelog directly
+                    # to avoid infinite recursion if the hash is bogus
+                    n = self.changelog._match(hash)
+                    if n:
+                        # we need rev since node will recurse lookup
+                        ctx = context.changectx(self,
+                                                self.changelog.rev(n))
+                        if not ctx.extra().get('close'):
+                            remotebranches[name] = n
             return remotebranches
 
         def lookup(self, key):
