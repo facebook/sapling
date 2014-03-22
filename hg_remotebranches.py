@@ -368,4 +368,19 @@ def remotebrancheskw(**args):
         return templatekw.showlist('remotebranch', names,
                                    plural='remotebranches', **args)
 
+def preferredremotebrancheskw(**args):
+    """:preferredremotebranches: List of strings. List of remote bookmarks and
+    branches associated with the changeset where bookmarks are preferred over
+    displaying branches.
+    """
+    repo, ctx = args['repo'], args['ctx']
+    remotenames = sorted([name for name, node in
+                          repo._preferredremotebranches.iteritems()
+                          if node == ctx.node()])
+    if remotenames:
+        return templatekw.showlist('remotebranch', remotenames,
+                                   plural='remotebranches', **args)
+
+
 templatekw.keywords['remotebranches'] = remotebrancheskw
+templatekw.keywords['preferredremotebranches'] = preferredremotebrancheskw
