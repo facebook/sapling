@@ -10,6 +10,7 @@ from mercurial import url
 from mercurial import util
 from mercurial import revset
 from mercurial import templatekw
+from mercurial import templater
 
 from hgext import schemes
 
@@ -380,6 +381,40 @@ def preferredremotebrancheskw(**args):
     if remotenames:
         return templatekw.showlist('remotebranch', remotenames,
                                    plural='remotebranches', **args)
+
+def calculateremotedistance(repo, ctx, remote):
+    """Helper function to calculate the distance."""
+    # get the remote ref (branch or bookmark) here
+    remote, ref = splitremotebranch(remote)
+
+    # only expand default or default-push paths
+    if 'default' in remote:
+        rpath = dict(repo.ui.configitems('paths')).get(remote, '')
+        rpath = activepath(repo.ui, expandscheme(repo.ui, rpath))
+        if rpath and rpath != remote:
+            remote = rpath
+
+    # similar to the 'current' keyword for bookmarks in templates, we, too,
+    # will have 'curren't be a keyword for the current bookmark falling back to
+    # the branch name if there is no bookmark active.
+    if ref == 'current':
+        ref = repo._bookmarkcurrent
+        if not ref:
+            ref = ctx.branch()
+
+    remote = joinremotebranch(remote, ref)
+
+    for name, node in repo._remotebranches.iteritems():
+        if name == remote:
+            sign = 1
+            ctx1 = ctx
+            ctx2 = repo[node]
+            if ctx1.rev() < ctx2.rev():
+                sign = -1
+                ctx1, ctx2 = ctx2, ctx1
+            span = repo.revs('%d::%d - %d' % (ctx2.rev(), ctx1.rev(), ctx2.rev()))
+            return '%s:%d' % (remote, sign*len(span))
+    return '%s:0' % remote
 
 
 templatekw.keywords['remotebranches'] = remotebrancheskw
