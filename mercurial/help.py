@@ -92,8 +92,6 @@ def topicmatch(kw):
             results['topics'].append((names[0], header))
     import commands # avoid cycle
     for cmd, entry in commands.table.iteritems():
-        if cmd.startswith('debug'):
-            continue
         if len(entry) == 3:
             summary = entry[2]
         else:
