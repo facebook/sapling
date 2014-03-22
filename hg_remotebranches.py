@@ -416,6 +416,21 @@ def calculateremotedistance(repo, ctx, remote):
             return '%s:%d' % (remote, sign*len(span))
     return '%s:0' % remote
 
+def remotedistancekw(**args):
+    """:remotedistance: String of the form <remotepath>:<distance>. For the default
+     path, calculate the distance from the changeset to the remotepath,
+     e.g. default/default
+
+    """
+    repo, ctx = args['repo'], args['ctx']
+    ref = ctx.branch()
+
+    distances = ['%s:%d' % (name, calculateremotedistance(repo, ctx, name))
+                 for name in repo._preferredremotebranches]
+    return templatekw.showlist('remotedistance', distances,
+                               plural='remotedistances', **args)
+
 
 templatekw.keywords['remotebranches'] = remotebrancheskw
 templatekw.keywords['preferredremotebranches'] = preferredremotebrancheskw
+templatekw.keywords['remotedistance'] = remotedistancekw
