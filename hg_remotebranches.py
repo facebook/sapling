@@ -202,6 +202,11 @@ def splitremotebranch(remote):
         remote, name = remote.split('/', 1)
     return remote, name
 
+def joinremotebranch(remote, ref):
+    if ref:
+        remote += '/' + ref
+    return remote
+
 def saveremotebranches(repo, remote, branches, bookmarks):
     bfile = repo.join('remotebranches')
     olddata = []
