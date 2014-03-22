@@ -196,6 +196,11 @@ def expandscheme(ui, uri):
             scheme.url, context)) + tail
     return uri
 
+def splitremotebranch(remote):
+    name = ''
+    if '/' in remote:
+        remote, name = remote.split('/', 1)
+    return remote, name
 
 def saveremotebranches(repo, remote, branches, bookmarks):
     bfile = repo.join('remotebranches')
