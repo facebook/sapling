@@ -413,8 +413,8 @@ def calculateremotedistance(repo, ctx, remote):
                 sign = -1
                 ctx1, ctx2 = ctx2, ctx1
             span = repo.revs('%d::%d - %d' % (ctx2.rev(), ctx1.rev(), ctx2.rev()))
-            return '%s:%d' % (remote, sign*len(span))
-    return '%s:0' % remote
+            return sign*len(span)
+    return 0
 
 def remotedistancekw(**args):
     """:remotedistance: String of the form <remotepath>:<distance>. For the default
@@ -431,6 +431,19 @@ def remotedistancekw(**args):
                                plural='remotedistances', **args)
 
 
+def remotedistance(context, mapping, args):
+    """:remotedistance: String of the form <remotepath>:<distance>. Given a remote
+    branch calculate the distance from the changeset to the remotepath,
+    e.g. smf/default
+
+    """
+    remote = templater.stringify(args[0][1])
+    ctx = mapping['ctx']
+    repo = ctx._repo.unfiltered()
+
+    return calculateremotedistance(repo, ctx, remote)
+
 templatekw.keywords['remotebranches'] = remotebrancheskw
 templatekw.keywords['preferredremotebranches'] = preferredremotebrancheskw
 templatekw.keywords['remotedistance'] = remotedistancekw
+templater.funcs['remotedistance'] = remotedistance
