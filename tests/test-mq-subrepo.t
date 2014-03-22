@@ -435,6 +435,8 @@ both into 'revision' and 'patch file under .hg/patches':
   +b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
   $ hg parents --template '{node}\n'
   f69e96d86e75a6d4fd88285dc9697acb23951041
+  $ hg parents --template '{files}\n'
+  .hgsub .hgsubstate
 
 check also whether qnew not including ".hgsubstate" explicitly causes
 as same result (in node hash) as one including it.
@@ -448,6 +450,8 @@ as same result (in node hash) as one including it.
   $ hg qnew -u test -d '0 0' import-at-qnew
   $ hg parents --template '{node}\n'
   f69e96d86e75a6d4fd88285dc9697acb23951041
+  $ hg parents --template '{files}\n'
+  .hgsub .hgsubstate
 
 check whether qrefresh imports updated .hgsubstate correctly
 
@@ -457,6 +461,8 @@ check whether qrefresh imports updated .hgsubstate correctly
   $ hg qpush
   applying import-at-qnew
   now at: import-at-qnew
+  $ hg parents --template '{files}\n'
+  .hgsub .hgsubstate
 
   $ hg qnew import-at-qrefresh
   $ echo sb > sub/sb
@@ -468,7 +474,7 @@ check whether qrefresh imports updated .hgsubstate correctly
   $ cat .hgsubstate
   88ac1bef5ed43b689d1d200b59886b675dec474b sub
   $ hg diff -c tip
-  diff -r 44f846335325 -r b3e8c5fa3aaa .hgsubstate
+  diff -r 05b056bb9c8c -r d987bec230f4 .hgsubstate
   --- a/.hgsubstate
   +++ b/.hgsubstate
   @@ -1,1 +1,1 @@
@@ -478,20 +484,22 @@ check whether qrefresh imports updated .hgsubstate correctly
   # HG changeset patch
   # Date 0 0
   # User test
-  # Parent 44f846335325209be6be35dc2c9a4be107278c09
+  # Parent 05b056bb9c8c05ff15258b84fd42ab3527271033
   
-  diff -r 44f846335325 .hgsubstate
+  diff -r 05b056bb9c8c .hgsubstate
   --- a/.hgsubstate
   +++ b/.hgsubstate
   @@ -1,1 +1,1 @@
   -b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
   +88ac1bef5ed43b689d1d200b59886b675dec474b sub
+  $ hg parents --template '{files}\n'
+  .hgsubstate
 
   $ hg qrefresh -u test -d '0 0'
   $ cat .hgsubstate
   88ac1bef5ed43b689d1d200b59886b675dec474b sub
   $ hg diff -c tip
-  diff -r 44f846335325 -r b3e8c5fa3aaa .hgsubstate
+  diff -r 05b056bb9c8c -r d987bec230f4 .hgsubstate
   --- a/.hgsubstate
   +++ b/.hgsubstate
   @@ -1,1 +1,1 @@
@@ -501,14 +509,16 @@ check whether qrefresh imports updated .hgsubstate correctly
   # HG changeset patch
   # Date 0 0
   # User test
-  # Parent 44f846335325209be6be35dc2c9a4be107278c09
+  # Parent 05b056bb9c8c05ff15258b84fd42ab3527271033
   
-  diff -r 44f846335325 .hgsubstate
+  diff -r 05b056bb9c8c .hgsubstate
   --- a/.hgsubstate
   +++ b/.hgsubstate
   @@ -1,1 +1,1 @@
   -b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
   +88ac1bef5ed43b689d1d200b59886b675dec474b sub
+  $ hg parents --template '{files}\n'
+  .hgsubstate
 
   $ hg update -C tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -554,6 +564,8 @@ check whether qrefresh imports updated .hgsubstate correctly
   @@ -1,1 +1,1 @@
   -b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
   +88ac1bef5ed43b689d1d200b59886b675dec474b sub
+  $ hg parents --template '{files}\n'
+  .hgsubstate
 
 check whether qrefresh not including ".hgsubstate" explicitly causes
 as same result (in node hash) as one including it.
@@ -568,6 +580,8 @@ as same result (in node hash) as one including it.
   $ hg qrefresh -u test -d '0 0'
   $ hg parents --template '{node}\n'
   7c48c35501aae6770ed9c2517014628615821a8e
+  $ hg parents --template '{files}\n'
+  .hgsub .hgsubstate
 
   $ hg qpop -a -q
   patch queue now empty
@@ -579,6 +593,8 @@ as same result (in node hash) as one including it.
   $ hg qrefresh -u test -d '0 0'
   $ hg parents --template '{node}\n'
   7c48c35501aae6770ed9c2517014628615821a8e
+  $ hg parents --template '{files}\n'
+  .hgsub .hgsubstate
 
   $ cd ..
 

@@ -1193,10 +1193,9 @@ class localrepository(object):
             # only manage subrepos and .hgsubstate if .hgsub is present
             if '.hgsub' in wctx:
                 # we'll decide whether to track this ourselves, thanks
-                if '.hgsubstate' in changes[0]:
-                    changes[0].remove('.hgsubstate')
-                if '.hgsubstate' in changes[2]:
-                    changes[2].remove('.hgsubstate')
+                for c in changes[:3]:
+                    if '.hgsubstate' in c:
+                        c.remove('.hgsubstate')
 
                 # compare current state to last committed state
                 # build new substate based on last committed state

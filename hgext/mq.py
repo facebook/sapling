@@ -1048,7 +1048,7 @@ class queue(object):
             changes = self.checklocalchanges(repo, force=True)
         commitfiles = list(inclsubs)
         for files in changes[:3]:
-            commitfiles.extend([f for f in files if f != '.hgsubstate'])
+            commitfiles.extend(files)
         match = scmutil.matchfiles(repo, commitfiles)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
@@ -1577,7 +1577,7 @@ class queue(object):
 
             files = set(inclsubs)
             for x in refreshchanges:
-                files.update([f for f in x if f != '.hgsubstate'])
+                files.update(x)
             match = scmutil.matchfiles(repo, files)
 
             bmlist = repo[top].bookmarks()
