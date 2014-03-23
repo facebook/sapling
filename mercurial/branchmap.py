@@ -8,6 +8,7 @@
 from node import bin, hex, nullid, nullrev
 import encoding
 import util
+import time
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
@@ -206,8 +207,10 @@ class branchcache(dict):
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))
             f.write(" ".join(cachekey) + '\n')
+            nodecount = 0
             for label, nodes in sorted(self.iteritems()):
                 for node in nodes:
+                    nodecount += 1
                     if node in self._closednodes:
                         state = 'c'
                     else:
@@ -215,6 +218,9 @@ class branchcache(dict):
                     f.write("%s %s %s\n" % (hex(node), state,
                                             encoding.fromlocal(label)))
             f.close()
+            repo.ui.log('branchcache',
+                        'wrote %s branch cache with %d labels and %d nodes\n',
+                        repo.filtername, len(self), nodecount)
         except (IOError, OSError, util.Abort):
             # Abort may be raise by read only opener
             pass
@@ -224,6 +230,7 @@ class branchcache(dict):
         missing heads, and a generator of nodes that are strictly a superset of
         heads missing, this function updates self to be correct.
         """
+        starttime = time.time()
         cl = repo.changelog
         # collect new branch entries
         newbranches = {}
@@ -272,3 +279,7 @@ class branchcache(dict):
                     self.tipnode = cl.node(tiprev)
                     self.tiprev = tiprev
         self.filteredhash = self._hashfiltered(repo)
+
+        duration = time.time() - starttime
+        repo.ui.log('branchcache', 'updated %s branch cache in %.4f seconds\n',
+                    repo.filtername, duration)

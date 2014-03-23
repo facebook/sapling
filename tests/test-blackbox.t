@@ -55,8 +55,10 @@ clone, commit, pull
   adding file changes
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
-  $ hg blackbox -l 3
+  $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> pull
+  1970/01/01 00:00:00 bob> updated served branch cache in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob> wrote served branch cache with 1 labels and 2 nodes
   1970/01/01 00:00:00 bob> 1 incoming changes - new heads: d02f48003e62
   1970/01/01 00:00:00 bob> pull exited 0 after * seconds (glob)
 
@@ -115,9 +117,11 @@ backup bundles get logged
   $ hg strip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
-  $ hg blackbox -l 3
+  $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> strip tip
   1970/01/01 00:00:00 bob> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
+  1970/01/01 00:00:00 bob> updated base branch cache in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob> wrote base branch cache with 1 labels and 2 nodes
   1970/01/01 00:00:00 bob> strip tip exited 0 after * seconds (glob)
 
 tags cache gets logged
