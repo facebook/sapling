@@ -144,6 +144,42 @@ class SVNMeta(object):
                                                             filename))
         setattr(SVNMeta, name, prop)
 
+    def layout_from_commit(self, subdir, revpath, branch):
+        """ Guess what the layout is based existing commit info
+
+        Specifically, this compares the subdir for the repository and the
+        revpath as extracted from the convinfo in the commit.  If they
+        match, the layout is assumed to be single.  Otherwise, it tries
+        the available layouts and selects the first one that would
+        translate the given branch to the given revpath.
+
+        """
+
+        subdir = subdir or '/'
+        if subdir == revpath:
+            return 'single'
+
+        candidates = set()
+        for layout in layouts.NAME_TO_CLASS:
+            layoutobj = layouts.layout_from_name(layout, self)
+            try:
+                remotepath = layoutobj.remotepath(branch, subdir)
+            except KeyError:
+                continue
+            if  remotepath == revpath:
+                candidates.add(layout)
+
+        if len(candidates) == 1:
+            return candidates.pop()
+        elif candidates:
+            config_layout = layouts.detect.layout_from_config(self,
+                                                              allow_auto=True)
+            if config_layout in candidates:
+                return config_layout
+
+        return 'standard'
+
+
     @property
     def layout_file(self):
         return os.path.join(self.metapath, 'layout')
