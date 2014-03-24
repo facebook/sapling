@@ -114,7 +114,7 @@ class AuthorMap(dict):
 
         result = None
         if search_author in self:
-            result = self.super.__getitem__(search_author)
+            result = super(AuthorMap, self).__getitem__(search_author)
         elif self.meta.mapauthorscmd:
             cmd = self.meta.mapauthorscmd % author
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
