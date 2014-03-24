@@ -2021,26 +2021,36 @@ class localrepository(object):
             handled_bytes = 0
             self.ui.progress(_('clone'), 0, total=total_bytes)
             start = time.time()
-            for i in xrange(total_files):
-                # XXX doesn't support '\n' or '\r' in filenames
-                l = fp.readline()
-                try:
-                    name, size = l.split('\0', 1)
-                    size = int(size)
-                except (ValueError, TypeError):
-                    raise error.ResponseError(
-                        _('unexpected response from remote server:'), l)
-                if self.ui.debugflag:
-                    self.ui.debug('adding %s (%s)\n' %
-                                  (name, util.bytecount(size)))
-                # for backwards compat, name was partially encoded
-                ofp = self.sopener(store.decodedir(name), 'w')
-                for chunk in util.filechunkiter(fp, limit=size):
-                    handled_bytes += len(chunk)
-                    self.ui.progress(_('clone'), handled_bytes,
-                                     total=total_bytes)
-                    ofp.write(chunk)
-                ofp.close()
+
+            tr = self.transaction(_('clone'))
+            try:
+                for i in xrange(total_files):
+                    # XXX doesn't support '\n' or '\r' in filenames
+                    l = fp.readline()
+                    try:
+                        name, size = l.split('\0', 1)
+                        size = int(size)
+                    except (ValueError, TypeError):
+                        raise error.ResponseError(
+                            _('unexpected response from remote server:'), l)
+                    if self.ui.debugflag:
+                        self.ui.debug('adding %s (%s)\n' %
+                                      (name, util.bytecount(size)))
+                    # for backwards compat, name was partially encoded
+                    ofp = self.sopener(store.decodedir(name), 'w')
+                    for chunk in util.filechunkiter(fp, limit=size):
+                        handled_bytes += len(chunk)
+                        self.ui.progress(_('clone'), handled_bytes,
+                                         total=total_bytes)
+                        ofp.write(chunk)
+                    ofp.close()
+                tr.close()
+            finally:
+                tr.release()
+
+            # Writing straight to files circumvented the inmemory caches
+            self.invalidate()
+
             elapsed = time.time() - start
             if elapsed <= 0:
                 elapsed = 0.001
