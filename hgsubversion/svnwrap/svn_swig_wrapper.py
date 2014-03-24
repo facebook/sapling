@@ -205,7 +205,8 @@ class SubversionRepo(object):
 
     It uses the SWIG Python bindings, see above for requirements.
     """
-    def __init__(self, url='', username='', password='', head=None, password_stores=None):
+    def __init__(self, url='', username='', password='', head=None,
+                 password_stores=None, meta=None):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
@@ -230,6 +231,9 @@ class SubversionRepo(object):
         self.subdir = urllib.unquote(self.subdir)
         self.hasdiff3 = True
         self.autoprops_config = common.AutoPropsConfig()
+
+        # store the svn meta object for use with branch skipping
+        self.meta = meta
 
     def init_ra_and_client(self):
         """Initializes the RA and client layers, because sometimes getting
