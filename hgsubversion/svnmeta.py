@@ -61,7 +61,7 @@ class SVNMeta(object):
         self.prevbranches = dict(self.branches)
         self._layout = layouts.detect.layout_from_file(self)
 
-    def _get_cachedconfig(self, name, filename, configname, default):
+    def _get_cachedconfig(self, name, filename, configname, default, pre):
         """Return a cached value for a config option. If the cache is uninitialized
         then try to read its value from disk. Option can be overridden by the
         commandline.
@@ -69,6 +69,7 @@ class SVNMeta(object):
             filename: name of file in .hg/svn
             configname: commandline option name
             default: default value
+            pre: transformation to apply to a value before caching it.
         """
         varname = '_' + name
         if getattr(self, varname) is None:
@@ -99,6 +100,10 @@ class SVNMeta(object):
             if c is not None and c != val and c != default:
                 val = c
 
+            # apply transformation if necessary
+            if pre:
+                val = pre(val)
+
             # set the value as the one from disk (or default if not found)
             setattr(self, varname, val)
 
@@ -114,7 +119,7 @@ class SVNMeta(object):
         util.dump(value, f)
 
     def _gen_cachedconfig(self, name, default=None, filename=None,
-                          configname=None):
+                          configname=None, pre=None):
         """Generate an attribute for reading (and caching) config data.
 
         This method constructs a new attribute on self with the given name.
@@ -127,13 +132,14 @@ class SVNMeta(object):
             filename = name
         if configname is None:
             configname = name
-        prop = property(lambda x: x._get_cachedconfig(name,
-                                                      filename,
-                                                      configname,
-                                                      default),
-                        lambda x, y: x._set_cachedconfig(y,
-                                                         name,
-                                                         filename))
+        prop = property(lambda x: self._get_cachedconfig(name,
+                                                         filename,
+                                                         configname,
+                                                         default,
+                                                         pre=pre),
+                        lambda x, y: self._set_cachedconfig(y,
+                                                            name,
+                                                            filename))
         setattr(SVNMeta, name, prop)
 
     @property
