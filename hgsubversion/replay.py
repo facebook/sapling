@@ -177,7 +177,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
                                      parents,
-                                     util.getmessage(ui, rev),
+                                     meta.getmessage(rev),
                                      files.keys(),
                                      filectxfn,
                                      meta.authors[rev.author],
@@ -214,7 +214,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         current_ctx = context.memctx(meta.repo,
                                      (ha, node.nullid),
-                                     util.getmessage(ui, rev),
+                                     meta.getmessage(rev),
                                      files,
                                      del_all_files,
                                      meta.authors[rev.author],
