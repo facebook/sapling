@@ -56,7 +56,7 @@ class SVNMeta(object):
         if branchmap:
             self.branchmap.load(branchmap)
 
-        self.tagmap = maps.TagMap(self.ui, self.tagmap_file)
+        self._tagmap = None
 
         self.filemap = maps.FileMap(self.ui, self.filemap_file)
         if filemap:
@@ -257,6 +257,12 @@ class SVNMeta(object):
     def tagmap_file(self):
         # called tag-renames for backwards compatibility
         return os.path.join(self.metapath, 'tag-renames')
+
+    @property
+    def tagmap(self):
+        if self._tagmap is None:
+            self._tagmap = maps.TagMap(self.ui, self.tagmap_file)
+        return self._tagmap
 
     @property
     def revmap_file(self):
