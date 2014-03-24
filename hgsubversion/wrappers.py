@@ -396,6 +396,7 @@ def pull(repo, source, heads=[], force=False, meta=None):
         svn = source.svn
         if meta is None:
             meta = repo.svnmeta(svn.uuid, svn.subdir)
+        svn.meta = meta
 
         stopat_rev = util.parse_revnum(svn, checkout)
 
