@@ -28,7 +28,6 @@ class AuthorMap(dict):
         typically .hg/svn/authors.
         '''
         self.meta = meta
-        self.caseignoreauthors = self.meta.ui.configbool('hgsubversion', 'caseignoreauthors', False)
         self.defaulthost = ''
         if meta.defaulthost:
             self.defaulthost = '@%s' % meta.defaulthost.lstrip('@')
@@ -71,7 +70,7 @@ class AuthorMap(dict):
             src = src.strip()
             dst = dst.strip()
 
-            if self.caseignoreauthors:
+            if self.meta.caseignoreauthors:
                 src = src.lower()
 
             if writing:
@@ -95,10 +94,9 @@ class AuthorMap(dict):
         if author is None:
             author = '(no author)'
 
-        if self.caseignoreauthors:
+        search_author = author
+        if self.meta.caseignoreauthors:
             search_author = author.lower()
-        else:
-            search_author = author
 
         if search_author in self:
             result = self.super.__getitem__(search_author)
