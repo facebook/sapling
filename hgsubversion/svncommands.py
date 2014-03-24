@@ -72,7 +72,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             foundpartialinfo = False
             if os.path.exists(youngestpath):
                 youngest = util.load(youngestpath)
-                sofar = list(maps.RevMap.readmapfile(repo))
+                sofar = list(maps.RevMap.readmapfile(meta.revmap_file))
                 if sofar and len(sofar[-1].split(' ', 2)) > 1:
                     lasthash = sofar[-1].split(' ', 2)[1]
                     startrev = repo[lasthash].rev() + 1

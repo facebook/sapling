@@ -231,9 +231,9 @@ class RevMap(dict):
         return os.path.join(repo.path, 'svn', 'rev_map')
 
     @classmethod
-    def readmapfile(cls, repo, missingok=True):
+    def readmapfile(cls, path, missingok=True):
         try:
-            f = open(cls.mappath(repo))
+            f = open(path)
         except IOError, err:
             if not missingok or err.errno != errno.ENOENT:
                 raise
@@ -244,7 +244,7 @@ class RevMap(dict):
         return f
 
     def _load(self):
-        for l in self.readmapfile(self.repo):
+        for l in self.readmapfile(self.path):
             revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
                 branch = None

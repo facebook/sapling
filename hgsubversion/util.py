@@ -343,9 +343,11 @@ def revset_fromsvn(repo, subset, x):
 
     rev = repo.changelog.rev
     bin = node.bin
+    meta = repo.svnmeta(skiperrorcheck=True)
     try:
         svnrevs = set(rev(bin(l.split(' ', 2)[1]))
-                      for l in maps.RevMap.readmapfile(repo, missingok=False))
+                      for l in maps.RevMap.readmapfile(meta.revmap_file,
+                                                       missingok=False))
         return filter(svnrevs.__contains__, subset)
     except IOError, err:
         if err.errno != errno.ENOENT:
@@ -368,8 +370,9 @@ def revset_svnrev(repo, subset, x):
 
     rev = rev + ' '
     revs = []
+    meta = repo.svnmeta(skiperrorcheck=True)
     try:
-        for l in maps.RevMap.readmapfile(repo, missingok=False):
+        for l in maps.RevMap.readmapfile(meta.revmap_file, missingok=False):
             if l.startswith(rev):
                 n = l.split(' ', 2)[1]
                 r = repo[node.bin(n)].rev()
