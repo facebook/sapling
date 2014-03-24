@@ -138,6 +138,10 @@ class SVNMeta(object):
         setattr(SVNMeta, name, prop)
 
     @property
+    def layout_file(self):
+        return os.path.join(self.metapath, 'layout')
+
+    @property
     def layout(self):
         # this method can't determine the layout, but it needs to be
         # resolved into something other than auto before this ever
