@@ -31,6 +31,35 @@ class BaseMap(dict):
         if clmap:
             self.load(clmap)
 
+    def _findkey(self, key):
+        '''Takes a string and finds the first corresponding key that matches
+        via regex'''
+        if not key:
+            return None
+
+        # compile a new regex key if we're given a string; can't use
+        # hgutil.compilere since we need regex.sub
+        k = key
+        if isinstance(key, str):
+            k = re.compile(re.escape(key))
+
+        # preference goes to matching the exact pattern, i.e. 'foo' should
+        # first match 'foo' before trying regexes
+        for regex in self:
+            if regex.pattern == k.pattern:
+                return regex
+
+        # if key isn't a string, then we are done; nothing matches
+        if not isinstance(key, str):
+            return None
+
+        # now we test the regex; the above loop will be faster and is
+        # equivalent to not having regexes (i.e. just doing string compares)
+        for regex in self:
+            if regex.search(key):
+                return regex
+        return None
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         path = os.path.expandvars(path)
