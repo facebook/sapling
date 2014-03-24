@@ -248,7 +248,7 @@ class SVNMeta(object):
     @property
     def tags(self):
         if self._tags is None:
-            self._tags = maps.Tags(self.repo)
+            self._tags = maps.Tags(self)
         return self._tags
 
     @property
@@ -487,7 +487,7 @@ class SVNMeta(object):
                     return node.hex(self.revmap[tagged])
                 tag = fromtag
             # Reference an existing tag
-            limitedtags = maps.Tags(self.repo, endrev=number - 1)
+            limitedtags = maps.Tags(self, endrev=number - 1)
             if tag in limitedtags:
                 return limitedtags[tag]
         r, br = self.get_parent_svn_branch_and_rev(number - 1, branch, exact)

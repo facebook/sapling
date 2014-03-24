@@ -126,27 +126,23 @@ class Tags(dict):
     """
     VERSION = 2
 
-    @classmethod
-    def filepath(cls, repo):
-        return os.path.join(repo.path, 'svn', 'tagmap')
-
-    def __init__(self, repo, endrev=None):
+    def __init__(self, meta, endrev=None):
         dict.__init__(self)
-        self.path = self.filepath(repo)
+        self.meta = meta
         self.endrev = endrev
-        if os.path.isfile(self.path):
-            self._load(repo)
+        if os.path.isfile(self.meta.tagfile):
+            self._load()
         else:
             self._write()
 
-    def _load(self, repo):
-        f = open(self.path)
+    def _load(self):
+        f = open(self.meta.tagfile)
         ver = int(f.readline())
         if ver < self.VERSION:
-            repo.ui.status('tag map outdated, running rebuildmeta...\n')
+            self.meta.ui.status('tag map outdated, running rebuildmeta...\n')
             f.close()
-            os.unlink(self.path)
-            svncommands.rebuildmeta(repo.ui, repo, ())
+            os.unlink(self.meta.tagfile)
+            svncommands.rebuildmeta(self.meta.ui, self.meta.repo, ())
             return
         elif ver != self.VERSION:
             raise hgutil.Abort('tagmap too new -- please upgrade')
@@ -163,7 +159,7 @@ class Tags(dict):
 
     def _write(self):
         assert self.endrev is None
-        f = open(self.path, 'w')
+        f = open(self.meta.tagfile, 'w')
         f.write('%s\n' % self.VERSION)
         f.close()
 
@@ -184,7 +180,7 @@ class Tags(dict):
         if not tag:
             raise hgutil.Abort('tag cannot be empty')
         ha, revision = info
-        f = open(self.path, 'a')
+        f = open(self.meta.tagfile, 'a')
         f.write('%s %s %s\n' % (node.hex(ha), revision, tag))
         f.close()
         dict.__setitem__(self, tag, ha)
