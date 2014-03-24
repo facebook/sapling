@@ -194,18 +194,18 @@ class RevMap(dict):
 
     VERSION = 1
 
-    def __init__(self, repo):
+    def __init__(self, meta):
         dict.__init__(self)
-        self.path = self.mappath(repo)
-        self.repo = repo
-        self.ypath = os.path.join(repo.path, 'svn', 'lastpulled')
+        self.meta = meta
+        self.ypath = os.path.join(meta.metapath, 'lastpulled')
         # TODO(durin42): Consider moving management of the youngest
         # file to svnmeta itself rather than leaving it here.
         # must load youngest file first, or else self._load() can
         # clobber the info
         self._youngest = util.load(self.ypath, 0)
         self.oldest = 0
-        if os.path.isfile(self.path):
+
+        if os.path.isfile(self.meta.revmap_file):
             self._load()
         else:
             self._write()
@@ -226,10 +226,6 @@ class RevMap(dict):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
         return sorted(filter(check, self.iteritems()), reverse=True)
 
-    @staticmethod
-    def mappath(repo):
-        return os.path.join(repo.path, 'svn', 'rev_map')
-
     @classmethod
     def readmapfile(cls, path, missingok=True):
         try:
@@ -244,7 +240,7 @@ class RevMap(dict):
         return f
 
     def _load(self):
-        for l in self.readmapfile(self.path):
+        for l in self.readmapfile(self.meta.revmap_file):
             revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
                 branch = None
@@ -258,13 +254,13 @@ class RevMap(dict):
             dict.__setitem__(self, (revnum, branch), node.bin(ha))
 
     def _write(self):
-        f = open(self.path, 'w')
+        f = open(self.meta.revmap_file, 'w')
         f.write('%s\n' % self.VERSION)
         f.close()
 
     def __setitem__(self, key, ha):
         revnum, branch = key
-        f = open(self.path, 'a')
+        f = open(self.meta.revmap_file, 'a')
         b = branch or ''
         f.write(str(revnum) + ' ' + node.hex(ha) + ' ' + b + '\n')
         f.close()

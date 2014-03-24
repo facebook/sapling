@@ -260,7 +260,7 @@ class SVNMeta(object):
     @property
     def revmap(self):
         if self._revmap is None:
-            self._revmap = maps.RevMap(self.repo)
+            self._revmap = maps.RevMap(self)
         return self._revmap
 
     def fixdate(self, date):
