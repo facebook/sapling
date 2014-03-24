@@ -13,14 +13,12 @@ from mercurial import util as hgutil
 
 import custom
 import detect
-import persist
 import single
 import standard
 
 __all__ = [
     "detect",
     "layout_from_name",
-    "persist",
     ]
 
 # This is the authoritative store of what layouts are available.
