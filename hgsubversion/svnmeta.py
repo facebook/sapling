@@ -390,6 +390,19 @@ class SVNMeta(object):
         }
         return extra
 
+    def skipbranch(self, name):
+        '''Returns whether or not we're skipping a branch.'''
+        # sometimes it's easier to pass the path instead of just the branch
+        # name, so we test for that here
+        if name:
+            bname = self.split_branch_path(name)
+            if bname != (None, None, None):
+                name = bname[1]
+
+        # if the mapped branch == '' and the original branch name == '' then we
+        # won't commit this branch
+        return name and not self.branchmap.get(name, True)
+
     def mapbranch(self, extra, close=False):
         if close:
             extra['close'] = 1
