@@ -721,7 +721,7 @@ class SVNMeta(object):
             revnum, branch = self.get_source_rev(ctx=parentctx)[:2]
         ctx = context.memctx(self.repo,
                              (parentctx.node(), node.nullid),
-                             util.getmessage(self.ui, rev),
+                             self.getmessage(rev),
                              ['.hgtags', ],
                              hgtagsfn,
                              self.authors[rev.author],
@@ -789,7 +789,7 @@ class SVNMeta(object):
 
             ctx = context.memctx(self.repo,
                                  (parent.node(), node.nullid),
-                                 util.getmessage(self.ui, rev),
+                                 self.getmessage(rev),
                                  ['.hgtags'],
                                  fctxfun,
                                  self.authors[rev.author],
@@ -811,7 +811,7 @@ class SVNMeta(object):
         self.mapbranch(extra, True)
         ctx = context.memctx(self.repo,
                              (node, revlog.nullid),
-                             util.getmessage(self.ui, rev),
+                             self.getmessage(rev),
                              [],
                              lambda x, y, z: None,
                              self.authors[rev.author],
