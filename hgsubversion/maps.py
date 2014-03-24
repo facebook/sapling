@@ -410,7 +410,7 @@ class FileMap(object):
         f.write('%s\n' % self.VERSION)
         f.close()
 
-class BranchMap(dict):
+class BranchMap(BaseMap):
     '''Facility for controlled renaming of branch names. Example:
 
     oldname = newname
