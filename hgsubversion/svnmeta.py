@@ -53,7 +53,7 @@ class SVNMeta(object):
 
         self._tagmap = None
 
-        self.filemap = maps.FileMap(self.ui, self.filemap_file)
+        self._filemap = None
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.addedtags = {}
@@ -230,6 +230,12 @@ class SVNMeta(object):
     @property
     def filemap_file(self):
         return os.path.join(self.metapath, 'filemap')
+
+    @property
+    def filemap(self):
+        if self._filemap is None:
+            self._filemap = maps.FileMap(self.ui, self.filemap_file)
+        return self._filemap
 
     @property
     def branchmap_file(self):

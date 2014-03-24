@@ -393,7 +393,7 @@ class BranchMap(dict):
         if path != self.meta.branchmap_file:
             writing = open(self.meta.branchmap_file, 'a')
 
-        self.ui.debug('reading branchmap from %s\n' % path)
+        self.meta.ui.debug('reading branchmap from %s\n' % path)
         f = open(path, 'r')
         for number, line in enumerate(f):
 
