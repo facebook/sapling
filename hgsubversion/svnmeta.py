@@ -41,7 +41,6 @@ class SVNMeta(object):
         self._gen_cachedconfig('usebranchnames', True)
 
         branchmap = util.configpath(self.ui, 'branchmap')
-        tagmap = util.configpath(self.ui, 'tagmap')
         filemap = util.configpath(self.ui, 'filemap')
 
         self.branches = util.load(self.branch_info_file) or {}
@@ -58,8 +57,6 @@ class SVNMeta(object):
             self.branchmap.load(branchmap)
 
         self.tagmap = maps.TagMap(self.ui, self.tagmap_file)
-        if tagmap:
-            self.tagmap.load(tagmap)
 
         self.filemap = maps.FileMap(self.ui, self.filemap_file)
         if filemap:

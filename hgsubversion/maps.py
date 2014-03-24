@@ -437,6 +437,11 @@ class TagMap(dict):
         self.super.__init__()
         self.load(path)
 
+        # append tag mapping specified from the commandline
+        clmap = util.configpath(self.ui, 'tagmap')
+        if clmap:
+            self.load(clmap)
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         if not os.path.exists(path):
