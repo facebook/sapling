@@ -421,15 +421,7 @@ class BranchMap(BaseMap):
     '''
 
     def __init__(self, meta):
-        self.meta = meta
-        self.super = super(BranchMap, self)
-        self.super.__init__()
-        self.load(self.meta.branchmap_file)
-
-        # append branch mapping specified from the commandline
-        clmap = util.configpath(self.meta.ui, 'branchmap')
-        if clmap:
-            self.load(clmap)
+        super(BranchMap, self).__init__(meta)
 
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
