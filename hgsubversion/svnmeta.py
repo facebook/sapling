@@ -213,7 +213,8 @@ class SVNMeta(object):
 
     @property
     def layoutobj(self):
-        if not self._layoutobj:
+        # if self.layout has changed, we need to create a new layoutobj
+        if not self._layoutobj or self._layoutobj.name != self.layout:
             self._layoutobj = layouts.layout_from_name(self.layout, self)
         return self._layoutobj
 
