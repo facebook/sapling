@@ -148,8 +148,23 @@ def _makefpartparamsizes(nbparams):
     """
     return '>'+('BB'*nbparams)
 
-
 parthandlermapping = {}
+
+def parthandler(parttype):
+    """decorator that register a function as a bundle2 part handler
+
+    eg::
+
+        @parthandler('myparttype')
+        def myparttypehandler(...):
+            '''process a part of type "my part".'''
+            ...
+    """
+    def _decorator(func):
+        assert parttype not in parthandlermapping
+        parthandlermapping[parttype] = func
+        return func
+    return _decorator
 
 def processbundle(repo, stream):
     """This function process a bundle, apply effect to/from a repo
