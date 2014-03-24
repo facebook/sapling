@@ -91,19 +91,11 @@ class AuthorMap(BaseMap):
         The path argument is the location of the backing store,
         typically .hg/svn/authors.
         '''
-        self.meta = meta
         self.defaulthost = ''
         if meta.defaulthost:
             self.defaulthost = '@%s' % meta.defaulthost.lstrip('@')
 
-        self.super = super(AuthorMap, self)
-        self.super.__init__()
-        self.load(self.meta.authormap_file)
-
-        # append authors specified from the commandline
-        clmap = util.configpath(self.meta.ui, 'authormap')
-        if clmap:
-            self.load(clmap)
+        super(AuthorMap, self).__init__(meta)
 
     def load(self, path):
         ''' Load mappings from a file at the specified path. '''
