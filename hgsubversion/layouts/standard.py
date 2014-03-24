@@ -16,6 +16,15 @@ class StandardLayout(base.BaseLayout):
                                pre=lambda x: '/'.join(p for p in x.split('/')
                                                       if p) + '/')
 
+        # infix is expected to be stripped of trailing slashes but retain
+        # its first slash
+        def _infix_transform(x):
+            x = '/'.join(p for p in x.split('/') if p)
+            if x:
+                x = '/' + x
+            return x
+        meta._gen_cachedconfig('infix', '', pre=_infix_transform)
+
         self._infix = self.meta.ui.config('hgsubversion', 'infix', '').strip('/')
         if self._infix:
             self._infix = '/' + self._infix
