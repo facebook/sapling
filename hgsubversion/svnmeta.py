@@ -12,6 +12,7 @@ import util
 import maps
 import layouts
 import editor
+import svnwrap
 
 
 class SVNMeta(object):
@@ -143,6 +144,31 @@ class SVNMeta(object):
                                                             name,
                                                             filename))
         setattr(SVNMeta, name, prop)
+
+    def layout_from_subversion(self, svn, revision=None):
+        """ Guess what layout to use based on directories under the svn root.
+
+        This is intended for use during bootstrapping.  It guesses which
+        layout to use based on the presence or absence of the conventional
+        trunk, branches, tags dirs immediately under the path your are
+        cloning.
+
+        Additionally, this will write the layout in use to the ui object
+        passed, if any.
+
+        """
+
+        try:
+            rootlist = svn.list_dir('', revision=revision)
+        except svnwrap.SubversionException, e:
+            err = "%s (subversion error: %d)" % (e.args[0], e.args[1])
+            raise hgutil.Abort(err)
+        if sum(map(lambda x: x in rootlist, ('branches', 'tags', 'trunk'))):
+            layout = 'standard'
+        else:
+            layout = 'single'
+        self.ui.setconfig('hgsubversion', 'layout', layout)
+        return layout
 
     def layout_from_commit(self, subdir, revpath, branch):
         """ Guess what the layout is based existing commit info
