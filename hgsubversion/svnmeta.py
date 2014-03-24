@@ -41,6 +41,7 @@ class SVNMeta(object):
         self._branchmap = None
         self._tagmap = None
         self._filemap = None
+        self._layout = None
 
         # create .hg/svn folder if it doesn't exist
         if not os.path.isdir(self.metapath):
@@ -58,11 +59,11 @@ class SVNMeta(object):
         self._gen_cachedconfig('usebranchnames', True)
         self._gen_cachedconfig('defaultmessage', '')
         self._gen_cachedconfig('branch', '')
+        self._gen_cachedconfig('layout', 'auto')
 
         # misc
         self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
-        self._layout = layouts.detect.layout_from_file(self)
 
     def _get_cachedconfig(self, name, filename, configname, default, pre):
         """Return a cached value for a config option. If the cache is uninitialized
@@ -209,16 +210,6 @@ class SVNMeta(object):
     @property
     def layout_file(self):
         return os.path.join(self.metapath, 'layout')
-
-    @property
-    def layout(self):
-        # this method can't determine the layout, but it needs to be
-        # resolved into something other than auto before this ever
-        # gets called
-        if not self._layout or self._layout == 'auto':
-            self._layout = layouts.detect.layout_from_config(self)
-            util.dump(self._layout, self.layout_file)
-        return self._layout
 
     @property
     def layoutobj(self):
