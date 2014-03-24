@@ -31,15 +31,15 @@ class StandardLayout(base.BaseLayout):
 
     @property
     def trunk(self):
-        return 'trunk' + self._infix
+        return 'trunk' + self.meta.infix
 
     def localname(self, path):
         if path == self.trunk:
             return None
-        elif path.startswith(self.meta.branchdir) and path.endswith(self._infix):
+        elif path.startswith(self.meta.branchdir) and path.endswith(self.meta.infix):
             path = path[len(self.meta.branchdir):]
-            if self._infix:
-                path = path[:-len(self._infix)]
+            if self.meta.infix:
+                path = path[:-len(self.meta.infix)]
             return path
         return  '../%s' % path
 
@@ -49,7 +49,7 @@ class StandardLayout(base.BaseLayout):
         elif branch.startswith('../'):
             path =  branch[3:]
         else:
-            path = ''.join((self.meta.branchdir, branch, self._infix))
+            path = ''.join((self.meta.branchdir, branch, self.meta.infix))
 
         return path
 
@@ -61,7 +61,8 @@ class StandardLayout(base.BaseLayout):
             if branch.startswith('../'):
                 branchpath = branch[3:]
             else:
-                branchpath = ''.join((self.meta.branchdir, branch, self._infix))
+                branchpath = ''.join((self.meta.branchdir, branch,
+                                      self.meta.infix))
 
         return '%s/%s' % (subdir or '', branchpath)
 
@@ -132,10 +133,10 @@ class StandardLayout(base.BaseLayout):
                 local_path = components[1]
 
             if local_path == '':
-                branch_path += self._infix
-            elif local_path.startswith(self._infix[1:] + '/'):
-                branch_path += self._infix
-                local_path = local_path[len(self._infix):]
+                branch_path += self.meta.infix
+            elif local_path.startswith(self.meta.infix[1:] + '/'):
+                branch_path += self.meta.infix
+                local_path = local_path[len(self.meta.infix):]
             return branch_path, local_path
 
         components = path.split('/')
