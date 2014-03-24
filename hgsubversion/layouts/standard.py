@@ -16,12 +16,6 @@ class StandardLayout(base.BaseLayout):
                                pre=lambda x: '/'.join(p for p in x.split('/')
                                                       if p) + '/')
 
-        self._branch_dir = self.meta.ui.config('hgsubversion', 'branchdir', 'branches')
-        if self._branch_dir[0] == '/':
-            self._branch_dir = self._branch_dir[1:]
-        if self._branch_dir[-1] != '/':
-            self._branch_dir += '/'
-
         self._infix = self.meta.ui.config('hgsubversion', 'infix', '').strip('/')
         if self._infix:
             self._infix = '/' + self._infix
