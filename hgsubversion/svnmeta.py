@@ -36,6 +36,7 @@ class SVNMeta(object):
         self._gen_cachedconfig('lastpulled', 0, configname=False)
         self._gen_cachedconfig('defaultauthors', True)
         self._gen_cachedconfig('caseignoreauthors', False)
+        self._gen_cachedconfig('defaulthost', self.uuid)
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = util.configpath(self.ui, 'authormap')
