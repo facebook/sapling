@@ -375,6 +375,11 @@ class BranchMap(dict):
         self.super.__init__()
         self.load(path)
 
+        # append branch mapping specified from the commandline
+        clmap = util.configpath(self.ui, 'branchmap')
+        if clmap:
+            self.load(clmap)
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         if not os.path.exists(path):

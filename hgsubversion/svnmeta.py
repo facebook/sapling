@@ -40,7 +40,6 @@ class SVNMeta(object):
         self._gen_cachedconfig('defaulthost', self.uuid)
         self._gen_cachedconfig('usebranchnames', True)
 
-        branchmap = util.configpath(self.ui, 'branchmap')
         filemap = util.configpath(self.ui, 'filemap')
 
         self.branches = util.load(self.branch_info_file) or {}
@@ -53,8 +52,6 @@ class SVNMeta(object):
         self._authors = None
 
         self.branchmap = maps.BranchMap(self.ui, self.branchmap_file)
-        if branchmap:
-            self.branchmap.load(branchmap)
 
         self._tagmap = None
 
