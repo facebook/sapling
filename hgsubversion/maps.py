@@ -34,7 +34,7 @@ class AuthorMap(dict):
 
         self.super = super(AuthorMap, self)
         self.super.__init__()
-        self.load(self.meta.authors_file)
+        self.load(self.meta.authormap_file)
 
         # append authors specified from the commandline
         clmap = util.configpath(self.meta.ui, 'authormap')
@@ -49,8 +49,8 @@ class AuthorMap(dict):
             return
 
         writing = False
-        if path != self.meta.authors_file:
-            writing = open(self.meta.authors_file, 'a')
+        if path != self.meta.authormap_file:
+            writing = open(self.meta.authormap_file, 'a')
 
         self.meta.ui.debug('reading authormap from %s\n' % path)
         f = open(path, 'r')

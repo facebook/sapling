@@ -286,7 +286,7 @@ class SVNMeta(object):
         return os.path.join(self.metapath, 'branch_info')
 
     @property
-    def authors_file(self):
+    def authormap_file(self):
         return os.path.join(self.metapath, 'authors')
 
     @property
