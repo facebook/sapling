@@ -177,4 +177,62 @@ Encoding of reserved / long paths in the store
 
   $ cd ..
 
+Aborting lock does not prevent fncache writes
 
+  $ cat > exceptionext.py <<EOF
+  > import os
+  > from mercurial import commands, util
+  > from mercurial.extensions import wrapfunction
+  > 
+  > def lockexception(orig, vfs, lockname, wait, releasefn, acquirefn, desc):
+  >     def releasewrap():
+  >         raise util.Abort("forced lock failure")
+  >     return orig(vfs, lockname, wait, releasewrap, acquirefn, desc)
+  > 
+  > def reposetup(ui, repo):
+  >     wrapfunction(repo, '_lock', lockexception)
+  > 
+  > cmdtable = {}
+  > 
+  > EOF
+  $ extpath=`pwd`/exceptionext.py
+  $ hg init fncachetxn
+  $ cd fncachetxn
+  $ printf "[extensions]\nexceptionext=$extpath\n" >> .hg/hgrc
+  $ touch y
+  $ hg ci -qAm y
+  abort: forced lock failure
+  [255]
+  $ cat .hg/store/fncache
+  data/y.i
+
+Aborting transaction prevents fncache change
+
+  $ cat > ../exceptionext.py <<EOF
+  > import os
+  > from mercurial import commands, util, transaction
+  > from mercurial.extensions import wrapfunction
+  > 
+  > def wrapper(orig, self, *args, **kwargs):
+  >     origonclose = self.onclose
+  >     def onclose():
+  >         origonclose()
+  >         raise util.Abort("forced transaction failure")
+  >     self.onclose = onclose
+  >     return orig(self, *args, **kwargs)
+  > 
+  > def uisetup(ui):
+  >     wrapfunction(transaction.transaction, 'close', wrapper)
+  > 
+  > cmdtable = {}
+  > 
+  > EOF
+  $ rm "${extpath}c"
+  $ touch z
+  $ hg ci -qAm z
+  transaction abort!
+  rollback completed
+  abort: forced transaction failure
+  [255]
+  $ cat .hg/store/fncache
+  data/y.i

@@ -337,7 +337,7 @@ class basicstore(object):
     def copylist(self):
         return ['requires'] + _data.split()
 
-    def write(self):
+    def write(self, tr):
         pass
 
     def __contains__(self, path):
@@ -402,8 +402,9 @@ class fncache(object):
                     raise util.Abort(t)
         fp.close()
 
-    def write(self):
+    def write(self, tr):
         if self._dirty:
+            tr.addbackup('fncache')
             fp = self.vfs('fncache', mode='wb', atomictemp=True)
             if self.entries:
                 fp.write(encodedir('\n'.join(self.entries) + '\n'))
@@ -485,8 +486,8 @@ class fncachestore(basicstore):
         return (['requires', '00changelog.i'] +
                 ['store/' + f for f in d.split()])
 
-    def write(self):
-        self.fncache.write()
+    def write(self, tr):
+        self.fncache.write(tr)
 
     def _exists(self, f):
         ef = self.encode(f)

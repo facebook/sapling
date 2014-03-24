@@ -823,13 +823,17 @@ class localrepository(object):
             raise error.RepoError(
                 _("abandoned transaction found - run hg recover"))
 
+        def onclose():
+            self.store.write(tr)
+
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
         tr = transaction.transaction(rp, self.sopener,
                                      "journal",
                                      aftertrans(renames),
-                                     self.store.createmode)
+                                     self.store.createmode,
+                                     onclose)
         self._transref = weakref.ref(tr)
         return tr
 
@@ -1037,7 +1041,6 @@ class localrepository(object):
             return l
 
         def unlock():
-            self.store.write()
             if hasunfilteredcache(self, '_phasecache'):
                 self._phasecache.write()
             for k, ce in self._filecache.items():
