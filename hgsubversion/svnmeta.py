@@ -261,7 +261,7 @@ class SVNMeta(object):
     @property
     def tagmap(self):
         if self._tagmap is None:
-            self._tagmap = maps.TagMap(self.ui, self.tagmap_file)
+            self._tagmap = maps.TagMap(self)
         return self._tagmap
 
     @property

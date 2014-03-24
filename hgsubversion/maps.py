@@ -430,15 +430,14 @@ class TagMap(dict):
         the other tag will not be reflected in the hg repository.
     '''
 
-    def __init__(self, ui, path):
-        self.ui = ui
-        self.path = path
+    def __init__(self, meta):
+        self.meta = meta
         self.super = super(TagMap, self)
         self.super.__init__()
-        self.load(path)
+        self.load(self.meta.tagmap_file)
 
         # append tag mapping specified from the commandline
-        clmap = util.configpath(self.ui, 'tagmap')
+        clmap = util.configpath(self.meta.ui, 'tagmap')
         if clmap:
             self.load(clmap)
 
@@ -448,10 +447,10 @@ class TagMap(dict):
             return
 
         writing = False
-        if path != self.path:
-            writing = open(self.path, 'a')
+        if path != self.meta.tagmap_file:
+            writing = open(self.meta.tagmap_file, 'a')
 
-        self.ui.debug('reading tag renames from %s\n' % path)
+        self.meta.ui.debug('reading tag renames from %s\n' % path)
         f = open(path, 'r')
         for number, line in enumerate(f):
 
@@ -466,16 +465,16 @@ class TagMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in tag renames %s: %s\n'
-                self.ui.status(msg % (number, path, line.rstrip()))
+                self.meta.ui.status(msg % (number, path, line.rstrip()))
                 continue
 
             src = src.strip()
             dst = dst.strip()
-            self.ui.debug('adding tag %s to tag renames\n' % src)
+            self.meta.ui.debug('adding tag %s to tag renames\n' % src)
 
             if src in self and dst != self[src]:
                 msg = 'overriding tag rename: "%s" to "%s" (%s)\n'
-                self.ui.status(msg % (self[src], dst, src))
+                self.meta.ui.status(msg % (self[src], dst, src))
             self[src] = dst
 
         f.close()
