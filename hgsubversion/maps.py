@@ -96,6 +96,14 @@ class AuthorMap(dict):
             key = key.lower()
         super(AuthorMap, self).__setitem__(key, value)
 
+    def __contains__(self, key):
+        '''Similar to dict.__contains__, except we check caseignoreauthors to
+        use lowercase string or not
+        '''
+        if self.meta.caseignoreauthors:
+            key = key.lower()
+        return super(AuthorMap, self).__contains__(key)
+
     def __getitem__(self, author):
         ''' Similar to dict.__getitem__, except in case of an unknown author.
         In such cases, a new value is generated and added to the dictionary
