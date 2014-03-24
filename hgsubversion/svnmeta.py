@@ -94,6 +94,8 @@ class SVNMeta(object):
                     c = self.ui.configint('hgsubversion', configname, default)
                 elif isinstance(default, list):
                     c = self.ui.configlist('hgsubversion', configname, default)
+                elif isinstance(default, dict):
+                    c = dict(self.ui.configitems(configname))
                 else:
                     c = self.ui.config('hgsubversion', configname, default)
 
