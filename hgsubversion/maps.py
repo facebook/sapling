@@ -80,6 +80,20 @@ class BaseMap(dict):
 
         return val
 
+    def __setitem__(self, key, value):
+        '''Similar to dict.__setitem__, except we compile the string into a regex, if
+        need be.
+        '''
+        # try to find the regex already in the map
+        k = self._findkey(key)
+        # if we found one, then use it
+        if k:
+            key = k
+        # else make a new regex
+        if isinstance(key, str):
+            key = re.compile(re.escape(key))
+        super(BaseMap, self).__setitem__(key, value)
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         path = os.path.expandvars(path)
