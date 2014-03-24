@@ -28,7 +28,6 @@ class AuthorMap(dict):
         typically .hg/svn/authors.
         '''
         self.meta = meta
-        self.use_defaultauthors = self.meta.ui.configbool('hgsubversion', 'defaultauthors', True)
         self.caseignoreauthors = self.meta.ui.configbool('hgsubversion', 'caseignoreauthors', False)
         self.defaulthost = ''
         if meta.defaulthost:
@@ -103,7 +102,7 @@ class AuthorMap(dict):
 
         if search_author in self:
             result = self.super.__getitem__(search_author)
-        elif self.use_defaultauthors:
+        elif self.meta.defaultauthors:
             self[author] = result = '%s%s' % (author, self.defaulthost)
             msg = 'substituting author "%s" for default "%s"\n'
             self.meta.ui.debug(msg % (author, result))
