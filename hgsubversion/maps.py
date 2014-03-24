@@ -88,6 +88,14 @@ class AuthorMap(dict):
         if writing:
             writing.close()
 
+    def __setitem__(self, key, value):
+        '''Similar to dict.__setitem__, except we check caseignoreauthors to
+        use lowercase string or not
+        '''
+        if self.meta.caseignoreauthors:
+            key = key.lower()
+        super(AuthorMap, self).__setitem__(key, value)
+
     def __getitem__(self, author):
         ''' Similar to dict.__getitem__, except in case of an unknown author.
         In such cases, a new value is generated and added to the dictionary
