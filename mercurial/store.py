@@ -402,20 +402,13 @@ class fncache(object):
                     raise util.Abort(t)
         fp.close()
 
-    def _write(self, files, atomictemp):
-        fp = self.vfs('fncache', mode='wb', atomictemp=atomictemp)
-        if files:
-            fp.write(encodedir('\n'.join(files) + '\n'))
-        fp.close()
-        self._dirty = False
-
-    def rewrite(self, files):
-        self._write(files, False)
-        self.entries = set(files)
-
     def write(self):
         if self._dirty:
-            self._write(self.entries, True)
+            fp = self.vfs('fncache', mode='wb', atomictemp=True)
+            if self.entries:
+                fp.write(encodedir('\n'.join(self.entries) + '\n'))
+            fp.close()
+            self._dirty = False
 
     def add(self, fn):
         if self.entries is None:
@@ -476,7 +469,6 @@ class fncachestore(basicstore):
         return self.rawvfs.stat(path).st_size
 
     def datafiles(self):
-        rewrite = False
         existing = []
         for f in sorted(self.fncache):
             ef = self.encode(f)
@@ -486,12 +478,6 @@ class fncachestore(basicstore):
             except OSError, err:
                 if err.errno != errno.ENOENT:
                     raise
-                # nonexistent entry
-                rewrite = True
-        if rewrite:
-            # rewrite fncache to remove nonexistent entries
-            # (may be caused by rollback / strip)
-            self.fncache.rewrite(existing)
 
     def copylist(self):
         d = ('data dh fncache phaseroots obsstore'
