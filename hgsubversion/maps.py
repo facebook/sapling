@@ -434,15 +434,7 @@ class TagMap(BaseMap):
     '''
 
     def __init__(self, meta):
-        self.meta = meta
-        self.super = super(TagMap, self)
-        self.super.__init__()
-        self.load(self.meta.tagmap_file)
-
-        # append tag mapping specified from the commandline
-        clmap = util.configpath(self.meta.ui, 'tagmap')
-        if clmap:
-            self.load(clmap)
+        super(TagMap, self).__init__(meta)
 
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
