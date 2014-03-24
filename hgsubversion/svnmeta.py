@@ -379,7 +379,7 @@ class SVNMeta(object):
                 # ancient svn failed to enforce utf8 encoding
                 return msg.decode('iso-8859-1').encode('utf-8')
         else:
-            return self.ui.config('hgsubversion', 'defaultmessage', '')
+            return self.defaultmessage
 
     def get_path_tag(self, path):
         """If path could represent the path to a tag, returns the
