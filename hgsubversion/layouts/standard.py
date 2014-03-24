@@ -25,6 +25,10 @@ class StandardLayout(base.BaseLayout):
             return x
         meta._gen_cachedconfig('infix', '', pre=_infix_transform)
 
+        # the lambda is to ensure nested paths are handled properly
+        meta._gen_cachedconfig('taglocations', ['tags'], 'tag_locations',
+                               'tagpaths', lambda x: list(reversed(sorted(x))))
+
     @property
     def trunk(self):
         return 'trunk' + self.meta.infix
@@ -63,30 +67,7 @@ class StandardLayout(base.BaseLayout):
         return '%s/%s' % (subdir or '', branchpath)
 
     def taglocations(self, metapath):
-        # import late to avoid trouble when running the test suite
-        try:
-            # newer versions of mercurial >= 2.8 will import this because the
-            # hgext_ logic is already being done in core
-            from hgsubversion import util
-        except ImportError:
-            from hgext_hgsubversion import util
-
-        if self._tag_locations is None:
-
-            tag_locations_file = os.path.join(metapath, 'tag_locations')
-            self._tag_locations = util.load(tag_locations_file)
-
-            if not self._tag_locations:
-                self._tag_locations = self.meta.ui.configlist('hgsubversion',
-                                                              'tagpaths',
-                                                              ['tags'])
-            util.dump(self._tag_locations, tag_locations_file)
-
-            # ensure nested paths are handled properly
-            self._tag_locations.sort()
-            self._tag_locations.reverse()
-
-        return self._tag_locations
+        return self.meta.taglocations
 
     def get_path_tag(self, path, taglocations):
         for tagspath in taglocations:
