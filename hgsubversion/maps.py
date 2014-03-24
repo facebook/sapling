@@ -423,46 +423,6 @@ class BranchMap(BaseMap):
     def __init__(self, meta):
         super(BranchMap, self).__init__(meta)
 
-    def load(self, path):
-        '''Load mappings from a file at the specified path.'''
-        if not os.path.exists(path):
-            return
-
-        writing = False
-        if path != self.meta.branchmap_file:
-            writing = open(self.meta.branchmap_file, 'a')
-
-        self.meta.ui.debug('reading branchmap from %s\n' % path)
-        f = open(path, 'r')
-        for number, line in enumerate(f):
-
-            if writing:
-                writing.write(line)
-
-            line = line.split('#')[0]
-            if not line.strip():
-                continue
-
-            try:
-                src, dst = line.split('=', 1)
-            except (IndexError, ValueError):
-                msg = 'ignoring line %i in branch map %s: %s\n'
-                self.meta.ui.status(msg % (number, path, line.rstrip()))
-                continue
-
-            src = src.strip()
-            dst = dst.strip()
-            self.meta.ui.debug('adding branch %s to branch map\n' % src)
-
-            if dst and src in self and dst != self[src]:
-                msg = 'overriding branch: "%s" to "%s" (%s)\n'
-                self.meta.ui.status(msg % (self[src], dst, src))
-            self[src] = dst
-
-        f.close()
-        if writing:
-            writing.close()
-
 class TagMap(dict):
     '''Facility for controlled renaming of tags. Example:
 
