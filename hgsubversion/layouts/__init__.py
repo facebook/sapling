@@ -34,7 +34,8 @@ NAME_TO_CLASS = {
 def layout_from_name(name, meta):
     """Returns a layout module given the layout name
 
-    You should use one of the layout.detect.* functions to get the
+    You should be able to read the layout name from meta.layout but, if
+    necessary, you can use one of the meta.layout_from_* functions to get the
     name to pass to this function.
 
     """
