@@ -242,7 +242,7 @@ class SVNMeta(object):
     @property
     def branchmap(self):
         if self._branchmap is None:
-            self._branchmap = maps.BranchMap(self.ui, self.branchmap_file)
+            self._branchmap = maps.BranchMap(self)
         return self._branchmap
 
     @property

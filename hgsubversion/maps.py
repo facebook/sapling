@@ -368,15 +368,14 @@ class BranchMap(dict):
     changes on other will now be on default (have no branch name set).
     '''
 
-    def __init__(self, ui, path):
-        self.ui = ui
-        self.path = path
+    def __init__(self, meta):
+        self.meta = meta
         self.super = super(BranchMap, self)
         self.super.__init__()
-        self.load(path)
+        self.load(self.meta.branchmap_file)
 
         # append branch mapping specified from the commandline
-        clmap = util.configpath(self.ui, 'branchmap')
+        clmap = util.configpath(self.meta.ui, 'branchmap')
         if clmap:
             self.load(clmap)
 
@@ -386,8 +385,8 @@ class BranchMap(dict):
             return
 
         writing = False
-        if path != self.path:
-            writing = open(self.path, 'a')
+        if path != self.meta.branchmap_file:
+            writing = open(self.meta.branchmap_file, 'a')
 
         self.ui.debug('reading branchmap from %s\n' % path)
         f = open(path, 'r')
@@ -404,12 +403,12 @@ class BranchMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in branch map %s: %s\n'
-                self.ui.status(msg % (number, path, line.rstrip()))
+                self.meta.ui.status(msg % (number, path, line.rstrip()))
                 continue
 
             src = src.strip()
             dst = dst.strip()
-            self.ui.debug('adding branch %s to branch map\n' % src)
+            self.meta.ui.debug('adding branch %s to branch map\n' % src)
 
             if not dst:
                 # prevent people from assuming such lines are valid
@@ -418,7 +417,7 @@ class BranchMap(dict):
                                    % (number, path))
             elif src in self and dst != self[src]:
                 msg = 'overriding branch: "%s" to "%s" (%s)\n'
-                self.ui.status(msg % (self[src], dst, src))
+                self.meta.ui.status(msg % (self[src], dst, src))
             self[src] = dst
 
         f.close()
