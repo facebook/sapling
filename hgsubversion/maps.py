@@ -18,6 +18,7 @@ class BaseMap(dict):
         super(BaseMap, self).__init__()
 
         self._commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
+        self.syntaxes = ('re', 'glob')
 
         # trickery: all subclasses have the same name as their file and config
         # names, e.g. AuthorMap is meta.authormap_file for the filename and
@@ -111,6 +112,7 @@ class BaseMap(dict):
 
         self.meta.ui.debug('reading %s from %s\n' % (self.mapname , path))
         f = open(path, 'r')
+        syntax = ''
         for number, line in enumerate(f):
 
             if writing:
@@ -126,6 +128,20 @@ class BaseMap(dict):
             if not line:
                 continue
 
+            if line.startswith('syntax:'):
+                s = line[7:].strip()
+                syntax = ''
+                if s in self.syntaxes:
+                    syntax = s
+                continue
+            pat = syntax
+            for s in self.syntaxes:
+                if line.startswith(s + ':'):
+                    pat = s
+                    line = line[len(s) + 1:]
+                    break
+
+            # split on the first '='
             try:
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
@@ -136,6 +152,12 @@ class BaseMap(dict):
 
             src = src.strip()
             dst = dst.strip()
+
+            if pat != 're':
+                src = re.escape(src)
+            if pat == 'glob':
+                src = src.replace('\\*', '.*')
+            src = re.compile(src)
 
             if src not in self:
                 self.meta.ui.debug('adding %s to %s\n' % (src, self.mapname))
