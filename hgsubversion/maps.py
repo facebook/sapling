@@ -66,6 +66,20 @@ class BaseMap(dict):
             return self[key]
         return default
 
+    def __getitem__(self, key):
+        '''Similar to dict.get, except we use our own matcher, _findkey. If the key is
+        a string, then we can use our regex matching to map its value.
+        '''
+        k = self._findkey(key)
+        val = super(BaseMap, self).__getitem__(k)
+
+        # if key is a string then we can transform it using our regex, else we
+        # don't have enough information, so we just return the val
+        if isinstance(key, str):
+            val = k.sub(val, key)
+
+        return val
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         path = os.path.expandvars(path)
