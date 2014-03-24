@@ -173,21 +173,28 @@ class AuthorMap(BaseMap):
 
         super(AuthorMap, self).__init__(meta)
 
+    def _lowercase(self, key):
+        '''Determine whether or not to lowercase a str or regex using the
+        meta.caseignoreauthors.'''
+        k = key
+        if self.meta.caseignoreauthors:
+            if isinstance(key, str):
+                k = key.lower()
+            else:
+                k = re.compile(key.pattern.lower())
+        return k
+
     def __setitem__(self, key, value):
         '''Similar to dict.__setitem__, except we check caseignoreauthors to
         use lowercase string or not
         '''
-        if self.meta.caseignoreauthors:
-            key = key.lower()
-        super(AuthorMap, self).__setitem__(key, value)
+        super(AuthorMap, self).__setitem__(self._lowercase(key), value)
 
     def __contains__(self, key):
         '''Similar to dict.__contains__, except we check caseignoreauthors to
         use lowercase string or not
         '''
-        if self.meta.caseignoreauthors:
-            key = key.lower()
-        return super(AuthorMap, self).__contains__(key)
+        return super(AuthorMap, self).__contains__(self._lowercase(key))
 
     def __getitem__(self, author):
         ''' Similar to dict.__getitem__, except in case of an unknown author.
@@ -195,6 +202,9 @@ class AuthorMap(BaseMap):
         as well as the backing store. '''
         if author is None:
             author = '(no author)'
+
+        if not isinstance(author, str):
+            return super(AuthorMap, self).__getitem__(author)
 
         search_author = author
         if self.meta.caseignoreauthors:
