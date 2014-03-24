@@ -9,6 +9,25 @@ import subprocess
 import svncommands
 import util
 
+class BaseMap(dict):
+    '''A base class for the different type of mappings: author, branch, and
+    tags.'''
+    def __init__(self, meta):
+        self.meta = meta
+        super(BaseMap, self).__init__()
+
+        # trickery: all subclasses have the same name as their file and config
+        # names, e.g. AuthorMap is meta.authormap_file for the filename and
+        # 'authormap' for the config option
+        self.mapname = self.__class__.__name__.lower()
+        self.mapfilename = self.mapname + '_file'
+        self.load(self.meta.__getattribute__(self.mapfilename))
+
+        # append mappings specified from the commandline
+        clmap = util.configpath(self.meta.ui, self.mapname)
+        if clmap:
+            self.load(clmap)
+
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
     authors, and back. The data is stored persistently on disk.
