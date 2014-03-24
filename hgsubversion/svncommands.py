@@ -18,6 +18,7 @@ import svnrepo
 import util
 import svnexternals
 import verify
+import svnmeta
 
 
 def updatemeta(ui, repo, args, **opts):
@@ -53,6 +54,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
     url = repo.ui.expandpath(dest or repo.ui.config('paths', 'default-push') or
                              repo.ui.config('paths', 'default') or '')
+
+    meta = svnmeta.SVNMeta(repo, skiperrorcheck=True)
     svnmetadir = os.path.join(repo.path, 'svn')
     if not os.path.exists(svnmetadir):
         os.makedirs(svnmetadir)
