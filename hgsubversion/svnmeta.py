@@ -366,6 +366,20 @@ class SVNMeta(object):
     def taglocations(self):
         return self.layoutobj.taglocations(self.metapath)
 
+    def getmessage(self, rev):
+        msg = rev.message
+
+        if msg:
+            try:
+                msg.decode('utf-8')
+                return msg
+
+            except UnicodeDecodeError:
+                # ancient svn failed to enforce utf8 encoding
+                return msg.decode('iso-8859-1').encode('utf-8')
+        else:
+            return self.ui.config('hgsubversion', 'defaultmessage', '')
+
     def get_path_tag(self, path):
         """If path could represent the path to a tag, returns the
         potential (non-empty) tag name. Otherwise, returns None
