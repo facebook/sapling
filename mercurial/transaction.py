@@ -42,12 +42,27 @@ def _playback(journal, report, opener, entries, unlink=True):
     opener.unlink(journal)
 
 class transaction(object):
-    def __init__(self, report, opener, journal, after=None, createmode=None):
+    def __init__(self, report, opener, journal, after=None, createmode=None,
+            onclose=None, onabort=None):
+        """Begin a new transaction
+
+        Begins a new transaction that allows rolling back writes in the event of
+        an exception.
+
+        * `after`: called after the transaction has been committed
+        * `createmode`: the mode of the journal file that will be created
+        * `onclose`: called as the transaction is closing, but before it is
+        closed
+        * `onabort`: called as the transaction is aborting, but before any files
+        have been truncated
+        """
         self.count = 1
         self.usages = 1
         self.report = report
         self.opener = opener
         self.after = after
+        self.onclose = onclose
+        self.onabort = onabort
         self.entries = []
         self.map = {}
         self.journal = journal
@@ -126,6 +141,9 @@ class transaction(object):
     @active
     def close(self):
         '''commit the transaction'''
+        if self.count == 1 and self.onclose is not None:
+            self.onclose()
+
         self.count -= 1
         if self.count != 0:
             return
@@ -148,6 +166,9 @@ class transaction(object):
         self.count = 0
         self.usages = 0
         self.file.close()
+
+        if self.onabort is not None:
+            self.onabort()
 
         try:
             if not self.entries:
