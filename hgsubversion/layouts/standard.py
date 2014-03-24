@@ -31,8 +31,8 @@ class StandardLayout(base.BaseLayout):
     def localname(self, path):
         if path == self._trunk:
             return None
-        elif path.startswith(self._branch_dir) and path.endswith(self._infix):
-            path = path[len(self._branch_dir):]
+        elif path.startswith(self.meta.branchdir) and path.endswith(self._infix):
+            path = path[len(self.meta.branchdir):]
             if self._infix:
                 path = path[:-len(self._infix)]
             return path
@@ -44,7 +44,7 @@ class StandardLayout(base.BaseLayout):
         elif branch.startswith('../'):
             path =  branch[3:]
         else:
-            path = ''.join((self._branch_dir, branch, self._infix))
+            path = ''.join((self.meta.branchdir, branch, self._infix))
 
         return path
 
@@ -56,7 +56,7 @@ class StandardLayout(base.BaseLayout):
             if branch.startswith('../'):
                 branchpath = branch[3:]
             else:
-                branchpath = ''.join((self._branch_dir, branch, self._infix))
+                branchpath = ''.join((self.meta.branchdir, branch, self._infix))
 
         return '%s/%s' % (subdir or '', branchpath)
 
@@ -117,10 +117,10 @@ class StandardLayout(base.BaseLayout):
         if path == 'trunk' or path.startswith('trunk/'):
             return self._trunk, path[len(self._trunk) + 1:]
 
-        if path.startswith(self._branch_dir):
-            path = path[len(self._branch_dir):]
+        if path.startswith(self.meta.branchdir):
+            path = path[len(self.meta.branchdir):]
             components = path.split('/', 1)
-            branch_path = ''.join((self._branch_dir, components[0]))
+            branch_path = ''.join((self.meta.branchdir, components[0]))
             if len(components) == 1:
                 local_path = ''
             else:
