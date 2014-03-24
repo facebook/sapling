@@ -66,14 +66,16 @@ def layout_from_file(metapath, ui=None):
 
     """
 
-    layout = None
+    # import late to avoid trouble when running the test suite
+    try:
+        from hgext_hgsubversion import util
+    except ImportError:
+        from hgsubversion import util
+
     layoutfile = os.path.join(metapath, 'layout')
-    if os.path.exists(layoutfile):
-        f = open(layoutfile)
-        layout = f.read().strip()
-        f.close()
-        if ui:
-            ui.setconfig('hgsubversion', 'layout', layout)
+    layout = util.load(layoutfile)
+    if layout is not None and ui:
+        ui.setconfig('hgsubversion', 'layout', layout)
     return layout
 
 def layout_from_commit(subdir, revpath, branch, ui):
