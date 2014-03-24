@@ -66,7 +66,8 @@ class StandardLayout(base.BaseLayout):
 
         return '%s/%s' % (subdir or '', branchpath)
 
-    def taglocations(self, metapath):
+    @property
+    def taglocations(self):
         return self.meta.taglocations
 
     def get_path_tag(self, path, taglocations):

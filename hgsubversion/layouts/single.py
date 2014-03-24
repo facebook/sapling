@@ -14,7 +14,8 @@ class SingleLayout(base.BaseLayout):
     def remotepath(self, branch, subdir='/'):
         return subdir or '/'
 
-    def taglocations(self, metapath):
+    @property
+    def taglocations(self):
         return []
 
     def get_path_tag(self, path, taglocations):

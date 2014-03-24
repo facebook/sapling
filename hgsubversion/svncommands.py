@@ -219,7 +219,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
 
-        tag_locations = layoutobj.taglocations(meta.metapath)
+        tag_locations = layoutobj.taglocations
         found_tag = False
         for location in tag_locations:
             if commitpath.startswith(location + '/'):
