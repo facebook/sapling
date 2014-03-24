@@ -148,7 +148,7 @@ class SVNMeta(object):
         # gets called
         if not self._layout or self._layout == 'auto':
             self._layout = layouts.detect.layout_from_config(self.repo.ui)
-            layouts.persist.layout_to_file(self.metapath, self._layout)
+            util.dump(self._layout, self.layout_file)
         return self._layout
 
     @property
