@@ -51,7 +51,7 @@ class SVNMeta(object):
                                                        ui=self.repo.ui)
         self._layoutobj = None
 
-        self.authors = maps.AuthorMap(self)
+        self._authors = None
 
         self.branchmap = maps.BranchMap(self.ui, self.branchmap_file)
         if branchmap:
@@ -230,6 +230,12 @@ class SVNMeta(object):
     @property
     def authors_file(self):
         return os.path.join(self.metapath, 'authors')
+
+    @property
+    def authors(self):
+        if self._authors is None:
+            self._authors = maps.AuthorMap(self)
+        return self._authors
 
     @property
     def filemap_file(self):
