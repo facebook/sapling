@@ -38,6 +38,10 @@ class CustomLayout(base.BaseLayout):
             self.svn_to_hg[svn_path] = hg_branch
             self.hg_to_svn[hg_branch] = svn_path
 
+    @property
+    def name(self):
+        return 'custom'
+
     def localname(self, path):
         if path in self.svn_to_hg:
             return self.svn_to_hg[path]
