@@ -56,13 +56,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                              repo.ui.config('paths', 'default') or '')
 
     meta = svnmeta.SVNMeta(repo, skiperrorcheck=True)
-    svnmetadir = os.path.join(repo.path, 'svn')
-    if not os.path.exists(svnmetadir):
-        os.makedirs(svnmetadir)
-    uuidpath = os.path.join(svnmetadir, 'uuid')
+    uuidpath = os.path.join(meta.metapath, 'uuid')
     uuid = util.load(uuidpath)
 
-    subdirpath = os.path.join(svnmetadir, 'subdir')
+    subdirpath = os.path.join(meta.metapath, 'subdir')
     subdir = util.load(subdirpath)
     svn = None
     if subdir is None:
@@ -74,7 +71,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     startrev = 0
     sofar = []
     branchinfo = {}
-    youngestpath = os.path.join(svnmetadir, 'lastpulled')
+    youngestpath = os.path.join(meta.metapath, 'lastpulled')
     if partial:
         try:
             foundpartialinfo = False
@@ -84,7 +81,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if sofar and len(sofar[-1].split(' ', 2)) > 1:
                     lasthash = sofar[-1].split(' ', 2)[1]
                     startrev = repo[lasthash].rev() + 1
-                    branchinfo = util.load(os.path.join(svnmetadir,
+                    branchinfo = util.load(os.path.join(meta.metapath,
                                                         'branch_info'))
                     foundpartialinfo = True
             if not foundpartialinfo:
@@ -97,12 +94,11 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         except AttributeError:
             ui.status('no metadata available -- doing a full rebuild\n')
 
-
-    revmap = open(os.path.join(svnmetadir, 'rev_map'), 'w')
+    revmap = open(os.path.join(meta.metapath, 'rev_map'), 'w')
     revmap.write('1\n')
     revmap.writelines(sofar)
     last_rev = -1
-    tagfile = os.path.join(svnmetadir, 'tagmap')
+    tagfile = os.path.join(meta.metapath, 'tagmap')
     if not partial and os.path.exists(maps.Tags.filepath(repo)) :
         os.unlink(maps.Tags.filepath(repo))
     tags = maps.Tags(repo)
@@ -197,9 +193,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         if layout is None:
             layout = layouts.detect.layout_from_commit(subdir, revpath,
                                                        ctx.branch(), ui)
-            existing_layout = layouts.detect.layout_from_file(svnmetadir)
+            existing_layout = layouts.detect.layout_from_file(meta.metapath)
             if layout != existing_layout:
-                layouts.persist.layout_to_file(svnmetadir, layout)
+                layouts.persist.layout_to_file(meta.metapath, layout)
             layoutobj = layouts.layout_from_name(layout, ui)
         elif layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
@@ -226,7 +222,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
 
-        tag_locations = layoutobj.taglocations(svnmetadir)
+        tag_locations = layoutobj.taglocations(meta.metapath)
         found_tag = False
         for location in tag_locations:
             if commitpath.startswith(location + '/'):
@@ -289,7 +285,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info
-    util.dump(branchinfo, os.path.join(svnmetadir, 'branch_info'))
+    util.dump(branchinfo, os.path.join(meta.metapath, 'branch_info'))
 
 
 def help_(ui, args=None, **opts):
