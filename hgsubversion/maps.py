@@ -256,7 +256,7 @@ class FileMap(object):
 
     VERSION = 1
 
-    def __init__(self, ui, path):
+    def __init__(self, meta):
         '''Initialise a new FileMap.
 
         The ui argument is used to print diagnostic messages.
@@ -264,17 +264,16 @@ class FileMap(object):
         The path argument is the location of the backing store,
         typically .hg/svn/filemap.
         '''
-        self.ui = ui
-        self.path = path
+        self.meta = meta
         self.include = {}
         self.exclude = {}
-        if os.path.isfile(self.path):
+        if os.path.isfile(self.meta.filemap_file):
             self._load()
         else:
             self._write()
 
         # append file mapping specified from the commandline
-        clmap = util.configpath(self.ui, 'filemap')
+        clmap = util.configpath(self.meta.ui, 'filemap')
         if clmap:
             self.load(clmap)
 
@@ -316,19 +315,19 @@ class FileMap(object):
         mapping = getattr(self, m)
         if path in mapping:
             msg = 'duplicate %s entry in %s: "%s"\n'
-            self.ui.status(msg % (m, fn, path))
+            self.meta.ui.status(msg % (m, fn, path))
             return
         bits = m.rstrip('e'), path
-        self.ui.debug('%sing %s\n' % bits)
+        self.meta.ui.debug('%sing %s\n' % bits)
         # respect rule order
         mapping[path] = len(self)
-        if fn != self.path:
-            f = open(self.path, 'a')
+        if fn != self.meta.filemap_file:
+            f = open(self.meta.filemap_file, 'a')
             f.write(m + ' ' + path + '\n')
             f.close()
 
     def load(self, fn):
-        self.ui.debug('reading file map from %s\n' % fn)
+        self.meta.ui.debug('reading file map from %s\n' % fn)
         f = open(fn, 'r')
         self.load_fd(f, fn)
         f.close()
@@ -344,22 +343,22 @@ class FileMap(object):
                 if cmd in ('include', 'exclude'):
                     self.add(fn, cmd, path)
                     continue
-                self.ui.warn('unknown filemap command %s\n' % cmd)
+                self.meta.ui.warn('unknown filemap command %s\n' % cmd)
             except IndexError:
                 msg = 'ignoring bad line in filemap %s: %s\n'
-                self.ui.warn(msg % (fn, line.rstrip()))
+                self.meta.ui.warn(msg % (fn, line.rstrip()))
 
     def _load(self):
-        self.ui.debug('reading in-repo file map from %s\n' % self.path)
-        f = open(self.path)
+        self.meta.ui.debug('reading in-repo file map from %s\n' % self.meta.filemap_file)
+        f = open(self.meta.filemap_file)
         ver = int(f.readline())
         if ver != self.VERSION:
             raise hgutil.Abort('filemap too new -- please upgrade')
-        self.load_fd(f, self.path)
+        self.load_fd(f, self.meta.filemap_file)
         f.close()
 
     def _write(self):
-        f = open(self.path, 'w')
+        f = open(self.meta.filemap_file, 'w')
         f.write('%s\n' % self.VERSION)
         f.close()
 
