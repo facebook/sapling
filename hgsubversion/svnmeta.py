@@ -22,42 +22,45 @@ class SVNMeta(object):
         subdir is the subdirectory of the edits *on the svn server*.
         It is needed for stripping paths off in certain cases.
         """
+        # simple and public variables
         self.ui = repo.ui
         self.repo = repo
         self.path = os.path.normpath(repo.join('..'))
-        self._skiperror = skiperrorcheck
+        self.firstpulled = 0
+        self.lastdate = '1970-01-01 00:00:00 -0000'
+        self.addedtags = {}
+        self.deletedtags = {}
 
+        # private variables
+        self._skiperror = skiperrorcheck
+        self._tags = None
+        self._layoutobj = None
+        self._revmap = None
+        self._authors = None
+        self._branchmap = None
+        self._tagmap = None
+        self._filemap = None
+
+        # create .hg/svn folder if it doesn't exist
         if not os.path.isdir(self.metapath):
             os.makedirs(self.metapath)
+
+        # properties that need .hg/svn to exist
         self.uuid = uuid
         self.subdir = subdir
-        self._revmap = None
-        self.firstpulled = 0
 
+        # generated properties that have a persistent file stored on disk
         self._gen_cachedconfig('lastpulled', 0, configname=False)
         self._gen_cachedconfig('defaultauthors', True)
         self._gen_cachedconfig('caseignoreauthors', False)
         self._gen_cachedconfig('defaulthost', self.uuid)
         self._gen_cachedconfig('usebranchnames', True)
 
+        # misc
         self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
-        self._tags = None
         self._layout = layouts.detect.layout_from_file(self.metapath,
                                                        ui=self.repo.ui)
-        self._layoutobj = None
-
-        self._authors = None
-
-        self._branchmap = None
-
-        self._tagmap = None
-
-        self._filemap = None
-
-        self.lastdate = '1970-01-01 00:00:00 -0000'
-        self.addedtags = {}
-        self.deletedtags = {}
 
     def _get_cachedconfig(self, name, filename, configname, default):
         """Return a cached value for a config option. If the cache is uninitialized
