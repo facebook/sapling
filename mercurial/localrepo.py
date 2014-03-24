@@ -996,6 +996,7 @@ class localrepository(object):
             except AttributeError:
                 pass
         self.invalidatecaches()
+        self.store.invalidatecaches()
 
     def invalidateall(self):
         '''Fully invalidates both store and non-store parts, causing the

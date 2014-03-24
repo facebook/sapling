@@ -340,6 +340,9 @@ class basicstore(object):
     def write(self, tr):
         pass
 
+    def invalidatecaches(self):
+        pass
+
     def __contains__(self, path):
         '''Checks if the store contains path'''
         path = "/".join(("data", path))
@@ -488,6 +491,9 @@ class fncachestore(basicstore):
 
     def write(self, tr):
         self.fncache.write(tr)
+
+    def invalidatecaches(self):
+        self.fncache.entries = None
 
     def _exists(self, f):
         ef = self.encode(f)
