@@ -56,9 +56,9 @@ Create an extension to test bundle2 API
   >     for chunk in bundler.getchunks():
   >         file.write(chunk)
   > 
-  > @command('unbundle2', [], '')
-  > def cmdunbundle2(ui, repo):
-  >     """read a bundle2 container from standard input"""
+  > @command('statbundle2', [], '')
+  > def cmdstatbundle2(ui, repo):
+  >     """print statistic on the bundle2 container read from stdin"""
   >     unbundler = bundle2.unbundle20(ui, sys.stdin)
   >     try:
   >         params = unbundler.params
@@ -105,7 +105,7 @@ Test bundling
 
 Test unbundling
 
-  $ hg bundle2 | hg unbundle2
+  $ hg bundle2 | hg statbundle2
   options count: 0
   parts count:   0
 
@@ -113,7 +113,7 @@ Test old style bundle are detected and refused
 
   $ hg bundle --all ../bundle.hg
   1 changesets found
-  $ hg unbundle2 < ../bundle.hg
+  $ hg statbundle2 < ../bundle.hg
   abort: unknown bundle version 10
   [255]
 
@@ -135,7 +135,7 @@ Test generation simple option
 
 Test unbundling
 
-  $ hg bundle2 --param 'caution' | hg unbundle2
+  $ hg bundle2 --param 'caution' | hg statbundle2
   options count: 1
   - caution
   parts count:   0
@@ -147,7 +147,7 @@ Test generation multiple option
 
 Test unbundling
 
-  $ hg bundle2 --param 'caution' --param 'meal' | hg unbundle2
+  $ hg bundle2 --param 'caution' --param 'meal' | hg statbundle2
   options count: 2
   - caution
   - meal
@@ -163,7 +163,7 @@ Test generation
 
 Test unbundling
 
-  $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants' | hg unbundle2
+  $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants' | hg statbundle2
   options count: 3
   - caution
   - elephants
@@ -181,7 +181,7 @@ Test generation
 
 Test unbundling
 
-  $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple | hg unbundle2
+  $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple | hg statbundle2
   options count: 2
   - e|! 7/
       babar%#==tutu
@@ -191,7 +191,7 @@ Test unbundling
 Test unknown mandatory option
 ---------------------------------------------------
 
-  $ hg bundle2 --param 'Gravity' | hg unbundle2
+  $ hg bundle2 --param 'Gravity' | hg statbundle2
   abort: unknown parameters: 'Gravity'
   [255]
 
@@ -213,7 +213,7 @@ file content is ok
 
 unbundling debug
 
-  $ hg unbundle2 --debug < ../out.hg2
+  $ hg statbundle2 --debug < ../out.hg2
   start processing of HG20 stream
   reading bundle2 stream parameters
   ignoring unknown parameter 'e|! 7/'
@@ -265,7 +265,7 @@ Test part
   Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00'	test:math\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
-  $ hg unbundle2 < ../parts.hg2
+  $ hg statbundle2 < ../parts.hg2
   options count: 0
   parts count:   4
     :test:empty:
@@ -285,7 +285,7 @@ Test part
       advisory: 1
       payload: 2 bytes
 
-  $ hg unbundle2 --debug < ../parts.hg2
+  $ hg statbundle2 --debug < ../parts.hg2
   start processing of HG20 stream
   reading bundle2 stream parameters
   options count: 0
