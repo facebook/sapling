@@ -89,7 +89,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             ui.status('no metadata available -- doing a full rebuild\n')
 
     revmap = open(meta.revmap_file, 'w')
-    revmap.write('1\n')
+    revmap.write('%d\n' % maps.RevMap.VERSION)
     revmap.writelines(sofar)
     last_rev = -1
     if not partial and os.path.exists(meta.tagfile):
