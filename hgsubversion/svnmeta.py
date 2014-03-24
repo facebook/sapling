@@ -389,7 +389,8 @@ class SVNMeta(object):
         (or tag) we have, for our purposes.
         """
         path = self.normalize(path)
-        return self.layoutobj.get_path_tag(path, self.taglocations)
+        tloc = self.layoutobj.taglocations(self.metapath)
+        return self.layoutobj.get_path_tag(path, tloc)
 
     def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
