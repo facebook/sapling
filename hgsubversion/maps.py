@@ -72,7 +72,7 @@ class BaseMap(dict):
         if writing:
             writing.close()
 
-class AuthorMap(dict):
+class AuthorMap(BaseMap):
     '''A mapping from Subversion-style authors to Mercurial-style
     authors, and back. The data is stored persistently on disk.
 
