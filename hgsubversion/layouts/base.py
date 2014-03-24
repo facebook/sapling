@@ -17,6 +17,12 @@ class BaseLayout(object):
             "Incomplete layout implementation: %s.%s doesn't implement %s" %
             (self.__module__, self.__name__, method_name))
 
+    @property
+    def name(self):
+        """Return the name of the key for NAME_TO_CLASS so we can easily compute a
+        stale cache."""
+        self.__unimplemented('name')
+
     def localname(self, path):
         """Compute the local name for a branch located at path.
 
