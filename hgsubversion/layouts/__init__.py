@@ -12,12 +12,10 @@ NB: this has a long way to go before it does everything it claims to
 from mercurial import util as hgutil
 
 import custom
-import detect
 import single
 import standard
 
 __all__ = [
-    "detect",
     "layout_from_name",
     ]
 
