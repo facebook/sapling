@@ -71,9 +71,6 @@ class AuthorMap(dict):
             src = src.strip()
             dst = dst.strip()
 
-            if self.meta.caseignoreauthors:
-                src = src.lower()
-
             if writing:
                 if not src in self:
                     self.meta.ui.debug('adding author %s to author map\n' % src)
