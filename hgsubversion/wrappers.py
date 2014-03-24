@@ -401,9 +401,7 @@ def pull(repo, source, heads=[], force=False, meta=None):
 
         layout = layouts.detect.layout_from_config(meta, allow_auto=True)
         if layout == 'auto':
-            layout = layouts.detect.layout_from_subversion(svn,
-                                                           (stopat_rev or None),
-                                                           meta)
+            layout = meta.layout_from_subversion(svn, (stopat_rev or None))
             repo.ui.note('using %s layout\n' % layout)
 
         if meta.branch:
