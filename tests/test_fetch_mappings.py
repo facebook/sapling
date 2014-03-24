@@ -290,21 +290,6 @@ class MapTests(test_util.TestBase):
         for r in repo:
             self.assertEquals(verify.verify(ui, repo, rev=r), 0)
 
-    def test_branchmap_no_replacement(self):
-        '''
-        test that empty mappings are rejected
-
-        Empty mappings are lines like 'this ='. The most sensible thing to do
-        is to not convert the 'this' branches. Until we can do that, we settle
-        with aborting.
-        '''
-        repo_path = self.load_svndump('propset-branch.svndump')
-        branchmap = open(self.branchmap, 'w')
-        branchmap.write("closeme =\n")
-        branchmap.close()
-        self.assertRaises(hgutil.Abort,
-                          maps.BranchMap, self.ui(), self.branchmap)
-
     def test_tagmap(self):
         repo_path = self.load_svndump('basic_tag_tests.svndump')
         tagmap = open(self.tagmap, 'w')
