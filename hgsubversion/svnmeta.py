@@ -56,6 +56,7 @@ class SVNMeta(object):
         self._gen_cachedconfig('defaulthost', self.uuid)
         self._gen_cachedconfig('usebranchnames', True)
         self._gen_cachedconfig('defaultmessage', '')
+        self._gen_cachedconfig('branch', '')
 
         # misc
         self.branches = util.load(self.branch_info_file) or {}
