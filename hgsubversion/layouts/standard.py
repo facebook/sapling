@@ -27,7 +27,7 @@ class StandardLayout(base.BaseLayout):
         return 'trunk' + self._infix
 
     def localname(self, path):
-        if path == self._trunk:
+        if path == self.trunk:
             return None
         elif path.startswith(self.meta.branchdir) and path.endswith(self._infix):
             path = path[len(self.meta.branchdir):]
@@ -38,7 +38,7 @@ class StandardLayout(base.BaseLayout):
 
     def remotename(self, branch):
         if branch == 'default' or branch is None:
-            path = self._trunk
+            path = self.trunk
         elif branch.startswith('../'):
             path =  branch[3:]
         else:
@@ -49,7 +49,7 @@ class StandardLayout(base.BaseLayout):
     def remotepath(self, branch, subdir='/'):
         if subdir == '/':
             subdir = ''
-        branchpath = self._trunk
+        branchpath = self.trunk
         if branch and branch != 'default':
             if branch.startswith('../'):
                 branchpath = branch[3:]
@@ -113,7 +113,7 @@ class StandardLayout(base.BaseLayout):
             return candidate, '/'.join(components)
 
         if path == 'trunk' or path.startswith('trunk/'):
-            return self._trunk, path[len(self._trunk) + 1:]
+            return self.trunk, path[len(self.trunk) + 1:]
 
         if path.startswith(self.meta.branchdir):
             path = path[len(self.meta.branchdir):]
