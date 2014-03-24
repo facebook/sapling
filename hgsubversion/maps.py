@@ -97,49 +97,6 @@ class AuthorMap(BaseMap):
 
         super(AuthorMap, self).__init__(meta)
 
-    def load(self, path):
-        ''' Load mappings from a file at the specified path. '''
-
-        path = os.path.expandvars(path)
-        if not os.path.exists(path):
-            return
-
-        writing = False
-        if path != self.meta.authormap_file:
-            writing = open(self.meta.authormap_file, 'a')
-
-        self.meta.ui.debug('reading authormap from %s\n' % path)
-        f = open(path, 'r')
-        for number, line_org in enumerate(f):
-
-            line = line_org.split('#')[0]
-            if not line.strip():
-                continue
-
-            try:
-                src, dst = line.split('=', 1)
-            except (IndexError, ValueError):
-                msg = 'ignoring line %i in author map %s: %s\n'
-                self.meta.ui.status(msg % (number, path, line.rstrip()))
-                continue
-
-            src = src.strip()
-            dst = dst.strip()
-
-            if writing:
-                if not src in self:
-                    self.meta.ui.debug('adding author %s to author map\n' % src)
-                elif dst != self[src]:
-                    msg = 'overriding author: "%s" to "%s" (%s)\n'
-                    self.meta.ui.status(msg % (self[src], dst, src))
-                writing.write(line_org)
-
-            self[src] = dst
-
-        f.close()
-        if writing:
-            writing.close()
-
     def __setitem__(self, key, value):
         '''Similar to dict.__setitem__, except we check caseignoreauthors to
         use lowercase string or not
