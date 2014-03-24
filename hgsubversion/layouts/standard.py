@@ -20,8 +20,6 @@ class StandardLayout(base.BaseLayout):
         if self._infix:
             self._infix = '/' + self._infix
 
-        self._trunk = 'trunk%s' % self._infix
-
     @property
     def trunk(self):
         return 'trunk' + self._infix
