@@ -76,8 +76,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if sofar and len(sofar[-1].split(' ', 2)) > 1:
                     lasthash = sofar[-1].split(' ', 2)[1]
                     startrev = repo[lasthash].rev() + 1
-                    branchinfo = util.load(os.path.join(meta.metapath,
-                                                        'branch_info'))
+                    branchinfo = util.load(meta.branch_info_file)
                     foundpartialinfo = True
             if not foundpartialinfo:
                 ui.status('missing some metadata -- doing a full rebuild\n')
@@ -282,7 +281,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info
-    util.dump(branchinfo, os.path.join(meta.metapath, 'branch_info'))
+    util.dump(branchinfo, meta.branch_info_file)
 
 
 def help_(ui, args=None, **opts):
