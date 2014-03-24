@@ -14,7 +14,7 @@ class AuthorMap(dict):
 
     If the 'hgsubversion.defaultauthors' configuration option is set to false,
     attempting to obtain an unknown author will fail with an Abort.
-    
+
     If the 'hgsubversion.caseignoreauthors' configuration option is set to true,
     the userid from Subversion is always compared lowercase.
     '''
