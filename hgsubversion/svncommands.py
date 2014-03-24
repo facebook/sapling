@@ -92,10 +92,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     revmap.write('1\n')
     revmap.writelines(sofar)
     last_rev = -1
-    tagfile = os.path.join(meta.metapath, 'tagmap')
-    if not partial and os.path.exists(maps.Tags.filepath(repo)) :
-        os.unlink(maps.Tags.filepath(repo))
-    tags = maps.Tags(repo)
+    if not partial and os.path.exists(meta.tagfile):
+        os.unlink(meta.tagfile)
 
     layout = None
     layoutobj = None
@@ -172,7 +170,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 # number.
                 tagging = int(convinfo[40:].split('@')[1])
                 tagrev = max(tagged, tagging)
-                tags[tag] = node.bin(ha), tagrev
+                meta.tags[tag] = node.bin(ha), tagrev
 
         # check that the conversion metadata matches expectations
         assert convinfo.startswith('svn:')
