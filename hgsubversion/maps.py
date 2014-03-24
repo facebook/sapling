@@ -94,6 +94,10 @@ class BaseMap(dict):
             key = re.compile(re.escape(key))
         super(BaseMap, self).__setitem__(key, value)
 
+    def __contains__(self, key):
+        '''Similar to dict.get, except we use our own matcher, _findkey.'''
+        return self._findkey(key) is not None
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         path = os.path.expandvars(path)
