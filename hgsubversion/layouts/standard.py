@@ -22,6 +22,10 @@ class StandardLayout(base.BaseLayout):
 
         self._trunk = 'trunk%s' % self._infix
 
+    @property
+    def trunk(self):
+        return 'trunk' + self._infix
+
     def localname(self, path):
         if path == self._trunk:
             return None
