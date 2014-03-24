@@ -37,11 +37,10 @@ class SVNMeta(object):
         self._gen_cachedconfig('defaultauthors', True)
         self._gen_cachedconfig('caseignoreauthors', False)
         self._gen_cachedconfig('defaulthost', self.uuid)
+        self._gen_cachedconfig('usebranchnames', True)
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = util.configpath(self.ui, 'authormap')
-        self.usebranchnames = self.ui.configbool('hgsubversion',
-                                                 'usebranchnames', True)
         branchmap = util.configpath(self.ui, 'branchmap')
         tagmap = util.configpath(self.ui, 'tagmap')
         filemap = util.configpath(self.ui, 'filemap')
