@@ -5,6 +5,10 @@ import base
 class SingleLayout(base.BaseLayout):
     """A layout with only the default branch"""
 
+    @property
+    def name(self):
+        return 'single'
+
     def localname(self, path):
         return None
 
