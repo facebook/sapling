@@ -20,6 +20,14 @@ Create an extension to test bundle2 API
   > Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko."""
   > assert len(ELEPHANTSSONG) == 178 # future test say 178 bytes, trust it.
   > 
+  > def songhandler(repo, part):
+  >     """handle a "test:song" bundle2 part, printing the lyrics on stdin"""
+  >     repo.ui.write('The choir start singing:\n')
+  >     for line in part.data.split('\n'):
+  >         repo.ui.write('    %s\n' % line)
+  > 
+  > bundle2.parthandlermapping['test:song'] = songhandler
+  > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),],
@@ -55,6 +63,11 @@ Create an extension to test bundle2 API
   > 
   >     for chunk in bundler.getchunks():
   >         file.write(chunk)
+  > 
+  > @command('unbundle2', [], '')
+  > def cmdunbundle2(ui, repo):
+  >     """process a bundle2 stream from stdin on the current repo"""
+  >     bundle2.processbundle(repo, sys.stdin)
   > 
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
@@ -327,3 +340,41 @@ Test part
       mandatory: 2
       advisory: 1
       payload: 2 bytes
+
+Test actual unbundling
+========================
+
+Process the bundle
+
+  $ hg unbundle2 --debug < ../parts.hg2
+  start processing of HG20 stream
+  reading bundle2 stream parameters
+  start extraction of bundle2 parts
+  part header size: 13
+  part type: "test:empty"
+  part parameters: 0
+  payload chunk size: 0
+  ignoring unknown advisory part 'test:empty'
+  part header size: 13
+  part type: "test:empty"
+  part parameters: 0
+  payload chunk size: 0
+  ignoring unknown advisory part 'test:empty'
+  part header size: 12
+  part type: "test:song"
+  part parameters: 0
+  payload chunk size: 178
+  payload chunk size: 0
+  found an handler for part 'test:song'
+  The choir start singing:
+      Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+      Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+      Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  part header size: 39
+  part type: "test:math"
+  part parameters: 3
+  payload chunk size: 2
+  payload chunk size: 0
+  ignoring unknown advisory part 'test:math'
+  part header size: 0
+  end of bundle2 stream

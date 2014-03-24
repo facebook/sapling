@@ -148,6 +148,48 @@ def _makefpartparamsizes(nbparams):
     """
     return '>'+('BB'*nbparams)
 
+
+parthandlermapping = {}
+
+def processbundle(repo, stream):
+    """This function process a bundle, apply effect to/from a repo
+
+    Currently it:
+    - parse a stream into an unbundle20 object
+    - iterate over each parts then search and use the proper handling code to
+      process the part.
+
+    Parts are processes in order.
+
+    This is very early version of this function that will be strongly reworked
+    before final usage.
+
+    All unknown parts are currently ignored (Mandatory parts logic will comes
+    later).
+    """
+    ui = repo.ui
+    # Extraction of the unbundler object will most likely change. It may be
+    # done outside of this function, the unbundler would be passed as argument.
+    # in all case the unbundler will eventually be created by a
+    # `changegroup.readbundle` style function.
+    unbundler = unbundle20(ui, stream)
+    # todo:
+    # - replace this is a init function soon.
+    # - exception catching
+    unbundler.params
+    for part in unbundler:
+        parttype = part.type
+        # part key are matched lower case
+        key = parttype.lower()
+        try:
+            handler = parthandlermapping[key]
+            ui.debug('found an handler for part %r\n' % parttype)
+        except KeyError:
+            ui.debug('ignoring unknown advisory part %r\n' % key)
+            # todo: consume the part (once we use streamed parts)
+            continue
+        handler(repo, part)
+
 class bundle20(object):
     """represent an outgoing bundle2 container
 
