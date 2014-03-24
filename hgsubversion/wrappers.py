@@ -461,7 +461,7 @@ def pull(repo, source, heads=[], force=False):
                 converted = False
                 while not converted:
                     try:
-                        msg = util.getmessage(ui, r).strip()
+                        msg = meta.getmessage(r).strip()
                         if msg:
                             msg = [s.strip() for s in msg.splitlines() if s][0]
                         if getattr(ui, 'termwidth', False):
