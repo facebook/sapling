@@ -343,6 +343,9 @@ class basicstore(object):
     def invalidatecaches(self):
         pass
 
+    def markremoved(self, fn):
+        pass
+
     def __contains__(self, path):
         '''Checks if the store contains path'''
         path = "/".join(("data", path))
@@ -421,6 +424,15 @@ class fncache(object):
             self._dirty = True
             self.entries.add(fn)
 
+    def remove(self, fn):
+        if self.entries is None:
+            self._load()
+        try:
+            self.entries.remove(fn)
+            self._dirty = True
+        except KeyError:
+            pass
+
     def __contains__(self, fn):
         if self.entries is None:
             self._load()
@@ -494,6 +506,9 @@ class fncachestore(basicstore):
 
     def invalidatecaches(self):
         self.fncache.entries = None
+
+    def markremoved(self, fn):
+        self.fncache.remove(fn)
 
     def _exists(self, f):
         ef = self.encode(f)

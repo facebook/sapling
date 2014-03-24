@@ -134,6 +134,8 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
             for i in xrange(offset, len(tr.entries)):
                 file, troffset, ignore = tr.entries[i]
                 repo.sopener(file, 'a').truncate(troffset)
+                if troffset == 0:
+                    repo.store.markremoved(file)
             tr.close()
         except: # re-raises
             tr.abort()

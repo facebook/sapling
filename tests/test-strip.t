@@ -336,6 +336,19 @@ after strip of merge parent
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ restore
 
+verify fncache is kept up-to-date
+
+  $ touch a
+  $ hg ci -qAm a
+  $ cat .hg/store/fncache | sort
+  data/a.i
+  data/bar.i
+  $ hg strip tip
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
+  $ cat .hg/store/fncache
+  data/bar.i
+
 stripping an empty revset
 
   $ hg strip "1 and not 1"
