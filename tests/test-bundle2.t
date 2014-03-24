@@ -29,6 +29,7 @@ Create an extension to test bundle2 API
   > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
+  >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
@@ -54,6 +55,10 @@ Create an extension to test bundle2 API
   >                            [('cooking', 'raw')],
   >                            '42')
   >        bundler.addpart(part)
+  >     if opts['unknown']:
+  >        part = bundle2.part('test:UNKNOWN',
+  >                            data='some random content')
+  >        bundler.addpart(part)
   > 
   >     if path is None:
   >        file = sys.stdout
@@ -66,7 +71,10 @@ Create an extension to test bundle2 API
   > @command('unbundle2', [], '')
   > def cmdunbundle2(ui, repo):
   >     """process a bundle2 stream from stdin on the current repo"""
-  >     bundle2.processbundle(repo, sys.stdin)
+  >     try:
+  >         bundle2.processbundle(repo, sys.stdin)
+  >     except KeyError, exc:
+  >         raise util.Abort('missing support for %s' % exc)
   > 
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
@@ -377,3 +385,14 @@ Process the bundle
   ignoring unknown advisory part 'test:math'
   part header size: 0
   end of bundle2 stream
+
+
+  $ hg bundle2 --parts --unknown ../unknown.hg2
+
+  $ hg unbundle2 < ../unknown.hg2
+  The choir start singing:
+      Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+      Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+      Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  abort: missing support for 'test:unknown'
+  [255]

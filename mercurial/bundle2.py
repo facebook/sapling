@@ -119,6 +119,19 @@ Binary format is as follow
 
     The current implementation always produces either zero or one chunk.
     This is an implementation limitation that will ultimatly be lifted.
+
+Bundle processing
+============================
+
+Each part is processed in order using a "part handler". Handler are registered
+for a certain part type.
+
+The matching of a part to its handler is case insensitive. The case of the
+part type is used to know if a part is mandatory or advisory. If the Part type
+contains any uppercase char it is considered mandatory. When no handler is
+known for a Mandatory part, the process is aborted and an exception is raised.
+If the part is advisory and no handler is known, the part is ignored.
+
 """
 
 import util
@@ -161,8 +174,9 @@ def parthandler(parttype):
             ...
     """
     def _decorator(func):
-        assert parttype not in parthandlermapping
-        parthandlermapping[parttype] = func
+        lparttype = parttype.lower() # enforce lower case matching.
+        assert lparttype not in parthandlermapping
+        parthandlermapping[lparttype] = func
         return func
     return _decorator
 
@@ -179,8 +193,7 @@ def processbundle(repo, stream):
     This is very early version of this function that will be strongly reworked
     before final usage.
 
-    All unknown parts are currently ignored (Mandatory parts logic will comes
-    later).
+    Unknown Mandatory part will abort the process.
     """
     ui = repo.ui
     # Extraction of the unbundler object will most likely change. It may be
@@ -200,6 +213,11 @@ def processbundle(repo, stream):
             handler = parthandlermapping[key]
             ui.debug('found an handler for part %r\n' % parttype)
         except KeyError:
+            if key != parttype: # mandatory parts
+                # todo:
+                # - use a more precise exception
+                # - consume the bundle2 stream anyway.
+                raise
             ui.debug('ignoring unknown advisory part %r\n' % key)
             # todo: consume the part (once we use streamed parts)
             continue
