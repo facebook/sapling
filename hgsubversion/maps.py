@@ -197,7 +197,6 @@ class RevMap(dict):
     def __init__(self, meta):
         dict.__init__(self)
         self.meta = meta
-        self.oldest = 0
 
         if os.path.isfile(self.meta.revmap_file):
             self._load()
@@ -234,8 +233,8 @@ class RevMap(dict):
             revnum = int(revnum)
             if revnum > self.meta.lastpulled or not self.meta.lastpulled:
                 self.meta.lastpulled = revnum
-            if revnum < self.oldest or not self.oldest:
-                self.oldest = revnum
+            if revnum < self.meta.firstpulled or not self.meta.firstpulled:
+                self.meta.firstpulled = revnum
             dict.__setitem__(self, (revnum, branch), node.bin(ha))
 
     def _write(self):
@@ -251,8 +250,8 @@ class RevMap(dict):
         f.close()
         if revnum > self.meta.lastpulled or not self.meta.lastpulled:
             self.meta.lastpulled = revnum
-        if revnum < self.oldest or not self.oldest:
-            self.oldest = revnum
+        if revnum < self.meta.firstpulled or not self.meta.firstpulled:
+            self.meta.firstpulled = revnum
         dict.__setitem__(self, (revnum, branch), ha)
 
 

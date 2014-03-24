@@ -31,6 +31,7 @@ class SVNMeta(object):
         self.uuid = uuid
         self.subdir = subdir
         self._revmap = None
+        self.firstpulled = 0
 
         self._gen_cachedconfig('lastpulled', 0, configname=False)
 
