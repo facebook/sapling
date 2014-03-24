@@ -59,8 +59,7 @@ class SVNMeta(object):
         # misc
         self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
-        self._layout = layouts.detect.layout_from_file(self.metapath,
-                                                       ui=self.repo.ui)
+        self._layout = layouts.detect.layout_from_file(self)
 
     def _get_cachedconfig(self, name, filename, configname, default):
         """Return a cached value for a config option. If the cache is uninitialized
@@ -147,14 +146,14 @@ class SVNMeta(object):
         # resolved into something other than auto before this ever
         # gets called
         if not self._layout or self._layout == 'auto':
-            self._layout = layouts.detect.layout_from_config(self.repo.ui)
+            self._layout = layouts.detect.layout_from_config(self)
             util.dump(self._layout, self.layout_file)
         return self._layout
 
     @property
     def layoutobj(self):
         if not self._layoutobj:
-            self._layoutobj = layouts.layout_from_name(self.layout, self.ui)
+            self._layoutobj = layouts.layout_from_name(self.layout, self)
         return self._layoutobj
 
     @property

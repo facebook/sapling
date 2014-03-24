@@ -5,18 +5,18 @@ import base
 class StandardLayout(base.BaseLayout):
     """The standard trunk, branches, tags layout"""
 
-    def __init__(self, ui):
-        base.BaseLayout.__init__(self, ui)
+    def __init__(self, meta):
+        base.BaseLayout.__init__(self, meta)
 
         self._tag_locations = None
 
-        self._branch_dir = ui.config('hgsubversion', 'branchdir', 'branches')
+        self._branch_dir = self.meta.ui.config('hgsubversion', 'branchdir', 'branches')
         if self._branch_dir[0] == '/':
             self._branch_dir = self._branch_dir[1:]
         if self._branch_dir[-1] != '/':
             self._branch_dir += '/'
 
-        self._infix = ui.config('hgsubversion', 'infix', '').strip('/')
+        self._infix = self.meta.ui.config('hgsubversion', 'infix', '').strip('/')
         if self._infix:
             self._infix = '/' + self._infix
 
@@ -69,9 +69,9 @@ class StandardLayout(base.BaseLayout):
             self._tag_locations = util.load(tag_locations_file)
 
             if not self._tag_locations:
-                self._tag_locations = self.ui.configlist('hgsubversion',
-                                                        'tagpaths',
-                                                        ['tags'])
+                self._tag_locations = self.meta.ui.configlist('hgsubversion',
+                                                              'tagpaths',
+                                                              ['tags'])
             util.dump(self._tag_locations, tag_locations_file)
 
             # ensure nested paths are handled properly

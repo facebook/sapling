@@ -9,8 +9,8 @@ from mercurial import util as hgutil
 
 class BaseLayout(object):
 
-    def __init__(self, ui):
-        self.ui = ui
+    def __init__(self, meta):
+        self.meta = meta
 
     def __unimplemented(self, method_name):
         raise NotImplementedError(

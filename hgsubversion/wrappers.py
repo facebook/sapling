@@ -398,11 +398,11 @@ def pull(repo, source, heads=[], force=False):
 
         stopat_rev = util.parse_revnum(svn, checkout)
 
-        layout = layouts.detect.layout_from_config(repo.ui, allow_auto=True)
+        layout = layouts.detect.layout_from_config(meta, allow_auto=True)
         if layout == 'auto':
             layout = layouts.detect.layout_from_subversion(svn,
                                                            (stopat_rev or None),
-                                                           repo.ui)
+                                                           meta)
             repo.ui.note('using %s layout\n' % layout)
 
         branch = repo.ui.config('hgsubversion', 'branch')

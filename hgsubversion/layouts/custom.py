@@ -12,13 +12,13 @@ import base
 
 class CustomLayout(base.BaseLayout):
 
-    def __init__(self, ui):
-        base.BaseLayout.__init__(self, ui)
+    def __init__(self, meta):
+        base.BaseLayout.__init__(self, meta)
 
         self.svn_to_hg = {}
         self.hg_to_svn = {}
 
-        for hg_branch, svn_path in ui.configitems('hgsubversionbranch'):
+        for hg_branch, svn_path in meta.ui.configitems('hgsubversionbranch'):
 
             hg_branch = hg_branch.strip()
             if hg_branch == 'default' or not hg_branch:

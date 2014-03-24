@@ -12,7 +12,7 @@ from mercurial import util as hgutil
 
 import __init__ as layouts
 
-def layout_from_subversion(svn, revision=None, ui=None):
+def layout_from_subversion(svn, revision=None, meta=None):
     """ Guess what layout to use based on directories under the svn root.
 
     This is intended for use during bootstrapping.  It guesses which
@@ -39,10 +39,10 @@ def layout_from_subversion(svn, revision=None, ui=None):
         layout = 'standard'
     else:
         layout = 'single'
-    ui.setconfig('hgsubversion', 'layout', layout)
+    meta.ui.setconfig('hgsubversion', 'layout', layout)
     return layout
 
-def layout_from_config(ui, allow_auto=False):
+def layout_from_config(meta, allow_auto=False):
     """ Load the layout we are using based on config
 
     We will read the config from the ui object.  Pass allow_auto=True
@@ -51,19 +51,15 @@ def layout_from_config(ui, allow_auto=False):
     detect the layout as auto.
     """
 
-    layout = ui.config('hgsubversion', 'layout', default='auto')
+    layout = meta.ui.config('hgsubversion', 'layout', default='auto')
     if layout == 'auto' and not allow_auto:
         raise hgutil.Abort('layout not yet determined')
     elif layout not in layouts.NAME_TO_CLASS and layout != 'auto':
         raise hgutil.Abort("unknown layout '%s'" % layout)
     return layout
 
-def layout_from_file(metapath, ui=None):
+def layout_from_file(meta):
     """ Load the layout in use from the metadata file.
-
-    If you pass the ui arg, we will also write the layout to the
-    config for that ui.
-
     """
 
     # import late to avoid trouble when running the test suite
@@ -72,13 +68,12 @@ def layout_from_file(metapath, ui=None):
     except ImportError:
         from hgsubversion import util
 
-    layoutfile = os.path.join(metapath, 'layout')
-    layout = util.load(layoutfile)
-    if layout is not None and ui:
-        ui.setconfig('hgsubversion', 'layout', layout)
+    layout = util.load(meta.layout_file)
+    if layout:
+        meta.ui.setconfig('hgsubversion', 'layout', layout)
     return layout
 
-def layout_from_commit(subdir, revpath, branch, ui):
+def layout_from_commit(subdir, revpath, branch, meta):
     """ Guess what the layout is based existing commit info
 
     Specifically, this compares the subdir for the repository and the
@@ -95,7 +90,7 @@ def layout_from_commit(subdir, revpath, branch, ui):
 
     candidates = set()
     for layout in layouts.NAME_TO_CLASS:
-        layoutobj = layouts.layout_from_name(layout, ui)
+        layoutobj = layouts.layout_from_name(layout, meta)
         try:
             remotepath = layoutobj.remotepath(branch, subdir)
         except KeyError:
@@ -106,7 +101,7 @@ def layout_from_commit(subdir, revpath, branch, ui):
     if len(candidates) == 1:
         return candidates.pop()
     elif candidates:
-        config_layout = layout_from_config(ui, allow_auto=True)
+        config_layout = layout_from_config(meta, allow_auto=True)
         if config_layout in candidates:
             return config_layout
 
