@@ -51,7 +51,7 @@ class SVNMeta(object):
 
         self._authors = None
 
-        self.branchmap = maps.BranchMap(self.ui, self.branchmap_file)
+        self._branchmap = None
 
         self._tagmap = None
 
@@ -238,6 +238,12 @@ class SVNMeta(object):
     @property
     def branchmap_file(self):
         return os.path.join(self.metapath, 'branchmap')
+
+    @property
+    def branchmap(self):
+        if self._branchmap is None:
+            self._branchmap = maps.BranchMap(self.ui, self.branchmap_file)
+        return self._branchmap
 
     @property
     def tagfile(self):
