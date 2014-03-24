@@ -2,6 +2,7 @@
 
 import errno
 import os
+import re
 from mercurial import util as hgutil
 from mercurial.node import bin, hex, nullid
 
@@ -15,6 +16,8 @@ class BaseMap(dict):
     def __init__(self, meta):
         self.meta = meta
         super(BaseMap, self).__init__()
+
+        self._commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
 
         # trickery: all subclasses have the same name as their file and config
         # names, e.g. AuthorMap is meta.authormap_file for the filename and
@@ -46,8 +49,14 @@ class BaseMap(dict):
             if writing:
                 writing.write(line)
 
-            line = line.split('#')[0]
-            if not line.strip():
+            # strip out comments
+            if "#" in line:
+                # remove comments prefixed by an even number of escapes
+                line = self._commentre.sub(r'\1', line)
+                # fixup properly escaped comments that survived the above
+                line = line.replace("\\#", "#")
+            line = line.rstrip()
+            if not line:
                 continue
 
             try:
