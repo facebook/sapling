@@ -406,14 +406,13 @@ def pull(repo, source, heads=[], force=False, meta=None):
                                                            meta)
             repo.ui.note('using %s layout\n' % layout)
 
-        branch = repo.ui.config('hgsubversion', 'branch')
-        if branch:
+        if meta.branch:
             if layout != 'single':
                 msg = ('branch cannot be specified for Subversion clones using '
                        'standard directory layout')
                 raise hgutil.Abort(msg)
 
-            meta.branchmap['default'] = branch
+            meta.branchmap['default'] = meta.branch
 
         ui = repo.ui
         start = meta.lastpulled
