@@ -192,7 +192,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                                        ctx.branch(), ui)
             existing_layout = layouts.detect.layout_from_file(meta.metapath)
             if layout != existing_layout:
-                layouts.persist.layout_to_file(meta.metapath, layout)
+                util.dump(layout, meta.layout_file)
             layoutobj = layouts.layout_from_name(layout, ui)
         elif layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
