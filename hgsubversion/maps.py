@@ -28,6 +28,50 @@ class BaseMap(dict):
         if clmap:
             self.load(clmap)
 
+    def load(self, path):
+        '''Load mappings from a file at the specified path.'''
+        path = os.path.expandvars(path)
+        if not os.path.exists(path):
+            return
+
+        writing = False
+        mapfile = self.meta.__getattribute__(self.mapfilename)
+        if path != mapfile:
+            writing = open(mapfile, 'a')
+
+        self.meta.ui.debug('reading %s from %s\n' % (self.mapname , path))
+        f = open(path, 'r')
+        for number, line in enumerate(f):
+
+            if writing:
+                writing.write(line)
+
+            line = line.split('#')[0]
+            if not line.strip():
+                continue
+
+            try:
+                src, dst = line.split('=', 1)
+            except (IndexError, ValueError):
+                msg = 'ignoring line %i in %s %s: %s\n'
+                self.meta.ui.status(msg % (number, self.mapname, path,
+                                           line.rstrip()))
+                continue
+
+            src = src.strip()
+            dst = dst.strip()
+
+            if src not in self:
+                self.meta.ui.debug('adding %s to %s\n' % (src, self.mapname))
+            elif dst != self[src]:
+                msg = 'overriding %s: "%s" to "%s" (%s)\n'
+                self.meta.ui.status(msg % (self.mapname, self[src], dst, src))
+            self[src] = dst
+
+        f.close()
+        if writing:
+            writing.close()
+
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
     authors, and back. The data is stored persistently on disk.
