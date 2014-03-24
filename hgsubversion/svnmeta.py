@@ -199,8 +199,7 @@ class SVNMeta(object):
         if len(candidates) == 1:
             return candidates.pop()
         elif candidates:
-            config_layout = layouts.detect.layout_from_config(self,
-                                                              allow_auto=True)
+            config_layout = self.layout
             if config_layout in candidates:
                 return config_layout
 
