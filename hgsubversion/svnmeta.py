@@ -67,6 +67,81 @@ class SVNMeta(object):
         self.addedtags = {}
         self.deletedtags = {}
 
+    def _get_cachedconfig(self, name, filename, configname, default):
+        """Return a cached value for a config option. If the cache is uninitialized
+        then try to read its value from disk. Option can be overridden by the
+        commandline.
+            name: property name, e.g. 'lastpulled'
+            filename: name of file in .hg/svn
+            configname: commandline option name
+            default: default value
+        """
+        varname = '_' + name
+        if getattr(self, varname) is None:
+            # construct the file path from metapath (e.g. .hg/svn) plus the
+            # filename
+            f = os.path.join(self.metapath, filename)
+
+            # load the config property (i.e. command-line or .hgrc)
+            c = None
+            if configname:
+                # a little awkward but we need to convert the option from a
+                # string to whatever type the default value is, so we use the
+                # type of `default` to determine with ui.config method to call
+                c = None
+                if isinstance(default, bool):
+                    c = self.ui.configbool('hgsubversion', configname, default)
+                elif isinstance(default, int):
+                    c = self.ui.configint('hgsubversion', configname, default)
+                elif isinstance(default, list):
+                    c = self.ui.configlist('hgsubversion', configname, default)
+                else:
+                    c = self.ui.config('hgsubversion', configname, default)
+
+            # load the value from disk
+            val = util.load(f, default=default)
+
+            # prefer the non-default, and the one sent from command-line
+            if c and c != val and c != default:
+                val = c
+
+            # set the value as the one from disk (or default if not found)
+            setattr(self, varname, val)
+
+            # save the value to disk by using the setter property
+            setattr(self, name, val)
+
+        return getattr(self, varname)
+
+    def _set_cachedconfig(self, value, name, filename):
+        varname = '_' + name
+        f = os.path.join(self.metapath, filename)
+        setattr(self, varname, value)
+        util.dump(value, f)
+
+    def _gen_cachedconfig(self, name, default=None, filename=None,
+                          configname=None):
+        """Generate an attribute for reading (and caching) config data.
+
+        This method constructs a new attribute on self with the given name.
+        The actual value from the config file will be read lazily, and then
+        cached once that read has occurred. No cache invalidation will happen,
+        so within a session these values shouldn't be required to mutate.
+        """
+        setattr(SVNMeta, '_' + name, None)
+        if filename is None:
+            filename = name
+        if configname is None:
+            configname = name
+        prop = property(lambda x: x._get_cachedconfig(name,
+                                                      filename,
+                                                      configname,
+                                                      default),
+                        lambda x, y: x._set_cachedconfig(y,
+                                                         name,
+                                                         filename))
+        setattr(SVNMeta, name, prop)
+
     @property
     def layout(self):
         # this method can't determine the layout, but it needs to be
