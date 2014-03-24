@@ -209,6 +209,22 @@ class MapTests(test_util.TestBase):
         self.assert_('good-name' in branches)
         self.assertEquals(self.repo[2].branch(), 'default')
 
+    def test_branchmap_regex_and_glob(self):
+        repo_path = self.load_svndump('branchmap.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("syntax:re\n")
+        branchmap.write("bad(.*) = good-\\1 # stuffy\n")
+        branchmap.write("glob:feat* = default\n")
+        branchmap.close()
+        ui = self.ui()
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        branches = set(self.repo[i].branch() for i in self.repo)
+        self.assert_('badname' not in branches)
+        self.assert_('good-name' in branches)
+        self.assertEquals(self.repo[2].branch(), 'default')
+
     def test_branchmap_tagging(self):
         '''test tagging a renamed branch, which used to raise an exception'''
         repo_path = self.load_svndump('commit-to-tag.svndump')
