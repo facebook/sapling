@@ -30,6 +30,10 @@ class StandardLayout(base.BaseLayout):
                                'tagpaths', lambda x: list(reversed(sorted(x))))
 
     @property
+    def name(self):
+        return 'standard'
+
+    @property
     def trunk(self):
         return 'trunk' + self.meta.infix
 
