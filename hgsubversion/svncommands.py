@@ -66,10 +66,13 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     startrev = 0
     sofar = []
     branchinfo = {}
-    youngestpath = os.path.join(meta.metapath, 'lastpulled')
     if partial:
         try:
+            # we can't use meta.lastpulled here because we are bootstraping the
+            # lastpulled and want to keep the cached value on disk during a
+            # partial rebuild
             foundpartialinfo = False
+            youngestpath = os.path.join(meta.metapath, 'lastpulled')
             if os.path.exists(youngestpath):
                 youngest = util.load(youngestpath)
                 sofar = list(maps.RevMap.readmapfile(meta.revmap_file))
@@ -137,7 +140,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             else:
                 closed.add(parentctx.rev())
 
-    util.dump(youngest, youngestpath)
+    meta.lastpulled = youngest
     ui.progress('prepare', None, total=numrevs)
 
     for rev in xrange(startrev, len(repo)):
