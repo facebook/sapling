@@ -25,10 +25,6 @@ class StandardLayout(base.BaseLayout):
             return x
         meta._gen_cachedconfig('infix', '', pre=_infix_transform)
 
-        self._infix = self.meta.ui.config('hgsubversion', 'infix', '').strip('/')
-        if self._infix:
-            self._infix = '/' + self._infix
-
     @property
     def trunk(self):
         return 'trunk' + self.meta.infix
