@@ -10,6 +10,12 @@ class StandardLayout(base.BaseLayout):
 
         self._tag_locations = None
 
+        # branchdir is expected to be stripped of leading slashes but retain
+        # its last slash
+        meta._gen_cachedconfig('branchdir', 'branches',
+                               pre=lambda x: '/'.join(p for p in x.split('/')
+                                                      if p) + '/')
+
         self._branch_dir = self.meta.ui.config('hgsubversion', 'branchdir', 'branches')
         if self._branch_dir[0] == '/':
             self._branch_dir = self._branch_dir[1:]
