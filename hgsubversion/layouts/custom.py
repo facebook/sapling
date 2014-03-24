@@ -18,7 +18,9 @@ class CustomLayout(base.BaseLayout):
         self.svn_to_hg = {}
         self.hg_to_svn = {}
 
-        for hg_branch, svn_path in meta.ui.configitems('hgsubversionbranch'):
+        meta._gen_cachedconfig('custombranches', {}, configname='hgsubversionbranch')
+
+        for hg_branch, svn_path in meta.custombranches.iteritems():
 
             hg_branch = hg_branch.strip()
             if hg_branch == 'default' or not hg_branch:
