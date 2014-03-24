@@ -40,8 +40,6 @@ class SVNMeta(object):
         self._gen_cachedconfig('defaulthost', self.uuid)
         self._gen_cachedconfig('usebranchnames', True)
 
-        filemap = util.configpath(self.ui, 'filemap')
-
         self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
         self._tags = None
@@ -56,8 +54,6 @@ class SVNMeta(object):
         self._tagmap = None
 
         self.filemap = maps.FileMap(self.ui, self.filemap_file)
-        if filemap:
-            self.filemap.load(filemap)
 
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.addedtags = {}

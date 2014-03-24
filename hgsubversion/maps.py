@@ -273,6 +273,11 @@ class FileMap(object):
         else:
             self._write()
 
+        # append file mapping specified from the commandline
+        clmap = util.configpath(self.ui, 'filemap')
+        if clmap:
+            self.load(clmap)
+
     def _rpairs(self, name):
         e = len(name)
         while e != -1:
