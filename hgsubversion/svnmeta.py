@@ -363,10 +363,6 @@ class SVNMeta(object):
             path = path[1:]
         return path
 
-    @property
-    def taglocations(self):
-        return self.layoutobj.taglocations(self.metapath)
-
     def getmessage(self, rev):
         msg = rev.message
 
