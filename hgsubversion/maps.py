@@ -60,6 +60,12 @@ class BaseMap(dict):
                 return regex
         return None
 
+    def get(self, key, default=None):
+        '''Similar to dict.get, except we use our own matcher, _findkey.'''
+        if self._findkey(key):
+            return self[key]
+        return default
+
     def load(self, path):
         '''Load mappings from a file at the specified path.'''
         path = os.path.expandvars(path)
