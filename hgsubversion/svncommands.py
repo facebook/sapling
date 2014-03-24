@@ -98,9 +98,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     if not partial and os.path.exists(meta.tagfile):
         os.unlink(meta.tagfile)
 
-    layout = None
-    layoutobj = None
-
     skipped = set()
     closed = set()
 
@@ -187,14 +184,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         assert revpath.startswith(subdir), ('That does not look like the '
                                             'right location in the repo.')
 
-        if layout is None:
-            layout = layouts.detect.layout_from_commit(subdir, revpath,
-                                                       ctx.branch(), meta)
-            existing_layout = layouts.detect.layout_from_file(meta)
-            if layout != existing_layout:
-                util.dump(layout, meta.layout_file)
-            layoutobj = layouts.layout_from_name(layout, meta)
-        elif layout == 'single':
+        if meta.layout == 'auto':
+            meta.layout = meta.layout_from_commit(subdir, revpath, ctx.branch())
+        elif meta.layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
                                                 ' defect in replay')
 
@@ -219,7 +211,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
 
-        tag_locations = layoutobj.taglocations
+        tag_locations = meta.layoutobj.taglocations
         found_tag = False
         for location in tag_locations:
             if commitpath.startswith(location + '/'):
@@ -228,7 +220,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         if found_tag and ctx.extra().get('close'):
             continue
 
-        branch = layoutobj.localname(commitpath)
+        branch = meta.layoutobj.localname(commitpath)
         revmap.write('%s %s %s\n' % (revision, ctx.hex(), branch or ''))
 
         revision = int(revision)
@@ -254,7 +246,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if found_tag and parentextra.get('close'):
                     continue
 
-                branch = layoutobj.localname(parentpath)
+                branch = meta.layoutobj.localname(parentpath)
                 break
 
         if rev in closed:
