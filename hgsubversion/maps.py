@@ -197,27 +197,12 @@ class RevMap(dict):
     def __init__(self, meta):
         dict.__init__(self)
         self.meta = meta
-        self.ypath = os.path.join(meta.metapath, 'lastpulled')
-        # TODO(durin42): Consider moving management of the youngest
-        # file to svnmeta itself rather than leaving it here.
-        # must load youngest file first, or else self._load() can
-        # clobber the info
-        self._youngest = util.load(self.ypath, 0)
         self.oldest = 0
 
         if os.path.isfile(self.meta.revmap_file):
             self._load()
         else:
             self._write()
-
-    def _set_youngest(self, rev):
-        self._youngest = max(self._youngest, rev)
-        util.dump(self._youngest, self.ypath)
-
-    def _get_youngest(self):
-        return self._youngest
-
-    youngest = property(_get_youngest, _set_youngest)
 
     def hashes(self):
         return dict((v, k) for (k, v) in self.iteritems())
@@ -247,8 +232,8 @@ class RevMap(dict):
             else:
                 branch = branch[:-1]
             revnum = int(revnum)
-            if revnum > self.youngest or not self.youngest:
-                self.youngest = revnum
+            if revnum > self.meta.lastpulled or not self.meta.lastpulled:
+                self.meta.lastpulled = revnum
             if revnum < self.oldest or not self.oldest:
                 self.oldest = revnum
             dict.__setitem__(self, (revnum, branch), node.bin(ha))
@@ -264,8 +249,8 @@ class RevMap(dict):
         b = branch or ''
         f.write(str(revnum) + ' ' + node.hex(ha) + ' ' + b + '\n')
         f.close()
-        if revnum > self.youngest or not self.youngest:
-            self.youngest = revnum
+        if revnum > self.meta.lastpulled or not self.meta.lastpulled:
+            self.meta.lastpulled = revnum
         if revnum < self.oldest or not self.oldest:
             self.oldest = revnum
         dict.__setitem__(self, (revnum, branch), ha)

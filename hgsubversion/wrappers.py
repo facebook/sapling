@@ -97,7 +97,7 @@ def incoming(orig, ui, repo, origsource='default', **opts):
     meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    svnrevisions = list(svn.revisions(start=meta.revmap.youngest))
+    svnrevisions = list(svn.revisions(start=meta.lastpulled))
     if opts.get('newest_first'):
         svnrevisions.reverse()
     # Returns 0 if there are incoming changes, 1 otherwise.
@@ -391,7 +391,7 @@ def pull(repo, source, heads=[], force=False):
             meta.branchmap['default'] = branch
 
         ui = repo.ui
-        start = meta.revmap.youngest
+        start = meta.lastpulled
         origrevcount = len(meta.revmap)
 
         if start <= 0:
@@ -485,7 +485,7 @@ def pull(repo, source, heads=[], force=False):
         util.swap_out_encoding(old_encoding)
 
     if lastpulled is not None:
-        meta.revmap.youngest = lastpulled
+        meta.lastpulled = lastpulled
     revisions = len(meta.revmap) - oldrevisions
 
     if revisions == 0:

@@ -32,6 +32,8 @@ class SVNMeta(object):
         self.subdir = subdir
         self._revmap = None
 
+        self._gen_cachedconfig('lastpulled', 0, configname=False)
+
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = util.configpath(self.ui, 'authormap')
         self.usebranchnames = self.ui.configbool('hgsubversion',
