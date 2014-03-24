@@ -57,13 +57,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     meta = svnmeta.SVNMeta(repo, skiperrorcheck=True)
 
-    subdirpath = os.path.join(meta.metapath, 'subdir')
-    subdir = util.load(subdirpath)
     svn = None
-    if subdir is None:
+    if meta.subdir is None:
         svn = svnrepo.svnremoterepo(ui, url).svn
-        subdir = svn.subdir
-        util.dump(subdir.strip('/'), subdirpath)
+        meta.subdir = svn.subdir
 
     youngest = 0
     startrev = 0
@@ -181,6 +178,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         # check that the conversion metadata matches expectations
         assert convinfo.startswith('svn:')
         revpath, revision = convinfo[40:].split('@')
+        # use tmp variable for testing
+        subdir = meta.subdir
         if subdir and subdir[0] != '/':
             subdir = '/' + subdir
         if subdir and subdir[-1] == '/':
