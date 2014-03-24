@@ -56,8 +56,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                              repo.ui.config('paths', 'default') or '')
 
     meta = svnmeta.SVNMeta(repo, skiperrorcheck=True)
-    uuidpath = os.path.join(meta.metapath, 'uuid')
-    uuid = util.load(uuidpath)
 
     subdirpath = os.path.join(meta.metapath, 'subdir')
     subdir = util.load(subdirpath)
@@ -202,7 +200,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                                 ' defect in replay')
 
         # write repository uuid if required
-        if uuid is None or validateuuid:
+        if meta.uuid is None or validateuuid:
             validateuuid = False
             uuid = convinfo[4:40]
             if not skipuuid:
@@ -211,7 +209,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if uuid != svn.uuid:
                     raise hgutil.Abort('remote svn repository identifier '
                                        'does not match')
-            util.dump(uuid, uuidpath)
+            meta.uuid = uuid
 
         # don't reflect closed branches
         if (ctx.extra().get('close') and not ctx.files() or
