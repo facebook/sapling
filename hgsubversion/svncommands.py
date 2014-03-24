@@ -88,7 +88,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         except AttributeError:
             ui.status('no metadata available -- doing a full rebuild\n')
 
-    revmap = open(os.path.join(meta.metapath, 'rev_map'), 'w')
+    revmap = open(meta.revmap_file, 'w')
     revmap.write('1\n')
     revmap.writelines(sofar)
     last_rev = -1
