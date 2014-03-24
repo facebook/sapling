@@ -578,6 +578,12 @@ class HgEditor(svnwrap.Editor):
             try:
                 if not self.meta.is_path_valid(path):
                     return
+
+                # are we skipping this branch entirely?
+                br_path, branch = self.meta.split_branch_path(path)[:2]
+                if self.meta.skipbranch(branch):
+                    return
+
                 try:
                     handler(window)
                 except AssertionError, e: # pragma: no cover

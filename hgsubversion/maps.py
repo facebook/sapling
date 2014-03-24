@@ -425,12 +425,7 @@ class BranchMap(dict):
             dst = dst.strip()
             self.meta.ui.debug('adding branch %s to branch map\n' % src)
 
-            if not dst:
-                # prevent people from assuming such lines are valid
-                raise hgutil.Abort('removing branches is not supported, yet\n'
-                                   '(line %i in branch map %s)'
-                                   % (number, path))
-            elif src in self and dst != self[src]:
+            if dst and src in self and dst != self[src]:
                 msg = 'overriding branch: "%s" to "%s" (%s)\n'
                 self.meta.ui.status(msg % (self[src], dst, src))
             self[src] = dst

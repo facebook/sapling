@@ -290,6 +290,23 @@ class MapTests(test_util.TestBase):
         for r in repo:
             self.assertEquals(verify.verify(ui, repo, rev=r), 0)
 
+    def test_branchmap_no_replacement(self):
+        '''test that empty mappings are accepted
+
+        Empty mappings are lines like 'this ='. We check that such branches are
+        not converted.
+        '''
+        repo_path = self.load_svndump('branchmap.svndump')
+        branchmap = open(self.branchmap, 'w')
+        branchmap.write("badname =\n")
+        branchmap.close()
+        ui = self.ui()
+        ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
+        commands.clone(ui, test_util.fileurl(repo_path),
+                       self.wc_path, branchmap=self.branchmap)
+        branches = set(self.repo[i].branch() for i in self.repo)
+        self.assertEquals(sorted(branches), ['default', 'feature'])
+
     def test_tagmap(self):
         repo_path = self.load_svndump('basic_tag_tests.svndump')
         tagmap = open(self.tagmap, 'w')

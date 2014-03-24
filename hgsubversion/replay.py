@@ -121,6 +121,12 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         if branch in current.emptybranches and files:
             del current.emptybranches[branch]
 
+        if meta.skipbranch(branch):
+            # make sure we also get rid of it from emptybranches
+            if branch in current.emptybranches:
+                del current.emptybranches[branch]
+            continue
+
         files = dict(files)
         parents = meta.get_parent_revision(rev.revnum, branch), revlog.nullid
         if parents[0] in closedrevs and branch in meta.closebranches:
@@ -194,6 +200,9 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     # 2. handle branches that need to be committed without any files
     for branch in current.emptybranches:
+
+        if meta.skipbranch(branch):
+            continue
 
         ha = meta.get_parent_revision(rev.revnum, branch)
         if ha == node.nullid:

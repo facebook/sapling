@@ -684,6 +684,10 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     date = meta.fixdate(r.date)
     check_deleted_branches = set(tbdelta['branches'][1])
     for b in branches:
+
+        if meta.skipbranch(b):
+            continue
+
         parentctx = meta.repo[meta.get_parent_revision(r.revnum, b)]
         tag = meta.get_path_tag(meta.remotename(b))
         kind = svn.checkpath(branches[b], r.revnum)
