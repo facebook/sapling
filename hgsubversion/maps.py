@@ -423,7 +423,7 @@ class BranchMap(BaseMap):
     def __init__(self, meta):
         super(BranchMap, self).__init__(meta)
 
-class TagMap(dict):
+class TagMap(BaseMap):
     '''Facility for controlled renaming of tags. Example:
 
     oldname = newname
