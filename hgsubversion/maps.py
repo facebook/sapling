@@ -19,7 +19,7 @@ class AuthorMap(dict):
     the userid from Subversion is always compared lowercase.
     '''
 
-    def __init__(self, ui, path, defaulthost=None):
+    def __init__(self, meta):
         '''Initialise a new AuthorMap.
 
         The ui argument is used to print diagnostic messages.
@@ -27,20 +27,19 @@ class AuthorMap(dict):
         The path argument is the location of the backing store,
         typically .hg/svn/authors.
         '''
-        self.ui = ui
-        self.path = path
-        self.use_defaultauthors = self.ui.configbool('hgsubversion', 'defaultauthors', True)
-        self.caseignoreauthors = self.ui.configbool('hgsubversion', 'caseignoreauthors', False)
-        if defaulthost:
-            self.defaulthost = '@%s' % defaulthost.lstrip('@')
-        else:
-            self.defaulthost = ''
+        self.meta = meta
+        self.use_defaultauthors = self.meta.ui.configbool('hgsubversion', 'defaultauthors', True)
+        self.caseignoreauthors = self.meta.ui.configbool('hgsubversion', 'caseignoreauthors', False)
+        self.defaulthost = ''
+        if meta.defaulthost:
+            self.defaulthost = '@%s' % meta.defaulthost.lstrip('@')
+
         self.super = super(AuthorMap, self)
         self.super.__init__()
-        self.load(path)
+        self.load(self.meta.authors_file)
 
         # append authors specified from the commandline
-        clmap = util.configpath(self.ui, 'authormap')
+        clmap = util.configpath(self.meta.ui, 'authormap')
         if clmap:
             self.load(clmap)
 
@@ -52,10 +51,10 @@ class AuthorMap(dict):
             return
 
         writing = False
-        if path != self.path:
-            writing = open(self.path, 'a')
+        if path != self.meta.authors_file:
+            writing = open(self.meta.authors_file, 'a')
 
-        self.ui.debug('reading authormap from %s\n' % path)
+        self.meta.ui.debug('reading authormap from %s\n' % path)
         f = open(path, 'r')
         for number, line_org in enumerate(f):
 
@@ -67,7 +66,7 @@ class AuthorMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in author map %s: %s\n'
-                self.ui.status(msg % (number, path, line.rstrip()))
+                self.meta.ui.status(msg % (number, path, line.rstrip()))
                 continue
 
             src = src.strip()
@@ -78,10 +77,10 @@ class AuthorMap(dict):
 
             if writing:
                 if not src in self:
-                    self.ui.debug('adding author %s to author map\n' % src)
+                    self.meta.ui.debug('adding author %s to author map\n' % src)
                 elif dst != self[src]:
                     msg = 'overriding author: "%s" to "%s" (%s)\n'
-                    self.ui.status(msg % (self[src], dst, src))
+                    self.meta.ui.status(msg % (self[src], dst, src))
                 writing.write(line_org)
 
             self[src] = dst
@@ -107,11 +106,11 @@ class AuthorMap(dict):
         elif self.use_defaultauthors:
             self[author] = result = '%s%s' % (author, self.defaulthost)
             msg = 'substituting author "%s" for default "%s"\n'
-            self.ui.debug(msg % (author, result))
+            self.meta.ui.debug(msg % (author, result))
         else:
             msg = 'author %s has no entry in the author map!'
             raise hgutil.Abort(msg % author)
-        self.ui.debug('mapping author "%s" to "%s"\n' % (author, result))
+        self.meta.ui.debug('mapping author "%s" to "%s"\n' % (author, result))
         return result
 
     def reverselookup(self, author):

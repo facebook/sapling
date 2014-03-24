@@ -84,10 +84,15 @@ class MapTests(test_util.TestBase):
     def test_author_map_no_overwrite(self):
         cwd = os.path.dirname(__file__)
         orig = os.path.join(cwd, 'fixtures', 'author-map-test.txt')
-        new = open(self.authors, 'w')
+        # create a fake hgsubversion repo
+        repopath = os.path.join(self.wc_path, '.hg')
+        repopath = os.path.join(repopath, 'svn')
+        if not os.path.isdir(repopath):
+            os.makedirs(repopath)
+        new = open(os.path.join(repopath, 'authors'), 'w')
         new.write(open(orig).read())
         new.close()
-        test = maps.AuthorMap(self.ui(), self.authors)
+        test = maps.AuthorMap(self.repo.svnmeta(skiperrorcheck=True))
         fromself = set(test)
         test.load(orig)
         all_tests = set(test)
