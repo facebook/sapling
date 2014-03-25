@@ -3913,7 +3913,7 @@ proc writecommit {} {
     grid $top.clab $top.cmd -sticky w -pady 10
     ttk::label $top.flab -text "Output file:"
     ttk::entry $top.fname -width 60
-    $top.fname insert 0 [file normalize "commit-[string range $rowmenuid 0 6]"]
+    $top.fname insert 0 [file normalize "commit-[string range $rowmenuid 0 6].diff"]
     grid $top.flab $top.fname -sticky w
     ttk::frame $top.buts
     ttk::button $top.buts.gen -text "Write" -command wrcomgo
