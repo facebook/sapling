@@ -939,7 +939,7 @@ def runone(options, test, count):
                 else:
                     return ignore("doesn't match keyword")
 
-    if not lctest.startswith("test-"):
+    if not os.path.basename(lctest).startswith("test-"):
         return skip("not a test file")
     for ext, func, out in testtypes:
         if lctest.endswith(ext):
@@ -1197,8 +1197,8 @@ def main(args, parser=None):
             args = os.listdir(".")
 
     tests = [t for t in args
-             if t.startswith("test-")
-             and (t.endswith(".py") or t.endswith(".t"))]
+             if os.path.basename(t).startswith("test-")
+                 and (t.endswith(".py") or t.endswith(".t"))]
 
     if options.random:
         random.shuffle(tests)
