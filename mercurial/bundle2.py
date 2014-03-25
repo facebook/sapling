@@ -130,8 +130,11 @@ The matching of a part to its handler is case insensitive. The case of the
 part type is used to know if a part is mandatory or advisory. If the Part type
 contains any uppercase char it is considered mandatory. When no handler is
 known for a Mandatory part, the process is aborted and an exception is raised.
-If the part is advisory and no handler is known, the part is ignored.
-
+If the part is advisory and no handler is known, the part is ignored. When the
+process is aborted, the full bundle is still read from the stream to keep the
+channel usable. But none of the part read from an abort are processed. In the
+future, dropping the stream may become an option for channel we do not care to
+preserve.
 """
 
 import util
@@ -205,23 +208,29 @@ def processbundle(repo, stream):
     # - replace this is a init function soon.
     # - exception catching
     unbundler.params
-    for part in unbundler:
-        parttype = part.type
-        # part key are matched lower case
-        key = parttype.lower()
-        try:
-            handler = parthandlermapping[key]
-            ui.debug('found an handler for part %r\n' % parttype)
-        except KeyError:
-            if key != parttype: # mandatory parts
+    iterparts = iter(unbundler)
+    try:
+        for part in iterparts:
+            parttype = part.type
+            # part key are matched lower case
+            key = parttype.lower()
+            try:
+                handler = parthandlermapping[key]
+                ui.debug('found an handler for part %r\n' % parttype)
+            except KeyError:
+                if key != parttype: # mandatory parts
+                    # todo:
+                    # - use a more precise exception
+                    raise
+                ui.debug('ignoring unknown advisory part %r\n' % key)
                 # todo:
-                # - use a more precise exception
-                # - consume the bundle2 stream anyway.
-                raise
-            ui.debug('ignoring unknown advisory part %r\n' % key)
-            # todo: consume the part (once we use streamed parts)
-            continue
-        handler(repo, part)
+                # - consume the part once we use streaming
+                continue
+            handler(repo, part)
+    except Exception:
+        for part in iterparts:
+            pass # consume the bundle content
+        raise
 
 class bundle20(object):
     """represent an outgoing bundle2 container

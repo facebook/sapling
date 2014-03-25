@@ -72,9 +72,13 @@ Create an extension to test bundle2 API
   > def cmdunbundle2(ui, repo):
   >     """process a bundle2 stream from stdin on the current repo"""
   >     try:
-  >         bundle2.processbundle(repo, sys.stdin)
-  >     except KeyError, exc:
-  >         raise util.Abort('missing support for %s' % exc)
+  >         try:
+  >             bundle2.processbundle(repo, sys.stdin)
+  >         except KeyError, exc:
+  >             raise util.Abort('missing support for %s' % exc)
+  >     finally:
+  >         remains = sys.stdin.read()
+  >         ui.write('%i unread bytes\n' % len(remains))
   > 
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
@@ -385,6 +389,7 @@ Process the bundle
   ignoring unknown advisory part 'test:math'
   part header size: 0
   end of bundle2 stream
+  0 unread bytes
 
 
   $ hg bundle2 --parts --unknown ../unknown.hg2
@@ -394,5 +399,6 @@ Process the bundle
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  0 unread bytes
   abort: missing support for 'test:unknown'
   [255]
