@@ -133,7 +133,7 @@ def parselistfiles(files, listtype, warn=True):
         f.close()
     return entries
 
-def parseargs(args):
+def getparser():
     parser = optparse.OptionParser("%prog [options] [tests]")
 
     # keep these sorted
@@ -210,6 +210,10 @@ def parseargs(args):
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
     parser.set_defaults(**defaults)
+
+    return parser
+
+def parseargs(args, parser):
     (options, args) = parser.parse_args(args)
 
     # jython is always pure
@@ -1176,8 +1180,9 @@ def runtests(options, tests):
 testtypes = [('.py', pytest, '.out'),
              ('.t', tsttest, '')]
 
-def main(args):
-    (options, args) = parseargs(args)
+def main(args, parser=None):
+    parser = parser or getparser()
+    (options, args) = parseargs(args, parser)
     os.umask(022)
 
     checktools()
