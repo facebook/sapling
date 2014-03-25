@@ -2630,8 +2630,8 @@ class _generatorset(object):
         if x in self._cache:
             return self._cache[x]
 
-        # Use __iter__ which caches values and stores them into self._genlist
-        for l in self:
+        # Use new values only, as existing values would be cached.
+        for l in self._consumegen():
             if l == x:
                 return True
 
@@ -2645,17 +2645,18 @@ class _generatorset(object):
             # started over the generatorset.
             for l in self._genlist:
                 yield l
-        else:
-            # Starting iteration over the generatorset.
-            self._iterated = True
+
+        for item in self._consumegen():
+            yield item
+
+    def _consumegen(self):
+        self._iterated = True
 
         for item in self._gen:
             self._cache[item] = True
             self._genlist.append(item)
             yield item
 
-        # Iteration over the generator has finished. Whole value list should be
-        # cached in self._genlist
         self._finished = True
 
     def set(self):
@@ -2680,7 +2681,8 @@ class _ascgeneratorset(_generatorset):
         if x in self._cache:
             return self._cache[x]
 
-        for l in self:
+        # Use new values only, as existing values would be cached.
+        for l in self._consumegen():
             if l == x:
                 return True
             if l > x:
@@ -2702,7 +2704,8 @@ class _descgeneratorset(_generatorset):
         if x in self._cache:
             return self._cache[x]
 
-        for l in self:
+        # Use new values only, as existing values would be cached.
+        for l in self._consumegen():
             if l == x:
                 return True
             if l < x:
