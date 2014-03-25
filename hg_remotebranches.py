@@ -130,6 +130,73 @@ def reposetup(ui, repo):
                 pass
             return olookup(key)
 
+        @util.propertycache
+        def _preferredremotebranches(self):
+            """This property is a dictionary of values identical to _remotebranches but
+            returning only 'preferred' names per path, e.g. '@' instead of
+            'default'. A table of behavior is given below:
+
+            +---------+---------+---------+
+            |  name1  |  name2  | output  |
+            |         |         |         |
+            +---------+---------+---------+
+            |         | default |         |
+            +---------+---------+---------+
+            |         |    @    |    @    |
+            +---------+---------+---------+
+            | default |    @    |    @    |
+            +---------+---------+---------+
+            |   foo   |    @    |  foo @  |
+            +---------+---------+---------+
+            |   foo   |   bar   | foo bar |
+            +---------+---------+---------+
+
+            """
+            ret = {}
+
+            # iterate over all the paths so we don't clobber path1/@ with
+            # path2/@
+            for path, uri in ui.configitems('paths'):
+
+                inverse = {}
+                remotebranches = dict([(name, node) for name, node in
+                                       self._remotebranches.iteritems()
+                                       if name.startswith(path)])
+                for name, node in remotebranches.iteritems():
+                    # nothing to check, so add and move on
+                    if node not in inverse.keys():
+                        inverse[node] = name
+                        continue
+
+                    # get the ref names, remote will always be the same
+                    remote, ref1 = splitremotebranch(inverse[node])
+                    remote, ref2 = splitremotebranch(name)
+
+                    # prefer anything over default
+                    if ref2 == 'default':
+                        continue
+                    if ref1 == 'default':
+                        inverse[node] = joinremotebranch(remote, ref2)
+                        continue
+
+                    # prefer non-empty name to alias (empty) name
+                    if not ref2:
+                        continue
+                    if not ref1:
+                        inverse[node] = joinremotebranch(remote, ref2)
+                        continue
+
+                    # if we got to this point then both names are non-default /
+                    # non-alias names and we should add ref2 to the return list
+                    # directly (ref1 will be added normally)
+                    if ref1 and ref2 and ref1 != ref2:
+                        ret[joinremotebranch(remote, ref2)] = node
+
+                ret.update(dict([(name, node) for node, name in
+                                 inverse.iteritems()]))
+
+            return ret
+
     repo.__class__ = remotebranchesrepo
 
 def activepath(ui, remote):
