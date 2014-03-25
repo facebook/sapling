@@ -28,7 +28,7 @@ allow commits despite working copy presense
   $ git config receive.denyCurrentBranch ignore
   $ cd ..
 Ensure gitlinks are transformed to .hgsubstate on hg pull from git
-  $ hg clone gitrepo1 hgrepo
+  $ hg clone gitrepo1 hgrepo 2>&1 | egrep -v '^(Cloning into|done)'
   importing git objects into hg
   updating to branch default
   cloning subrepo subrepo1 from $TESTTMP/gitsubrepo

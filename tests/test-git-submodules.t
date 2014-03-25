@@ -27,10 +27,10 @@ version spell it sanely as it was given (eg . in a newer version,
 while older git will use the full normalized path for .)
   $ clonefilt='s/Cloning into/Initialized empty Git repository in/;s/in .*/in .../'
 
-  $ git clone ../gitrepo1 . | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
+  $ git clone ../gitrepo1 . 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
   Initialized empty Git repository in ...
   
-  $ git submodule add ../gitsubrepo subrepo | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
+  $ git submodule add ../gitsubrepo subrepo 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
   Initialized empty Git repository in ...
   
   $ git commit -m 'add subrepo' | sed 's/, 0 deletions(-)//'
@@ -48,7 +48,7 @@ while older git will use the full normalized path for .)
   [master a000567] change subrepo commit
    1 file changed, 1 insertion(+), 1 deletion(-)
 
-  $ git submodule add ../gitsubrepo subrepo2 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
+  $ git submodule add ../gitsubrepo subrepo2 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
   Initialized empty Git repository in ...
   
   $ git commit -m 'add another subrepo' | sed 's/, 0 deletions(-)//'
@@ -79,7 +79,7 @@ same name has existed at any point historically, so use alpha instead of subrepo
 
   $ git rm alpha
   rm 'alpha'
-  $ git submodule add ../gitsubrepo alpha | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
+  $ git submodule add ../gitsubrepo alpha 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
   Initialized empty Git repository in ...
   
   $ git commit -m 'replace file with subrepo' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'

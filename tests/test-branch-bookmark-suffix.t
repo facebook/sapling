@@ -82,7 +82,7 @@ bail if the user does not have dulwich
   Cloning into 'gitrepo2'...
   done.
   $ cd gitrepo2
-  $ git checkout branch1
+  $ git checkout branch1 2>&1 | grep -v 'up-to-date'
   Already on 'branch1'
   $ echo g1 >> f1
   $ git add f1
