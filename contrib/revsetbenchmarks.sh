@@ -14,8 +14,8 @@
 # to compare performance.
 
 HG="hg update"
-PERF="./hg perfrevset"
-BASE_PERF="hg perfrevset"
+PERF="./hg --config extensions.perf=contrib/perf.py perfrevset"
+BASE_PERF="hg --config extensions.perf=contrib/perf.py perfrevset"
 
 TARGETS=$1
 shift
