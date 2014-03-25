@@ -73,27 +73,23 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    opull = getattr(repo.__class__, 'pull', False)
-    opush = getattr(repo.__class__, 'push', False)
-    olookup = repo.lookup
-    ofindtags = repo._findtags
-
-    if opull or opush:
+    if (getattr(repo.__class__, 'pull', False) or
+        getattr(repo.__class__, 'push', False)):
         # Mercurial 3.1 and earlier use push/pull methods on the
         # localrepo object instead of in the exchange module. Avoid
         # reintroducing these methods into newer hg versions so we can
         # continue to detect breakage.
         class rbexchangerepo(repo.__class__):
             def pull(self, remote, *args, **kwargs):
-                return expull(opull, self, remote, *args, **kwargs)
+                return expull(super(remotebranchesrepo, self).pull, self, remote, *args, **kwargs)
 
             def push(self, remote, *args, **kwargs):
-                return expush(opush, self, remote, *args, **kwargs)
+                return expush(super(remotebranchesrepo, self).push, self, remote, *args, **kwargs)
         repo.__class__ = rbexchangerepo
 
     class remotebranchesrepo(repo.__class__):
         def _findtags(self):
-            (tags, tagtypes) = ofindtags()
+            (tags, tagtypes) = super(remotebranchesrepo, self)._findtags()
             for tag, n in self._remotebranches.iteritems():
                 tags[tag] = n
                 tagtypes[tag] = 'remote'
@@ -129,7 +125,7 @@ def reposetup(ui, repo):
                     key = self._remotebranches[key]
             except TypeError: # unhashable type
                 pass
-            return olookup(key)
+            return super(remotebranchesrepo, self).lookup(key)
 
         @util.propertycache
         def _preferredremotebranches(self):
