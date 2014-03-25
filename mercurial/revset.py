@@ -2624,10 +2624,8 @@ class _generatorset(object):
         gen: a generator producing the values for the generatorset.
         """
         self._gen = gen
-        self._iter = iter(gen)
         self._cache = {}
         self._genlist = baseset([])
-        self._iterated = False
         self._finished = False
 
     def __contains__(self, x):
@@ -2639,28 +2637,30 @@ class _generatorset(object):
             if l == x:
                 return True
 
-        self._finished = True
         self._cache[x] = False
         return False
 
     def __iter__(self):
-        if self._iterated:
-            # At least a part of the list should be cached if iteration has
-            # started over the generatorset.
-            for l in self._genlist:
-                yield l
+        if self._finished:
+            for x in self._genlist:
+                yield x
+            return
 
-        for item in self._consumegen():
-            yield item
+        i = 0
+        genlist = self._genlist
+        consume = self._consumegen()
+        while True:
+            if i < len(genlist):
+                yield genlist[i]
+            else:
+                yield consume.next()
+            i += 1
 
     def _consumegen(self):
-        self._iterated = True
-
         for item in self._gen:
             self._cache[item] = True
             self._genlist.append(item)
             yield item
-
         self._finished = True
 
     def set(self):
