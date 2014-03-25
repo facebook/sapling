@@ -141,6 +141,7 @@ import util
 import struct
 import urllib
 import string
+import StringIO
 
 import changegroup
 from i18n import _
@@ -523,4 +524,18 @@ class part(object):
             yield self.data
         # end of payload
         yield _pack(_fpayloadsize, 0)
+
+@parthandler('changegroup')
+def handlechangegroup(op, part):
+    """apply a changegroup part on the repo
+
+    This is a very early implementation that will massive rework before being
+    inflicted to any end-user.
+    """
+    data = StringIO.StringIO(part.data)
+    data.seek(0)
+    cg = changegroup.readbundle(data, 'bundle2part')
+    ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
+    op.records.add('changegroup', {'return': ret})
+
 
