@@ -626,13 +626,16 @@ Support for changegroup
   \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02H (esc)
   \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
-  $ hg unbundle2 < ../rev.hg2
+  $ hg unbundle2 ../rev-replay.hg2 < ../rev.hg2
   adding changesets
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
   0 unread bytes
   addchangegroup return: 1
+
+  $ cat ../rev-replay.hg2
+  HG20\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to0return1\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 Real world exchange
 =====================

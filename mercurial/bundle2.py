@@ -558,7 +558,7 @@ class part(object):
         yield _pack(_fpayloadsize, 0)
 
 @parthandler('changegroup')
-def handlechangegroup(op, part):
+def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
     This is a very early implementation that will massive rework before being
@@ -570,10 +570,21 @@ def handlechangegroup(op, part):
     # we need to make sure we trigger the creation of a transaction object used
     # for the whole processing scope.
     op.gettransaction()
-    data = StringIO.StringIO(part.data)
+    data = StringIO.StringIO(inpart.data)
     data.seek(0)
     cg = changegroup.readbundle(data, 'bundle2part')
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
+    if op.reply is not None:
+        # This is definitly not the final form of this
+        # return. But one need to start somewhere.
+        op.reply.addpart(part('reply:changegroup', (),
+                         [('in-reply-to', str(inpart.id)),
+                          ('return', '%i' % ret)]))
 
+@parthandler('reply:changegroup')
+def handlechangegroup(op, inpart):
+    p = dict(inpart.advisoryparams)
+    ret = int(p['return'])
+    op.records.add('changegroup', {'return': ret}, int(p['in-reply-to']))
 
