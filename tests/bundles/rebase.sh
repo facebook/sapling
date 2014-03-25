@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 hg init rebase
 cd rebase
 

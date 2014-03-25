@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 hg init remote
 cd remote
 
