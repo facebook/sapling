@@ -1500,6 +1500,10 @@ def _substringmatcher(pattern):
 def tag(repo, subset, x):
     """``tag([name])``
     The specified tag by name, or all tagged revisions if no name is given.
+
+    If `name` starts with `re:`, the remainder of the name is treated as
+    a regular expression. To match a tag that actually starts with `re:`,
+    use the prefix `literal:`.
     """
     # i18n: "tag" is a keyword
     args = getargs(x, 0, 1, _("tag takes one or no arguments"))
