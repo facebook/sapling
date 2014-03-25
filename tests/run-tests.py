@@ -1228,7 +1228,8 @@ def main(args):
             # Meaning of tmpdir has changed since 1.3: we used to create
             # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
             # tmpdir already exists.
-            sys.exit("error: temp dir %r already exists" % tmpdir)
+            print "error: temp dir %r already exists" % tmpdir
+            return 1
 
             # Automatically removing tmpdir sounds convenient, but could
             # really annoy anyone in the habit of using "--tmpdir=/tmp"
@@ -1293,10 +1294,10 @@ def main(args):
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        sys.exit(runtests(options, tests) or 0)
+        return runtests(options, tests) or 0
     finally:
         time.sleep(.1)
         cleanup(options)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
