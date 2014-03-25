@@ -218,7 +218,10 @@ def activepath(ui, remote):
             rpath = getattr(getattr(remote, '_repo', None),
                             'root', None)
     elif not isinstance(remote, str):
-        rpath = remote._url
+        try:
+            rpath = remote._url
+        except:
+            rpath = remote.url
 
     for path, uri in ui.configitems('paths'):
         uri = ui.expandpath(expandscheme(ui, uri))
