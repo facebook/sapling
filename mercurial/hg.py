@@ -230,8 +230,10 @@ def copystore(ui, srcrepo, destpath):
                 dstvfs.mkdir(dstbase)
             if srcvfs.exists(f):
                 if f.endswith('data'):
+                    # 'dstbase' may be empty (e.g. revlog format 0)
+                    lockfile = os.path.join(dstbase, "lock")
                     # lock to avoid premature writing to the target
-                    destlock = lock.lock(dstvfs, dstbase + "/lock")
+                    destlock = lock.lock(dstvfs, lockfile)
                 hardlink, n = util.copyfiles(srcvfs.join(f), dstvfs.join(f),
                                              hardlink)
                 num += n

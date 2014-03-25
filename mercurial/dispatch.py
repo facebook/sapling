@@ -108,13 +108,17 @@ def _runcatch(req):
 
             # if we are in HGPLAIN mode, then disable custom debugging
             debugger = ui.config("ui", "debugger")
+            debugmod = pdb
             if not debugger or ui.plain():
                 debugger = 'pdb'
-
-            try:
-                debugmod = __import__(debugger)
-            except ImportError:
-                debugmod = pdb
+            elif '--debugger' in req.args:
+                # This import can be slow for fancy debuggers, so only
+                # do it when absolutely necessary, i.e. when actual
+                # debugging has been requested
+                try:
+                    debugmod = __import__(debugger)
+                except ImportError:
+                    pass # Leave debugmod = pdb
 
             debugtrace[debugger] = debugmod.set_trace
             debugmortem[debugger] = debugmod.post_mortem
