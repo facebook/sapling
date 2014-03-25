@@ -116,7 +116,55 @@ issue3228 was fixed in 2.1
   no changes found
   [1]
 
+hg-git issue103 -- directories can lose information at hg-git export time
+
+  $ hg up master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkdir dir1
+  $ echo alpha > dir1/alpha
+  $ hg add dir1/alpha
+  $ fn_hg_commit -m 'add dir1/alpha'
+  $ hg push -r master
+  pushing to $TESTTMP/gitrepo
+  searching for changes
+  adding objects
+  added 1 commits with 2 trees and 0 blobs
+  updating reference refs/heads/master
+
+  $ echo beta > dir1/beta
+  $ hg add dir1/beta
+  $ fn_hg_commit -m 'add dir1/beta'
+  $ hg push -r master
+  pushing to $TESTTMP/gitrepo
+  searching for changes
+  adding objects
+  added 1 commits with 2 trees and 0 blobs
+  updating reference refs/heads/master
+  $ hg log -r master
+  changeset:   5:fff64abfde07
+  bookmark:    master
+  tag:         default/master
+  tag:         tip
+  user:        test
+  date:        Mon Jan 01 00:00:15 2007 +0000
+  summary:     add dir1/beta
+  
+
   $ cd ..
+
+  $ hg clone gitrepo hgrepo-test
+  importing git objects into hg
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R hgrepo-test log -r master
+  changeset:   4:fff64abfde07
+  bookmark:    master
+  tag:         default/master
+  tag:         tip
+  user:        test
+  date:        Mon Jan 01 00:00:15 2007 +0000
+  summary:     add dir1/beta
+  
 
 Push empty Hg repo to empty Git repo (issue #58)
 Since there aren't any changes, exit code 1 is expected in modern Mercurial.

@@ -91,7 +91,11 @@ class IncrementalChangesetExporter(object):
             self._dirs[path] = tree
             for entry in tree.iteritems():
                 if entry.mode == dirkind:
-                    todo.append((path + '/' + entry.path, store[entry.sha]))
+                    if path == '':
+                        newpath = entry.path
+                    else:
+                        newpath = path + '/' + entry.path
+                    todo.append((newpath, store[entry.sha]))
 
     @property
     def root_tree_sha(self):
