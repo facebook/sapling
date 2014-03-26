@@ -25,23 +25,23 @@ def _revancestors(repo, revs, followfirst):
     cl = repo.changelog
 
     def iterate():
-        revqueue, revsnode = None, None
+        revqueue, inputrev = None, None
         h = []
 
         revs.sort(reverse=True)
         revqueue = util.deque(revs)
         if revqueue:
-            revsnode = revqueue.popleft()
-            heapq.heappush(h, -revsnode)
+            inputrev = revqueue.popleft()
+            heapq.heappush(h, -inputrev)
 
         seen = set()
         while h:
             current = -heapq.heappop(h)
             if current not in seen:
-                if revsnode and current == revsnode:
+                if inputrev and current == inputrev:
                     if revqueue:
-                        revsnode = revqueue.popleft()
-                        heapq.heappush(h, -revsnode)
+                        inputrev = revqueue.popleft()
+                        heapq.heappush(h, -inputrev)
                 seen.add(current)
                 yield current
                 for parent in cl.parentrevs(current)[:cut]:
