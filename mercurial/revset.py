@@ -26,22 +26,24 @@ def _revancestors(repo, revs, followfirst):
 
     def iterate():
         revs.sort(reverse=True)
-        revqueue = util.deque(revs)
-        if not revqueue:
-            return
-
+        irevs = iter(revs)
         h = []
-        inputrev = revqueue.popleft()
-        heapq.heappush(h, -inputrev)
+        try:
+            inputrev = irevs.next()
+            heapq.heappush(h, -inputrev)
+        except StopIteration:
+            return
 
         seen = set()
         while h:
             current = -heapq.heappop(h)
             if current not in seen:
                 if current == inputrev:
-                    if revqueue:
-                        inputrev = revqueue.popleft()
+                    try:
+                        inputrev = irevs.next()
                         heapq.heappush(h, -inputrev)
+                    except StopIteration:
+                        pass
                 seen.add(current)
                 yield current
                 for parent in cl.parentrevs(current)[:cut]:
