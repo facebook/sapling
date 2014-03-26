@@ -1,5 +1,27 @@
   $ HGENCODING=utf-8
   $ export HGENCODING
+  $ cat > testrevset.py << EOF
+  > import mercurial.revset
+  > 
+  > baseset = mercurial.revset.baseset
+  > 
+  > def r3232(repo, subset, x):
+  >     """"simple revset that return [3,2,3,2]
+  > 
+  >     revisions duplicated on purpose.
+  >     """
+  >     if 3 not in subset:
+  >        if 2 in subset:
+  >            return baseset([2,2])
+  >        return baseset()
+  >     return baseset([3,3,2,2])
+  > 
+  > mercurial.revset.symbols['r3232'] = r3232
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > testrevset=$TESTTMP/testrevset.py
+  > EOF
 
   $ try() {
   >   hg debugrevspec --debug "$@"
@@ -340,6 +362,9 @@ ancestor can accept 0 or more arguments
   0
   $ log 'ancestor(1,2,3,4,5)'
   1
+
+test ancestors
+
   $ log 'ancestors(5)'
   0
   1
@@ -347,6 +372,12 @@ ancestor can accept 0 or more arguments
   5
   $ log 'ancestor(ancestors(5))'
   0
+  $ log '::r3232()'
+  0
+  1
+  2
+  3
+
   $ log 'author(bob)'
   2
   $ log 'author("re:bob|test")'

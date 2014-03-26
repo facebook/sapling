@@ -37,13 +37,13 @@ def _revancestors(repo, revs, followfirst):
         seen = set()
         while h:
             current = -heapq.heappop(h)
+            if current == inputrev:
+                try:
+                    inputrev = irevs.next()
+                    heapq.heappush(h, -inputrev)
+                except StopIteration:
+                    pass
             if current not in seen:
-                if current == inputrev:
-                    try:
-                        inputrev = irevs.next()
-                        heapq.heappush(h, -inputrev)
-                    except StopIteration:
-                        pass
                 seen.add(current)
                 yield current
                 for parent in cl.parentrevs(current)[:cut]:
