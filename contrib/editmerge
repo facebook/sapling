@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # A simple script for opening merge conflicts in the editor.
 # Use the following Mercurial settings to enable it.
 #

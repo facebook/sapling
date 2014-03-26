@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Measure the performance of a list of revsets against multiple revisions
 # defined by parameter. Checkout one by one and run perfrevset with every
