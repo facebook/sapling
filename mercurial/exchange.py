@@ -409,7 +409,12 @@ class pulloperation(object):
         if self.heads is None:
             # We pulled every thing possible
             # sync on everything common
-            return self.common + self.rheads
+            c = set(self.common)
+            ret = list(self.common)
+            for n in self.rheads:
+                if n not in c:
+                    ret.append(n)
+            return ret
         else:
             # We pulled a specific subset
             # sync on this subset
