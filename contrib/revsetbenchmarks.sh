@@ -59,7 +59,7 @@ for i in $(hg log --template='{rev}\n' --rev $TARGETS);
 do
   echo "----------------------------"
   echo -n "Revision: "
-  hg log -r $i --template "{desc|firstline}"
+  hg log -r $i --template "{desc|firstline}\n"
 
   echo "----------------------------"
   $HG $i
