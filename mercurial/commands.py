@@ -3875,6 +3875,23 @@ def incoming(ui, repo, source="default", **opts):
 
     See pull for valid source format details.
 
+    .. container:: verbose
+
+      Examples:
+
+      - show incoming changes with patches and full description::
+
+          hg incoming -vp
+
+      - show incoming changes excluding merges, store a bundle::
+
+          hg in -vpM --bundle incoming.hg
+          hg pull incoming.hg
+
+      - briefly list changes inside a bundle::
+
+          hg in changes.hg -T "{desc|firstline}\\n"
+
     Returns 0 if there are incoming changes, 1 otherwise.
     """
     if opts.get('graph'):
