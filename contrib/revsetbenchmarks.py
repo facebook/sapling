@@ -14,9 +14,17 @@
 # to compare performance.
 
 import sys
-from subprocess import check_call, check_output
+from subprocess import check_call, check_output, CalledProcessError
 
-HG="hg update --quiet --check"
+
+def update(rev):
+    """update the repo to a revision"""
+    try:
+        check_call(['hg', 'update', '--quiet', '--check', str(rev)])
+    except CalledProcessError, exc:
+        print >> sys.stderr, 'update to revision %s failed, aborting' % rev
+        sys.exit(exc.returncode)
+
 PERF="./hg --config extensions.perf=contrib/perf.py perfrevset"
 
 target_rev = sys.argv[1]
@@ -49,7 +57,7 @@ for r in revs:
     check_call('hg log -r %s --template "{desc|firstline}\n"' % r, shell=True)
 
     print "----------------------------"
-    check_call(HG + ' ' + r, shell=True)
+    update(r)
     for idx, rset in enumerate(revsets):
         sys.stdout.write("%i) " % idx)
         sys.stdout.flush()
