@@ -14,7 +14,7 @@
 # to compare performance.
 
 import sys
-from subprocess import check_call, check_output, CalledProcessError
+from subprocess import check_call, check_output, CalledProcessError, STDOUT
 
 
 def update(rev):
@@ -28,8 +28,14 @@ def update(rev):
 def perf(revset):
     """run benchmark for this very revset"""
     try:
-        check_call(['./hg', '--config', 'extensions.perf=contrib/perf.py',
-                    'perfrevset', revset])
+        output = check_output(['./hg',
+                               '--config',
+                               'extensions.perf=contrib/perf.py',
+                               'perfrevset',
+                               revset],
+                               stderr=STDOUT)
+        output = output.lstrip('!') # remove useless ! in this context
+        return output.strip()
     except CalledProcessError, exc:
         print >> sys.stderr, 'abort: cannot run revset benchmark'
         sys.exit(exc.returncode)
@@ -78,8 +84,7 @@ for r in revs:
     print "----------------------------"
     update(r)
     for idx, rset in enumerate(revsets):
-        sys.stdout.write("%i) " % idx)
-        sys.stdout.flush()
-        perf(rset)
+
+        print "%i)" % idx, perf(rset)
     print "----------------------------"
 
