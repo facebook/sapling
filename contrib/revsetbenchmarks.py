@@ -41,6 +41,16 @@ def printrevision(rev):
     check_call(['hg', 'log', '--rev', str(rev), '--template',
                '{desc|firstline}\n'])
 
+def getrevs(spec):
+    """get the list of rev matched by a revset"""
+    try:
+        out = check_output(['hg', 'log', '--template={rev}\n', '--rev', spec])
+    except CalledProcessError, exc:
+        print >> sys.stderr, "abort, can't get revision from %s" % spec
+        sys.exit(exc.returncode)
+    return [r for r in out.split() if r]
+
+
 
 target_rev = sys.argv[1]
 
@@ -59,12 +69,9 @@ for idx, rset in enumerate(revsets):
 print "----------------------------"
 print
 
-revs = check_output("hg log --template='{rev}\n' --rev " + target_rev,
-                    shell=True)
 
-revs = [r for r in revs.split() if r]
+revs = getrevs(target_rev)
 
-# Benchmark revisions
 for r in revs:
     print "----------------------------"
     printrevision(r)
