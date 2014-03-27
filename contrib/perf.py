@@ -335,7 +335,7 @@ def perfrevset(ui, repo, expr, clear=False):
     def d():
         if clear:
             repo.invalidatevolatilesets()
-        repo.revs(expr)
+        for r in repo.revs(expr): pass
     timer(d)
 
 @command('perfvolatilesets')
