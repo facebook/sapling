@@ -212,6 +212,7 @@ def buildfunc(exp, context):
             raise error.ParseError(_("filter %s expects one argument") % n)
         f = context._filters[n]
         return (runfilter, (args[0][0], args[0][1], f))
+    raise error.ParseError(_("unknown function '%s'") % n)
 
 def date(context, mapping, args):
     if not (1 <= len(args) <= 2):

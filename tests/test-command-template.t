@@ -1416,6 +1416,12 @@ Behind the scenes, this will throw ValueError
   abort: template filter 'datefilter' is not compatible with keyword 'author'
   [255]
 
+Thrown an error if a template function doesn't exist
+
+  $ hg tip --template '{foo()}\n'
+  hg: parse error: unknown function 'foo'
+  [255]
+
   $ cd ..
 
 
