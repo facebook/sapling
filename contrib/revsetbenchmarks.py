@@ -25,7 +25,15 @@ def update(rev):
         print >> sys.stderr, 'update to revision %s failed, aborting' % rev
         sys.exit(exc.returncode)
 
-PERF="./hg --config extensions.perf=contrib/perf.py perfrevset"
+def perf(revset):
+    """run benchmark for this very revset"""
+    try:
+        check_call(['./hg', '--config', 'extensions.perf=contrib/perf.py',
+                    'perfrevset', revset])
+    except CalledProcessError, exc:
+        print >> sys.stderr, 'abort: cannot run revset benchmark'
+        sys.exit(exc.returncode)
+
 
 target_rev = sys.argv[1]
 
@@ -61,6 +69,6 @@ for r in revs:
     for idx, rset in enumerate(revsets):
         sys.stdout.write("%i) " % idx)
         sys.stdout.flush()
-        check_call(PERF + ' "%s"' % rset, shell=True)
+        perf(rset)
     print "----------------------------"
 
