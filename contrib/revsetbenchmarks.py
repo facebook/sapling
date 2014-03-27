@@ -78,13 +78,40 @@ print
 
 revs = getrevs(target_rev)
 
+results = []
 for r in revs:
     print "----------------------------"
     printrevision(r)
     print "----------------------------"
     update(r)
+    res = []
+    results.append(res)
     for idx, rset in enumerate(revsets):
-
-        print "%i)" % idx, perf(rset)
+        data = perf(rset)
+        res.append(data)
+        print "%i)" % idx, data
+        sys.stdout.flush()
     print "----------------------------"
 
+
+print """
+
+Result by revset
+================
+"""
+
+print 'Revision:', revs
+for idx, rev in enumerate(revs):
+    sys.stdout.write('%i) ' % idx)
+    sys.stdout.flush()
+    printrevision(rev)
+
+print
+print
+
+for ridx, rset in enumerate(revsets):
+
+    print "revset #%i: %s" % (ridx, rset)
+    for idx, data in enumerate(results):
+        print '%i) %s' % (idx, data[ridx])
+    print
