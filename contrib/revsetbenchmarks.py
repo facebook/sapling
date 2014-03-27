@@ -37,7 +37,7 @@ print "----------------------------"
 print
 
 revs = check_output("hg log --template='{rev}\n' --rev " + target_rev,
-                    shell=True);
+                    shell=True)
 
 revs = [r for r in revs.split() if r]
 
