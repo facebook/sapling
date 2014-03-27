@@ -34,6 +34,13 @@ def perf(revset):
         print >> sys.stderr, 'abort: cannot run revset benchmark'
         sys.exit(exc.returncode)
 
+def printrevision(rev):
+    """print data about a revision"""
+    sys.stdout.write("Revision: ")
+    sys.stdout.flush()
+    check_call(['hg', 'log', '--rev', str(rev), '--template',
+               '{desc|firstline}\n'])
+
 
 target_rev = sys.argv[1]
 
@@ -60,10 +67,7 @@ revs = [r for r in revs.split() if r]
 # Benchmark revisions
 for r in revs:
     print "----------------------------"
-    sys.stdout.write("Revision: ")
-    sys.stdout.flush()
-    check_call('hg log -r %s --template "{desc|firstline}\n"' % r, shell=True)
-
+    printrevision(r)
     print "----------------------------"
     update(r)
     for idx, rset in enumerate(revsets):
