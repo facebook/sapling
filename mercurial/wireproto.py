@@ -628,6 +628,7 @@ def listkeys(repo, proto, namespace):
                    for k, v in d])
     return t
 
+@wireprotocommand('lookup', 'key')
 def lookup(repo, proto, key):
     try:
         k = encoding.tolocal(key)
@@ -794,7 +795,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),
     'stream_out': (stream, ''),
     'unbundle': (unbundle, 'heads'),
