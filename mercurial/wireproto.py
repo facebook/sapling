@@ -605,6 +605,7 @@ def getbundle(repo, proto, others):
     cg = repo.getbundle('serve', **opts)
     return streamres(proto.groupchunks(cg))
 
+@wireprotocommand('heads')
 def heads(repo, proto):
     h = repo.heads()
     return encodelist(h) + "\n"
@@ -790,7 +791,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'heads': (heads, ''),
     'hello': (hello, ''),
     'known': (known, 'nodes *'),
     'listkeys': (listkeys, 'namespace'),
