@@ -12,7 +12,7 @@ from common import HTTP_OK
 HGTYPE = 'application/mercurial-0.1'
 HGERRTYPE = 'application/hg-error'
 
-class webproto(object):
+class webproto(wireproto.abstractserverproto):
     def __init__(self, req, ui):
         self.req = req
         self.response = ''

@@ -9,7 +9,7 @@
 import util, hook, wireproto, changegroup
 import os, sys
 
-class sshserver(object):
+class sshserver(wireproto.abstractserverproto):
     def __init__(self, ui, repo):
         self.ui = ui
         self.repo = repo
