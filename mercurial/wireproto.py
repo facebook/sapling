@@ -750,6 +750,7 @@ def stream(repo, proto):
 
     return streamres(streamer(repo, entries, total_bytes))
 
+@wireprotocommand('unbundle', 'heads')
 def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
 
@@ -795,7 +796,3 @@ def unbundle(repo, proto, heads):
     finally:
         fp.close()
         os.unlink(tempname)
-
-commands.update({
-    'unbundle': (unbundle, 'heads'),
-})
