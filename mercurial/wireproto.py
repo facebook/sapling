@@ -610,6 +610,7 @@ def heads(repo, proto):
     h = repo.heads()
     return encodelist(h) + "\n"
 
+@wireprotocommand('hello')
 def hello(repo, proto):
     '''the hello command returns a set of lines describing various
     interesting things about the server, in an RFC822-like format.
@@ -791,7 +792,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'hello': (hello, ''),
     'known': (known, 'nodes *'),
     'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),
