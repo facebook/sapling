@@ -372,6 +372,44 @@ class wirepeer(peer.peerrepository):
             opts['four'] = four
         return self._call('debugwireargs', one=one, two=two, **opts)
 
+    def _call(self, cmd, **args):
+        """execute <cmd> on the server
+
+        The command is expected to return a simple string.
+
+        returns the server reply as a string."""
+        raise NotImplementedError()
+
+    def _callstream(self, cmd, **args):
+        """execute <cmd> on the server
+
+        The command is expected to return a stream.
+
+        returns the server reply as a file like object."""
+        raise NotImplementedError()
+
+    def _callpush(self, cmd, fp, **args):
+        """execute a <cmd> on server
+
+        The command is expected to be related to a push. Push has a special
+        return method.
+
+        returns the server reply as a (ret, output) tuple. ret is either
+        empty (error) or a stringified int.
+        """
+        raise NotImplementedError()
+
+    def _abort(self, exception):
+        """clearly abort the wire protocol connection and raise the exception
+        """
+        raise NotImplementedError()
+
+
+    def _decompress(self, stream):
+        """decompress a received stream
+        """
+        raise NotImplementedError()
+
 # server side
 
 # wire protocol command can either return a string or one of these classes.
