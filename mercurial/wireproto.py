@@ -581,6 +581,7 @@ def changegroup(repo, proto, roots):
     cg = repo.changegroup(nodes, 'serve')
     return streamres(proto.groupchunks(cg))
 
+@wireprotocommand('changegroupsubset', 'bases heads')
 def changegroupsubset(repo, proto, bases, heads):
     bases = decodelist(bases)
     heads = decodelist(heads)
@@ -787,7 +788,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'changegroupsubset': (changegroupsubset, 'bases heads'),
     'debugwireargs': (debugwireargs, 'one two *'),
     'getbundle': (getbundle, '*'),
     'heads': (heads, ''),
