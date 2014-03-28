@@ -683,6 +683,7 @@ def _walkstreamfiles(repo):
     # this is it's own function so extensions can override it
     return repo.store.walk()
 
+@wireprotocommand('stream_out')
 def stream(repo, proto):
     '''If the server supports streaming clone, it advertises the "stream"
     capability with a value representing the version and flags of the repo
@@ -796,6 +797,5 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'stream_out': (stream, ''),
     'unbundle': (unbundle, 'heads'),
 })
