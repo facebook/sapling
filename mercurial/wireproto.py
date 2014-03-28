@@ -471,6 +471,16 @@ def options(cmd, keys, others):
                          % (cmd, ",".join(others)))
     return opts
 
+# list of commands
+commands = {}
+
+def wireprotocommand(name, args=''):
+    """decorator for wireprotocol command"""
+    def register(func):
+        commands[name] = (func, args)
+        return func
+    return register
+
 def batch(repo, proto, cmds, others):
     repo = repo.filtered("served")
     res = []
@@ -770,7 +780,7 @@ def unbundle(repo, proto, heads):
         fp.close()
         os.unlink(tempname)
 
-commands = {
+commands.update({
     'batch': (batch, 'cmds *'),
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
@@ -788,4 +798,4 @@ commands = {
     'pushkey': (pushkey, 'namespace key old new'),
     'stream_out': (stream, ''),
     'unbundle': (unbundle, 'heads'),
-}
+})
