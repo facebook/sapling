@@ -575,6 +575,7 @@ def _capabilities(repo, proto):
 def capabilities(repo, proto):
     return ' '.join(_capabilities(repo, proto))
 
+@wireprotocommand('changegroup', 'roots')
 def changegroup(repo, proto, roots):
     nodes = decodelist(roots)
     cg = repo.changegroup(nodes, 'serve')
@@ -786,7 +787,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'changegroup': (changegroup, 'roots'),
     'changegroupsubset': (changegroupsubset, 'bases heads'),
     'debugwireargs': (debugwireargs, 'one two *'),
     'getbundle': (getbundle, '*'),
