@@ -2285,4 +2285,30 @@ enabling largefiles extension.
   $ test -d clone-pull-dst
   [1]
 
+#if serve
+
+Test largefiles specific peer setup, when largefiles is enabled
+locally (issue4109)
+
+  $ hg showconfig extensions | grep largefiles
+  extensions.largefiles=!
+  $ mkdir -p $TESTTMP/individualenabling/usercache
+
+  $ hg serve -R enabledlocally -d -p $HGPORT --pid-file hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg init pull-dst
+  $ cat > pull-dst/.hg/hgrc <<EOF
+  > [extensions]
+  > # enable locally
+  > largefiles=
+  > [largefiles]
+  > # ignore system cache to force largefiles specific wire proto access
+  > usercache=$TESTTMP/individualenabling/usercache
+  > EOF
+  $ hg -R pull-dst -q pull -u http://localhost:$HGPORT
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+#endif
+
   $ cd ..

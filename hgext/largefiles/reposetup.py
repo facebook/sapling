@@ -16,14 +16,13 @@ from mercurial.i18n import _
 from mercurial import localrepo
 
 import lfcommands
-import proto
 import lfutil
 
 def reposetup(ui, repo):
-    # wire repositories should be given new wireproto functions but not the
-    # other largefiles modifications
+    # wire repositories should be given new wireproto functions
+    # by "proto.wirereposetup()" via "hg.wirepeersetupfuncs"
     if not repo.local():
-        return proto.wirereposetup(ui, repo)
+        return
 
     class lfilesrepo(repo.__class__):
         lfstatus = False

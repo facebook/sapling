@@ -98,6 +98,9 @@ def openpath(ui, path):
     else:
         return url.open(ui, path)
 
+# a list of (ui, repo) functions called for wire peer initialization
+wirepeersetupfuncs = []
+
 def _peerorrepo(ui, path, create=False):
     """return a repository object for the specified path"""
     obj = _peerlookup(path).instance(ui, path, create)
@@ -106,6 +109,9 @@ def _peerorrepo(ui, path, create=False):
         hook = getattr(module, 'reposetup', None)
         if hook:
             hook(ui, obj)
+    if not obj.local():
+        for f in wirepeersetupfuncs:
+            f(ui, obj)
     return obj
 
 def repository(ui, path='', create=False):
