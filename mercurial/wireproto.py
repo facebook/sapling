@@ -521,6 +521,7 @@ def between(repo, proto, pairs):
         r.append(encodelist(b) + "\n")
     return "".join(r)
 
+@wireprotocommand('branchmap')
 def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
@@ -783,7 +784,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'branchmap': (branchmap, ''),
     'branches': (branches, 'nodes'),
     'capabilities': (capabilities, ''),
     'changegroup': (changegroup, 'roots'),
