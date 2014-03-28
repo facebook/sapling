@@ -594,6 +594,7 @@ def debugwireargs(repo, proto, one, two, others):
     opts = options('debugwireargs', ['three', 'four'], others)
     return repo.debugwireargs(one, two, **opts)
 
+@wireprotocommand('getbundle', '*')
 def getbundle(repo, proto, others):
     opts = options('getbundle', ['heads', 'common', 'bundlecaps'], others)
     for k, v in opts.iteritems():
@@ -789,7 +790,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'getbundle': (getbundle, '*'),
     'heads': (heads, ''),
     'hello': (hello, ''),
     'known': (known, 'nodes *'),
