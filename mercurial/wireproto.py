@@ -621,6 +621,7 @@ def hello(repo, proto):
     '''
     return "capabilities: %s\n" % (capabilities(repo, proto))
 
+@wireprotocommand('listkeys', 'namespace')
 def listkeys(repo, proto, namespace):
     d = repo.listkeys(encoding.tolocal(namespace)).items()
     t = '\n'.join(['%s\t%s' % (encoding.fromlocal(k), encoding.fromlocal(v))
@@ -793,7 +794,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),
     'stream_out': (stream, ''),
