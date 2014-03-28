@@ -644,6 +644,7 @@ def lookup(repo, proto, key):
 def known(repo, proto, nodes, others):
     return ''.join(b and "1" or "0" for b in repo.known(decodelist(nodes)))
 
+@wireprotocommand('pushkey', 'namespace key old new')
 def pushkey(repo, proto, namespace, key, old, new):
     # compatibility with pre-1.8 clients which were accidentally
     # sending raw binary nodes rather than utf-8-encoded hex
@@ -795,7 +796,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'pushkey': (pushkey, 'namespace key old new'),
     'stream_out': (stream, ''),
     'unbundle': (unbundle, 'heads'),
 })
