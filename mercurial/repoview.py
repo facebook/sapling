@@ -10,6 +10,7 @@ import copy
 import phases
 import util
 import obsolete
+import tags as tagsmod
 
 
 def hideablerevs(repo):
@@ -35,9 +36,10 @@ def computehidden(repo):
             blockers.append(par.rev())
         for bm in repo._bookmarks.values():
             blockers.append(repo[bm].rev())
-        tags = [n for t, n in repo.tags().iteritems()
-                if (repo.tagtype(t) and repo.tagtype(t) != 'global')]
-        blockers.extend(repo[t].rev() for t in tags)
+        tags = {}
+        tagsmod.readlocaltags(repo.ui, repo, tags, {})
+        if tags:
+            blockers.extend(repo[t[0]].rev() for t in tags.values())
         blocked = cl.ancestors(blockers, inclusive=True)
         return frozenset(r for r in hideable if r not in blocked)
     return frozenset()
