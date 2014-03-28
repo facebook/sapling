@@ -481,6 +481,7 @@ def wireprotocommand(name, args=''):
         return func
     return register
 
+@wireprotocommand('batch', 'cmds *')
 def batch(repo, proto, cmds, others):
     repo = repo.filtered("served")
     res = []
@@ -781,7 +782,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'batch': (batch, 'cmds *'),
     'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
     'branches': (branches, 'nodes'),
