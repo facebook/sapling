@@ -638,6 +638,7 @@ def lookup(repo, proto, key):
         success = 0
     return "%s %s\n" % (success, r)
 
+@wireprotocommand('known', 'nodes *')
 def known(repo, proto, nodes, others):
     return ''.join(b and "1" or "0" for b in repo.known(decodelist(nodes)))
 
@@ -792,7 +793,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'known': (known, 'nodes *'),
     'listkeys': (listkeys, 'namespace'),
     'lookup': (lookup, 'key'),
     'pushkey': (pushkey, 'namespace key old new'),
