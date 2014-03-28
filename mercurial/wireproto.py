@@ -327,19 +327,38 @@ class wirepeer(peer.peerrepository):
 
 # server side
 
+# wire protocol command can either return a string or one of these classes.
 class streamres(object):
+    """wireproto reply: binary stream
+
+    The call was successful and the result is a stream.
+    Iterate on the `self.gen` attribute to retrieve chunks.
+    """
     def __init__(self, gen):
         self.gen = gen
 
 class pushres(object):
+    """wireproto reply: success with simple integer return
+
+    The call was successful and returned an integer contained in `self.res`.
+    """
     def __init__(self, res):
         self.res = res
 
 class pusherr(object):
+    """wireproto reply: failure
+
+    The call failed. The `self.res` attribute contains the error message.
+    """
     def __init__(self, res):
         self.res = res
 
 class ooberror(object):
+    """wireproto reply: failure of a batch of operation
+
+    Something failed during a batch call. The error message is stored in
+    `self.message`.
+    """
     def __init__(self, message):
         self.message = message
 
