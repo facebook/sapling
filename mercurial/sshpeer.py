@@ -157,6 +157,9 @@ class sshpeer(wireproto.wirepeer):
 
         return self.pipei
 
+    def _callcompressable(self, cmd, **args):
+        return self._callstream(cmd, **args)
+
     def _call(self, cmd, **args):
         self._callstream(cmd, **args)
         return self._recv()
@@ -176,8 +179,6 @@ class sshpeer(wireproto.wirepeer):
             return '', r
         return self._recv(), ''
 
-    def _decompress(self, stream):
-        return stream
 
     def _recv(self):
         l = self.pipei.readline()

@@ -211,10 +211,8 @@ class httppeer(wireproto.wirepeer):
             fp.close()
             os.unlink(tempname)
 
-    def _abort(self, exception):
-        raise exception
-
-    def _decompress(self, stream):
+    def _callcompressable(self, cmd, **args):
+        stream =  self._callstream(cmd, **args)
         return util.chunkbuffer(zgenerator(stream))
 
 class httpspeer(httppeer):

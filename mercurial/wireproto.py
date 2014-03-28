@@ -314,16 +314,16 @@ class wirepeer(peer.peerrepository):
 
     def changegroup(self, nodes, kind):
         n = encodelist(nodes)
-        f = self._callstream("changegroup", roots=n)
-        return changegroupmod.unbundle10(self._decompress(f), 'UN')
+        f = self._callcompressable("changegroup", roots=n)
+        return changegroupmod.unbundle10(f, 'UN')
 
     def changegroupsubset(self, bases, heads, kind):
         self.requirecap('changegroupsubset', _('look up remote changes'))
         bases = encodelist(bases)
         heads = encodelist(heads)
-        f = self._callstream("changegroupsubset",
-                             bases=bases, heads=heads)
-        return changegroupmod.unbundle10(self._decompress(f), 'UN')
+        f = self._callcompressable("changegroupsubset",
+                                   bases=bases, heads=heads)
+        return changegroupmod.unbundle10(f, 'UN')
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None):
         self.requirecap('getbundle', _('look up remote changes'))
@@ -334,8 +334,8 @@ class wirepeer(peer.peerrepository):
             opts['common'] = encodelist(common)
         if bundlecaps is not None:
             opts['bundlecaps'] = ','.join(bundlecaps)
-        f = self._callstream("getbundle", **opts)
-        return changegroupmod.unbundle10(self._decompress(f), 'UN')
+        f = self._callcompressable("getbundle", **opts)
+        return changegroupmod.unbundle10(f, 'UN')
 
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the
@@ -388,6 +388,19 @@ class wirepeer(peer.peerrepository):
         returns the server reply as a file like object."""
         raise NotImplementedError()
 
+    def _callcompressable(self, cmd, **args):
+        """execute <cmd> on the server
+
+        The command is expected to return a stream.
+
+        The stream may have been compressed in some implementaitons. This
+        function takes care of the decompression. This is the only difference
+        with _callstream.
+
+        returns the server reply as a file like object.
+        """
+        raise NotImplementedError()
+
     def _callpush(self, cmd, fp, **args):
         """execute a <cmd> on server
 
@@ -401,12 +414,6 @@ class wirepeer(peer.peerrepository):
 
     def _abort(self, exception):
         """clearly abort the wire protocol connection and raise the exception
-        """
-        raise NotImplementedError()
-
-
-    def _decompress(self, stream):
-        """decompress a received stream
         """
         raise NotImplementedError()
 
