@@ -588,6 +588,7 @@ def changegroupsubset(repo, proto, bases, heads):
     cg = repo.changegroupsubset(bases, heads, 'serve')
     return streamres(proto.groupchunks(cg))
 
+@wireprotocommand('debugwireargs', 'one two *')
 def debugwireargs(repo, proto, one, two, others):
     # only accept optional args from the known set
     opts = options('debugwireargs', ['three', 'four'], others)
@@ -788,7 +789,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'debugwireargs': (debugwireargs, 'one two *'),
     'getbundle': (getbundle, '*'),
     'heads': (heads, ''),
     'hello': (hello, ''),
