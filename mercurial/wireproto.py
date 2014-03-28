@@ -571,6 +571,7 @@ def _capabilities(repo, proto):
 
 # If you are writting and extension and consider wrapping this function. Wrap
 # `_capabilities` instead.
+@wireprotocommand('capabilities')
 def capabilities(repo, proto):
     return ' '.join(_capabilities(repo, proto))
 
@@ -785,7 +786,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'capabilities': (capabilities, ''),
     'changegroup': (changegroup, 'roots'),
     'changegroupsubset': (changegroupsubset, 'bases heads'),
     'debugwireargs': (debugwireargs, 'one two *'),
