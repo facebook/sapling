@@ -513,6 +513,7 @@ def batch(repo, proto, cmds, others):
         res.append(escapearg(result))
     return ';'.join(res)
 
+@wireprotocommand('between', 'pairs')
 def between(repo, proto, pairs):
     pairs = [decodelist(p, '-') for p in pairs.split(" ")]
     r = []
@@ -782,7 +783,6 @@ def unbundle(repo, proto, heads):
         os.unlink(tempname)
 
 commands.update({
-    'between': (between, 'pairs'),
     'branchmap': (branchmap, ''),
     'branches': (branches, 'nodes'),
     'capabilities': (capabilities, ''),
