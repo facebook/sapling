@@ -52,20 +52,7 @@ def computehidden(repo):
     hideable = hideablerevs(repo)
     if hideable:
         cl = repo.changelog
-        firsthideable = min(hideable)
-        revs = cl.revs(start=firsthideable)
-        tofilter = repo.revs(
-            '(%ld) and children(%ld)', list(revs), list(hideable))
-        blockers = [r for r in tofilter if r not in hideable]
-        for par in repo[None].parents():
-            blockers.append(par.rev())
-        for bm in repo._bookmarks.values():
-            blockers.append(repo[bm].rev())
-        tags = {}
-        tagsmod.readlocaltags(repo.ui, repo, tags, {})
-        if tags:
-            blockers.extend(repo[t[0]].rev() for t in tags.values())
-        blocked = cl.ancestors(blockers, inclusive=True)
+        blocked = cl.ancestors(_gethiddenblockers(repo), inclusive=True)
         return frozenset(r for r in hideable if r not in blocked)
     return frozenset()
 
