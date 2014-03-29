@@ -355,10 +355,46 @@ ancestor can accept 0 or more arguments
   $ log 'matching(6:7, "phase parents user date branch summary files description substate")'
   6
   7
+
+Testing min and max
+
+max: simple
+
   $ log 'max(contains(a))'
   5
+
+max: simple on unordered set)
+
+  $ log 'max((4+0+2+5+7) and contains(a))'
+  5
+
+max: no result
+
+  $ log 'max(contains(stringthatdoesnotappearanywhere))'
+
+max: no result on unordered set
+
+  $ log 'max((4+0+2+5+7) and contains(stringthatdoesnotappearanywhere))'
+
+min: simple
+
   $ log 'min(contains(a))'
   0
+
+min: simple on unordered set
+
+  $ log 'min((4+0+2+5+7) and contains(a))'
+  0
+
+min: empty
+
+  $ log 'min(contains(stringthatdoesnotappearanywhere))'
+
+min: empty on unordered set
+
+  $ log 'min((4+0+2+5+7) and contains(stringthatdoesnotappearanywhere))'
+
+
   $ log 'merge()'
   6
   $ log 'branchpoint()'

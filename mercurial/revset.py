@@ -2287,7 +2287,7 @@ class _orderedsetmixin(object):
         """return the first revision in the set"""
         for r in self:
             return r
-        return None
+        raise ValueError('arg is an empty sequence')
 
     def _last(self):
         """return the last revision in the set"""
