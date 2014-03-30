@@ -3318,6 +3318,20 @@ def grep(ui, repo, pattern, *pats, **opts):
         def __eq__(self, other):
             return self.line == other.line
 
+        def __iter__(self):
+            yield (self.line[:self.colstart], '')
+            yield (self.line[self.colstart:self.colend], 'grep.match')
+            rest = self.line[self.colend:]
+            while rest != '':
+                match = regexp.search(rest)
+                if not match:
+                    yield (rest, '')
+                    break
+                mstart, mend = match.span()
+                yield (rest[:mstart], '')
+                yield (rest[mstart:mend], 'grep.match')
+                rest = rest[mend:]
+
     matches = {}
     copies = {}
     def grepbody(fn, rev, body):
@@ -3357,7 +3371,6 @@ def grep(ui, repo, pattern, *pats, **opts):
             iter = [('', l) for l in states]
         for change, l in iter:
             cols = [(fn, 'grep.filename'), (str(rev), 'grep.rev')]
-            before, match, after = None, None, None
 
             if opts.get('line_number'):
                 cols.append((str(l.linenum), 'grep.linenumber'))
@@ -3367,25 +3380,20 @@ def grep(ui, repo, pattern, *pats, **opts):
                 cols.append((ui.shortuser(ctx.user()), 'grep.user'))
             if opts.get('date'):
                 cols.append((datefunc(ctx.date()), 'grep.date'))
-            if not opts.get('files_with_matches'):
-                before = l.line[:l.colstart]
-                match = l.line[l.colstart:l.colend]
-                after = l.line[l.colend:]
             for col, label in cols[:-1]:
                 ui.write(col, label=label)
                 ui.write(sep, label='grep.sep')
             ui.write(cols[-1][0], label=cols[-1][1])
-            if before is not None:
+            if not opts.get('files_with_matches'):
                 ui.write(sep, label='grep.sep')
                 if not opts.get('text') and binary():
                     ui.write(" Binary file matches")
                 else:
-                    ui.write(before)
-                    ui.write(match, label='grep.match')
-                    ui.write(after)
+                    for s, label in l:
+                        ui.write(s, label=label)
             ui.write(eol)
             found = True
-            if before is None:
+            if opts.get('files_with_matches'):
                 break
         return found
 
