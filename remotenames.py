@@ -57,7 +57,8 @@ def expull(orig, repo, remote, *args, **kwargs):
         try:
             path = activepath(repo.ui, remote)
             if path:
-                saveremotenames(repo, path, remote.branchmap(), remote.listkeys('bookmarks'))
+                saveremotenames(repo, path, remote.branchmap(),
+                                remote.listkeys('bookmarks'))
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
@@ -127,6 +128,7 @@ def reposetup(ui, repo):
                 pass
             return super(remotenamesrepo, self).lookup(key)
 
+        # arguably, this needs a better name
         @util.propertycache
         def _preferredremotenames(self):
             """This property is a dictionary of values identical to _remotenames but
