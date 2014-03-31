@@ -70,7 +70,7 @@ class mergestate(object):
                 bits = record.split("\0")
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
-                raise util.Abort(_('unsupported merge state record:'
+                raise util.Abort(_('unsupported merge state record: %s'
                                    % rtype))
         self._dirty = False
     def _readrecords(self):
