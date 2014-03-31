@@ -752,8 +752,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         if not changesets:
             extendnode = extendbisectrange(nodes, good)
             if extendnode is not None:
-                ui.write(_("Extending search to changeset %d:%s\n"
-                         % (extendnode.rev(), extendnode)))
+                ui.write(_("Extending search to changeset %d:%s\n")
+                         % (extendnode.rev(), extendnode))
                 state['current'] = [extendnode.node()]
                 hbisect.save_state(repo, state)
                 if noupdate:

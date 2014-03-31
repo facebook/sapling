@@ -321,8 +321,8 @@ def _sanitize(ui, path):
         for f in names:
             if f.lower() == 'hgrc':
                 ui.warn(
-                    _("warning: removing potentially hostile .hg/hgrc in '%s'"
-                      % path))
+                    _("warning: removing potentially hostile .hg/hgrc in '%s'")
+                      % path)
                 os.unlink(os.path.join(dirname, f))
     os.walk(path, v, None)
 
