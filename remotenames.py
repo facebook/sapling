@@ -12,6 +12,7 @@ from mercurial import revset
 from mercurial import templatekw
 from mercurial import templater
 from mercurial import exchange
+from mercurial import namespaces
 
 from hgext import schemes
 
@@ -60,6 +61,8 @@ extensions.wrapfunction(exchange, 'pull', expull)
 def reposetup(ui, repo):
     if not repo.local():
         return
+
+    loadremotenames(repo)
 
     class remotenamesrepo(repo.__class__):
         def _findtags(self):
@@ -249,6 +252,34 @@ def joinremotename(remote, ref):
     if ref:
         remote += '/' + ref
     return remote
+
+def loadremotenames(repo):
+    rfile = repo.join('remotenames')
+    # exit early if there is nothing to do
+    if not os.path.exists(rfile):
+        return
+
+    _remotenames = {}
+    f = open(rfile)
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        hash, name = line.split(' ', 1)
+        if hash not in repo:
+            continue
+        ctx = repo[hash]
+        if not ctx.extra().get('close'):
+            _remotenames[name] = ctx.node()
+    f.close()
+
+    ns = namespaces.namespace
+    n = ns("remotenames", "remotename",
+           lambda rp: _remotenames.keys(),
+           lambda rp, name: _remotenames.get(name),
+           lambda rp, node: [name for name, n in _remotenames.iteritems()
+                             if n == node])
+    repo.names.addnamespace(n)
 
 def saveremotenames(repo, remote, branches, bookmarks):
     bfile = repo.join('remotenames')

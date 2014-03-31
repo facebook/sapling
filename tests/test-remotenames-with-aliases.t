@@ -92,6 +92,7 @@
   changeset:   4:a43aa1e4a27c
   branch:      stable
   tag:         beta/stable
+  remotename:  beta/stable
   parent:      2:5b35a0d5bd4d
   parent:      3:5ae9f075bc64
   user:        test
@@ -101,6 +102,8 @@
   changeset:   3:5ae9f075bc64
   tag:         beta
   tag:         beta/default
+  remotename:  beta
+  remotename:  beta/default
   parent:      1:2b9c7234e035
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -109,12 +112,14 @@
   changeset:   2:5b35a0d5bd4d
   branch:      stable
   tag:         default/stable
+  remotename:  default/stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
   changeset:   1:2b9c7234e035
   tag:         default/default
+  remotename:  default/default
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
