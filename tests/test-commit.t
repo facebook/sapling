@@ -299,7 +299,7 @@ test saving last-message.txt
   $ echo 'sub = sub' > .hgsub
   $ hg add .hgsub
 
-  $ cat > $TESTDIR/editor.sh <<EOF
+  $ cat > $TESTTMP/editor.sh <<EOF
   > echo "==== before editing:"
   > cat \$1
   > echo "===="
@@ -307,7 +307,7 @@ test saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTDIR/editor.sh" hg commit -S -q
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg commit -S -q
   ==== before editing:
   
   

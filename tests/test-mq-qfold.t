@@ -144,7 +144,7 @@ Test saving last-message.txt:
 
   $ hg qrefresh -m "original message"
 
-  $ cat > $TESTDIR/commitfailure.py <<EOF
+  $ cat > $TESTTMP/commitfailure.py <<EOF
   > from mercurial import util
   > def reposetup(ui, repo):
   >     class commitfailure(repo.__class__):
@@ -155,10 +155,10 @@ Test saving last-message.txt:
 
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > commitfailure = $TESTDIR/commitfailure.py
+  > commitfailure = $TESTTMP/commitfailure.py
   > EOF
 
-  $ cat > $TESTDIR/editor.sh << EOF
+  $ cat > $TESTTMP/editor.sh << EOF
   > echo "==== before editing"
   > cat \$1
   > echo "===="
@@ -166,7 +166,7 @@ Test saving last-message.txt:
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTDIR/editor.sh" hg qfold -e p3
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e p3
   ==== before editing
   original message====
   refresh interrupted while patch was popped! (revert --all, qpush to recover)

@@ -107,7 +107,7 @@ check histedit_source
 
 check saving last-message.txt
 
-  $ cat > $TESTDIR/abortfolding.py <<EOF
+  $ cat > $TESTTMP/abortfolding.py <<EOF
   > from mercurial import util
   > def abortfolding(ui, repo, hooktype, **kwargs):
   >     ctx = repo[kwargs.get('node')]
@@ -117,10 +117,10 @@ check saving last-message.txt
   > EOF
   $ cat > .hg/hgrc <<EOF
   > [hooks]
-  > pretxncommit.abortfolding = python:$TESTDIR/abortfolding.py:abortfolding
+  > pretxncommit.abortfolding = python:$TESTTMP/abortfolding.py:abortfolding
   > EOF
 
-  $ cat > $TESTDIR/editor.sh << EOF
+  $ cat > $TESTTMP/editor.sh << EOF
   > echo "==== before editing"
   > cat \$1
   > echo "===="
@@ -128,7 +128,7 @@ check saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTDIR/editor.sh" hg histedit 6de59d13424a --commands - 2>&1 <<EOF | fixbundle
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 6de59d13424a --commands - 2>&1 <<EOF | fixbundle
   > pick 6de59d13424a f
   > fold 9c277da72c9b d
   > EOF
