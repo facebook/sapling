@@ -14,8 +14,16 @@
 # to compare performance.
 
 import sys
-from subprocess import check_call, check_output, CalledProcessError, STDOUT
+from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
 
+def check_output(*args, **kwargs):
+    kwargs.setdefault('stderr', PIPE)
+    kwargs.setdefault('stdout', PIPE)
+    proc = Popen(*args, **kwargs)
+    output, error = proc.communicate()
+    if proc.returncode != 0:
+        raise CalledProcessError(proc.returncode, ' '.join(args))
+    return output
 
 def update(rev):
     """update the repo to a revision"""
