@@ -9,7 +9,7 @@ from i18n import _
 from node import nullrev, nullid, hex
 import mdiff, util, dagutil
 import struct, os, bz2, zlib, tempfile
-import discovery
+import discovery, error
 
 _BUNDLE10_DELTA_HEADER = "20s20s20s20s"
 
@@ -514,3 +514,43 @@ def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
     return changegroupsubset(repo, basenodes, repo.heads(), source)
 
+def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
+    revisions = 0
+    files = 0
+    while True:
+        chunkdata = source.filelogheader()
+        if not chunkdata:
+            break
+        f = chunkdata["filename"]
+        repo.ui.debug("adding %s revisions\n" % f)
+        pr()
+        fl = repo.file(f)
+        o = len(fl)
+        if not fl.addgroup(source, revmap, trp):
+            raise util.Abort(_("received file revlog group is empty"))
+        revisions += len(fl) - o
+        files += 1
+        if f in needfiles:
+            needs = needfiles[f]
+            for new in xrange(o, len(fl)):
+                n = fl.node(new)
+                if n in needs:
+                    needs.remove(n)
+                else:
+                    raise util.Abort(
+                        _("received spurious file revlog entry"))
+            if not needs:
+                del needfiles[f]
+    repo.ui.progress(_('files'), None)
+
+    for f, needs in needfiles.iteritems():
+        fl = repo.file(f)
+        for n in needs:
+            try:
+                fl.rev(n)
+            except error.LookupError:
+                raise util.Abort(
+                    _('missing file data for %s:%s - run hg verify') %
+                    (f, hex(n)))
+
+    return revisions, files
