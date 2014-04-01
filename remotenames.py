@@ -11,21 +11,9 @@ from mercurial import util
 from mercurial import revset
 from mercurial import templatekw
 from mercurial import templater
+from mercurial import exchange
 
 from hgext import schemes
-
-try:
-    # Mercurial 3.0 adds laziness for revsets, which breaks returning lists.
-    baseset = revset.baseset
-except AttributeError:
-    baseset = lambda x: x
-
-hasexchange = False
-try:
-    from mercurial import exchange
-    hasexchange = bool(getattr(exchange, 'push', False))
-except ImportError:
-    pass
 
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
@@ -66,27 +54,12 @@ def expull(orig, repo, remote, *args, **kwargs):
         lock.release()
         return res
 
-if hasexchange:
-    extensions.wrapfunction(exchange, 'push', expush)
-    extensions.wrapfunction(exchange, 'pull', expull)
+extensions.wrapfunction(exchange, 'push', expush)
+extensions.wrapfunction(exchange, 'pull', expull)
 
 def reposetup(ui, repo):
     if not repo.local():
         return
-
-    if (getattr(repo.__class__, 'pull', False) or
-        getattr(repo.__class__, 'push', False)):
-        # Mercurial 3.1 and earlier use push/pull methods on the
-        # localrepo object instead of in the exchange module. Avoid
-        # reintroducing these methods into newer hg versions so we can
-        # continue to detect breakage.
-        class rnexchangerepo(repo.__class__):
-            def pull(self, remote, *args, **kwargs):
-                return expull(super(remotenamesrepo, self).pull, self, remote, *args, **kwargs)
-
-            def push(self, remote, *args, **kwargs):
-                return expush(super(remotenamesrepo, self).push, self, remote, *args, **kwargs)
-        repo.__class__ = rnexchangerepo
 
     class remotenamesrepo(repo.__class__):
         def _findtags(self):
@@ -307,20 +280,10 @@ def upstream_revs(filt, repo, subset, x):
              repo._remotenames.iteritems() if filt(name)]
     if not upstream_tips: []
 
-    ls = getattr(revset, 'lazyset', False)
-    if ls:
-        # If revset.lazyset exists (hg 3.0), use lazysets instead for
-        # speed.
-        tipancestors = repo.revs('::%ln', map(node.bin, upstream_tips))
-        def cond(n):
-            return n in tipancestors
-        return ls(subset, cond)
-    # 2.9 and earlier codepath
-    upstream = reduce(lambda x, y: x.update(y) or x,
-                      map(lambda x: set(revset.ancestors(repo, subset, x)),
-                          [('string', n) for n in upstream_tips]),
-                      set())
-    return [r for r in subset if r in upstream]
+    tipancestors = repo.revs('::%ln', map(node.bin, upstream_tips))
+    def cond(n):
+        return n in tipancestors
+    return revset.filteredset(subset, cond)
 
 def upstream(repo, subset, x):
     '''``upstream()``
@@ -348,7 +311,7 @@ def remotenamesrevset(repo, subset, x):
     """
     args = revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set(repo[n].rev() for n in repo._remotenames.itervalues())
-    return baseset([r for r in subset if r in remoterevs])
+    return revset.baseset([r for r in subset if r in remoterevs])
 
 revset.symbols.update({'upstream': upstream,
                        'pushed': pushed,
