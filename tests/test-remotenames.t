@@ -1,5 +1,4 @@
   > echo "[extensions]" >> $HGRCPATH
-  > echo "graphlog=" >> $HGRCPATH
   > echo "remotenames=$(echo $(dirname $TESTDIR))/remotenames.py" >> $HGRCPATH
 
   > FILTERPWD="sed s%$PWD/%%g"

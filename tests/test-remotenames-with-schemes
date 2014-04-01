@@ -2,7 +2,6 @@
 
 
 echo "[extensions]" >> $HGRCPATH
-echo "graphlog=" >> $HGRCPATH
 echo "schemes=" >> $HGRCPATH
 echo "remotenames=$(echo $(dirname $(dirname $0)))/remotenames.py" >> $HGRCPATH
 

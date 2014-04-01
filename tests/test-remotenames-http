@@ -1,7 +1,6 @@
 #!/bin/sh
 
 echo "[extensions]" >> $HGRCPATH
-echo "graphlog=" >> $HGRCPATH
 echo "remotenames=$(echo $(dirname $(dirname $0)))/remotenames.py" >> $HGRCPATH
 
 hg init test
