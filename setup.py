@@ -4,7 +4,7 @@ except:
     from distutils.core import setup
 
 setup(
-    name='hg-remotebranches',
+    name='hg-remotenames',
     version='1.0.0',
     author='Augie Fackler',
     maintainer='Augie Fackler',
@@ -18,5 +18,5 @@ in .hg/hgrc.
     """.strip(),
     keywords='hg mercurial',
     license='GPLv2',
-    py_modules=['hg_remotebranches'],
+    py_modules=['remotenames'],
 )

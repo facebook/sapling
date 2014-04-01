@@ -2,7 +2,7 @@
 
 echo "[extensions]" >> $HGRCPATH
 echo "graphlog=" >> $HGRCPATH
-echo "remotebranches=$(echo $(dirname $(dirname $0)))/hg_remotebranches.py" >> $HGRCPATH
+echo "remotenames=$(echo $(dirname $(dirname $0)))/remotenames.py" >> $HGRCPATH
 
 hg init test
 cd test

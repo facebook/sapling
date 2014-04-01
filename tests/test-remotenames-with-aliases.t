@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > remotebranches=$(echo $(dirname $TESTDIR))/hg_remotebranches.py 
-  > [remotebranches]
+  > remotenames=$(echo $(dirname $TESTDIR))/remotenames.py
+  > [remotenames]
   > alias.default = True
   > EOF
 

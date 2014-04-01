@@ -1,6 +1,6 @@
   > echo "[extensions]" >> $HGRCPATH
   > echo "graphlog=" >> $HGRCPATH
-  > echo "remotebranches=$(echo $(dirname $TESTDIR))/hg_remotebranches.py" >> $HGRCPATH
+  > echo "remotenames=$(echo $(dirname $TESTDIR))/remotenames.py" >> $HGRCPATH
 
   > FILTERPWD="sed s%$PWD/%%g"
 
@@ -117,9 +117,9 @@ graph shows tags for the branch heads of each path
      summary:     add a
   
 
-make sure bogus revisions in .hg/remotebranches do not break hg
+make sure bogus revisions in .hg/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
-  > .hg/remotebranches
+  > .hg/remotenames
   $ hg parents
   changeset:   6:ce61ec32ee23
   tag:         tip
@@ -165,7 +165,7 @@ Upstream without configuration is synonymous with pushed():
   
 
 but configured, it'll do the expected thing:
-  $ echo '[remotebranches]' >> .hg/hgrc
+  $ echo '[remotenames]' >> .hg/hgrc
   $ echo 'upstream=alpha' >> .hg/hgrc
   $ hg log --graph -r 'not upstream()'
   @    changeset:   6:ce61ec32ee23
@@ -207,10 +207,10 @@ but configured, it'll do the expected thing:
   |  summary:     add c
   |
 
-Test remotebranches revset and keyword
+Test remotenames revset and keyword
 
-  $ hg log -r 'remotebranches()' \
-  >   --template '{rev}:{node|short} {remotebranches}\n'
+  $ hg log -r 'remotenames()' \
+  >   --template '{rev}:{node|short} {remotenames}\n'
   1:7c3bad9141dc alpha/default
   2:95cb4ab9fe1d alpha/stable
   3:78f83396d79e beta/default

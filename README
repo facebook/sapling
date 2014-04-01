@@ -1,7 +1,7 @@
 .. -*-restructuredtext-*-
 
 ==============
-remotebranches
+remotenames
 ==============
 Keep track of remote branch heads in Mercurial.
 
@@ -32,17 +32,17 @@ This extension should work properly with paths from the schemes extension
 included with Mercurial 1.4 and later. Other extensions which perform varying
 kinds of manipulation on the repository path may not function as expected.
 
-When revsets are available (Mercurial 1.7 and later), remotebranches
+When revsets are available (Mercurial 1.7 and later), remotenames
 makes three new revsets available: ``pushed()``, ``upstream()`` and
-``remotebranches()``. The ``pushed()`` revset returns all revisions
+``remotenames()``. The ``pushed()`` revset returns all revisions
 that are have been pushed to any repository tracked by
-remotebranches. The ``upstream()`` set is those revisions which are in
+remotenames. The ``upstream()`` set is those revisions which are in
 a repository whose path is listed in the ``upstream`` field of the
-``[remotebranches]`` configuration section. If there is no
-``remotebranches.upstream`` setting, it defaults to behaving
-identically to ``pushed()``. The ``remotebranches()`` revset simply
+``[remotenames]`` configuration section. If there is no
+``remotenames.upstream`` setting, it defaults to behaving
+identically to ``pushed()``. The ``remotenames()`` revset simply
 returns all remote branches head changesets.
 
 When template keywords can be registered (Mercurial 1.5 and later),
-remotebranches adds a ``remotebranches`` keyword returning a space
+remotenames adds a ``remotenames`` keyword returning a space
 separated list of all names of remote branches heads on a changeset.
