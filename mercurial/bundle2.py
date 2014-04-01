@@ -292,16 +292,22 @@ class unbundle20(object):
             data = headerblock[offset:(offset + size)]
             self._offset = offset + size
             return data
-        typesize = _unpack(_fparttypesize, fromheader(1))[0]
+        def unpackheader(format):
+            """read given format from header
+
+            This automatically compute the size of the format to read."""
+            data = fromheader(struct.calcsize(format))
+            return _unpack(format, data)
+
+        typesize = unpackheader(_fparttypesize)[0]
         parttype = fromheader(typesize)
         self.ui.debug('part type: "%s"\n' % parttype)
         ## reading parameters
         # param count
-        mancount, advcount = _unpack(_fpartparamcount, fromheader(2))
+        mancount, advcount = unpackheader(_fpartparamcount)
         self.ui.debug('part parameters: %i\n' % (mancount + advcount))
         # param size
-        paramsizes = _unpack(_makefpartparamsizes(mancount + advcount),
-                             fromheader(2*(mancount + advcount)))
+        paramsizes = unpackheader(_makefpartparamsizes(mancount + advcount))
         # make it a list of couple again
         paramsizes = zip(paramsizes[::2], paramsizes[1::2])
         # split mandatory from advisory
