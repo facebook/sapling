@@ -321,11 +321,11 @@ Test part
   end of bundle
 
   $ cat ../parts.hg2
-  HG20\x00\x00\x00\r (esc)
-  test:empty\x00\x00\x00\x00\x00\x00\x00\r (esc)
-  test:empty\x00\x00\x00\x00\x00\x00\x00\x0c	test:song\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
+  HG20\x00\x00\x00\x11 (esc)
+  test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
+  test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00'	test:math\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x03\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg statbundle2 < ../parts.hg2
@@ -353,21 +353,25 @@ Test part
   reading bundle2 stream parameters
   options count: 0
   start extraction of bundle2 parts
-  part header size: 13
+  part header size: 17
   part type: "test:empty"
+  part id: "0"
   part parameters: 0
   payload chunk size: 0
-  part header size: 13
+  part header size: 17
   part type: "test:empty"
+  part id: "1"
   part parameters: 0
   payload chunk size: 0
-  part header size: 12
+  part header size: 16
   part type: "test:song"
+  part id: "2"
   part parameters: 0
   payload chunk size: 178
   payload chunk size: 0
-  part header size: 39
+  part header size: 43
   part type: "test:math"
+  part id: "3"
   part parameters: 3
   payload chunk size: 2
   payload chunk size: 0
@@ -400,18 +404,21 @@ Process the bundle
   start processing of HG20 stream
   reading bundle2 stream parameters
   start extraction of bundle2 parts
-  part header size: 13
+  part header size: 17
   part type: "test:empty"
+  part id: "0"
   part parameters: 0
   payload chunk size: 0
   ignoring unknown advisory part 'test:empty'
-  part header size: 13
+  part header size: 17
   part type: "test:empty"
+  part id: "1"
   part parameters: 0
   payload chunk size: 0
   ignoring unknown advisory part 'test:empty'
-  part header size: 12
+  part header size: 16
   part type: "test:song"
+  part id: "2"
   part parameters: 0
   payload chunk size: 178
   payload chunk size: 0
@@ -420,8 +427,9 @@ Process the bundle
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  part header size: 39
+  part header size: 43
   part type: "test:math"
+  part id: "3"
   part parameters: 3
   payload chunk size: 2
   payload chunk size: 0
@@ -532,7 +540,7 @@ Support for changegroup
   end of bundle
 
   $ cat ../rev.hg2
-  HG20\x00\x00\x00\x0e\x0bchangegroup\x00\x00\x00\x00\x06\x19HG10UN\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
+  HG20\x00\x00\x00\x12\x0bchangegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x19HG10UN\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02D (esc)
   \x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01D\x00\x00\x00\xa4\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\xcd\x01\x0b\x8c\xd9\x98\xf3\x98\x1aZ\x81\x15\xf9O\x8d\xa4\xabP`\x89\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)4dece9c826f69490507b98c6383a3009b295837d (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02E (esc)

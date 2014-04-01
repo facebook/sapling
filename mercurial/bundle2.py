@@ -87,6 +87,9 @@ Binary format is as follow
 
     :typename: alphanumerical part name
 
+    :partid: A 32bits integer (unique in the bundle) that can be used to refer
+             to this part.
+
     :parameters:
 
         Part's parameter may have arbitraty content, the binary structure is::
@@ -154,6 +157,7 @@ _magicstring = 'HG20'
 _fstreamparamsize = '>H'
 _fpartheadersize = '>H'
 _fparttypesize = '>B'
+_fpartid = '>I'
 _fpayloadsize = '>I'
 _fpartparamcount = '>BB'
 
@@ -319,6 +323,8 @@ class bundle20(object):
         """add a new part to the bundle2 container
 
         Parts contains the actuall applicative payload."""
+        assert part.id is None
+        part.id = len(self._parts) # very cheap counter
         self._parts.append(part)
 
     def getchunks(self):
@@ -449,6 +455,8 @@ class unbundle20(object):
         typesize = unpackheader(_fparttypesize)[0]
         parttype = fromheader(typesize)
         self.ui.debug('part type: "%s"\n' % parttype)
+        partid = unpackheader(_fpartid)[0]
+        self.ui.debug('part id: "%s"\n' % partid)
         ## reading parameters
         # param count
         mancount, advcount = unpackheader(_fpartparamcount)
@@ -478,6 +486,7 @@ class unbundle20(object):
             self.ui.debug('payload chunk size: %i\n' % payloadsize)
         payload = ''.join(payload)
         current = part(parttype, manparams, advparams, data=payload)
+        current.id = partid
         return current
 
 
@@ -490,6 +499,7 @@ class part(object):
 
     def __init__(self, parttype, mandatoryparams=(), advisoryparams=(),
                  data=''):
+        self.id = None
         self.type = parttype
         self.data = data
         self.mandatoryparams = mandatoryparams
@@ -499,7 +509,7 @@ class part(object):
         #### header
         ## parttype
         header = [_pack(_fparttypesize, len(self.type)),
-                  self.type,
+                  self.type, _pack(_fpartid, self.id),
                  ]
         ## parameters
         # count
