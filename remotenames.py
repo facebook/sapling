@@ -89,14 +89,6 @@ def reposetup(ui, repo):
                     remotenames[name] = n
             return remotenames
 
-        def lookup(self, key):
-            try:
-                if key in self._remotenames:
-                    key = self._remotenames[key]
-            except TypeError: # unhashable type
-                pass
-            return super(remotenamesrepo, self).lookup(key)
-
         # arguably, this needs a better name
         @util.propertycache
         def _preferredremotenames(self):
