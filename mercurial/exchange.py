@@ -508,7 +508,7 @@ def _pullchangeset(pullop):
                                    "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
-    pullop.cgresult = pullop.repo.addchangegroup(cg, 'pull',
+    pullop.cgresult = changegroup.addchangegroup(pullop.repo, cg, 'pull',
                                                  pullop.remote.url())
 
 def _pullphase(pullop):

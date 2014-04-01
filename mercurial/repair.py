@@ -148,7 +148,8 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
             if not repo.ui.verbose:
                 # silence internal shuffling chatter
                 repo.ui.pushbuffer()
-            repo.addchangegroup(gen, 'strip', 'bundle:' + chgrpfile, True)
+            changegroup.addchangegroup(repo, gen, 'strip',
+                                       'bundle:' + chgrpfile, True)
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()

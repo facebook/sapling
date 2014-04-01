@@ -786,7 +786,8 @@ def unbundle(repo, proto, heads):
             gen = changegroupmod.readbundle(fp, None)
 
             try:
-                r = repo.addchangegroup(gen, 'serve', proto._client())
+                r = changegroupmod.addchangegroup(repo, gen, 'serve',
+                                                  proto._client())
             except util.Abort, inst:
                 sys.stderr.write("abort: %s\n" % inst)
         finally:

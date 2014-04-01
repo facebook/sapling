@@ -561,7 +561,8 @@ def unshelve(ui, repo, *shelved, **opts):
             ui.quiet = True
             fp = shelvedfile(repo, basename, 'hg').opener()
             gen = changegroup.readbundle(fp, fp.name)
-            repo.addchangegroup(gen, 'unshelve', 'bundle:' + fp.name)
+            changegroup.addchangegroup(repo, gen, 'unshelve',
+                                       'bundle:' + fp.name)
             nodes = [ctx.node() for ctx in repo.set('%d:', oldtiprev)]
             phases.retractboundary(repo, phases.secret, nodes)
         finally:

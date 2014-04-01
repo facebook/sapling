@@ -5780,7 +5780,8 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         for fname in fnames:
             f = hg.openpath(ui, fname)
             gen = changegroup.readbundle(f, fname)
-            modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
+            modheads = changegroup.addchangegroup(repo, gen, 'unbundle',
+                                                  'bundle:' + fname)
     finally:
         lock.release()
     bookmarks.updatecurrentbookmark(repo, wc.node(), wc.branch())

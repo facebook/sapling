@@ -5,11 +5,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import weakref
 from i18n import _
-from node import nullrev, nullid, hex
+from node import nullrev, nullid, hex, short
 import mdiff, util, dagutil
 import struct, os, bz2, zlib, tempfile
-import discovery, error
+import discovery, error, phases, branchmap
 
 _BUNDLE10_DELTA_HEADER = "20s20s20s20s"
 
@@ -554,3 +555,184 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
                     (f, hex(n)))
 
     return revisions, files
+
+def addchangegroup(repo, source, srctype, url, emptyok=False):
+    """Add the changegroup returned by source.read() to this repo.
+    srctype is a string like 'push', 'pull', or 'unbundle'.  url is
+    the URL of the repo where this changegroup is coming from.
+
+    Return an integer summarizing the change to this repo:
+    - nothing changed or no source: 0
+    - more heads than before: 1+added heads (2..n)
+    - fewer heads than before: -1-removed heads (-2..-n)
+    - number of heads stays the same: 1
+    """
+    repo = repo.unfiltered()
+    def csmap(x):
+        repo.ui.debug("add changeset %s\n" % short(x))
+        return len(cl)
+
+    def revmap(x):
+        return cl.rev(x)
+
+    if not source:
+        return 0
+
+    repo.hook('prechangegroup', throw=True, source=srctype, url=url)
+
+    changesets = files = revisions = 0
+    efiles = set()
+
+    # write changelog data to temp files so concurrent readers will not see
+    # inconsistent view
+    cl = repo.changelog
+    cl.delayupdate()
+    oldheads = cl.heads()
+
+    tr = repo.transaction("\n".join([srctype, util.hidepassword(url)]))
+    try:
+        trp = weakref.proxy(tr)
+        # pull off the changeset group
+        repo.ui.status(_("adding changesets\n"))
+        clstart = len(cl)
+        class prog(object):
+            step = _('changesets')
+            count = 1
+            ui = repo.ui
+            total = None
+            def __call__(repo):
+                repo.ui.progress(repo.step, repo.count, unit=_('chunks'),
+                                 total=repo.total)
+                repo.count += 1
+        pr = prog()
+        source.callback = pr
+
+        source.changelogheader()
+        srccontent = cl.addgroup(source, csmap, trp)
+        if not (srccontent or emptyok):
+            raise util.Abort(_("received changelog group is empty"))
+        clend = len(cl)
+        changesets = clend - clstart
+        for c in xrange(clstart, clend):
+            efiles.update(repo[c].files())
+        efiles = len(efiles)
+        repo.ui.progress(_('changesets'), None)
+
+        # pull off the manifest group
+        repo.ui.status(_("adding manifests\n"))
+        pr.step = _('manifests')
+        pr.count = 1
+        pr.total = changesets # manifests <= changesets
+        # no need to check for empty manifest group here:
+        # if the result of the merge of 1 and 2 is the same in 3 and 4,
+        # no new manifest will be created and the manifest group will
+        # be empty during the pull
+        source.manifestheader()
+        repo.manifest.addgroup(source, revmap, trp)
+        repo.ui.progress(_('manifests'), None)
+
+        needfiles = {}
+        if repo.ui.configbool('server', 'validate', default=False):
+            # validate incoming csets have their manifests
+            for cset in xrange(clstart, clend):
+                mfest = repo.changelog.read(repo.changelog.node(cset))[0]
+                mfest = repo.manifest.readdelta(mfest)
+                # store file nodes we must see
+                for f, n in mfest.iteritems():
+                    needfiles.setdefault(f, set()).add(n)
+
+        # process the files
+        repo.ui.status(_("adding file changes\n"))
+        pr.step = _('files')
+        pr.count = 1
+        pr.total = efiles
+        source.callback = None
+
+        newrevs, newfiles = addchangegroupfiles(repo, source, revmap, trp, pr,
+                                                needfiles)
+        revisions += newrevs
+        files += newfiles
+
+        dh = 0
+        if oldheads:
+            heads = cl.heads()
+            dh = len(heads) - len(oldheads)
+            for h in heads:
+                if h not in oldheads and repo[h].closesbranch():
+                    dh -= 1
+        htext = ""
+        if dh:
+            htext = _(" (%+d heads)") % dh
+
+        repo.ui.status(_("added %d changesets"
+                         " with %d changes to %d files%s\n")
+                         % (changesets, revisions, files, htext))
+        repo.invalidatevolatilesets()
+
+        if changesets > 0:
+            p = lambda: cl.writepending() and repo.root or ""
+            repo.hook('pretxnchangegroup', throw=True,
+                      node=hex(cl.node(clstart)), source=srctype,
+                      url=url, pending=p)
+
+        added = [cl.node(r) for r in xrange(clstart, clend)]
+        publishing = repo.ui.configbool('phases', 'publish', True)
+        if srctype == 'push':
+            # Old servers can not push the boundary themselves.
+            # New servers won't push the boundary if changeset already
+            # exists locally as secret
+            #
+            # We should not use added here but the list of all change in
+            # the bundle
+            if publishing:
+                phases.advanceboundary(repo, phases.public, srccontent)
+            else:
+                phases.advanceboundary(repo, phases.draft, srccontent)
+                phases.retractboundary(repo, phases.draft, added)
+        elif srctype != 'strip':
+            # publishing only alter behavior during push
+            #
+            # strip should not touch boundary at all
+            phases.retractboundary(repo, phases.draft, added)
+
+        # make changelog see real files again
+        cl.finalize(trp)
+
+        tr.close()
+
+        if changesets > 0:
+            if srctype != 'strip':
+                # During strip, branchcache is invalid but coming call to
+                # `destroyed` will repair it.
+                # In other case we can safely update cache on disk.
+                branchmap.updatecache(repo.filtered('served'))
+            def runhooks():
+                # These hooks run when the lock releases, not when the
+                # transaction closes. So it's possible for the changelog
+                # to have changed since we last saw it.
+                if clstart >= len(repo):
+                    return
+
+                # forcefully update the on-disk branch cache
+                repo.ui.debug("updating the branch cache\n")
+                repo.hook("changegroup", node=hex(cl.node(clstart)),
+                          source=srctype, url=url)
+
+                for n in added:
+                    repo.hook("incoming", node=hex(n), source=srctype,
+                              url=url)
+
+                newheads = [h for h in repo.heads() if h not in oldheads]
+                repo.ui.log("incoming",
+                            "%s incoming changes - new heads: %s\n",
+                            len(added),
+                            ', '.join([hex(c[:6]) for c in newheads]))
+            repo._afterlock(runhooks)
+
+    finally:
+        tr.release()
+    # never return 0 here:
+    if dh < 0:
+        return dh - 1
+    else:
+        return dh + 1
