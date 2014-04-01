@@ -114,15 +114,17 @@ def reposetup(ui, repo):
             """
             ret = {}
 
+            ns = self.names["remotenames"]
+            remotenames = ns.listnames(self)
             # iterate over all the paths so we don't clobber path1/@ with
             # path2/@
             for path, uri in ui.configitems('paths'):
 
                 inverse = {}
-                remotenames = dict([(name, node) for name, node in
-                                       self._remotenames.iteritems()
-                                       if name.startswith(path)])
-                for name, node in remotenames.iteritems():
+                for name in remotenames:
+                    if not name.startswith(path):
+                        continue
+                    node = repo.names.singlenode(name)
                     # nothing to check, so add and move on
                     if node not in inverse.keys():
                         inverse[node] = name
@@ -261,7 +263,7 @@ def loadremotenames(repo):
     ns = namespaces.namespace
     n = ns("remotenames", "remotename",
            lambda rp: _remotenames.keys(),
-           lambda rp, name: _remotenames.get(name),
+           lambda rp, name: namespaces.tolist(_remotenames.get(name)),
            lambda rp, node: [name for name, n in _remotenames.iteritems()
                              if n == node])
     repo.names.addnamespace(n)
@@ -292,12 +294,16 @@ def saveremotenames(repo, remote, branches, bookmarks):
 #########
 
 def upstream_revs(filt, repo, subset, x):
-    upstream_tips = [node.hex(n) for name, n in
-             repo._remotenames.iteritems() if filt(name)]
+    upstream_tips = set()
+    ns = repo.names["remotenames"]
+    for name in ns.listnames(repo):
+        if filt(name):
+            upstream_tips.update(ns.nodes(repo, name))
+
     if not upstream_tips:
         return revset.baseset([])
 
-    tipancestors = repo.revs('::%ln', map(node.bin, upstream_tips))
+    tipancestors = repo.revs('::%ln', upstream_tips)
     def cond(n):
         return n in tipancestors
     return revset.filteredset(subset, cond)
@@ -327,8 +333,12 @@ def remotenamesrevset(repo, subset, x):
     All remote branches heads.
     """
     args = revset.getargs(x, 0, 0, "remotenames takes no arguments")
-    remoterevs = set(repo[n].rev() for n in repo._remotenames.itervalues())
-    return revset.baseset([r for r in subset if r in remoterevs])
+    remoterevs = set()
+    cl = repo.changelog
+    ns = repo.names["remotenames"]
+    for name in ns.listnames(repo):
+        remoterevs.update(ns.nodes(repo, name))
+    return revset.baseset(sorted(cl.rev(n) for n in remoterevs))
 
 revset.symbols.update({'upstream': upstream,
                        'pushed': pushed,
@@ -373,7 +383,7 @@ def calculateremotedistance(repo, ctx, remote):
 
     remote = joinremotename(remote, ref)
 
-    for name, node in repo._remotenames.iteritems():
+    for name, node in repo.markers('remotename').iteritems():
         if name == remote:
             sign = 1
             ctx1 = ctx
