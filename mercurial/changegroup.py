@@ -428,3 +428,20 @@ class bundle10(object):
     def builddeltaheader(self, node, p1n, p2n, basenode, linknode):
         # do nothing with basenode, it is implicitly the previous one in HG10
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
+
+def getsubset(repo, outgoing, bundler, source, fastpath=False):
+    repo = repo.unfiltered()
+    commonrevs = outgoing.common
+    csets = outgoing.missing
+    heads = outgoing.missingheads
+    # We go through the fast path if we get told to, or if all (unfiltered
+    # heads have been requested (since we then know there all linkrevs will
+    # be pulled by the client).
+    heads.sort()
+    fastpathlinkrev = fastpath or (
+            repo.filtername is None and heads == sorted(repo.heads()))
+
+    repo.hook('preoutgoing', throw=True, source=source)
+    repo.changegroupinfo(csets, source)
+    gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
+    return unbundle10(util.chunkbuffer(gengroup), 'UN')

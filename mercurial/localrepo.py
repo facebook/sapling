@@ -1714,7 +1714,7 @@ class localrepository(object):
             discbases.extend([p for p in cl.parents(n) if p != nullid])
         outgoing = discovery.outgoing(cl, discbases, heads)
         bundler = changegroup.bundle10(self)
-        return self._changegroupsubset(outgoing, bundler, source)
+        return changegroup.getsubset(self, outgoing, bundler, source)
 
     def getlocalbundle(self, source, outgoing, bundlecaps=None):
         """Like getbundle, but taking a discovery.outgoing as an argument.
@@ -1724,7 +1724,7 @@ class localrepository(object):
         if not outgoing.missing:
             return None
         bundler = changegroup.bundle10(self, bundlecaps)
-        return self._changegroupsubset(outgoing, bundler, source)
+        return changegroup.getsubset(self, outgoing, bundler, source)
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None):
         """Like changegroupsubset, but returns the set difference between the
@@ -1746,24 +1746,6 @@ class localrepository(object):
         return self.getlocalbundle(source,
                                    discovery.outgoing(cl, common, heads),
                                    bundlecaps=bundlecaps)
-
-    @unfilteredmethod
-    def _changegroupsubset(self, outgoing, bundler, source,
-                           fastpath=False):
-        commonrevs = outgoing.common
-        csets = outgoing.missing
-        heads = outgoing.missingheads
-        # We go through the fast path if we get told to, or if all (unfiltered
-        # heads have been requested (since we then know there all linkrevs will
-        # be pulled by the client).
-        heads.sort()
-        fastpathlinkrev = fastpath or (
-                self.filtername is None and heads == sorted(self.heads()))
-
-        self.hook('preoutgoing', throw=True, source=source)
-        self.changegroupinfo(csets, source)
-        gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
-        return changegroup.unbundle10(util.chunkbuffer(gengroup), 'UN')
 
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)

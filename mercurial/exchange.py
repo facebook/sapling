@@ -181,10 +181,11 @@ def _pushchangeset(pushop):
         # push everything,
         # use the fast path, no race possible on push
         bundler = changegroup.bundle10(pushop.repo, bundlecaps)
-        cg = pushop.repo._changegroupsubset(outgoing,
-                                            bundler,
-                                            'push',
-                                            fastpath=True)
+        cg = changegroup.getsubset(pushop.repo,
+                                   outgoing,
+                                   bundler,
+                                   'push',
+                                   fastpath=True)
     else:
         cg = pushop.repo.getlocalbundle('push', outgoing, bundlecaps)
 
