@@ -278,7 +278,8 @@ def saveremotenames(repo, remote, branches, bookmarks):
 def upstream_revs(filt, repo, subset, x):
     upstream_tips = [node.hex(n) for name, n in
              repo._remotenames.iteritems() if filt(name)]
-    if not upstream_tips: []
+    if not upstream_tips:
+        return revset.baseset([])
 
     tipancestors = repo.revs('::%ln', map(node.bin, upstream_tips))
     def cond(n):
