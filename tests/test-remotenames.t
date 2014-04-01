@@ -83,7 +83,6 @@ graph shows tags for the branch heads of each path
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  | |  tag:         beta/stable
   | |  remotename:  beta/stable
   | |  parent:      2:95cb4ab9fe1d
   | |  parent:      3:78f83396d79e
@@ -92,7 +91,6 @@ graph shows tags for the branch heads of each path
   | |  summary:     merged
   | |
   | o  changeset:   3:78f83396d79e
-  | |  tag:         beta/default
   | |  remotename:  beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
@@ -101,14 +99,12 @@ graph shows tags for the branch heads of each path
   | |
   o |  changeset:   2:95cb4ab9fe1d
   |/   branch:      stable
-  |    tag:         alpha/stable
   |    remotename:  alpha/stable
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     add c
   |
   o  changeset:   1:7c3bad9141dc
-  |  tag:         alpha/default
   |  remotename:  alpha/default
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -187,7 +183,6 @@ but configured, it'll do the expected thing:
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  | |  tag:         beta/stable
   | |  remotename:  beta/stable
   | |  parent:      2:95cb4ab9fe1d
   | |  parent:      3:78f83396d79e
@@ -196,7 +191,6 @@ but configured, it'll do the expected thing:
   | |  summary:     merged
   | |
   | o  changeset:   3:78f83396d79e
-  | |  tag:         beta/default
   | |  remotename:  beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
@@ -206,7 +200,6 @@ but configured, it'll do the expected thing:
   $ hg log --limit 2 --graph -r 'heads(upstream())'
   o  changeset:   2:95cb4ab9fe1d
   |  branch:      stable
-  |  tag:         alpha/stable
   |  remotename:  alpha/stable
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000

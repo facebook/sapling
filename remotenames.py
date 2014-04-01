@@ -65,13 +65,6 @@ def reposetup(ui, repo):
     loadremotenames(repo)
 
     class remotenamesrepo(repo.__class__):
-        def _findtags(self):
-            (tags, tagtypes) = super(remotenamesrepo, self)._findtags()
-            for tag, n in self._remotenames.iteritems():
-                tags[tag] = n
-                tagtypes[tag] = 'remote'
-            return (tags, tagtypes)
-
         @util.propertycache
         def _remotenames(self):
             bfile = self.join('remotenames')
