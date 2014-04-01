@@ -8,6 +8,7 @@ from mercurial import node
 from mercurial import ui
 from mercurial import url
 from mercurial import util
+from mercurial import repoview
 from mercurial import revset
 from mercurial import templatekw
 from mercurial import templater
@@ -55,8 +56,21 @@ def expull(orig, repo, remote, *args, **kwargs):
         lock.release()
         return res
 
+def blockerhook(orig, repo, *args, **kwargs):
+    blockers = orig(repo)
+
+    # add remotenames to blockers
+    cl = repo.changelog
+    ns = repo.names["remotenames"]
+    for name in ns.listnames(repo):
+        blockers.update(cl.rev(node) for node in
+                        ns.nodes(repo, name))
+
+    return blockers
+
 extensions.wrapfunction(exchange, 'push', expush)
 extensions.wrapfunction(exchange, 'pull', expull)
+extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
 
 def reposetup(ui, repo):
     if not repo.local():
