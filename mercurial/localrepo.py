@@ -1683,16 +1683,6 @@ class localrepository(object):
     def push(self, remote, force=False, revs=None, newbranch=False):
         return exchange.push(self, remote, force, revs, newbranch)
 
-    def getlocalbundle(self, source, outgoing, bundlecaps=None):
-        """Like getbundle, but taking a discovery.outgoing as an argument.
-
-        This is only implemented for local repos and reuses potentially
-        precomputed sets in outgoing."""
-        if not outgoing.missing:
-            return None
-        bundler = changegroup.bundle10(self, bundlecaps)
-        return changegroup.getsubset(self, outgoing, bundler, source)
-
     def getbundle(self, source, heads=None, common=None, bundlecaps=None):
         """Like changegroupsubset, but returns the set difference between the
         ancestors of heads and the ancestors common.
@@ -1710,9 +1700,9 @@ class localrepository(object):
             common = [nullid]
         if not heads:
             heads = cl.heads()
-        return self.getlocalbundle(source,
-                                   discovery.outgoing(cl, common, heads),
-                                   bundlecaps=bundlecaps)
+        outgoing = discovery.outgoing(cl, common, heads)
+        return changegroup.getlocalbundle(self, source, outgoing,
+                                          bundlecaps=bundlecaps)
 
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)

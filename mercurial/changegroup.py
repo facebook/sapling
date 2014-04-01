@@ -480,3 +480,13 @@ def changegroupsubset(repo, roots, heads, source):
     bundler = bundle10(repo)
     return getsubset(repo, outgoing, bundler, source)
 
+def getlocalbundle(repo, source, outgoing, bundlecaps=None):
+    """Like getbundle, but taking a discovery.outgoing as an argument.
+
+    This is only implemented for local repos and reuses potentially
+    precomputed sets in outgoing."""
+    if not outgoing.missing:
+        return None
+    bundler = bundle10(repo, bundlecaps)
+    return getsubset(repo, outgoing, bundler, source)
+
