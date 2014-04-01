@@ -392,7 +392,7 @@ def calculateremotedistance(repo, ctx, remote):
             remote = rpath
 
     # similar to the 'current' keyword for bookmarks in templates, we, too,
-    # will have 'curren't be a keyword for the current bookmark falling back to
+    # will have 'current' be a keyword for the current bookmark falling back to
     # the branch name if there is no bookmark active.
     if ref == 'current':
         ref = repo._bookmarkcurrent
