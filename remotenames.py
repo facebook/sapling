@@ -338,19 +338,6 @@ revset.symbols.update({'upstream': upstream,
 # templates
 ###########
 
-def remotenameskw(**args):
-    """:remotenames: List of strings. Any remote branch associated
-    with the changeset.
-    """
-    repo, ctx = args['repo'], args['ctx']
-    remotenodes = {}
-    for name, node in repo._remotenames.iteritems():
-        remotenodes.setdefault(node, []).append(name)
-    if ctx.node() in remotenodes:
-        names = sorted(remotenodes[ctx.node()])
-        return templatekw.showlist('remotename', names,
-                                   plural='remotenames', **args)
-
 def preferredremotenameskw(**args):
     """:preferredremotenames: List of strings. List of remote bookmarks and
     branches associated with the changeset where bookmarks are preferred over
@@ -425,7 +412,6 @@ def remotedistance(context, mapping, args):
 
     return calculateremotedistance(repo, ctx, remote)
 
-templatekw.keywords['remotenames'] = remotenameskw
 templatekw.keywords['preferredremotenames'] = preferredremotenameskw
 templatekw.keywords['remotedistance'] = remotedistancekw
 templater.funcs['remotedistance'] = remotedistance
