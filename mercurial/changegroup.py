@@ -429,6 +429,14 @@ class bundle10(object):
         # do nothing with basenode, it is implicitly the previous one in HG10
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
 
+def _changegroupinfo(repo, nodes, source):
+    if repo.ui.verbose or source == 'bundle':
+        repo.ui.status(_("%d changesets found\n") % len(nodes))
+    if repo.ui.debugflag:
+        repo.ui.debug("list of changesets:\n")
+        for node in nodes:
+            repo.ui.debug("%s\n" % hex(node))
+
 def getsubset(repo, outgoing, bundler, source, fastpath=False):
     repo = repo.unfiltered()
     commonrevs = outgoing.common
@@ -442,6 +450,6 @@ def getsubset(repo, outgoing, bundler, source, fastpath=False):
             repo.filtername is None and heads == sorted(repo.heads()))
 
     repo.hook('preoutgoing', throw=True, source=source)
-    repo.changegroupinfo(csets, source)
+    _changegroupinfo(repo, csets, source)
     gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
     return unbundle10(util.chunkbuffer(gengroup), 'UN')

@@ -1683,14 +1683,6 @@ class localrepository(object):
     def push(self, remote, force=False, revs=None, newbranch=False):
         return exchange.push(self, remote, force, revs, newbranch)
 
-    def changegroupinfo(self, nodes, source):
-        if self.ui.verbose or source == 'bundle':
-            self.ui.status(_("%d changesets found\n") % len(nodes))
-        if self.ui.debugflag:
-            self.ui.debug("list of changesets:\n")
-            for node in nodes:
-                self.ui.debug("%s\n" % hex(node))
-
     def changegroupsubset(self, roots, heads, source):
         """Compute a changegroup consisting of all the nodes that are
         descendants of any of the roots and ancestors of any of the heads.
