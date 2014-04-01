@@ -143,7 +143,7 @@ class locallegacypeer(localpeer):
         return self._repo.changegroup(basenodes, source)
 
     def changegroupsubset(self, bases, heads, source):
-        return self._repo.changegroupsubset(bases, heads, source)
+        return changegroup.changegroupsubset(self._repo, bases, heads, source)
 
 class localrepository(object):
 
@@ -1683,31 +1683,6 @@ class localrepository(object):
     def push(self, remote, force=False, revs=None, newbranch=False):
         return exchange.push(self, remote, force, revs, newbranch)
 
-    def changegroupsubset(self, roots, heads, source):
-        """Compute a changegroup consisting of all the nodes that are
-        descendants of any of the roots and ancestors of any of the heads.
-        Return a chunkbuffer object whose read() method will return
-        successive changegroup chunks.
-
-        It is fairly complex as determining which filenodes and which
-        manifest nodes need to be included for the changeset to be complete
-        is non-trivial.
-
-        Another wrinkle is doing the reverse, figuring out which changeset in
-        the changegroup a particular filenode or manifestnode belongs to.
-        """
-        cl = self.changelog
-        if not roots:
-            roots = [nullid]
-        # TODO: remove call to nodesbetween.
-        csets, roots, heads = cl.nodesbetween(roots, heads)
-        discbases = []
-        for n in roots:
-            discbases.extend([p for p in cl.parents(n) if p != nullid])
-        outgoing = discovery.outgoing(cl, discbases, heads)
-        bundler = changegroup.bundle10(self)
-        return changegroup.getsubset(self, outgoing, bundler, source)
-
     def getlocalbundle(self, source, outgoing, bundlecaps=None):
         """Like getbundle, but taking a discovery.outgoing as an argument.
 
@@ -1741,7 +1716,8 @@ class localrepository(object):
 
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)
-        return self.changegroupsubset(basenodes, self.heads(), source)
+        return changegroup.changegroupsubset(self, basenodes, self.heads(),
+                                             source)
 
     @unfilteredmethod
     def addchangegroup(self, source, srctype, url, emptyok=False):

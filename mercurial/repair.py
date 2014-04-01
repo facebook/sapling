@@ -14,7 +14,7 @@ import errno
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
-    cg = repo.changegroupsubset(bases, heads, 'strip')
+    cg = changegroup.changegroupsubset(repo, bases, heads, 'strip')
     backupdir = repo.join("strip-backup")
     if not os.path.isdir(backupdir):
         os.mkdir(backupdir)

@@ -25,7 +25,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases, commands
 from mercurial import error, hg, mdiff, merge, patch, repair, util
-from mercurial import templatefilters
+from mercurial import templatefilters, changegroup
 from mercurial import lock as lockmod
 from hgext import rebase
 import errno
@@ -227,7 +227,7 @@ def createcmd(ui, repo, pats, opts):
         fp.write('\0'.join(shelvedfiles))
 
         bases = list(publicancestors(repo[node]))
-        cg = repo.changegroupsubset(bases, [node], 'shelve')
+        cg = changegroup.changegroupsubset(repo, bases, [node], 'shelve')
         changegroup.writebundle(cg, shelvedfile(repo, name, 'hg').filename(),
                                 'HG10UN')
         cmdutil.export(repo, [node],

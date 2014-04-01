@@ -585,7 +585,7 @@ def changegroup(repo, proto, roots):
 def changegroupsubset(repo, proto, bases, heads):
     bases = decodelist(bases)
     heads = decodelist(heads)
-    cg = repo.changegroupsubset(bases, heads, 'serve')
+    cg = changegroupmod.changegroupsubset(repo, bases, heads, 'serve')
     return streamres(proto.groupchunks(cg))
 
 @wireprotocommand('debugwireargs', 'one two *')

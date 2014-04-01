@@ -6,9 +6,10 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-from node import nullrev, hex
+from node import nullrev, nullid, hex
 import mdiff, util, dagutil
 import struct, os, bz2, zlib, tempfile
+import discovery
 
 _BUNDLE10_DELTA_HEADER = "20s20s20s20s"
 
@@ -453,3 +454,29 @@ def getsubset(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
     return unbundle10(util.chunkbuffer(gengroup), 'UN')
+
+def changegroupsubset(repo, roots, heads, source):
+    """Compute a changegroup consisting of all the nodes that are
+    descendants of any of the roots and ancestors of any of the heads.
+    Return a chunkbuffer object whose read() method will return
+    successive changegroup chunks.
+
+    It is fairly complex as determining which filenodes and which
+    manifest nodes need to be included for the changeset to be complete
+    is non-trivial.
+
+    Another wrinkle is doing the reverse, figuring out which changeset in
+    the changegroup a particular filenode or manifestnode belongs to.
+    """
+    cl = repo.changelog
+    if not roots:
+        roots = [nullid]
+    # TODO: remove call to nodesbetween.
+    csets, roots, heads = cl.nodesbetween(roots, heads)
+    discbases = []
+    for n in roots:
+        discbases.extend([p for p in cl.parents(n) if p != nullid])
+    outgoing = discovery.outgoing(cl, discbases, heads)
+    bundler = bundle10(repo)
+    return getsubset(repo, outgoing, bundler, source)
+
