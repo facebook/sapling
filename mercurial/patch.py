@@ -711,7 +711,7 @@ class patchfile(object):
         if self.exists and self.create:
             if self.copysource:
                 self.ui.warn(_("cannot create %s: destination already "
-                               "exists\n" % self.fname))
+                               "exists\n") % self.fname)
             else:
                 self.ui.warn(_("file %s already exists\n") % self.fname)
             self.rej.append(h)

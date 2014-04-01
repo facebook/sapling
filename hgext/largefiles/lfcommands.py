@@ -303,14 +303,14 @@ def _converttags(ui, revmap, data):
         try:
             id, name = line.split(' ', 1)
         except ValueError:
-            ui.warn(_('skipping incorrectly formatted tag %s\n'
-                % line))
+            ui.warn(_('skipping incorrectly formatted tag %s\n')
+                % line)
             continue
         try:
             newid = node.bin(id)
         except TypeError:
-            ui.warn(_('skipping incorrectly formatted id %s\n'
-                % id))
+            ui.warn(_('skipping incorrectly formatted id %s\n')
+                % id)
             continue
         try:
             newdata.append('%s %s\n' % (node.hex(revmap[newid]),

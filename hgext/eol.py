@@ -344,7 +344,7 @@ def reposetup(ui, repo):
                     continue
                 if inconsistenteol(data):
                     raise util.Abort(_("inconsistent newline style "
-                                       "in %s\n" % f))
+                                       "in %s\n") % f)
             return super(eolrepo, self).commitctx(ctx, error)
     repo.__class__ = eolrepo
     repo._hgcleardirstate()

@@ -451,7 +451,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                         if bn == 'default':
                             status = _("updating to bookmark @\n")
                         else:
-                            status = _("updating to bookmark @ on branch %s\n"
+                            status = (_("updating to bookmark @ on branch %s\n")
                                        % bn)
                     except KeyError:
                         try:

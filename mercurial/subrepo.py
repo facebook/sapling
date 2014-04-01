@@ -321,8 +321,8 @@ def _sanitize(ui, path):
         for f in names:
             if f.lower() == 'hgrc':
                 ui.warn(
-                    _("warning: removing potentially hostile .hg/hgrc in '%s'"
-                      % path))
+                    _("warning: removing potentially hostile .hg/hgrc in '%s'")
+                      % path)
                 os.unlink(os.path.join(dirname, f))
     os.walk(path, v, None)
 
@@ -1011,7 +1011,7 @@ class svnsubrepo(abstractsubrepo):
     def remove(self):
         if self.dirty():
             self._ui.warn(_('not removing repo %s because '
-                            'it has changes.\n' % self._path))
+                            'it has changes.\n') % self._path)
             return
         self._ui.note(_('removing subrepo %s\n') % self._path)
 
