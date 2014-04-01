@@ -64,11 +64,6 @@ def reposetup(ui, repo):
 
     loadremotenames(repo)
 
-    class remotenamesrepo(repo.__class__):
-        pass
-
-    repo.__class__ = remotenamesrepo
-
 # arguably, this needs a better name
 def _preferredremotenames(repo):
     """This property is a dictionary of values identical to _remotenames but
