@@ -65,30 +65,6 @@ def reposetup(ui, repo):
     loadremotenames(repo)
 
     class remotenamesrepo(repo.__class__):
-        @util.propertycache
-        def _remotenames(self):
-            bfile = self.join('remotenames')
-            if not os.path.exists(bfile):
-                return {}
-
-            remotenames = {}
-            f = open(bfile)
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                hash, name = line.split(' ', 1)
-                # look up the hash in the changelog directly
-                # to avoid infinite recursion if the hash is bogus
-                n = self.changelog._match(hash)
-                if not n:
-                    continue
-                # we need rev since node will recurse lookup
-                ctx = context.changectx(self, self.changelog.rev(n))
-                if not ctx.extra().get('close'):
-                    remotenames[name] = n
-            return remotenames
-
         # arguably, this needs a better name
         @util.propertycache
         def _preferredremotenames(self):
