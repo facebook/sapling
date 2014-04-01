@@ -510,3 +510,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     outgoing = discovery.outgoing(cl, common, heads)
     return getlocalbundle(repo, source, outgoing, bundlecaps=bundlecaps)
 
+def changegroup(repo, basenodes, source):
+    # to avoid a race we use changegroupsubset() (issue1320)
+    return changegroupsubset(repo, basenodes, repo.heads(), source)
+

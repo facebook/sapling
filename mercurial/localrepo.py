@@ -140,7 +140,7 @@ class locallegacypeer(localpeer):
         return self._repo.between(pairs)
 
     def changegroup(self, basenodes, source):
-        return self._repo.changegroup(basenodes, source)
+        return changegroup.changegroup(self._repo, basenodes, source)
 
     def changegroupsubset(self, bases, heads, source):
         return changegroup.changegroupsubset(self._repo, bases, heads, source)
@@ -1682,11 +1682,6 @@ class localrepository(object):
 
     def push(self, remote, force=False, revs=None, newbranch=False):
         return exchange.push(self, remote, force, revs, newbranch)
-
-    def changegroup(self, basenodes, source):
-        # to avoid a race we use changegroupsubset() (issue1320)
-        return changegroup.changegroupsubset(self, basenodes, self.heads(),
-                                             source)
 
     @unfilteredmethod
     def addchangegroup(self, source, srctype, url, emptyok=False):
