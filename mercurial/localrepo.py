@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from node import hex, nullid, short
 from i18n import _
-import peer, changegroup, subrepo, discovery, pushkey, obsolete, repoview
+import peer, changegroup, subrepo, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock as lockmod
 import transaction, store, encoding, exchange
@@ -104,8 +104,8 @@ class localpeer(peer.peerrepository):
         return self._repo.known(nodes)
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None):
-        return self._repo.getbundle(source, heads=heads, common=common,
-                                    bundlecaps=None)
+        return changegroup.getbundle(self._repo, source, heads=heads,
+                                     common=common, bundlecaps=None)
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.
@@ -1682,27 +1682,6 @@ class localrepository(object):
 
     def push(self, remote, force=False, revs=None, newbranch=False):
         return exchange.push(self, remote, force, revs, newbranch)
-
-    def getbundle(self, source, heads=None, common=None, bundlecaps=None):
-        """Like changegroupsubset, but returns the set difference between the
-        ancestors of heads and the ancestors common.
-
-        If heads is None, use the local heads. If common is None, use [nullid].
-
-        The nodes in common might not all be known locally due to the way the
-        current discovery protocol works.
-        """
-        cl = self.changelog
-        if common:
-            hasnode = cl.hasnode
-            common = [n for n in common if hasnode(n)]
-        else:
-            common = [nullid]
-        if not heads:
-            heads = cl.heads()
-        outgoing = discovery.outgoing(cl, common, heads)
-        return changegroup.getlocalbundle(self, source, outgoing,
-                                          bundlecaps=bundlecaps)
 
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)

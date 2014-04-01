@@ -1129,8 +1129,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
-        cg = repo.getbundle('bundle', heads=heads, common=common,
-                            bundlecaps=bundlecaps)
+        cg = changegroup.getbundle(repo, 'bundle', heads=heads, common=common,
+                                   bundlecaps=bundlecaps)
         outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')

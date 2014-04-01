@@ -602,7 +602,7 @@ def getbundle(repo, proto, others):
             opts[k] = decodelist(v)
         elif k == 'bundlecaps':
             opts[k] = set(v.split(','))
-    cg = repo.getbundle('serve', **opts)
+    cg = changegroupmod.getbundle(repo, 'serve', **opts)
     return streamres(proto.groupchunks(cg))
 
 @wireprotocommand('heads')

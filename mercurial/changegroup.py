@@ -490,3 +490,23 @@ def getlocalbundle(repo, source, outgoing, bundlecaps=None):
     bundler = bundle10(repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
+def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
+    """Like changegroupsubset, but returns the set difference between the
+    ancestors of heads and the ancestors common.
+
+    If heads is None, use the local heads. If common is None, use [nullid].
+
+    The nodes in common might not all be known locally due to the way the
+    current discovery protocol works.
+    """
+    cl = repo.changelog
+    if common:
+        hasnode = cl.hasnode
+        common = [n for n in common if hasnode(n)]
+    else:
+        common = [nullid]
+    if not heads:
+        heads = cl.heads()
+    outgoing = discovery.outgoing(cl, common, heads)
+    return getlocalbundle(repo, source, outgoing, bundlecaps=bundlecaps)
+
