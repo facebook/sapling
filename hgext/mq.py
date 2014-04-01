@@ -3289,14 +3289,14 @@ def reposetup(ui, repo):
             return super(mqrepo, self).commit(text, user, date, match, force,
                                               editor, extra)
 
-        def checkpush(self, force, revs):
-            if self.mq.applied and self.mq.checkapplied and not force:
+        def checkpush(self, pushop):
+            if self.mq.applied and self.mq.checkapplied and not pushop.force:
                 outapplied = [e.node for e in self.mq.applied]
-                if revs:
+                if pushop.revs:
                     # Assume applied patches have no non-patch descendants and
                     # are not on remote already. Filtering any changeset not
                     # pushed.
-                    heads = set(revs)
+                    heads = set(pushop.revs)
                     for node in reversed(outapplied):
                         if node in heads:
                             break
@@ -3307,7 +3307,7 @@ def reposetup(ui, repo):
                     if self[node].phase() < phases.secret:
                         raise util.Abort(_('source has mq patches applied'))
                 # no non-secret patches pushed
-            super(mqrepo, self).checkpush(force, revs)
+            super(mqrepo, self).checkpush(pushop)
 
         def _findtags(self):
             '''augment tags from base class with patch tags'''

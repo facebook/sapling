@@ -1673,7 +1673,7 @@ class localrepository(object):
     def pull(self, remote, heads=None, force=False):
         return exchange.pull (self, remote, heads, force)
 
-    def checkpush(self, force, revs):
+    def checkpush(self, pushop):
         """Extensions can override this function if additional checks have
         to be performed before pushing, or call it if they override push
         command.

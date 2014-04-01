@@ -95,7 +95,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
     try:
-        pushop.repo.checkpush(pushop.force, pushop.revs)
+        pushop.repo.checkpush(pushop)
         lock = None
         unbundle = pushop.remote.capable('unbundle')
         if not unbundle:
