@@ -11,7 +11,16 @@ Do test while holding fifo open
   $ (
   > echo lock
   > echo addchangegroup
-  > while [ ! -s .hg/store/journal ]; do sleep 0; done
+  > start=`date +%s`
+  > # 10 second seems much enough to let the server catch up
+  > deadline=`expr $start + 10`
+  > while [ ! -s .hg/store/journal ]; do
+  >     sleep 0;
+  >     if [ `date +%s` -gt $deadline ]; then
+  >         echo "transaction did not start after 10 seconds" >&2;
+  >         exit 1;
+  >     fi
+  > done
   > kill -HUP $P
   > ) > p
 
