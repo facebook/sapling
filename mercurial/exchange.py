@@ -455,12 +455,7 @@ def pull(repo, remote, heads=None, force=False):
                                            heads=pullop.heads,
                                            force=force)
         pullop.common, pullop.fetch, pullop.rheads = tmp
-        if not pullop.fetch:
-            pullop.repo.ui.status(_("no changes found\n"))
-            pullop.cgresult = 0
-        else:
-            pullop.cgresult = _pullchangeset(pullop)
-
+        _pullchangeset(pullop)
         _pullphase(pullop)
         _pullobsolete(pullop)
         pullop.closetransaction()
@@ -475,6 +470,10 @@ def _pullchangeset(pullop):
     # We delay the open of the transaction as late as possible so we
     # don't open transaction for nothing or you break future useful
     # rollback call
+    if not pullop.fetch:
+            pullop.repo.ui.status(_("no changes found\n"))
+            pullop.cgresult = 0
+            return
     pullop.gettransaction()
     if pullop.heads is None and list(pullop.common) == [nullid]:
         pullop.repo.ui.status(_("requesting all changes\n"))
@@ -494,7 +493,8 @@ def _pullchangeset(pullop):
                                    "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
-    return pullop.repo.addchangegroup(cg, 'pull', pullop.remote.url())
+    pullop.cgresult = pullop.repo.addchangegroup(cg, 'pull',
+                                                 pullop.remote.url())
 
 def _pullphase(pullop):
     # Get remote phases data from remote
