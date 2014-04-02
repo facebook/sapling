@@ -403,6 +403,8 @@ class pulloperation(object):
         self.fetch = None
         # result of changegroup pulling (used as returng code by pull)
         self.cgresult = None
+        # list of step remaining todo (related to future bundle2 usage)
+        self.todosteps = set(['changegroup', 'phases', 'obsmarkers'])
 
     @util.propertycache
     def pulledsubset(self):
@@ -451,9 +453,12 @@ def pull(repo, remote, heads=None, force=False):
     lock = pullop.repo.lock()
     try:
         _pulldiscovery(pullop)
-        _pullchangeset(pullop)
-        _pullphase(pullop)
-        _pullobsolete(pullop)
+        if 'changegroup' in pullop.todosteps:
+            _pullchangeset(pullop)
+        if 'phases' in pullop.todosteps:
+            _pullphase(pullop)
+        if 'obsmarkers' in pullop.todosteps:
+            _pullobsolete(pullop)
         pullop.closetransaction()
     finally:
         pullop.releasetransaction()
@@ -477,6 +482,7 @@ def _pullchangeset(pullop):
     # We delay the open of the transaction as late as possible so we
     # don't open transaction for nothing or you break future useful
     # rollback call
+    pullop.todosteps.remove('changegroup')
     if not pullop.fetch:
             pullop.repo.ui.status(_("no changes found\n"))
             pullop.cgresult = 0
@@ -505,6 +511,7 @@ def _pullchangeset(pullop):
 
 def _pullphase(pullop):
     # Get remote phases data from remote
+    pullop.todosteps.remove('phases')
     remotephases = pullop.remote.listkeys('phases')
     publishing = bool(remotephases.get('publishing', False))
     if remotephases and not publishing:
@@ -529,6 +536,7 @@ def _pullobsolete(pullop):
     a new transaction have been created (when applicable).
 
     Exists mostly to allow overriding for experimentation purpose"""
+    pullop.todosteps.remove('obsmarkers')
     tr = None
     if obsolete._enabled:
         pullop.repo.ui.debug('fetching remote obsolete markers\n')
