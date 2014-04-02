@@ -450,11 +450,7 @@ def pull(repo, remote, heads=None, force=False):
 
     lock = pullop.repo.lock()
     try:
-        tmp = discovery.findcommonincoming(pullop.repo.unfiltered(),
-                                           pullop.remote,
-                                           heads=pullop.heads,
-                                           force=force)
-        pullop.common, pullop.fetch, pullop.rheads = tmp
+        _pulldiscovery(pullop)
         _pullchangeset(pullop)
         _pullphase(pullop)
         _pullobsolete(pullop)
@@ -464,6 +460,17 @@ def pull(repo, remote, heads=None, force=False):
         lock.release()
 
     return pullop.cgresult
+
+def _pulldiscovery(pullop):
+    """discovery phase for the pull
+
+    Current handle changeset discovery only, will change handle all discovery
+    at some point."""
+    tmp = discovery.findcommonincoming(pullop.repo.unfiltered(),
+                                       pullop.remote,
+                                       heads=pullop.heads,
+                                       force=pullop.force)
+    pullop.common, pullop.fetch, pullop.rheads = tmp
 
 def _pullchangeset(pullop):
     """pull changeset from unbundle into the local repo"""
