@@ -183,15 +183,11 @@ def parthandler(parttype):
         return func
     return _decorator
 
-def processbundle(repo, stream):
+def processbundle(repo, unbundler):
     """This function process a bundle, apply effect to/from a repo
 
-    Currently it:
-    - parse a stream into an unbundle20 object
-    - iterate over each parts then search and use the proper handling code to
-      process the part.
-
-    Parts are processes in order.
+    It iterates over each part then searches for and uses the proper handling
+    code to process the part. Parts are processed in order.
 
     This is very early version of this function that will be strongly reworked
     before final usage.
@@ -199,11 +195,6 @@ def processbundle(repo, stream):
     Unknown Mandatory part will abort the process.
     """
     ui = repo.ui
-    # Extraction of the unbundler object will most likely change. It may be
-    # done outside of this function, the unbundler would be passed as argument.
-    # in all case the unbundler will eventually be created by a
-    # `changegroup.readbundle` style function.
-    unbundler = unbundle20(ui, stream)
     # todo:
     # - replace this is a init function soon.
     # - exception catching

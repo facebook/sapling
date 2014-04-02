@@ -74,7 +74,8 @@ Create an extension to test bundle2 API
   >     try:
   >         lock = repo.lock()
   >         try:
-  >             bundle2.processbundle(repo, sys.stdin)
+  >             unbundler = bundle2.unbundle20(ui, sys.stdin)
+  >             bundle2.processbundle(repo, unbundler)
   >         except KeyError, exc:
   >             raise util.Abort('missing support for %s' % exc)
   >     finally:
