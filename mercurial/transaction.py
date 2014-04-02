@@ -12,7 +12,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import errno, os
+import errno
 import error, util
 
 def active(func):
