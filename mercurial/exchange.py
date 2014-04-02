@@ -401,6 +401,8 @@ class pulloperation(object):
         self.rheads = None
         # list of missing changeset to fetch remotly
         self.fetch = None
+        # result of changegroup pulling (used as returng code by pull)
+        self.cgresult = None
 
     @util.propertycache
     def pulledsubset(self):
@@ -455,9 +457,9 @@ def pull(repo, remote, heads=None, force=False):
         pullop.common, pullop.fetch, pullop.rheads = tmp
         if not pullop.fetch:
             pullop.repo.ui.status(_("no changes found\n"))
-            result = 0
+            pullop.cgresult = 0
         else:
-            result = _pullchangeset(pullop)
+            pullop.cgresult = _pullchangeset(pullop)
 
         _pullphase(pullop)
         _pullobsolete(pullop)
@@ -466,7 +468,7 @@ def pull(repo, remote, heads=None, force=False):
         pullop.releasetransaction()
         lock.release()
 
-    return result
+    return pullop.cgresult
 
 def _pullchangeset(pullop):
     """pull changeset from unbundle into the local repo"""
