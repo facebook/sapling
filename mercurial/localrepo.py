@@ -62,7 +62,8 @@ def unfilteredmethod(orig):
         return orig(repo.unfiltered(), *args, **kwargs)
     return wrapper
 
-moderncaps = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle'))
+moderncaps = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle',
+                  'bundle2'))
 legacycaps = moderncaps.union(set(['changegroupsubset']))
 
 class localpeer(peer.peerrepository):
@@ -276,6 +277,11 @@ class localrepository(object):
         pass
 
     def _restrictcapabilities(self, caps):
+        # bundle2 is not ready for prime time, drop it unless explicitly
+        # required by the tests (or some brave tester)
+        if not self.ui.configbool('server', 'bundle2', False):
+            caps = set(caps)
+            caps.remove('bundle2')
         return caps
 
     def _applyrequirements(self, requirements):

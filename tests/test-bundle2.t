@@ -142,6 +142,8 @@ Create an extension to test bundle2 API
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > bundle2=$TESTTMP/bundle2.py
+  > [server]
+  > bundle2=True
   > EOF
 
 The extension requires a repo (currently unused)
@@ -560,3 +562,41 @@ Support for changegroup
   added 0 changesets with 0 changes to 3 files
   0 unread bytes
   addchangegroup return: 1
+
+Real world exchange
+=====================
+
+
+clone --pull
+
+  $ cd ..
+  $ hg clone main other --pull --rev 9520eea781bc
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R other log -G
+  @  changeset:   1:9520eea781bc
+  |  tag:         tip
+  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  |  date:        Sat Apr 30 15:24:48 2011 +0200
+  |  summary:     E
+  |
+  o  changeset:   0:cd010b8cd998
+     user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+     date:        Sat Apr 30 15:24:48 2011 +0200
+     summary:     A
+  
+
+pull
+
+  $ hg -R other pull
+  pulling from $TESTTMP/main (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 7 changesets with 6 changes to 6 files (+3 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)

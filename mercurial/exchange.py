@@ -7,9 +7,10 @@
 
 from i18n import _
 from node import hex, nullid
+import cStringIO
 import errno
 import util, scmutil, changegroup, base85
-import discovery, phases, obsolete, bookmarks
+import discovery, phases, obsolete, bookmarks, bundle2
 
 
 class pushoperation(object):
@@ -455,6 +456,8 @@ def pull(repo, remote, heads=None, force=False):
     lock = pullop.repo.lock()
     try:
         _pulldiscovery(pullop)
+        if pullop.remote.capable('bundle2'):
+            _pullbundle2(pullop)
         if 'changegroup' in pullop.todosteps:
             _pullchangeset(pullop)
         if 'phases' in pullop.todosteps:
@@ -478,6 +481,31 @@ def _pulldiscovery(pullop):
                                        heads=pullop.heads,
                                        force=pullop.force)
     pullop.common, pullop.fetch, pullop.rheads = tmp
+
+def _pullbundle2(pullop):
+    """pull data using bundle2
+
+    For now, the only supported data are changegroup."""
+    kwargs = {'bundlecaps': set(['HG20'])}
+    # pulling changegroup
+    pullop.todosteps.remove('changegroup')
+    if not pullop.fetch:
+            pullop.repo.ui.status(_("no changes found\n"))
+            pullop.cgresult = 0
+    else:
+        kwargs['common'] = pullop.common
+        kwargs['heads'] = pullop.heads or pullop.rheads
+        if pullop.heads is None and list(pullop.common) == [nullid]:
+            pullop.repo.ui.status(_("requesting all changes\n"))
+    if kwargs.keys() == ['format']:
+        return # nothing to pull
+    bundle = pullop.remote.getbundle('pull', **kwargs)
+    try:
+        op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
+    except KeyError, exc:
+        raise util.Abort('missing support for %s' % exc)
+    assert len(op.records['changegroup']) == 1
+    pullop.cgresult = op.records['changegroup'][0]['return']
 
 def _pullchangeset(pullop):
     """pull changeset from unbundle into the local repo"""
