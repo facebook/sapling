@@ -24,8 +24,11 @@ Create an extension to test bundle2 API
   > def songhandler(op, part):
   >     """handle a "test:song" bundle2 part, printing the lyrics on stdin"""
   >     op.ui.write('The choir starts singing:\n')
+  >     verses = 0
   >     for line in part.data.split('\n'):
   >         op.ui.write('    %s\n' % line)
+  >         verses += 1
+  >     op.records.add('song', {'verses': verses})
   > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
@@ -75,13 +78,16 @@ Create an extension to test bundle2 API
   >         lock = repo.lock()
   >         try:
   >             unbundler = bundle2.unbundle20(ui, sys.stdin)
-  >             bundle2.processbundle(repo, unbundler)
+  >             op = bundle2.processbundle(repo, unbundler)
   >         except KeyError, exc:
   >             raise util.Abort('missing support for %s' % exc)
   >     finally:
   >         lock.release()
   >         remains = sys.stdin.read()
   >         ui.write('%i unread bytes\n' % len(remains))
+  >     if op.records['song']:
+  >         totalverses = sum(r['verses'] for r in op.records['song'])
+  >         ui.write('%i total verses sung\n' % totalverses)
   > 
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
@@ -393,6 +399,7 @@ Process the bundle
   part header size: 0
   end of bundle2 stream
   0 unread bytes
+  3 total verses sung
 
 
   $ hg bundle2 --parts --unknown ../unknown.hg2

@@ -183,6 +183,44 @@ def parthandler(parttype):
         return func
     return _decorator
 
+class unbundlerecords(object):
+    """keep record of what happens during and unbundle
+
+    New records are added using `records.add('cat', obj)`. Where 'cat' is a
+    category of record and obj is an arbitraty object.
+
+    `records['cat']` will return all entries of this category 'cat'.
+
+    Iterating on the object itself will yield `('category', obj)` tuples
+    for all entries.
+
+    All iterations happens in chronological order.
+    """
+
+    def __init__(self):
+        self._categories = {}
+        self._sequences = []
+
+    def add(self, category, entry):
+        """add a new record of a given category.
+
+        The entry can then be retrieved in the list returned by
+        self['category']."""
+        self._categories.setdefault(category, []).append(entry)
+        self._sequences.append((category, entry))
+
+    def __getitem__(self, cat):
+        return tuple(self._categories.get(cat, ()))
+
+    def __iter__(self):
+        return iter(self._sequences)
+
+    def __len__(self):
+        return len(self._sequences)
+
+    def __nonzero__(self):
+        return bool(self._sequences)
+
 class bundleoperation(object):
     """an object that represents a single bundling process
 
@@ -202,6 +240,7 @@ class bundleoperation(object):
     def __init__(self, repo):
         self.repo = repo
         self.ui = repo.ui
+        self.records = unbundlerecords()
 
 def processbundle(repo, unbundler):
     """This function process a bundle, apply effect to/from a repo
@@ -242,6 +281,7 @@ def processbundle(repo, unbundler):
         for part in iterparts:
             pass # consume the bundle content
         raise
+    return op
 
 class bundle20(object):
     """represent an outgoing bundle2 container
