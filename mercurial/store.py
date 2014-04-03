@@ -485,12 +485,10 @@ class fncachestore(basicstore):
         return self.rawvfs.stat(path).st_size
 
     def datafiles(self):
-        existing = []
         for f in sorted(self.fncache):
             ef = self.encode(f)
             try:
                 yield f, ef, self.getsize(ef)
-                existing.append(f)
             except OSError, err:
                 if err.errno != errno.ENOENT:
                     raise
