@@ -183,6 +183,26 @@ def parthandler(parttype):
         return func
     return _decorator
 
+class bundleoperation(object):
+    """an object that represents a single bundling process
+
+    Its purpose is to carry unbundle-related objects and states.
+
+    A new object should be created at the beginning of each bundle processing.
+    The object is to be returned by the processing function.
+
+    The object has very little content now it will ultimately contain:
+    * an access to the repo the bundle is applied to,
+    * a ui object,
+    * a way to retrieve a transaction to add changes to the repo,
+    * a way to record the result of processing each part,
+    * a way to construct a bundle response when applicable.
+    """
+
+    def __init__(self, repo):
+        self.repo = repo
+        self.ui = repo.ui
+
 def processbundle(repo, unbundler):
     """This function process a bundle, apply effect to/from a repo
 
@@ -194,7 +214,7 @@ def processbundle(repo, unbundler):
 
     Unknown Mandatory part will abort the process.
     """
-    ui = repo.ui
+    op = bundleoperation(repo)
     # todo:
     # - replace this is a init function soon.
     # - exception catching
@@ -207,17 +227,17 @@ def processbundle(repo, unbundler):
             key = parttype.lower()
             try:
                 handler = parthandlermapping[key]
-                ui.debug('found an handler for part %r\n' % parttype)
+                op.ui.debug('found a handler for part %r\n' % parttype)
             except KeyError:
                 if key != parttype: # mandatory parts
                     # todo:
                     # - use a more precise exception
                     raise
-                ui.debug('ignoring unknown advisory part %r\n' % key)
+                op.ui.debug('ignoring unknown advisory part %r\n' % key)
                 # todo:
                 # - consume the part once we use streaming
                 continue
-            handler(repo, part)
+            handler(op, part)
     except Exception:
         for part in iterparts:
             pass # consume the bundle content

@@ -21,11 +21,11 @@ Create an extension to test bundle2 API
   > assert len(ELEPHANTSSONG) == 178 # future test say 178 bytes, trust it.
   > 
   > @bundle2.parthandler('test:song')
-  > def songhandler(repo, part):
+  > def songhandler(op, part):
   >     """handle a "test:song" bundle2 part, printing the lyrics on stdin"""
-  >     repo.ui.write('The choir start singing:\n')
+  >     op.ui.write('The choir starts singing:\n')
   >     for line in part.data.split('\n'):
-  >         repo.ui.write('    %s\n' % line)
+  >         op.ui.write('    %s\n' % line)
   > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
