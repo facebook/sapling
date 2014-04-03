@@ -238,12 +238,23 @@ class bundleoperation(object):
     * a way to construct a bundle response when applicable.
     """
 
-    def __init__(self, repo):
+    def __init__(self, repo, transactiongetter):
         self.repo = repo
         self.ui = repo.ui
         self.records = unbundlerecords()
+        self.gettransaction = transactiongetter
 
-def processbundle(repo, unbundler):
+class TransactionUnavailable(RuntimeError):
+    pass
+
+def _notransaction():
+    """default method to get a transaction while processing a bundle
+
+    Raise an exception to highlight the fact that no transaction was expected
+    to be created"""
+    raise TransactionUnavailable()
+
+def processbundle(repo, unbundler, transactiongetter=_notransaction):
     """This function process a bundle, apply effect to/from a repo
 
     It iterates over each part then searches for and uses the proper handling
@@ -254,7 +265,7 @@ def processbundle(repo, unbundler):
 
     Unknown Mandatory part will abort the process.
     """
-    op = bundleoperation(repo)
+    op = bundleoperation(repo, transactiongetter)
     # todo:
     # - replace this is a init function soon.
     # - exception catching
@@ -532,6 +543,12 @@ def handlechangegroup(op, part):
     This is a very early implementation that will massive rework before being
     inflicted to any end-user.
     """
+    # Make sure we trigger a transaction creation
+    #
+    # The addchangegroup function will get a transaction object by itself, but
+    # we need to make sure we trigger the creation of a transaction object used
+    # for the whole processing scope.
+    op.gettransaction()
     data = StringIO.StringIO(part.data)
     data.seek(0)
     cg = changegroup.readbundle(data, 'bundle2part')
