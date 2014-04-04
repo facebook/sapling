@@ -150,7 +150,7 @@ def createcmd(ui, repo, pats, opts):
     label = repo._bookmarkcurrent or parent.branch() or 'default'
 
     # slashes aren't allowed in filenames, therefore we rename it
-    origlabel, label = label, label.replace('/', '_')
+    label = label.replace('/', '_')
 
     def gennames():
         yield label
