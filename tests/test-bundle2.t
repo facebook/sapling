@@ -408,8 +408,8 @@ Process the bundle
   part parameters: 0
   payload chunk size: 178
   payload chunk size: 0
-  found an handler for part 'test:song'
-  The choir start singing:
+  found a handler for part 'test:song'
+  The choir starts singing:
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
@@ -428,7 +428,7 @@ Process the bundle
   $ hg bundle2 --parts --unknown ../unknown.hg2
 
   $ hg unbundle2 < ../unknown.hg2
-  The choir start singing:
+  The choir starts singing:
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
