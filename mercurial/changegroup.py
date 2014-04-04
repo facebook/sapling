@@ -360,7 +360,7 @@ class bundle10(object):
 
         def linknodes(filerevlog, fname):
             if fastpathlinkrev:
-                ln, llr = filerevlog.node, filerevlog.linkrev
+                llr = filerevlog.linkrev
                 def genfilenodes():
                     for r in filerevlog:
                         linkrev = llr(r)
