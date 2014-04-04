@@ -5,15 +5,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient
+import fileserverclient, remotefilelog
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import changegroup, revlog, phases
+from mercurial import changegroup, revlog, phases, mdiff, match
 from mercurial.i18n import _
 
 NoFiles = 0
 LocalFiles = 1
 AllFiles = 2
+
+requirement = "remotefilelog"
 
 def sortnodes(nodes, parentfunc):
     """Topologically sorts the nodes, using the parentfunc to find
@@ -85,7 +87,7 @@ class shallowbundle(changegroup.bundle10):
         yield self.close()
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
-        if "remotefilelog" in self._repo.requirements:
+        if requirement in self._repo.requirements:
             repo = self._repo
             filestosend = self.shouldaddfilegroups(source)
             if filestosend == NoFiles:
@@ -130,7 +132,7 @@ class shallowbundle(changegroup.bundle10):
 
     def shouldaddfilegroups(self, source):
         repo = self._repo
-        if not "remotefilelog" in repo.requirements:
+        if not requirement in repo.requirements:
             return AllFiles
 
         if source == "push" or source == "bundle":
@@ -174,3 +176,143 @@ class shallowbundle(changegroup.bundle10):
         yield changegroup.chunkheader(l)
         yield meta
         yield delta
+
+def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None):
+    if not requirement in repo.requirements:
+        return orig(repo, source, revmap, trp, pr, needfiles)
+
+    original = repo.shallowmatch
+    try:
+        # if serving, only send files the clients has patterns for
+        if source == 'serve':
+            includepattern = None
+            excludepattern = None
+            for cap in (bundlecaps or []):
+                if cap.startswith("includepattern="):
+                    raw = cap[len("includepattern="):]
+                    if raw:
+                        includepattern = raw.split('\0')
+                elif cap.startswith("excludepattern="):
+                    raw = cap[len("excludepattern="):]
+                    if raw:
+                        excludepattern = raw.split('\0')
+            if includepattern or excludepattern:
+                repo.shallowmatch = match.match(repo.root, '', None,
+                    includepattern, excludepattern)
+            else:
+                repo.shallowmatch = match.always(repo.root, '')
+        return orig(repo, source, heads, common, bundlecaps)
+    finally:
+        repo.shallowmatch = original
+
+def addchangegroupfiles(orig, repo, source, revmap, trp, pr, needfiles):
+    if not requirement in repo.requirements:
+        return orig(repo, source, revmap, trp, pr, needfiles)
+
+    files = 0
+    visited = set()
+    revisiondatas = {}
+    queue = []
+
+    # Normal Mercurial processes each file one at a time, adding all
+    # the new revisions for that file at once. In remotefilelog a file
+    # revision may depend on a different file's revision (in the case
+    # of a rename/copy), so we must lay all revisions down across all
+    # files in topological order.
+
+    # read all the file chunks but don't add them
+    while True:
+        chunkdata = source.filelogheader()
+        if not chunkdata:
+            break
+        f = chunkdata["filename"]
+        repo.ui.debug("adding %s revisions\n" % f)
+        pr()
+
+        if not repo.shallowmatch(f):
+            fl = repo.file(f)
+            fl.addgroup(source, revmap, trp)
+            continue
+
+        chain = None
+        while True:
+            revisiondata = source.deltachunk(chain)
+            if not revisiondata:
+                break
+
+            chain = revisiondata['node']
+
+            revisiondatas[(f, chain)] = revisiondata
+            queue.append((f, chain))
+
+            if f not in visited:
+                files += 1
+                visited.add(f)
+
+        if chain == None:
+            raise util.Abort(_("received file revlog group is empty"))
+
+    processed = set()
+    def available(f, node, depf, depnode):
+        if depnode != nullid and (depf, depnode) not in processed:
+            if not (depf, depnode) in revisiondatas:
+                # It's not in the changegroup, assume it's already
+                # in the repo
+                return True
+            # re-add self to queue
+            queue.insert(0, (f, node))
+            # add dependency in front
+            queue.insert(0, (depf, depnode))
+            return False
+        return True
+
+    skipcount = 0
+
+    # Apply the revisions in topological order such that a revision
+    # is only written once it's deltabase and parents have been written.
+    while queue:
+        f, node = queue.pop(0)
+        if (f, node) in processed:
+            continue
+
+        skipcount += 1
+        if skipcount > len(queue) + 1:
+            raise util.Abort(_("circular node dependency"))
+
+        fl = repo.file(f)
+
+        revisiondata = revisiondatas[(f, node)]
+        p1 = revisiondata['p1']
+        p2 = revisiondata['p2']
+        linknode = revisiondata['cs']
+        deltabase = revisiondata['deltabase']
+        delta = revisiondata['delta']
+
+        if not available(f, node, f, deltabase):
+            continue
+
+        base = fl.revision(deltabase)
+        text = mdiff.patch(base, delta)
+        if isinstance(text, buffer):
+            text = str(text)
+
+        meta, text = remotefilelog._parsemeta(text)
+        if 'copy' in meta:
+            copyfrom = meta['copy']
+            copynode = bin(meta['copyrev'])
+            copyfl = repo.file(copyfrom)
+            if not available(f, node, copyfrom, copynode):
+                continue
+
+        for p in [p1, p2]:
+            if p != nullid:
+                if not available(f, node, f, p):
+                    continue
+
+        fl.add(text, meta, trp, linknode, p1, p2)
+        processed.add((f, node))
+        skipcount = 0
+
+    repo.ui.progress(_('files'), None)
+
+    return len(revisiondatas), files

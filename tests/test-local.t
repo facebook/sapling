@@ -123,7 +123,7 @@
 
   $ hg bundle -r 2 --base 1 ../local.bundle
   1 changesets found
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.10s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q

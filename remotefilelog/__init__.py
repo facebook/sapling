@@ -135,6 +135,8 @@ def onetimeclientsetup(ui):
     clientonetime = True
 
     changegroup.bundle10 = shallowbundle.shallowbundle
+    wrapfunction(changegroup, 'addchangegroupfiles', shallowbundle.addchangegroupfiles)
+    wrapfunction(changegroup, 'getbundle', shallowbundle.getbundle)
 
     def storewrapper(orig, requirements, path, vfstype):
         s = orig(requirements, path, vfstype)
@@ -145,7 +147,7 @@ def onetimeclientsetup(ui):
     wrapfunction(store, 'store', storewrapper)
 
     # prefetch files before update
-    def applyupdates(orig, repo, actions, wctx, mctx, actx, overwrite):
+    def applyupdates(orig, repo, actions, wctx, mctx, overwrite):
         if shallowrepo.requirement in repo.requirements:
             manifest = mctx.manifest()
             files = []
@@ -153,7 +155,7 @@ def onetimeclientsetup(ui):
                 files.append((f, hex(manifest[f])))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
-        return orig(repo, actions, wctx, mctx, actx, overwrite)
+        return orig(repo, actions, wctx, mctx, overwrite)
     wrapfunction(merge, 'applyupdates', applyupdates)
 
     # prefetch files before mergecopies check

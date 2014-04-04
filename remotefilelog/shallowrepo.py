@@ -7,7 +7,7 @@
 
 from mercurial.node import hex, nullid, bin
 from mercurial.i18n import _
-from mercurial import localrepo, context, mdiff, util, match
+from mercurial import localrepo, context, util, match
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
 
@@ -53,12 +53,10 @@ def wraprepo(repo):
                 return orig(command, **opts)
 
             def localgetbundle(orig, source, heads=None, common=None, bundlecaps=None):
-                self = orig.__self__
                 if not bundlecaps:
                     bundlecaps = []
                 bundlecaps.append('remotefilelog')
-                return self._repo.getbundle(source, heads=heads, common=common,
-                    bundlecaps=bundlecaps)
+                return orig(source, heads=heads, common=common, bundlecaps=bundlecaps)
 
             if hasattr(remote, '_callstream'):
                 wrapfunction(remote, '_callstream', remotecallstream)
@@ -66,142 +64,6 @@ def wraprepo(repo):
                 wrapfunction(remote, 'getbundle', localgetbundle)
 
             return super(shallowrepository, self).pull(remote, *args, **kwargs)
-
-        def getbundle(self, source, heads=None, common=None, bundlecaps=None):
-            original = self.shallowmatch
-            try:
-                # if serving, only send files the clients has patterns for
-                if source == 'serve':
-                    includepattern = None
-                    excludepattern = None
-                    for cap in (bundlecaps or []):
-                        if cap.startswith("includepattern="):
-                            raw = cap[len("includepattern="):]
-                            if raw:
-                                includepattern = raw.split('\0')
-                        elif cap.startswith("excludepattern="):
-                            raw = cap[len("excludepattern="):]
-                            if raw:
-                                excludepattern = raw.split('\0')
-                    if includepattern or excludepattern:
-                        self.shallowmatch = match.match(self.root, '', None,
-                            includepattern, excludepattern)
-                    else:
-                        self.shallowmatch = match.always(self.root, '')
-
-                return super(shallowrepository, self).getbundle(source, heads,
-                    common, bundlecaps)
-            finally:
-                self.shallowmatch = original
-
-        def addchangegroupfiles(self, source, revmap, trp, pr, needfiles):
-            files = 0
-            visited = set()
-            revisiondatas = {}
-            queue = []
-
-            # Normal Mercurial processes each file one at a time, adding all
-            # the new revisions for that file at once. In remotefilelog a file
-            # revision may depend on a different file's revision (in the case
-            # of a rename/copy), so we must lay all revisions down across all
-            # files in topological order.
-
-            # read all the file chunks but don't add them
-            while True:
-                chunkdata = source.filelogheader()
-                if not chunkdata:
-                    break
-                f = chunkdata["filename"]
-                self.ui.debug("adding %s revisions\n" % f)
-                pr()
-
-                if not self.shallowmatch(f):
-                    fl = self.file(f)
-                    fl.addgroup(source, revmap, trp)
-                    continue
-
-                chain = None
-                while True:
-                    revisiondata = source.deltachunk(chain)
-                    if not revisiondata:
-                        break
-
-                    chain = revisiondata['node']
-
-                    revisiondatas[(f, chain)] = revisiondata
-                    queue.append((f, chain))
-
-                    if f not in visited:
-                        files += 1
-                        visited.add(f)
-
-                if chain == None:
-                    raise util.Abort(_("received file revlog group is empty"))
-
-            processed = set()
-            def available(f, node, depf, depnode):
-                if depnode != nullid and (depf, depnode) not in processed:
-                    if not (depf, depnode) in revisiondatas:
-                        # It's not in the changegroup, assume it's already
-                        # in the repo
-                        return True
-                    # re-add self to queue
-                    queue.insert(0, (f, node))
-                    # add dependency in front
-                    queue.insert(0, (depf, depnode))
-                    return False
-                return True
-
-            skipcount = 0
-
-            # Apply the revisions in topological order such that a revision
-            # is only written once it's deltabase and parents have been written.
-            while queue:
-                f, node = queue.pop(0)
-                if (f, node) in processed:
-                    continue
-
-                skipcount += 1
-                if skipcount > len(queue) + 1:
-                    raise util.Abort(_("circular node dependency"))
-
-                fl = self.file(f)
-
-                revisiondata = revisiondatas[(f, node)]
-                p1 = revisiondata['p1']
-                p2 = revisiondata['p2']
-                linknode = revisiondata['cs']
-                deltabase = revisiondata['deltabase']
-                delta = revisiondata['delta']
-
-                if not available(f, node, f, deltabase):
-                    continue
-
-                base = fl.revision(deltabase)
-                text = mdiff.patch(base, delta)
-                if isinstance(text, buffer):
-                    text = str(text)
-
-                meta, text = remotefilelog._parsemeta(text)
-                if 'copy' in meta:
-                    copyfrom = meta['copy']
-                    copynode = bin(meta['copyrev'])
-                    copyfl = self.file(copyfrom)
-                    if not available(f, node, copyfrom, copynode):
-                        continue
-
-                for p in [p1, p2]:
-                    if p != nullid:
-                        if not available(f, node, f, p):
-                            continue
-
-                fl.add(text, meta, trp, linknode, p1, p2)
-                processed.add((f, node))
-                skipcount = 0
-
-            self.ui.progress(_('files'), None)
-
-            return len(revisiondatas), files
 
     # Wrap dirstate.status here so we can prefetch all file nodes in
     # the lookup set before localrepo.status uses them.
