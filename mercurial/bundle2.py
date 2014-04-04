@@ -254,6 +254,7 @@ class bundleoperation(object):
         self.ui = repo.ui
         self.records = unbundlerecords()
         self.gettransaction = transactiongetter
+        self.reply = None
 
 class TransactionUnavailable(RuntimeError):
     pass
@@ -277,6 +278,9 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
     Unknown Mandatory part will abort the process.
     """
     op = bundleoperation(repo, transactiongetter)
+    # todo:
+    # - only create reply bundle if requested.
+    op.reply = bundle20(op.ui)
     # todo:
     # - replace this is a init function soon.
     # - exception catching

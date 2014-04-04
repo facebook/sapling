@@ -33,6 +33,13 @@ Create an extension to test bundle2 API
   >         verses += 1
   >     op.records.add('song', {'verses': verses})
   > 
+  > @bundle2.parthandler('test:ping')
+  > def pinghandler(op, part):
+  >     op.ui.write('received ping request (id %i)\n' % part.id)
+  >     if op.reply is not None:
+  >         op.reply.addpart(bundle2.part('test:pong',
+  >                                       [('in-reply-to', str(part.id))]))
+  > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
@@ -83,6 +90,9 @@ Create an extension to test bundle2 API
   >        part = bundle2.part('test:UNKNOWN',
   >                            data='some random content')
   >        bundler.addpart(part)
+  >     if opts['parts']:
+  >        part = bundle2.part('test:ping')
+  >        bundler.addpart(part)
   > 
   >     if path is None:
   >        file = sys.stdout
@@ -93,7 +103,7 @@ Create an extension to test bundle2 API
   >         file.write(chunk)
   > 
   > @command('unbundle2', [], '')
-  > def cmdunbundle2(ui, repo):
+  > def cmdunbundle2(ui, repo, replypath=None):
   >     """process a bundle2 stream from stdin on the current repo"""
   >     try:
   >         tr = None
@@ -116,6 +126,10 @@ Create an extension to test bundle2 API
   >         ui.write('%i total verses sung\n' % totalverses)
   >     for rec in op.records['changegroup']:
   >         ui.write('addchangegroup return: %i\n' % rec['return'])
+  >     if op.reply is not None and replypath is not None:
+  >         file = open(replypath, 'w')
+  >         for chunk in op.reply.getchunks():
+  >             file.write(chunk)
   > 
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
@@ -318,6 +332,7 @@ Test part
   bundle part: "test:empty"
   bundle part: "test:song"
   bundle part: "test:math"
+  bundle part: "test:ping"
   end of bundle
 
   $ cat ../parts.hg2
@@ -325,12 +340,12 @@ Test part
   test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
   test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x03\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x03\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg statbundle2 < ../parts.hg2
   options count: 0
-  parts count:   4
+  parts count:   5
     :test:empty:
       mandatory: 0
       advisory: 0
@@ -347,6 +362,10 @@ Test part
       mandatory: 2
       advisory: 1
       payload: 2 bytes
+    :test:ping:
+      mandatory: 0
+      advisory: 0
+      payload: 0 bytes
 
   $ hg statbundle2 --debug < ../parts.hg2
   start processing of HG20 stream
@@ -375,9 +394,14 @@ Test part
   part parameters: 3
   payload chunk size: 2
   payload chunk size: 0
+  part header size: 16
+  part type: "test:ping"
+  part id: "4"
+  part parameters: 0
+  payload chunk size: 0
   part header size: 0
   end of bundle2 stream
-  parts count:   4
+  parts count:   5
     :test:empty:
       mandatory: 0
       advisory: 0
@@ -394,6 +418,10 @@ Test part
       mandatory: 2
       advisory: 1
       payload: 2 bytes
+    :test:ping:
+      mandatory: 0
+      advisory: 0
+      payload: 0 bytes
 
 Test actual unbundling of test part
 =======================================
@@ -434,11 +462,20 @@ Process the bundle
   payload chunk size: 2
   payload chunk size: 0
   ignoring unknown advisory part 'test:math'
+  part header size: 16
+  part type: "test:ping"
+  part id: "4"
+  part parameters: 0
+  payload chunk size: 0
+  found a handler for part 'test:ping'
+  received ping request (id 4)
   part header size: 0
   end of bundle2 stream
   0 unread bytes
   3 total verses sung
 
+Unbundle with an unknown mandatory part
+(should abort)
 
   $ hg bundle2 --parts --unknown ../unknown.hg2
 
@@ -450,6 +487,32 @@ Process the bundle
   0 unread bytes
   abort: missing support for 'test:unknown'
   [255]
+
+unbundle with a reply
+
+  $ hg unbundle2 ../reply.hg2 < ../parts.hg2
+  The choir starts singing:
+      Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+      Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+      Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  received ping request (id 4)
+  0 unread bytes
+  3 total verses sung
+
+The reply is a bundle
+
+  $ cat ../reply.hg2
+  HG20\x00\x00\x00\x1e	test:pong\x00\x00\x00\x00\x01\x00\x0b\x01in-reply-to4\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+
+The reply is valid
+
+  $ hg statbundle2 < ../reply.hg2
+  options count: 0
+  parts count:   1
+    :test:pong:
+      mandatory: 1
+      advisory: 0
+      payload: 0 bytes
 
 Support for changegroup
 ===================================
