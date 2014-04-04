@@ -596,7 +596,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     """
     # build bundle here.
     cg = changegroup.getbundle(repo, source, heads=heads,
-                               common=common, bundlecaps=None)
+                               common=common, bundlecaps=bundlecaps)
     if bundlecaps is None or 'HG20' not in bundlecaps:
         return cg
     # very crude first implementation,
