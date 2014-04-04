@@ -143,7 +143,6 @@ def genpath(rng, count):
 
     mink, maxk = 1, 4096
     def steps():
-        x, k = 0, mink
         for i in xrange(count):
             yield mink + int(round(math.sqrt((maxk - mink) * float(i) / count)))
     for k in steps():
