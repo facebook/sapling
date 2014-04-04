@@ -72,11 +72,13 @@ Create an extension to test bundle2 API
   > def cmdunbundle2(ui, repo):
   >     """process a bundle2 stream from stdin on the current repo"""
   >     try:
+  >         lock = repo.lock()
   >         try:
   >             bundle2.processbundle(repo, sys.stdin)
   >         except KeyError, exc:
   >             raise util.Abort('missing support for %s' % exc)
   >     finally:
+  >         lock.release()
   >         remains = sys.stdin.read()
   >         ui.write('%i unread bytes\n' % len(remains))
   > 
