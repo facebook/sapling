@@ -103,9 +103,10 @@ class localpeer(peer.peerrepository):
     def known(self, nodes):
         return self._repo.known(nodes)
 
-    def getbundle(self, source, heads=None, common=None, bundlecaps=None):
+    def getbundle(self, source, heads=None, common=None, bundlecaps=None,
+                  format='HG10'):
         return changegroup.getbundle(self._repo, source, heads=heads,
-                                     common=common, bundlecaps=None)
+                                     common=common, bundlecaps=bundlecaps)
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.
