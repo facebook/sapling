@@ -552,3 +552,34 @@ def _pullobsolete(pullop):
             pullop.repo.invalidatevolatilesets()
     return tr
 
+def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
+    """return a full bundle (with potentially multiple kind of parts)
+
+    Could be a bundle HG10 or a bundle HG20 depending on bundlecaps
+    passed. For now, the bundle can contain only changegroup, but this will
+    changes when more part type will be available for bundle2.
+
+    This is different from changegroup.getbundle that only returns an HG10
+    changegroup bundle. They may eventually get reunited in the future when we
+    have a clearer idea of the API we what to query different data.
+
+    The implementation is at a very early stage and will get massive rework
+    when the API of bundle is refined.
+    """
+    # build bundle here.
+    cg = changegroup.getbundle(repo, source, heads=heads,
+                               common=common, bundlecaps=None)
+    if bundlecaps is None or 'HG20' not in bundlecaps:
+        return cg
+    # very crude first implementation,
+    # the bundle API will change and the generation will be done lazily.
+    bundler = bundle2.bundle20(repo.ui)
+    tempname = changegroup.writebundle(cg, None, 'HG10UN')
+    data = open(tempname).read()
+    part = bundle2.part('changegroup', data=data)
+    bundler.addpart(part)
+    temp = cStringIO.StringIO()
+    for c in bundler.getchunks():
+        temp.write(c)
+    temp.seek(0)
+    return bundle2.unbundle20(repo.ui, temp)
