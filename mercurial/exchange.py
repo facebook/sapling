@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import sys
 from i18n import _
 from node import hex, nullid
 import cStringIO
@@ -628,3 +629,28 @@ def check_heads(repo, their_heads, context):
         # were transferring data
         raise PushRaced('repository changed while %s - '
                         'please try again' % context)
+
+def unbundle(repo, cg, heads, source, url):
+    """Apply a bundle to a repo.
+
+    this function makes sure the repo is locked during the application and have
+    mechanism to check that no push race occured between the creation of the
+    bundle and its application.
+
+    If the push was raced as PushRaced exception is raised."""
+    r = 0
+    lock = repo.lock()
+    try:
+        check_heads(repo, heads, 'uploading changes')
+        # push can proceed
+        try:
+            r = changegroup.addchangegroup(repo, cg, source, url)
+        except util.Abort, inst:
+            # The old code we moved used sys.stderr directly.
+            # We did not changed it to minise code change.
+            # This need to be moved to something proper.
+            # Feel free to do it.
+            sys.stderr.write("abort: %s\n" % inst)
+    finally:
+        lock.release()
+    return r

@@ -765,21 +765,10 @@ def unbundle(repo, proto, heads):
         r = 0
         try:
             proto.getfile(fp)
-            lock = repo.lock()
-            try:
-                exchange.check_heads(repo, their_heads, 'uploading changes')
-
-                # push can proceed
-                fp.seek(0)
-                gen = changegroupmod.readbundle(fp, None)
-
-                try:
-                    r = changegroupmod.addchangegroup(repo, gen, 'serve',
-                                                      proto._client())
-                except util.Abort, inst:
-                    sys.stderr.write("abort: %s\n" % inst)
-            finally:
-                lock.release()
+            fp.seek(0)
+            gen = changegroupmod.readbundle(fp, None)
+            r = exchange.unbundle(repo, gen, their_heads, 'serve',
+                                  proto._client())
             return pushres(r)
 
         finally:
