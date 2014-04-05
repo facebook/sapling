@@ -611,3 +611,20 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
         temp.write(c)
     temp.seek(0)
     return bundle2.unbundle20(repo.ui, temp)
+
+class PushRaced(RuntimeError):
+    """An exception raised during unbunding that indicate a push race"""
+
+def check_heads(repo, their_heads, context):
+    """check if the heads of a repo have been modified
+
+    Used by peer for unbundling.
+    """
+    heads = repo.heads()
+    heads_hash = util.sha1(''.join(sorted(heads))).digest()
+    if not (their_heads == ['force'] or their_heads == heads or
+            their_heads == ['hashed', heads_hash]):
+        # someone else committed/pushed/unbundled while we
+        # were transferring data
+        raise PushRaced('repository changed while %s - '
+                        'please try again' % context)

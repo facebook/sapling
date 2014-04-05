@@ -9,7 +9,7 @@ import urllib, tempfile, os, sys
 from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
-import peer, error, encoding, util, store
+import peer, error, encoding, util, store, exchange
 
 
 class abstractserverproto(object):
@@ -754,46 +754,36 @@ def stream(repo, proto):
 def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
 
-    def check_heads():
-        heads = repo.heads()
-        heads_hash = util.sha1(''.join(sorted(heads))).digest()
-        return (their_heads == ['force'] or their_heads == heads or
-                their_heads == ['hashed', heads_hash])
-
-    proto.redirect()
-
-    # fail early if possible
-    if not check_heads():
-        return pusherr('repository changed while preparing changes - '
-                       'please try again')
-
-    # write bundle data to temporary file because it can be big
-    fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
-    fp = os.fdopen(fd, 'wb+')
-    r = 0
     try:
-        proto.getfile(fp)
-        lock = repo.lock()
+        proto.redirect()
+
+        exchange.check_heads(repo, their_heads, 'preparing changes')
+
+        # write bundle data to temporary file because it can be big
+        fd, tempname = tempfile.mkstemp(prefix='hg-unbundle-')
+        fp = os.fdopen(fd, 'wb+')
+        r = 0
         try:
-            if not check_heads():
-                # someone else committed/pushed/unbundled while we
-                # were transferring data
-                return pusherr('repository changed while uploading changes - '
-                               'please try again')
-
-            # push can proceed
-            fp.seek(0)
-            gen = changegroupmod.readbundle(fp, None)
-
+            proto.getfile(fp)
+            lock = repo.lock()
             try:
-                r = changegroupmod.addchangegroup(repo, gen, 'serve',
-                                                  proto._client())
-            except util.Abort, inst:
-                sys.stderr.write("abort: %s\n" % inst)
-        finally:
-            lock.release()
-        return pushres(r)
+                exchange.check_heads(repo, their_heads, 'uploading changes')
 
-    finally:
-        fp.close()
-        os.unlink(tempname)
+                # push can proceed
+                fp.seek(0)
+                gen = changegroupmod.readbundle(fp, None)
+
+                try:
+                    r = changegroupmod.addchangegroup(repo, gen, 'serve',
+                                                      proto._client())
+                except util.Abort, inst:
+                    sys.stderr.write("abort: %s\n" % inst)
+            finally:
+                lock.release()
+            return pushres(r)
+
+        finally:
+            fp.close()
+            os.unlink(tempname)
+    except exchange.PushRaced, exc:
+        return pusherr(str(exc))
