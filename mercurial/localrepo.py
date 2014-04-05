@@ -63,7 +63,7 @@ def unfilteredmethod(orig):
     return wrapper
 
 moderncaps = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle',
-                  'bundle2'))
+                  'bundle2', 'unbundle'))
 legacycaps = moderncaps.union(set(['changegroupsubset']))
 
 class localpeer(peer.peerrepository):
@@ -111,6 +111,15 @@ class localpeer(peer.peerrepository):
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.
+
+    def unbundle(self, cg, heads, url):
+        """apply a bundle on a repo
+
+        This function handles the repo locking itself."""
+        try:
+            return exchange.unbundle(self._repo, cg, heads, 'push', url)
+        except exchange.PushRaced, exc:
+            raise error.ResponseError(_('push failed:'), exc.message)
 
     def lock(self):
         return self._repo.lock()

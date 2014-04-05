@@ -774,5 +774,12 @@ def unbundle(repo, proto, heads):
         finally:
             fp.close()
             os.unlink(tempname)
+    except util.Abort, inst:
+        # The old code we moved used sys.stderr directly.
+        # We did not changed it to minise code change.
+        # This need to be moved to something proper.
+        # Feel free to do it.
+        sys.stderr.write("abort: %s\n" % inst)
+        return pushres(0)
     except exchange.PushRaced, exc:
         return pusherr(str(exc))

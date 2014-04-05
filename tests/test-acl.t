@@ -116,9 +116,9 @@ Extension disabled for lack of a hook
   adding quux/file.py revisions
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -177,9 +177,9 @@ Extension disabled for lack of acl.sources
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -249,9 +249,9 @@ No [acl.allow]/[acl.deny]
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -747,9 +747,9 @@ barney is allowed everywhere
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -1067,9 +1067,9 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -1147,9 +1147,9 @@ fred is always allowed
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -1300,9 +1300,9 @@ OS-level groups
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
@@ -1501,9 +1501,9 @@ No branch acls specified
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
@@ -1807,9 +1807,9 @@ Branch acl allow other
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
@@ -1895,9 +1895,9 @@ push foobar into the remote
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
@@ -2056,9 +2056,9 @@ User 'astro' must not be denied
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
