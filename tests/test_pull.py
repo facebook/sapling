@@ -60,6 +60,13 @@ class TestPull(test_util.TestBase):
         commands.pull(repo.ui, repo)
         self.assertEqual(oldheads, map(node.hex, repo.heads()))
 
+    def test_pull_with_secret_default(self):
+        repo = self._loadupdate('branchtagcollision.svndump',
+                                config={'phases.new-commit': 'secret'})[0]
+        oldheads = map(node.hex, repo.heads())
+        commands.pull(repo.ui, repo)
+        self.assertEqual(oldheads, map(node.hex, repo.heads()))
+
     def test_skip_basic(self):
         repo, repo_path = self._loadupdate('single_rev.svndump')
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
