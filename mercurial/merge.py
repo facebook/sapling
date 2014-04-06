@@ -376,7 +376,7 @@ def _checkcollision(repo, wmf, actions):
         foldmap[fold] = f
 
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
-                  acceptremote=False):
+                  acceptremote, followcopies):
     """
     Merge p1 and p2 with ancestor pa and generate merge action list
 
@@ -385,18 +385,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     acceptremote = accept the incoming changes without prompting
     """
 
-    overwrite = force and not branchmerge
     actions, copy, movewithdir = [], {}, {}
-
-    followcopies = False
-    if overwrite:
-        pa = wctx
-    elif pa == p2: # backwards
-        pa = wctx.p1()
-    elif not branchmerge and not wctx.dirty(missing=True):
-        pass
-    elif pa and repo.ui.configbool("merge", "followcopies", True):
-        followcopies = True
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in
@@ -730,14 +719,14 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
 
     return updated, merged, removed, unresolved
 
-def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial,
-                     acceptremote=False):
-    "Calculate the actions needed to merge mctx into tctx"
-    actions = []
-    actions += manifestmerge(repo, tctx, mctx,
+def calculateupdates(repo, wctx, mctx, ancestor, branchmerge, force, partial,
+                     acceptremote, followcopies):
+    "Calculate the actions needed to merge mctx into wctx using ancestor"
+
+    actions = manifestmerge(repo, wctx, mctx,
                              ancestor,
                              branchmerge, force,
-                             partial, acceptremote)
+                             partial, acceptremote, followcopies)
 
     # Filter out prompts.
     newactions, prompts = [], []
@@ -765,8 +754,8 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial,
                 newactions.append((f, "g", (flags,), "prompt recreating"))
         else: assert False, m
 
-    if tctx.rev() is None:
-        newactions += _forgetremoved(tctx, mctx, branchmerge)
+    if wctx.rev() is None:
+        newactions += _forgetremoved(wctx, mctx, branchmerge)
 
     return newactions
 
@@ -990,9 +979,19 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                     # Allow jumping branches if clean and specific rev given
                     pa = p1
 
+        followcopies = False
+        if overwrite:
+            pa = wc
+        elif pa == p2: # backwards
+            pa = wc.p1()
+        elif not branchmerge and not wc.dirty(missing=True):
+            pass
+        elif pa and repo.ui.configbool("merge", "followcopies", True):
+            followcopies = True
+
         ### calculate phase
-        actions = calculateupdates(repo, wc, p2, pa,
-                                   branchmerge, force, partial, mergeancestor)
+        actions = calculateupdates(repo, wc, p2, pa, branchmerge, force,
+                                   partial, mergeancestor, followcopies)
 
         ### apply phase
         if not branchmerge: # just jump to the new rev
