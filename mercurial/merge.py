@@ -719,9 +719,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
 
     return updated, merged, removed, unresolved
 
-def calculateupdates(repo, wctx, mctx, ancestor, branchmerge, force, partial,
+def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                      acceptremote, followcopies):
-    "Calculate the actions needed to merge mctx into wctx using ancestor"
+    "Calculate the actions needed to merge mctx into wctx using ancestors"
+
+    ancestor = ancestors[0]
 
     actions = manifestmerge(repo, wctx, mctx,
                              ancestor,
@@ -875,9 +877,9 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         wc = repo[None]
         pl = wc.parents()
         p1 = pl[0]
-        pa = None
+        pas = [None]
         if ancestor:
-            pa = repo[ancestor]
+            pas = [repo[ancestor]]
 
         if node is None:
             # Here is where we should consider bookmarks, divergent bookmarks,
@@ -916,13 +918,13 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                     # get the max revision for the given successors set,
                     # i.e. the 'tip' of a set
                     node = repo.revs("max(%ln)", successors)[0]
-                    pa = p1
+                    pas = [p1]
 
         overwrite = force and not branchmerge
 
         p2 = repo[node]
-        if pa is None:
-            pa = p1.ancestor(p2)
+        if pas[0] is None:
+            pas = [p1.ancestor(p2)]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
@@ -930,10 +932,10 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         if not overwrite and len(pl) > 1:
             raise util.Abort(_("outstanding uncommitted merges"))
         if branchmerge:
-            if pa == p2:
+            if pas == [p2]:
                 raise util.Abort(_("merging with a working directory ancestor"
                                    " has no effect"))
-            elif pa == p1:
+            elif pas == [p1]:
                 if not mergeancestor and p1.branch() == p2.branch():
                     raise util.Abort(_("nothing to merge"),
                                      hint=_("use 'hg update' "
@@ -953,7 +955,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 repo.hook('update', parent1=xp2, parent2='', error=0)
                 return 0, 0, 0, 0
 
-            if pa not in (p1, p2):  # nonlinear
+            if pas not in ([p1], [p2]):  # nonlinear
                 dirty = wc.dirty(missing=True)
                 if dirty or onode is None:
                     # Branching is a bit strange to ensure we do the minimal
@@ -961,7 +963,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                     foreground = obsolete.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
-                        pa = p1  # allow updating to successors
+                        pas = [p1]  # allow updating to successors
                     elif dirty:
                         msg = _("uncommitted changes")
                         if onode is None:
@@ -977,20 +979,20 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                         raise util.Abort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
-                    pa = p1
+                    pas = [p1]
 
         followcopies = False
         if overwrite:
-            pa = wc
-        elif pa == p2: # backwards
-            pa = wc.p1()
+            pas = [wc]
+        elif pas == [p2]: # backwards
+            pas = [wc.p1()]
         elif not branchmerge and not wc.dirty(missing=True):
             pass
-        elif pa and repo.ui.configbool("merge", "followcopies", True):
+        elif pas[0] and repo.ui.configbool("merge", "followcopies", True):
             followcopies = True
 
         ### calculate phase
-        actions = calculateupdates(repo, wc, p2, pa, branchmerge, force,
+        actions = calculateupdates(repo, wc, p2, pas, branchmerge, force,
                                    partial, mergeancestor, followcopies)
 
         ### apply phase

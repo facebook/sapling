@@ -365,10 +365,10 @@ def overridecheckunknownfile(origfn, repo, wctx, mctx, f):
 # Finally, the merge.applyupdates function will then take care of
 # writing the files into the working copy and lfcommands.updatelfiles
 # will update the largefiles.
-def overridecalculateupdates(origfn, repo, p1, p2, pa, branchmerge, force,
+def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                              partial, acceptremote, followcopies):
     overwrite = force and not branchmerge
-    actions = origfn(repo, p1, p2, pa, branchmerge, force, partial,
+    actions = origfn(repo, p1, p2, pas, branchmerge, force, partial,
                      acceptremote, followcopies)
 
     if overwrite:
