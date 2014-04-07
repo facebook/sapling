@@ -291,7 +291,11 @@ def patchbomb(ui, repo, *revs, **opts):
         return [str(r) for r in revs]
 
     def getpatches(revs):
+        prev = repo['.'].rev()
         for r in scmutil.revrange(repo, revs):
+            if r == prev and (repo[None].files() or repo[None].deleted()):
+                ui.warn(_('warning: working directory has '
+                          'uncommitted changes\n'))
             output = cStringIO.StringIO()
             cmdutil.export(repo, [r], fp=output,
                          opts=patch.diffopts(ui, opts))

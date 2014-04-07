@@ -1805,7 +1805,9 @@ no intro message in non-interactive mode
   +b
   
 
-test single flag for single patch:
+test single flag for single patch (and no warning when not mailing dirty rev):
+  $ hg up -qr1
+  $ echo dirt > a
   $ hg email --date '1970-1-1 0:1' -n --flag fooFlag -f quux -t foo -c bar -s test \
   >  -r 2
   this patch series consists of 1 patches.
@@ -1839,9 +1841,10 @@ test single flag for single patch:
   +c
   
 
-test single flag for multiple patches:
+test single flag for multiple patches (and warning when mailing dirty rev):
   $ hg email --date '1970-1-1 0:1' -n --flag fooFlag -f quux -t foo -c bar -s test \
   >  -r 0:1
+  warning: working directory has uncommitted changes
   this patch series consists of 2 patches.
   
   
@@ -1919,6 +1922,8 @@ test single flag for multiple patches:
   @@ -0,0 +1,1 @@
   +b
   
+  $ hg revert --no-b a
+  $ hg up -q
 
 test multiple flags for single patch:
   $ hg email --date '1970-1-1 0:1' -n --flag fooFlag --flag barFlag -f quux -t foo \
