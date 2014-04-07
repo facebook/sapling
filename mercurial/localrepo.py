@@ -1154,10 +1154,10 @@ class localrepository(object):
             fparent1, fparent2 = fparent2, nullid
         elif fparent2 != nullid:
             # is one parent an ancestor of the other?
-            fparentancestor = flog.ancestor(fparent1, fparent2)
-            if fparentancestor == fparent1:
+            fparentancestors = flog.commonancestors(fparent1, fparent2)
+            if fparent1 in fparentancestors:
                 fparent1, fparent2 = fparent2, nullid
-            elif fparentancestor == fparent2:
+            elif fparent2 in fparentancestors:
                 fparent2 = nullid
 
         # is the file changed?
