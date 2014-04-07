@@ -311,6 +311,15 @@ def extstyles():
     for name, ext in extensions.extensions():
         _styles.update(getattr(ext, 'colortable', {}))
 
+def valideffect(effect):
+    'Determine if the effect is valid or not.'
+    good = False
+    if not _terminfo_params and effect in _effects:
+        good = True
+    elif effect in _terminfo_params or effect[:-11] in _terminfo_params:
+        good = True
+    return good
+
 def configstyles(ui):
     for status, cfgeffects in ui.configitems('color'):
         if '.' not in status or status.startswith('color.'):
@@ -319,9 +328,7 @@ def configstyles(ui):
         if cfgeffects:
             good = []
             for e in cfgeffects:
-                if not _terminfo_params and e in _effects:
-                    good.append(e)
-                elif e in _terminfo_params or e[:-11] in _terminfo_params:
+                if valideffect(e):
                     good.append(e)
                 else:
                     ui.warn(_("ignoring unknown color/effect %r "
