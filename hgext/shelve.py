@@ -526,13 +526,13 @@ def unshelve(ui, repo, *shelved, **opts):
         tr = repo.transaction('unshelve', report=lambda x: None)
         oldtiprev = len(repo)
 
-        wctx = repo['.']
-        tmpwctx = wctx
+        pctx = repo['.']
+        tmpwctx = pctx
         # The goal is to have a commit structure like so:
-        # ...-> wctx -> tmpwctx -> shelvectx
+        # ...-> pctx -> tmpwctx -> shelvectx
         # where tmpwctx is an optional commit with the user's pending changes
         # and shelvectx is the unshelved changes. Then we merge it all down
-        # to the original wctx.
+        # to the original pctx.
 
         # Store pending changes in a commit
         m, a, r, d = repo.status()[:4]
@@ -587,7 +587,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
                 stripnodes = [repo.changelog.node(rev)
                               for rev in xrange(oldtiprev, len(repo))]
-                shelvedstate.save(repo, basename, wctx, tmpwctx, stripnodes)
+                shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes)
 
                 util.rename(repo.join('rebasestate'),
                             repo.join('unshelverebasestate'))
@@ -602,7 +602,7 @@ def unshelve(ui, repo, *shelved, **opts):
                 # rebase was a no-op, so it produced no child commit
                 shelvectx = tmpwctx
 
-        mergefiles(ui, repo, wctx, shelvectx)
+        mergefiles(ui, repo, pctx, shelvectx)
         shelvedstate.clear(repo)
 
         # The transaction aborting will strip all the commits for us,
