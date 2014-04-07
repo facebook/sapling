@@ -8,9 +8,8 @@
 
 import urllib2
 
-from mercurial import util
+from mercurial import util, wireproto
 from mercurial.i18n import _
-from mercurial.wireproto import remotebatch
 
 import lfutil
 import basestore
@@ -97,4 +96,4 @@ class remotestore(basestore.basestore):
 
     def batch(self):
         '''Support for remote batching.'''
-        return remotebatch(self)
+        return wireproto.remotebatch(self)
