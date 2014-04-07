@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short, hex, bin
 from i18n import _
-import ancestor, mdiff, error, util, scmutil, subrepo, patch, encoding, phases
+import mdiff, error, util, scmutil, subrepo, patch, encoding, phases
 import match as matchmod
 import os, errno, stat
 import obsolete as obsmod
@@ -687,55 +687,6 @@ class basefilectx(object):
                 pcache[f] = []
 
         return zip(hist[base][0], hist[base][1].splitlines(True))
-
-    def ancestor(self, fc2, actx):
-        """
-        find the common ancestor file context, if any, of self, and fc2
-
-        actx must be the changectx of the common ancestor
-        of self's and fc2's respective changesets.
-        """
-
-        # the easy case: no (relevant) renames
-        if fc2.path() == self.path() and self.path() in actx:
-            return actx[self.path()]
-
-        # the next easiest cases: unambiguous predecessor (name trumps
-        # history)
-        if self.path() in actx and fc2.path() not in actx:
-            return actx[self.path()]
-        if fc2.path() in actx and self.path() not in actx:
-            return actx[fc2.path()]
-
-        # prime the ancestor cache for the working directory
-        acache = {}
-        for c in (self, fc2):
-            if c.filenode() is None:
-                pl = [(n.path(), n.filenode()) for n in c.parents()]
-                acache[(c._path, None)] = pl
-
-        flcache = {self._repopath:self._filelog, fc2._repopath:fc2._filelog}
-        def parents(vertex):
-            if vertex in acache:
-                return acache[vertex]
-            f, n = vertex
-            if f not in flcache:
-                flcache[f] = self._repo.file(f)
-            fl = flcache[f]
-            pl = [(f, p) for p in fl.parents(n) if p != nullid]
-            re = fl.renamed(n)
-            if re:
-                pl.append(re)
-            acache[vertex] = pl
-            return pl
-
-        a, b = (self._path, self._filenode), (fc2._path, fc2._filenode)
-        v = ancestor.genericancestor(a, b, parents)
-        if v:
-            f, n = v
-            return filectx(self._repo, f, fileid=n, filelog=flcache[f])
-
-        return None
 
     def ancestors(self, followfirst=False):
         visit = {}
