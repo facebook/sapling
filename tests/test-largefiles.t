@@ -2226,6 +2226,79 @@ merge action 'd' for 'local renamed directory to d2/g' which has no filename
   0 largefiles updated, 0 removed
   $ cd ..
 
+
+Merge conflicts:
+
+  $ hg init merge
+  $ cd merge
+  $ echo 0 > f-different
+  $ echo 0 > f-same
+  $ echo 0 > f-unchanged-1
+  $ echo 0 > f-unchanged-2
+  $ hg add --large *
+  $ hg ci -m0
+  Invoking status precommit hook
+  A f-different
+  A f-same
+  A f-unchanged-1
+  A f-unchanged-2
+  $ echo tmp1 > f-unchanged-1
+  $ echo tmp1 > f-unchanged-2
+  $ echo tmp1 > f-same
+  $ hg ci -m1
+  Invoking status precommit hook
+  M f-same
+  M f-unchanged-1
+  M f-unchanged-2
+  $ echo 2 > f-different
+  $ echo 0 > f-unchanged-1
+  $ echo 1 > f-unchanged-2
+  $ echo 1 > f-same
+  $ hg ci -m2
+  Invoking status precommit hook
+  M f-different
+  M f-same
+  M f-unchanged-1
+  M f-unchanged-2
+  $ hg up -qr0
+  $ echo tmp2 > f-unchanged-1
+  $ echo tmp2 > f-unchanged-2
+  $ echo tmp2 > f-same
+  $ hg ci -m3
+  Invoking status precommit hook
+  M f-same
+  M f-unchanged-1
+  M f-unchanged-2
+  created new head
+  $ echo 1 > f-different
+  $ echo 1 > f-unchanged-1
+  $ echo 0 > f-unchanged-2
+  $ echo 1 > f-same
+  $ hg ci -m4
+  Invoking status precommit hook
+  M f-different
+  M f-same
+  M f-unchanged-1
+  M f-unchanged-2
+  $ hg merge
+  largefile f-different has a merge conflict
+  ancestor was 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
+  keep (l)ocal e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e or
+  take (o)ther 7448d8798a4380162d4b56f9b452e2f6f9e24e7a? l
+  0 files updated, 4 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ cat f-different
+  1
+  $ cat f-same
+  1
+  $ cat f-unchanged-1
+  1
+  $ cat f-unchanged-2
+  1
+  $ cd ..
+
 Check whether "largefiles" feature is supported only in repositories
 enabling largefiles extension.
 
