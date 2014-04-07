@@ -909,8 +909,13 @@ class revlog(object):
         ladd = l.append
 
         # preload the cache
-        self._chunkraw(revs[0], revs[-1])
-        offset, data = self._chunkcache
+        try:
+            self._chunkraw(revs[0], revs[-1])
+            offset, data = self._chunkcache
+        except OverflowError:
+            # issue4215 - we can't cache a run of chunks greater than
+            # 2G on Windows
+            return [self._chunk(rev) for rev in revs]
 
         for rev in revs:
             chunkstart = start(rev)
