@@ -458,7 +458,9 @@ def unshelvecontinue(ui, repo, state, opts):
           ('c', 'continue', None,
            _('continue an incomplete unshelve operation')),
           ('', 'keep', None,
-           _('keep shelve after unshelving'))],
+           _('keep shelve after unshelving')),
+          ('', 'date', '',
+           _('set date for temporary commits (DEPRECATED)'), _('DATE'))],
          _('hg unshelve [SHELVED]'))
 def unshelve(ui, repo, *shelved, **opts):
     """restore a shelved change to the working directory
@@ -553,6 +555,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
             tempopts = {}
             tempopts['message'] = "pending changes temporary commit"
+            tempopts['date'] = opts.get('date')
             ui.quiet = True
             node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
             tmpwctx = repo[node]

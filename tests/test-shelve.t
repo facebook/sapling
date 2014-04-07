@@ -577,7 +577,7 @@ unshelve and conflicts with untracked files
   
   $ mv f.orig f
   $ echo other change >> a
-  $ hg unshelve
+  $ hg unshelve --date '1073741824 0'
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
@@ -586,16 +586,16 @@ unshelve and conflicts with untracked files
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
-  $ hg log -G --template '{rev}  {desc|firstline}  {author}'
-  @  5  changes to 'commit stuff'  shelve@localhost
+  $ hg log -G --template '{rev}  {desc|firstline}  {author}  {date|isodate}'
+  @  5  changes to 'commit stuff'  shelve@localhost  1970-01-01 00:00 +0000
   |
-  | @  4  pending changes temporary commit  shelve@localhost
+  | @  4  pending changes temporary commit  shelve@localhost  2004-01-10 13:37 +0000
   |/
-  o  3  commit stuff  test
+  o  3  commit stuff  test  1970-01-01 00:00 +0000
   |
-  | o  2  c  test
+  | o  2  c  test  1970-01-01 00:00 +0000
   |/
-  o  0  a  test
+  o  0  a  test  1970-01-01 00:00 +0000
   
   $ hg st
   M f
