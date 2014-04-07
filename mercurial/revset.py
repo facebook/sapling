@@ -320,7 +320,7 @@ def adds(repo, subset, x):
 
 def ancestor(repo, subset, x):
     """``ancestor(*changeset)``
-    Greatest common ancestor of the changesets.
+    A greatest common ancestor of the changesets.
 
     Accepts 0 or more changesets.
     Will return empty list when passed no args.
@@ -332,18 +332,15 @@ def ancestor(repo, subset, x):
     anc = None
 
     # (getset(repo, rl, i) for i in l) generates a list of lists
-    rev = repo.changelog.rev
-    ancestor = repo.changelog.ancestor
-    node = repo.changelog.node
     for revs in (getset(repo, rl, i) for i in l):
         for r in revs:
             if anc is None:
-                anc = r
+                anc = repo[r]
             else:
-                anc = rev(ancestor(node(anc), node(r)))
+                anc = anc.ancestor(repo[r])
 
-    if anc is not None and anc in subset:
-        return baseset([anc])
+    if anc is not None and anc.rev() in subset:
+        return baseset([anc.rev()])
     return baseset([])
 
 def _ancestors(repo, subset, x, followfirst=False):
