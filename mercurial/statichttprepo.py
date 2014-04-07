@@ -143,6 +143,7 @@ class statichttprepository(localrepo.localrepository):
         self.decodepats = None
 
     def _restrictcapabilities(self, caps):
+        caps = super(statichttprepository, self)._restrictcapabilities(caps)
         return caps.difference(["pushkey"])
 
     def url(self):
