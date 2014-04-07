@@ -24,7 +24,7 @@ These imports will not be delayed:
   b = __import__(a)
 '''
 
-import __builtin__
+import __builtin__, os
 _origimport = __import__
 
 nothing = object()
@@ -167,7 +167,8 @@ def isenabled():
 
 def enable():
     "enable global demand-loading of modules"
-    __builtin__.__import__ = _demandimport
+    if os.environ.get('HGDEMANDIMPORT') != 'disable':
+        __builtin__.__import__ = _demandimport
 
 def disable():
     "disable global demand-loading of modules"

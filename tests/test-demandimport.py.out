@@ -13,3 +13,4 @@ fred = <proxied module 're'>
 re = <unloaded module 'sys'>
 re.stderr = <open file '<whatever>', mode 'w' at 0x?>
 re = <proxied module 'sys'>
+node = <module 'mercurial.node' from '?'>

@@ -37,3 +37,9 @@ print "fred =", f(fred)
 print "re =", f(re)
 print "re.stderr =", f(re.stderr)
 print "re =", f(re)
+
+demandimport.disable()
+os.environ['HGDEMANDIMPORT'] = 'disable'
+demandimport.enable()
+from mercurial import node
+print "node =", f(node)
