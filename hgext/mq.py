@@ -826,10 +826,10 @@ class queue(object):
                 repo.setparents(p1, merge)
 
             if all_files and '.hgsubstate' in all_files:
-                wctx = repo['.']
-                mctx = actx = repo[None]
+                wctx = repo[None]
+                pctx = repo['.']
                 overwrite = False
-                mergedsubstate = subrepo.submerge(repo, wctx, mctx, actx,
+                mergedsubstate = subrepo.submerge(repo, pctx, wctx, wctx,
                     overwrite)
                 files += mergedsubstate.keys()
 
