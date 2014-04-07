@@ -568,8 +568,9 @@ def transplant(ui, repo, *revs, **opts):
         if not heads:
             heads = repo.heads()
         ancestors = []
+        ctx = repo[dest]
         for head in heads:
-            ancestors.append(repo.changelog.ancestor(dest, head))
+            ancestors.append(ctx.ancestor(repo[head]).node())
         for node in repo.changelog.nodesbetween(ancestors, heads)[0]:
             if match(node):
                 yield node
