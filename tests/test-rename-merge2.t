@@ -86,6 +86,7 @@ $4 = expected result
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
+   a: keep -> k
    b: remote copied from a -> m
     preserving a for resolve of b
    rev: versions differ -> m
@@ -570,6 +571,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
+   a: keep -> k
    b: versions differ -> m
     preserving b for resolve of b
    rev: versions differ -> m

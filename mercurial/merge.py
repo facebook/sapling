@@ -449,7 +449,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             fla = ma.flags(fa)
             nol = 'l' not in fl1 + fl2 + fla
             if n2 == a and fl2 == fla:
-                pass # remote unchanged - keep local
+                actions.append((f, "k", (), "keep")) # remote unchanged
             elif n1 == a and fl1 == fla: # local unchanged - use remote
                 if n1 == n2: # optimization: keep local content
                     actions.append((f, "e", (fl2,), "update permissions"))
@@ -634,13 +634,13 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
             audit(f)
             util.unlinkpath(repo.wjoin(f))
 
-    numupdates = len(actions)
+    numupdates = len([a for a in actions if a[1] != 'k'])
     workeractions = [a for a in actions if a[1] in 'gr']
     updateactions = [a for a in workeractions if a[1] == 'g']
     updated = len(updateactions)
     removeactions = [a for a in workeractions if a[1] == 'r']
     removed = len(removeactions)
-    actions = [a for a in actions if a[1] not in 'gr']
+    actions = [a for a in actions if a[1] not in 'grk']
 
     hgsub = [a[1] for a in workeractions if a[0] == '.hgsubstate']
     if hgsub and hgsub[0] == 'r':
@@ -778,6 +778,8 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.drop(f)
         elif m == "e": # exec change
             repo.dirstate.normallookup(f)
+        elif m == "k": # keep
+            pass
         elif m == "g": # get
             if branchmerge:
                 repo.dirstate.otherparent(f)
