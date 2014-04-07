@@ -531,7 +531,7 @@ unshelve should keep a copy of unknown files
   z
 
 
-unshelve and conflicts with untracked files
+unshelve and conflicts with tracked and untracked files
 
  preparing:
 
@@ -546,7 +546,7 @@ unshelve and conflicts with untracked files
   $ hg shelve
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ echo gold > f
+  $ echo g > f
   $ hg unshelve
   unshelving change 'default'
   $ hg st
@@ -555,7 +555,7 @@ unshelve and conflicts with untracked files
   $ cat f
   f
   $ cat f.orig
-  gold
+  g
 
  other uncommitted changes - merge:
 
@@ -576,7 +576,7 @@ unshelve and conflicts with untracked files
   o  0  a  test
   
   $ mv f.orig f
-  $ echo other change >> a
+  $ echo 1 > a
   $ hg unshelve --date '1073741824 0'
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
@@ -602,12 +602,12 @@ unshelve and conflicts with untracked files
   ? f.orig
   $ cat f
   <<<<<<< local
-  gold
+  g
   =======
   f
   >>>>>>> other
   $ cat f.orig
-  gold
+  g
   $ hg unshelve --abort
   rebase aborted
   unshelve of 'default' aborted
@@ -615,7 +615,7 @@ unshelve and conflicts with untracked files
   M a
   ? f.orig
   $ cat f.orig
-  gold
+  g
   $ hg unshelve
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
@@ -645,18 +645,22 @@ unshelve and conflicts with untracked files
   ? f.orig
   $ cat f
   <<<<<<< local
-  gold
+  g
   =======
   f
   >>>>>>> other
   $ cat f.orig
-  gold
+  g
   $ hg unshelve --abort
   rebase aborted
   no changes needed to a
   no changes needed to d
   no changes needed to e
   unshelve of 'default' aborted
+  $ hg st
+  ? f.orig
+  $ cat f.orig
+  g
   $ hg shelve --delete default
 
   $ cd ..
