@@ -382,6 +382,8 @@ class colorui(uimod.ui):
             s = _styles.get(l, '')
             if s:
                 effects.append(s)
+            elif valideffect(l):
+                effects.append(l)
         effects = ' '.join(effects)
         if effects:
             return '\n'.join([render_effects(s, effects)
