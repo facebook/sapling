@@ -281,7 +281,7 @@ class localrepository(object):
         # required by the tests (or some brave tester)
         if not self.ui.configbool('server', 'bundle2', False):
             caps = set(caps)
-            caps.remove('bundle2')
+            caps.discard('bundle2')
         return caps
 
     def _applyrequirements(self, requirements):
