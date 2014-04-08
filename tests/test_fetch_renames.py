@@ -18,6 +18,10 @@ class TestFetchRenames(test_util.TestBase):
     def test_rename(self):
         config = {
             'hgsubversion.filestoresize': '0',
+            # we set this because we expect all of the copies to be
+            # handled via replay, and we want to notice if that
+            # changes.
+            'hgsubversion.failonmissing': 'yes',
             }
         repo = self._load_fixture_and_fetch('renames.svndump', config=config)
         self._run_assertions(repo)
@@ -25,6 +29,7 @@ class TestFetchRenames(test_util.TestBase):
     def test_rename_with_prefix(self):
         config = {
             'hgsubversion.filestoresize': '0',
+            'hgsubversion.failonmissing': 'yes',
             }
         repo = self._load_fixture_and_fetch('renames_with_prefix.svndump',
                                             subdir='prefix',

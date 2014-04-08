@@ -380,7 +380,10 @@ class HgEditor(svnwrap.Editor):
 
         fctx = ctx.filectx(from_file)
         flags = fctx.flags()
-        self.current.set(path, fctx.data(), 'x' in flags, 'l' in flags)
+        base = fctx.data()
+        if 'l' in flags:
+            base = 'link ' + base
+        self.current.set(path, base, 'x' in flags, 'l' in flags)
         copypath = None
         if from_branch == branch:
             parentid = self.meta.get_parent_revision(
@@ -389,7 +392,7 @@ class HgEditor(svnwrap.Editor):
                 parentctx = self._getctx(parentid)
                 if util.issamefile(parentctx, ctx, from_file):
                     copypath = from_file
-        return self._openfile(path, fctx.data(), 'x' in flags, 'l' in flags,
+        return self._openfile(path, base, 'x' in flags, 'l' in flags,
                 copypath, create=True)
 
     @svnwrap.ieditor
