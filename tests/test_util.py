@@ -108,6 +108,7 @@ subdir = {'truncatedhistory.svndump': '/project2',
           'non_ascii_path_1.svndump': '/b\xC3\xB8b',
           'non_ascii_path_2.svndump': '/b%C3%B8b',
           'subdir_is_file_prefix.svndump': '/flaf',
+          'renames_with_prefix.svndump': '/prefix',
           }
 # map defining the layouts of the fixtures we can use with custom layout
 # these are really popular layouts, so I gave them names
@@ -160,6 +161,10 @@ custom = {
         'branch': 'branches/branch',
         },
     'renames.svndump': {
+        'default': 'trunk',
+        'branch1': 'branches/branch1',
+        },
+    'renames_with_prefix.svndump': {
         'default': 'trunk',
         'branch1': 'branches/branch1',
         },

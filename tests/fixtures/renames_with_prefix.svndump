@@ -1,0 +1,1189 @@
+SVN-fs-dump-format-version: 2
+
+UUID: ae30a990-0fd3-493e-b5d7-883bdd606745
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.118401Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 118
+Content-length: 118
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.138394Z
+K 7
+svn:log
+V 12
+init project
+PROPS-END
+
+Node-path: prefix
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 120
+Content-length: 120
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.304127Z
+K 7
+svn:log
+V 14
+add everything
+PROPS-END
+
+Node-path: prefix/trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: prefix/trunk/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Node-path: prefix/trunk/changed
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 8
+Text-content-md5: ec1bebaea2c042beb68f7679ddd106a4
+Text-content-sha1: 2f6933b5ee0f5fdd823d9717d8729f3c2523811b
+Content-length: 18
+
+PROPS-END
+changed
+
+
+Node-path: prefix/trunk/changeddir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk/changeddir/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 9
+Text-content-md5: 2dfdfd8492a2c558ec838d69f73f5f6b
+Text-content-sha1: fc7acf217b976525893922a9ed1bb3c3ab24f3a9
+Content-length: 19
+
+PROPS-END
+changed2
+
+
+Node-path: prefix/trunk/changeddir/link
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: af3f1e8f8fa51f08e4985bda241ee7b8
+Text-content-sha1: f11a0ea0293755a1ec59d29628130cf3fcd3ec1c
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link f
+
+Node-path: prefix/trunk/changedlink
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 12
+Text-content-md5: d91fb1e1062e62a17f97b44932d454c4
+Text-content-sha1: 8c147187742f58ed0cd8707ddd0c0942fe8b2616
+Content-length: 45
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link changed
+
+Node-path: prefix/trunk/da
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk/da/daf
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-content-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
+Content-length: 12
+
+PROPS-END
+c
+
+
+Node-path: prefix/trunk/da/dalink
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 8
+Text-content-md5: 21af4beda4f4d197c0b1cecbf11543dc
+Text-content-sha1: 52f2276428bcb4cf45fefaf293521b5b3a26aa5f
+Content-length: 41
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link daf
+
+Node-path: prefix/trunk/da/db
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk/da/db/dbf
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Text-content-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
+Content-length: 12
+
+PROPS-END
+d
+
+
+Node-path: prefix/trunk/da/db/dblink
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 11
+Text-content-md5: 301198daf87f24796a8be0746389da42
+Text-content-sha1: af5485e6ea78867c36f7993542cbaadb570b79c8
+Content-length: 44
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link ../daf
+
+Node-path: prefix/trunk/deleteddir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk/deleteddir/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 11
+Text-content-md5: 49b72b575e26ecddb296dd59b24c3e67
+Text-content-sha1: 02801293a2cd7e4c105239d34a3cfa4a4eb9c921
+Content-length: 21
+
+PROPS-END
+deleteddir
+
+
+Node-path: prefix/trunk/deleteddir/link
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: af3f1e8f8fa51f08e4985bda241ee7b8
+Text-content-sha1: f11a0ea0293755a1ec59d29628130cf3fcd3ec1c
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link f
+
+Node-path: prefix/trunk/deletedfile
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 8
+Text-content-md5: 4d742b2f247bec99b41a60acbebc149a
+Text-content-sha1: 1ef5922542033869106719d682a87ed706af4ddd
+Content-length: 18
+
+PROPS-END
+deleted
+
+
+Node-path: prefix/trunk/deletedlink
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-content-sha1: 7325442a5f7383205e66db563025d51535883784
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link b
+
+Node-path: prefix/trunk/groupdir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk/groupdir/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: prefix/trunk/groupdir/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Node-path: prefix/trunk/groupdir/linka
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link a
+
+Node-path: prefix/trunk/groupdir/linkb
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-content-sha1: 7325442a5f7383205e66db563025d51535883784
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link b
+
+Node-path: prefix/trunk/linka
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link a
+
+Node-path: prefix/trunk/linkb
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-content-sha1: 7325442a5f7383205e66db563025d51535883784
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link b
+
+Node-path: prefix/trunk/unchanged
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 10
+Text-content-md5: 85ae5b04dd0a666efad8633d142a4635
+Text-content-sha1: c654a5435f170cfad37e136fee9672ecc40afd4a
+Content-length: 20
+
+PROPS-END
+unchanged
+
+
+Node-path: prefix/trunk/unchangeddir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: prefix/trunk/unchangeddir/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 11
+Text-content-md5: a11092875079a002afb9ecef07f510e7
+Text-content-sha1: c18ebadf1cffd6a79e4b74c50474b3cf8d5cb32b
+Content-length: 21
+
+PROPS-END
+unchanged2
+
+
+Node-path: prefix/trunk/unchangeddir/link
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: af3f1e8f8fa51f08e4985bda241ee7b8
+Text-content-sha1: f11a0ea0293755a1ec59d29628130cf3fcd3ec1c
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link f
+
+Node-path: prefix/trunk/unchangedlink
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 14
+Text-content-md5: 1aa9c01278c74a273e3117dc42426153
+Text-content-sha1: 3f1a6ab03b820f0baab56c083f77bd9279db2486
+Content-length: 47
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link unchanged
+
+Revision-number: 3
+Prop-content-length: 127
+Content-length: 127
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.400275Z
+K 7
+svn:log
+V 21
+delete files and dirs
+PROPS-END
+
+Node-path: prefix/trunk/changed
+Node-kind: file
+Node-action: change
+Text-content-length: 16
+Text-content-md5: 1725f40a29aad369a39b0f96c82d50f9
+Text-content-sha1: bd7078ed7302005a46b0f32b08cb81406df5d5cf
+Content-length: 16
+
+changed
+changed
+
+
+Node-path: prefix/trunk/changeddir/f
+Node-kind: file
+Node-action: change
+Text-content-length: 18
+Text-content-md5: 984b8c4ab9193b7659b9f914897a949c
+Text-content-sha1: df588cfa0799c1d4447646645ff2799e23e59f57
+Content-length: 18
+
+changed2
+changed2
+
+
+Node-path: prefix/trunk/changeddir/link
+Node-kind: file
+Node-action: change
+Text-content-length: 15
+Text-content-md5: 19b47078b08789b4af5bc8d78b09f051
+Text-content-sha1: 697d35a9a0857889666f1cae1baa9e294b4cf36f
+Content-length: 15
+
+link ../changed
+
+Node-path: prefix/trunk/changedlink
+Node-kind: file
+Node-action: change
+Text-content-length: 17
+Text-content-md5: 78d7d7c917f0f0355f01f23508cc0a0a
+Text-content-sha1: 6d7057bfb5ba8dffc0184f491e4fa43ec1904cdd
+Content-length: 17
+
+link changeddir/f
+
+Node-path: prefix/trunk/groupdir/a
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+Content-length: 4
+
+a
+a
+
+
+Node-path: prefix/trunk/groupdir/linka
+Node-kind: file
+Node-action: change
+Text-content-length: 9
+Text-content-md5: 37f1cfbed04f4354d8e706a1f1f626b6
+Text-content-sha1: 7e368116b09c906ec1b989cefe328fd6dec4f759
+Content-length: 9
+
+link ../a
+
+Node-path: prefix/trunk/deleteddir
+Node-action: delete
+
+
+Node-path: prefix/trunk/deletedfile
+Node-action: delete
+
+
+Node-path: prefix/trunk/deletedlink
+Node-action: delete
+
+
+Revision-number: 4
+Prop-content-length: 120
+Content-length: 120
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.494631Z
+K 7
+svn:log
+V 14
+create branch1
+PROPS-END
+
+Node-path: prefix/branches/branch1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: prefix/trunk
+
+
+Node-path: prefix/branches/branch1/a
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/a
+Text-copy-source-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-copy-source-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+
+
+Node-path: prefix/branches/branch1/b
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/b
+Text-copy-source-md5: 3b5d5c3712955042212316173ccf37be
+Text-copy-source-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+
+
+Node-path: prefix/branches/branch1/changed
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: prefix/trunk/changed
+Text-copy-source-md5: 1725f40a29aad369a39b0f96c82d50f9
+Text-copy-source-sha1: bd7078ed7302005a46b0f32b08cb81406df5d5cf
+
+
+Node-path: prefix/branches/branch1/changeddir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/changeddir
+
+
+Node-path: prefix/branches/branch1/changeddir/f
+Node-kind: file
+Node-action: delete
+
+Node-path: prefix/branches/branch1/changeddir/f
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: prefix/trunk/changeddir/f
+Text-copy-source-md5: 984b8c4ab9193b7659b9f914897a949c
+Text-copy-source-sha1: df588cfa0799c1d4447646645ff2799e23e59f57
+
+
+
+
+Node-path: prefix/branches/branch1/changeddir/link
+Node-kind: file
+Node-action: delete
+
+Node-path: prefix/branches/branch1/changeddir/link
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: prefix/trunk/changeddir/link
+Text-copy-source-md5: 19b47078b08789b4af5bc8d78b09f051
+Text-copy-source-sha1: 697d35a9a0857889666f1cae1baa9e294b4cf36f
+
+
+
+
+Node-path: prefix/branches/branch1/changedlink
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: prefix/trunk/changedlink
+Text-copy-source-md5: 78d7d7c917f0f0355f01f23508cc0a0a
+Text-copy-source-sha1: 6d7057bfb5ba8dffc0184f491e4fa43ec1904cdd
+
+
+Node-path: prefix/branches/branch1/da
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/da
+
+
+Node-path: prefix/branches/branch1/groupdir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/groupdir
+
+
+Node-path: prefix/branches/branch1/groupdir/a
+Node-kind: file
+Node-action: delete
+
+Node-path: prefix/branches/branch1/groupdir/a
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: prefix/trunk/groupdir/a
+Text-copy-source-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-copy-source-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+
+
+
+
+Node-path: prefix/branches/branch1/groupdir/linka
+Node-kind: file
+Node-action: delete
+
+Node-path: prefix/branches/branch1/groupdir/linka
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: prefix/trunk/groupdir/linka
+Text-copy-source-md5: 37f1cfbed04f4354d8e706a1f1f626b6
+Text-copy-source-sha1: 7e368116b09c906ec1b989cefe328fd6dec4f759
+
+
+
+
+Node-path: prefix/branches/branch1/linka
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/linka
+Text-copy-source-md5: c118dba188202a1efc975bef6064180b
+Text-copy-source-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+
+
+Node-path: prefix/branches/branch1/linkb
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/linkb
+Text-copy-source-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-copy-source-sha1: 7325442a5f7383205e66db563025d51535883784
+
+
+Node-path: prefix/branches/branch1/unchanged
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/unchanged
+Text-copy-source-md5: 85ae5b04dd0a666efad8633d142a4635
+Text-copy-source-sha1: c654a5435f170cfad37e136fee9672ecc40afd4a
+
+
+Node-path: prefix/branches/branch1/unchangeddir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/unchangeddir
+
+
+Node-path: prefix/branches/branch1/unchangedlink
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/unchangedlink
+Text-copy-source-md5: 1aa9c01278c74a273e3117dc42426153
+Text-copy-source-sha1: 3f1a6ab03b820f0baab56c083f77bd9279db2486
+
+
+Revision-number: 5
+Prop-content-length: 121
+Content-length: 121
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.558149Z
+K 7
+svn:log
+V 15
+add c and linkc
+PROPS-END
+
+Node-path: prefix/branches/branch1/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-content-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
+Content-length: 12
+
+PROPS-END
+c
+
+
+Node-path: prefix/branches/branch1/linkc
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: aaa83258c434079cc82a5b4868340dc0
+Text-content-sha1: d347f561790aa523b963fc1714c64e1d158cc5d7
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link c
+
+Revision-number: 6
+Prop-content-length: 154
+Content-length: 154
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.742494Z
+K 7
+svn:log
+V 48
+rename and copy a, b, c and da, plus their links
+PROPS-END
+
+Node-path: prefix/branches/branch1/c1
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: prefix/branches/branch1/c
+Text-copy-source-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-copy-source-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
+Text-content-length: 4
+Text-content-md5: 63fad9092ad37713ebe26b3193f89c41
+Text-content-sha1: ccfb93b7bac6f1520f0adc0eebc2cafe9da80f42
+Content-length: 4
+
+c
+c
+
+
+Node-path: prefix/branches/branch1/linkc1
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: prefix/branches/branch1/linkc
+Text-copy-source-md5: aaa83258c434079cc82a5b4868340dc0
+Text-copy-source-sha1: d347f561790aa523b963fc1714c64e1d158cc5d7
+Text-content-length: 7
+Text-content-md5: ea7a177c3c3af680cf62010efe71275f
+Text-content-sha1: d780ef86a4c5016931861dc32373a1155755e404
+Content-length: 7
+
+link cc
+
+Node-path: prefix/trunk/a1
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/a
+Text-copy-source-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-copy-source-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+
+
+Node-path: prefix/trunk/a2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/a
+Text-copy-source-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-copy-source-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+
+
+Node-path: prefix/trunk/b
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 06ac26ed8b614fc0b141e4542aa067c2
+Text-content-sha1: f6980469e74f7125178e88ec571e06fe6ce86e95
+Content-length: 4
+
+b
+b
+
+
+Node-path: prefix/trunk/b1
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/b
+Text-copy-source-md5: 3b5d5c3712955042212316173ccf37be
+Text-copy-source-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Text-content-length: 4
+Text-content-md5: 33cb6785d50937d8d307ebb66d6259a7
+Text-content-sha1: 7a6478264aa11a0f4befef356c03e83f2b1f6eba
+Content-length: 4
+
+b
+c
+
+
+Node-path: prefix/trunk/da1
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/da
+
+
+Node-path: prefix/trunk/da2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/da
+
+
+Node-path: prefix/trunk/linka1
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/linka
+Text-copy-source-md5: c118dba188202a1efc975bef6064180b
+Text-copy-source-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+
+
+Node-path: prefix/trunk/linka2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/linka
+Text-copy-source-md5: c118dba188202a1efc975bef6064180b
+Text-copy-source-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+
+
+Node-path: prefix/trunk/linkb
+Node-kind: file
+Node-action: change
+Text-content-length: 7
+Text-content-md5: 00b18251bf95a42453612a62619254c0
+Text-content-sha1: 8d00f006e36676f00d40c3935b6992cbb8349c2b
+Content-length: 7
+
+link bb
+
+Node-path: prefix/trunk/linkb1
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/linkb
+Text-copy-source-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-copy-source-sha1: 7325442a5f7383205e66db563025d51535883784
+Text-content-length: 7
+Text-content-md5: 1c9f17365658cf9ea7904568eff11f27
+Text-content-sha1: 163de098ef857862584154ca26e3d028fb34ba45
+Content-length: 7
+
+link bc
+
+Node-path: prefix/trunk/a
+Node-action: delete
+
+
+Node-path: prefix/trunk/da
+Node-action: delete
+
+
+Node-path: prefix/trunk/linka
+Node-action: delete
+
+
+Revision-number: 7
+Prop-content-length: 125
+Content-length: 125
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.807910Z
+K 7
+svn:log
+V 19
+copy c from branch1
+PROPS-END
+
+Node-path: prefix/trunk/c
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: prefix/branches/branch1/c
+Text-copy-source-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-copy-source-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
+
+
+Node-path: prefix/trunk/linkc
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: prefix/branches/branch1/linkc
+Text-copy-source-md5: aaa83258c434079cc82a5b4868340dc0
+Text-copy-source-sha1: d347f561790aa523b963fc1714c64e1d158cc5d7
+
+
+Revision-number: 8
+Prop-content-length: 130
+Content-length: 130
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:22.895608Z
+K 7
+svn:log
+V 24
+copy stuff from the past
+PROPS-END
+
+Node-path: prefix/trunk/deleteddir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/deleteddir
+
+
+Node-path: prefix/trunk/deletedfile
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/deletedfile
+Text-copy-source-md5: 4d742b2f247bec99b41a60acbebc149a
+Text-copy-source-sha1: 1ef5922542033869106719d682a87ed706af4ddd
+
+
+Node-path: prefix/trunk/deletedlink
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/deletedlink
+Text-copy-source-md5: e9292b8c4fca95ac8c70b4ae040d0b79
+Text-copy-source-sha1: 7325442a5f7383205e66db563025d51535883784
+
+
+Revision-number: 9
+Prop-content-length: 144
+Content-length: 144
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:23.017668Z
+K 7
+svn:log
+V 38
+copy stuff from the past before change
+PROPS-END
+
+Node-path: prefix/trunk/changed2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/changed
+Text-copy-source-md5: ec1bebaea2c042beb68f7679ddd106a4
+Text-copy-source-sha1: 2f6933b5ee0f5fdd823d9717d8729f3c2523811b
+
+
+Node-path: prefix/trunk/changed3
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/changed
+Text-copy-source-md5: ec1bebaea2c042beb68f7679ddd106a4
+Text-copy-source-sha1: 2f6933b5ee0f5fdd823d9717d8729f3c2523811b
+Text-content-length: 17
+Text-content-md5: 7d93e8c4d61c2a7b05c20b7d8bf11f83
+Text-content-sha1: d78c3e7f04c44b599787ec534a3193357df1fa37
+Content-length: 17
+
+changed
+changed3
+
+
+Node-path: prefix/trunk/changeddir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/changeddir
+
+
+Node-path: prefix/trunk/changedlink2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/changedlink
+Text-copy-source-md5: d91fb1e1062e62a17f97b44932d454c4
+Text-copy-source-sha1: 8c147187742f58ed0cd8707ddd0c0942fe8b2616
+
+
+Node-path: prefix/trunk/changedlink3
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/changedlink
+Text-copy-source-md5: d91fb1e1062e62a17f97b44932d454c4
+Text-copy-source-sha1: 8c147187742f58ed0cd8707ddd0c0942fe8b2616
+Text-content-length: 13
+Text-content-md5: 0ad81e7d7fc35e744e0ad3dea0f158fe
+Text-content-sha1: bae4618ecddda5e6ab6e5fa3b116f5d14dc3464b
+Content-length: 13
+
+link changed3
+
+Revision-number: 10
+Prop-content-length: 140
+Content-length: 140
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:23.111440Z
+K 7
+svn:log
+V 34
+copy unchanged stuff from the past
+PROPS-END
+
+Node-path: prefix/trunk/unchanged2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/unchanged
+Text-copy-source-md5: 85ae5b04dd0a666efad8633d142a4635
+Text-copy-source-sha1: c654a5435f170cfad37e136fee9672ecc40afd4a
+
+
+Node-path: prefix/trunk/unchangeddir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/unchangeddir
+
+
+Node-path: prefix/trunk/unchangedlink2
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/unchangedlink
+Text-copy-source-md5: 1aa9c01278c74a273e3117dc42426153
+Text-copy-source-sha1: 3f1a6ab03b820f0baab56c083f77bd9279db2486
+
+
+Revision-number: 11
+Prop-content-length: 133
+Content-length: 133
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-08T01:02:23.179096Z
+K 7
+svn:log
+V 27
+copy groupdir from the past
+PROPS-END
+
+Node-path: prefix/trunk/groupdir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: prefix/trunk/groupdir
+
+

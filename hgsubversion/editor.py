@@ -651,7 +651,7 @@ class HgEditor(svnwrap.Editor):
                     svn.init_ra_and_client()
                 i += 1
                 data, mode = svn.get_file(f, rev)
-                self.current.set(f, data, 'x' in mode, 'l' in mode)
+                self.current.set(root + f, data, 'x' in mode, 'l' in mode)
             if not self.ui.debugflag:
                 self.ui.note('\n')
 

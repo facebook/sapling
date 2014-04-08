@@ -20,7 +20,18 @@ class TestFetchRenames(test_util.TestBase):
             'hgsubversion.filestoresize': '0',
             }
         repo = self._load_fixture_and_fetch('renames.svndump', config=config)
+        self._run_assertions(repo)
 
+    def test_rename_with_prefix(self):
+        config = {
+            'hgsubversion.filestoresize': '0',
+            }
+        repo = self._load_fixture_and_fetch('renames_with_prefix.svndump',
+                                            subdir='prefix',
+                                            config=config)
+        self._run_assertions(repo)
+
+    def _run_assertions(self, repo):
         # Map revnum to mappings of dest name to (source name, dest content)
         copies = {
             4: {
