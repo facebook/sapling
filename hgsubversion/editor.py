@@ -31,6 +31,13 @@ class FileStore(object):
         if fname in self._popped:
             raise EditingError('trying to set a popped file %s' % fname)
 
+        if fname in self._data:
+            self._size -= len(self._data[fname])
+            del self._data[fname]
+
+        if fname in self._files:
+            del self._files[fname]
+
         if self._maxsize < 0 or (len(data) + self._size) <= self._maxsize:
             self._data[fname] = data
             self._size += len(data)

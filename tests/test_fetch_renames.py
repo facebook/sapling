@@ -25,22 +25,33 @@ class TestFetchRenames(test_util.TestBase):
         copies = {
             4: {
                 'a1': ('a', 'a\n'),
+                'linka1': ('linka', 'a'),
                 'a2': ('a', 'a\n'),
+                'linka2': ('linka', 'a'),
                 'b1': ('b', 'b\nc\n'),
+                'linkb1': ('linkb', 'bc'),
                 'da1/daf': ('da/daf', 'c\n'),
+                'da1/dalink': ('da/dalink', 'daf'),
                 'da1/db/dbf': ('da/db/dbf', 'd\n'),
+                'da1/db/dblink': ('da/db/dblink', '../daf'),
                 'da2/daf': ('da/daf', 'c\n'),
+                'da2/dalink': ('da/dalink', 'daf'),
                 'da2/db/dbf': ('da/db/dbf', 'd\n'),
+                'da2/db/dblink': ('da/db/dblink', '../daf'),
                 },
             5: {
                 'c1': ('c', 'c\nc\n'),
+                'linkc1': ('linkc', 'cc'),
                 },
             9: {
                 'unchanged2': ('unchanged', 'unchanged\n'),
+                'unchangedlink2': ('unchangedlink', 'unchanged'),
                 'unchangeddir2/f': ('unchangeddir/f', 'unchanged2\n'),
+                'unchangeddir2/link': ('unchangeddir/link', 'f'),
                 },
             10: {
-                 'groupdir2/b': ('groupdir/b', 'b\n')
+                'groupdir2/b': ('groupdir/b', 'b\n'),
+                'groupdir2/linkb': ('groupdir/linkb', 'b'),
                  },
             }
         for rev in repo:
