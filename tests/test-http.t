@@ -267,7 +267,6 @@ test http authentication
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
   "POST /?cmd=unbundle HTTP/1.1" 200 - x-hgarg-1:heads=686173686564+5eb5abfefeea63c80dd7553bcc3783f37e0c5524
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
-  "POST /?cmd=pushkey HTTP/1.1" 200 - x-hgarg-1:key=7f4e523d01f2cc3765ac8934da3d14db775ff872&namespace=phases&new=0&old=1
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
 
 #endif

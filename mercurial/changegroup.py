@@ -677,7 +677,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False):
 
         added = [cl.node(r) for r in xrange(clstart, clend)]
         publishing = repo.ui.configbool('phases', 'publish', True)
-        if srctype == 'push':
+        if srctype in ('push', 'serve'):
             # Old servers can not push the boundary themselves.
             # New servers won't push the boundary if changeset already
             # exists locally as secret
