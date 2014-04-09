@@ -37,7 +37,7 @@ from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
-from mercurial import util
+from mercurial import util, changegroup
 import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
 import warnings
@@ -82,6 +82,7 @@ def uisetup(ui):
 
     wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
     wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
+    wrapfunction(changegroup, 'addchangegroup', addchangegroup)
 
 def reposetup(ui, repo):
     if repo.ui.configbool("hgsql", "enabled"):
@@ -117,6 +118,13 @@ def commit(orig, *args, **kwargs):
 
 def updatefromremote(orig, *args, **kwargs):
     repo = args[1]
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, True, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
+
+def addchangegroup(orig, *args, **kwargs):
+    repo = args[0]
     if repo.ui.configbool("hgsql", "enabled"):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
@@ -392,12 +400,6 @@ def wraprepo(repo):
                 clrev += chunksize
 
             queue.put(False)
-
-        def addchangegroup(self, source, srctype, url, emptyok=False):
-            def _addchangegroup():
-                return super(sqllocalrepo, self).addchangegroup(source, srctype, url, emptyok)
-
-            return executewithsql(self, _addchangegroup, True)
 
         def pushkey(self, namespace, key, old, new):
             def _pushkey():
