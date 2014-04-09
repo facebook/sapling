@@ -180,7 +180,14 @@ def push(repo, dest, force, revs):
     cmdutil.bailifchanged(repo)
     checkpush = getattr(repo, 'checkpush', None)
     if checkpush:
-        checkpush(force, revs)
+        try:
+            # The checkpush function changed as of e10000369b47 in mercurial
+            from mercurial.exchange import pushoperation
+            pushop = pushoperation(repo, dest, force, revs, False)
+            checkpush(pushop)
+        except (ImportError, TypeError):
+            checkpush(force, revs)
+
     ui = repo.ui
     old_encoding = util.swap_out_encoding()
 
