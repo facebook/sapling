@@ -549,13 +549,20 @@ class part(object):
         yield _pack(_fpartheadersize, len(headerchunk))
         yield headerchunk
         ## payload
+        for chunk in self._payloadchunks():
+            yield _pack(_fpayloadsize, len(chunk))
+            yield chunk
+        # end of payload
+        yield _pack(_fpayloadsize, 0)
+
+    def _payloadchunks(self):
+        """yield chunks of a the part payload
+
+        Exists to handle the different methods to provide data to a part."""
         # we only support fixed size data now.
         # This will be improved in the future.
         if len(self.data):
-            yield _pack(_fpayloadsize, len(self.data))
             yield self.data
-        # end of payload
-        yield _pack(_fpayloadsize, 0)
 
 @parthandler('changegroup')
 def handlechangegroup(op, inpart):
