@@ -327,6 +327,7 @@ function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
     };
 
     xfr.open(method, url);
+    xfr.overrideMimeType("text/xhtml; charset=" + document.characterSet.toLowerCase());
     xfr.send();
     onstart();
     return xfr;
