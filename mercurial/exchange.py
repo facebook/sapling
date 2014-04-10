@@ -106,7 +106,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 pushop.repo.prepushoutgoinghooks(pushop.repo,
                                                  pushop.remote,
                                                  pushop.outgoing)
-                _pushchangeset(pushop)
+                if pushop.remote.capable('bundle2'):
+                    _pushbundle2(pushop)
+                else:
             _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
@@ -171,6 +173,35 @@ def _pushcheckoutgoing(pushop):
                              bool(pushop.incoming),
                              newbm)
     return True
+
+def _pushbundle2(pushop):
+    """push data to the remote using bundle2
+
+    The only currently supported type of data is changegroup but this will
+    evolve in the future."""
+    # Send known head to the server for race detection.
+    bundler = bundle2.bundle20(pushop.ui)
+    if not pushop.force:
+        part = bundle2.bundlepart('CHECK:HEADS', data=iter(pushop.remoteheads))
+        bundler.addpart(part)
+    # add the changegroup bundle
+    cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
+    def cgchunks(cg=cg):
+        yield 'HG10UN'
+        for c in cg.getchunks():
+            yield c
+    cgpart = bundle2.bundlepart('CHANGEGROUP', data=cgchunks())
+    bundler.addpart(cgpart)
+    stream = util.chunkbuffer(bundler.getchunks())
+    sent = bundle2.unbundle20(pushop.repo.ui, stream)
+    reply = pushop.remote.unbundle(sent, ['force'], 'push')
+    try:
+        op = bundle2.processbundle(pushop.repo, reply)
+    except KeyError, exc:
+        raise util.Abort('missing support for %s' % exc)
+    cgreplies = op.records.getreplies(cgpart.id)
+    assert len(cgreplies['changegroup']) == 1
+    pushop.ret = cgreplies['changegroup'][0]['return']
 
 def _pushchangeset(pushop):
     """Make the actual push of changeset bundle to remote repo"""
@@ -637,11 +668,22 @@ def unbundle(repo, cg, heads, source, url):
 
     If the push was raced as PushRaced exception is raised."""
     r = 0
+    # need a transaction when processing a bundle2 stream
+    tr = None
     lock = repo.lock()
     try:
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
-        r = changegroup.addchangegroup(repo, cg, source, url)
+        if util.safehasattr(cg, 'params'):
+            tr = repo.transaction('unbundle')
+            ret = bundle2.processbundle(repo, cg, lambda: tr)
+            tr.close()
+            stream = util.chunkbuffer(ret.reply.getchunks())
+            r = bundle2.unbundle20(repo.ui, stream)
+        else:
+            r = changegroup.addchangegroup(repo, cg, source, url)
     finally:
+        if tr is not None:
+            tr.release()
         lock.release()
     return r

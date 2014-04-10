@@ -668,11 +668,21 @@ clone --pull
 
 pull
 
-  $ hg -R other pull
+  $ hg -R other pull -r 24b6387c8c8c
   pulling from $TESTTMP/main (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 7 changesets with 6 changes to 6 files (+3 heads)
+  added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
+
+push
+
+  $ hg -R main push other --rev eea13746799a
+  pushing to other
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (-1 heads)
