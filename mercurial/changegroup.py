@@ -91,23 +91,8 @@ def writebundle(cg, filename, bundletype, vfs=None):
         # an empty chunkgroup is the end of the changegroup
         # a changegroup has at least 2 chunkgroups (changelog and manifest).
         # after that, an empty chunkgroup is the end of the changegroup
-        empty = False
-        count = 0
-        while not empty or count <= 2:
-            empty = True
-            count += 1
-            while True:
-                chunk = getchunk(cg)
-                if not chunk:
-                    break
-                empty = False
-                fh.write(z.compress(chunkheader(len(chunk))))
-                pos = 0
-                while pos < len(chunk):
-                    next = pos + 2**20
-                    fh.write(z.compress(chunk[pos:next]))
-                    pos = next
-            fh.write(z.compress(closechunk()))
+        for chunk in cg.getchunks():
+            fh.write(z.compress(chunk))
         fh.write(z.flush())
         cleanup = None
         return filename
@@ -201,6 +186,34 @@ class unbundle10(object):
         node, p1, p2, deltabase, cs = self._deltaheader(header, prevnode)
         return {'node': node, 'p1': p1, 'p2': p2, 'cs': cs,
                 'deltabase': deltabase, 'delta': delta}
+
+    def getchunks(self):
+        """returns all the chunks contains in the bundle
+
+        Used when you need to forward the binary stream to a file or another
+        network API. To do so, it parse the changegroup data, otherwise it will
+        block in case of sshrepo because it don't know the end of the stream.
+        """
+        # an empty chunkgroup is the end of the changegroup
+        # a changegroup has at least 2 chunkgroups (changelog and manifest).
+        # after that, an empty chunkgroup is the end of the changegroup
+        empty = False
+        count = 0
+        while not empty or count <= 2:
+            empty = True
+            count += 1
+            while True:
+                chunk = getchunk(self)
+                if not chunk:
+                    break
+                empty = False
+                yield chunkheader(len(chunk))
+                pos = 0
+                while pos < len(chunk):
+                    next = pos + 2**20
+                    yield chunk[pos:next]
+                    pos = next
+            yield closechunk()
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
