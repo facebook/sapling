@@ -559,27 +559,29 @@ class unbundlepart(unpackermixin):
         self._headeroffset += size
         return data
 
+    def _unpackheader(self, format):
+        """read given format from header
+
+        This automatically compute the size of the format to read."""
+        data = self._fromheader(struct.calcsize(format))
+        return _unpack(format, data)
+
     def _readdata(self):
         """read the header and setup the object"""
         # some utility to help reading from the header block
-        def unpackheader(format):
-            """read given format from header
 
-            This automatically compute the size of the format to read."""
-            data = self._fromheader(struct.calcsize(format))
-            return _unpack(format, data)
-
-        typesize = unpackheader(_fparttypesize)[0]
+        typesize = self._unpackheader(_fparttypesize)[0]
         self.type = self._fromheader(typesize)
         self.ui.debug('part type: "%s"\n' % self.type)
-        self.id = unpackheader(_fpartid)[0]
+        self.id = self._unpackheader(_fpartid)[0]
         self.ui.debug('part id: "%s"\n' % self.id)
         ## reading parameters
         # param count
-        mancount, advcount = unpackheader(_fpartparamcount)
+        mancount, advcount = self._unpackheader(_fpartparamcount)
         self.ui.debug('part parameters: %i\n' % (mancount + advcount))
         # param size
-        paramsizes = unpackheader(_makefpartparamsizes(mancount + advcount))
+        fparamsizes = _makefpartparamsizes(mancount + advcount)
+        paramsizes = self._unpackheader(fparamsizes)
         # make it a list of couple again
         paramsizes = zip(paramsizes[::2], paramsizes[1::2])
         # split mandatory from advisory
