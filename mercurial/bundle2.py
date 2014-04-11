@@ -205,14 +205,21 @@ class unbundlerecords(object):
     def __init__(self):
         self._categories = {}
         self._sequences = []
+        self._replies = {}
 
-    def add(self, category, entry):
+    def add(self, category, entry, inreplyto=None):
         """add a new record of a given category.
 
         The entry can then be retrieved in the list returned by
         self['category']."""
         self._categories.setdefault(category, []).append(entry)
         self._sequences.append((category, entry))
+        if inreplyto is not None:
+            self.getreplies(inreplyto).add(category, entry)
+
+    def getreplies(self, partid):
+        """get the subrecords that replies to a specific part"""
+        return self._replies.setdefault(partid, unbundlerecords())
 
     def __getitem__(self, cat):
         return tuple(self._categories.get(cat, ()))
