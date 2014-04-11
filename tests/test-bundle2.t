@@ -28,7 +28,7 @@ Create an extension to test bundle2 API
   >     """handle a "test:song" bundle2 part, printing the lyrics on stdin"""
   >     op.ui.write('The choir starts singing:\n')
   >     verses = 0
-  >     for line in part.data.split('\n'):
+  >     for line in part.read().split('\n'):
   >         op.ui.write('    %s\n' % line)
   >         verses += 1
   >     op.records.add('song', {'verses': verses})
@@ -152,7 +152,7 @@ Create an extension to test bundle2 API
   >         ui.write('  :%s:\n' % p.type)
   >         ui.write('    mandatory: %i\n' % len(p.mandatoryparams))
   >         ui.write('    advisory: %i\n' % len(p.advisoryparams))
-  >         ui.write('    payload: %i bytes\n' % len(p.data))
+  >         ui.write('    payload: %i bytes\n' % len(p.read()))
   >     ui.write('parts count:   %i\n' % count)
   > EOF
   $ cat >> $HGRCPATH << EOF
@@ -378,48 +378,48 @@ Test part
   part type: "test:empty"
   part id: "0"
   part parameters: 0
-  payload chunk size: 0
     :test:empty:
       mandatory: 0
       advisory: 0
+  payload chunk size: 0
       payload: 0 bytes
   part header size: 17
   part type: "test:empty"
   part id: "1"
   part parameters: 0
-  payload chunk size: 0
     :test:empty:
       mandatory: 0
       advisory: 0
+  payload chunk size: 0
       payload: 0 bytes
   part header size: 16
   part type: "test:song"
   part id: "2"
   part parameters: 0
-  payload chunk size: 178
-  payload chunk size: 0
     :test:song:
       mandatory: 0
       advisory: 0
+  payload chunk size: 178
+  payload chunk size: 0
       payload: 178 bytes
   part header size: 43
   part type: "test:math"
   part id: "3"
   part parameters: 3
-  payload chunk size: 2
-  payload chunk size: 0
     :test:math:
       mandatory: 2
       advisory: 1
+  payload chunk size: 2
+  payload chunk size: 0
       payload: 2 bytes
   part header size: 16
   part type: "test:ping"
   part id: "4"
   part parameters: 0
-  payload chunk size: 0
     :test:ping:
       mandatory: 0
       advisory: 0
+  payload chunk size: 0
       payload: 0 bytes
   part header size: 0
   end of bundle2 stream
@@ -438,22 +438,22 @@ Process the bundle
   part type: "test:empty"
   part id: "0"
   part parameters: 0
-  payload chunk size: 0
   ignoring unknown advisory part 'test:empty'
+  payload chunk size: 0
   part header size: 17
   part type: "test:empty"
   part id: "1"
   part parameters: 0
-  payload chunk size: 0
   ignoring unknown advisory part 'test:empty'
+  payload chunk size: 0
   part header size: 16
   part type: "test:song"
   part id: "2"
   part parameters: 0
-  payload chunk size: 178
-  payload chunk size: 0
   found a handler for part 'test:song'
   The choir starts singing:
+  payload chunk size: 178
+  payload chunk size: 0
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
@@ -461,16 +461,16 @@ Process the bundle
   part type: "test:math"
   part id: "3"
   part parameters: 3
+  ignoring unknown advisory part 'test:math'
   payload chunk size: 2
   payload chunk size: 0
-  ignoring unknown advisory part 'test:math'
   part header size: 16
   part type: "test:ping"
   part id: "4"
   part parameters: 0
-  payload chunk size: 0
   found a handler for part 'test:ping'
   received ping request (id 4)
+  payload chunk size: 0
   part header size: 0
   end of bundle2 stream
   0 unread bytes
