@@ -1853,7 +1853,7 @@ Test --patch and --stat with --follow and --follow-first
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     copy a b
   |
-  |   a |  0
+  |   b |  0
   |   1 files changed, 0 insertions(+), 0 deletions(-)
   |
 
@@ -1886,7 +1886,7 @@ Test --patch and --stat with --follow and --follow-first
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     copy a b
   |
-  |   a |  0
+  |   b |  0
   |   1 files changed, 0 insertions(+), 0 deletions(-)
   |
   o  changeset:   0:f8035bb17114

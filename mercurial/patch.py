@@ -1859,7 +1859,7 @@ def diffstatdata(lines):
             # set numbers to 0 anyway when starting new file
             adds, removes, isbinary = 0, 0, False
             if line.startswith('diff --git a/'):
-                filename = gitre.search(line).group(1)
+                filename = gitre.search(line).group(2)
             elif line.startswith('diff -r'):
                 # format: "diff -r ... -r ... filename"
                 filename = diffre.search(line).group(1)
