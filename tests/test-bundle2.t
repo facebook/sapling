@@ -66,11 +66,11 @@ Create an extension to test bundle2 API
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
   >             outgoing = discovery.outgoing(repo.changelog, headcommon, headmissing)
   >             cg = changegroup.getlocalbundle(repo, 'test:bundle2', outgoing, None)
-  >             assert cg is not None
-  >             # make me lazy later
-  >             tempname = changegroup.writebundle(cg, None, 'HG10UN')
-  >             data = open(tempname).read()
-  >             part = bundle2.part('changegroup', data=data)
+  >             def cgchunks(cg=cg):
+  >                 yield 'HG10UN'
+  >                 for c in cg.getchunks():
+  >                    yield c
+  >             part = bundle2.part('changegroup', data=cgchunks())
   >             bundler.addpart(part)
   > 
   >     if opts['parts']:
@@ -585,6 +585,10 @@ Support for changegroup
   9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   eea13746799a9e0bfd88f29d3c2e9dc9389f524f
   02de42196ebee42ef284b6780a87cdc96e8eaab6
+  start emission of HG20 stream
+  bundle parameter: 
+  start of parts
+  bundle part: "changegroup"
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -596,10 +600,6 @@ Support for changegroup
   bundling: D 1/3 files (33.33%)
   bundling: E 2/3 files (66.67%)
   bundling: H 3/3 files (100.00%)
-  start emission of HG20 stream
-  bundle parameter: 
-  start of parts
-  bundle part: "changegroup"
   end of bundle
 
   $ cat ../rev.hg2

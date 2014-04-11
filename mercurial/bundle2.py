@@ -161,6 +161,8 @@ _fpartid = '>I'
 _fpayloadsize = '>I'
 _fpartparamcount = '>BB'
 
+preferedchunksize = 4096
+
 def _makefpartparamsizes(nbparams):
     """return a struct format to read part parameter sizes
 
@@ -561,7 +563,13 @@ class part(object):
         Exists to handle the different methods to provide data to a part."""
         # we only support fixed size data now.
         # This will be improved in the future.
-        if len(self.data):
+        if util.safehasattr(self.data, 'next'):
+            buff = util.chunkbuffer(self.data)
+            chunk = buff.read(preferedchunksize)
+            while chunk:
+                yield chunk
+                chunk = buff.read(preferedchunksize)
+        elif len(self.data):
             yield self.data
 
 @parthandler('changegroup')
