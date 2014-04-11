@@ -968,13 +968,15 @@ class chunkbuffer(object):
         self.iter = splitbig(in_iter)
         self._queue = deque()
 
-    def read(self, l):
+    def read(self, l=None):
         """Read L bytes of data from the iterator of chunks of data.
-        Returns less than L bytes if the iterator runs dry."""
+        Returns less than L bytes if the iterator runs dry.
+
+        If size parameter is ommited, read everything"""
         left = l
         buf = []
         queue = self._queue
-        while left > 0:
+        while left is None or left > 0:
             # refill the queue
             if not queue:
                 target = 2**18
@@ -987,8 +989,9 @@ class chunkbuffer(object):
                     break
 
             chunk = queue.popleft()
-            left -= len(chunk)
-            if left < 0:
+            if left is not None:
+                left -= len(chunk)
+            if left is not None and left < 0:
                 queue.appendleft(chunk[left:])
                 buf.append(chunk[:left])
             else:
