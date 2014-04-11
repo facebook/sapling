@@ -657,3 +657,17 @@ def handlechangegroup(op, inpart):
     ret = int(p['return'])
     op.records.add('changegroup', {'return': ret}, int(p['in-reply-to']))
 
+@parthandler('check:heads')
+def handlechangegroup(op, inpart):
+    """check that head of the repo did not change
+
+    This is used to detect a push race when using unbundle.
+    This replaces the "heads" argument of unbundle."""
+    h = inpart.read(20)
+    heads = []
+    while len(h) == 20:
+        heads.append(h)
+        h = inpart.read(20)
+    assert not h
+    if heads != op.repo.heads():
+        raise exchange.PushRaced()
