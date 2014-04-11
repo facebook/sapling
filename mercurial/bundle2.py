@@ -543,6 +543,7 @@ class unbundlepart(unpackermixin):
         self.ui = ui
         # unbundle state attr
         self._headerdata = header
+        self._headeroffset = 0
         # part data
         self.id = None
         self.type = None
@@ -551,26 +552,25 @@ class unbundlepart(unpackermixin):
         self.data = None
         self._readdata()
 
+    def _fromheader(self, size):
+        """return the next <size> byte from the header"""
+        offset = self._headeroffset
+        data = self._headerdata[offset:(offset + size)]
+        self._headeroffset += size
+        return data
+
     def _readdata(self):
         """read the header and setup the object"""
         # some utility to help reading from the header block
-        headerblock = self._headerdata
-        self._offset = 0 # layer violation to have something easy to understand
-        def fromheader(size):
-            """return the next <size> byte from the header"""
-            offset = self._offset
-            data = headerblock[offset:(offset + size)]
-            self._offset = offset + size
-            return data
         def unpackheader(format):
             """read given format from header
 
             This automatically compute the size of the format to read."""
-            data = fromheader(struct.calcsize(format))
+            data = self._fromheader(struct.calcsize(format))
             return _unpack(format, data)
 
         typesize = unpackheader(_fparttypesize)[0]
-        self.type = fromheader(typesize)
+        self.type = self._fromheader(typesize)
         self.ui.debug('part type: "%s"\n' % self.type)
         self.id = unpackheader(_fpartid)[0]
         self.ui.debug('part id: "%s"\n' % self.id)
@@ -588,11 +588,10 @@ class unbundlepart(unpackermixin):
         # retrive param value
         manparams = []
         for key, value in mansizes:
-            manparams.append((fromheader(key), fromheader(value)))
+            manparams.append((self._fromheader(key), self._fromheader(value)))
         advparams = []
         for key, value in advsizes:
-            advparams.append((fromheader(key), fromheader(value)))
-        del self._offset # clean up layer, nobody saw anything.
+            advparams.append((self._fromheader(key), self._fromheader(value)))
         self.mandatoryparams = manparams
         self.advisoryparams  = advparams
         ## part payload
