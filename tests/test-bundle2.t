@@ -146,13 +146,14 @@ Create an extension to test bundle2 API
   >         value = params[key]
   >         if value is not None:
   >             ui.write('    %s\n' % value)
-  >     parts = list(unbundler)
-  >     ui.write('parts count:   %i\n' % len(parts))
-  >     for p in parts:
+  >     count = 0
+  >     for p in unbundler:
+  >         count += 1
   >         ui.write('  :%s:\n' % p.type)
   >         ui.write('    mandatory: %i\n' % len(p.mandatoryparams))
   >         ui.write('    advisory: %i\n' % len(p.advisoryparams))
   >         ui.write('    payload: %i bytes\n' % len(p.data))
+  >     ui.write('parts count:   %i\n' % count)
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -346,7 +347,6 @@ Test part
 
   $ hg statbundle2 < ../parts.hg2
   options count: 0
-  parts count:   5
     :test:empty:
       mandatory: 0
       advisory: 0
@@ -367,6 +367,7 @@ Test part
       mandatory: 0
       advisory: 0
       payload: 0 bytes
+  parts count:   5
 
   $ hg statbundle2 --debug < ../parts.hg2
   start processing of HG20 stream
@@ -378,51 +379,51 @@ Test part
   part id: "0"
   part parameters: 0
   payload chunk size: 0
+    :test:empty:
+      mandatory: 0
+      advisory: 0
+      payload: 0 bytes
   part header size: 17
   part type: "test:empty"
   part id: "1"
   part parameters: 0
   payload chunk size: 0
+    :test:empty:
+      mandatory: 0
+      advisory: 0
+      payload: 0 bytes
   part header size: 16
   part type: "test:song"
   part id: "2"
   part parameters: 0
   payload chunk size: 178
   payload chunk size: 0
+    :test:song:
+      mandatory: 0
+      advisory: 0
+      payload: 178 bytes
   part header size: 43
   part type: "test:math"
   part id: "3"
   part parameters: 3
   payload chunk size: 2
   payload chunk size: 0
+    :test:math:
+      mandatory: 2
+      advisory: 1
+      payload: 2 bytes
   part header size: 16
   part type: "test:ping"
   part id: "4"
   part parameters: 0
   payload chunk size: 0
-  part header size: 0
-  end of bundle2 stream
-  parts count:   5
-    :test:empty:
-      mandatory: 0
-      advisory: 0
-      payload: 0 bytes
-    :test:empty:
-      mandatory: 0
-      advisory: 0
-      payload: 0 bytes
-    :test:song:
-      mandatory: 0
-      advisory: 0
-      payload: 178 bytes
-    :test:math:
-      mandatory: 2
-      advisory: 1
-      payload: 2 bytes
     :test:ping:
       mandatory: 0
       advisory: 0
       payload: 0 bytes
+  part header size: 0
+  end of bundle2 stream
+  parts count:   5
 
 Test actual unbundling of test part
 =======================================
@@ -509,11 +510,11 @@ The reply is valid
 
   $ hg statbundle2 < ../reply.hg2
   options count: 0
-  parts count:   1
     :test:pong:
       mandatory: 1
       advisory: 0
       payload: 0 bytes
+  parts count:   1
 
 Support for changegroup
 ===================================
