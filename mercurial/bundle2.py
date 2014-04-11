@@ -503,12 +503,12 @@ class unbundle20(object):
             payloadsize = self._unpack(_fpayloadsize)[0]
             self.ui.debug('payload chunk size: %i\n' % payloadsize)
         payload = ''.join(payload)
-        current = part(parttype, manparams, advparams, data=payload)
+        current = bundlepart(parttype, manparams, advparams, data=payload)
         current.id = partid
         return current
 
 
-class part(object):
+class bundlepart(object):
     """A bundle2 part contains application level payload
 
     The part `type` is used to route the part to the application level
@@ -598,9 +598,9 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitly not the final form of this
         # return. But one need to start somewhere.
-        op.reply.addpart(part('reply:changegroup', (),
-                         [('in-reply-to', str(inpart.id)),
-                          ('return', '%i' % ret)]))
+        op.reply.addpart(bundlepart('reply:changegroup', (),
+                                    [('in-reply-to', str(inpart.id)),
+                                     ('return', '%i' % ret)]))
 
 @parthandler('reply:changegroup')
 def handlechangegroup(op, inpart):

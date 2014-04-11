@@ -604,7 +604,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
         yield 'HG10UN'
         for c in cg.getchunks():
             yield c
-    part = bundle2.part('changegroup', data=cgchunks())
+    part = bundle2.bundlepart('changegroup', data=cgchunks())
     bundler.addpart(part)
     return bundle2.unbundle20(repo.ui, util.chunkbuffer(bundler.getchunks()))
 

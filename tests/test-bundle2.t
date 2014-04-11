@@ -37,8 +37,9 @@ Create an extension to test bundle2 API
   > def pinghandler(op, part):
   >     op.ui.write('received ping request (id %i)\n' % part.id)
   >     if op.reply is not None:
-  >         op.reply.addpart(bundle2.part('test:pong',
-  >                                       [('in-reply-to', str(part.id))]))
+  >         rpart = bundle2.bundlepart('test:pong',
+  >                                    [('in-reply-to', str(part.id))])
+  >         op.reply.addpart(rpart)
   > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
@@ -70,28 +71,28 @@ Create an extension to test bundle2 API
   >                 yield 'HG10UN'
   >                 for c in cg.getchunks():
   >                    yield c
-  >             part = bundle2.part('changegroup', data=cgchunks())
+  >             part = bundle2.bundlepart('changegroup', data=cgchunks())
   >             bundler.addpart(part)
   > 
   >     if opts['parts']:
-  >        part = bundle2.part('test:empty')
+  >        part = bundle2.bundlepart('test:empty')
   >        bundler.addpart(part)
   >        # add a second one to make sure we handle multiple parts
-  >        part = bundle2.part('test:empty')
+  >        part = bundle2.bundlepart('test:empty')
   >        bundler.addpart(part)
-  >        part = bundle2.part('test:song', data=ELEPHANTSSONG)
+  >        part = bundle2.bundlepart('test:song', data=ELEPHANTSSONG)
   >        bundler.addpart(part)
-  >        part = bundle2.part('test:math',
-  >                            [('pi', '3.14'), ('e', '2.72')],
-  >                            [('cooking', 'raw')],
-  >                            '42')
+  >        part = bundle2.bundlepart('test:math',
+  >                                  [('pi', '3.14'), ('e', '2.72')],
+  >                                  [('cooking', 'raw')],
+  >                                  '42')
   >        bundler.addpart(part)
   >     if opts['unknown']:
-  >        part = bundle2.part('test:UNKNOWN',
-  >                            data='some random content')
+  >        part = bundle2.bundlepart('test:UNKNOWN',
+  >                                  data='some random content')
   >        bundler.addpart(part)
   >     if opts['parts']:
-  >        part = bundle2.part('test:ping')
+  >        part = bundle2.bundlepart('test:ping')
   >        bundler.addpart(part)
   > 
   >     if path is None:
