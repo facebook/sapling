@@ -305,6 +305,11 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 # todo:
                 # - consume the part once we use streaming
                 continue
+
+            # handler is called outside the above try block so that we don't
+            # risk catching KeyErrors from anything other than the
+            # parthandlermapping lookup (any KeyError raised by handler()
+            # itself represents a defect of a different variety).
             handler(op, part)
     except Exception:
         for part in iterparts:
