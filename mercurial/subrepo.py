@@ -1463,8 +1463,8 @@ class gitsubrepo(abstractsubrepo):
                 return False
             self._ui.status(_('pushing branch %s of subrepo %s\n') %
                             (current.split('/', 2)[2], self._relpath))
-            self._gitcommand(cmd + ['origin', current])
-            return True
+            ret = self._gitdir(cmd + ['origin', current])
+            return ret[1] == 0
         else:
             self._ui.warn(_('no branch checked out in subrepo %s\n'
                             'cannot push revision %s\n') %
