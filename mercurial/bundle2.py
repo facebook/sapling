@@ -373,21 +373,11 @@ class bundle20(object):
             blocks.append(par)
         return ' '.join(blocks)
 
-class unbundle20(object):
-    """interpret a bundle2 stream
+class unpackermixin(object):
+    """A mixin to extract bytes and struct data from a stream"""
 
-    (this will eventually yield parts)"""
-
-    def __init__(self, ui, fp):
-        self.ui = ui
+    def __init__(self, fp):
         self._fp = fp
-        header = self._readexact(4)
-        magic, version = header[0:2], header[2:4]
-        if magic != 'HG':
-            raise util.Abort(_('not a Mercurial bundle'))
-        if version != '20':
-            raise util.Abort(_('unknown bundle version %s') % version)
-        self.ui.debug('start processing of %s stream\n' % header)
 
     def _unpack(self, format):
         """unpack this struct format from the stream"""
@@ -397,6 +387,23 @@ class unbundle20(object):
     def _readexact(self, size):
         """read exactly <size> bytes from the stream"""
         return changegroup.readexactly(self._fp, size)
+
+
+class unbundle20(unpackermixin):
+    """interpret a bundle2 stream
+
+    (this will eventually yield parts)"""
+
+    def __init__(self, ui, fp):
+        self.ui = ui
+        super(unbundle20, self).__init__(fp)
+        header = self._readexact(4)
+        magic, version = header[0:2], header[2:4]
+        if magic != 'HG':
+            raise util.Abort(_('not a Mercurial bundle'))
+        if version != '20':
+            raise util.Abort(_('unknown bundle version %s') % version)
+        self.ui.debug('start processing of %s stream\n' % header)
 
     @util.propertycache
     def params(self):
