@@ -209,8 +209,7 @@ def _pushchangeset(pushop):
     else:
         # we return an integer indicating remote head count
         # change
-        pushop.ret = pushop.remote.addchangegroup(cg, 'push',
-                                                              pushop.repo.url())
+        pushop.ret = pushop.remote.addchangegroup(cg, 'push', pushop.repo.url())
 
 def _pushcomputecommonheads(pushop):
     unfi = pushop.repo.unfiltered()
