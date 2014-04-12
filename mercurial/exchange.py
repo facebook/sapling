@@ -7,7 +7,6 @@
 
 from i18n import _
 from node import hex, nullid
-import cStringIO
 import errno
 import util, scmutil, changegroup, base85
 import discovery, phases, obsolete, bookmarks, bundle2
@@ -607,11 +606,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
             yield c
     part = bundle2.part('changegroup', data=cgchunks())
     bundler.addpart(part)
-    temp = cStringIO.StringIO()
-    for c in bundler.getchunks():
-        temp.write(c)
-    temp.seek(0)
-    return bundle2.unbundle20(repo.ui, temp)
+    return bundle2.unbundle20(repo.ui, util.chunkbuffer(bundler.getchunks()))
 
 class PushRaced(RuntimeError):
     """An exception raised during unbunding that indicate a push race"""
