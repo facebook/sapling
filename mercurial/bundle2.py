@@ -144,7 +144,6 @@ import util
 import struct
 import urllib
 import string
-import StringIO
 
 import changegroup
 from i18n import _
@@ -640,9 +639,7 @@ def handlechangegroup(op, inpart):
     # we need to make sure we trigger the creation of a transaction object used
     # for the whole processing scope.
     op.gettransaction()
-    data = StringIO.StringIO(inpart.read())
-    data.seek(0)
-    cg = changegroup.readbundle(data, 'bundle2part')
+    cg = changegroup.readbundle(inpart, 'bundle2part')
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
