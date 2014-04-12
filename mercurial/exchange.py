@@ -601,9 +601,11 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     # very crude first implementation,
     # the bundle API will change and the generation will be done lazily.
     bundler = bundle2.bundle20(repo.ui)
-    tempname = changegroup.writebundle(cg, None, 'HG10UN')
-    data = open(tempname).read()
-    part = bundle2.part('changegroup', data=data)
+    def cgchunks(cg=cg):
+        yield 'HG10UN'
+        for c in cg.getchunks():
+            yield c
+    part = bundle2.part('changegroup', data=cgchunks())
     bundler.addpart(part)
     temp = cStringIO.StringIO()
     for c in bundler.getchunks():
