@@ -181,7 +181,8 @@ def push(repo, dest, force, revs):
     checkpush = getattr(repo, 'checkpush', None)
     if checkpush:
         try:
-            # The checkpush function changed as of e10000369b47 in mercurial
+            # The checkpush function changed as of e10000369b47 (first
+            # in 3.0) in mercurial
             from mercurial.exchange import pushoperation
             pushop = pushoperation(repo, dest, force, revs, False)
             checkpush(pushop)
