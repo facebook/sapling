@@ -1125,7 +1125,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
     origbadfn = m.bad
     def lfbadfn(f, msg):
         if not f in notbad:
-            return origbadfn(f, msg)
+            origbadfn(f, msg)
     m.bad = lfbadfn
     for f in ctx.walk(m):
         fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
