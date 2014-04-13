@@ -24,8 +24,7 @@ import basestore
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
 def installnormalfilesmatchfn(manifest):
-    '''overrides scmutil.match so that the matcher it returns will ignore all
-    largefiles'''
+    '''installmatchfn with a matchfn that ignores all largefiles'''
     oldmatch = None # for the closure
     def overridematch(ctx, pats=[], opts={}, globbed=False,
             default='relpath'):
@@ -42,16 +41,18 @@ def installnormalfilesmatchfn(manifest):
     oldmatch = installmatchfn(overridematch)
 
 def installmatchfn(f):
+    '''monkey patch the scmutil module with a custom match function.
+    Warning: it is monkey patching the _module_ on runtime! Not thread safe!'''
     oldmatch = scmutil.match
     setattr(f, 'oldmatch', oldmatch)
     scmutil.match = f
     return oldmatch
 
 def restorematchfn():
-    '''restores scmutil.match to what it was before installnormalfilesmatchfn
+    '''restores scmutil.match to what it was before installmatchfn
     was called.  no-op if scmutil.match is its original function.
 
-    Note that n calls to installnormalfilesmatchfn will require n calls to
+    Note that n calls to installmatchfn will require n calls to
     restore matchfn to reverse'''
     scmutil.match = getattr(scmutil.match, 'oldmatch', scmutil.match)
 
