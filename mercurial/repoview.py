@@ -41,7 +41,6 @@ def _gethiddenblockers(repo):
         tagsmod.readlocaltags(repo.ui, repo, tags, {})
         if tags:
             blockers.extend(repo[t[0]].rev() for t in tags.values())
-        blockers.extend(repo[t].rev() for t in tags)
     return blockers
 
 def computehidden(repo):
