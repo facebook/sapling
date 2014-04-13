@@ -27,6 +27,7 @@ def _gethiddenblockers(repo):
     hideable = hideablerevs(repo)
     blockers = []
     if hideable:
+        # We use cl to avoid recursive lookup from repo[xxx]
         cl = repo.changelog
         firsthideable = min(hideable)
         revs = cl.revs(start=firsthideable)
@@ -36,11 +37,11 @@ def _gethiddenblockers(repo):
         for par in repo[None].parents():
             blockers.append(par.rev())
         for bm in repo._bookmarks.values():
-            blockers.append(repo[bm].rev())
+            blockers.append(cl.rev(bm))
         tags = {}
         tagsmod.readlocaltags(repo.ui, repo, tags, {})
         if tags:
-            blockers.extend(repo[t[0]].rev() for t in tags.values())
+            blockers.extend(cl.rev(t[0]) for t in tags.values())
     return blockers
 
 def computehidden(repo):
