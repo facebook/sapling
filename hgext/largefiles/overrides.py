@@ -598,31 +598,30 @@ def overriderevert(orig, ui, repo, *pats, **opts):
 
         oldstandins = lfutil.getstandinsstate(repo)
 
+        def overridematch(ctx, pats=[], opts={}, globbed=False,
+                default='relpath'):
+            match = oldmatch(ctx, pats, opts, globbed, default)
+            m = copy.copy(match)
+            def tostandin(f):
+                if lfutil.standin(f) in ctx:
+                    return lfutil.standin(f)
+                elif lfutil.standin(f) in repo[None]:
+                    return None
+                return f
+            m._files = [tostandin(f) for f in m._files]
+            m._files = [f for f in m._files if f is not None]
+            m._fmap = set(m._files)
+            m._always = False
+            origmatchfn = m.matchfn
+            def matchfn(f):
+                if lfutil.isstandin(f):
+                    return (origmatchfn(lfutil.splitstandin(f)) and
+                            (f in repo[None] or f in ctx))
+                return origmatchfn(f)
+            m.matchfn = matchfn
+            return m
+        oldmatch = installmatchfn(overridematch)
         try:
-            def overridematch(ctx, pats=[], opts={}, globbed=False,
-                    default='relpath'):
-                match = oldmatch(ctx, pats, opts, globbed, default)
-                m = copy.copy(match)
-                def tostandin(f):
-                    if lfutil.standin(f) in ctx:
-                        return lfutil.standin(f)
-                    elif lfutil.standin(f) in repo[None]:
-                        return None
-                    return f
-                m._files = [tostandin(f) for f in m._files]
-                m._files = [f for f in m._files if f is not None]
-                m._fmap = set(m._files)
-                m._always = False
-                origmatchfn = m.matchfn
-                def matchfn(f):
-                    if lfutil.isstandin(f):
-                        return (origmatchfn(lfutil.splitstandin(f)) and
-                                (f in repo[None] or f in ctx))
-                    return origmatchfn(f)
-                m.matchfn = matchfn
-                return m
-            oldmatch = installmatchfn(overridematch)
-            overridematch(repo[None], pats, opts)
             orig(ui, repo, *pats, **opts)
         finally:
             restorematchfn()
