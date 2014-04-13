@@ -702,9 +702,12 @@ def tsttest(test, wd, options, replacements, env):
         if not l.endswith('\n'):
             l += '\n'
         if l.startswith('#if'):
+            lsplit = l.split()
+            if len(lsplit) < 2 or lsplit[0] != '#if':
+                after.setdefault(pos, []).append('  !!! invalid #if\n')
             if skipping is not None:
                 after.setdefault(pos, []).append('  !!! nested #if\n')
-            skipping = not hghave(l.split()[1:])
+            skipping = not hghave(lsplit[1:])
             after.setdefault(pos, []).append(l)
         elif l.startswith('#else'):
             if skipping is None:

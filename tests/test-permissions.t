@@ -1,4 +1,4 @@
-#ifdef unix-permissions no-root
+#if unix-permissions no-root
 
   $ hg init t
   $ cd t
