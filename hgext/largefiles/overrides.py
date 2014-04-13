@@ -465,9 +465,9 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
     # match largefiles and run it again.
     nonormalfiles = False
     nolfiles = False
+    installnormalfilesmatchfn(repo[None].manifest())
     try:
         try:
-            installnormalfilesmatchfn(repo[None].manifest())
             result = orig(ui, repo, pats, opts, rename)
         except util.Abort, e:
             if str(e) != _('no files to copy'):
