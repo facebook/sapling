@@ -25,7 +25,6 @@ import basestore
 
 def installnormalfilesmatchfn(manifest):
     '''installmatchfn with a matchfn that ignores all largefiles'''
-    oldmatch = None # for the closure
     def overridematch(ctx, pats=[], opts={}, globbed=False,
             default='relpath'):
         match = oldmatch(ctx, pats, opts, globbed, default)
@@ -492,7 +491,6 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
             wlock = repo.wlock()
 
             manifest = repo[None].manifest()
-            oldmatch = None # for the closure
             def overridematch(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
                 newpats = []
@@ -601,7 +599,6 @@ def overriderevert(orig, ui, repo, *pats, **opts):
 
         try:
             ctx = scmutil.revsingle(repo, opts.get('rev'))
-            oldmatch = None # for the closure
             def overridematch(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
                 match = oldmatch(ctx, pats, opts, globbed, default)
