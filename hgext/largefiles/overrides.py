@@ -54,7 +54,7 @@ def restorematchfn():
 
     Note that n calls to installmatchfn will require n calls to
     restore matchfn to reverse'''
-    scmutil.match = getattr(scmutil.match, 'oldmatch', scmutil.match)
+    scmutil.match = getattr(scmutil.match, 'oldmatch')
 
 def addlargefiles(ui, repo, *pats, **opts):
     large = opts.pop('large', None)
