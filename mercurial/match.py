@@ -228,7 +228,21 @@ def _patsplit(pattern, default):
     return default, pattern
 
 def _globre(pat):
-    '''Convert an extended glob string to a regexp string.'''
+    r'''Convert an extended glob string to a regexp string.
+
+    >>> print _globre(r'?')
+    .
+    >>> print _globre(r'*')
+    [^/]*
+    >>> print _globre(r'**')
+    .*
+    >>> print _globre(r'[a*?!^][^b][!c]')
+    [a*?!^][\^b][^c]
+    >>> print _globre(r'{a,b}')
+    (?:a|b)
+    >>> print _globre(r'.\*\?')
+    \.\*\?
+    '''
     i, n = 0, len(pat)
     res = ''
     group = 0
