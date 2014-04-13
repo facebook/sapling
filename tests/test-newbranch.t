@@ -210,7 +210,7 @@ Update with no arguments: tipmost revision of the current branch:
   abort: branch foobar not found
   [255]
 
-Fastforward merge:
+Fast-forward merge:
 
   $ hg branch ff
   marked working directory as branch ff

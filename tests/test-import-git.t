@@ -321,7 +321,7 @@ Multiple binary files:
   a874b471193996e7cb034bb301cac7bdaf3e3f46 644   mbinary2
 
 Binary file and delta hunk (we build the patch using this sed hack to
-avoid an unquoted ^, which check-code says breaks sh on solaris):
+avoid an unquoted ^, which check-code says breaks sh on Solaris):
 
   $ sed 's/ caret /^/g;s/ dollarparen /$(/g' > quote-hack.patch <<'EOF'
   > diff --git a/delta b/delta

@@ -146,7 +146,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     you want to close a branch. Each entry contains a revision or hash
     separated by white space.
 
-    The tagpmap is a file that exactly analogous to the branchmap. This will
+    The tagmap is a file that exactly analogous to the branchmap. This will
     rename tags on the fly and prevent the 'update tags' commit usually found
     at the end of a convert process.
 

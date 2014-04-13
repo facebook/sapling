@@ -176,7 +176,7 @@ def encodemeta(meta):
         if ':' in key or '\0' in key:
             raise ValueError("':' and '\0' are forbidden in metadata key'")
         if '\0' in value:
-            raise ValueError("':' are forbidden in metadata value'")
+            raise ValueError("':' is forbidden in metadata value'")
     return '\0'.join(['%s:%s' % (k, meta[k]) for k in sorted(meta)])
 
 def decodemeta(data):
@@ -355,8 +355,8 @@ _maxpayload = 5300
 def _pushkeyescape(markers):
     """encode markers into a dict suitable for pushkey exchange
 
-    - binary data is base86 encoded
-    - splitted in chunks less than 5300 bytes"""
+    - binary data is base85 encoded
+    - split in chunks smaller than 5300 bytes"""
     keys = {}
     parts = []
     currentlen = _maxpayload * 2  # ensure we create a new part
@@ -652,7 +652,7 @@ def successorssets(repo, initialnode, cache=None):
                 # Within a marker, a successor may have divergent successors
                 # sets. In such a case, the marker will contribute multiple
                 # divergent successors sets. If multiple successors have
-                # divergent successors sets, a cartesian product is used.
+                # divergent successors sets, a Cartesian product is used.
                 #
                 # At the end we post-process successors sets to remove
                 # duplicated entry and successors set that are strict subset of
@@ -779,7 +779,7 @@ def _computeextinctset(repo):
 def _computebumpedset(repo):
     """the set of revs trying to obsolete public revisions"""
     bumped = set()
-    # utils function (avoid attribute lookup in the loop)
+    # util function (avoid attribute lookup in the loop)
     phase = repo._phasecache.phase # would be faster to grab the full list
     public = phases.public
     cl = repo.changelog
@@ -825,7 +825,7 @@ def createmarkers(repo, relations, flag=0, metadata=None):
     """Add obsolete markers between changesets in a repo
 
     <relations> must be an iterable of (<old>, (<new>, ...)[,{metadata}])
-    tuple. `old` and `news` are changectx. metadata is an optional dictionnary
+    tuple. `old` and `news` are changectx. metadata is an optional dictionary
     containing metadata for this marker only. It is merged with the global
     metadata specified through the `metadata` argument of this function,
 

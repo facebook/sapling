@@ -148,7 +148,7 @@ Test secret changeset are not pushed
 (Issue3303)
 Check that remote secret changeset are ignore when checking creation of remote heads
 
-We add a secret head into the push destination.  This secreat head shadow a
+We add a secret head into the push destination. This secret head shadows a
 visible shared between the initial repo and the push destination.
 
   $ hg up -q 4 # B'
@@ -156,8 +156,8 @@ visible shared between the initial repo and the push destination.
   $ hg phase .
   5: secret
 
-# We now try to push a new public changeset that descend from the common public
-# head shadowed by the remote secret head.
+We now try to push a new public changeset that descend from the common public
+head shadowed by the remote secret head.
 
   $ cd ../initialrepo
   $ hg up -q 6 #B'

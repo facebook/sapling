@@ -71,7 +71,7 @@ test transplanted revset
       "transplanted([set])"
         Transplanted changesets in set, or all transplanted changesets.
 
-test tranplanted keyword
+test transplanted keyword
 
   $ hg log --template '{rev} {transplanted}\n'
   7 a53251cdf717679d1907b289f991534be05c997a
@@ -414,7 +414,7 @@ Issue1111: Test transplant --merge
   $ hg ci -m appendd
   created new head
 
-tranplant
+transplant
 
   $ hg transplant -m 1
   applying 42dc4432fd35

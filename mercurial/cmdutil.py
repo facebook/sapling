@@ -2258,7 +2258,7 @@ def _performrevert(repo, parents, ctx, revert, add, remove, undelete):
     This is an independent function to let extension to plug in and react to
     the imminent revert.
 
-    Make sure you have the working directory locked when caling this function.
+    Make sure you have the working directory locked when calling this function.
     """
     parent, p2 = parents
     node = ctx.node()

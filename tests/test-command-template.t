@@ -1486,7 +1486,7 @@ No tag set:
   1: null+2
   0: null+1
 
-One common tag: longuest path wins:
+One common tag: longest path wins:
 
   $ hg tag -r 1 -m t1 -d '6 0' t1
   $ hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
@@ -1709,7 +1709,7 @@ Test string escaping:
   $ hg log -R a -r 8 --template '{files % r"{file}\n"}\n'
   fourth\nsecond\nthird\n
 
-Test string escapeing in nested expression:
+Test string escaping in nested expression:
 
   $ hg log -R a -r 8 --template '{ifeq(r"\x6e", if("1", "\x5c\x786e"), join(files, "\x5c\x786e"))}\n'
   fourth\x6esecond\x6ethird

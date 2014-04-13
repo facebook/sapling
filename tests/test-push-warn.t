@@ -353,7 +353,7 @@ Using --new-branch to push new named branch:
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
-Pushing muliple headed new branch:
+Pushing multi headed new branch:
 
   $ echo 14 > foo
   $ hg -q branch f

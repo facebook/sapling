@@ -306,7 +306,7 @@ Sticky subrepositories, no changes
   2
   $ cd ..
 
-Sticky subrepositorys, file changes
+Sticky subrepositories, file changes
   $ touch s/f1
   $ cd s
   $ svn add f1

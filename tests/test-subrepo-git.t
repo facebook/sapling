@@ -452,7 +452,7 @@ Sticky subrepositories, no changes
   da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
   $ cd ..
 
-Sticky subrepositorys, file changes
+Sticky subrepositories, file changes
   $ touch s/f1
   $ cd s
   $ git add f1

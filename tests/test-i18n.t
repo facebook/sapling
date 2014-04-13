@@ -13,7 +13,7 @@ using the "replace" error handler:
   abortado: n?o foi encontrado um reposit?rio em '$TESTTMP' (.hg n?o encontrado)!
   [255]
 
-Using a more accomodating encoding:
+Using a more accommodating encoding:
 
   $ HGENCODING=UTF-8 LANGUAGE=pt_BR hg tip
   abortado: n\xc3\xa3o foi encontrado um reposit\xc3\xb3rio em '$TESTTMP' (.hg n\xc3\xa3o encontrado)! (esc)

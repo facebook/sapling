@@ -1,4 +1,4 @@
-Test histedit extention: Fold commands
+Test histedit extension: Fold commands
 ======================================
 
 This test file is dedicated to testing the fold command in non conflicting
@@ -173,7 +173,7 @@ check saving last-message.txt
 folding and creating no new change doesn't break:
 -------------------------------------------------
 
-folded content is dropped during a merge. The folded commit should properly disapear.
+folded content is dropped during a merge. The folded commit should properly disappear.
 
   $ mkdir fold-to-empty-test
   $ cd fold-to-empty-test

@@ -548,7 +548,7 @@ test sorting two sorted collections in different orders backwards
   6
   2
 
-test substracting something from an addset
+test subtracting something from an addset
 
   $ log '(outgoing() or removes(a)) - removes(a)'
   8

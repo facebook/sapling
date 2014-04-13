@@ -2459,7 +2459,7 @@ class _addset(_orderedsetmixin):
 
     If the ascending attribute is set, that means the two structures are
     ordered in either an ascending or descending way. Therefore, we can add
-    them mantaining the order by iterating over both at the same time
+    them maintaining the order by iterating over both at the same time
 
     This class does not duck-type baseset and it's only supposed to be used
     internally

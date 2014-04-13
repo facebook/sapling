@@ -489,8 +489,8 @@ dir after a purge.
   $ cat sub2/large7
   large7
 
-Test addremove: verify that files that should be added as largfiles are added as
-such and that already-existing largfiles are not added as normal files by
+Test addremove: verify that files that should be added as largefiles are added as
+such and that already-existing largefiles are not added as normal files by
 accident.
 
   $ rm normal3

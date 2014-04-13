@@ -438,7 +438,7 @@ def debugcolor(ui, repo, **opts):
     _styles = {}
     for effect in _effects.keys():
         _styles[effect] = effect
-    ui.write(('colormode: %s\n') % ui._colormode)
+    ui.write(('color mode: %s\n') % ui._colormode)
     ui.write(_('available colors:\n'))
     for label, colors in _styles.items():
         ui.write(('%s\n') % colors, label=label)

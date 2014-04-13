@@ -774,7 +774,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
 
 Systematic and terse testing of merge merges and ancestor calculation:
 
-Excpected result:
+Expected result:
 
 \  a  m1  m2  dst
 0  -   f   f   f   "versions differ"

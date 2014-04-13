@@ -238,7 +238,7 @@ define commands to display help text
   
   use "hg -v help show_ambig_ru" to show the global options
 
-(2-2-4) display Russian ambiguous-width charactes in utf-8
+(2-2-4) display Russian ambiguous-width characters in utf-8
 
   $ COLUMNS=60 HGENCODINGAMBIGUOUS=wide hg --encoding utf-8 --config extensions.show=./show.py help show_ambig_ru
   hg show_ambig_ru

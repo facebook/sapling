@@ -948,7 +948,7 @@ Sticky subrepositories, no changes
   $ hg -R t id
   e95bcfa18a35
 
-Sticky subrepositorys, file changes
+Sticky subrepositories, file changes
   $ touch s/f1
   $ touch t/f1
   $ hg add -S s/f1
@@ -1333,7 +1333,7 @@ configuration
   $ cd ..
 
 
-Test that comit --secret works on both repo and subrepo (issue4182)
+Test that commit --secret works on both repo and subrepo (issue4182)
 
   $ cd main
   $ echo secret >> b

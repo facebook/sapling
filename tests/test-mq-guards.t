@@ -441,7 +441,7 @@ hg qseries -m with color
   \x1b[0;31;1mb.patch\x1b[0m (esc)
 
 
-excercise cornercases in "qselect --reapply"
+excercise corner cases in "qselect --reapply"
 
   $ hg qpop -a
   popping c.patch

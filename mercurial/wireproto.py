@@ -393,7 +393,7 @@ class wirepeer(peer.peerrepository):
 
         The command is expected to return a stream.
 
-        The stream may have been compressed in some implementaitons. This
+        The stream may have been compressed in some implementations. This
         function takes care of the decompression. This is the only difference
         with _callstream.
 
@@ -475,7 +475,7 @@ def options(cmd, keys, others):
 commands = {}
 
 def wireprotocommand(name, args=''):
-    """decorator for wireprotocol command"""
+    """decorator for wire protocol command"""
     def register(func):
         commands[name] = (func, args)
         return func
@@ -551,7 +551,7 @@ def _capabilities(repo, proto):
 
     - returns a lists: easy to alter
     - change done here will be propagated to both `capabilities` and `hello`
-      command without any other effort. without any other action needed.
+      command without any other action needed.
     """
     # copy to prevent modification of the global list
     caps = list(wireprotocaps)
@@ -569,7 +569,7 @@ def _capabilities(repo, proto):
     caps.append('httpheader=1024')
     return caps
 
-# If you are writting and extension and consider wrapping this function. Wrap
+# If you are writing an extension and consider wrapping this function. Wrap
 # `_capabilities` instead.
 @wireprotocommand('capabilities')
 def capabilities(repo, proto):
@@ -692,7 +692,7 @@ def stream(repo, proto):
     The format is simple: the server writes out a line with the amount
     of files, then the total amount of bytes to be transferred (separated
     by a space). Then, for each file, the server first writes the filename
-    and filesize (separated by the null character), then the file contents.
+    and file size (separated by the null character), then the file contents.
     '''
 
     if not _allowstream(repo.ui):
@@ -776,7 +776,7 @@ def unbundle(repo, proto, heads):
             os.unlink(tempname)
     except util.Abort, inst:
         # The old code we moved used sys.stderr directly.
-        # We did not changed it to minise code change.
+        # We did not change it to minimise code change.
         # This need to be moved to something proper.
         # Feel free to do it.
         sys.stderr.write("abort: %s\n" % inst)

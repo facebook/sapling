@@ -1,4 +1,4 @@
-# exchange.py - utily to exchange data between repo.
+# exchange.py - utility to exchange data between repos.
 #
 # Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
 #
@@ -17,7 +17,7 @@ class pushoperation(object):
 
     It purpose is to carry push related state and very common operation.
 
-    A new should be created at the begining of each push and discarded
+    A new should be created at the beginning of each push and discarded
     afterward.
     """
 
@@ -42,7 +42,7 @@ class pushoperation(object):
         #   we have outgoing changesets but refused to push
         # - other values as described by addchangegroup()
         self.ret = None
-        # discover.outgoing object (contains common and outgoin data)
+        # discover.outgoing object (contains common and outgoing data)
         self.outgoing = None
         # all remote heads before the push
         self.remoteheads = None
@@ -244,7 +244,7 @@ def _pushcomputecommonheads(pushop):
     pushop.commonheads = cheads
 
 def _pushsyncphase(pushop):
-    """synchronise phase information locally and remotly"""
+    """synchronise phase information locally and remotely"""
     unfi = pushop.repo.unfiltered()
     cheads = pushop.commonheads
     if pushop.ret:
@@ -379,7 +379,7 @@ class pulloperation(object):
 
     It purpose is to carry push related state and very common operation.
 
-    A new should be created at the begining of each pull and discarded
+    A new should be created at the beginning of each pull and discarded
     afterward.
     """
 
@@ -400,9 +400,9 @@ class pulloperation(object):
         self.common = None
         # set of pulled head
         self.rheads = None
-        # list of missing changeset to fetch remotly
+        # list of missing changeset to fetch remotely
         self.fetch = None
-        # result of changegroup pulling (used as returng code by pull)
+        # result of changegroup pulling (used as return code by pull)
         self.cgresult = None
         # list of step remaining todo (related to future bundle2 usage)
         self.todosteps = set(['changegroup', 'phases', 'obsmarkers'])
@@ -609,7 +609,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     return bundle2.unbundle20(repo.ui, util.chunkbuffer(bundler.getchunks()))
 
 class PushRaced(RuntimeError):
-    """An exception raised during unbunding that indicate a push race"""
+    """An exception raised during unbundling that indicate a push race"""
 
 def check_heads(repo, their_heads, context):
     """check if the heads of a repo have been modified
@@ -629,7 +629,7 @@ def unbundle(repo, cg, heads, source, url):
     """Apply a bundle to a repo.
 
     this function makes sure the repo is locked during the application and have
-    mechanism to check that no push race occured between the creation of the
+    mechanism to check that no push race occurred between the creation of the
     bundle and its application.
 
     If the push was raced as PushRaced exception is raised."""

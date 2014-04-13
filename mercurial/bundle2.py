@@ -24,7 +24,7 @@ The format is architectured as follow
 the Binary format
 ============================
 
-All numbers are unsigned and big endian.
+All numbers are unsigned and big-endian.
 
 stream level parameters
 ------------------------
@@ -40,21 +40,21 @@ Binary format is as follow
   A blob of `params size` containing the serialized version of all stream level
   parameters.
 
-  The blob contains a space separated list of parameters. parameter with value
+  The blob contains a space separated list of parameters. Parameters with value
   are stored in the form `<name>=<value>`. Both name and value are urlquoted.
 
   Empty name are obviously forbidden.
 
   Name MUST start with a letter. If this first letter is lower case, the
-  parameter is advisory and can be safefly ignored. However when the first
+  parameter is advisory and can be safely ignored. However when the first
   letter is capital, the parameter is mandatory and the bundling process MUST
   stop if he is not able to proceed it.
 
   Stream parameters use a simple textual format for two main reasons:
 
-  - Stream level parameters should remains simple and we want to discourage any
+  - Stream level parameters should remain simple and we want to discourage any
     crazy usage.
-  - Textual data allow easy human inspection of a the bundle2 header in case of
+  - Textual data allow easy human inspection of a bundle2 header in case of
     troubles.
 
   Any Applicative level options MUST go into a bundle2 part instead.
@@ -85,14 +85,14 @@ Binary format is as follow
 
     :typesize: (one byte)
 
-    :typename: alphanumerical part name
+    :parttype: alphanumerical part name
 
     :partid: A 32bits integer (unique in the bundle) that can be used to refer
              to this part.
 
     :parameters:
 
-        Part's parameter may have arbitraty content, the binary structure is::
+        Part's parameter may have arbitrary content, the binary structure is::
 
             <mandatory-count><advisory-count><param-sizes><param-data>
 
@@ -121,7 +121,7 @@ Binary format is as follow
     `chunksize` says)` The payload part is concluded by a zero size chunk.
 
     The current implementation always produces either zero or one chunk.
-    This is an implementation limitation that will ultimatly be lifted.
+    This is an implementation limitation that will ultimately be lifted.
 
 Bundle processing
 ============================
@@ -193,7 +193,7 @@ class unbundlerecords(object):
     """keep record of what happens during and unbundle
 
     New records are added using `records.add('cat', obj)`. Where 'cat' is a
-    category of record and obj is an arbitraty object.
+    category of record and obj is an arbitrary object.
 
     `records['cat']` will return all entries of this category 'cat'.
 
@@ -327,7 +327,7 @@ class bundle20(object):
 
     Use the `addparam` method to add stream level parameter. and `addpart` to
     populate it. Then call `getchunks` to retrieve all the binary chunks of
-    datathat compose the bundle2 container."""
+    data that compose the bundle2 container."""
 
     def __init__(self, ui):
         self.ui = ui
@@ -345,7 +345,7 @@ class bundle20(object):
     def addpart(self, part):
         """add a new part to the bundle2 container
 
-        Parts contains the actuall applicative payload."""
+        Parts contains the actual applicative payload."""
         assert part.id is None
         part.id = len(self._parts) # very cheap counter
         self._parts.append(part)
@@ -412,7 +412,7 @@ class unbundle20(unpackermixin):
 
     @util.propertycache
     def params(self):
-        """dictionnary of stream level parameters"""
+        """dictionary of stream level parameters"""
         self.ui.debug('reading bundle2 stream parameters\n')
         params = {}
         paramssize = self._unpack(_fstreamparamsize)[0]

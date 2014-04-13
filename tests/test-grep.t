@@ -118,7 +118,7 @@ match in last "line" without newline
 
   $ cd ..
 
-Issue685: trackback in grep -r after rename
+Issue685: traceback in grep -r after rename
 
 Got a traceback when using grep on a single
 revision with renamed files.

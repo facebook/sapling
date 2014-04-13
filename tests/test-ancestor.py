@@ -103,7 +103,7 @@ def test_lazyancestors():
 
 
 # The C gca algorithm requires a real repo. These are textual descriptions of
-# dags that have been known to be problematic.
+# DAGs that have been known to be problematic.
 dagtests = [
     '+2*2*2/*3/2',
     '+3*3/*2*2/*4*4/*4/2*4/2*2',

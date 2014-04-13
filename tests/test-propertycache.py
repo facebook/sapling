@@ -39,8 +39,8 @@ mercurial.localrepo.localrepository.testcachedfoobar = testcachedfoobar
 mercurial.localrepo.localrepository.testcachedunfifoobar = testcachedunfifoobar
 
 
-# create an empty repo. and instanciate it. It is important to run
-# those test on the real object to detect regression.
+# Create an empty repo and instantiate it. It is important to run
+# these tests on the real object to detect regression.
 repopath = os.path.join(os.environ['TESTTMP'], 'repo')
 assert subprocess.call(['hg', 'init', repopath]) == 0
 ui = uimod.ui()

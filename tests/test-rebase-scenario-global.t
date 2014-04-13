@@ -650,7 +650,7 @@ each root have a different common ancestor with the destination and this is a de
   o  0: 'A'
   
 
-Test that rebase is not confused by $CWD disapearing during rebase (issue 4121)
+Test that rebase is not confused by $CWD disappearing during rebase (issue 4121)
 
   $ cd ..
   $ hg init cwd-vanish

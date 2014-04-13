@@ -149,7 +149,7 @@ def getparser():
         help="print a test coverage report")
     parser.add_option("-d", "--debug", action="store_true",
         help="debug mode: write output of test scripts to console"
-             " rather than capturing and diff'ing it (disables timeout)")
+             " rather than capturing and diffing it (disables timeout)")
     parser.add_option("-f", "--first", action="store_true",
         help="exit on the first test failure")
     parser.add_option("-H", "--htmlcov", action="store_true",
@@ -606,7 +606,7 @@ def rematch(el, l):
 
 def globmatch(el, l):
     # The only supported special characters are * and ? plus / which also
-    # matches \ on windows. Escaping of these caracters is supported.
+    # matches \ on windows. Escaping of these characters is supported.
     if el + '\n' == l:
         if os.altsep:
             # matching on "/" is not needed for this line
@@ -664,7 +664,7 @@ def tsttest(test, wd, options, replacements, env):
     after = {}
     pos = prepos = -1
 
-    # Expected shellscript output
+    # Expected shell script output
     expected = {}
 
     # We keep track of whether or not we're in a Python block so we

@@ -546,7 +546,7 @@ test for http://mercurial.selenic.com/bts/issue1144
 
 test that verify bundle does not traceback
 
-partial history bundle, fails w/ unkown parent
+partial history bundle, fails w/ unknown parent
 
   $ hg -R bundle.hg verify
   abort: 00changelog.i@bbd179dfa0a7: unknown parent!

@@ -247,7 +247,7 @@ split is not divergences
       392fd25390da
   $ hg log -r 'divergent()'
 
-Even when subsequente rewriting happen
+Even when subsequent rewriting happen
 
   $ mkcommit A_3
   created new head

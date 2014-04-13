@@ -183,7 +183,7 @@ set and then unset it
   [1]
 
 when a bookmark is active, hg up -r . is
-analogus to hg book -i <active bookmark>
+analogous to hg book -i <active bookmark>
 
   $ hg up -q X
   $ hg up -q .

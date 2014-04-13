@@ -85,14 +85,14 @@ class mergestate(object):
     def _readrecords(self):
         """Read merge state from disk and return a list of record (TYPE, data)
 
-        We read data from both V1 and Ve files decide which on to use.
+        We read data from both v1 and v2 files and decide which one to use.
 
-        V1 have been used by version prior to 2.9.1 and contains less data than
-        v2. We read both version and check if no data in v2 contradict one in
+        V1 has been used by version prior to 2.9.1 and contains less data than
+        v2. We read both versions and check if no data in v2 contradicts
         v1. If there is not contradiction we can safely assume that both v1
         and v2 were written at the same time and use the extract data in v2. If
         there is contradiction we ignore v2 content as we assume an old version
-        of Mercurial have over written the mergstate file and left an old v2
+        of Mercurial has overwritten the mergestate file and left an old v2
         file around.
 
         returns list of record [(TYPE, data), ...]"""

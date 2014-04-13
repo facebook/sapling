@@ -908,9 +908,8 @@ Discovery locally secret changeset on a remote repository:
   o  0 public a-A - 054250a37db4
   
 
-pushing a locally public and draft changesets remotly secret should make them
+pushing a locally public and draft changesets remotely secret should make them
 appear on the remote side.
-
 
   $ hg -R ../mu phase --secret --force 967b449fbc94
   $ hg push -r 435b5d83910c ../mu
