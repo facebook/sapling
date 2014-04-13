@@ -294,7 +294,7 @@ def _pushsyncphase(pushop):
         # courtesy to publish changesets possibly locally draft
         # on the remote.
         remotephases = {'publishing': 'True'}
-    if not remotephases: # old server or public only rer
+    if not remotephases: # old server or public only reply from non-publishing
         _localphasemove(pushop, cheads)
         # don't push any phase data as there is nothing to push
     else:
