@@ -71,7 +71,7 @@ class shelvedfile(object):
     def applybundle(self):
         fp = self.opener()
         try:
-            gen = exchange.readbundle(fp, self.fname, self.vfs)
+            gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
             changegroup.addchangegroup(self.repo, gen, 'unshelve',
                                        'bundle:' + self.vfs.join(self.fname))
         finally:

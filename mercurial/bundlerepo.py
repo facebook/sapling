@@ -202,7 +202,7 @@ class bundlerepository(localrepo.localrepository):
 
         self.tempfile = None
         f = util.posixfile(bundlename, "rb")
-        self.bundle = exchange.readbundle(f, bundlename)
+        self.bundle = exchange.readbundle(ui, f, bundlename)
         if self.bundle.compressed():
             fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un")
@@ -220,7 +220,7 @@ class bundlerepository(localrepo.localrepository):
                 fptemp.close()
 
             f = self.vfs.open(self.tempfile, mode="rb")
-            self.bundle = exchange.readbundle(f, bundlename, self.vfs)
+            self.bundle = exchange.readbundle(ui, f, bundlename, self.vfs)
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}

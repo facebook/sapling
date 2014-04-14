@@ -147,7 +147,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         if saveheads or savebases:
             ui.note(_("adding branch\n"))
             f = vfs.open(chgrpfile, "rb")
-            gen = exchange.readbundle(f, chgrpfile, vfs)
+            gen = exchange.readbundle(ui, f, chgrpfile, vfs)
             if not repo.ui.verbose:
                 # silence internal shuffling chatter
                 repo.ui.pushbuffer()

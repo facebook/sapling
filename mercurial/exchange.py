@@ -11,7 +11,7 @@ import errno
 import util, scmutil, changegroup, base85
 import discovery, phases, obsolete, bookmarks, bundle2
 
-def readbundle(fh, fname, vfs=None):
+def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 6)
 
     if not fname:

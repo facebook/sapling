@@ -1736,7 +1736,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
     f = hg.openpath(ui, bundlepath)
     try:
-        gen = exchange.readbundle(f, bundlepath)
+        gen = exchange.readbundle(ui, f, bundlepath)
         if all:
             ui.write(("format: id, p1, p2, cset, delta base, len(delta)\n"))
 
@@ -5807,7 +5807,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     try:
         for fname in fnames:
             f = hg.openpath(ui, fname)
-            gen = exchange.readbundle(f, fname)
+            gen = exchange.readbundle(ui, f, fname)
             modheads = changegroup.addchangegroup(repo, gen, 'unbundle',
                                                   'bundle:' + fname)
     finally:
