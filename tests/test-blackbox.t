@@ -120,6 +120,18 @@ backup bundles get logged
   1970/01/01 00:00:00 bob> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
   1970/01/01 00:00:00 bob> strip tip exited 0 after * seconds (glob)
 
+tags cache gets logged
+  $ hg up tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg tag -m 'create test tag' test-tag
+  $ hg tags
+  tip                                3:5b5562c08298
+  test-tag                           2:d02f48003e62
+  $ hg blackbox -l 3
+  1970/01/01 00:00:00 bob> resolved 1 tags cache entries from 1 manifests in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 2 heads and 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after ?.?? seconds (glob)
+
 extension and python hooks - use the eol extension for a pythonhook
 
   $ echo '[extensions]' >> .hg/hgrc
@@ -128,7 +140,7 @@ extension and python hooks - use the eol extension for a pythonhook
   $ echo 'update = echo hooked' >> .hg/hgrc
   $ hg update
   hooked
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg blackbox -l 4
   1970/01/01 00:00:00 bob> update
   1970/01/01 00:00:00 bob> pythonhook-preupdate: hgext.eol.preupdate finished in * seconds (glob)
@@ -144,7 +156,7 @@ log rotation
   $ hg status
   $ hg status
   $ hg tip -q
-  2:d02f48003e62
+  3:5b5562c08298
   $ ls .hg/blackbox.log*
   .hg/blackbox.log
   .hg/blackbox.log.1

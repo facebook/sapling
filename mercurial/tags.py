@@ -15,6 +15,7 @@ from i18n import _
 import encoding
 import error
 import errno
+import time
 
 def findglobaltags(ui, repo, alltags, tagtypes):
     '''Find global tags in repo by reading .hgtags from every head that
@@ -234,6 +235,8 @@ def _readtagcache(ui, repo):
         # potentially expensive search.
         return (repoheads, cachefnode, None, True)
 
+    starttime = time.time()
+
     newheads = [head
                 for head in repoheads
                 if head not in set(cacheheads)]
@@ -251,6 +254,12 @@ def _readtagcache(ui, repo):
             # no .hgtags file on this head
             pass
 
+    duration = time.time() - starttime
+    ui.log('tagscache',
+           'resolved %d tags cache entries from %d manifests in %0.4f '
+           'seconds\n',
+           len(cachefnode), len(newheads), duration)
+
     # Caller has to iterate over all heads, but can use the filenodes in
     # cachefnode to get to each .hgtags revision quickly.
     return (repoheads, cachefnode, None, True)
@@ -261,6 +270,9 @@ def _writetagcache(ui, repo, heads, tagfnode, cachetags):
         cachefile = repo.opener('cache/tags', 'w', atomictemp=True)
     except (OSError, IOError):
         return
+
+    ui.log('tagscache', 'writing tags cache file with %d heads and %d tags\n',
+            len(heads), len(cachetags))
 
     realheads = repo.heads()            # for sanity checks below
     for head in heads:
