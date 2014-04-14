@@ -189,6 +189,49 @@ say we'll change the message, but don't.
   
 
 modify the message
+
+check saving last-message.txt, at first
+
+  $ cat > $TESTTMP/commitfailure.py <<EOF
+  > from mercurial import util
+  > def reposetup(ui, repo):
+  >     class commitfailure(repo.__class__):
+  >         def commit(self, *args, **kwargs):
+  >             raise util.Abort('emulating unexpected abort')
+  >     repo.__class__ = commitfailure
+  > EOF
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > commitfailure = $TESTTMP/commitfailure.py
+  > EOF
+
+  $ cat > $TESTTMP/editor.sh <<EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > echo "check saving last-message.txt" >> \$1
+  > EOF
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - 2>&1 << EOF | fixbundle
+  > mess 1fd3b2fe7754 f
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  ==== before editing
+  f
+  ====
+  abort: emulating unexpected abort
+  $ cat .hg/last-message.txt
+  f
+  check saving last-message.txt
+
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > commitfailure = !
+  > EOF
+  $ hg histedit --abort -q
+
+then, check "modify the message" itself
+
   $ hg histedit tip --commands - 2>&1 << EOF | fixbundle
   > mess 1fd3b2fe7754 f
   > EOF

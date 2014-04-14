@@ -398,6 +398,7 @@ def message(ui, repo, ctx, ha, opts):
             _('Fix up the change and run hg histedit --continue'))
     message = oldctx.description() + '\n'
     message = ui.edit(message, ui.username())
+    repo.savecommitmessage(message)
     commit = commitfuncfor(repo, oldctx)
     new = commit(text=message, user=oldctx.user(), date=oldctx.date(),
                  extra=oldctx.extra())
