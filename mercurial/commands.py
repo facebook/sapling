@@ -20,7 +20,7 @@ import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod
 import random
 import setdiscovery, treediscovery, dagutil, pvec, localrepo
-import phases, obsolete
+import phases, obsolete, exchange
 
 table = {}
 
@@ -1736,7 +1736,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
     f = hg.openpath(ui, bundlepath)
     try:
-        gen = changegroup.readbundle(f, bundlepath)
+        gen = exchange.readbundle(f, bundlepath)
         if all:
             ui.write(("format: id, p1, p2, cset, delta base, len(delta)\n"))
 
@@ -5807,7 +5807,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     try:
         for fname in fnames:
             f = hg.openpath(ui, fname)
-            gen = changegroup.readbundle(f, fname)
+            gen = exchange.readbundle(f, fname)
             modheads = changegroup.addchangegroup(repo, gen, 'unbundle',
                                                   'bundle:' + fname)
     finally:

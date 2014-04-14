@@ -227,25 +227,6 @@ class headerlessfixup(object):
             return d
         return readexactly(self._fh, n)
 
-def readbundle(fh, fname, vfs=None):
-    header = readexactly(fh, 6)
-
-    if not fname:
-        fname = "stream"
-        if not header.startswith('HG') and header.startswith('\0'):
-            fh = headerlessfixup(fh, header)
-            header = "HG10UN"
-    elif vfs:
-        fname = vfs.join(fname)
-
-    magic, version, alg = header[0:2], header[2:4], header[4:6]
-
-    if magic != 'HG':
-        raise util.Abort(_('%s: not a Mercurial bundle') % fname)
-    if version != '10':
-        raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
-    return unbundle10(fh, alg)
-
 class bundle10(object):
     deltaheader = _BUNDLE10_DELTA_HEADER
     def __init__(self, repo, bundlecaps=None):

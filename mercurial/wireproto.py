@@ -766,7 +766,7 @@ def unbundle(repo, proto, heads):
         try:
             proto.getfile(fp)
             fp.seek(0)
-            gen = changegroupmod.readbundle(fp, None)
+            gen = exchange.readbundle(fp, None)
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
                                   proto._client())
             return pushres(r)

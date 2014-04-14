@@ -11,6 +11,25 @@ import errno
 import util, scmutil, changegroup, base85
 import discovery, phases, obsolete, bookmarks, bundle2
 
+def readbundle(fh, fname, vfs=None):
+    header = changegroup.readexactly(fh, 6)
+
+    if not fname:
+        fname = "stream"
+        if not header.startswith('HG') and header.startswith('\0'):
+            fh = changegroup.headerlessfixup(fh, header)
+            header = "HG10UN"
+    elif vfs:
+        fname = vfs.join(fname)
+
+    magic, version, alg = header[0:2], header[2:4], header[4:6]
+
+    if magic != 'HG':
+        raise util.Abort(_('%s: not a Mercurial bundle') % fname)
+    if version != '10':
+        raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
+    return changegroup.unbundle10(fh, alg)
+
 
 class pushoperation(object):
     """A object that represent a single push operation
