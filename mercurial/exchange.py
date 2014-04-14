@@ -109,6 +109,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 if pushop.remote.capable('bundle2'):
                     _pushbundle2(pushop)
                 else:
+                    _pushchangeset(pushop)
             _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
@@ -186,11 +187,7 @@ def _pushbundle2(pushop):
         bundler.addpart(part)
     # add the changegroup bundle
     cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
-    def cgchunks(cg=cg):
-        yield 'HG10UN'
-        for c in cg.getchunks():
-            yield c
-    cgpart = bundle2.bundlepart('CHANGEGROUP', data=cgchunks())
+    cgpart = bundle2.bundlepart('CHANGEGROUP', data=cg.getchunks())
     bundler.addpart(cgpart)
     stream = util.chunkbuffer(bundler.getchunks())
     sent = bundle2.unbundle20(pushop.repo.ui, stream)
@@ -634,11 +631,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     # very crude first implementation,
     # the bundle API will change and the generation will be done lazily.
     bundler = bundle2.bundle20(repo.ui)
-    def cgchunks(cg=cg):
-        yield 'HG10UN'
-        for c in cg.getchunks():
-            yield c
-    part = bundle2.bundlepart('changegroup', data=cgchunks())
+    part = bundle2.bundlepart('changegroup', data=cg.getchunks())
     bundler.addpart(part)
     return bundle2.unbundle20(repo.ui, util.chunkbuffer(bundler.getchunks()))
 
