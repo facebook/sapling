@@ -1403,23 +1403,12 @@ def commit(ui, repo, *pats, **opts):
         if (not obsolete._enabled) and old.children():
             raise util.Abort(_('cannot amend changeset with children'))
 
-        e = cmdutil.commiteditor
-        if forceeditor:
-            e = cmdutil.commitforceeditor
-
         # commitfunc is used only for temporary amend commit by cmdutil.amend
         def commitfunc(ui, repo, message, match, opts):
-            editor = e
-            # message contains text from -m or -l, if it's empty,
-            # open the editor with the old message
-            if not message:
-                message = old.description()
-                editor = cmdutil.commitforceeditor
             return repo.commit(message,
                                opts.get('user') or old.user(),
                                opts.get('date') or old.date(),
                                match,
-                               editor=editor,
                                extra=extra)
 
         current = repo._bookmarkcurrent

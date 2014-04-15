@@ -827,3 +827,25 @@ Test that amend with --secret creates new secret changeset forcibly
   $ hg phase '.^::.'
   35: draft
   38: secret
+
+Test that amend with --edit invokes editor forcibly
+---------------------------------------------------
+
+  $ hg parents --template "{desc}\n"
+  amend as secret
+  $ HGEDITOR=cat hg commit --amend -m "editor should be suppressed"
+  $ hg parents --template "{desc}\n"
+  editor should be suppressed
+
+  $ HGEDITOR=cat hg commit --amend -m "editor should be invoked" --edit
+  editor should be invoked
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'silliness'
+  HG: changed obs.py
+  $ hg parents --template "{desc}\n"
+  editor should be invoked

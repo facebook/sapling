@@ -1948,6 +1948,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             if not message:
                 editmsg = True
                 message = old.description()
+            elif opts.get('edit'):
+                editmsg = True
 
             pureextra = extra.copy()
             extra['amend_source'] = old.hex()
