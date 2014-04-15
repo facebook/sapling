@@ -1005,22 +1005,18 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     lfutil.getlfilestoupload(repo, o, lambda fn, lfhash: toupload.add(fn))
     return sorted(toupload)
 
-def overrideoutgoing(orig, ui, repo, dest=None, **opts):
-    result = orig(ui, repo, dest, **opts)
-
+def outgoinghook(ui, repo, other, opts, missing):
     if opts.pop('large', None):
-        toupload = getoutgoinglfiles(ui, repo, dest, **opts)
-        if toupload is None:
-            ui.status(_('largefiles: No remote repo\n'))
-        elif not toupload:
+        toupload = set()
+        lfutil.getlfilestoupload(repo, missing,
+                                 lambda fn, lfhash: toupload.add(fn))
+        if not toupload:
             ui.status(_('largefiles: no files to upload\n'))
         else:
             ui.status(_('largefiles to upload:\n'))
-            for file in toupload:
+            for file in sorted(toupload):
                 ui.status(lfutil.splitstandin(file) + '\n')
             ui.status('\n')
-
-    return result
 
 def summaryremotehook(ui, repo, opts, changes):
     largeopt = opts.get('large', False)

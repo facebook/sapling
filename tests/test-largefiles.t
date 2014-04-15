@@ -703,7 +703,6 @@ Test that outgoing --large works (with revsets too)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     this used to not notice the rm
   
-  searching for changes
   largefiles to upload:
   foo
   large
@@ -2154,9 +2153,14 @@ check messages when there is no files to upload:
   comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
   no changes found
-  searching for changes
   largefiles: no files to upload
   [1]
+
+  $ hg -R clone2 outgoing --large --graph --template "{rev}"
+  comparing with $TESTTMP/issue3651/src (glob)
+  searching for changes
+  no changes found
+  largefiles: no files to upload
 
 check messages when there are files to upload:
 
@@ -2181,7 +2185,14 @@ check messages when there are files to upload:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     #1
   
+  largefiles to upload:
+  b
+  
+  $ hg -R clone2 outgoing --large --graph --template "{rev}"
+  comparing with $TESTTMP/issue3651/src
   searching for changes
+  @  1
+  
   largefiles to upload:
   b
   

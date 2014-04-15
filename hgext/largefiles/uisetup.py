@@ -65,10 +65,11 @@ def uisetup(ui):
     debugstateopt = [('', 'large', None, _('display largefiles dirstate'))]
     entry[1].extend(debugstateopt)
 
-    entry = extensions.wrapcommand(commands.table, 'outgoing',
-        overrides.overrideoutgoing)
+    outgoing = lambda orgfunc, *arg, **kwargs: orgfunc(*arg, **kwargs)
+    entry = extensions.wrapcommand(commands.table, 'outgoing', outgoing)
     outgoingopt = [('', 'large', None, _('display outgoing largefiles'))]
     entry[1].extend(outgoingopt)
+    cmdutil.outgoinghooks.add('largefiles', overrides.outgoinghook)
     entry = extensions.wrapcommand(commands.table, 'summary',
                                    overrides.overridesummary)
     summaryopt = [('', 'large', None, _('display outgoing largefiles'))]
