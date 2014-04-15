@@ -223,7 +223,7 @@ def openrevlog(repo, cmd, file_, opts):
     r = None
     if repo:
         if cl:
-            r = repo.changelog
+            r = repo.unfiltered().changelog
         elif mf:
             r = repo.manifest
         elif file_:
