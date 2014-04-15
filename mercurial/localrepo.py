@@ -9,7 +9,7 @@ from i18n import _
 import peer, changegroup, subrepo, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock as lockmod
-import transaction, store, encoding, exchange
+import transaction, store, encoding, exchange, bundle2
 import scmutil, util, extensions, hook, error, revset
 import match as matchmod
 import merge as mergemod
@@ -106,8 +106,14 @@ class localpeer(peer.peerrepository):
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None,
                   format='HG10'):
-        return exchange.getbundle(self._repo, source, heads=heads,
-                                  common=common, bundlecaps=bundlecaps)
+        cg = exchange.getbundle(self._repo, source, heads=heads,
+                                common=common, bundlecaps=bundlecaps)
+        if bundlecaps is not None and 'HG20' in bundlecaps:
+            # When requesting a bundle2, getbundle returns a stream to make the
+            # wire level function happier. We need to build a proper object
+            # from it in local peer.
+            cg = bundle2.unbundle20(self.ui, cg)
+        return cg
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.

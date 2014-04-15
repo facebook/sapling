@@ -659,7 +659,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     bundler = bundle2.bundle20(repo.ui)
     part = bundle2.bundlepart('changegroup', data=cg.getchunks())
     bundler.addpart(part)
-    return bundle2.unbundle20(repo.ui, util.chunkbuffer(bundler.getchunks()))
+    return util.chunkbuffer(bundler.getchunks())
 
 class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
