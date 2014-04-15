@@ -204,8 +204,7 @@ class converter_sink(object):
         mapping equivalent authors identifiers for each system."""
         return None
 
-    def putcommit(self, files, copies, parents, commit, source,
-                  revmap, tagmap):
+    def putcommit(self, files, copies, parents, commit, source, revmap):
         """Create a revision with all changed files listed in 'files'
         and having listed parents. 'commit' is a commit object
         containing at a minimum the author, date, and message for this

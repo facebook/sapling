@@ -146,10 +146,6 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     you want to close a branch. Each entry contains a revision or hash
     separated by white space.
 
-    The tagmap is a file that exactly analogous to the branchmap. This will
-    rename tags on the fly and prevent the 'update tags' commit usually found
-    at the end of a convert process.
-
     Mercurial Source
     ################
 
@@ -330,8 +326,6 @@ cmdtable = {
            _('change branch names while converting'), _('FILE')),
           ('', 'closemap', '',
            _('closes given revs'), _('FILE')),
-          ('', 'tagmap', '',
-           _('change tag names while converting'), _('FILE')),
           ('', 'branchsort', None, _('try to sort changesets by branches')),
           ('', 'datesort', None, _('try to sort changesets by date')),
           ('', 'sourcesort', None, _('preserve source changesets order')),
