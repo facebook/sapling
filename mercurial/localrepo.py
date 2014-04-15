@@ -1696,6 +1696,13 @@ class localrepository(object):
         """
         pass
 
+    @unfilteredpropertycache
+    def prepushoutgoinghooks(self):
+        """Return util.hooks consists of "(repo, remote, outgoing)"
+        functions, which are called before pushing changesets.
+        """
+        return util.hooks()
+
     def push(self, remote, force=False, revs=None, newbranch=False):
         return exchange.push(self, remote, force, revs, newbranch)
 

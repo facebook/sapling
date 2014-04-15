@@ -103,6 +103,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         try:
             _pushdiscovery(pushop)
             if _pushcheckoutgoing(pushop):
+                pushop.repo.prepushoutgoinghooks(pushop.repo,
+                                                 pushop.remote,
+                                                 pushop.outgoing)
                 _pushchangeset(pushop)
             _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
