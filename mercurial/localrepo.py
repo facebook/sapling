@@ -124,7 +124,14 @@ class localpeer(peer.peerrepository):
         This function handles the repo locking itself."""
         try:
             cg = exchange.readbundle(self.ui, cg, None)
-            return exchange.unbundle(self._repo, cg, heads, 'push', url)
+            ret = exchange.unbundle(self._repo, cg, heads, 'push', url)
+            if util.safehasattr(ret, 'getchunks'):
+                # This is a bundle20 object, turn it into an unbundler.
+                # This little dance should be dropped eventually when the API
+                # is finally improved.
+                stream = util.chunkbuffer(ret.getchunks())
+                ret = bundle2.unbundle20(self.ui, stream)
+            return ret
         except exchange.PushRaced, exc:
             raise error.ResponseError(_('push failed:'), exc.message)
 

@@ -694,10 +694,8 @@ def unbundle(repo, cg, heads, source, url):
         # push can proceed
         if util.safehasattr(cg, 'params'):
             tr = repo.transaction('unbundle')
-            ret = bundle2.processbundle(repo, cg, lambda: tr)
+            r = bundle2.processbundle(repo, cg, lambda: tr).reply
             tr.close()
-            stream = util.chunkbuffer(ret.reply.getchunks())
-            r = bundle2.unbundle20(repo.ui, stream)
         else:
             r = changegroup.addchangegroup(repo, cg, source, url)
     finally:
