@@ -11,7 +11,6 @@ import copy
 import os
 
 from mercurial import error, manifest, match as match_, util, discovery
-from mercurial import node as node_
 from mercurial.i18n import _
 from mercurial import localrepo
 
@@ -419,30 +418,8 @@ def reposetup(ui, repo):
             if outgoing.missing:
                 toupload = set()
                 o = self.changelog.nodesbetween(outgoing.missing, revs)[0]
-                for n in o:
-                    parents = [p for p in self.changelog.parents(n)
-                               if p != node_.nullid]
-                    ctx = self[n]
-                    files = set(ctx.files())
-                    if len(parents) == 2:
-                        mc = ctx.manifest()
-                        mp1 = ctx.parents()[0].manifest()
-                        mp2 = ctx.parents()[1].manifest()
-                        for f in mp1:
-                            if f not in mc:
-                                files.add(f)
-                        for f in mp2:
-                            if f not in mc:
-                                files.add(f)
-                        for f in mc:
-                            if mc[f] != mp1.get(f, None) or mc[f] != mp2.get(f,
-                                    None):
-                                files.add(f)
-
-                    toupload = toupload.union(
-                        set([ctx[f].data().strip()
-                             for f in files
-                             if lfutil.isstandin(f) and f in ctx]))
+                addfunc = lambda fn, lfhash: toupload.add(lfhash)
+                lfutil.getlfilestoupload(self, o, addfunc)
                 lfcommands.uploadlfiles(ui, self, remote, toupload)
             return super(lfilesrepo, self).push(remote, force=force, revs=revs,
                 newbranch=newbranch)

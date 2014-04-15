@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
-        node, archival, error, merge, discovery, pathutil, revset
+        archival, error, merge, discovery, pathutil, revset
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
@@ -1002,25 +1002,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
         o.reverse()
 
     toupload = set()
-    for n in o:
-        parents = [p for p in repo.changelog.parents(n) if p != node.nullid]
-        ctx = repo[n]
-        files = set(ctx.files())
-        if len(parents) == 2:
-            mc = ctx.manifest()
-            mp1 = ctx.parents()[0].manifest()
-            mp2 = ctx.parents()[1].manifest()
-            for f in mp1:
-                if f not in mc:
-                        files.add(f)
-            for f in mp2:
-                if f not in mc:
-                    files.add(f)
-            for f in mc:
-                if mc[f] != mp1.get(f, None) or mc[f] != mp2.get(f, None):
-                    files.add(f)
-        toupload = toupload.union(
-            set([f for f in files if lfutil.isstandin(f) and f in ctx]))
+    lfutil.getlfilestoupload(repo, o, lambda fn, lfhash: toupload.add(fn))
     return sorted(toupload)
 
 def overrideoutgoing(orig, ui, repo, dest=None, **opts):
