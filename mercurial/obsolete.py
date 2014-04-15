@@ -385,7 +385,7 @@ def pushmarker(repo, key, old, new):
         repo.ui.warn(_('unknown key: %r') % key)
         return 0
     if old:
-        repo.ui.warn(_('unexpected old value') % key)
+        repo.ui.warn(_('unexpected old value for %r') % key)
         return 0
     data = base85.b85decode(new)
     lock = repo.lock()
