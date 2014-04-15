@@ -1996,8 +1996,10 @@ class hooks(object):
 
     def __call__(self, *args):
         self._hooks.sort(key=lambda x: x[0])
+        results = []
         for source, hook in self._hooks:
-            hook(*args)
+            results.append(hook(*args))
+        return results
 
 def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
