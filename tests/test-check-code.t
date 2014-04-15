@@ -255,3 +255,32 @@
    warning: add two newlines after '.. note::'
   [1]
 
+  $ cat > ./map-inside-gettext.py <<EOF
+  > print _("map inside gettext %s" % v)
+  > 
+  > print _("concatenating " " by " " space %s" % v)
+  > print _("concatenating " + " by " + " '+' %s" % v)
+  > 
+  > print _("maping operation in different line %s"
+  >         % v)
+  > 
+  > print _(
+  >         "leading spaces inside of '(' %s" % v)
+  > EOF
+  $ "$check_code" ./map-inside-gettext.py
+  ./map-inside-gettext.py:1:
+   > print _("map inside gettext %s" % v)
+   don't use % inside _()
+  ./map-inside-gettext.py:3:
+   > print _("concatenating " " by " " space %s" % v)
+   don't use % inside _()
+  ./map-inside-gettext.py:4:
+   > print _("concatenating " + " by " + " '+' %s" % v)
+   don't use % inside _()
+  ./map-inside-gettext.py:6:
+   > print _("maping operation in different line %s"
+   don't use % inside _()
+  ./map-inside-gettext.py:9:
+   > print _(
+   don't use % inside _()
+  [1]
