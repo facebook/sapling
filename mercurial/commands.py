@@ -4774,8 +4774,9 @@ def push(ui, repo, dest=None, **opts):
         c = repo['']
         subs = c.substate # only repos that are committed
         for s in sorted(subs):
-            if c.sub(s).push(opts) == 0:
-                return False
+            result = c.sub(s).push(opts)
+            if result == 0:
+                return not result
     finally:
         del repo._subtoppath
     result = repo.push(other, opts.get('force'), revs=revs,
