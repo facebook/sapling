@@ -88,7 +88,6 @@ Extension disabled for lack of a hook
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -98,6 +97,7 @@ Extension disabled for lack of a hook
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -147,7 +147,6 @@ Extension disabled for lack of acl.sources
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -157,6 +156,7 @@ Extension disabled for lack of acl.sources
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -209,7 +209,6 @@ No [acl.allow]/[acl.deny]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -219,6 +218,7 @@ No [acl.allow]/[acl.deny]
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -281,7 +281,6 @@ Empty [acl.allow]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -291,6 +290,7 @@ Empty [acl.allow]
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -348,7 +348,6 @@ fred is allowed inside foo/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -358,6 +357,7 @@ fred is allowed inside foo/
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -420,7 +420,6 @@ Empty [acl.deny]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -430,6 +429,7 @@ Empty [acl.deny]
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -489,7 +489,6 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -499,6 +498,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -563,7 +563,6 @@ fred is allowed inside foo/, but not foo/Bar/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -573,6 +572,7 @@ fred is allowed inside foo/, but not foo/Bar/
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -634,7 +634,6 @@ fred is allowed inside foo/, but not foo/Bar/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -644,6 +643,7 @@ fred is allowed inside foo/, but not foo/Bar/
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -707,7 +707,6 @@ barney is allowed everywhere
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -717,6 +716,7 @@ barney is allowed everywhere
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -786,7 +786,6 @@ wilma can change files with a .txt extension
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -796,6 +795,7 @@ wilma can change files with a .txt extension
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -866,7 +866,6 @@ file specified by acl.config does not exist
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -876,6 +875,7 @@ file specified by acl.config does not exist
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -941,7 +941,6 @@ betty is allowed inside foo/ by a acl.config file
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -951,6 +950,7 @@ betty is allowed inside foo/ by a acl.config file
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1027,7 +1027,6 @@ acl.config can set only [acl.allow]/[acl.deny]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -1037,6 +1036,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1107,7 +1107,6 @@ fred is always allowed
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -1117,6 +1116,7 @@ fred is always allowed
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1183,7 +1183,6 @@ no one is allowed inside foo/Bar/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -1193,6 +1192,7 @@ no one is allowed inside foo/Bar/
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1259,7 +1259,6 @@ OS-level groups
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -1269,6 +1268,7 @@ OS-level groups
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1336,7 +1336,6 @@ OS-level groups
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  adding changesets
   bundling: 1/3 changesets (33.33%)
   bundling: 2/3 changesets (66.67%)
   bundling: 3/3 changesets (100.00%)
@@ -1346,6 +1345,7 @@ OS-level groups
   bundling: foo/Bar/file.txt 1/3 files (33.33%)
   bundling: foo/file.txt 2/3 files (66.67%)
   bundling: quux/file.py 3/3 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1451,7 +1451,6 @@ No branch acls specified
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1464,6 +1463,7 @@ No branch acls specified
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1534,7 +1534,6 @@ Branch acl deny test
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1547,6 +1546,7 @@ Branch acl deny test
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1613,7 +1613,6 @@ Branch acl empty allow test
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1626,6 +1625,7 @@ Branch acl empty allow test
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1688,7 +1688,6 @@ Branch acl allow other
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1701,6 +1700,7 @@ Branch acl allow other
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1757,7 +1757,6 @@ Branch acl allow other
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1770,6 +1769,7 @@ Branch acl allow other
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1845,7 +1845,6 @@ push foobar into the remote
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1858,6 +1857,7 @@ push foobar into the remote
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -1932,7 +1932,6 @@ Branch acl conflicting deny
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -1945,6 +1944,7 @@ Branch acl conflicting deny
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -2006,7 +2006,6 @@ User 'astro' must not be denied
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -2019,6 +2018,7 @@ User 'astro' must not be denied
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks
@@ -2087,7 +2087,6 @@ Non-astro users must be denied
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  adding changesets
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -2100,6 +2099,7 @@ Non-astro users must be denied
   bundling: foo/Bar/file.txt 2/4 files (50.00%)
   bundling: foo/file.txt 3/4 files (75.00%)
   bundling: quux/file.py 4/4 files (100.00%)
+  adding changesets
   changesets: 1 chunks
   add changeset ef1ea85a6374
   changesets: 2 chunks

@@ -123,6 +123,7 @@ class localpeer(peer.peerrepository):
 
         This function handles the repo locking itself."""
         try:
+            cg = exchange.readbundle(self.ui, cg, None)
             return exchange.unbundle(self._repo, cg, heads, 'push', url)
         except exchange.PushRaced, exc:
             raise error.ResponseError(_('push failed:'), exc.message)

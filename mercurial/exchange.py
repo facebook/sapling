@@ -216,8 +216,7 @@ def _pushbundle2(pushop):
     cgpart = bundle2.bundlepart('CHANGEGROUP', data=cg.getchunks())
     bundler.addpart(cgpart)
     stream = util.chunkbuffer(bundler.getchunks())
-    sent = bundle2.unbundle20(pushop.repo.ui, stream)
-    reply = pushop.remote.unbundle(sent, ['force'], 'push')
+    reply = pushop.remote.unbundle(stream, ['force'], 'push')
     try:
         op = bundle2.processbundle(pushop.repo, reply)
     except KeyError, exc:
