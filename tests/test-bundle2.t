@@ -156,6 +156,8 @@ Create an extension to test bundle2 API
   > bundle2=$TESTTMP/bundle2.py
   > [server]
   > bundle2=True
+  > [ui]
+  > ssh=python "$TESTDIR/dummyssh"
   > EOF
 
 The extension requires a repo (currently unused)
@@ -682,3 +684,31 @@ push
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (-1 heads)
+
+pull over ssh
+
+  $ hg -R other pull ssh://user@dummy/main -r 02de42196ebe --traceback
+  pulling from ssh://user@dummy/main
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+
+pull over http
+
+  $ hg -R main serve -p $HGPORT -d --pid-file=main.pid -E main-error.log
+  $ cat main.pid >> $DAEMON_PIDS
+
+  $ hg -R other pull http://localhost:$HGPORT/ -r 42ccdea3bb16
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ cat main-error.log
+
+

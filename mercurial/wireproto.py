@@ -8,7 +8,7 @@
 import urllib, tempfile, os, sys
 from i18n import _
 from node import bin, hex
-import changegroup as changegroupmod
+import changegroup as changegroupmod, bundle2
 import peer, error, encoding, util, store, exchange
 
 
@@ -335,7 +335,10 @@ class wirepeer(peer.peerrepository):
         if bundlecaps is not None:
             opts['bundlecaps'] = ','.join(bundlecaps)
         f = self._callcompressable("getbundle", **opts)
-        return changegroupmod.unbundle10(f, 'UN')
+        if bundlecaps is not None and 'HG20' in bundlecaps:
+            return bundle2.unbundle20(self.ui, f)
+        else:
+            return changegroupmod.unbundle10(f, 'UN')
 
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the
@@ -565,6 +568,8 @@ def _capabilities(repo, proto):
         # otherwise, add 'streamreqs' detailing our local revlog format
         else:
             caps.append('streamreqs=%s' % ','.join(requiredformats))
+    if repo.ui.configbool('server', 'bundle2', False):
+        caps.append('bundle2')
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     caps.append('httpheader=1024')
     return caps
@@ -602,7 +607,7 @@ def getbundle(repo, proto, others):
             opts[k] = decodelist(v)
         elif k == 'bundlecaps':
             opts[k] = set(v.split(','))
-    cg = changegroupmod.getbundle(repo, 'serve', **opts)
+    cg = exchange.getbundle(repo, 'serve', **opts)
     return streamres(proto.groupchunks(cg))
 
 @wireprotocommand('heads')
