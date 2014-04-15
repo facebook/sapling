@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
-        archival, error, merge, discovery, pathutil, revset
+        archival, merge, pathutil, revset
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
@@ -982,28 +982,6 @@ def overrideforget(orig, ui, repo, *pats, **opts):
         wlock.release()
 
     return result
-
-def getoutgoinglfiles(ui, repo, dest=None, **opts):
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest, opts.get('branch'))
-    revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    if revs:
-        revs = [repo.lookup(rev) for rev in scmutil.revrange(repo, revs)]
-
-    try:
-        remote = hg.peer(repo, opts, dest)
-    except error.RepoError:
-        return None
-    outgoing = discovery.findcommonoutgoing(repo, remote.peer(), force=False)
-    if not outgoing.missing:
-        return outgoing.missing
-    o = repo.changelog.nodesbetween(outgoing.missing, revs)[0]
-    if opts.get('newest_first'):
-        o.reverse()
-
-    toupload = set()
-    lfutil.getlfilestoupload(repo, o, lambda fn, lfhash: toupload.add(fn))
-    return sorted(toupload)
 
 def outgoinghook(ui, repo, other, opts, missing):
     if opts.pop('large', None):
