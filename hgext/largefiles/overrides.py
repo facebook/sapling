@@ -1022,24 +1022,36 @@ def overrideoutgoing(orig, ui, repo, dest=None, **opts):
 
     return result
 
+def summaryremotehook(ui, repo, opts, changes):
+    largeopt = opts.get('large', False)
+    if changes is None:
+        if largeopt:
+            return (False, True) # only outgoing check is needed
+        else:
+            return (False, False)
+    elif largeopt:
+        url, branch, peer, outgoing = changes[1]
+        if peer is None:
+            # i18n: column positioning for "hg summary"
+            ui.status(_('largefiles: (no remote repo)\n'))
+            return
+
+        toupload = set()
+        lfutil.getlfilestoupload(repo, outgoing.missing,
+                                 lambda fn, lfhash: toupload.add(fn))
+        if not toupload:
+            # i18n: column positioning for "hg summary"
+            ui.status(_('largefiles: (no files to upload)\n'))
+        else:
+            # i18n: column positioning for "hg summary"
+            ui.status(_('largefiles: %d to upload\n') % len(toupload))
+
 def overridesummary(orig, ui, repo, *pats, **opts):
     try:
         repo.lfstatus = True
         orig(ui, repo, *pats, **opts)
     finally:
         repo.lfstatus = False
-
-    if opts.pop('large', None):
-        toupload = getoutgoinglfiles(ui, repo, None, **opts)
-        if toupload is None:
-            # i18n: column positioning for "hg summary"
-            ui.status(_('largefiles: (no remote repo)\n'))
-        elif not toupload:
-            # i18n: column positioning for "hg summary"
-            ui.status(_('largefiles: (no files to upload)\n'))
-        else:
-            # i18n: column positioning for "hg summary"
-            ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
 def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
                      similarity=None):

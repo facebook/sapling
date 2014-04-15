@@ -2149,7 +2149,6 @@ check messages when there is no files to upload:
   branch: default
   commit: (clean)
   update: (current)
-  searching for changes
   largefiles: (no files to upload)
   $ hg -R clone2 outgoing --large
   comparing with $TESTTMP/issue3651/src (glob)
@@ -2172,7 +2171,6 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
-  searching for changes
   largefiles: 1 to upload
   $ hg -R clone2 outgoing --large
   comparing with $TESTTMP/issue3651/src (glob)

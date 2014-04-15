@@ -73,6 +73,7 @@ def uisetup(ui):
                                    overrides.overridesummary)
     summaryopt = [('', 'large', None, _('display outgoing largefiles'))]
     entry[1].extend(summaryopt)
+    cmdutil.summaryremotehooks.add('largefiles', overrides.summaryremotehook)
 
     entry = extensions.wrapcommand(commands.table, 'update',
                                    overrides.overrideupdate)
