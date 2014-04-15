@@ -1228,6 +1228,23 @@ class workingctx(committablectx):
                 pass
         return modified, fixup
 
+    def _manifestmatches(self, match, s):
+        """Slow path for workingctx
+
+        The fast path is when we compare the working directory to its parent
+        which means this function is comparing with a non-parent; therefore we
+        need to build a manifest and return what matches.
+        """
+        mf = self._repo['.']._manifestmatches(match, s)
+        modified, added, removed = s[0:3]
+        for f in modified + added:
+            mf[f] = None
+            mf.set(f, self.flags(f))
+        for f in removed:
+            if f in mf:
+                del mf[f]
+        return mf
+
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
