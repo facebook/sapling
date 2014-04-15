@@ -1593,7 +1593,6 @@ largefiles can be pushed locally (issue3583)
   $ hg push ../dest
   pushing to ../dest
   searching for changes
-  searching for changes
   adding changesets
   adding manifests
   adding file changes
@@ -1687,7 +1686,6 @@ Push of file that exists on server but is corrupted - magic healing would be nic
   $ hg push -R r7 http://localhost:$HGPORT1
   pushing to http://localhost:$HGPORT1/
   searching for changes
-  searching for changes
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -1710,7 +1708,6 @@ Push a largefiles repository to a served empty repository
   $ rm "${USERCACHE}"/*
   $ hg push -R r8 http://localhost:$HGPORT2/#default
   pushing to http://localhost:$HGPORT2/
-  searching for changes
   searching for changes
   remote: adding changesets
   remote: adding manifests

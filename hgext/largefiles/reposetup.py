@@ -10,7 +10,7 @@
 import copy
 import os
 
-from mercurial import error, manifest, match as match_, util, discovery
+from mercurial import error, manifest, match as match_, util
 from mercurial.i18n import _
 from mercurial import localrepo
 
@@ -412,15 +412,6 @@ def reposetup(ui, repo):
                             " supported in the destination:"
                             " %s") % (', '.join(sorted(missing)))
                     raise util.Abort(msg)
-
-            outgoing = discovery.findcommonoutgoing(repo, remote.peer(),
-                                                    force=force)
-            if outgoing.missing:
-                toupload = set()
-                o = self.changelog.nodesbetween(outgoing.missing, revs)[0]
-                addfunc = lambda fn, lfhash: toupload.add(lfhash)
-                lfutil.getlfilestoupload(self, o, addfunc)
-                lfcommands.uploadlfiles(ui, self, remote, toupload)
             return super(lfilesrepo, self).push(remote, force=force, revs=revs,
                 newbranch=newbranch)
 
@@ -479,6 +470,14 @@ def reposetup(ui, repo):
             return actualfiles
 
     repo.__class__ = lfilesrepo
+
+    def prepushoutgoinghook(local, remote, outgoing):
+        if outgoing.missing:
+            toupload = set()
+            addfunc = lambda fn, lfhash: toupload.add(lfhash)
+            lfutil.getlfilestoupload(local, outgoing.missing, addfunc)
+            lfcommands.uploadlfiles(ui, local, remote, toupload)
+    repo.prepushoutgoinghooks.add("largefiles", prepushoutgoinghook)
 
     def checkrequireslfiles(ui, repo, **kwargs):
         if 'largefiles' not in repo.requirements and util.any(
