@@ -415,6 +415,13 @@ class wirepeer(peer.peerrepository):
         """
         raise NotImplementedError()
 
+    def _calltwowaystream(self, cmd, fp, **args):
+        """execute <cmd> on server
+
+        The command will send a stream to the server and get a stream in reply.
+        """
+        raise NotImplementedError()
+
     def _abort(self, exception):
         """clearly abort the wire protocol connection and raise the exception
         """
