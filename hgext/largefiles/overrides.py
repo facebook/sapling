@@ -732,8 +732,8 @@ def overrideclone(orig, ui, source, dest=None, **opts):
         d = hg.defaultdest(source)
     if opts.get('all_largefiles') and not hg.islocal(d):
             raise util.Abort(_(
-            '--all-largefiles is incompatible with non-local destination %s' %
-            d))
+            '--all-largefiles is incompatible with non-local destination %s') %
+            d)
 
     return orig(ui, source, dest, **opts)
 
