@@ -585,7 +585,6 @@ def _outgoing(ui, repo, dest, opts):
     o = outgoing.missing
     if not o:
         scmutil.nochangesfound(repo.ui, repo, outgoing.excluded)
-        return None
     return o
 
 def outgoing(ui, repo, dest, opts):
@@ -600,7 +599,7 @@ def outgoing(ui, repo, dest, opts):
 
     limit = cmdutil.loglimit(opts)
     o = _outgoing(ui, repo, dest, opts)
-    if o is None:
+    if not o:
         return recurse()
 
     if opts.get('newest_first'):

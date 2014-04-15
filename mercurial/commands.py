@@ -4354,7 +4354,7 @@ def outgoing(ui, repo, dest=None, **opts):
     if opts.get('graph'):
         cmdutil.checkunsupportedgraphflags([], opts)
         o = hg._outgoing(ui, repo, dest, opts)
-        if o is None:
+        if not o:
             return
 
         revdag = cmdutil.graphrevs(repo, o, opts)
