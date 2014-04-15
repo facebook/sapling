@@ -399,15 +399,17 @@ class unbundle20(unpackermixin):
 
     (this will eventually yield parts)"""
 
-    def __init__(self, ui, fp):
+    def __init__(self, ui, fp, header=None):
+        """If header is specified, we do not read it out of the stream."""
         self.ui = ui
         super(unbundle20, self).__init__(fp)
-        header = self._readexact(4)
-        magic, version = header[0:2], header[2:4]
-        if magic != 'HG':
-            raise util.Abort(_('not a Mercurial bundle'))
-        if version != '20':
-            raise util.Abort(_('unknown bundle version %s') % version)
+        if header is None:
+            header = self._readexact(4)
+            magic, version = header[0:2], header[2:4]
+            if magic != 'HG':
+                raise util.Abort(_('not a Mercurial bundle'))
+            if version != '20':
+                raise util.Abort(_('unknown bundle version %s') % version)
         self.ui.debug('start processing of %s stream\n' % header)
 
     @util.propertycache
