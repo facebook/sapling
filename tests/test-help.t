@@ -870,6 +870,7 @@ test deprecated option is shown with -v
   $ hg help -v debugoptDEP | grep dopt
     --dopt option is DEPRECATED
 
+#if gettext
 test deprecated option is hidden with translation with untranslated description
 (use many globy for not failing on changed transaction)
   $ LANGUAGE=sv hg help debugoptDEP
@@ -880,7 +881,7 @@ test deprecated option is hidden with translation with untranslated description
   flaggor:
   
   *"hg -v help debugoptDEP"* (glob)
-
+#endif
 
 Test a help topic
 
