@@ -1364,7 +1364,7 @@ def commit(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if nothing changed.
     """
-    forceeditor = opts.get('force_editor') or opts.get('edit')
+    forceeditor = opts.get('edit')
 
     if opts.get('subrepos'):
         if opts.get('amend'):
