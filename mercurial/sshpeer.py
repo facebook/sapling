@@ -179,6 +179,18 @@ class sshpeer(wireproto.wirepeer):
             return '', r
         return self._recv(), ''
 
+    def _calltwowaystream(self, cmd, fp, **args):
+        r = self._call(cmd, **args)
+        if r:
+            # XXX needs to be made better
+            raise util.Abort('unexpected remote reply: %s' % r)
+        while True:
+            d = fp.read(4096)
+            if not d:
+                break
+            self._send(d)
+        self._send("", flush=True)
+        return self.pipei
 
     def _recv(self):
         l = self.pipei.readline()
