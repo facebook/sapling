@@ -32,6 +32,8 @@ def readbundle(ui, fh, fname, vfs=None):
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
         return changegroup.unbundle10(fh, alg)
+    elif version == '20':
+        return bundle2.unbundle20(ui, fh, header=magic + version)
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
