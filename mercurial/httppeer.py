@@ -8,6 +8,7 @@
 
 from node import nullid
 from i18n import _
+import tempfile
 import changegroup, statichttprepo, error, httpconnection, url, util, wireproto
 import os, urllib, urllib2, zlib, httplib
 import errno, socket
@@ -210,6 +211,27 @@ class httppeer(wireproto.wirepeer):
         finally:
             fp.close()
             os.unlink(tempname)
+
+    def _calltwowaystream(self, cmd, fp, **args):
+        fh = None
+        filename = None
+        try:
+            # dump bundle to disk
+            fd, filename = tempfile.mkstemp(prefix="hg-bundle-", suffix=".hg")
+            fh = os.fdopen(fd, "wb")
+            d = fp.read(4096)
+            while d:
+                fh.write(d)
+                d = fp.read(4096)
+            fh.close()
+            # start http push
+            fp = httpconnection.httpsendfile(self.ui, filename, "rb")
+            headers = {'Content-Type': 'application/mercurial-0.1'}
+            return self._callstream(cmd, data=fp, headers=headers, **args)
+        finally:
+            if fh is not None:
+                fh.close()
+                os.unlink(filename)
 
     def _callcompressable(self, cmd, **args):
         stream =  self._callstream(cmd, **args)
