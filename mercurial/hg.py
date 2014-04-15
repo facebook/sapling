@@ -585,7 +585,7 @@ def _outgoing(ui, repo, dest, opts):
     o = outgoing.missing
     if not o:
         scmutil.nochangesfound(repo.ui, repo, outgoing.excluded)
-    return o
+    return o, other
 
 def outgoing(ui, repo, dest, opts):
     def recurse():
@@ -598,7 +598,7 @@ def outgoing(ui, repo, dest, opts):
         return ret
 
     limit = cmdutil.loglimit(opts)
-    o = _outgoing(ui, repo, dest, opts)
+    o, other = _outgoing(ui, repo, dest, opts)
     if not o:
         return recurse()
 

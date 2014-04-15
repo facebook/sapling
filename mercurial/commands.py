@@ -4353,7 +4353,7 @@ def outgoing(ui, repo, dest=None, **opts):
     """
     if opts.get('graph'):
         cmdutil.checkunsupportedgraphflags([], opts)
-        o = hg._outgoing(ui, repo, dest, opts)
+        o, other = hg._outgoing(ui, repo, dest, opts)
         if not o:
             return
 
