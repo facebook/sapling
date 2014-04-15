@@ -600,6 +600,7 @@ def outgoing(ui, repo, dest, opts):
     limit = cmdutil.loglimit(opts)
     o, other = _outgoing(ui, repo, dest, opts)
     if not o:
+        cmdutil.outgoinghooks(ui, repo, other, opts, o)
         return recurse()
 
     if opts.get('newest_first'):
@@ -615,6 +616,7 @@ def outgoing(ui, repo, dest, opts):
         count += 1
         displayer.show(repo[n])
     displayer.close()
+    cmdutil.outgoinghooks(ui, repo, other, opts, o)
     recurse()
     return 0 # exit code is zero since we found outgoing changes
 

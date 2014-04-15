@@ -4355,6 +4355,7 @@ def outgoing(ui, repo, dest=None, **opts):
         cmdutil.checkunsupportedgraphflags([], opts)
         o, other = hg._outgoing(ui, repo, dest, opts)
         if not o:
+            cmdutil.outgoinghooks(ui, repo, other, opts, o)
             return
 
         revdag = cmdutil.graphrevs(repo, o, opts)
@@ -4362,6 +4363,7 @@ def outgoing(ui, repo, dest=None, **opts):
         showparents = [ctx.node() for ctx in repo[None].parents()]
         cmdutil.displaygraph(ui, revdag, displayer, showparents,
                              graphmod.asciiedges)
+        cmdutil.outgoinghooks(ui, repo, other, opts, o)
         return 0
 
     if opts.get('bookmarks'):
