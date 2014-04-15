@@ -5522,7 +5522,11 @@ def summary(ui, repo, **opts):
     cmdutil.summaryhooks(ui, repo)
 
     if opts.get('remote'):
-        t = []
+        needsincoming, needsoutgoing = True, True
+    else:
+        needsincoming, needsoutgoing = False, False
+
+    def getincoming():
         source, branches = hg.parseurl(ui.expandpath('default'))
         sbranch = branches[0]
         other = hg.peer(repo, {}, source)
@@ -5532,28 +5536,48 @@ def summary(ui, repo, **opts):
         ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
         commoninc = discovery.findcommonincoming(repo, other, heads=revs)
-        _common, incoming, _rheads = commoninc
         repo.ui.popbuffer()
-        if incoming:
-            t.append(_('1 or more incoming'))
+        return source, sbranch, other, commoninc, commoninc[1]
 
+    if needsincoming:
+        source, sbranch, sother, commoninc, incoming = getincoming()
+    else:
+        source = sbranch = sother = commoninc = incoming = None
+
+    def getoutgoing():
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
         dbranch = branches[0]
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         if source != dest:
-            other = hg.peer(repo, {}, dest)
+            dother = hg.peer(repo, {}, dest)
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
+        else:
+            dother = sother
         if (source != dest or (sbranch is not None and sbranch != dbranch)):
-            commoninc = None
+            common = None
+        else:
+            common = commoninc
         if revs:
             revs = [repo.lookup(rev) for rev in revs]
         repo.ui.pushbuffer()
-        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs,
-                                                commoninc=commoninc)
+        outgoing = discovery.findcommonoutgoing(repo, dother, onlyheads=revs,
+                                                commoninc=common)
         repo.ui.popbuffer()
+        return dest, dbranch, dother, outgoing
+
+    if needsoutgoing:
+        dest, dbranch, dother, outgoing = getoutgoing()
+    else:
+        dest = dbranch = dother = outgoing = None
+
+    if opts.get('remote'):
+        t = []
+        if incoming:
+            t.append(_('1 or more incoming'))
         o = outgoing.missing
         if o:
             t.append(_('%d outgoing') % len(o))
+        other = dother or sother
         if 'bookmarks' in other.listkeys('namespaces'):
             lmarks = repo.listkeys('bookmarks')
             rmarks = other.listkeys('bookmarks')
