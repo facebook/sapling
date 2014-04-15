@@ -5525,11 +5525,23 @@ def summary(ui, repo, **opts):
         needsincoming, needsoutgoing = True, True
     else:
         needsincoming, needsoutgoing = False, False
+        for i, o in cmdutil.summaryremotehooks(ui, repo, opts, None):
+            if i:
+                needsincoming = True
+            if o:
+                needsoutgoing = True
+        if not needsincoming and not needsoutgoing:
+            return
 
     def getincoming():
         source, branches = hg.parseurl(ui.expandpath('default'))
         sbranch = branches[0]
-        other = hg.peer(repo, {}, source)
+        try:
+            other = hg.peer(repo, {}, source)
+        except error.RepoError:
+            if opts.get('remote'):
+                raise
+            return source, sbranch, None, None, None
         revs, checkout = hg.addbranchrevs(repo, other, branches, None)
         if revs:
             revs = [other.lookup(rev) for rev in revs]
@@ -5549,8 +5561,16 @@ def summary(ui, repo, **opts):
         dbranch = branches[0]
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         if source != dest:
-            dother = hg.peer(repo, {}, dest)
+            try:
+                dother = hg.peer(repo, {}, dest)
+            except error.RepoError:
+                if opts.get('remote'):
+                    raise
+                return dest, dbranch, None, None
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
+        elif sother is None:
+            # there is no explicit destination peer, but source one is invalid
+            return dest, dbranch, None, None
         else:
             dother = sother
         if (source != dest or (sbranch is not None and sbranch != dbranch)):
@@ -5594,6 +5614,10 @@ def summary(ui, repo, **opts):
         else:
             # i18n: column positioning for "hg summary"
             ui.status(_('remote: (synced)\n'))
+
+    cmdutil.summaryremotehooks(ui, repo, opts,
+                               ((source, sbranch, sother, commoninc),
+                                (dest, dbranch, dother, outgoing)))
 
 @command('tag',
     [('f', 'force', None, _('force tag')),

@@ -2382,6 +2382,16 @@ def command(table):
 # a list of (ui, repo) functions called by commands.summary
 summaryhooks = util.hooks()
 
+# a list of (ui, repo, opts, changes) functions called by commands.summary.
+#
+# functions should return tuple of booleans below, if 'changes' is None:
+#  (whether-incomings-are-needed, whether-outgoings-are-needed)
+#
+# otherwise, 'changes' is a tuple of tuples below:
+#  - (sourceurl, sourcebranch, sourcepeer, incoming)
+#  - (desturl,   destbranch,   destpeer,   outgoing)
+summaryremotehooks = util.hooks()
+
 # A list of state files kept by multistep operations like graft.
 # Since graft cannot be aborted, it is considered 'clearable' by update.
 # note: bisect is intentionally excluded
