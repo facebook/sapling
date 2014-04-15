@@ -191,7 +191,8 @@ def revset_fromgit(repo, subset, x):
     '''
     args = revset.getargs(x, 0, 0, "fromgit takes no arguments")
     git = repo.githandler
-    return [r for r in subset if git.map_git_get(repo[r].hex()) is not None]
+    node = repo.changelog.node
+    return [r for r in subset if git.map_git_get(hex(node(r))) is not None]
 
 def revset_gitnode(repo, subset, x):
     '''``gitnode(hash)``
