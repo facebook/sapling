@@ -122,10 +122,6 @@
       can be used to (for instance) move code in one repository from "default"
       to a named branch.
   
-      The closemap is a file that allows closing of a branch. This is useful if
-      you want to close a branch. Each entry contains a revision or hash
-      separated by white space.
-  
       Mercurial Source
       ################
   
@@ -271,7 +267,6 @@
       --filemap FILE     remap file names using contents of file
       --splicemap FILE   splice synthesized history into place
       --branchmap FILE   change branch names while converting
-      --closemap FILE    closes given revs
       --branchsort       try to sort changesets by branches
       --datesort         try to sort changesets by date
       --sourcesort       preserve source changesets order
