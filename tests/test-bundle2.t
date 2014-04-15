@@ -158,6 +158,9 @@ Create an extension to test bundle2 API
   > bundle2=True
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
+  > [web]
+  > push_ssl = false
+  > allow_push = *
   > EOF
 
 The extension requires a repo (currently unused)
@@ -711,4 +714,72 @@ pull over http
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
 
+push over ssh
 
+  $ hg -R main push ssh://user@dummy/other -r 5fddd98957c8
+  pushing to ssh://user@dummy/other
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+push over http
+
+  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ cat other.pid >> $DAEMON_PIDS
+
+  $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  $ cat other-error.log
+
+Check final content.
+
+  $ hg -R other log -G
+  o  changeset:   7:32af7686d403
+  |  tag:         tip
+  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  |  date:        Sat Apr 30 15:24:48 2011 +0200
+  |  summary:     D
+  |
+  o  changeset:   6:5fddd98957c8
+  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  |  date:        Sat Apr 30 15:24:48 2011 +0200
+  |  summary:     C
+  |
+  o  changeset:   5:42ccdea3bb16
+  |  parent:      0:cd010b8cd998
+  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  |  date:        Sat Apr 30 15:24:48 2011 +0200
+  |  summary:     B
+  |
+  | o  changeset:   4:02de42196ebe
+  | |  parent:      2:24b6387c8c8c
+  | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  | |  date:        Sat Apr 30 15:24:48 2011 +0200
+  | |  summary:     H
+  | |
+  | | o  changeset:   3:eea13746799a
+  | |/|  parent:      2:24b6387c8c8c
+  | | |  parent:      1:9520eea781bc
+  | | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  | | |  date:        Sat Apr 30 15:24:48 2011 +0200
+  | | |  summary:     G
+  | | |
+  | o |  changeset:   2:24b6387c8c8c
+  |/ /   parent:      0:cd010b8cd998
+  | |    user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  | |    date:        Sat Apr 30 15:24:48 2011 +0200
+  | |    summary:     F
+  | |
+  | @  changeset:   1:9520eea781bc
+  |/   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  |    date:        Sat Apr 30 15:24:48 2011 +0200
+  |    summary:     E
+  |
+  o  changeset:   0:cd010b8cd998
+     user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+     date:        Sat Apr 30 15:24:48 2011 +0200
+     summary:     A
+  

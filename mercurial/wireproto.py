@@ -343,8 +343,12 @@ class wirepeer(peer.peerrepository):
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the
         changegroup to push, typically a chunkbuffer object) to the
-        remote server as a bundle. Return an integer indicating the
-        result of the push (see localrepository.addchangegroup()).'''
+        remote server as a bundle.
+
+        When pushing a bundle10 stream, return an integer indicating the
+        result of the push (see localrepository.addchangegroup()).
+
+        When pushing a bundle20 stream, return a bundle20 stream.'''
 
         if heads != ['force'] and self.capable('unbundlehash'):
             heads = encodelist(['hashed',
@@ -352,18 +356,24 @@ class wirepeer(peer.peerrepository):
         else:
             heads = encodelist(heads)
 
-        ret, output = self._callpush("unbundle", cg, heads=heads)
-        if ret == "":
-            raise error.ResponseError(
-                _('push failed:'), output)
-        try:
-            ret = int(ret)
-        except ValueError:
-            raise error.ResponseError(
-                _('push failed (unexpected response):'), ret)
+        if util.safehasattr(cg, 'deltaheader'):
+            # this a bundle10, do the old style call sequence
+            ret, output = self._callpush("unbundle", cg, heads=heads)
+            if ret == "":
+                raise error.ResponseError(
+                    _('push failed:'), output)
+            try:
+                ret = int(ret)
+            except ValueError:
+                raise error.ResponseError(
+                    _('push failed (unexpected response):'), ret)
 
-        for l in output.splitlines(True):
-            self.ui.status(_('remote: '), l)
+            for l in output.splitlines(True):
+                self.ui.status(_('remote: '), l)
+        else:
+            # bundle2 push. Send a stream, fetch a stream.
+            stream = self._calltwowaystream('unbundle', cg, heads=heads)
+            ret = bundle2.unbundle20(self.ui, stream)
         return ret
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
@@ -781,6 +791,10 @@ def unbundle(repo, proto, heads):
             gen = exchange.readbundle(repo.ui, fp, None)
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
                                   proto._client())
+            if util.safehasattr(r, 'addpart'):
+                # The return looks streameable, we are in the bundle2 case and
+                # should return a stream.
+                return streamres(r.getchunks())
             return pushres(r)
 
         finally:
