@@ -307,7 +307,21 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
             # risk catching KeyErrors from anything other than the
             # parthandlermapping lookup (any KeyError raised by handler()
             # itself represents a defect of a different variety).
-            handler(op, part)
+            output = None
+            if op.reply is not None:
+                op.ui.pushbuffer()
+                output = ''
+            try:
+                handler(op, part)
+            finally:
+                if output is not None:
+                    output = op.ui.popbuffer()
+            if output:
+                outpart = bundlepart('output',
+                                     advisoryparams=[('in-reply-to',
+                                                      str(part.id))],
+                                     data=output)
+                op.reply.addpart(outpart)
             part.read()
     except Exception:
         if part is not None:
@@ -672,6 +686,12 @@ def handlechangegroup(op, inpart):
     if heads != op.repo.heads():
         raise exchange.PushRaced()
 
+@parthandler('output')
+def handleoutput(op, inpart):
+    """forward output captured on the server to the client"""
+    for line in inpart.read().splitlines():
+        op.ui.write(('remote: %s\n' % line))
+
 @parthandler('replycaps')
 def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
@@ -679,3 +699,4 @@ def handlereplycaps(op, inpart):
     Will convey bundle capability at some point too."""
     if op.reply is None:
         op.reply = bundle20(op.ui)
+

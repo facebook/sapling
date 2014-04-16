@@ -499,28 +499,46 @@ unbundle with a reply
 
   $ hg bundle2 --parts --reply ../parts-reply.hg2
   $ hg unbundle2 ../reply.hg2 < ../parts-reply.hg2
-  The choir starts singing:
-      Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
-      Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-      Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  received ping request (id 5)
   0 unread bytes
   3 total verses sung
 
 The reply is a bundle
 
   $ cat ../reply.hg2
-  HG20\x00\x00\x00\x1e	test:pong\x00\x00\x00\x00\x01\x00\x0b\x01in-reply-to5\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  HG20\x00\x00\x00\x1b\x06output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
+      Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+      Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+      Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x01\x01\x00\x0b\x01in-reply-to5\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x02\x00\x01\x0b\x01in-reply-to5\x00\x00\x00\x1dreceived ping request (id 5) (esc)
+  \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 The reply is valid
 
   $ hg statbundle2 < ../reply.hg2
   options count: 0
+    :output:
+      mandatory: 0
+      advisory: 1
+      payload: 217 bytes
     :test:pong:
       mandatory: 1
       advisory: 0
       payload: 0 bytes
-  parts count:   1
+    :output:
+      mandatory: 0
+      advisory: 1
+      payload: 29 bytes
+  parts count:   3
+
+Unbundle the reply to get the output:
+
+  $ hg unbundle2 < ../reply.hg2
+  remote: The choir starts singing:
+  remote:     Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+  remote:     Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
+  remote:     Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  remote: received ping request (id 5)
+  0 unread bytes
 
 Support for changegroup
 ===================================
@@ -646,15 +664,15 @@ with reply
 
   $ hg bundle2 --rev '8+7+5+4' --reply ../rev-rr.hg2
   $ hg unbundle2 ../rev-reply.hg2 < ../rev-rr.hg2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 3 files
   0 unread bytes
   addchangegroup return: 1
 
   $ cat ../rev-reply.hg2
-  HG20\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  HG20\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 3 files
+  \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 Real world exchange
 =====================
@@ -699,10 +717,10 @@ push
   $ hg -R main push other --rev eea13746799a
   pushing to other
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files (-1 heads)
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 0 changes to 0 files (-1 heads)
 
 pull over ssh
 
@@ -748,6 +766,10 @@ push over http
   $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403
   pushing to http://localhost:$HGPORT2/
   searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
   $ cat other-error.log
 
 Check final content.
