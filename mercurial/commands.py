@@ -1162,12 +1162,17 @@ def cat(ui, repo, file1, *pats, **opts):
     no revision is given, the parent of the working directory is used.
 
     Output may be to a file, in which case the name of the file is
-    given using a format string. The formatting rules are the same as
-    for the export command, with the following additions:
+    given using a format string. The formatting rules as follows:
 
+    :``%%``: literal "%" character
     :``%s``: basename of file being printed
     :``%d``: dirname of file being printed, or '.' if in repository root
     :``%p``: root-relative path name of file being printed
+    :``%H``: changeset hash (40 hexadecimal digits)
+    :``%R``: changeset revision number
+    :``%h``: short-form changeset hash (12 hexadecimal digits)
+    :``%r``: zero-padded changeset revision number
+    :``%b``: basename of the exporting repository
 
     Returns 0 on success.
     """

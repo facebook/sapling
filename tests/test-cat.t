@@ -32,3 +32,22 @@ Test fileset
   1
   3
 
+  $ mkdir tmp
+  $ hg cat --output tmp/HH_%H c
+  $ hg cat --output tmp/RR_%R c
+  $ hg cat --output tmp/h_%h c
+  $ hg cat --output tmp/r_%r c
+  $ hg cat --output tmp/%s_s c
+  $ hg cat --output tmp/%d%%_d c
+  $ hg cat --output tmp/%p_p c
+  $ hg log -r . --template "{rev}: {node|short}\n"
+  2: 45116003780e
+  $ find tmp -type f | sort
+  tmp/.%_d
+  tmp/HH_45116003780e3678b333fb2c99fa7d559c8457e9
+  tmp/RR_2
+  tmp/c_p
+  tmp/c_s
+  tmp/h_45116003780e
+  tmp/r_2
+
