@@ -762,9 +762,36 @@ atom log
     <updated>1970-01-01T00:00:00+00:00</updated>
     <published>1970-01-01T00:00:00+00:00</published>
     <content type="xhtml">
-     <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">second a</pre>
-     </div>
+  	<table xmlns="http://www.w3.org/1999/xhtml">
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>01de2d66a28d</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">branch</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">bookmark</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>second a</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td></td>
+  	</tr>
+  	</table>
     </content>
    </entry>
    <entry>
@@ -778,9 +805,36 @@ atom log
     <updated>1970-01-01T00:00:00+00:00</updated>
     <published>1970-01-01T00:00:00+00:00</published>
     <content type="xhtml">
-     <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">first a</pre>
-     </div>
+  	<table xmlns="http://www.w3.org/1999/xhtml">
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>5ed941583260</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">branch</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">bookmark</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>first a</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td></td>
+  	</tr>
+  	</table>
     </content>
    </entry>
   

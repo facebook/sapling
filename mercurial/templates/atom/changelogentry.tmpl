@@ -1,5 +1,5 @@
  <entry>
-  <title>{desc|strip|firstline|strip|escape|nonempty}</title>
+  <title>{branches%"{if(name, '[{name|escape}] ')}"}{desc|strip|firstline|strip|escape|nonempty}</title>
   <id>{urlbase}{url|urlescape}#changeset-{node}</id>
   <link href="{urlbase}{url|urlescape}rev/{node|short}"/>
   <author>
@@ -9,8 +9,35 @@
   <updated>{date|rfc3339date}</updated>
   <published>{date|rfc3339date}</published>
   <content type="xhtml">
-   <div xmlns="http://www.w3.org/1999/xhtml">
-    <pre xml:space="preserve">{desc|escape|nonempty}</pre>
-   </div>
+	<table xmlns="http://www.w3.org/1999/xhtml">
+	<tr>
+		<th style="text-align:left;">changeset</th>
+		<td>{node|short}</td>
+	</tr>
+	<tr>
+		<th style="text-align:left;">branch</th>
+		<td>{branches%"{name|escape}"}</td>
+	</tr>
+	<tr>
+		<th style="text-align:left;">bookmark</th>
+		<td>{bookmarks%"{name|escape}"}</td>
+	</tr>
+	<tr>
+		<th style="text-align:left;">tag</th>
+		<td>{tags%"{name|escape}"}</td>
+	</tr>
+	<tr>
+		<th style="text-align:left;">user</th>
+		<td>{author|obfuscate}</td>
+	</tr>
+	<tr>
+		<th style="text-align:left;vertical-align:top;">description</th>
+		<td>{desc|strip|escape|addbreaks|nonempty}</td>
+	</tr>
+	<tr>
+		<th style="text-align:left;vertical-align:top;">files</th>
+		<td>{files}</td>
+	</tr>
+	</table>
   </content>
  </entry>

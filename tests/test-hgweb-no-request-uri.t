@@ -89,7 +89,7 @@ should be used from d74fc8dec2b4 onward to route the request.
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>test</title>
+    <title>[default] test</title>
     <id>http://127.0.0.1:$HGPORT/#changeset-61c9426e69fef294feed5e2bbfc97d39944a5b1c</id>
     <link href="http://127.0.0.1:$HGPORT/rev/61c9426e69fe"/>
     <author>
@@ -99,9 +99,36 @@ should be used from d74fc8dec2b4 onward to route the request.
     <updated>1970-01-01T00:00:00+00:00</updated>
     <published>1970-01-01T00:00:00+00:00</published>
     <content type="xhtml">
-     <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">test</pre>
-     </div>
+  	<table xmlns="http://www.w3.org/1999/xhtml">
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>61c9426e69fe</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">branch</th>
+  		<td>default</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">bookmark</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td>tip</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>test</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td>bar<br /></td>
+  	</tr>
+  	</table>
     </content>
    </entry>
   
