@@ -67,6 +67,44 @@ Load commonly used test logic
   ? dir/.gitignore
   ? dir/bar
 
+  $ echo '.hg/' > .gitignore
+  $ hg status
+  ? .gitignore
+  ? bar
+  ? dir/.gitignore
+  ? dir/bar
+  ? foo
+  ? foobar
+
+  $ echo 'dir/.hg/' > .gitignore
+  $ hg status
+  ? .gitignore
+  ? bar
+  ? dir/.gitignore
+  ? dir/bar
+  ? foo
+  ? foobar
+
+  $ echo '.hg/foo' > .gitignore
+  $ hg status
+  ? .gitignore
+  ? bar
+  ? dir/.gitignore
+  ? dir/bar
+  ? foo
+  ? foobar
+
+  $ touch foo.hg
+  $ echo 'foo.hg' > .gitignore
+  $ hg status
+  ? .gitignore
+  ? bar
+  ? dir/.gitignore
+  ? dir/bar
+  ? foo
+  ? foobar
+  $ rm foo.hg
+
   $ touch .hgignore
   $ hg status
   ? .gitignore

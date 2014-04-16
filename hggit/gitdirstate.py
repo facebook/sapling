@@ -39,6 +39,8 @@ def gignorepats(orig, lines, root = None):
         if line.startswith('!'):
             warnings.append(_("unsupported ignore pattern '%s'") % line)
             continue
+        if re.match(r'(:?.*/)?\.hg(:?/|$)', line):
+            continue
         rootprefix = '%s/' % root if root else ''
         if line.startswith('/'):
             line = line[1:]
