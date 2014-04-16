@@ -208,6 +208,7 @@ def _pushbundle2(pushop):
     evolve in the future."""
     # Send known head to the server for race detection.
     bundler = bundle2.bundle20(pushop.ui)
+    bundler.addpart(bundle2.bundlepart('replycaps'))
     if not pushop.force:
         part = bundle2.bundlepart('CHECK:HEADS', data=iter(pushop.remoteheads))
         bundler.addpart(part)

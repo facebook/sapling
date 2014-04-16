@@ -280,9 +280,6 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
     """
     op = bundleoperation(repo, transactiongetter)
     # todo:
-    # - only create reply bundle if requested.
-    op.reply = bundle20(op.ui)
-    # todo:
     # - replace this is a init function soon.
     # - exception catching
     unbundler.params
@@ -674,3 +671,11 @@ def handlechangegroup(op, inpart):
     assert not h
     if heads != op.repo.heads():
         raise exchange.PushRaced()
+
+@parthandler('replycaps')
+def handlereplycaps(op, inpart):
+    """Notify that a reply bundle should be created
+
+    Will convey bundle capability at some point too."""
+    if op.reply is None:
+        op.reply = bundle20(op.ui)

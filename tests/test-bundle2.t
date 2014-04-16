@@ -45,6 +45,7 @@ Create an extension to test bundle2 API
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),
+  >           ('', 'reply', False, 'produce a reply bundle'),
   >           ('r', 'rev', [], 'includes those changeset in the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
@@ -56,6 +57,9 @@ Create an extension to test bundle2 API
   >             bundler.addparam(*p)
   >         except ValueError, exc:
   >             raise util.Abort('%s' % exc)
+  > 
+  >     if opts['reply']:
+  >         bundler.addpart(bundle2.bundlepart('replycaps'))
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -493,19 +497,20 @@ Unbundle with an unknown mandatory part
 
 unbundle with a reply
 
-  $ hg unbundle2 ../reply.hg2 < ../parts.hg2
+  $ hg bundle2 --parts --reply ../parts-reply.hg2
+  $ hg unbundle2 ../reply.hg2 < ../parts-reply.hg2
   The choir starts singing:
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  received ping request (id 4)
+  received ping request (id 5)
   0 unread bytes
   3 total verses sung
 
 The reply is a bundle
 
   $ cat ../reply.hg2
-  HG20\x00\x00\x00\x1e	test:pong\x00\x00\x00\x00\x01\x00\x0b\x01in-reply-to4\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  HG20\x00\x00\x00\x1e	test:pong\x00\x00\x00\x00\x01\x00\x0b\x01in-reply-to5\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 The reply is valid
 
@@ -629,7 +634,7 @@ Support for changegroup
   \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02H (esc)
   \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
-  $ hg unbundle2 ../rev-replay.hg2 < ../rev.hg2
+  $ hg unbundle2 < ../rev.hg2
   adding changesets
   adding manifests
   adding file changes
@@ -637,8 +642,19 @@ Support for changegroup
   0 unread bytes
   addchangegroup return: 1
 
-  $ cat ../rev-replay.hg2
-  HG20\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to0return1\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+with reply
+
+  $ hg bundle2 --rev '8+7+5+4' --reply ../rev-rr.hg2
+  $ hg unbundle2 ../rev-reply.hg2 < ../rev-rr.hg2
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 3 files
+  0 unread bytes
+  addchangegroup return: 1
+
+  $ cat ../rev-reply.hg2
+  HG20\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 Real world exchange
 =====================
