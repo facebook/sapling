@@ -143,7 +143,7 @@ Create an extension to test bundle2 API
   >         if value is not None:
   >             ui.write('    %s\n' % value)
   >     count = 0
-  >     for p in unbundler:
+  >     for p in unbundler.iterparts():
   >         count += 1
   >         ui.write('  :%s:\n' % p.type)
   >         ui.write('    mandatory: %i\n' % len(p.mandatoryparams))

@@ -286,7 +286,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
     # - replace this is a init function soon.
     # - exception catching
     unbundler.params
-    iterparts = iter(unbundler)
+    iterparts = unbundler.iterparts()
     part = None
     try:
         for part in iterparts:
@@ -397,7 +397,8 @@ class unpackermixin(object):
 class unbundle20(unpackermixin):
     """interpret a bundle2 stream
 
-    (this will eventually yield parts)"""
+    This class is fed with a binary stream and yields parts through its
+    `iterparts` methods."""
 
     def __init__(self, ui, fp, header=None):
         """If header is specified, we do not read it out of the stream."""
@@ -450,7 +451,7 @@ class unbundle20(unpackermixin):
             raise KeyError(name)
 
 
-    def __iter__(self):
+    def iterparts(self):
         """yield all parts contained in the stream"""
         # make sure param have been loaded
         self.params
