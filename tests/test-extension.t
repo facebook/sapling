@@ -621,8 +621,8 @@ Broken disabled extension and command:
   > EOF
   $ hg --config extensions.path=./path.py help foo > /dev/null
   warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
-  hg: unknown command 'foo'
-  warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
+  abort: no such help topic: foo
+  (try "hg help --keyword foo")
   [255]
 
   $ cat > throw.py <<EOF

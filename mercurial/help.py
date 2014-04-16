@@ -486,7 +486,6 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             hint = _('try "hg help" for a list of topics')
             raise util.Abort(msg, hint=hint)
     elif name and name != 'shortlist':
-        i = None
         if unknowncmd:
             queries = (helpextcmd,)
         elif opts.get('extension'):
@@ -498,12 +497,16 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         for f in queries:
             try:
                 rst = f(name)
-                i = None
                 break
-            except error.UnknownCommand, inst:
-                i = inst
-        if i:
-            raise i
+            except error.UnknownCommand:
+                pass
+        else:
+            if unknowncmd:
+                raise error.UnknownCommand(name)
+            else:
+                msg = _('no such help topic: %s') % name
+                hint = _('try "hg help --keyword %s"') % name
+                raise util.Abort(msg, hint=hint)
     else:
         # program name
         if not ui.quiet:
