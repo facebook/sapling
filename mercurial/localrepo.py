@@ -1523,6 +1523,24 @@ class localrepository(object):
         ctx1 = self[node1]
         ctx2 = self[node2]
 
+        # This next code block is, admittedly, fragile logic that tests for
+        # reversing the contexts and wouldn't need to exist if it weren't for
+        # the fast (and common) code path of comparing the working directory
+        # with its first parent.
+        #
+        # What we're aiming for here is the ability to call:
+        #
+        # workingctx.status(parentctx)
+        #
+        # If we always built the manifest for each context and compared those,
+        # then we'd be done. But the special case of the above call means we
+        # just copy the manifest of the parent.
+        reversed = False
+        if (not isinstance(ctx1, context.changectx)
+            and isinstance(ctx2, context.changectx)):
+            reversed = True
+            ctx1, ctx2 = ctx2, ctx1
+
         working = ctx2.rev() is None
         parentworking = working and ctx1 == self['.']
         match = match or matchmod.always(self.root, self.getcwd())
@@ -1580,6 +1598,9 @@ class localrepository(object):
 
         if working:
             modified = ctx2._filtersuspectsymlink(modified)
+
+        if reversed:
+            added, removed = removed, added
 
         r = modified, added, removed, deleted, unknown, ignored, clean
 
