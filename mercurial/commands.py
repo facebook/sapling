@@ -438,7 +438,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     node = scmutil.revsingle(repo, rev).node()
 
     op1, op2 = repo.dirstate.parents()
-    if node not in repo.changelog.commonancestors(op1, node):
+    if node not in repo.changelog.commonancestorsheads(op1, node):
         raise util.Abort(_('cannot backout change that is not an ancestor'))
 
     p1, p2 = repo.changelog.parents(node)
