@@ -673,6 +673,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False):
 
         if changesets > 0:
             p = lambda: cl.writepending() and repo.root or ""
+            if 'node' not in tr.hookargs:
+                tr.hookargs['node'] = hex(cl.node(clstart))
             repo.hook('pretxnchangegroup', throw=True,
                       node=hex(cl.node(clstart)), source=srctype,
                       url=url, pending=p)
