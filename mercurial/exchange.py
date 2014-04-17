@@ -578,6 +578,7 @@ def _pullbundle2(pullop):
         kwargs['heads'] = pullop.heads or pullop.rheads
         if pullop.heads is None and list(pullop.common) == [nullid]:
             pullop.repo.ui.status(_("requesting all changes\n"))
+    _pullbundle2extraprepare(pullop, kwargs)
     if kwargs.keys() == ['format']:
         return # nothing to pull
     bundle = pullop.remote.getbundle('pull', **kwargs)
@@ -587,6 +588,10 @@ def _pullbundle2(pullop):
         raise util.Abort('missing support for %s' % exc)
     assert len(op.records['changegroup']) == 1
     pullop.cgresult = op.records['changegroup'][0]['return']
+
+def _pullbundle2extraprepare(pullop, kwargs):
+    """hook function so that extensions can extend the getbundle call"""
+    pass
 
 def _pullchangeset(pullop):
     """pull changeset from unbundle into the local repo"""
