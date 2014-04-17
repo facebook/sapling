@@ -697,7 +697,8 @@ def handleoutput(op, inpart):
 def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
 
-    Will convey bundle capability at some point too."""
+    the part payload is a list of capabilities (one per line)"""
+    caps = [c for c in inpart.read().splitlines() if c]
     if op.reply is None:
-        op.reply = bundle20(op.ui)
+        op.reply = bundle20(op.ui, caps)
 

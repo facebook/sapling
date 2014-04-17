@@ -36,12 +36,21 @@ Create an extension to test bundle2 API
   > @bundle2.parthandler('test:ping')
   > def pinghandler(op, part):
   >     op.ui.write('received ping request (id %i)\n' % part.id)
-  >     if op.reply is not None:
+  >     if op.reply is not None and 'ping-pong' in op.reply.capabilities:
   >         op.ui.write_err('replying to ping request (id %i)\n' % part.id)
   >         rpart = bundle2.bundlepart('test:pong',
   >                                    [('in-reply-to', str(part.id))])
   >         op.reply.addpart(rpart)
   > 
+  > @bundle2.parthandler('test:debugreply')
+  > def debugreply(op, part):
+  >     """print data about the capacity of the bundle reply"""
+  >     if op.reply is None:
+  >         op.ui.write('debugreply: no reply\n')
+  >     else:
+  >         op.ui.write('debugreply: capabilities:\n')
+  >         for cap in sorted(op.reply.capabilities):
+  >             op.ui.write('debugreply:     %r\n' % cap)
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
@@ -60,7 +69,8 @@ Create an extension to test bundle2 API
   >             raise util.Abort('%s' % exc)
   > 
   >     if opts['reply']:
-  >         bundler.addpart(bundle2.bundlepart('replycaps'))
+  >         capsstring = 'ping-pong\nelephants'
+  >         bundler.addpart(bundle2.bundlepart('replycaps', data=capsstring))
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -82,6 +92,8 @@ Create an extension to test bundle2 API
   >        part = bundle2.bundlepart('test:empty')
   >        bundler.addpart(part)
   >        part = bundle2.bundlepart('test:song', data=ELEPHANTSSONG)
+  >        bundler.addpart(part)
+  >        part = bundle2.bundlepart('test:debugreply')
   >        bundler.addpart(part)
   >        part = bundle2.bundlepart('test:math',
   >                                  [('pi', '3.14'), ('e', '2.72')],
@@ -339,6 +351,7 @@ Test part
   bundle part: "test:empty"
   bundle part: "test:empty"
   bundle part: "test:song"
+  bundle part: "test:debugreply"
   bundle part: "test:math"
   bundle part: "test:ping"
   end of bundle
@@ -348,7 +361,7 @@ Test part
   test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
   test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x03\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x16\x0ftest:debugreply\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x04\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg statbundle2 < ../parts.hg2
@@ -365,6 +378,10 @@ Test part
       mandatory: 0
       advisory: 0
       payload: 178 bytes
+    :test:debugreply:
+      mandatory: 0
+      advisory: 0
+      payload: 0 bytes
     :test:math:
       mandatory: 2
       advisory: 1
@@ -373,7 +390,7 @@ Test part
       mandatory: 0
       advisory: 0
       payload: 0 bytes
-  parts count:   5
+  parts count:   6
 
   $ hg statbundle2 --debug < ../parts.hg2
   start processing of HG20 stream
@@ -408,9 +425,18 @@ Test part
   payload chunk size: 178
   payload chunk size: 0
       payload: 178 bytes
+  part header size: 22
+  part type: "test:debugreply"
+  part id: "3"
+  part parameters: 0
+    :test:debugreply:
+      mandatory: 0
+      advisory: 0
+  payload chunk size: 0
+      payload: 0 bytes
   part header size: 43
   part type: "test:math"
-  part id: "3"
+  part id: "4"
   part parameters: 3
     :test:math:
       mandatory: 2
@@ -420,7 +446,7 @@ Test part
       payload: 2 bytes
   part header size: 16
   part type: "test:ping"
-  part id: "4"
+  part id: "5"
   part parameters: 0
     :test:ping:
       mandatory: 0
@@ -429,7 +455,7 @@ Test part
       payload: 0 bytes
   part header size: 0
   end of bundle2 stream
-  parts count:   5
+  parts count:   6
 
 Test actual unbundling of test part
 =======================================
@@ -463,19 +489,26 @@ Process the bundle
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  part header size: 22
+  part type: "test:debugreply"
+  part id: "3"
+  part parameters: 0
+  found a handler for part 'test:debugreply'
+  debugreply: no reply
+  payload chunk size: 0
   part header size: 43
   part type: "test:math"
-  part id: "3"
+  part id: "4"
   part parameters: 3
   ignoring unknown advisory part 'test:math'
   payload chunk size: 2
   payload chunk size: 0
   part header size: 16
   part type: "test:ping"
-  part id: "4"
+  part id: "5"
   part parameters: 0
   found a handler for part 'test:ping'
-  received ping request (id 4)
+  received ping request (id 5)
   payload chunk size: 0
   part header size: 0
   end of bundle2 stream
@@ -492,6 +525,7 @@ Unbundle with an unknown mandatory part
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
+  debugreply: no reply
   0 unread bytes
   abort: missing support for 'test:unknown'
   [255]
@@ -510,8 +544,11 @@ The reply is a bundle
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x01\x01\x00\x0b\x01in-reply-to5\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x02\x00\x01\x0b\x01in-reply-to5\x00\x00\x00=received ping request (id 5) (esc)
-  replying to ping request (id 5)
+  \x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00Rdebugreply: capabilities: (esc)
+  debugreply:     'elephants'
+  debugreply:     'ping-pong'
+  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to6\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to6\x00\x00\x00=received ping request (id 6) (esc)
+  replying to ping request (id 6)
   \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 The reply is valid
@@ -522,6 +559,10 @@ The reply is valid
       mandatory: 0
       advisory: 1
       payload: 217 bytes
+    :output:
+      mandatory: 0
+      advisory: 1
+      payload: 82 bytes
     :test:pong:
       mandatory: 1
       advisory: 0
@@ -530,7 +571,7 @@ The reply is valid
       mandatory: 0
       advisory: 1
       payload: 61 bytes
-  parts count:   3
+  parts count:   4
 
 Unbundle the reply to get the output:
 
@@ -539,8 +580,11 @@ Unbundle the reply to get the output:
   remote:     Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
   remote:     Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
   remote:     Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  remote: received ping request (id 5)
-  remote: replying to ping request (id 5)
+  remote: debugreply: capabilities:
+  remote: debugreply:     'elephants'
+  remote: debugreply:     'ping-pong'
+  remote: received ping request (id 6)
+  remote: replying to ping request (id 6)
   0 unread bytes
 
 Support for changegroup
