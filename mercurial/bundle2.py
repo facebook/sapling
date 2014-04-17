@@ -340,10 +340,11 @@ class bundle20(object):
     populate it. Then call `getchunks` to retrieve all the binary chunks of
     data that compose the bundle2 container."""
 
-    def __init__(self, ui):
+    def __init__(self, ui, capabilities=()):
         self.ui = ui
         self._params = []
         self._parts = []
+        self.capabilities = set(capabilities)
 
     def addparam(self, name, value=None):
         """add a stream level parameter"""
