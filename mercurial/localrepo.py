@@ -179,6 +179,8 @@ class localrepository(object):
     requirements = ['revlogv1']
     filtername = None
 
+    bundle2caps = {'HG20': ()}
+
     # a list of (ui, featureset) functions.
     # only functions defined in module of enabled extensions are invoked
     featuresetupfuncs = set()
