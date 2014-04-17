@@ -86,6 +86,8 @@ class transaction(object):
         self.backupmap = {}
         self.journal = journal
         self._queue = []
+        # a dict of arguments to be passed to hooks
+        self.hookargs = {}
 
         self.backupjournal = "%s.backupfiles" % journal
         self.file = opener.open(self.journal, "w")
