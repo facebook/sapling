@@ -675,9 +675,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False):
             p = lambda: cl.writepending() and repo.root or ""
             if 'node' not in tr.hookargs:
                 tr.hookargs['node'] = hex(cl.node(clstart))
-            repo.hook('pretxnchangegroup', throw=True,
-                      node=hex(cl.node(clstart)), source=srctype,
-                      url=url, pending=p)
+            repo.hook('pretxnchangegroup', throw=True, source=srctype,
+                      url=url, pending=p, **tr.hookargs)
 
         added = [cl.node(r) for r in xrange(clstart, clend)]
         publishing = repo.ui.configbool('phases', 'publish', True)
