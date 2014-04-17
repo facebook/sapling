@@ -132,7 +132,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 pushop.repo.prepushoutgoinghooks(pushop.repo,
                                                  pushop.remote,
                                                  pushop.outgoing)
-                if pushop.remote.capable('bundle2'):
+                if pushop.remote.capable('bundle2-exp'):
                     _pushbundle2(pushop)
                 else:
                     _pushchangeset(pushop)
@@ -207,7 +207,7 @@ def _pushbundle2(pushop):
     The only currently supported type of data is changegroup but this will
     evolve in the future."""
     # Send known head to the server for race detection.
-    capsblob = urllib.unquote(pushop.remote.capable('bundle2'))
+    capsblob = urllib.unquote(pushop.remote.capable('bundle2-exp'))
     caps = bundle2.decodecaps(capsblob)
     bundler = bundle2.bundle20(pushop.ui, caps)
     # create reply capability
@@ -515,7 +515,7 @@ def pull(repo, remote, heads=None, force=False):
     lock = pullop.repo.lock()
     try:
         _pulldiscovery(pullop)
-        if pullop.remote.capable('bundle2'):
+        if pullop.remote.capable('bundle2-exp'):
             _pullbundle2(pullop)
         if 'changegroup' in pullop.todosteps:
             _pullchangeset(pullop)

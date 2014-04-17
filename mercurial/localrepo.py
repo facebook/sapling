@@ -308,7 +308,7 @@ class localrepository(object):
         if self.ui.configbool('server', 'bundle2', False):
             caps = set(caps)
             capsblob = bundle2.encodecaps(self.bundle2caps)
-            caps.add('bundle2=' + urllib.quote(capsblob))
+            caps.add('bundle2-exp=' + urllib.quote(capsblob))
         return caps
 
     def _applyrequirements(self, requirements):
