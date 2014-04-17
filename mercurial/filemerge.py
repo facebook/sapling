@@ -334,10 +334,10 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
             if onfailure:
                 ui.warn(onfailure % fd)
         else:
-            os.unlink(back)
+            util.unlink(back)
 
-        os.unlink(b)
-        os.unlink(c)
+        util.unlink(b)
+        util.unlink(c)
         return r
 
     if not r and (_toolbool(ui, tool, "checkconflicts") or
@@ -368,10 +368,10 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         if onfailure:
             ui.warn(onfailure % fd)
     else:
-        os.unlink(back)
+        util.unlink(back)
 
-    os.unlink(b)
-    os.unlink(c)
+    util.unlink(b)
+    util.unlink(c)
     return r
 
 # tell hggettext to extract docstrings from these functions:
