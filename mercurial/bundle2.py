@@ -712,6 +712,8 @@ def handlereplycaps(op, inpart):
         else:
             key, vals = line.split('=', 1)
             vals = vals.split(',')
+        key = urllib.unquote(key)
+        vals = [urllib.unquote(v) for v in vals]
         caps[key] = vals
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
