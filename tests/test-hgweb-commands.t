@@ -928,6 +928,13 @@ File-related
   -rw-r--r-- 4 foo
   
   
+  $ hg log --template "{file_mods}\n" -r 1
+  
+  $ hg parents --template "{node|short}\n" -r 1
+  2ef0ac749a14
+  $ hg parents --template "{node|short}\n" -r 1 foo
+  2ef0ac749a14
+
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/1/foo'
   200 Script output follows
   
@@ -998,7 +1005,7 @@ File-related
   </tr>
   <tr>
    <th class="author">parents</th>
-   <td class="author"></td>
+   <td class="author"><a href="/file/2ef0ac749a14/foo">2ef0ac749a14</a> </td>
   </tr>
   <tr>
    <th class="author">children</th>
@@ -1044,6 +1051,109 @@ File-related
   
   
   
+
+  $ hg log --template "{file_mods}\n" -r 2
+  foo
+  $ hg parents --template "{node|short}\n" -r 2
+  a4f92ed23982
+  $ hg parents --template "{node|short}\n" -r 2 foo
+  2ef0ac749a14
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/2/foo'
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: 1d22e65f027e foo</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="http://mercurial.selenic.com/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/1d22e65f027e">log</a></li>
+  <li><a href="/graph/1d22e65f027e">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/1d22e65f027e">changeset</a></li>
+  <li><a href="/file/1d22e65f027e/">browse</a></li>
+  </ul>
+  <ul>
+  <li class="active">file</li>
+  <li><a href="/file/tip/foo">latest</a></li>
+  <li><a href="/diff/1d22e65f027e/foo">diff</a></li>
+  <li><a href="/comparison/1d22e65f027e/foo">comparison</a></li>
+  <li><a href="/annotate/1d22e65f027e/foo">annotate</a></li>
+  <li><a href="/log/1d22e65f027e/foo">file log</a></li>
+  <li><a href="/raw-file/1d22e65f027e/foo">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>view foo @ 2:1d22e65f027e</h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="description">branch</div>
+  
+  <table id="changesetEntry">
+  <tr>
+   <th class="author">author</th>
+   <td class="author">&#116;&#101;&#115;&#116;</td>
+  </tr>
+  <tr>
+   <th class="date">date</th>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+  </tr>
+  <tr>
+   <th class="author">parents</th>
+   <td class="author"><a href="/file/2ef0ac749a14/foo">2ef0ac749a14</a> </td>
+  </tr>
+  <tr>
+   <th class="author">children</th>
+   <td class="author"></td>
+  </tr>
+  </table>
+  
+  <div class="overflow">
+  <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
+  <div class="sourcefirst"> line source</div>
+  <pre class="sourcelines stripes4 wrap">
+  <span id="l1">another</span><a href="#l1"></a></pre>
+  <div class="sourcelast"></div>
+  </div>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
+
 
 Overviews
 

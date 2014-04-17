@@ -193,6 +193,14 @@ raw revision
 
 diff removed file
 
+  $ hg log --template "{file_mods}\n{file_dels}\n" -r tip
+  a
+  b
+  $ hg parents --template "{node|short}\n" -r tip
+  0cd96de13884
+  $ hg parents --template "{node|short}\n" -r tip b
+  0cd96de13884
+
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/tip/b'
   200 Script output follows
   
@@ -459,7 +467,15 @@ revision
   +b
   
 
-diff removed file
+diff modified file
+
+  $ hg log --template "{file_mods}\n{file_dels}\n" -r tip
+  a
+  b
+  $ hg parents --template "{node|short}\n" -r tip
+  0cd96de13884
+  $ hg parents --template "{node|short}\n" -r tip a
+  0cd96de13884
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/tip/a'
   200 Script output follows
@@ -531,7 +547,7 @@ diff removed file
   </tr>
   <tr>
    <th>parents</th>
-   <td></td>
+   <td><a href="/file/0cd96de13884/a">0cd96de13884</a> </td>
   </tr>
   <tr>
    <th>children</th>
@@ -934,6 +950,10 @@ comparison not-modified file
   $ hg tip --template "{node|short}\n"
   41d9fc4a6ae1
   $ hg diff -c tip e
+  $ hg parents --template "{node|short}\n" -r tip
+  402bea3b0976
+  $ hg parents --template "{node|short}\n" -r tip e
+  402bea3b0976
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/e'
   200 Script output follows
@@ -1005,7 +1025,7 @@ comparison not-modified file
   </tr>
   <tr>
    <th>parents</th>
-   <td></td>
+   <td><a href="/file/402bea3b0976/e">402bea3b0976</a> </td>
   </tr>
   <tr>
    <th>children</th>
