@@ -12,7 +12,10 @@ from node import hex
 
 class ui(object):
     def __init__(self, src=None):
+        # _buffers: used for temporary capture of output
         self._buffers = []
+        # _bufferstates: Should the temporary capture includes stderr
+        self._bufferstates = []
         self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
         self._reportuntrusted = True
         self._ocfg = config.config() # overlay
@@ -471,8 +474,12 @@ class ui(object):
             path = self.config('paths', default)
         return path or loc
 
-    def pushbuffer(self):
+    def pushbuffer(self, error=False):
+        """install a buffer to capture standar output of the ui object
+
+        If error is True, the error output will be captured too."""
         self._buffers.append([])
+        self._bufferstates.append(error)
 
     def popbuffer(self, labeled=False):
         '''pop the last buffer and return the buffered output
@@ -484,6 +491,7 @@ class ui(object):
         is being buffered so it can be captured and parsed or
         processed, labeled should not be set to True.
         '''
+        self._bufferstates.pop()
         return "".join(self._buffers.pop())
 
     def write(self, *args, **opts):
@@ -511,6 +519,8 @@ class ui(object):
 
     def write_err(self, *args, **opts):
         try:
+            if self._bufferstates and self._bufferstates[-1]:
+                return self.write(*args, **opts)
             if not getattr(self.fout, 'closed', False):
                 self.fout.flush()
             for a in args:
