@@ -309,7 +309,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
             # itself represents a defect of a different variety).
             output = None
             if op.reply is not None:
-                op.ui.pushbuffer()
+                op.ui.pushbuffer(error=True)
                 output = ''
             try:
                 handler(op, part)

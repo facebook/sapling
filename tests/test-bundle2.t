@@ -37,6 +37,7 @@ Create an extension to test bundle2 API
   > def pinghandler(op, part):
   >     op.ui.write('received ping request (id %i)\n' % part.id)
   >     if op.reply is not None:
+  >         op.ui.write_err('replying to ping request (id %i)\n' % part.id)
   >         rpart = bundle2.bundlepart('test:pong',
   >                                    [('in-reply-to', str(part.id))])
   >         op.reply.addpart(rpart)
@@ -509,7 +510,8 @@ The reply is a bundle
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x01\x01\x00\x0b\x01in-reply-to5\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x02\x00\x01\x0b\x01in-reply-to5\x00\x00\x00\x1dreceived ping request (id 5) (esc)
+  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x01\x01\x00\x0b\x01in-reply-to5\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x02\x00\x01\x0b\x01in-reply-to5\x00\x00\x00=received ping request (id 5) (esc)
+  replying to ping request (id 5)
   \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 The reply is valid
@@ -527,7 +529,7 @@ The reply is valid
     :output:
       mandatory: 0
       advisory: 1
-      payload: 29 bytes
+      payload: 61 bytes
   parts count:   3
 
 Unbundle the reply to get the output:
@@ -538,6 +540,7 @@ Unbundle the reply to get the output:
   remote:     Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
   remote:     Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
   remote: received ping request (id 5)
+  remote: replying to ping request (id 5)
   0 unread bytes
 
 Support for changegroup
