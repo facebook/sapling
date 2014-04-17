@@ -988,6 +988,13 @@ Test keyword search help
   
    qclone clone main and patch repository at same time
 
+Test unfound keyword
+
+  $ hg help --keyword nonexistingwordthatwillneverexisteverever
+  abort: no matches
+  (try "hg help" for a list of topics)
+  [255]
+
 Test omit indicating for help
 
   $ cat > addverboseitems.py <<EOF

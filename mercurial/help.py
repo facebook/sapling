@@ -481,6 +481,10 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
                 rst.append('%s:\n\n' % title)
                 rst.extend(minirst.maketable(sorted(matches[t]), 1))
                 rst.append('\n')
+        if not rst:
+            msg = _('no matches')
+            hint = _('try "hg help" for a list of topics')
+            raise util.Abort(msg, hint=hint)
     elif name and name != 'shortlist':
         i = None
         if unknowncmd:
