@@ -1168,7 +1168,7 @@ class localrepository(object):
             fparent1, fparent2 = fparent2, nullid
         elif fparent2 != nullid:
             # is one parent an ancestor of the other?
-            fparentancestors = flog.commonancestors(fparent1, fparent2)
+            fparentancestors = flog.commonancestorsheads(fparent1, fparent2)
             if fparent1 in fparentancestors:
                 fparent1, fparent2 = fparent2, nullid
             elif fparent2 in fparentancestors:
