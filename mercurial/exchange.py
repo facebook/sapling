@@ -728,6 +728,10 @@ def unbundle(repo, cg, heads, source, url):
             tr = repo.transaction('unbundle')
             tr.hookargs['bundle2-exp'] = '1'
             r = bundle2.processbundle(repo, cg, lambda: tr).reply
+            cl = repo.unfiltered().changelog
+            p = cl.writepending() and repo.root or ""
+            repo.hook('b2x-pretransactionclose', throw=True, source=source,
+                      url=url, pending=p, **tr.hookargs)
             tr.close()
         else:
             r = changegroup.addchangegroup(repo, cg, source, url)
