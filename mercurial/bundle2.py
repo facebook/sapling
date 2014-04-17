@@ -356,6 +356,18 @@ def decodecaps(blob):
         caps[key] = vals
     return caps
 
+def encodecaps(caps):
+    """encode a bundle2 caps dictionary into a bytes blob"""
+    chunks = []
+    for ca in sorted(caps):
+        vals = caps[ca]
+        ca = urllib.quote(ca)
+        vals = [urllib.quote(v) for v in vals]
+        if vals:
+            ca = "%s=%s" % (ca, ','.join(vals))
+        chunks.append(ca)
+    return '\n'.join(chunks)
+
 class bundle20(object):
     """represent an outgoing bundle2 container
 
