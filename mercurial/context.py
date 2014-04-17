@@ -402,8 +402,17 @@ class changectx(basectx):
         n2 = c2._node
         if n2 is None:
             n2 = c2._parents[0]._node
-        n = self._repo.changelog.ancestor(self._node, n2)
-        return changectx(self._repo, n)
+        cahs = self._repo.changelog.commonancestorsheads(self._node, n2)
+        if not cahs:
+            anc = nullid
+        elif len(cahs) == 1:
+            anc = cahs[0]
+        else:
+            anc = self._repo.changelog.ancestor(self._node, n2)
+            self._repo.ui.status(
+                (_("note: using %s as ancestor of %s and %s\n") %
+                 (short(anc), short(self._node), short(n2))))
+        return changectx(self._repo, anc)
 
     def descendant(self, other):
         """True if other is descendant of this changeset"""

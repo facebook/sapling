@@ -23,7 +23,9 @@ Criss cross merging
   $ echo '5 second change' > f1
   $ hg ci -m '5 second change f1'
 
-  $ hg up -qr3
+  $ hg up -r3
+  note: using 0f6b37dbe527 as ancestor of adfe50279922 and cf89f02107e5
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '6 second change' > f2
   $ hg ci -m '6 second change f2'
 
@@ -72,6 +74,7 @@ Criss cross merging
   
 
   $ hg merge -v --debug --tool internal:dump 5
+  note: using 0f6b37dbe527 as ancestor of 3b08d01b0ab5 and adfe50279922
     searching for copies back to rev 3
   resolving manifests
    branchmerge: True, force: False, partial: False
