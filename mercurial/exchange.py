@@ -733,6 +733,8 @@ def unbundle(repo, cg, heads, source, url):
             repo.hook('b2x-pretransactionclose', throw=True, source=source,
                       url=url, pending=p, **tr.hookargs)
             tr.close()
+            repo.hook('b2x-transactionclose', source=source, url=url,
+                      **tr.hookargs)
         else:
             r = changegroup.addchangegroup(repo, cg, source, url)
     finally:
