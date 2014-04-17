@@ -317,7 +317,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if output is not None:
                     output = op.ui.popbuffer()
             if output:
-                outpart = bundlepart('output',
+                outpart = bundlepart('b2x:output',
                                      advisoryparams=[('in-reply-to',
                                                       str(part.id))],
                                      data=output)
@@ -676,7 +676,7 @@ class unbundlepart(unpackermixin):
         return data
 
 
-@parthandler('changegroup')
+@parthandler('b2x:changegroup')
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
@@ -695,19 +695,19 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitly not the final form of this
         # return. But one need to start somewhere.
-        part = bundlepart('reply:changegroup', (),
+        part = bundlepart('b2x:reply:changegroup', (),
                            [('in-reply-to', str(inpart.id)),
                             ('return', '%i' % ret)])
         op.reply.addpart(part)
     assert not inpart.read()
 
-@parthandler('reply:changegroup')
+@parthandler('b2x:reply:changegroup')
 def handlechangegroup(op, inpart):
     p = dict(inpart.advisoryparams)
     ret = int(p['return'])
     op.records.add('changegroup', {'return': ret}, int(p['in-reply-to']))
 
-@parthandler('check:heads')
+@parthandler('b2x:check:heads')
 def handlechangegroup(op, inpart):
     """check that head of the repo did not change
 
@@ -722,13 +722,13 @@ def handlechangegroup(op, inpart):
     if heads != op.repo.heads():
         raise exchange.PushRaced()
 
-@parthandler('output')
+@parthandler('b2x:output')
 def handleoutput(op, inpart):
     """forward output captured on the server to the client"""
     for line in inpart.read().splitlines():
         op.ui.write(('remote: %s\n' % line))
 
-@parthandler('replycaps')
+@parthandler('b2x:replycaps')
 def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
 

@@ -73,7 +73,7 @@ Create an extension to test bundle2 API
   > 
   >     if opts['reply']:
   >         capsstring = 'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
-  >         bundler.addpart(bundle2.bundlepart('replycaps', data=capsstring))
+  >         bundler.addpart(bundle2.bundlepart('b2x:replycaps', data=capsstring))
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -85,7 +85,7 @@ Create an extension to test bundle2 API
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
   >             outgoing = discovery.outgoing(repo.changelog, headcommon, headmissing)
   >             cg = changegroup.getlocalbundle(repo, 'test:bundle2', outgoing, None)
-  >             part = bundle2.bundlepart('changegroup', data=cg.getchunks())
+  >             part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
   >             bundler.addpart(part)
   > 
   >     if opts['parts']:
@@ -543,18 +543,21 @@ unbundle with a reply
 The reply is a bundle
 
   $ cat ../reply.hg2
-  HG2X\x00\x00\x00\x1b\x06output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
+  HG2X\x00\x00\x00\x1f (esc)
+  b2x:output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  \x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00\xc9debugreply: capabilities: (esc)
+  \x00\x00\x00\x00\x00\x1f (esc)
+  b2x:output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00\xc9debugreply: capabilities: (esc)
   debugreply:     'city=!'
   debugreply:         'celeste,ville'
   debugreply:     'elephants'
   debugreply:         'babar'
   debugreply:         'celeste'
   debugreply:     'ping-pong'
-  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to6\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to6\x00\x00\x00=received ping request (id 6) (esc)
+  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to6\x00\x00\x00\x00\x00\x1f (esc)
+  b2x:output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to6\x00\x00\x00=received ping request (id 6) (esc)
   replying to ping request (id 6)
   \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
@@ -562,11 +565,11 @@ The reply is valid
 
   $ hg statbundle2 < ../reply.hg2
   options count: 0
-    :output:
+    :b2x:output:
       mandatory: 0
       advisory: 1
       payload: 217 bytes
-    :output:
+    :b2x:output:
       mandatory: 0
       advisory: 1
       payload: 201 bytes
@@ -574,7 +577,7 @@ The reply is valid
       mandatory: 1
       advisory: 0
       payload: 0 bytes
-    :output:
+    :b2x:output:
       mandatory: 0
       advisory: 1
       payload: 61 bytes
@@ -672,7 +675,7 @@ Support for changegroup
   start emission of HG2X stream
   bundle parameter: 
   start of parts
-  bundle part: "changegroup"
+  bundle part: "b2x:changegroup"
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -687,7 +690,7 @@ Support for changegroup
   end of bundle
 
   $ cat ../rev.hg2
-  HG2X\x00\x00\x00\x12\x0bchangegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
+  HG2X\x00\x00\x00\x16\x0fb2x:changegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02D (esc)
   \x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01D\x00\x00\x00\xa4\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\xcd\x01\x0b\x8c\xd9\x98\xf3\x98\x1aZ\x81\x15\xf9O\x8d\xa4\xabP`\x89\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)4dece9c826f69490507b98c6383a3009b295837d (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02E (esc)
@@ -726,7 +729,8 @@ with reply
   addchangegroup return: 1
 
   $ cat ../rev-reply.hg2
-  HG2X\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
+  HG2X\x00\x00\x003\x15b2x:reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x1f (esc)
+  b2x:output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files

@@ -212,13 +212,14 @@ def _pushbundle2(pushop):
     bundler = bundle2.bundle20(pushop.ui, caps)
     # create reply capability
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
-    bundler.addpart(bundle2.bundlepart('replycaps', data=capsblob))
+    bundler.addpart(bundle2.bundlepart('b2x:replycaps', data=capsblob))
     if not pushop.force:
-        part = bundle2.bundlepart('CHECK:HEADS', data=iter(pushop.remoteheads))
+        part = bundle2.bundlepart('B2X:CHECK:HEADS',
+                                  data=iter(pushop.remoteheads))
         bundler.addpart(part)
     # add the changegroup bundle
     cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
-    cgpart = bundle2.bundlepart('CHANGEGROUP', data=cg.getchunks())
+    cgpart = bundle2.bundlepart('B2X:CHANGEGROUP', data=cg.getchunks())
     bundler.addpart(cgpart)
     stream = util.chunkbuffer(bundler.getchunks())
     reply = pushop.remote.unbundle(stream, ['force'], 'push')
@@ -668,7 +669,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
             blob = urllib.unquote(bcaps[len('bundle2='):])
             b2caps.update(bundle2.decodecaps(blob))
     bundler = bundle2.bundle20(repo.ui, b2caps)
-    part = bundle2.bundlepart('changegroup', data=cg.getchunks())
+    part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
     bundler.addpart(part)
     return util.chunkbuffer(bundler.getchunks())
 
