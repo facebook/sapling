@@ -174,8 +174,8 @@ Create an extension to test bundle2 API
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > bundle2=$TESTTMP/bundle2.py
-  > [server]
-  > bundle2=True
+  > [experimental]
+  > bundle2-exp=True
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > [web]

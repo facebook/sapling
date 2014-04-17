@@ -305,7 +305,7 @@ class localrepository(object):
     def _restrictcapabilities(self, caps):
         # bundle2 is not ready for prime time, drop it unless explicitly
         # required by the tests (or some brave tester)
-        if self.ui.configbool('server', 'bundle2', False):
+        if self.ui.configbool('experimental', 'bundle2-exp', False):
             caps = set(caps)
             capsblob = bundle2.encodecaps(self.bundle2caps)
             caps.add('bundle2-exp=' + urllib.quote(capsblob))
