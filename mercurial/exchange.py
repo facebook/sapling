@@ -546,6 +546,8 @@ def _pullbundle2(pullop):
 
     For now, the only supported data are changegroup."""
     kwargs = {'bundlecaps': set(['HG20'])}
+    capsblob = bundle2.encodecaps(pullop.repo.bundle2caps)
+    kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
     # pulling changegroup
     pullop.todosteps.remove('changegroup')
     if not pullop.fetch:
@@ -660,7 +662,12 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
         return cg
     # very crude first implementation,
     # the bundle API will change and the generation will be done lazily.
-    bundler = bundle2.bundle20(repo.ui)
+    b2caps = {}
+    for bcaps in bundlecaps:
+        if bcaps.startswith('bundle2='):
+            blob = urllib.unquote(bcaps[len('bundle2='):])
+            b2caps.update(bundle2.decodecaps(blob))
+    bundler = bundle2.bundle20(repo.ui, b2caps)
     part = bundle2.bundlepart('changegroup', data=cg.getchunks())
     bundler.addpart(part)
     return util.chunkbuffer(bundler.getchunks())
