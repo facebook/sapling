@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from node import hex, nullid, short
 from i18n import _
+import urllib
 import peer, changegroup, subrepo, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock as lockmod
@@ -63,7 +64,7 @@ def unfilteredmethod(orig):
     return wrapper
 
 moderncaps = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle',
-                  'bundle2', 'unbundle'))
+                  'unbundle'))
 legacycaps = moderncaps.union(set(['changegroupsubset']))
 
 class localpeer(peer.peerrepository):
@@ -304,9 +305,10 @@ class localrepository(object):
     def _restrictcapabilities(self, caps):
         # bundle2 is not ready for prime time, drop it unless explicitly
         # required by the tests (or some brave tester)
-        if not self.ui.configbool('server', 'bundle2', False):
+        if self.ui.configbool('server', 'bundle2', False):
             caps = set(caps)
-            caps.discard('bundle2')
+            capsblob = bundle2.encodecaps(self.bundle2caps)
+            caps.add('bundle2=' + urllib.quote(capsblob))
         return caps
 
     def _applyrequirements(self, requirements):

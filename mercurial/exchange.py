@@ -7,7 +7,7 @@
 
 from i18n import _
 from node import hex, nullid
-import errno
+import errno, urllib
 import util, scmutil, changegroup, base85
 import discovery, phases, obsolete, bookmarks, bundle2
 
@@ -207,7 +207,9 @@ def _pushbundle2(pushop):
     The only currently supported type of data is changegroup but this will
     evolve in the future."""
     # Send known head to the server for race detection.
-    bundler = bundle2.bundle20(pushop.ui)
+    capsblob = urllib.unquote(pushop.remote.capable('bundle2'))
+    caps = bundle2.decodecaps(capsblob)
+    bundler = bundle2.bundle20(pushop.ui, caps)
     bundler.addpart(bundle2.bundlepart('replycaps'))
     if not pushop.force:
         part = bundle2.bundlepart('CHECK:HEADS', data=iter(pushop.remoteheads))

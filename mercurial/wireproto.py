@@ -586,7 +586,8 @@ def _capabilities(repo, proto):
         else:
             caps.append('streamreqs=%s' % ','.join(requiredformats))
     if repo.ui.configbool('server', 'bundle2', False):
-        caps.append('bundle2')
+        capsblob = bundle2.encodecaps(repo.bundle2caps)
+        caps.append('bundle2=' + urllib.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     caps.append('httpheader=1024')
     return caps
