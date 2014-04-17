@@ -92,13 +92,13 @@ should be used from d74fc8dec2b4 onward to route the request.
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>61c9426e69fe</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>default</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>

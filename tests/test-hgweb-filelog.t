@@ -766,13 +766,13 @@ atom log
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>01de2d66a28d</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>
@@ -809,13 +809,13 @@ atom log
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>5ed941583260</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>

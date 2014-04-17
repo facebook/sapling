@@ -1,5 +1,5 @@
  <entry>
-  <title>{branches%"{if(name, '[{name|escape}] ')}"}{desc|strip|firstline|strip|escape|nonempty}</title>
+  <title>{inbranch%"{if(name, '[{name|escape}] ')}"}{branches%"{if(name, '[{name|escape}] ')}"}{desc|strip|firstline|strip|escape|nonempty}</title>
   <id>{urlbase}{url|urlescape}#changeset-{node}</id>
   <link href="{urlbase}{url|urlescape}rev/{node|short}"/>
   <author>
@@ -13,13 +13,13 @@
 	<tr>
 		<th style="text-align:left;">changeset</th>
 		<td>{node|short}</td>
-	</tr>
-	<tr>
-		<th style="text-align:left;">branch</th>
-		<td>{branches%"{name|escape}"}</td>
-	</tr>
-	<tr>
-		<th style="text-align:left;">bookmark</th>
+              </tr>
+              <tr>
+                              <th style="text-align:left;">branch</th>
+                              <td>{inbranch%"{name|escape}"}{branches%"{name|escape}"}</td>
+              </tr>
+              <tr>
+                              <th style="text-align:left;">bookmark</th>
 		<td>{bookmarks%"{name|escape}"}</td>
 	</tr>
 	<tr>

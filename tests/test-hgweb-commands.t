@@ -76,13 +76,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>cad8025a2e87</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>unstable</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>unstable</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td>something</td>
   	</tr>
   	<tr>
@@ -119,13 +119,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>1d22e65f027e</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>stable</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>stable</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>
@@ -162,13 +162,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>a4f92ed23982</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>default</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>
@@ -205,13 +205,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>2ef0ac749a14</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td>anotherthing</td>
   	</tr>
   	<tr>
@@ -262,13 +262,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>a4f92ed23982</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>default</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>
@@ -305,13 +305,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>2ef0ac749a14</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td>anotherthing</td>
   	</tr>
   	<tr>
@@ -360,13 +360,13 @@ Logs and changes
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>2ef0ac749a14</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td>anotherthing</td>
   	</tr>
   	<tr>

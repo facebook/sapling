@@ -759,13 +759,13 @@ should succeed, slashy names
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>8580ff50825a</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>default</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>
@@ -816,13 +816,13 @@ should succeed, slashy names
   	<tr>
   		<th style="text-align:left;">changeset</th>
   		<td>8580ff50825a</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">branch</th>
-  		<td>default</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">bookmark</th>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
   		<td></td>
   	</tr>
   	<tr>
