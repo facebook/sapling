@@ -545,14 +545,18 @@ def wraprepo(repo):
             if not expectedrevs:
                 return
 
-            expectedwhere = ["(path, rev, chunk) = ('%s', %s, 0)" %
-                (self.sqlconn.escape_string(path), rev) for path, rev
-                in expectedrevs]
-            expectedwhere = ' OR '.join(expectedwhere)
+            whereclauses = []
+            args = []
+            args.append(reponame)
+            for path, rev in expectedrevs:
+                whereclauses.append("(path, rev, chunk) = (%s, %s, 0)")
+                args.append(path)
+                args.append(rev)
 
+            whereclause = ' OR '.join(whereclauses)
             cursor.execute("""SELECT path, rev, node FROM revisions WHERE
-                repo = %s AND (""" + expectedwhere + ")",
-                (reponame,))
+                repo = %s AND (""" + whereclause + ")",
+                args)
 
             for path, rev, node in cursor:
                 rev = int(rev)
