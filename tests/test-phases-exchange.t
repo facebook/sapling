@@ -755,7 +755,7 @@ Pushing to Publish=True (common changeset from publish=False)
 
 Bare push with next changeset and common changeset needing sync (issue3575)
 
-(reset some stat on remot repo to not confused other test)
+(reset some stat on remote repo to avoid confusing other tests)
 
   $ hg -R ../alpha --config extensions.strip= strip --no-backup 967b449fbc94
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

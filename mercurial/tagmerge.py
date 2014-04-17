@@ -39,7 +39,7 @@
 #       and between base and p2, possibly on separate clones
 # 4. for each tag found both on p1 and p2 perform the following merge algorithm:
 #     - the tags conflict if their tag "histories" have the same "rank" (i.e.
-#       length) _AND_ the last (current) tag is _NOT_ the same
+#       length) AND the last (current) tag is NOT the same
 #     - for non conflicting tags:
 #         - choose which are the high and the low ranking nodes
 #             - the high ranking list of nodes is the one that is longer.
@@ -57,7 +57,7 @@
 # 5. write the merged tags taking into account to their positions in the first
 #    parent (i.e. try to keep the relative ordering of the nodes that come
 #    from p1). This minimizes the diff between the merged and the p1 tag files
-#    This is donw by using the following algorithm
+#    This is done by using the following algorithm
 #     - group the nodes for a given tag that must be written next to each other
 #         - A: nodes that come from consecutive lines on p1
 #         - B: nodes that come from p2 (i.e. whose associated line number is
@@ -81,9 +81,9 @@ hexnullid = hex(nullid)
 def readtagsformerge(ui, repo, lines, fn='', keeplinenums=False):
     '''read the .hgtags file into a structure that is suitable for merging
 
-    Sepending on the keeplinenumbers flag, clear the line numbers associated
-    with each tag. Rhis is done because only the line numbers of the first
-    parent are useful for merging
+    Depending on the keeplinenums flag, clear the line numbers associated
+    with each tag. This is done because only the line numbers of the first
+    parent are useful for merging.
     '''
     filetags = tagsmod._readtaghist(ui, repo, lines, fn=fn, recode=None,
                                     calcnodelines=True)[1]

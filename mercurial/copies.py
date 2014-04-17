@@ -97,7 +97,7 @@ def _findlimit(repo, a, b):
     # |/
     # o  0 a0
     #
-    # When findlimit is called, a and b are revs 3 and 0, so limit will be 2,
+    # When _findlimit is called, a and b are revs 3 and 0, so limit will be 2,
     # yet the filelog has the copy information in rev 1 and we will not look
     # back far enough unless we also look at the a and b as candidates.
     # This only occurs when a is a descendent of b or visa-versa.

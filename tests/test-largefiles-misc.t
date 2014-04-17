@@ -589,7 +589,7 @@ check messages when there are files to upload:
       89e6c98d92887913cadf06b2adb97f26cde4849b
   
 
-Pusing revision #1 causes uploading entity 89e6c98d9288, which is
+Pushing revision #1 causes uploading entity 89e6c98d9288, which is
 shared also by largefiles b1, b2 in revision #2 and b in revision #5.
 
 Then, entity 89e6c98d9288 is not treated as "outgoing entity" at "hg

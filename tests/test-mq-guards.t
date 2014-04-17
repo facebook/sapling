@@ -568,7 +568,7 @@ guarded (= not yet applied) one.
   3 G b.patch
 
 test that "qselect --reapply" checks applied patches correctly when no
-applied patche becomes guarded but some of unapplied ones become
+applied patches becomes guarded but some of unapplied ones become
 unguarded.
 
   $ hg qpop -q -a

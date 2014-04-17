@@ -537,7 +537,7 @@ class ui(object):
         return path or loc
 
     def pushbuffer(self, error=False):
-        """install a buffer to capture standar output of the ui object
+        """install a buffer to capture standard output of the ui object
 
         If error is True, the error output will be captured too."""
         self._buffers.append([])

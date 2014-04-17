@@ -390,7 +390,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             dstcachedir = os.path.join(destpath, 'cache')
             # In local clones we're copying all nodes, not just served
-            # ones. Therefore copy all branchcaches over.
+            # ones. Therefore copy all branch caches over.
             copybranchcache('branch2')
             for cachename in repoview.filtertable:
                 copybranchcache('branch2-%s' % cachename)

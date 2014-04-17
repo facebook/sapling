@@ -1582,7 +1582,7 @@ Test that secret mq patch does not break hgweb
 
   $ cd ..
 
-Test interraction with revset (issue4426)
+Test interaction with revset (issue4426)
 
   $ hg init issue4426
   $ cd issue4426

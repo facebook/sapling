@@ -261,7 +261,7 @@
   > print _("concatenating " " by " " space %s" % v)
   > print _("concatenating " + " by " + " '+' %s" % v)
   > 
-  > print _("maping operation in different line %s"
+  > print _("mapping operation in different line %s"
   >         % v)
   > 
   > print _(
@@ -278,7 +278,7 @@
    > print _("concatenating " + " by " + " '+' %s" % v)
    don't use % inside _()
   ./map-inside-gettext.py:6:
-   > print _("maping operation in different line %s"
+   > print _("mapping operation in different line %s"
    don't use % inside _()
   ./map-inside-gettext.py:9:
    > print _(

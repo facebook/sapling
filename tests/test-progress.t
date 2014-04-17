@@ -296,7 +296,7 @@ are different from each other.
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [=====>   ]\r (no-eol) (esc)
                        \r (no-eol) (esc)
 
-test triming progress items, when they contain multi-byte characters,
+test trimming progress items, when they contain multi-byte characters,
 of which length of byte sequence and columns in display are different
 from each other.
 

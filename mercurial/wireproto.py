@@ -827,7 +827,7 @@ def unbundle(repo, proto, heads):
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
                                   proto._client())
             if util.safehasattr(r, 'addpart'):
-                # The return looks streameable, we are in the bundle2 case and
+                # The return looks streamable, we are in the bundle2 case and
                 # should return a stream.
                 return streamres(r.getchunks())
             return pushres(r)

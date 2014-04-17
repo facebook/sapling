@@ -400,7 +400,7 @@ Systematic behavior validation of most possible cases
 
 This section tests most of the possible combinations of working directory
 changes and inter-revision changes. The number of possible cases is significant
-but they all have a slighly different handling. So this section commits to
+but they all have a slightly different handling. So this section commits to
 generating and testing all of them to allow safe refactoring of the revert code.
 
 A python script is used to generate a file history for each combination of
@@ -1065,7 +1065,7 @@ revert all files individually and check the output
   ### revert for: removed_wc
   
 
-check resulting directory againt the --all run
+check resulting directory against the --all run
 (There should be no difference)
 
   $ python ../dircontent.py > ../content-parent-explicit.txt
@@ -1185,7 +1185,7 @@ revert all files individually and check the output
   ### revert for: removed_wc
   
 
-check resulting directory againt the --all run
+check resulting directory against the --all run
 (There should be no difference)
 
   $ python ../dircontent.py > ../content-base-explicit.txt

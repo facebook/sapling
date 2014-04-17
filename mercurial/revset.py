@@ -2551,7 +2551,7 @@ class addset(abstractsmartset):
         return it()
 
     def _trysetasclist(self):
-        """populate the _asclist attribut if possible and necessary"""
+        """populate the _asclist attribute if possible and necessary"""
         if self._genlist is not None and self._asclist is None:
             self._asclist = sorted(self._genlist)
 
@@ -2744,7 +2744,7 @@ class generatorset(abstractsmartset):
 
         # We have to use this complex iteration strategy to allow multiple
         # iterations at the same time. We need to be able to catch revision
-        # removed from `consumegen` and added to genlist in another instance.
+        # removed from _consumegen and added to genlist in another instance.
         #
         # Getting rid of it would provide an about 15% speed up on this
         # iteration.
@@ -2939,17 +2939,15 @@ class _spanset(abstractsmartset):
 class fullreposet(_spanset):
     """a set containing all revisions in the repo
 
-    This class exists to host special optimisation.
+    This class exists to host special optimization.
     """
 
     def __init__(self, repo):
         super(fullreposet, self).__init__(repo)
 
     def __and__(self, other):
-        """fullrepo & other -> other
-
-        As self contains the whole repo, all of the other set should also be in
-        self. Therefor `self & other = other`.
+        """As self contains the whole repo, all of the other set should also be
+        in self. Therefore `self & other = other`.
 
         This boldly assumes the other contains valid revs only.
         """

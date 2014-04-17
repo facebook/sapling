@@ -146,7 +146,7 @@ def canonpath(root, cwd, myname, auditor=None):
 def normasprefix(path):
     '''normalize the specified path as path prefix
 
-    Returned vaule can be used safely for "p.startswith(prefix)",
+    Returned value can be used safely for "p.startswith(prefix)",
     "p[len(prefix):]", and so on.
 
     For efficiency, this expects "path" argument to be already

@@ -479,7 +479,7 @@ check that we can merge tags that differ in rank
   4f3e9b90005b68b4d8a3f4355cedc302a8364f5c t3
   79505d5360b07e3e79d1052e347e73c02b8afa5b t3
 
-check that the merge tried to minimize the diff witht he first merge parent
+check that the merge tried to minimize the diff with the first merge parent
 
   $ hg diff --git -r 'p1()' .hgtags
   diff --git a/.hgtags b/.hgtags

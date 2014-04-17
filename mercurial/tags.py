@@ -87,7 +87,7 @@ def readlocaltags(ui, repo, alltags, tagtypes):
 def _readtaghist(ui, repo, lines, fn, recode=None, calcnodelines=False):
     '''Read tag definitions from a file (or any source of lines).
     This function returns two sortdicts with similar information:
-    - the first dict, bingtaglist, contains the tag information as expected by
+    - the first dict, bintaghist, contains the tag information as expected by
       the _readtags function, i.e. a mapping from tag name to (node, hist):
         - node is the node id from the last line read for that name,
         - hist is the list of node ids previously associated with it (in file

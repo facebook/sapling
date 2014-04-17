@@ -113,7 +113,7 @@ def logmessage(ui, opts):
 def mergeeditform(ctxorbool, baseform):
     """build appropriate editform from ctxorbool and baseform
 
-    'cxtorbool' is one of a ctx to be committed, or a bool whether
+    'ctxorbool' is one of a ctx to be committed, or a bool whether
     merging is committed.
 
     This returns editform 'baseform' with '.merge' if merging is
@@ -1783,8 +1783,8 @@ def _makelogrevset(repo, pats, opts, revs):
         # If we're forced to take the slowpath it means we're following
         # at least one pattern/directory, so don't bother with rename tracking.
         if follow and not match.always() and not slowpath:
-            # _makelogfilematcher expects its files argument to be relative to
-            # the repo root, so use match.files(), not pats.
+            # _makefollowlogfilematcher expects its files argument to be
+            # relative to the repo root, so use match.files(), not pats.
             filematcher = _makefollowlogfilematcher(repo, match.files(),
                                                     followfirst)
         else:
@@ -2522,11 +2522,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         deladded = _deleted - smf
         deleted = _deleted - deladded
 
-        # We need to account for the state of file in the dirstate
+        # We need to account for the state of file in the dirstate.
         #
-        # Even, when we revert agains something else than parent. this will
+        # Even, when we revert against something else than parent. This will
         # slightly alter the behavior of revert (doing back up or not, delete
-        # or just forget etc)
+        # or just forget etc).
         if parent == node:
             dsmodified = modified
             dsadded = added

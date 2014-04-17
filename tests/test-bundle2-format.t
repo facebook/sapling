@@ -1,4 +1,4 @@
-This test is decicated to test the bundle2 container format
+This test is dedicated to test the bundle2 container format
 
 It test multiple existing parts to test different feature of the container. You
 probably do not need to touch this test unless you change the binary encoding

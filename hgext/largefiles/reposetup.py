@@ -263,7 +263,7 @@ def reposetup(ui, repo):
                 # and so on), this code path is used to avoid:
                 # (1) updating standins, because standins should
                 #     be already updated at this point
-                # (2) aborting when stadnins are matched by "match",
+                # (2) aborting when standins are matched by "match",
                 #     because automated committing may specify them directly
                 #
                 if getattr(self, "_isrebasing", False) or \

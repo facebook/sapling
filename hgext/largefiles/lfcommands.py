@@ -462,10 +462,10 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True,
                      expecthash != lfutil.hashfile(abslfile))):
                     if lfile not in repo[None]: # not switched to normal file
                         util.unlinkpath(abslfile, ignoremissing=True)
-                    # use normallookup() to allocate entry in largefiles
+                    # use normallookup() to allocate an entry in largefiles
                     # dirstate, because lack of it misleads
                     # lfilesrepo.status() into recognition that such cache
-                    # missing files are REMOVED.
+                    # missing files are removed.
                     lfdirstate.normallookup(lfile)
                     update[lfile] = expecthash
             else:

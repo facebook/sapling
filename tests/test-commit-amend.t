@@ -889,9 +889,9 @@ in the file revlog topology and the changelog topology.
 
 The way mercurial does amends is to create a temporary commit (rev 3) and then
 fold the new and old commits together into another commit (rev 4). During this
-process, findlimit is called to check how far back to look for the transitive
+process, _findlimit is called to check how far back to look for the transitive
 closure of file copy information, but due to the divergence of the filelog
-and changelog graph topologies, before findlimit was fixed, it returned a rev
+and changelog graph topologies, before _findlimit was fixed, it returned a rev
 which was not far enough back in this case.
   $ hg mv a1 a2
   $ hg status --copies --rev 0

@@ -291,7 +291,7 @@ pypats = [
      "always assign an opened file to a variable, and close it afterwards"),
     (r'[\s\(](open|file)\([^)]*\)\.',
      "always assign an opened file to a variable, and close it afterwards"),
-    (r'(?i)descendent', "the proper spelling is descendAnt"),
+    (r'(?i)descend[e]nt', "the proper spelling is descendAnt"),
     (r'\.debug\(\_', "don't mark debug messages for translation"),
     (r'\.strip\(\)\.split\(\)', "no need to strip before splitting"),
     (r'^\s*except\s*:', "naked except clause", r'#.*re-raises'),

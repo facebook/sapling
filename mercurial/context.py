@@ -109,7 +109,7 @@ class basectx(object):
         """provide a hook to allow child objects to postprocess status results
 
         For example, this allows other contexts, such as workingctx, to filter
-        suspect symlinks in the case of FAT32 and NTFS filesytems.
+        suspect symlinks in the case of FAT32 and NTFS filesystems.
         """
         return s
 
@@ -1415,7 +1415,7 @@ class workingctx(committablectx):
     def _prestatus(self, other, s, match, listignored, listclean, listunknown):
         """override the parent hook with a dirstate query
 
-        We use this prestatus hook to populate the status with information from
+        We use this _prestatus hook to populate the status with information from
         the dirstate.
         """
         # doesn't need to call super; if that changes, be aware that super
@@ -1426,9 +1426,9 @@ class workingctx(committablectx):
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
         """override the parent hook with a filter for suspect symlinks
 
-        We use this poststatus hook to filter out symlinks that might have
+        We use this _poststatus hook to filter out symlinks that might have
         accidentally ended up with the entire contents of the file they are
-        susposed to be linking to.
+        supposed to be linking to.
         """
         s[0] = self._filtersuspectsymlink(s[0])
         self._status = scmutil.status(*s)
@@ -1693,7 +1693,7 @@ class memctx(committablectx):
 class memfilectx(committablefilectx):
     """memfilectx represents an in-memory file to commit.
 
-    See memctx and commitablefilectx for more details.
+    See memctx and committablefilectx for more details.
     """
     def __init__(self, repo, path, data, islink=False,
                  isexec=False, copied=None, memctx=None):

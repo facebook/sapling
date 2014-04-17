@@ -1,5 +1,5 @@
-This file contains testcases that tend to be related to the wireprotocol part of
-largefile.
+This file contains testcases that tend to be related to the wire protocol part
+of largefiles.
 
   $ USERCACHE="$TESTTMP/cache"; export USERCACHE
   $ mkdir "${USERCACHE}"

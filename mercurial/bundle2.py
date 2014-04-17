@@ -229,7 +229,7 @@ class unbundlerecords(object):
             self.getreplies(inreplyto).add(category, entry)
 
     def getreplies(self, partid):
-        """get the subrecords that replies to a specific part"""
+        """get the records that are replies to a specific part"""
         return self._replies.setdefault(partid, unbundlerecords())
 
     def __getitem__(self, cat):
@@ -303,7 +303,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
             # consume the bundle content
             part.read()
         # Small hack to let caller code distinguish exceptions from bundle2
-        # processing fron the ones from bundle1 processing. This is mostly
+        # processing from processing the old format. This is mostly
         # needed to handle different return codes to unbundle according to the
         # type of bundle. We should probably clean up or drop this return code
         # craziness in a future version.
@@ -359,7 +359,7 @@ def _processpart(op, part):
 
 
 def decodecaps(blob):
-    """decode a bundle2 caps bytes blob into a dictionnary
+    """decode a bundle2 caps bytes blob into a dictionary
 
     The blob is a list of capabilities (one per line)
     Capabilities may have values using a line of the form::
@@ -741,7 +741,7 @@ class interrupthandler(unpackermixin):
         self.ui.debug('bundle2 stream interruption, looking for a part.\n')
         headerblock = self._readpartheader()
         if headerblock is None:
-            self.ui.debug('no part found during iterruption.\n')
+            self.ui.debug('no part found during interruption.\n')
             return
         part = unbundlepart(self.ui, headerblock, self._fp)
         op = interruptoperation(self.ui)
@@ -828,7 +828,7 @@ class unbundlepart(unpackermixin):
         # split mandatory from advisory
         mansizes = paramsizes[:mancount]
         advsizes = paramsizes[mancount:]
-        # retrive param value
+        # retrieve param value
         manparams = []
         for key, value in mansizes:
             manparams.append((self._fromheader(key), self._fromheader(value)))
@@ -888,7 +888,7 @@ def getrepocaps(repo):
     return caps
 
 def bundle2caps(remote):
-    """return the bundlecapabilities of a peer as dict"""
+    """return the bundle capabilities of a peer as dict"""
     raw = remote.capable('bundle2-exp')
     if not raw and raw != '':
         return {}
@@ -920,7 +920,7 @@ def handlechangegroup(op, inpart):
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
-        # This is definitly not the final form of this
+        # This is definitely not the final form of this
         # return. But one need to start somewhere.
         part = op.reply.newpart('b2x:reply:changegroup')
         part.addparam('in-reply-to', str(inpart.id), mandatory=False)
@@ -989,7 +989,7 @@ def handleremotechangegroup(op, inpart):
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
-        # This is definitly not the final form of this
+        # This is definitely not the final form of this
         # return. But one need to start somewhere.
         part = op.reply.newpart('b2x:reply:changegroup')
         part.addparam('in-reply-to', str(inpart.id), mandatory=False)

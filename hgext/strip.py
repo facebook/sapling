@@ -1,4 +1,4 @@
-"""strip changesets and their descendents from history
+"""strip changesets and their descendants from history
 
 This extension allows you to strip changesets and all their descendants from the
 repository. See the command help for details.

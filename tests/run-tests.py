@@ -500,7 +500,7 @@ class Test(unittest.TestCase):
             except self.failureException, e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
-                # this decision could be revisted in the future,
+                # this decision could be revisited in the future,
                 # especially for PythonTest instances.
                 if result.addFailure(self, str(e)):
                     success = True
@@ -1263,7 +1263,7 @@ class TestResult(unittest._TextTestResult):
             iolock.release()
 
 class TestSuite(unittest.TestSuite):
-    """Custom unitest TestSuite that knows how to execute Mercurial tests."""
+    """Custom unittest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
                  retest=False, keywords=None, loop=False,
@@ -1895,8 +1895,8 @@ class TestRunner(object):
         the one we expect it to be.  If not, print a warning to stderr."""
         if ((self._bindir == self._pythondir) and
             (self._bindir != self._tmpbindir)):
-            # The pythondir has been infered from --with-hg flag.
-            # We cannot expect anything sensible here
+            # The pythondir has been inferred from --with-hg flag.
+            # We cannot expect anything sensible here.
             return
         expecthg = os.path.join(self._pythondir, 'mercurial')
         actualhg = self._gethgpath()

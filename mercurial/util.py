@@ -1148,7 +1148,7 @@ class chunkbuffer(object):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry.
 
-        If size parameter is ommited, read everything"""
+        If size parameter is omitted, read everything"""
         left = l
         buf = []
         queue = self._queue

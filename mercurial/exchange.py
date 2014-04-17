@@ -298,7 +298,7 @@ def _pushdiscoveryphase(pushop):
     else:
         # adds changeset we are going to push as draft
         #
-        # should not be necessary for pushblishing server, but because of an
+        # should not be necessary for publishing server, but because of an
         # issue fixed in xxxxx we have to do it anyway.
         fdroots = list(unfi.set('roots(%ln  + %ln::)',
                        outgoing.missing, droots))
@@ -448,7 +448,7 @@ def _pushb2ctx(pushop, bundler):
     cg = changegroup.getlocalchangegroup(pushop.repo, 'push', pushop.outgoing)
     cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg.getchunks())
     def handlereply(op):
-        """extract addchangroup returns from server reply"""
+        """extract addchangegroup returns from server reply"""
         cgreplies = op.records.getreplies(cgpart.id)
         assert len(cgreplies['changegroup']) == 1
         pushop.cgresult = cgreplies['changegroup'][0]['return']
@@ -702,7 +702,7 @@ def _pushsyncphase(pushop):
                     pushop.ui.warn(msg)
 
         else:
-            # fallback to independant pushkey command
+            # fallback to independent pushkey command
             for newremotehead in outdated:
                 r = pushop.remote.pushkey('phases',
                                           newremotehead.hex(),

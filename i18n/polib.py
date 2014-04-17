@@ -396,7 +396,7 @@ class _BaseFile(list):
     def ordered_metadata(self):
         """
         Convenience method that returns an ordered version of the metadata
-        dictionnary. The return value is list of tuples (metadata name,
+        dictionary. The return value is list of tuples (metadata name,
         metadata_value).
         """
         # copy the dict first
