@@ -85,7 +85,6 @@ beyondcompare3.diffargs=/lro /lefttitle='$plabel1' /righttitle='$clabel' /solo /
 
 ; Linux version of Beyond Compare
 bcompare.args=$local $other $base -mergeoutput=$output -ro -lefttitle=parent1 -centertitle=base -righttitle=parent2 -outputtitle=merged -automerge -reviewconflicts -solo
-bcompare.premerge=False
 bcompare.gui=True
 bcompare.priority=-1
 bcompare.diffargs=-lro -lefttitle='$plabel1' -righttitle='$clabel' -solo -expandall $parent $child
@@ -103,7 +102,6 @@ araxis.regkey=SOFTWARE\Classes\TypeLib\{46799e0a-7bd1-4330-911c-9660bb964ea2}\7.
 araxis.regappend=\ConsoleCompare.exe
 araxis.priority=-2
 araxis.args=/3 /a2 /wait /merge /title1:"Other" /title2:"Base" /title3:"Local :"$local $other $base $local $output
-araxis.premerge=False
 araxis.checkconflict=True
 araxis.binary=True
 araxis.gui=True
