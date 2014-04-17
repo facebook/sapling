@@ -51,6 +51,9 @@ Create an extension to test bundle2 API
   >         op.ui.write('debugreply: capabilities:\n')
   >         for cap in sorted(op.reply.capabilities):
   >             op.ui.write('debugreply:     %r\n' % cap)
+  >             for val in op.reply.capabilities[cap]:
+  >                 op.ui.write('debugreply:         %r\n' % val)
+  > 
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
@@ -69,7 +72,7 @@ Create an extension to test bundle2 API
   >             raise util.Abort('%s' % exc)
   > 
   >     if opts['reply']:
-  >         capsstring = 'ping-pong\nelephants'
+  >         capsstring = 'ping-pong\nelephants=babar,celeste\ncity=celesteville'
   >         bundler.addpart(bundle2.bundlepart('replycaps', data=capsstring))
   > 
   >     revs = opts['rev']
@@ -544,8 +547,12 @@ The reply is a bundle
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  \x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00Rdebugreply: capabilities: (esc)
+  \x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00\xc6debugreply: capabilities: (esc)
+  debugreply:     'city'
+  debugreply:         'celesteville'
   debugreply:     'elephants'
+  debugreply:         'babar'
+  debugreply:         'celeste'
   debugreply:     'ping-pong'
   \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to6\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to6\x00\x00\x00=received ping request (id 6) (esc)
   replying to ping request (id 6)
@@ -562,7 +569,7 @@ The reply is valid
     :output:
       mandatory: 0
       advisory: 1
-      payload: 82 bytes
+      payload: 198 bytes
     :test:pong:
       mandatory: 1
       advisory: 0
@@ -581,7 +588,11 @@ Unbundle the reply to get the output:
   remote:     Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
   remote:     Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
   remote: debugreply: capabilities:
+  remote: debugreply:     'city'
+  remote: debugreply:         'celesteville'
   remote: debugreply:     'elephants'
+  remote: debugreply:         'babar'
+  remote: debugreply:         'celeste'
   remote: debugreply:     'ping-pong'
   remote: received ping request (id 6)
   remote: replying to ping request (id 6)

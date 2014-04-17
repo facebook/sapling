@@ -344,7 +344,7 @@ class bundle20(object):
         self.ui = ui
         self._params = []
         self._parts = []
-        self.capabilities = set(capabilities)
+        self.capabilities = dict(capabilities)
 
     def addparam(self, name, value=None):
         """add a stream level parameter"""
@@ -697,8 +697,22 @@ def handleoutput(op, inpart):
 def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
 
-    the part payload is a list of capabilities (one per line)"""
-    caps = [c for c in inpart.read().splitlines() if c]
+    The part payload is a list of capabilities (one per line)
+    Capabilities may have values using a line of form::
+
+        capability=value1,value2,value3
+
+    The value are alway a list."""
+    caps = {}
+    for line in inpart.read().splitlines():
+        if not line:
+            continue
+        if '=' not in line:
+            key, vals = line, ()
+        else:
+            key, vals = line.split('=', 1)
+            vals = vals.split(',')
+        caps[key] = vals
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 
