@@ -219,6 +219,7 @@ def _pushbundle2(pushop):
         part = bundle2.bundlepart('B2X:CHECK:HEADS',
                                   data=iter(pushop.remoteheads))
         bundler.addpart(part)
+    extrainfo = _pushbundle2extraparts(pushop, bundler)
     # add the changegroup bundle
     cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
     cgpart = bundle2.bundlepart('B2X:CHANGEGROUP', data=cg.getchunks())
@@ -232,6 +233,21 @@ def _pushbundle2(pushop):
     cgreplies = op.records.getreplies(cgpart.id)
     assert len(cgreplies['changegroup']) == 1
     pushop.ret = cgreplies['changegroup'][0]['return']
+    _pushbundle2extrareply(pushop, op, extrainfo)
+
+def _pushbundle2extraparts(pushop, bundler):
+    """hook function to let extensions add parts
+
+    Return a dict to let extensions pass data to the reply processing.
+    """
+    return {}
+
+def _pushbundle2extrareply(pushop, op, extrainfo):
+    """hook function to let extensions react to part replies
+
+    The dict from _pushbundle2extrareply is fed to this function.
+    """
+    pass
 
 def _pushchangeset(pushop):
     """Make the actual push of changeset bundle to remote repo"""
