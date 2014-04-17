@@ -1666,6 +1666,7 @@ Static files
   /* Changelog/Filelog entries */
   .logEntry { width: 100%; }
   .logEntry .age { width: 15%; }
+  .logEntry th.label { width: 16em; }
   .logEntry th { font-weight: normal; text-align: right; vertical-align: top; }
   .logEntry th.age, .logEntry th.firstline { font-weight: bold; }
   .logEntry th.firstline { text-align: left; width: inherit; }

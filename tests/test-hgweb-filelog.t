@@ -639,7 +639,7 @@ should show base link, use spartan because it shows it
   
   <table class="logEntry parity0">
    <tr>
-    <th><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
+    <th class="label"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
     <th class="firstline"><a href="/rev/b7682196df1c?style=spartan">change c</a></th>
    </tr>
    <tr>
@@ -664,7 +664,7 @@ should show base link, use spartan because it shows it
   
   <table class="logEntry parity1">
    <tr>
-    <th><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
+    <th class="label"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
     <th class="firstline"><a href="/rev/1a6696706df2?style=spartan">mv b</a></th>
    </tr>
    <tr>
