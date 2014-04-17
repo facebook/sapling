@@ -201,7 +201,7 @@ Empty bundle
 Test bundling
 
   $ hg bundle2
-  HG20\x00\x00\x00\x00 (no-eol) (esc)
+  HG2X\x00\x00\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -231,7 +231,7 @@ Simplest possible parameters form
 Test generation simple option
 
   $ hg bundle2 --param 'caution'
-  HG20\x00\x07caution\x00\x00 (no-eol) (esc)
+  HG2X\x00\x07caution\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -243,7 +243,7 @@ Test unbundling
 Test generation multiple option
 
   $ hg bundle2 --param 'caution' --param 'meal'
-  HG20\x00\x0ccaution meal\x00\x00 (no-eol) (esc)
+  HG2X\x00\x0ccaution meal\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -259,7 +259,7 @@ advisory parameters, with value
 Test generation
 
   $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants'
-  HG20\x00\x1ccaution meal=vegan elephants\x00\x00 (no-eol) (esc)
+  HG2X\x00\x1ccaution meal=vegan elephants\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -277,7 +277,7 @@ parameter with special char in value
 Test generation
 
   $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple
-  HG20\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
+  HG2X\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -301,7 +301,7 @@ Test debug output
 bundling debug
 
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
-  start emission of HG20 stream
+  start emission of HG2X stream
   bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
   start of parts
   end of bundle
@@ -309,12 +309,12 @@ bundling debug
 file content is ok
 
   $ cat ../out.hg2
-  HG20\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
+  HG2X\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
 
 unbundling debug
 
   $ hg statbundle2 --debug < ../out.hg2
-  start processing of HG20 stream
+  start processing of HG2X stream
   reading bundle2 stream parameters
   ignoring unknown parameter 'e|! 7/'
   ignoring unknown parameter 'simple'
@@ -348,7 +348,7 @@ Test part
 =================
 
   $ hg bundle2 --parts ../parts.hg2 --debug
-  start emission of HG20 stream
+  start emission of HG2X stream
   bundle parameter: 
   start of parts
   bundle part: "test:empty"
@@ -360,7 +360,7 @@ Test part
   end of bundle
 
   $ cat ../parts.hg2
-  HG20\x00\x00\x00\x11 (esc)
+  HG2X\x00\x00\x00\x11 (esc)
   test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
   test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
@@ -396,7 +396,7 @@ Test part
   parts count:   6
 
   $ hg statbundle2 --debug < ../parts.hg2
-  start processing of HG20 stream
+  start processing of HG2X stream
   reading bundle2 stream parameters
   options count: 0
   start extraction of bundle2 parts
@@ -466,7 +466,7 @@ Test actual unbundling of test part
 Process the bundle
 
   $ hg unbundle2 --debug < ../parts.hg2
-  start processing of HG20 stream
+  start processing of HG2X stream
   reading bundle2 stream parameters
   start extraction of bundle2 parts
   part header size: 17
@@ -543,7 +543,7 @@ unbundle with a reply
 The reply is a bundle
 
   $ cat ../reply.hg2
-  HG20\x00\x00\x00\x1b\x06output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
+  HG2X\x00\x00\x00\x1b\x06output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
@@ -669,7 +669,7 @@ Support for changegroup
   9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   eea13746799a9e0bfd88f29d3c2e9dc9389f524f
   02de42196ebee42ef284b6780a87cdc96e8eaab6
-  start emission of HG20 stream
+  start emission of HG2X stream
   bundle parameter: 
   start of parts
   bundle part: "changegroup"
@@ -687,7 +687,7 @@ Support for changegroup
   end of bundle
 
   $ cat ../rev.hg2
-  HG20\x00\x00\x00\x12\x0bchangegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
+  HG2X\x00\x00\x00\x12\x0bchangegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02D (esc)
   \x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01D\x00\x00\x00\xa4\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\xcd\x01\x0b\x8c\xd9\x98\xf3\x98\x1aZ\x81\x15\xf9O\x8d\xa4\xabP`\x89\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)4dece9c826f69490507b98c6383a3009b295837d (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02E (esc)
@@ -726,7 +726,7 @@ with reply
   addchangegroup return: 1
 
   $ cat ../rev-reply.hg2
-  HG20\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
+  HG2X\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files

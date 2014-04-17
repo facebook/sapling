@@ -109,7 +109,7 @@ class localpeer(peer.peerrepository):
                   format='HG10'):
         cg = exchange.getbundle(self._repo, source, heads=heads,
                                 common=common, bundlecaps=bundlecaps)
-        if bundlecaps is not None and 'HG20' in bundlecaps:
+        if bundlecaps is not None and 'HG2X' in bundlecaps:
             # When requesting a bundle2, getbundle returns a stream to make the
             # wire level function happier. We need to build a proper object
             # from it in local peer.
@@ -180,7 +180,7 @@ class localrepository(object):
     requirements = ['revlogv1']
     filtername = None
 
-    bundle2caps = {'HG20': ()}
+    bundle2caps = {'HG2X': ()}
 
     # a list of (ui, featureset) functions.
     # only functions defined in module of enabled extensions are invoked

@@ -32,7 +32,7 @@ def readbundle(ui, fh, fname, vfs=None):
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
         return changegroup.unbundle10(fh, alg)
-    elif version == '20':
+    elif version == '2X':
         return bundle2.unbundle20(ui, fh, header=magic + version)
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
@@ -545,7 +545,7 @@ def _pullbundle2(pullop):
     """pull data using bundle2
 
     For now, the only supported data are changegroup."""
-    kwargs = {'bundlecaps': set(['HG20'])}
+    kwargs = {'bundlecaps': set(['HG2X'])}
     capsblob = bundle2.encodecaps(pullop.repo.bundle2caps)
     kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
     # pulling changegroup
@@ -644,7 +644,7 @@ def _pullobsolete(pullop):
 def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     """return a full bundle (with potentially multiple kind of parts)
 
-    Could be a bundle HG10 or a bundle HG20 depending on bundlecaps
+    Could be a bundle HG10 or a bundle HG2X depending on bundlecaps
     passed. For now, the bundle can contain only changegroup, but this will
     changes when more part type will be available for bundle2.
 
@@ -658,7 +658,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     # build bundle here.
     cg = changegroup.getbundle(repo, source, heads=heads,
                                common=common, bundlecaps=bundlecaps)
-    if bundlecaps is None or 'HG20' not in bundlecaps:
+    if bundlecaps is None or 'HG2X' not in bundlecaps:
         return cg
     # very crude first implementation,
     # the bundle API will change and the generation will be done lazily.

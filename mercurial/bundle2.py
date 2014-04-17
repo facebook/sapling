@@ -151,7 +151,7 @@ from i18n import _
 _pack = struct.pack
 _unpack = struct.unpack
 
-_magicstring = 'HG20'
+_magicstring = 'HG2X'
 
 _fstreamparamsize = '>H'
 _fpartheadersize = '>H'
@@ -456,7 +456,7 @@ class unbundle20(unpackermixin):
             magic, version = header[0:2], header[2:4]
             if magic != 'HG':
                 raise util.Abort(_('not a Mercurial bundle'))
-            if version != '20':
+            if version != '2X':
                 raise util.Abort(_('unknown bundle version %s') % version)
         self.ui.debug('start processing of %s stream\n' % header)
 

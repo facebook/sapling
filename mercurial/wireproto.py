@@ -335,7 +335,7 @@ class wirepeer(peer.peerrepository):
         if bundlecaps is not None:
             opts['bundlecaps'] = ','.join(bundlecaps)
         f = self._callcompressable("getbundle", **opts)
-        if bundlecaps is not None and 'HG20' in bundlecaps:
+        if bundlecaps is not None and 'HG2X' in bundlecaps:
             return bundle2.unbundle20(self.ui, f)
         else:
             return changegroupmod.unbundle10(f, 'UN')
