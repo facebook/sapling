@@ -743,21 +743,17 @@ class revlog(object):
             ancs = ancestor.commonancestorsheads(self.parentrevs, a, b)
         return map(self.node, ancs)
 
-    def commonancestors(self, a, b):
-        """calculate the least common ancestors of nodes a and b"""
+    def ancestor(self, a, b):
+        """calculate the least common ancestor of nodes a and b"""
+
         a, b = self.rev(a), self.rev(b)
         try:
             ancs = self.index.ancestors(a, b)
-        except (AttributeError, OverflowError): # C implementation failed
+        except (AttributeError, OverflowError):
             ancs = ancestor.ancestors(self.parentrevs, a, b)
-        return map(self.node, ancs)
-
-    def ancestor(self, a, b):
-        """calculate a least common ancestor of nodes a and b"""
-        ancs = self.commonancestors(a, b)
         if ancs:
             # choose a consistent winner when there's a tie
-            return min(ancs)
+            return min(map(self.node, ancs))
         return nullid
 
     def _match(self, id):
