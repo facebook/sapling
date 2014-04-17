@@ -132,7 +132,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 pushop.repo.prepushoutgoinghooks(pushop.repo,
                                                  pushop.remote,
                                                  pushop.outgoing)
-                if pushop.remote.capable('bundle2-exp'):
+                if (pushop.repo.ui.configbool('experimental', 'bundle2-exp',
+                                              False)
+                    and pushop.remote.capable('bundle2-exp')):
                     _pushbundle2(pushop)
                 else:
                     _pushchangeset(pushop)
@@ -516,7 +518,8 @@ def pull(repo, remote, heads=None, force=False):
     lock = pullop.repo.lock()
     try:
         _pulldiscovery(pullop)
-        if pullop.remote.capable('bundle2-exp'):
+        if (pullop.repo.ui.configbool('server', 'bundle2', False)
+            and pullop.remote.capable('bundle2-exp')):
             _pullbundle2(pullop)
         if 'changegroup' in pullop.todosteps:
             _pullchangeset(pullop)
