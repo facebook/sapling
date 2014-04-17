@@ -953,6 +953,7 @@ File-related
   <li><a href="/shortlog/a4f92ed23982">log</a></li>
   <li><a href="/graph/a4f92ed23982">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>

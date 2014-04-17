@@ -82,6 +82,7 @@ hgweb filerevision, html
   <li><a href="/shortlog/853dcd4de2a6">log</a></li>
   <li><a href="/graph/853dcd4de2a6">graph</a></li>
   <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
