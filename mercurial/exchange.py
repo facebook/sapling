@@ -726,6 +726,7 @@ def unbundle(repo, cg, heads, source, url):
         # push can proceed
         if util.safehasattr(cg, 'params'):
             tr = repo.transaction('unbundle')
+            tr.hookargs['bundle2-exp'] = '1'
             r = bundle2.processbundle(repo, cg, lambda: tr).reply
             tr.close()
         else:
