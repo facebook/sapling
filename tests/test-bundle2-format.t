@@ -80,7 +80,7 @@ Create an extension to test bundle2 API
   >           ('r', 'rev', [], 'includes those changeset in the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
-  >     """write a bundle2 container on standard ouput"""
+  >     """write a bundle2 container on standard output"""
   >     bundler = bundle2.bundle20(ui)
   >     for p in opts['param']:
   >         p = p.split('=', 1)

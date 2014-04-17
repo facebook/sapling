@@ -824,7 +824,7 @@ class pulloperation(object):
         return self.trmanager.transaction()
 
 class transactionmanager(object):
-    """An object to manages the lifecycle of a transaction
+    """An object to manage the life cycle of a transaction
 
     It creates the transaction on demand and calls the appropriate hooks when
     closing the transaction."""

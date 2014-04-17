@@ -129,13 +129,13 @@ class transaction(object):
 
         # hold file generations to be performed on commit
         self._filegenerators = {}
-        # hold callbalk to write pending data for hooks
+        # hold callback to write pending data for hooks
         self._pendingcallback = {}
         # True is any pending data have been written ever
         self._anypending = False
         # holds callback to call when writing the transaction
         self._finalizecallback = {}
-        # hold callbalk for post transaction close
+        # hold callback for post transaction close
         self._postclosecallback = {}
 
     def __del__(self):
@@ -250,7 +250,7 @@ class transaction(object):
 
         The `location` arguments may be used to indicate the files are located
         outside of the the standard directory for transaction. It should match
-        one of the key of the `transaction.vfsmap` dictionnary.
+        one of the key of the `transaction.vfsmap` dictionary.
         """
         # For now, we are unable to do proper backup and restore of custom vfs
         # but for bookmarks that are handled outside this mechanism.

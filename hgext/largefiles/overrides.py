@@ -54,7 +54,7 @@ def restorematchfn():
     was called.  no-op if scmutil.match is its original function.
 
     Note that n calls to installmatchfn will require n calls to
-    restore matchfn to reverse'''
+    restore the original matchfn.'''
     scmutil.match = getattr(scmutil.match, 'oldmatch')
 
 def installmatchandpatsfn(f):
@@ -69,7 +69,7 @@ def restorematchandpatsfn():
     is its original function.
 
     Note that n calls to installmatchandpatsfn will require n calls
-    to restore matchfn to reverse'''
+    to restore the original matchfn.'''
     scmutil.matchandpats = getattr(scmutil.matchandpats, 'oldmatchandpats',
             scmutil.matchandpats)
 
@@ -376,7 +376,7 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
         wlock.release()
 
 # Before starting the manifest merge, merge.updates will call
-# checkunknown to check if there are any files in the merged-in
+# _checkunknownfile to check if there are any files in the merged-in
 # changeset that collide with unknown files in the working copy.
 #
 # The largefiles are seen as unknown, so this prevents us from merging

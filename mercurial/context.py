@@ -1038,8 +1038,8 @@ class committablectx(basectx):
         """generate a manifest corresponding to the values in self._status
 
         This reuse the file nodeid from parent, but we append an extra letter
-        when modified.  Modified files get an extra 'm' while added files get
-        appened an extra 'a'. This is used by manifests merge to see that files
+        when modified. Modified files get an extra 'm' while added files get
+        an extra 'a'. This is used by manifests merge to see that files
         are different and by update logic to avoid deleting newly added files.
         """
 
@@ -1426,9 +1426,9 @@ class workingctx(committablectx):
         against its parent (repo['.']).
         """
         s = self._dirstatestatus(match, listignored, listclean, listunknown)
-        # Filter out symlinks that, in the case of FAT32 and NTFS filesytems,
+        # Filter out symlinks that, in the case of FAT32 and NTFS filesystems,
         # might have accidentally ended up with the entire contents of the file
-        # they are susposed to be linking to.
+        # they are supposed to be linking to.
         s.modified[:] = self._filtersuspectsymlink(s.modified)
         if other != self._repo['.']:
             s = super(workingctx, self)._buildstatus(other, s, match,

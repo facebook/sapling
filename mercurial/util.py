@@ -552,7 +552,7 @@ def nogc(func):
     container objects (the number being defined by gc.get_threshold()) are
     allocated even when marked not to be tracked by the collector. Tracking has
     no effect on when GCs are triggered, only on what objects the GC looks
-    into. As a workaround, disable GC while building complexe (huge)
+    into. As a workaround, disable GC while building complex (huge)
     containers.
 
     This garbage collector issue have been fixed in 2.7.

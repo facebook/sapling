@@ -55,7 +55,7 @@ import bookmark by name
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   Z	4e3505fd95835d721066b76e75dbb8cc554d7f77
 
-delete the bookmark to repull it
+delete the bookmark to re-pull it
 
   $ hg book -d X
   $ hg pull -B X ../a
@@ -177,7 +177,7 @@ divergent bookmarks
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
 
-explicite pull should overwrite the local version (issue4439)
+explicit pull should overwrite the local version (issue4439)
 
   $ hg pull --config paths.foo=../a foo -B X
   pulling from $TESTTMP/a (glob)

@@ -538,7 +538,7 @@ def updatestandinsbymatch(repo, match):
     return match
 
 class automatedcommithook(object):
-    '''Statefull hook to update standins at the 1st commit of resuming
+    '''Stateful hook to update standins at the 1st commit of resuming
 
     For efficiency, updating standins in the working directory should
     be avoided while automated committing (like rebase, transplant and
@@ -562,7 +562,7 @@ def getstatuswriter(ui, repo, forcibly=None):
     '''Return the function to write largefiles specific status out
 
     If ``forcibly`` is ``None``, this returns the last element of
-    ``repo._lfupdatereporters`` as "default" writer function.
+    ``repo._lfstatuswriters`` as "default" writer function.
 
     Otherwise, this returns the function to always write out (or
     ignore if ``not forcibly``) status.

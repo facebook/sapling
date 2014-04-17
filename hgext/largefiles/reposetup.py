@@ -285,7 +285,7 @@ def reposetup(ui, repo):
         def _subdirlfs(self, files, lfiles):
             '''
             Adjust matched file list
-            If we pass a directory to commit whose only commitable files
+            If we pass a directory to commit whose only committable files
             are largefiles, the core commit code aborts before finding
             the largefiles.
             So we do the following:
@@ -343,7 +343,7 @@ def reposetup(ui, repo):
     repo._lfcommithooks = [lfutil.updatestandinsbymatch]
 
     # Stack of status writer functions taking "*msg, **opts" arguments
-    # like "ui.status()". Only last element ("_lfupdatereporters[-1]")
+    # like "ui.status()". Only last element ("_lfstatuswriters[-1]")
     # is used to write status out.
     repo._lfstatuswriters = [ui.status]
 

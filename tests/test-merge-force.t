@@ -228,11 +228,11 @@ Merge with remote
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
-Check which files need to be resolved (should correspond to the ouput above).
+Check which files need to be resolved (should correspond to the output above).
 This should be the files for which the base (1st filename segment), the remote
 (2nd segment) and the working copy (4th segment) are all different.
 
-Interestingly, one untracked file got merged and added, which corresponds the
+Interestingly, one untracked file got merged and added, which corresponds to the
 odd 'if force and branchmerge and different' case in manifestmerge().
 
   $ hg resolve -l
