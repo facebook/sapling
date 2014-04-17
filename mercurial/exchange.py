@@ -661,7 +661,8 @@ def _pullobsolete(pullop):
             pullop.repo.invalidatevolatilesets()
     return tr
 
-def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
+def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
+              **kwargs):
     """return a full bundle (with potentially multiple kind of parts)
 
     Could be a bundle HG10 or a bundle HG2X depending on bundlecaps

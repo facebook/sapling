@@ -325,7 +325,8 @@ class wirepeer(peer.peerrepository):
                                    bases=bases, heads=heads)
         return changegroupmod.unbundle10(f, 'UN')
 
-    def getbundle(self, source, heads=None, common=None, bundlecaps=None):
+    def getbundle(self, source, heads=None, common=None, bundlecaps=None,
+                  **kwargs):
         self.requirecap('getbundle', _('look up remote changes'))
         opts = {}
         if heads is not None:
@@ -334,6 +335,7 @@ class wirepeer(peer.peerrepository):
             opts['common'] = encodelist(common)
         if bundlecaps is not None:
             opts['bundlecaps'] = ','.join(bundlecaps)
+        opts.update(kwargs)
         f = self._callcompressable("getbundle", **opts)
         if bundlecaps is not None and 'HG2X' in bundlecaps:
             return bundle2.unbundle20(self.ui, f)
