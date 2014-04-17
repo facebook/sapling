@@ -576,6 +576,10 @@ diff modified file
 
 comparison new file
 
+  $ hg parents --template "{rev}:{node|short}\n" -r 0
+  $ hg log --template "{rev}:{node|short}\n" -r 0
+  0:0cd96de13884
+
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/0/a'
   200 Script output follows
   
@@ -667,7 +671,7 @@ comparison new file
     <thead class="header">
       <tr>
         <th>-1:000000000000</th>
-        <th>0:b789fdd96dc2</th>
+        <th>0:0cd96de13884</th>
       </tr>
     </thead>
     
@@ -697,6 +701,12 @@ comparison existing file
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg ci -mc
+
+  $ hg parents --template "{rev}:{node|short}\n" -r tip
+  1:559edbd9ed20
+  $ hg log --template "{rev}:{node|short}\n" -r tip
+  2:d73db4d812ff
+
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/a'
   200 Script output follows
   
@@ -787,8 +797,8 @@ comparison existing file
   <table class="bigtable">
     <thead class="header">
       <tr>
-        <th>0:b789fdd96dc2</th>
-        <th>1:a80d06849b33</th>
+        <th>1:559edbd9ed20</th>
+        <th>2:d73db4d812ff</th>
       </tr>
     </thead>
     
@@ -820,6 +830,12 @@ comparison removed file
 
   $ hg rm a
   $ hg ci -md
+
+  $ hg parents --template "{rev}:{node|short}\n" -r tip
+  2:d73db4d812ff
+  $ hg log --template "{rev}:{node|short}\n" -r tip
+  3:20e80271eb7a
+
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/a'
   200 Script output follows
   
@@ -910,8 +926,8 @@ comparison removed file
   <table class="bigtable">
     <thead class="header">
       <tr>
-        <th>1:a80d06849b33</th>
-        <th>-1:000000000000</th>
+        <th>2:d73db4d812ff</th>
+        <th>3:20e80271eb7a</th>
       </tr>
     </thead>
     
@@ -947,13 +963,13 @@ comparison not-modified file
   $ echo f > f
   $ hg add f
   $ hg ci -m f
-  $ hg tip --template "{node|short}\n"
-  41d9fc4a6ae1
+  $ hg tip --template "{rev}:{node|short}\n"
+  5:41d9fc4a6ae1
   $ hg diff -c tip e
-  $ hg parents --template "{node|short}\n" -r tip
-  402bea3b0976
-  $ hg parents --template "{node|short}\n" -r tip e
-  402bea3b0976
+  $ hg parents --template "{rev}:{node|short}\n" -r tip
+  4:402bea3b0976
+  $ hg parents --template "{rev}:{node|short}\n" -r tip e
+  4:402bea3b0976
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/e'
   200 Script output follows
@@ -1045,8 +1061,8 @@ comparison not-modified file
   <table class="bigtable">
     <thead class="header">
       <tr>
-        <th>0:6b67ccefd5ce</th>
-        <th>0:6b67ccefd5ce</th>
+        <th>4:402bea3b0976</th>
+        <th>5:41d9fc4a6ae1</th>
       </tr>
     </thead>
     

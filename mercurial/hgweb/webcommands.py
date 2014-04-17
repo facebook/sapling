@@ -8,7 +8,7 @@
 import os, mimetypes, re, cgi, copy
 import webutil
 from mercurial import error, encoding, archival, templater, templatefilters
-from mercurial.node import short, hex, nullid
+from mercurial.node import short, hex
 from mercurial import util
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
@@ -712,28 +712,22 @@ def comparison(web, req, tmpl):
             return [_('(binary file %s, hash: %s)') % (mt, hex(f.filenode()))]
         return f.data().splitlines()
 
+    parent = ctx.p1()
+    leftrev = parent.rev()
+    leftnode = parent.node()
+    rightrev = ctx.rev()
+    rightnode = ctx.node()
     if path in ctx:
         fctx = ctx[path]
-        rightrev = fctx.filerev()
-        rightnode = fctx.filenode()
         rightlines = filelines(fctx)
-        parent = ctx.p1()
         if path not in parent:
-            leftrev = -1
-            leftnode = nullid
             leftlines = ()
         else:
             pfctx = parent[path]
-            leftrev = pfctx.filerev()
-            leftnode = pfctx.filenode()
             leftlines = filelines(pfctx)
     else:
-        rightrev = -1
-        rightnode = nullid
         rightlines = ()
         fctx = ctx.parents()[0][path]
-        leftrev = fctx.filerev()
-        leftnode = fctx.filenode()
         leftlines = filelines(fctx)
 
     comparison = webutil.compare(tmpl, context, leftlines, rightlines)
