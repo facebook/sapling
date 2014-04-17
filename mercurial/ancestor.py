@@ -9,6 +9,62 @@ import heapq
 import util
 from node import nullrev
 
+def commonancestorsheads(pfunc, *nodes):
+    """Returns a set with the heads of all common ancestors of all nodes,
+    heads(::nodes[0] and ::nodes[1] and ...) .
+
+    pfunc must return a list of parent vertices for a given vertex.
+    """
+    if not isinstance(nodes, set):
+        nodes = set(nodes)
+    if nullrev in nodes:
+        return set()
+    if len(nodes) <= 1:
+        return nodes
+
+    allseen = (1 << len(nodes)) - 1
+    seen = [0] * (max(nodes) + 1)
+    for i, n in enumerate(nodes):
+        seen[n] = 1 << i
+    poison = 1 << (i + 1)
+
+    gca = set()
+    interesting = len(nodes)
+    nv = len(seen) - 1
+    while nv >= 0 and interesting:
+        v = nv
+        nv -= 1
+        if not seen[v]:
+            continue
+        sv = seen[v]
+        if sv < poison:
+            interesting -= 1
+            if sv == allseen:
+                gca.add(v)
+                sv |= poison
+                if v in nodes:
+                    # history is linear
+                    return set([v])
+        if sv < poison:
+            for p in pfunc(v):
+                sp = seen[p]
+                if p == nullrev:
+                    continue
+                if sp == 0:
+                    seen[p] = sv
+                    interesting += 1
+                elif sp != sv:
+                    seen[p] |= sv
+        else:
+            for p in pfunc(v):
+                if p == nullrev:
+                    continue
+                sp = seen[p]
+                if sp and sp < poison:
+                    interesting -= 1
+                seen[p] = sv
+    return gca
+
 def ancestors(pfunc, *orignodes):
     """
     Returns the common ancestors of a and b that are furthest from a
@@ -16,57 +72,6 @@ def ancestors(pfunc, *orignodes):
 
     pfunc must return a list of parent vertices for a given vertex.
     """
-    if not isinstance(orignodes, set):
-        orignodes = set(orignodes)
-    if nullrev in orignodes:
-        return set()
-    if len(orignodes) <= 1:
-        return orignodes
-
-    def candidates(nodes):
-        allseen = (1 << len(nodes)) - 1
-        seen = [0] * (max(nodes) + 1)
-        for i, n in enumerate(nodes):
-            seen[n] = 1 << i
-        poison = 1 << (i + 1)
-
-        gca = set()
-        interesting = len(nodes)
-        nv = len(seen) - 1
-        while nv >= 0 and interesting:
-            v = nv
-            nv -= 1
-            if not seen[v]:
-                continue
-            sv = seen[v]
-            if sv < poison:
-                interesting -= 1
-                if sv == allseen:
-                    gca.add(v)
-                    sv |= poison
-                    if v in nodes:
-                        # history is linear
-                        return set([v])
-            if sv < poison:
-                for p in pfunc(v):
-                    sp = seen[p]
-                    if p == nullrev:
-                        continue
-                    if sp == 0:
-                        seen[p] = sv
-                        interesting += 1
-                    elif sp != sv:
-                        seen[p] |= sv
-            else:
-                for p in pfunc(v):
-                    if p == nullrev:
-                        continue
-                    sp = seen[p]
-                    if sp and sp < poison:
-                        interesting -= 1
-                    seen[p] = sv
-        return gca
-
     def deepest(nodes):
         interesting = {}
         count = max(nodes) + 1
@@ -123,7 +128,7 @@ def ancestors(pfunc, *orignodes):
             k |= i
         return set(n for (i, n) in mapping if k & i)
 
-    gca = candidates(orignodes)
+    gca = commonancestorsheads(pfunc, *orignodes)
 
     if len(gca) <= 1:
         return gca
