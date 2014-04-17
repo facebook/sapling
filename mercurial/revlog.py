@@ -734,6 +734,15 @@ class revlog(object):
                 break
         return False
 
+    def commonancestorsheads(self, a, b):
+        """calculate all the heads of the common ancestors of nodes a and b"""
+        a, b = self.rev(a), self.rev(b)
+        try:
+            ancs = self.index.commonancestorsheads(a, b)
+        except (AttributeError, OverflowError): # C implementation failed
+            ancs = ancestor.commonancestorsheads(self.parentrevs, a, b)
+        return map(self.node, ancs)
+
     def commonancestors(self, a, b):
         """calculate the least common ancestors of nodes a and b"""
         a, b = self.rev(a), self.rev(b)
