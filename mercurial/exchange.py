@@ -210,7 +210,9 @@ def _pushbundle2(pushop):
     capsblob = urllib.unquote(pushop.remote.capable('bundle2'))
     caps = bundle2.decodecaps(capsblob)
     bundler = bundle2.bundle20(pushop.ui, caps)
-    bundler.addpart(bundle2.bundlepart('replycaps'))
+    # create reply capability
+    capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
+    bundler.addpart(bundle2.bundlepart('replycaps', data=capsblob))
     if not pushop.force:
         part = bundle2.bundlepart('CHECK:HEADS', data=iter(pushop.remoteheads))
         bundler.addpart(part)
