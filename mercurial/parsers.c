@@ -1549,7 +1549,7 @@ bail:
  */
 static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 {
-	PyObject *ret = NULL, *gca = NULL;
+	PyObject *ret = NULL;
 	Py_ssize_t argcount, i, len;
 	bitmask repeat = 0;
 	int revcount = 0;
@@ -1620,22 +1620,16 @@ static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 		goto done;
 	}
 
-	gca = find_gca_candidates(self, revs, revcount);
-	if (gca == NULL)
+	ret = find_gca_candidates(self, revs, revcount);
+	if (ret == NULL)
 		goto bail;
-
-	ret = gca;
-	Py_INCREF(gca);
 
 done:
 	free(revs);
-	Py_XDECREF(gca);
-
 	return ret;
 
 bail:
 	free(revs);
-	Py_XDECREF(gca);
 	Py_XDECREF(ret);
 	return NULL;
 }
