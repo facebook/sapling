@@ -333,6 +333,29 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
         raise
     return op
 
+def decodecaps(blob):
+    """decode a bundle2 caps bytes blob into a dictionnary
+
+    The blob is a list of capabilities (one per line)
+    Capabilities may have values using a line of the form::
+
+        capability=value1,value2,value3
+
+    The values are always a list."""
+    caps = {}
+    for line in blob.splitlines():
+        if not line:
+            continue
+        if '=' not in line:
+            key, vals = line, ()
+        else:
+            key, vals = line.split('=', 1)
+            vals = vals.split(',')
+        key = urllib.unquote(key)
+        vals = [urllib.unquote(v) for v in vals]
+        caps[key] = vals
+    return caps
+
 class bundle20(object):
     """represent an outgoing bundle2 container
 
@@ -697,24 +720,8 @@ def handleoutput(op, inpart):
 def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
 
-    The part payload is a list of capabilities (one per line)
-    Capabilities may have values using a line of form::
-
-        capability=value1,value2,value3
-
-    The value are alway a list."""
-    caps = {}
-    for line in inpart.read().splitlines():
-        if not line:
-            continue
-        if '=' not in line:
-            key, vals = line, ()
-        else:
-            key, vals = line.split('=', 1)
-            vals = vals.split(',')
-        key = urllib.unquote(key)
-        vals = [urllib.unquote(v) for v in vals]
-        caps[key] = vals
+    The payload contains the capabilities information for the reply"""
+    caps = decodecaps(inpart.read())
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 
