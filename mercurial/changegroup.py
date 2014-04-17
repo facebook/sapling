@@ -718,8 +718,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False):
 
                 # forcefully update the on-disk branch cache
                 repo.ui.debug("updating the branch cache\n")
-                repo.hook("changegroup", node=hex(cl.node(clstart)),
-                          source=srctype, url=url)
+                repo.hook("changegroup", source=srctype, url=url,
+                          **tr.hookargs)
 
                 for n in added:
                     repo.hook("incoming", node=hex(n), source=srctype,
