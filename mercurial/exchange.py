@@ -691,7 +691,14 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     bundler = bundle2.bundle20(repo.ui, b2caps)
     part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
     bundler.addpart(part)
+    _getbundleextrapart(bundler, repo, source, heads=None, common=None,
+                        bundlecaps=None, **kwargs)
     return util.chunkbuffer(bundler.getchunks())
+
+def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
+                        bundlecaps=None, **kwargs):
+    """hook function to let extensions add parts to the requested bundle"""
+    pass
 
 class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
