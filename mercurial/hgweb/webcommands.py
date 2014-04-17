@@ -717,13 +717,13 @@ def comparison(web, req, tmpl):
         rightrev = fctx.filerev()
         rightnode = fctx.filenode()
         rightlines = filelines(fctx)
-        parents = fctx.parents()
-        if not parents:
+        parent = ctx.p1()
+        if path not in parent:
             leftrev = -1
             leftnode = nullid
             leftlines = ()
         else:
-            pfctx = parents[0]
+            pfctx = parent[path]
             leftrev = pfctx.filerev()
             leftnode = pfctx.filenode()
             leftlines = filelines(pfctx)

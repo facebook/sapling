@@ -923,6 +923,125 @@ comparison removed file
   </html>
   
 
+comparison not-modified file
+
+  $ echo e > e
+  $ hg add e
+  $ hg ci -m e
+  $ echo f > f
+  $ hg add f
+  $ hg ci -m f
+  $ hg tip --template "{node|short}\n"
+  41d9fc4a6ae1
+  $ hg diff -c tip e
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/e'
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>test: e comparison</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="http://mercurial.selenic.com/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog/41d9fc4a6ae1">log</a></li>
+  <li><a href="/graph/41d9fc4a6ae1">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li><a href="/rev/41d9fc4a6ae1">changeset</a></li>
+  <li><a href="/file/41d9fc4a6ae1">browse</a></li>
+  </ul>
+  <ul>
+  <li><a href="/file/41d9fc4a6ae1/e">file</a></li>
+  <li><a href="/file/tip/e">latest</a></li>
+  <li><a href="/diff/41d9fc4a6ae1/e">diff</a></li>
+  <li class="active">comparison</li>
+  <li><a href="/annotate/41d9fc4a6ae1/e">annotate</a></li>
+  <li><a href="/log/41d9fc4a6ae1/e">file log</a></li>
+  <li><a href="/raw-file/41d9fc4a6ae1/e">raw</a></li>
+  </ul>
+  <ul>
+  <li><a href="/help">help</a></li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>comparison e @ 5:41d9fc4a6ae1</h3>
+  
+  <form class="search" action="/log">
+  <p></p>
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  
+  <div class="description">f</div>
+  
+  <table id="changesetEntry">
+  <tr>
+   <th>author</th>
+   <td>&#116;&#101;&#115;&#116;</td>
+  </tr>
+  <tr>
+   <th>date</th>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+  </tr>
+  <tr>
+   <th>parents</th>
+   <td></td>
+  </tr>
+  <tr>
+   <th>children</th>
+   <td></td>
+  </tr>
+  </table>
+  
+  <div class="overflow">
+  <div class="sourcefirst">   comparison</div>
+  <div class="legend">
+    <span class="legendinfo equal">equal</span>
+    <span class="legendinfo delete">deleted</span>
+    <span class="legendinfo insert">inserted</span>
+    <span class="legendinfo replace">replaced</span>
+  </div>
+  
+  <table class="bigtable">
+    <thead class="header">
+      <tr>
+        <th>0:6b67ccefd5ce</th>
+        <th>0:6b67ccefd5ce</th>
+      </tr>
+    </thead>
+    
+  </table>
+  
+  </div>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
   $ cd ..
 
 test import rev as raw-rev
