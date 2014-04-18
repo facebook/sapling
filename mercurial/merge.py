@@ -730,6 +730,10 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                                 partial, acceptremote, followcopies)
 
     else: # only when merge.preferancestor=* - experimentalish code
+        repo.ui.status(
+            _("note: merging %s and %s using bids from ancestors %s\n") %
+            (wctx, mctx, _(' and ').join(str(anc) for anc in ancestors)))
+
         # Call for bids
         fbids = {} # mapping filename to list af action bids
         for ancestor in ancestors:

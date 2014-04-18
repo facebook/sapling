@@ -128,6 +128,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
   $ rm f*
   $ hg up -qC .
   $ hg merge -v --debug --tool internal:dump 5 --config merge.preferancestor="*"
+  note: merging 3b08d01b0ab5+ and adfe50279922 using bids from ancestors 0f6b37dbe527 and 40663881a6dd
   
   calculating bids for ancestor 0f6b37dbe527
     searching for copies back to rev 3
@@ -172,6 +173,7 @@ The other way around:
         alternatively, use --config merge.preferancestor=40663881a6dd
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge -v --debug --config merge.preferancestor="*"
+  note: merging adfe50279922+ and 3b08d01b0ab5 using bids from ancestors 0f6b37dbe527 and 40663881a6dd
   
   calculating bids for ancestor 0f6b37dbe527
     searching for copies back to rev 3
@@ -212,11 +214,13 @@ Verify how the output looks and and how verbose it is:
 
   $ hg up -qC
   $ hg merge --config merge.preferancestor="*"
+  note: merging 3b08d01b0ab5+ and adfe50279922 using bids from ancestors 0f6b37dbe527 and 40663881a6dd
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ hg up -qC
   $ hg merge -v --config merge.preferancestor="*"
+  note: merging 3b08d01b0ab5+ and adfe50279922 using bids from ancestors 0f6b37dbe527 and 40663881a6dd
   
   calculating bids for ancestor 0f6b37dbe527
   resolving manifests
@@ -235,6 +239,7 @@ Verify how the output looks and and how verbose it is:
 
   $ hg up -qC
   $ hg merge -v --debug --config merge.preferancestor="*"
+  note: merging 3b08d01b0ab5+ and adfe50279922 using bids from ancestors 0f6b37dbe527 and 40663881a6dd
   
   calculating bids for ancestor 0f6b37dbe527
     searching for copies back to rev 3
@@ -316,6 +321,7 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
   $ hg up -qC .
 
   $ hg merge -v --config merge.preferancestor="*"
+  note: merging 0d355fdef312+ and 4b8b546a3eef using bids from ancestors 70008a2163f6 and b211bbc6eb3c
   
   calculating bids for ancestor 70008a2163f6
   resolving manifests
