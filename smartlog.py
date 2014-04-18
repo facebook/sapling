@@ -270,18 +270,22 @@ Excludes:
             else:
                 master = 'tip'
 
-        masterbranch = branchinfo(repo.revs(master)[0])[0]
+        try:
+            master = repo.revs(master)[0]
+        except error.RepoLookupError:
+            master = repo.revs('tip')[0]
+
+        masterbranch = branchinfo(master)[0]
 
         for branch in branches:
             if branch != masterbranch:
-                branchmaster = 'first(reverse(branch("%s")) & public())' % branch
+                try:
+                    branchmaster = repo.revs(
+                        'first(reverse(branch("%s")) & public())' % branch)[0]
+                except:
+                    branchmaster = repo.revs('tip')[0]
             else:
                 branchmaster = master
-
-            try:
-                branchmaster = repo.revs(branchmaster)[0]
-            except error.RepoLookupError:
-                branchmaster = repo.revs('first(reverse(branch("%s")) & public())' % branch)[0]
 
             # Find ancestors of heads that are not in master
             # Don't use revsets, they are too slow
