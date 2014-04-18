@@ -52,6 +52,7 @@ Convert while testing all possible outputs
   5 init projA
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@1
   converting: 0/6 revisions (0.00%)
+  committing changelog
   4 hello
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   converting: 1/6 revisions (16.67%)
@@ -59,10 +60,13 @@ Convert while testing all possible outputs
   scanning paths: /trunk/\xc3\xa0 0/3 (0.00%) (esc)
   scanning paths: /trunk/\xc3\xa0/e\xcc\x81 1/3 (33.33%) (esc)
   scanning paths: /trunk/\xc3\xa9 2/3 (66.67%) (esc)
+  committing files:
   \xc3\xa0/e\xcc\x81 (esc)
   getting files: \xc3\xa0/e\xcc\x81 1/2 (50.00%) (esc)
   \xc3\xa9 (esc)
   getting files: \xc3\xa9 2/2 (100.00%) (esc)
+  committing manifest
+  committing changelog
   3 copy files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@3
   converting: 2/6 revisions (33.33%)
@@ -80,12 +84,15 @@ Convert while testing all possible outputs
   mark /trunk/\xc3\xb9 came from \xc3\xa0:2 (esc)
   getting files: \xc3\xa0/e\xcc\x81 1/4 (25.00%) (esc)
   getting files: \xc3\xa9 2/4 (50.00%) (esc)
+  committing files:
   \xc3\xa8 (esc)
   getting files: \xc3\xa8 3/4 (75.00%) (esc)
    \xc3\xa8: copy \xc3\xa9:6b67ccefd5ce6de77e7ead4f5292843a0255329f (esc)
   \xc3\xb9/e\xcc\x81 (esc)
   getting files: \xc3\xb9/e\xcc\x81 4/4 (100.00%) (esc)
    \xc3\xb9/e\xcc\x81: copy \xc3\xa0/e\xcc\x81:a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
+  committing manifest
+  committing changelog
   2 remove files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@4
   converting: 3/6 revisions (50.00%)
@@ -99,22 +106,30 @@ Convert while testing all possible outputs
   reparent to file://*/svn-repo/trunk (glob)
   getting files: \xc3\xa8 1/2 (50.00%) (esc)
   getting files: \xc3\xb9/e\xcc\x81 2/2 (100.00%) (esc)
+  committing files:
+  committing manifest
+  committing changelog
   1 branch to branch?
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
   converting: 4/6 revisions (66.67%)
   reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
   scanning paths: /branches/branch\xc3\xa9 0/1 (0.00%) (esc)
+  committing changelog
   0 branch to branch?e
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
   converting: 5/6 revisions (83.33%)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   scanning paths: /branches/branch\xc3\xa9e 0/1 (0.00%) (esc)
+  committing changelog
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   updating tags
+  committing files:
   .hgtags
+  committing manifest
+  committing changelog
   run hg sink post-conversion action
   $ cd A-hg
   $ hg up

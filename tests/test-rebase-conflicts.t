@@ -245,7 +245,10 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    f1.txt: remote is newer -> g
   getting f1.txt
   updating: f1.txt 1/1 files (100.00%)
+  committing files:
   f1.txt
+  committing manifest
+  committing changelog
   rebased as 19c888675e13
   rebasing 10:2f2496ddf49d "merge" (tip)
   rebasing: 10:2f2496ddf49d 6/6 changesets (100.00%)
@@ -261,7 +264,10 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    f1.txt: remote is newer -> g
   getting f1.txt
   updating: f1.txt 1/1 files (100.00%)
+  committing files:
   f1.txt
+  committing manifest
+  committing changelog
   rebased as 2a7f09cac94c
   rebase merging completed
   update back to initial working directory parent

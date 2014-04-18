@@ -264,7 +264,10 @@ test qpush --force and backup files
   applying p2
   saving current version of a as a.orig
   patching file a
+  committing files:
   a
+  committing manifest
+  committing changelog
   applying p3
   saving current version of b as b.orig
   saving current version of d as d.orig
@@ -277,7 +280,10 @@ test qpush --force and backup files
   file e already exists
   1 out of 1 hunks FAILED -- saving rejects to file e.rej
   patch failed to apply
+  committing files:
   b
+  committing manifest
+  committing changelog
   patch failed, rejects left in working dir
   errors during apply, please fix and refresh p3
   [2]
@@ -302,7 +308,10 @@ test qpush --force --no-backup
   $ hg qpush --force --no-backup --verbose
   applying p2
   patching file a
+  committing files:
   a
+  committing manifest
+  committing changelog
   now at: p2
   $ test -f a.orig && echo 'error: backup with --no-backup'
   [1]
@@ -316,7 +325,10 @@ test qgoto --force --no-backup
   $ hg qgoto --force --no-backup p2 --verbose
   applying p2
   patching file a
+  committing files:
   a
+  committing manifest
+  committing changelog
   now at: p2
   $ test -f a.orig && echo 'error: backup with --no-backup'
   [1]

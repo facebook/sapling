@@ -6,8 +6,11 @@
   adding dir/bar
   adding foo
   $ hg -v commit -m "add 1"
+  committing files:
   dir/bar
   foo
+  committing manifest
+  committing changelog
   committed changeset 0:6f7f953567a2
   $ cd dir/
   $ touch ../foo_2 bar_2
@@ -15,8 +18,11 @@
   adding dir/bar_2
   adding foo_2
   $ hg -v commit -m "add 2"
+  committing files:
   dir/bar_2
   foo_2
+  committing manifest
+  committing changelog
   committed changeset 1:e65414bf35c5
   $ cd ..
   $ hg forget foo

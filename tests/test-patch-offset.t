@@ -68,7 +68,10 @@ import patch
   Hunk #1 succeeded at 43 (offset 34 lines).
   Hunk #2 succeeded at 87 (offset 34 lines).
   Hunk #3 succeeded at 109 (offset 34 lines).
+  committing files:
   a
+  committing manifest
+  committing changelog
   created 189885cecb41
 
 compare imported changes against reference file

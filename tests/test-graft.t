@@ -159,7 +159,10 @@ Graft out of order, skipping a merge and a duplicate
   merging b and a to b
   my b@ef0ef43d49e7+ other a@5d205f8b35b6 ancestor a@68795b066622
    premerge successful
+  committing files:
   b
+  committing manifest
+  committing changelog
   grafting 5:97f8bfe72746 "5"
     searching for copies back to rev 1
   resolving manifests
@@ -169,7 +172,10 @@ Graft out of order, skipping a merge and a duplicate
   getting e
   updating: e 1/1 files (100.00%)
    b: remote unchanged -> k
+  committing files:
   e
+  committing manifest
+  committing changelog
   grafting 4:9c233e8e184d "4"
     searching for copies back to rev 1
   resolving manifests

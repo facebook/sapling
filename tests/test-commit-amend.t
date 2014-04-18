@@ -106,7 +106,10 @@ No changes, just a different message:
   $ hg ci -v --amend -m 'no changes, new message'
   amending changeset 74609c7f506e
   copying changeset 74609c7f506e to ad120869acf0
+  committing files:
   a
+  committing manifest
+  committing changelog
   stripping amended changeset 74609c7f506e
   1 changesets found
   uncompressed size of bundle content:
@@ -190,7 +193,10 @@ at first, test saving last-message.txt
   $ hg commit --amend -v -m "message given from command line"
   amending changeset 5f357c7560ab
   copying changeset 5f357c7560ab to ad120869acf0
+  committing files:
   a
+  committing manifest
+  committing changelog
   running hook pretxncommit.test-saving-last-message: false
   transaction abort!
   rollback completed
@@ -212,7 +218,10 @@ at first, test saving last-message.txt
   HG: user: foo
   HG: branch 'default'
   HG: changed a
+  committing files:
   a
+  committing manifest
+  committing changelog
   running hook pretxncommit.test-saving-last-message: false
   transaction abort!
   rollback completed
@@ -241,7 +250,10 @@ then, test editing custom commit message
   HG: user: foo
   HG: branch 'default'
   HG: changed a
+  committing files:
   a
+  committing manifest
+  committing changelog
   stripping amended changeset 5f357c7560ab
   1 changesets found
   uncompressed size of bundle content:
@@ -266,7 +278,10 @@ Same, but with changes in working dir (different code path):
   $ echo a >> a
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -v
   amending changeset 7ab3bf440b54
+  committing files:
   a
+  committing manifest
+  committing changelog
   copying changeset a0ea9b1a4c8c to ad120869acf0
   another precious commit message
   
@@ -277,7 +292,10 @@ Same, but with changes in working dir (different code path):
   HG: user: foo
   HG: branch 'default'
   HG: changed a
+  committing files:
   a
+  committing manifest
+  committing changelog
   stripping intermediate changeset a0ea9b1a4c8c
   stripping amended changeset 7ab3bf440b54
   2 changesets found

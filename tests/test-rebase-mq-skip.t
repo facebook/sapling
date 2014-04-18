@@ -56,7 +56,10 @@ already has one local mq patch
   getting r1
   resolving manifests
   getting p0
+  committing files:
   p0
+  committing manifest
+  committing changelog
   rebasing 3:148775c71080 "P1" (p1.patch qtip)
   resolving manifests
   note: rebase of 3:148775c71080 created no changes to commit

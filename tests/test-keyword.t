@@ -135,8 +135,11 @@ Interrupted commit should not change state or run commit hook
 Commit with several checks
 
   $ hg --debug commit -mabsym -u 'User Name <user@example.com>'
+  committing files:
   a
   b
+  committing manifest
+  committing changelog
   overwriting a expanding keywords
   running hook commit.test: cp a hooktest
   committed changeset 1:ef63ca68695bc9495032c6fda1350c71e6d256e9
@@ -475,7 +478,10 @@ record added file alone
   new file mode 100644
   examine changes to 'r'? [Ynesfdaq?] y
   
+  committing files:
   r
+  committing manifest
+  committing changelog
   committed changeset 3:82a2f715724d
   overwriting r expanding keywords
  - status call required for dirstate.normallookup() check
@@ -500,7 +506,10 @@ record added keyword ignored file
   new file mode 100644
   examine changes to 'i'? [Ynesfdaq?] y
   
+  committing files:
   i
+  committing manifest
+  committing changelog
   committed changeset 3:9f40ceb5a072
   $ cat i
   $Id$
@@ -585,8 +594,11 @@ Copy and show added kwfiles
 Commit and show expansion in original and copy
 
   $ hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
+  committing files:
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
+  committing manifest
+  committing changelog
   overwriting c expanding keywords
   committed changeset 2:25736cf2f5cbe41f6be4e6784ef6ecf9f3bbcc7d
   $ cat a c
@@ -756,7 +768,10 @@ Interrupted commit should not change state
 Commit with multi-line message and custom expansion
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
+  committing files:
   a
+  committing manifest
+  committing changelog
   overwriting a expanding keywords
   committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
   $ rm log
@@ -798,6 +813,9 @@ remove with status checks
   $ hg debugrebuildstate
   $ hg remove a
   $ hg --debug commit -m rma
+  committing files:
+  committing manifest
+  committing changelog
   committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
   $ hg status
   ? c
@@ -868,7 +886,10 @@ Imported patch should not be rejected
   >>> text = re.sub(r'(Id.*)', r'\1 rejecttest', open('a').read())
   >>> open('a', 'wb').write(text)
   $ hg --debug commit -m'rejects?' -d '3 0' -u 'User Name <user@example.com>'
+  committing files:
   a
+  committing manifest
+  committing changelog
   overwriting a expanding keywords
   committed changeset 2:85e279d709ffc28c9fdd1b868570985fc3d87082
   $ hg export -o ../rejecttest.diff tip
@@ -908,8 +929,11 @@ kwexpand x/a should abort
   [255]
   $ cd x
   $ hg --debug commit -m xa -d '3 0' -u 'User Name <user@example.com>'
+  committing files:
   x/a
    x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
+  committing manifest
+  committing changelog
   overwriting x/a expanding keywords
   committed changeset 3:b4560182a3f9a358179fd2d835c15e9da379c1e4
   $ cat a

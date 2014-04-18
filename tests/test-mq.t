@@ -1400,7 +1400,10 @@ apply force, should discard changes in hello, but not bye
   applying empty
   saving current version of hello.txt as hello.txt.orig
   patching file hello.txt
+  committing files:
   hello.txt
+  committing manifest
+  committing changelog
   now at: empty
   $ hg st
   M bye.txt

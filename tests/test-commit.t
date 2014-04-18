@@ -50,7 +50,10 @@ commit added file that has been deleted
   $ hg add
   adding dir/file (glob)
   $ hg -v commit -m commit-9 dir
+  committing files:
   dir/file
+  committing manifest
+  committing changelog
   committed changeset 2:d2a76177cb42
 
   $ echo > dir.file
@@ -71,7 +74,10 @@ commit added file that has been deleted
   abort: dir2: no match under directory!
   [255]
   $ hg -v commit -m commit-13 ../dir
+  committing files:
   dir/file
+  committing manifest
+  committing changelog
   committed changeset 3:1cd62a2d8db5
   $ cd ..
 
@@ -92,7 +98,10 @@ commit added file that has been deleted
   [255]
   $ echo >> dir/file
   $ hg -v commit -m commit-17 dir/file
+  committing files:
   dir/file
+  committing manifest
+  committing changelog
   committed changeset 4:49176991390e
 
 An empty date was interpreted as epoch origin

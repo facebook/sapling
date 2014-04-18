@@ -511,7 +511,10 @@ make sure --traceback works
   Automatically installed hook
   $ echo >> foo
   $ hg ci --debug -d '0 0' -m 'change foo'
+  committing files:
   foo
+  committing manifest
+  committing changelog
   calling hook commit.auto: hgext_hookext.autohook
   Automatically installed hook
   committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708

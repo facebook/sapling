@@ -291,7 +291,10 @@ rebase of merge of ancestors
   end of auction
   
   getting other
+  committing files:
   other
+  committing manifest
+  committing changelog
   rebase merging completed
   1 changesets found
   uncompressed size of bundle content:

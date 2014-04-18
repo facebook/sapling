@@ -47,7 +47,10 @@ test updating a symlink
   $ hg qpush --debug
   applying updatelink
   patching file a
+  committing files:
   a
+  committing manifest
+  committing changelog
   now at: updatelink
   $ "$TESTDIR/readlink.py" a
   a -> c

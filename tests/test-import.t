@@ -411,11 +411,17 @@ patches: import patch1 patch2; rollback
   $ hg --cwd b import -v ../patch1 ../patch2
   applying ../patch1
   patching file a
+  committing files:
   a
+  committing manifest
+  committing changelog
   created 1d4bd90af0e4
   applying ../patch2
   patching file a
+  committing files:
   a
+  committing manifest
+  committing changelog
   created 6d019af21222
   $ hg --cwd b rollback
   repository tip rolled back to revision 0 (undo import)

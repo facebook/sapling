@@ -1432,6 +1432,7 @@ class localrepository(object):
                 changed = []
                 removed = list(ctx.removed())
                 linkrev = len(self)
+                self.ui.note(_("committing files:\n"))
                 for f in sorted(ctx.modified() + ctx.added()):
                     self.ui.note(f + "\n")
                     try:
@@ -1453,6 +1454,7 @@ class localrepository(object):
                         raise
 
                 # update manifest
+                self.ui.note(_("committing manifest\n"))
                 removed = [f for f in sorted(removed) if f in m1 or f in m2]
                 drop = [f for f in removed if f in m]
                 for f in drop:
@@ -1466,6 +1468,7 @@ class localrepository(object):
                 files = []
 
             # update changelog
+            self.ui.note(_("committing changelog\n"))
             self.changelog.delayupdate(tr)
             n = self.changelog.add(mn, files, ctx.description(),
                                    trp, p1.node(), p2.node(),

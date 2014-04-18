@@ -270,7 +270,10 @@ should push b.patch
   applying c.patch
   patching file c
   adding c
+  committing files:
   c
+  committing manifest
+  committing changelog
   now at: c.patch
 
 guards in series file: +1 +2 -3

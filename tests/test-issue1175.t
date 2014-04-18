@@ -28,9 +28,12 @@ http://mercurial.selenic.com/bts/issue1175
   $ hg ci -Am4 a
 
   $ hg ci --debug --traceback -Am5 b
+  committing files:
   b
    b: searching for copy revision for a
    b: copy a:b80de5d138758541c5f05265ad144ab9fa86d1db
+  committing manifest
+  committing changelog
   committed changeset 5:732aafbecb501a198b3cc9323ad3899ff04ccf95
 
   $ hg verify
