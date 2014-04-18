@@ -58,7 +58,7 @@ def uisetup(ui):
 
 # copied from graphmod or cmdutil or somewhere...
 def grandparent(cl, lowestrev, roots, head):
-    """Return all ancestors of head in roots which revision is
+    """Return all ancestors of head in roots whose revision is
     greater or equal to lowestrev.
     """
     pending = set([head])
@@ -165,7 +165,7 @@ def getdag(repo, revs, master):
         mpars = [p.rev() for p in ctx.parents() if
                  p.rev() != nullrev and p.rev() not in parents]
 
-        fake = None
+        fake_nodes = []
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
@@ -175,17 +175,15 @@ def getdag(repo, revs, master):
             else:
                 gp = [g for g in gp if g not in parents]
                 for g in gp:
-                    # Insert fake nods in between children and grandparents.
+                    # Insert fake nodes in between children and grandparents.
                     # Reuse them across multiple chidlren when the grandparent
                     # is the same.
                     if not g in fakes:
                         fakes[g] = (mpar, 'F', fakectx(mpar), [g])
-                        fake = fakes[g]
+                        results.append(fakes[g])
                     parents.append(fakes[g][0])
 
         results.append((ctx.rev(), 'C', ctx, parents))
-        if fake:
-            results.append(fake)
 
     # Compute parent rev->parents mapping
     lookup = {}
@@ -212,8 +210,10 @@ def getdag(repo, revs, master):
 @command('^smartlog|slog', [
     ('', 'template', '', _('display with template'), _('TEMPLATE')),
     ('', 'master', '', _('master bookmark'), ''),
+    ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
+    ('', 'all', False, _('don\'t hide old local commits'), ''),
     ] + commands.logopts, _('hg smartlog|slog'))
-def mylog(ui, repo, *pats, **opts):
+def smartlog(ui, repo, *pats, **opts):
     '''Displays the graph of commits that are relevant to you.
 Also highlights your current commit in purple.
 
@@ -233,49 +233,95 @@ Excludes:
     heads = set()
 
     rev = repo.changelog.rev
+    branchinfo = repo.changelog.branchinfo
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
     parentrevs = repo.changelog.parentrevs
 
-    # Find all bookmarks and recent heads
-    books = bookmarks.bmstore(repo)
-    for b in books:
-        heads.add(rev(books[b]))
-    heads.update(repo.revs('head() & date(-14) & branch(.)'))
+    hiddenchanges = 0
 
-    if not master:
-        if '@' in books:
-            master = '@'
-        elif 'master' in books:
-            master = 'master'
-        elif 'trunk' in books:
-            master = 'trunk'
+    if not opts.get('rev'):
+        # Find all bookmarks and recent heads
+        books = bookmarks.bmstore(repo)
+        for b in books:
+            heads.add(rev(books[b]))
+
+        heads.update(repo.revs('.'))
+
+        allheads = set(repo.revs('head() & branch(.)'))
+        if opts.get('all'):
+            heads.update(allheads)
         else:
-            master = 'tip'
+            recent = set(repo.revs('head() & date(-14) & branch(.)'))
+            hiddenchanges = len(allheads - heads) - len(recent - heads)
+            heads.update(recent)
 
-    try:
-        master = repo.revs(master)[0]
-    except error.RepoLookupError:
-        master = repo.revs('tip')[0]
+        branches = set()
+        for head in heads:
+            branches.add(branchinfo(head)[0])
 
-    # Find ancestors of heads that are not in master
-    # Don't use revsets, they are too slow
-    for head in heads:
-        anc = rev(ancestor(node(head), node(master)))
-        queue = [head]
-        while queue:
-            current = queue.pop(0)
-            if not current in revs:
-                revs.add(current)
-                if current != anc:
-                    parents = parentrevs(current)
-                    for p in parents:
-                        if p > anc:
-                            queue.append(p)
+        if not master:
+            if '@' in books:
+                master = '@'
+            elif 'master' in books:
+                master = 'master'
+            elif 'trunk' in books:
+                master = 'trunk'
+            else:
+                master = 'tip'
 
-    # add context: master, current commit, and the common ancestor
-    revs.add(master)
-    revs.update(repo.revs('.'))
+        masterbranch = branchinfo(repo.revs(master)[0])[0]
+
+        for branch in branches:
+            if branch != masterbranch:
+                branchmaster = 'first(reverse(branch("%s")) & public())' % branch
+            else:
+                branchmaster = master
+
+            try:
+                branchmaster = repo.revs(branchmaster)[0]
+            except error.RepoLookupError:
+                branchmaster = repo.revs('first(reverse(branch("%s")) & public())' % branch)[0]
+
+            # Find ancestors of heads that are not in master
+            # Don't use revsets, they are too slow
+            for head in heads:
+                if branchinfo(head)[0] != branch:
+                    continue
+                anc = rev(ancestor(node(head), node(branchmaster)))
+                queue = [head]
+                while queue:
+                    current = queue.pop(0)
+                    if not current in revs:
+                        revs.add(current)
+                        if current != anc:
+                            parents = parentrevs(current)
+                            for p in parents:
+                                if p > anc:
+                                    queue.append(p)
+
+            # add context: master, current commit, and the common ancestor
+            revs.add(branchmaster)
+
+            # get common branch ancestor
+            if branch != masterbranch:
+                anc = None
+                for r in revs:
+                    if branchinfo(r)[0] != branch:
+                        continue
+                    if anc is None:
+                        anc = r
+                    else:
+                        anc = rev(ancestor(node(anc), node(r)))
+                if anc:
+                    revs.add(anc)
+    else:
+        for r in opts.get('rev'):
+            revs.update(repo.revs(r))
+        try:
+            master = repo.revs('.')[0]
+        except error.RepoLookupError:
+            master = revs[0]
 
     if -1 in revs:
         revs.remove(-1)
@@ -306,3 +352,7 @@ Excludes:
                      graphmod.asciiedges, None, None)
     finally:
         enabled = False
+
+    if hiddenchanges:
+        ui.warn("note: hiding %s old heads without bookmarks " % (hiddenchanges) +
+            "(use --all to see them)\n")
