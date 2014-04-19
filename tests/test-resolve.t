@@ -26,6 +26,13 @@ failing merge
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
+resolve -l should contain an unresolved entry
+
+  $ hg resolve -l
+  U file
+
+resolve the failure
+
   $ echo resolved > file
   $ hg resolve -m file
   $ hg commit -m 'resolved'
