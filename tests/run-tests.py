@@ -556,11 +556,15 @@ class Test(object):
         self._options = options
         self._count = count
 
-        self.threadtmp = os.path.join(HGTMP, 'child%d' % count)
-        os.mkdir(self.threadtmp)
+        self._threadtmp = os.path.join(HGTMP, 'child%d' % count)
+        os.mkdir(self._threadtmp)
+
+    def cleanup(self):
+        if self._threadtmp and not self._options.keep_tmpdir:
+            shutil.rmtree(self._threadtmp, True)
 
     def run(self, result, refpath):
-        testtmp = os.path.join(self.threadtmp, os.path.basename(self._path))
+        testtmp = os.path.join(self._threadtmp, os.path.basename(self._path))
         os.mkdir(testtmp)
         replacements, port = self._getreplacements(testtmp)
         env = self._getenv(testtmp, port)
@@ -627,8 +631,8 @@ class Test(object):
         env["HGPORT"] = str(port)
         env["HGPORT1"] = str(port + 1)
         env["HGPORT2"] = str(port + 2)
-        env["HGRCPATH"] = os.path.join(self.threadtmp, '.hgrc')
-        env["DAEMON_PIDS"] = os.path.join(self.threadtmp, 'daemon.pids')
+        env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
+        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
         env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"]   = "test"
@@ -1073,6 +1077,7 @@ def runone(options, test, count):
     t = runner(testpath, options, count)
     res = TestResult()
     t.run(res, ref)
+    t.cleanup()
 
     if res.interrupted:
         log('INTERRUPTED: %s (after %d seconds)' % (test, res.duration))
@@ -1139,8 +1144,6 @@ def runone(options, test, count):
         sys.stdout.flush()
         iolock.release()
 
-    if not options.keep_tmpdir:
-        shutil.rmtree(t.threadtmp, True)
     return result
 
 _hgpath = None
