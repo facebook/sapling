@@ -563,10 +563,27 @@ class Test(object):
         env = self._getenv()
         createhgrc(env['HGRCPATH'], self._options)
 
+        result = TestResult()
+        starttime = time.time()
+
+        def updateduration():
+            result.duration = time.time() - starttime
+
         try:
-            return self._run(self._replacements, env)
-        finally:
-            killdaemons(env['DAEMON_PIDS'])
+            ret, out = self._run(self._replacements, env)
+            updateduration()
+            result.ret = ret
+            result.out = out
+        except KeyboardInterrupt:
+            updateduration()
+            result.interrupted = True
+        except Exception, e:
+            updateduration()
+            result.exception = e
+
+        killdaemons(env['DAEMON_PIDS'])
+
+        return result
 
     def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -624,6 +641,16 @@ class Test(object):
                 del env[k]
 
         return env
+
+class TestResult(object):
+    """Holds the result of a test execution."""
+
+    def __init__(self):
+        self.ret = None
+        self.out = None
+        self.duration = None
+        self.interrupted = False
+        self.exception = None
 
 def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
@@ -1025,16 +1052,19 @@ def runone(options, test, count):
         os.remove(err)       # Remove any previous output files
 
     t = runner(testpath, options, count)
+    res = t.run()
 
-    starttime = time.time()
-    try:
-        ret, out = t.run()
-    except KeyboardInterrupt:
-        endtime = time.time()
-        log('INTERRUPTED: %s (after %d seconds)' % (test, endtime - starttime))
-        raise
-    endtime = time.time()
-    times.append((test, endtime - starttime))
+    if res.interrupted:
+        log('INTERRUPTED: %s (after %d seconds)' % (test, res.duration))
+        raise KeyboardInterrupt()
+
+    if res.exception:
+        return fail('Exception during execution: %s' % res.exception, 255)
+
+    ret = res.ret
+    out = res.out
+
+    times.append((test, res.duration))
     vlog("# Ret was:", ret)
 
     skipped = (ret == SKIPPED_STATUS)
