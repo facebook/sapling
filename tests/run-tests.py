@@ -545,22 +545,25 @@ def outputcoverage(options):
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
 class Test(object):
-    """Encapsulates a single, runnable test."""
+    """Encapsulates a single, runnable test.
+
+    Test instances can be run multiple times via run(). However, multiple
+    runs cannot be run concurrently.
+    """
 
     def __init__(self, path, options, count):
         self._path = path
         self._options = options
+        self._count = count
 
         self.threadtmp = os.path.join(HGTMP, 'child%d' % count)
         os.mkdir(self.threadtmp)
 
-        self._testtmp = os.path.join(self.threadtmp, os.path.basename(path))
-        os.mkdir(self._testtmp)
-
-        self._setreplacements(count)
-
     def run(self, result, refpath):
-        env = self._getenv()
+        testtmp = os.path.join(self.threadtmp, os.path.basename(self._path))
+        os.mkdir(testtmp)
+        replacements, port = self._getreplacements(testtmp)
+        env = self._getenv(testtmp, port)
         createhgrc(env['HGRCPATH'], self._options)
 
         starttime = time.time()
@@ -569,7 +572,7 @@ class Test(object):
             result.duration = time.time() - starttime
 
         try:
-            ret, out = self._run(self._replacements, env)
+            ret, out = self._run(testtmp, replacements, env)
             updateduration()
             result.ret = ret
             result.out = out
@@ -593,11 +596,14 @@ class Test(object):
         else:
             result.refout = []
 
-    def _run(self, replacements, env):
+        if not self._options.keep_tmpdir:
+            shutil.rmtree(testtmp)
+
+    def _run(self, testtmp, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
 
-    def _setreplacements(self, count):
-        port = self._options.port + count * 3
+    def _getreplacements(self, testtmp):
+        port = self._options.port + self._count * 3
         r = [
             (r':%s\b' % port, ':$HGPORT'),
             (r':%s\b' % (port + 1), ':$HGPORT1'),
@@ -608,20 +614,19 @@ class Test(object):
             r.append(
                 (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
                     c in '/\\' and r'[/\\]' or c.isdigit() and c or '\\' + c
-                    for c in self._testtmp), '$TESTTMP'))
+                    for c in testtmp), '$TESTTMP'))
         else:
-            r.append((re.escape(self._testtmp), '$TESTTMP'))
+            r.append((re.escape(testtmp), '$TESTTMP'))
 
-        self._replacements = r
-        self._port = port
+        return r, port
 
-    def _getenv(self):
+    def _getenv(self, testtmp, port):
         env = os.environ.copy()
-        env['TESTTMP'] = self._testtmp
-        env['HOME'] = self._testtmp
-        env["HGPORT"] = str(self._port)
-        env["HGPORT1"] = str(self._port + 1)
-        env["HGPORT2"] = str(self._port + 2)
+        env['TESTTMP'] = testtmp
+        env['HOME'] = testtmp
+        env["HGPORT"] = str(port)
+        env["HGPORT1"] = str(port + 1)
+        env["HGPORT2"] = str(port + 2)
         env["HGRCPATH"] = os.path.join(self.threadtmp, '.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self.threadtmp, 'daemon.pids')
         env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
@@ -676,8 +681,8 @@ def pytest(test, wd, options, replacements, env):
 
 class PythonTest(Test):
     """A Python-based test."""
-    def _run(self, replacements, env):
-        return pytest(self._path, self._testtmp, self._options, replacements,
+    def _run(self, testtmp, replacements, env):
+        return pytest(self._path, testtmp, self._options, replacements,
                       env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
@@ -939,8 +944,8 @@ def tsttest(test, wd, options, replacements, env):
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
-    def _run(self, replacements, env):
-        return tsttest(self._path, self._testtmp, self._options, replacements,
+    def _run(self, testtmp, replacements, env):
+        return tsttest(self._path, testtmp, self._options, replacements,
                        env)
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
