@@ -695,16 +695,6 @@ def escapef(m):
 def stringescape(s):
     return escapesub(escapef, s)
 
-def rematch(el, l):
-    try:
-        # use \Z to ensure that the regex matches to the end of the string
-        if os.name == 'nt':
-            return re.match(el + r'\r?\n\Z', l)
-        return re.match(el + r'\n\Z', l)
-    except re.error:
-        # el is an invalid regex
-        return False
-
 def globmatch(el, l):
     # The only supported special characters are * and ? plus / which also
     # matches \ on windows. Escaping of these characters is supported.
@@ -729,7 +719,7 @@ def globmatch(el, l):
             res += '[/\\\\]'
         else:
             res += re.escape(c)
-    return rematch(res, l)
+    return TTest.rematch(res, l)
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -944,6 +934,17 @@ class TTest(Test):
         return exitcode, postout
 
     @staticmethod
+    def rematch(el, l):
+        try:
+            # use \Z to ensure that the regex matches to the end of the string
+            if os.name == 'nt':
+                return re.match(el + r'\r?\n\Z', l)
+            return re.match(el + r'\n\Z', l)
+        except re.error:
+            # el is an invalid regex
+            return False
+
+    @staticmethod
     def linematch(el, l):
         if el == l: # perfect match (fast)
             return True
@@ -953,7 +954,7 @@ class TTest(Test):
             if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
                 return True
             if el.endswith(" (re)\n"):
-                return rematch(el[:-6], l)
+                return TTest.rematch(el[:-6], l)
             if el.endswith(" (glob)\n"):
                 return globmatch(el[:-8], l)
             if os.altsep and l.replace('\\', '/') == el:
