@@ -559,7 +559,7 @@ class Test(object):
 
         self._setreplacements(count)
 
-    def run(self, result):
+    def run(self, result, refpath):
         env = self._getenv()
         createhgrc(env['HGRCPATH'], self._options)
 
@@ -581,6 +581,17 @@ class Test(object):
             result.exception = e
 
         killdaemons(env['DAEMON_PIDS'])
+
+        # If we're not in --debug mode and reference output file exists,
+        # check test output against it.
+        if self._options.debug:
+            result.refout = None # to match "out is None"
+        elif os.path.exists(refpath):
+            f = open(refpath, 'r')
+            result.refout = f.read().splitlines(True)
+            f.close()
+        else:
+            result.refout = []
 
     def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -648,6 +659,7 @@ class TestResult(object):
         self.duration = None
         self.interrupted = False
         self.exception = None
+        self.refout = None
 
     @property
     def skipped(self):
@@ -1055,7 +1067,7 @@ def runone(options, test, count):
 
     t = runner(testpath, options, count)
     res = TestResult()
-    t.run(res)
+    t.run(res, ref)
 
     if res.interrupted:
         log('INTERRUPTED: %s (after %d seconds)' % (test, res.duration))
@@ -1071,17 +1083,7 @@ def runone(options, test, count):
     vlog("# Ret was:", ret)
 
     skipped = res.skipped
-
-    # If we're not in --debug mode and reference output file exists,
-    # check test output against it.
-    if options.debug:
-        refout = None                   # to match "out is None"
-    elif os.path.exists(ref):
-        f = open(ref, "r")
-        refout = f.read().splitlines(True)
-        f.close()
-    else:
-        refout = []
+    refout = res.refout
 
     if (ret != 0 or out != refout) and not skipped and not options.debug:
         # Save errors to a file for diagnosis
