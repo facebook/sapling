@@ -582,14 +582,17 @@ def outputcoverage(options):
 class Test(object):
     """Encapsulates a single, runnable test."""
 
-    def __init__(self, path, options):
+    def __init__(self, path, options, threadtmp):
         self._path = path
         self._options = options
 
-    def run(self, testtmp, replacements, env):
-        return self._run(testtmp, replacements, env)
+        self.testtmp = os.path.join(threadtmp, os.path.basename(path))
+        os.mkdir(self.testtmp)
 
-    def _run(self, testtmp, replacements, env):
+    def run(self, replacements, env):
+        return self._run(replacements, env)
+
+    def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
 
 def pytest(test, wd, options, replacements, env):
@@ -602,8 +605,9 @@ def pytest(test, wd, options, replacements, env):
 
 class PythonTest(Test):
     """A Python-based test."""
-    def _run(self, testtmp, replacements, env):
-        return pytest(self._path, testtmp, self._options, replacements, env)
+    def _run(self, replacements, env):
+        return pytest(self._path, self.testtmp, self._options, replacements,
+                      env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
@@ -864,8 +868,9 @@ def tsttest(test, wd, options, replacements, env):
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
-    def _run(self, testtmp, replacements, env):
-        return tsttest(self._path, testtmp, self._options, replacements, env)
+    def _run(self, replacements, env):
+        return tsttest(self._path, self.testtmp, self._options, replacements,
+                       env)
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
@@ -989,13 +994,11 @@ def runone(options, test, count):
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
 
-    t = runner(testpath, options)
-
     # Make a tmp subdirectory to work in
     threadtmp = os.path.join(HGTMP, "child%d" % count)
-    testtmp = os.path.join(threadtmp, os.path.basename(test))
     os.mkdir(threadtmp)
-    os.mkdir(testtmp)
+
+    t = runner(testpath, options, threadtmp)
 
     port = options.port + count * 3
     replacements = [
@@ -1009,16 +1012,16 @@ def runone(options, test, count):
                      c in '/\\' and r'[/\\]' or
                      c.isdigit() and c or
                      '\\' + c
-                     for c in testtmp), '$TESTTMP'))
+                     for c in t.testtmp), '$TESTTMP'))
     else:
-        replacements.append((re.escape(testtmp), '$TESTTMP'))
+        replacements.append((re.escape(t.testtmp), '$TESTTMP'))
 
-    env = createenv(options, testtmp, threadtmp, port)
+    env = createenv(options, t.testtmp, threadtmp, port)
     createhgrc(env['HGRCPATH'], options)
 
     starttime = time.time()
     try:
-        ret, out = t.run(testtmp, replacements, env)
+        ret, out = t.run(replacements, env)
     except KeyboardInterrupt:
         endtime = time.time()
         log('INTERRUPTED: %s (after %d seconds)' % (test, endtime - starttime))
