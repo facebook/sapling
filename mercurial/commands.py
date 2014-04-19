@@ -4977,6 +4977,13 @@ def resolve(ui, repo, *pats, **opts):
     if not didwork and pats:
         ui.warn(_("arguments do not match paths that need resolved\n"))
 
+    # Nudge users into finishing an unfinished operation. We don't print
+    # this with the list/show operation because we want list/show to remain
+    # machine readable.
+    if not list(ms.unresolved()) and not show:
+        ui.write(_('no unresolved files; '))
+        ui.write(_('you may continue your unfinished operation\n'))
+
     return ret
 
 @command('revert',

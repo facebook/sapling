@@ -260,6 +260,13 @@ class mergestate(object):
         self._state[dfile][0] = state
         self._dirty = True
 
+    def unresolved(self):
+        """Obtain the paths of unresolved files."""
+
+        for f, entry in self._state.items():
+            if entry[0] == 'u':
+                yield f
+
     def resolve(self, dfile, wctx):
         """rerun merge process for file path `dfile`"""
         if self[dfile] == 'r':

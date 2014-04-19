@@ -111,6 +111,7 @@ already has one local mq patch
   [1]
 
   $ HGMERGE=internal:local hg resolve --all
+  no unresolved files; you may continue your unfinished operation
 
   $ hg rebase --continue
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)

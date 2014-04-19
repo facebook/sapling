@@ -374,6 +374,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --all -t internal:local
+  no unresolved files; you may continue your unfinished operation
   $ hg rebase -c
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"

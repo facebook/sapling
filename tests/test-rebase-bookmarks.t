@@ -168,6 +168,7 @@ rebase --continue with bookmarks present (issue3802)
   [1]
   $ echo 'c' > c
   $ hg resolve --mark c
+  no unresolved files; you may continue your unfinished operation
   $ hg rebase --continue
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/3d5fa227f4b5-backup.hg (glob)
   $ hg tglog

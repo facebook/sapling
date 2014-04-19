@@ -39,6 +39,7 @@ resolve the failure
 
   $ echo resolved > file
   $ hg resolve -m file
+  no unresolved files; you may continue your unfinished operation
   $ hg commit -m 'resolved'
 
 resolve -l should error since no merge in progress

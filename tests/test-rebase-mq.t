@@ -69,6 +69,7 @@ Fix the 1st conflict:
 
   $ echo mq1r1 > f
   $ hg resolve -m f
+  no unresolved files; you may continue your unfinished operation
   $ hg rebase -c
   merging f
   warning: conflicts during merge.
@@ -80,6 +81,7 @@ Fix the 2nd conflict:
 
   $ echo mq1r1mq2 > f
   $ hg resolve -m f
+  no unresolved files; you may continue your unfinished operation
   $ hg rebase -c
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 

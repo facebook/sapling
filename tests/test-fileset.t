@@ -154,6 +154,7 @@ Test merge states
   b2
   $ echo e > b2
   $ hg resolve -m b2
+  no unresolved files; you may continue your unfinished operation
   $ fileset 'resolved()'
   b2
   $ fileset 'unresolved()'

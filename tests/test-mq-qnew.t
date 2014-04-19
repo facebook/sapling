@@ -158,6 +158,7 @@ plain headers
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  no unresolved files; you may continue your unfinished operation
   abort: cannot manage merge changesets
   $ rm -r sandbox
 
@@ -231,6 +232,7 @@ hg headers
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  no unresolved files; you may continue your unfinished operation
   abort: cannot manage merge changesets
   $ rm -r sandbox
 

@@ -107,6 +107,7 @@ should fail
   M a
   ? a.orig
   $ hg resolve -m a
+  no unresolved files; you may continue your unfinished operation
   $ hg ci -m merge
 
 Issue683: peculiarity with hg revert of an removed then added file
