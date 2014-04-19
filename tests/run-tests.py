@@ -747,28 +747,7 @@ def linematch(el, l):
             return '+glob'
     return False
 
-def tsttest(t, test, wd, options, replacements, env):
-    f = open(test)
-    tlines = f.readlines()
-    f.close()
-
-    salt, script, after, expected = t._parsetest(tlines, wd)
-
-    # Write out the script and execute it
-    name = wd + '.sh'
-    f = open(name, 'w')
-    for l in script:
-        f.write(l)
-    f.close()
-
-    cmd = '%s "%s"' % (options.shell, name)
-    vlog("# Running", cmd)
-    exitcode, output = run(cmd, wd, options, replacements, env)
-    # do not merge output if skipped, return hghave message instead
-    # similarly, with --debug, output is None
-    if exitcode == SKIPPED_STATUS or output is None:
-        return exitcode, output
-
+def tsttest(t, wd, options, salt, after, expected, exitcode, output):
     # Merge the script output back into a unified test
 
     warnonly = 1 # 1: not yet, 2: yes, 3: for sure not
@@ -833,8 +812,30 @@ class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
     def _run(self, testtmp, replacements, env):
-        return tsttest(self, self._path, testtmp, self._options, replacements,
-                       env)
+        f = open(self._path)
+        lines = f.readlines()
+        f.close()
+
+        salt, script, after, expected = self._parsetest(lines, testtmp)
+
+        # Write out the generated script.
+        fname = '%s.sh' % testtmp
+        f = open(fname, 'w')
+        for l in script:
+            f.write(l)
+        f.close()
+
+        cmd = '%s "%s"' % (self._options.shell, fname)
+        vlog("# Running", cmd)
+
+        exitcode, output = run(cmd, testtmp, self._options, replacements, env)
+        # Do not merge output if skipped. Return hghave message instead.
+        # Similarly, with --debug, output is None.
+        if exitcode == SKIPPED_STATUS or output is None:
+            return exitcode, output
+
+        return tsttest(self, testtmp, self._options, salt, after, expected,
+                       exitcode, output)
 
     def _hghave(self, reqs, testtmp):
         # TODO do something smarter when all other uses of hghave are gone.
