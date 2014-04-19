@@ -175,6 +175,18 @@ class mergestate(object):
                 raise
         return records
 
+    def active(self):
+        """Whether mergestate is active.
+
+        Returns True if there appears to be mergestate. This is a rough proxy
+        for "is a merge in progress."
+        """
+        # Check local variables before looking at filesystem for performance
+        # reasons.
+        return bool(self._local) or bool(self._state) or \
+               self._repo.opener.exists(self.statepathv1) or \
+               self._repo.opener.exists(self.statepathv2)
+
     def commit(self):
         """Write current state on disk (if necessary)"""
         if self._dirty:

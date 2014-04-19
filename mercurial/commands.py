@@ -4927,6 +4927,10 @@ def resolve(ui, repo, *pats, **opts):
                            'use --all to remerge all files'))
 
     ms = mergemod.mergestate(repo)
+
+    if not ms.active():
+        raise util.Abort(_('resolve command not applicable when not merging'))
+
     m = scmutil.match(repo[None], pats, opts)
     ret = 0
 

@@ -37,9 +37,11 @@ resolve the failure
   $ hg resolve -m file
   $ hg commit -m 'resolved'
 
-resolve -l, should be empty
+resolve -l should error since no merge in progress
 
   $ hg resolve -l
+  abort: resolve command not applicable when not merging
+  [255]
 
 test crashed merge with empty mergestate
 
