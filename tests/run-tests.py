@@ -649,6 +649,11 @@ class TestResult(object):
         self.interrupted = False
         self.exception = None
 
+    @property
+    def skipped(self):
+        """Whether the test was skipped."""
+        return self.ret == SKIPPED_STATUS
+
 def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
@@ -1065,7 +1070,7 @@ def runone(options, test, count):
     times.append((test, res.duration))
     vlog("# Ret was:", ret)
 
-    skipped = (ret == SKIPPED_STATUS)
+    skipped = res.skipped
 
     # If we're not in --debug mode and reference output file exists,
     # check test output against it.
