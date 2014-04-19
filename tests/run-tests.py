@@ -547,7 +547,7 @@ def outputcoverage(options):
 class Test(object):
     """Encapsulates a single, runnable test."""
 
-    def __init__(self, path, options, threadtmp):
+    def __init__(self, path, options, threadtmp, count):
         self._path = path
         self._options = options
         self._threadtmp = threadtmp
@@ -555,15 +555,17 @@ class Test(object):
         self.testtmp = os.path.join(threadtmp, os.path.basename(path))
         os.mkdir(self.testtmp)
 
-    def run(self, replacements, env):
+        self._setreplacements(count)
+
+    def run(self, env):
         createhgrc(env['HGRCPATH'], self._options)
 
-        return self._run(replacements, env)
+        return self._run(self._replacements, env)
 
     def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
 
-    def getreplacements(self, count):
+    def _setreplacements(self, count):
         port = self._options.port + count * 3
         r = [
             (r':%s\b' % port, ':$HGPORT'),
@@ -579,15 +581,16 @@ class Test(object):
         else:
             r.append((re.escape(self.testtmp), '$TESTTMP'))
 
-        return r, port
+        self._replacements = r
+        self._port = port
 
-    def getenv(self, port):
+    def getenv(self):
         env = os.environ.copy()
         env['TESTTMP'] = self.testtmp
         env['HOME'] = self.testtmp
-        env["HGPORT"] = str(port)
-        env["HGPORT1"] = str(port + 1)
-        env["HGPORT2"] = str(port + 2)
+        env["HGPORT"] = str(self._port)
+        env["HGPORT1"] = str(self._port + 1)
+        env["HGPORT2"] = str(self._port + 2)
         env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
         env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
@@ -1019,13 +1022,12 @@ def runone(options, test, count):
     threadtmp = os.path.join(HGTMP, "child%d" % count)
     os.mkdir(threadtmp)
 
-    t = runner(testpath, options, threadtmp)
-    replacements, port = t.getreplacements(count)
-    env = t.getenv(port)
+    t = runner(testpath, options, threadtmp, count)
+    env = t.getenv()
 
     starttime = time.time()
     try:
-        ret, out = t.run(replacements, env)
+        ret, out = t.run(env)
     except KeyboardInterrupt:
         endtime = time.time()
         log('INTERRUPTED: %s (after %d seconds)' % (test, endtime - starttime))
