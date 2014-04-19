@@ -747,67 +747,6 @@ def linematch(el, l):
             return '+glob'
     return False
 
-def tsttest(t, wd, options, salt, after, expected, exitcode, output):
-    # Merge the script output back into a unified test
-
-    warnonly = 1 # 1: not yet, 2: yes, 3: for sure not
-    if exitcode != 0: # failure has been reported
-        warnonly = 3 # set to "for sure not"
-    pos = -1
-    postout = []
-    for l in output:
-        lout, lcmd = l, None
-        if salt in l:
-            lout, lcmd = l.split(salt, 1)
-
-        if lout:
-            if not lout.endswith('\n'):
-                lout += ' (no-eol)\n'
-
-            # find the expected output at the current position
-            el = None
-            if pos in expected and expected[pos]:
-                el = expected[pos].pop(0)
-
-            r = linematch(el, lout)
-            if isinstance(r, str):
-                if r == '+glob':
-                    lout = el[:-1] + ' (glob)\n'
-                    r = '' # warn only this line
-                elif r == '-glob':
-                    lout = ''.join(el.rsplit(' (glob)', 1))
-                    r = '' # warn only this line
-                else:
-                    log('\ninfo, unknown linematch result: %r\n' % r)
-                    r = False
-            if r:
-                postout.append("  " + el)
-            else:
-                if needescape(lout):
-                    lout = stringescape(lout.rstrip('\n')) + " (esc)\n"
-                postout.append("  " + lout) # let diff deal with it
-                if r != '': # if line failed
-                    warnonly = 3 # set to "for sure not"
-                elif warnonly == 1: # is "not yet" (and line is warn only)
-                    warnonly = 2 # set to "yes" do warn
-
-        if lcmd:
-            # add on last return code
-            ret = int(lcmd.split()[1])
-            if ret != 0:
-                postout.append("  [%s]\n" % ret)
-            if pos in after:
-                # merge in non-active test bits
-                postout += after.pop(pos)
-            pos = int(lcmd.split()[0])
-
-    if pos in after:
-        postout += after.pop(pos)
-
-    if warnonly == 2:
-        exitcode = False # set exitcode to warned
-    return exitcode, postout
-
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
@@ -834,8 +773,7 @@ class TTest(Test):
         if exitcode == SKIPPED_STATUS or output is None:
             return exitcode, output
 
-        return tsttest(self, testtmp, self._options, salt, after, expected,
-                       exitcode, output)
+        return self._processoutput(exitcode, output, salt, after, expected)
 
     def _hghave(self, reqs, testtmp):
         # TODO do something smarter when all other uses of hghave are gone.
@@ -959,6 +897,67 @@ class TTest(Test):
 
         return salt, script, after, expected
 
+    def _processoutput(self, exitcode, output, salt, after, expected):
+        # Merge the script output back into a unified test.
+        warnonly = 1 # 1: not yet; 2: yes; 3: for sure not
+        if exitcode != 0:
+            warnonly = 3
+
+        pos = -1
+        postout = []
+        for l in output:
+            lout, lcmd = l, None
+            if salt in l:
+                lout, lcmd = l.split(salt, 1)
+
+            if lout:
+                if not lout.endswith('\n'):
+                    lout += ' (no-eol)\n'
+
+                # Find the expected output at the current position.
+                el = None
+                if expected.get(pos, None):
+                    el = expected[pos].pop(0)
+
+                r = linematch(el, lout)
+                if isinstance(r, str):
+                    if r == '+glob':
+                        lout = el[:-1] + ' (glob)\n'
+                        r = '' # Warn only this line.
+                    elif r == '-glob':
+                        lout = ''.join(el.rsplit(' (glob)', 1))
+                        r = '' # Warn only this line.
+                    else:
+                        log('\ninfo, unknown linematch result: %r\n' % r)
+                        r = False
+                if r:
+                    postout.append('  ' + el)
+                else:
+                    if needescape(lout):
+                        lout = stringescape(lout.rstrip('\n')) + ' (esc)\n'
+                    postout.append('  ' + lout) # Let diff deal with it.
+                    if r != '': # If line failed.
+                        warnonly = 3 # for sure not
+                    elif warnonly == 1: # Is "not yet" and line is warn only.
+                        warnonly = 2 # Yes do warn.
+
+            if lcmd:
+                # Add on last return code.
+                ret = int(lcmd.split()[1])
+                if ret != 0:
+                    postout.append('  [%s]\n' % ret)
+                if pos in after:
+                    # Merge in non-active test bits.
+                    postout += after.pop(pos)
+                pos = int(lcmd.split()[0])
+
+        if pos in after:
+            postout += after.pop(pos)
+
+        if warnonly == 2:
+            exitcode = False # Set exitcode to warned.
+
+        return exitcode, postout
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
