@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""Obsolete markers handling
+"""Obsolete marker handling
 
 An obsolete marker maps an old changeset to a list of new
 changesets. If the list of new changesets is empty, the old changeset
@@ -14,30 +14,31 @@ is said to be "killed". Otherwise, the old changeset is being
 "replaced" by the new changesets.
 
 Obsolete markers can be used to record and distribute changeset graph
-transformations performed by history rewriting operations, and help
-building new tools to reconciliate conflicting rewriting actions. To
-facilitate conflicts resolution, markers include various annotations
+transformations performed by history rewrite operations, and help
+building new tools to reconcile conflicting rewrite actions. To
+facilitate conflict resolution, markers include various annotations
 besides old and news changeset identifiers, such as creation date or
 author name.
 
-The old obsoleted changeset is called "precursor" and possible replacements are
-called "successors".  Markers that used changeset X as a precursors are called
-"successor markers of X" because they hold information about the successors of
-X. Markers that use changeset Y as a successors are call "precursor markers of
-Y" because they hold information about the precursors of Y.
+The old obsoleted changeset is called a "precursor" and possible
+replacements are called "successors". Markers that used changeset X as
+a precursor are called "successor markers of X" because they hold
+information about the successors of X. Markers that use changeset Y as
+a successors are call "precursor markers of Y" because they hold
+information about the precursors of Y.
 
 Examples:
 
-- When changeset A is replacement by a changeset A', one marker is stored:
+- When changeset A is replaced by changeset A', one marker is stored:
 
     (A, (A'))
 
-- When changesets A and B are folded into a new changeset C two markers are
+- When changesets A and B are folded into a new changeset C, two markers are
   stored:
 
     (A, (C,)) and (B, (C,))
 
-- When changeset A is simply "pruned" from the graph, a marker in create:
+- When changeset A is simply "pruned" from the graph, a marker is created:
 
     (A, ())
 
@@ -45,9 +46,9 @@ Examples:
 
     (A, (C, C))
 
-  We use a single marker to distinct the "split" case from the "divergence"
-  case. If two independents operation rewrite the same changeset A in to A' and
-  A'' when have an error case: divergent rewriting. We can detect it because
+  We use a single marker to distinguish the "split" case from the "divergence"
+  case. If two independent operations rewrite the same changeset A in to A' and
+  A'', we have an error case: divergent rewriting. We can detect it because
   two markers will be created independently:
 
   (A, (B,)) and (A, (C,))
@@ -65,12 +66,12 @@ The file starts with a version header:
 
 The header is followed by the markers. Each marker is made of:
 
-- 1 unsigned byte: number of new changesets "R", could be zero.
+- 1 unsigned byte: number of new changesets "R", can be zero.
 
 - 1 unsigned 32-bits integer: metadata size "M" in bytes.
 
-- 1 byte: a bit field. It is reserved for flags used in obsolete
-  markers common operations, to avoid repeated decoding of metadata
+- 1 byte: a bit field. It is reserved for flags used in common
+  obsolete marker operations, to avoid repeated decoding of metadata
   entries.
 
 - 20 bytes: obsoleted changeset identifier.
@@ -78,9 +79,10 @@ The header is followed by the markers. Each marker is made of:
 - N*20 bytes: new changesets identifiers.
 
 - M bytes: metadata as a sequence of nul-terminated strings. Each
-  string contains a key and a value, separated by a color ':', without
+  string contains a key and a value, separated by a colon ':', without
   additional encoding. Keys cannot contain '\0' or ':' and values
   cannot contain '\0'.
+
 """
 import struct
 import util, base85, node
