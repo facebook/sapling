@@ -675,19 +675,16 @@ class TestResult(object):
         """Whether the test was skipped."""
         return self.ret == SKIPPED_STATUS
 
-def pytest(test, wd, options, replacements, env):
-    py3kswitch = options.py3k_warnings and ' -3' or ''
-    cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
-    vlog("# Running", cmd)
-    if os.name == 'nt':
-        replacements.append((r'\r\n', '\n'))
-    return run(cmd, wd, options, replacements, env)
-
 class PythonTest(Test):
     """A Python-based test."""
     def _run(self, testtmp, replacements, env):
-        return pytest(self._path, testtmp, self._options, replacements,
-                      env)
+        py3kswitch = self._options.py3k_warnings and ' -3' or ''
+        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self._path)
+        vlog("# Running", cmd)
+        if os.name == 'nt':
+            replacements.append((r'\r\n', '\n'))
+        return run(cmd, testtmp, self._options, replacements, env)
+
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
