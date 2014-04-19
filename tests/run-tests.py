@@ -747,125 +747,12 @@ def linematch(el, l):
             return '+glob'
     return False
 
-def tsttest(test, wd, options, replacements, env):
-    # We generate a shell script which outputs unique markers to line
-    # up script results with our source. These markers include input
-    # line number and the last return code
-    salt = "SALT" + str(time.time())
-    def addsalt(line, inpython):
-        if inpython:
-            script.append('%s %d 0\n' % (salt, line))
-        else:
-            script.append('echo %s %s $?\n' % (salt, line))
-
-    # After we run the shell script, we re-unify the script output
-    # with non-active parts of the source, with synchronization by our
-    # SALT line number markers. The after table contains the
-    # non-active components, ordered by line number
-    after = {}
-    pos = prepos = -1
-
-    # Expected shell script output
-    expected = {}
-
-    # We keep track of whether or not we're in a Python block so we
-    # can generate the surrounding doctest magic
-    inpython = False
-
-    # True or False when in a true or false conditional section
-    skipping = None
-
-    def hghave(reqs):
-        # TODO: do something smarter when all other uses of hghave is gone
-        tdir = TESTDIR.replace('\\', '/')
-        proc = Popen4('%s -c "%s/hghave %s"' %
-                      (options.shell, tdir, ' '.join(reqs)), wd, 0)
-        stdout, stderr = proc.communicate()
-        ret = proc.wait()
-        if wifexited(ret):
-            ret = os.WEXITSTATUS(ret)
-        if ret == 2:
-            print stdout
-            sys.exit(1)
-        return ret == 0
-
+def tsttest(t, test, wd, options, replacements, env):
     f = open(test)
-    t = f.readlines()
+    tlines = f.readlines()
     f.close()
 
-    script = []
-    if options.debug:
-        script.append('set -x\n')
-    if os.getenv('MSYSTEM'):
-        script.append('alias pwd="pwd -W"\n')
-    n = 0
-    for n, l in enumerate(t):
-        if not l.endswith('\n'):
-            l += '\n'
-        if l.startswith('#if'):
-            lsplit = l.split()
-            if len(lsplit) < 2 or lsplit[0] != '#if':
-                after.setdefault(pos, []).append('  !!! invalid #if\n')
-            if skipping is not None:
-                after.setdefault(pos, []).append('  !!! nested #if\n')
-            skipping = not hghave(lsplit[1:])
-            after.setdefault(pos, []).append(l)
-        elif l.startswith('#else'):
-            if skipping is None:
-                after.setdefault(pos, []).append('  !!! missing #if\n')
-            skipping = not skipping
-            after.setdefault(pos, []).append(l)
-        elif l.startswith('#endif'):
-            if skipping is None:
-                after.setdefault(pos, []).append('  !!! missing #if\n')
-            skipping = None
-            after.setdefault(pos, []).append(l)
-        elif skipping:
-            after.setdefault(pos, []).append(l)
-        elif l.startswith('  >>> '): # python inlines
-            after.setdefault(pos, []).append(l)
-            prepos = pos
-            pos = n
-            if not inpython:
-                # we've just entered a Python block, add the header
-                inpython = True
-                addsalt(prepos, False) # make sure we report the exit code
-                script.append('%s -m heredoctest <<EOF\n' % PYTHON)
-            addsalt(n, True)
-            script.append(l[2:])
-        elif l.startswith('  ... '): # python inlines
-            after.setdefault(prepos, []).append(l)
-            script.append(l[2:])
-        elif l.startswith('  $ '): # commands
-            if inpython:
-                script.append("EOF\n")
-                inpython = False
-            after.setdefault(pos, []).append(l)
-            prepos = pos
-            pos = n
-            addsalt(n, False)
-            cmd = l[4:].split()
-            if len(cmd) == 2 and cmd[0] == 'cd':
-                l = '  $ cd %s || exit 1\n' % cmd[1]
-            script.append(l[4:])
-        elif l.startswith('  > '): # continuations
-            after.setdefault(prepos, []).append(l)
-            script.append(l[4:])
-        elif l.startswith('  '): # results
-            # queue up a list of expected results
-            expected.setdefault(pos, []).append(l[2:])
-        else:
-            if inpython:
-                script.append("EOF\n")
-                inpython = False
-            # non-command/result - queue up for merged output
-            after.setdefault(pos, []).append(l)
-
-    if inpython:
-        script.append("EOF\n")
-    if skipping is not None:
-        after.setdefault(pos, []).append('  !!! missing #endif\n')
-    addsalt(n + 1, False)
+    salt, script, after, expected = t._parsetest(tlines, wd)
 
     # Write out the script and execute it
     name = wd + '.sh'
@@ -946,8 +833,131 @@ class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
     def _run(self, testtmp, replacements, env):
-        return tsttest(self._path, testtmp, self._options, replacements,
+        return tsttest(self, self._path, testtmp, self._options, replacements,
                        env)
+
+    def _hghave(self, reqs, testtmp):
+        # TODO do something smarter when all other uses of hghave are gone.
+        tdir = TESTDIR.replace('\\', '/')
+        proc = Popen4('%s -c "%s/hghave %s"' %
+                      (self._options.shell, tdir, ' '.join(reqs)),
+                      testtmp, 0)
+        stdout, stderr = proc.communicate()
+        ret = proc.wait()
+        if wifexited(ret):
+            ret = os.WEXITSTATUS(ret)
+        if ret == 2:
+            print stdout
+            sys.exit(1)
+
+        return ret == 0
+
+    def _parsetest(self, lines, testtmp):
+        # We generate a shell script which outputs unique markers to line
+        # up script results with our source. These markers include input
+        # line number and the last return code.
+        salt = "SALT" + str(time.time())
+        def addsalt(line, inpython):
+            if inpython:
+                script.append('%s %d 0\n' % (salt, line))
+            else:
+                script.append('echo %s %s $?\n' % (salt, line))
+
+        script = []
+
+        # After we run the shell script, we re-unify the script output
+        # with non-active parts of the source, with synchronization by our
+        # SALT line number markers. The after table contains the non-active
+        # components, ordered by line number.
+        after = {}
+
+        # Expected shell script output.
+        expected = {}
+
+        pos = prepos = -1
+
+        # True or False when in a true or false conditional section
+        skipping = None
+
+        # We keep track of whether or not we're in a Python block so we
+        # can generate the surrounding doctest magic.
+        inpython = False
+
+        if self._options.debug:
+            script.append('set -x\n')
+        if os.getenv('MSYSTEM'):
+            script.append('alias pwd="pwd -W"\n')
+
+        for n, l in enumerate(lines):
+            if not l.endswith('\n'):
+                l += '\n'
+            if l.startswith('#if'):
+                lsplit = l.split()
+                if len(lsplit) < 2 or lsplit[0] != '#if':
+                    after.setdefault(pos, []).append('  !!! invalid #if\n')
+                if skipping is not None:
+                    after.setdefault(pos, []).append('  !!! nested #if\n')
+                skipping = not self._hghave(lsplit[1:], testtmp)
+                after.setdefault(pos, []).append(l)
+            elif l.startswith('#else'):
+                if skipping is None:
+                    after.setdefault(pos, []).append('  !!! missing #if\n')
+                skipping = not skipping
+                after.setdefault(pos, []).append(l)
+            elif l.startswith('#endif'):
+                if skipping is None:
+                    after.setdefault(pos, []).append('  !!! missing #if\n')
+                skipping = None
+                after.setdefault(pos, []).append(l)
+            elif skipping:
+                after.setdefault(pos, []).append(l)
+            elif l.startswith('  >>> '): # python inlines
+                after.setdefault(pos, []).append(l)
+                prepos = pos
+                pos = n
+                if not inpython:
+                    # We've just entered a Python block. Add the header.
+                    inpython = True
+                    addsalt(prepos, False) # Make sure we report the exit code.
+                    script.append('%s -m heredoctest <<EOF\n' % PYTHON)
+                addsalt(n, True)
+                script.append(l[2:])
+            elif l.startswith('  ... '): # python inlines
+                after.setdefault(prepos, []).append(l)
+                script.append(l[2:])
+            elif l.startswith('  $ '): # commands
+                if inpython:
+                    script.append('EOF\n')
+                    inpython = False
+                after.setdefault(pos, []).append(l)
+                prepos = pos
+                pos = n
+                addsalt(n, False)
+                cmd = l[4:].split()
+                if len(cmd) == 2 and cmd[0] == 'cd':
+                    l = '  $ cd %s || exit 1\n' % cmd[1]
+                script.append(l[4:])
+            elif l.startswith('  > '): # continuations
+                after.setdefault(prepos, []).append(l)
+                script.append(l[4:])
+            elif l.startswith('  '): # results
+                # Queue up a list of expected results.
+                expected.setdefault(pos, []).append(l[2:])
+            else:
+                if inpython:
+                    script.append('EOF\n')
+                    inpython = False
+                # Non-command/result. Queue up for merged output.
+                after.setdefault(pos, []).append(l)
+
+        if inpython:
+            script.append('EOF\n')
+        if skipping is not None:
+            after.setdefault(pos, []).append('  !!! missing #endif\n')
+        addsalt(n + 1, False)
+
+        return salt, script, after, expected
+
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
