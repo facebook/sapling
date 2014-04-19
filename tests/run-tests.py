@@ -731,22 +731,6 @@ def globmatch(el, l):
             res += re.escape(c)
     return rematch(res, l)
 
-def linematch(el, l):
-    if el == l: # perfect match (fast)
-        return True
-    if el:
-        if el.endswith(" (esc)\n"):
-            el = el[:-7].decode('string-escape') + '\n'
-        if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
-            return True
-        if el.endswith(" (re)\n"):
-            return rematch(el[:-6], l)
-        if el.endswith(" (glob)\n"):
-            return globmatch(el[:-8], l)
-        if os.altsep and l.replace('\\', '/') == el:
-            return '+glob'
-    return False
-
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
@@ -919,7 +903,7 @@ class TTest(Test):
                 if expected.get(pos, None):
                     el = expected[pos].pop(0)
 
-                r = linematch(el, lout)
+                r = TTest.linematch(el, lout)
                 if isinstance(r, str):
                     if r == '+glob':
                         lout = el[:-1] + ' (glob)\n'
@@ -958,6 +942,23 @@ class TTest(Test):
             exitcode = False # Set exitcode to warned.
 
         return exitcode, postout
+
+    @staticmethod
+    def linematch(el, l):
+        if el == l: # perfect match (fast)
+            return True
+        if el:
+            if el.endswith(" (esc)\n"):
+                el = el[:-7].decode('string-escape') + '\n'
+            if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+                return True
+            if el.endswith(" (re)\n"):
+                return rematch(el[:-6], l)
+            if el.endswith(" (glob)\n"):
+                return globmatch(el[:-8], l)
+            if os.altsep and l.replace('\\', '/') == el:
+                return '+glob'
+        return False
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):

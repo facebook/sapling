@@ -29,7 +29,7 @@ def lm(expected, output):
     assert expected.endswith('\n') and output.endswith('\n'), 'missing newline'
     assert not re.search(r'[^ \w\\/\r\n()*?]', expected + output), \
            'single backslash or unknown char'
-    match = run_tests.linematch(expected, output)
+    match = run_tests.TTest.linematch(expected, output)
     if isinstance(match, str):
         return 'special: ' + match
     else:
