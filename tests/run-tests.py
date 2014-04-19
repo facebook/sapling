@@ -579,6 +579,19 @@ def outputcoverage(options):
             os.mkdir(adir)
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
+class Test(object):
+    """Encapsulates a single, runnable test."""
+
+    def __init__(self, path, options):
+        self._path = path
+        self._options = options
+
+    def run(self, testtmp, replacements, env):
+        return self._run(testtmp, replacements, env)
+
+    def _run(self, testtmp, replacements, env):
+        raise NotImplemented('Subclasses must implement Test.run()')
+
 def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
@@ -586,6 +599,11 @@ def pytest(test, wd, options, replacements, env):
     if os.name == 'nt':
         replacements.append((r'\r\n', '\n'))
     return run(cmd, wd, options, replacements, env)
+
+class PythonTest(Test):
+    """A Python-based test."""
+    def _run(self, testtmp, replacements, env):
+        return pytest(self._path, testtmp, self._options, replacements, env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
@@ -843,6 +861,12 @@ def tsttest(test, wd, options, replacements, env):
         exitcode = False # set exitcode to warned
     return exitcode, postout
 
+class TTest(Test):
+    """A "t test" is a test backed by a .t file."""
+
+    def _run(self, testtmp, replacements, env):
+        return tsttest(self._path, testtmp, self._options, replacements, env)
+
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
     """Run command in a sub-process, capturing the output (stdout and stderr).
@@ -952,9 +976,9 @@ def runone(options, test, count):
 
     if not os.path.basename(lctest).startswith("test-"):
         return skip("not a test file")
-    for ext, func, out in testtypes:
+    for ext, cls, out in testtypes:
         if lctest.endswith(ext):
-            runner = func
+            runner = cls
             ref = os.path.join(TESTDIR, test + out)
             break
     else:
@@ -964,6 +988,8 @@ def runone(options, test, count):
 
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
+
+    t = runner(testpath, options)
 
     # Make a tmp subdirectory to work in
     threadtmp = os.path.join(HGTMP, "child%d" % count)
@@ -992,7 +1018,7 @@ def runone(options, test, count):
 
     starttime = time.time()
     try:
-        ret, out = runner(testpath, testtmp, options, replacements, env)
+        ret, out = t.run(testtmp, replacements, env)
     except KeyboardInterrupt:
         endtime = time.time()
         log('INTERRUPTED: %s (after %d seconds)' % (test, endtime - starttime))
@@ -1192,8 +1218,8 @@ def runtests(options, tests):
     if warned:
         return 80
 
-testtypes = [('.py', pytest, '.out'),
-             ('.t', tsttest, '')]
+testtypes = [('.py', PythonTest, '.out'),
+             ('.t', TTest, '')]
 
 def main(args, parser=None):
     parser = parser or getparser()
