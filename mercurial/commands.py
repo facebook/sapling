@@ -4934,9 +4934,12 @@ def resolve(ui, repo, *pats, **opts):
     m = scmutil.match(repo[None], pats, opts)
     ret = 0
 
+    didwork = False
     for f in ms:
         if not m(f):
             continue
+
+        didwork = True
 
         if show:
             if nostatus:
@@ -4970,6 +4973,10 @@ def resolve(ui, repo, *pats, **opts):
             util.rename(a + ".resolve", a + ".orig")
 
     ms.commit()
+
+    if not didwork and pats:
+        ui.warn(_("arguments do not match paths that need resolved\n"))
+
     return ret
 
 @command('revert',

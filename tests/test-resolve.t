@@ -31,6 +31,10 @@ resolve -l should contain an unresolved entry
   $ hg resolve -l
   U file
 
+resolving an unknown path emits a warning
+  $ hg resolve -m does-not-exist
+  arguments do not match paths that need resolved
+
 resolve the failure
 
   $ echo resolved > file
