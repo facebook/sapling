@@ -595,6 +595,24 @@ class Test(object):
     def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
 
+    def getreplacements(self, count):
+        port = self._options.port + count * 3
+        r = [
+            (r':%s\b' % port, ':$HGPORT'),
+            (r':%s\b' % (port + 1), ':$HGPORT1'),
+            (r':%s\b' % (port + 2), ':$HGPORT2'),
+            ]
+
+        if os.name == 'nt':
+            r.append(
+                (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
+                    c in '/\\' and r'[/\\]' or c.isdigit() and c or '\\' + c
+                    for c in self.testtmp), '$TESTTMP'))
+        else:
+            r.append((re.escape(self.testtmp), '$TESTTMP'))
+
+        return r, port
+
 def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
@@ -999,23 +1017,7 @@ def runone(options, test, count):
     os.mkdir(threadtmp)
 
     t = runner(testpath, options, threadtmp)
-
-    port = options.port + count * 3
-    replacements = [
-        (r':%s\b' % port, ':$HGPORT'),
-        (r':%s\b' % (port + 1), ':$HGPORT1'),
-        (r':%s\b' % (port + 2), ':$HGPORT2'),
-        ]
-    if os.name == 'nt':
-        replacements.append(
-            (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
-                     c in '/\\' and r'[/\\]' or
-                     c.isdigit() and c or
-                     '\\' + c
-                     for c in t.testtmp), '$TESTTMP'))
-    else:
-        replacements.append((re.escape(t.testtmp), '$TESTTMP'))
-
+    replacements, port = t.getreplacements(count)
     env = createenv(options, t.testtmp, threadtmp, port)
     createhgrc(env['HGRCPATH'], options)
 
