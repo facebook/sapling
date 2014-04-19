@@ -66,7 +66,7 @@ The file starts with a version header:
 
 The header is followed by the markers. Each marker is made of:
 
-- 1 unsigned byte: number of new changesets "R", can be zero.
+- 1 unsigned byte: number of new changesets "N", can be zero.
 
 - 1 unsigned 32-bits integer: metadata size "M" in bytes.
 
