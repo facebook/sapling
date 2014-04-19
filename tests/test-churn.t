@@ -159,4 +159,16 @@ Ignore trailing or leading spaces in emails
   user4@x.com      2 *****************************
   with space       1 **************
 
+Test multibyte sequences in names
+
+  $ echo bar >> bar
+  $ hg --encoding utf-8 ci -m'changed bar' -u 'El Niño <nino@x.com>'
+  $ hg --encoding utf-8 churn -ct '{author|person}'
+  user1           4 **********************************************************
+  user3           3 ********************************************
+  user2           2 *****************************
+  user4           2 *****************************
+  El Ni\xc3\xb1o         1 *************** (esc)
+  with space      1 ***************
+
   $ cd ..

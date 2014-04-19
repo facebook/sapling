@@ -10,6 +10,7 @@
 
 from mercurial.i18n import _
 from mercurial import patch, cmdutil, scmutil, util, templater, commands
+from mercurial import encoding
 import os
 import time, datetime
 
@@ -124,7 +125,7 @@ def churn(ui, repo, *pats, **opts):
     Aliases will be split from the rightmost "=".
     '''
     def pad(s, l):
-        return (s + " " * l)[:l]
+        return s + " " * (l - encoding.colwidth(s))
 
     amap = {}
     aliases = opts.get('aliases')
