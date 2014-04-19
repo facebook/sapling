@@ -557,7 +557,8 @@ class Test(object):
 
         self._setreplacements(count)
 
-    def run(self, env):
+    def run(self):
+        env = self._getenv()
         createhgrc(env['HGRCPATH'], self._options)
 
         try:
@@ -587,7 +588,7 @@ class Test(object):
         self._replacements = r
         self._port = port
 
-    def getenv(self):
+    def _getenv(self):
         env = os.environ.copy()
         env['TESTTMP'] = self.testtmp
         env['HOME'] = self.testtmp
@@ -1026,11 +1027,10 @@ def runone(options, test, count):
     os.mkdir(threadtmp)
 
     t = runner(testpath, options, threadtmp, count)
-    env = t.getenv()
 
     starttime = time.time()
     try:
-        ret, out = t.run(env)
+        ret, out = t.run()
     except KeyboardInterrupt:
         endtime = time.time()
         log('INTERRUPTED: %s (after %d seconds)' % (test, endtime - starttime))
