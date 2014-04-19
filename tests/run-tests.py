@@ -695,32 +695,6 @@ def escapef(m):
 def stringescape(s):
     return escapesub(escapef, s)
 
-def globmatch(el, l):
-    # The only supported special characters are * and ? plus / which also
-    # matches \ on windows. Escaping of these characters is supported.
-    if el + '\n' == l:
-        if os.altsep:
-            # matching on "/" is not needed for this line
-            return '-glob'
-        return True
-    i, n = 0, len(el)
-    res = ''
-    while i < n:
-        c = el[i]
-        i += 1
-        if c == '\\' and el[i] in '*?\\/':
-            res += el[i - 1:i + 1]
-            i += 1
-        elif c == '*':
-            res += '.*'
-        elif c == '?':
-            res += '.'
-        elif c == '/' and os.altsep:
-            res += '[/\\\\]'
-        else:
-            res += re.escape(c)
-    return TTest.rematch(res, l)
-
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
@@ -945,6 +919,33 @@ class TTest(Test):
             return False
 
     @staticmethod
+    def globmatch(el, l):
+        # The only supported special characters are * and ? plus / which also
+        # matches \ on windows. Escaping of these characters is supported.
+        if el + '\n' == l:
+            if os.altsep:
+                # matching on "/" is not needed for this line
+                return '-glob'
+            return True
+        i, n = 0, len(el)
+        res = ''
+        while i < n:
+            c = el[i]
+            i += 1
+            if c == '\\' and el[i] in '*?\\/':
+                res += el[i - 1:i + 1]
+                i += 1
+            elif c == '*':
+                res += '.*'
+            elif c == '?':
+                res += '.'
+            elif c == '/' and os.altsep:
+                res += '[/\\\\]'
+            else:
+                res += re.escape(c)
+        return TTest.rematch(res, l)
+
+    @staticmethod
     def linematch(el, l):
         if el == l: # perfect match (fast)
             return True
@@ -956,7 +957,7 @@ class TTest(Test):
             if el.endswith(" (re)\n"):
                 return TTest.rematch(el[:-6], l)
             if el.endswith(" (glob)\n"):
-                return globmatch(el[:-8], l)
+                return TTest.globmatch(el[:-8], l)
             if os.altsep and l.replace('\\', '/') == el:
                 return '+glob'
         return False
