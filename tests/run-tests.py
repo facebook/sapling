@@ -364,41 +364,6 @@ def createhgrc(path, options):
             hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
 
-def createenv(options, testtmp, threadtmp, port):
-    env = os.environ.copy()
-    env['TESTTMP'] = testtmp
-    env['HOME'] = testtmp
-    env["HGPORT"] = str(port)
-    env["HGPORT1"] = str(port + 1)
-    env["HGPORT2"] = str(port + 2)
-    env["HGRCPATH"] = os.path.join(threadtmp, '.hgrc')
-    env["DAEMON_PIDS"] = os.path.join(threadtmp, 'daemon.pids')
-    env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-    env["HGMERGE"] = "internal:merge"
-    env["HGUSER"]   = "test"
-    env["HGENCODING"] = "ascii"
-    env["HGENCODINGMODE"] = "strict"
-
-    # Reset some environment variables to well-known values so that
-    # the tests produce repeatable output.
-    env['LANG'] = env['LC_ALL'] = env['LANGUAGE'] = 'C'
-    env['TZ'] = 'GMT'
-    env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
-    env['COLUMNS'] = '80'
-    env['TERM'] = 'xterm'
-
-    for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
-              'NO_PROXY').split():
-        if k in env:
-            del env[k]
-
-    # unset env related to hooks
-    for k in env.keys():
-        if k.startswith('HG_'):
-            del env[k]
-
-    return env
-
 def checktools():
     # Before we go any further, check for pre-requisite tools
     # stuff from coreutils (cat, rm, etc) are not tested
@@ -585,6 +550,7 @@ class Test(object):
     def __init__(self, path, options, threadtmp):
         self._path = path
         self._options = options
+        self._threadtmp = threadtmp
 
         self.testtmp = os.path.join(threadtmp, os.path.basename(path))
         os.mkdir(self.testtmp)
@@ -612,6 +578,41 @@ class Test(object):
             r.append((re.escape(self.testtmp), '$TESTTMP'))
 
         return r, port
+
+    def getenv(self, port):
+        env = os.environ.copy()
+        env['TESTTMP'] = self.testtmp
+        env['HOME'] = self.testtmp
+        env["HGPORT"] = str(port)
+        env["HGPORT1"] = str(port + 1)
+        env["HGPORT2"] = str(port + 2)
+        env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
+        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
+        env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+        env["HGMERGE"] = "internal:merge"
+        env["HGUSER"]   = "test"
+        env["HGENCODING"] = "ascii"
+        env["HGENCODINGMODE"] = "strict"
+
+        # Reset some environment variables to well-known values so that
+        # the tests produce repeatable output.
+        env['LANG'] = env['LC_ALL'] = env['LANGUAGE'] = 'C'
+        env['TZ'] = 'GMT'
+        env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
+        env['COLUMNS'] = '80'
+        env['TERM'] = 'xterm'
+
+        for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
+                  'NO_PROXY').split():
+            if k in env:
+                del env[k]
+
+        # unset env related to hooks
+        for k in env.keys():
+            if k.startswith('HG_'):
+                del env[k]
+
+        return env
 
 def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
@@ -1018,7 +1019,7 @@ def runone(options, test, count):
 
     t = runner(testpath, options, threadtmp)
     replacements, port = t.getreplacements(count)
-    env = createenv(options, t.testtmp, threadtmp, port)
+    env = t.getenv(port)
     createhgrc(env['HGRCPATH'], options)
 
     starttime = time.time()
