@@ -556,6 +556,8 @@ class Test(object):
         os.mkdir(self.testtmp)
 
     def run(self, replacements, env):
+        createhgrc(env['HGRCPATH'], self._options)
+
         return self._run(replacements, env)
 
     def _run(self, replacements, env):
@@ -1020,7 +1022,6 @@ def runone(options, test, count):
     t = runner(testpath, options, threadtmp)
     replacements, port = t.getreplacements(count)
     env = t.getenv(port)
-    createhgrc(env['HGRCPATH'], options)
 
     starttime = time.time()
     try:
