@@ -4931,37 +4931,39 @@ def resolve(ui, repo, *pats, **opts):
     ret = 0
 
     for f in ms:
-        if m(f):
-            if show:
-                if nostatus:
-                    ui.write("%s\n" % f)
-                else:
-                    ui.write("%s %s\n" % (ms[f].upper(), f),
-                             label='resolve.' +
-                             {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
-            elif mark:
-                ms.mark(f, "r")
-            elif unmark:
-                ms.mark(f, "u")
+        if not m(f):
+            continue
+
+        if show:
+            if nostatus:
+                ui.write("%s\n" % f)
             else:
-                wctx = repo[None]
+                ui.write("%s %s\n" % (ms[f].upper(), f),
+                         label='resolve.' +
+                         {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
+        elif mark:
+            ms.mark(f, "r")
+        elif unmark:
+            ms.mark(f, "u")
+        else:
+            wctx = repo[None]
 
-                # backup pre-resolve (merge uses .orig for its own purposes)
-                a = repo.wjoin(f)
-                util.copyfile(a, a + ".resolve")
+            # backup pre-resolve (merge uses .orig for its own purposes)
+            a = repo.wjoin(f)
+            util.copyfile(a, a + ".resolve")
 
-                try:
-                    # resolve file
-                    ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                                 'resolve')
-                    if ms.resolve(f, wctx):
-                        ret = 1
-                finally:
-                    ui.setconfig('ui', 'forcemerge', '', 'resolve')
-                    ms.commit()
+            try:
+                # resolve file
+                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                             'resolve')
+                if ms.resolve(f, wctx):
+                    ret = 1
+            finally:
+                ui.setconfig('ui', 'forcemerge', '', 'resolve')
+                ms.commit()
 
-                # replace filemerge's .orig file with our resolve file
-                util.rename(a + ".resolve", a + ".orig")
+            # replace filemerge's .orig file with our resolve file
+            util.rename(a + ".resolve", a + ".orig")
 
     ms.commit()
     return ret
