@@ -547,13 +547,15 @@ def outputcoverage(options):
 class Test(object):
     """Encapsulates a single, runnable test."""
 
-    def __init__(self, path, options, threadtmp, count):
+    def __init__(self, path, options, count):
         self._path = path
         self._options = options
-        self._threadtmp = threadtmp
 
-        self.testtmp = os.path.join(threadtmp, os.path.basename(path))
-        os.mkdir(self.testtmp)
+        self.threadtmp = os.path.join(HGTMP, 'child%d' % count)
+        os.mkdir(self.threadtmp)
+
+        self._testtmp = os.path.join(self.threadtmp, os.path.basename(path))
+        os.mkdir(self._testtmp)
 
         self._setreplacements(count)
 
@@ -581,22 +583,22 @@ class Test(object):
             r.append(
                 (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
                     c in '/\\' and r'[/\\]' or c.isdigit() and c or '\\' + c
-                    for c in self.testtmp), '$TESTTMP'))
+                    for c in self._testtmp), '$TESTTMP'))
         else:
-            r.append((re.escape(self.testtmp), '$TESTTMP'))
+            r.append((re.escape(self._testtmp), '$TESTTMP'))
 
         self._replacements = r
         self._port = port
 
     def _getenv(self):
         env = os.environ.copy()
-        env['TESTTMP'] = self.testtmp
-        env['HOME'] = self.testtmp
+        env['TESTTMP'] = self._testtmp
+        env['HOME'] = self._testtmp
         env["HGPORT"] = str(self._port)
         env["HGPORT1"] = str(self._port + 1)
         env["HGPORT2"] = str(self._port + 2)
-        env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
-        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
+        env["HGRCPATH"] = os.path.join(self.threadtmp, '.hgrc')
+        env["DAEMON_PIDS"] = os.path.join(self.threadtmp, 'daemon.pids')
         env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"]   = "test"
@@ -634,7 +636,7 @@ def pytest(test, wd, options, replacements, env):
 class PythonTest(Test):
     """A Python-based test."""
     def _run(self, replacements, env):
-        return pytest(self._path, self.testtmp, self._options, replacements,
+        return pytest(self._path, self._testtmp, self._options, replacements,
                       env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
@@ -897,7 +899,7 @@ class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
     def _run(self, replacements, env):
-        return tsttest(self._path, self.testtmp, self._options, replacements,
+        return tsttest(self._path, self._testtmp, self._options, replacements,
                        env)
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
@@ -1022,11 +1024,7 @@ def runone(options, test, count):
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
 
-    # Make a tmp subdirectory to work in
-    threadtmp = os.path.join(HGTMP, "child%d" % count)
-    os.mkdir(threadtmp)
-
-    t = runner(testpath, options, threadtmp, count)
+    t = runner(testpath, options, count)
 
     starttime = time.time()
     try:
@@ -1102,7 +1100,7 @@ def runone(options, test, count):
         iolock.release()
 
     if not options.keep_tmpdir:
-        shutil.rmtree(threadtmp, True)
+        shutil.rmtree(t.threadtmp, True)
     return result
 
 _hgpath = None
