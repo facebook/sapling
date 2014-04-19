@@ -31,7 +31,7 @@ Examples:
 
 - When changeset A is replaced by changeset A', one marker is stored:
 
-    (A, (A'))
+    (A, (A',))
 
 - When changesets A and B are folded into a new changeset C, two markers are
   stored:
