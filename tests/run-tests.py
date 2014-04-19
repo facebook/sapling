@@ -560,7 +560,10 @@ class Test(object):
     def run(self, env):
         createhgrc(env['HGRCPATH'], self._options)
 
-        return self._run(self._replacements, env)
+        try:
+            return self._run(self._replacements, env)
+        finally:
+            killdaemons(env['DAEMON_PIDS'])
 
     def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -1035,8 +1038,6 @@ def runone(options, test, count):
     endtime = time.time()
     times.append((test, endtime - starttime))
     vlog("# Ret was:", ret)
-
-    killdaemons(env['DAEMON_PIDS'])
 
     skipped = (ret == SKIPPED_STATUS)
 
