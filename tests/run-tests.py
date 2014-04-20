@@ -57,6 +57,7 @@ import re
 import threading
 import killdaemons as killmod
 import Queue as queue
+import unittest
 
 processlock = threading.Lock()
 
@@ -187,6 +188,9 @@ def getparser():
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
+    parser.add_option("--unittest", action="store_true",
+        help="run tests with Python's unittest package"
+             " (this is an experimental feature)")
     parser.add_option("-v", "--verbose", action="store_true",
         help="output verbose messages")
     parser.add_option("--view", type="string",
@@ -255,6 +259,13 @@ def parseargs(args, parser):
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
+    if options.unittest:
+        if options.jobs > 1:
+            sys.stderr.write(
+                'warning: --jobs has no effect with --unittest')
+        if options.loop:
+            sys.stderr.write(
+                'warning: --loop has no effect with --unittest')
     if options.interactive and options.debug:
         parser.error("-i/--interactive and -d/--debug are incompatible")
     if options.debug:
@@ -1172,7 +1183,18 @@ class TestRunner(object):
                     print "running all tests"
                     tests = orig
 
-            self._executetests(tests)
+            if self.options.unittest:
+                suite = unittest.TestSuite()
+                for count, testpath in enumerate(tests):
+                    suite.addTest(self._gettest(testpath, count, asunit=True))
+
+                verbosity = 1
+                if self.options.verbose:
+                    verbosity = 2
+                runner = unittest.TextTestRunner(verbosity=verbosity)
+                runner.run(suite)
+            else:
+                self._executetests(tests)
 
             failed = len(self.results['!'])
             warned = len(self.results['~'])
@@ -1207,7 +1229,7 @@ class TestRunner(object):
         if warned:
             return 80
 
-    def _gettest(self, test, count):
+    def _gettest(self, test, count, asunit=False):
         """Obtain a Test by looking at its filename.
 
         Returns a Test instance. The Test may not be runnable if it doesn't
@@ -1224,7 +1246,17 @@ class TestRunner(object):
                 refpath = os.path.join(self.testdir, test + out)
                 break
 
-        return testcls(self, test, count, refpath)
+        t = testcls(self, test, count, refpath)
+
+        if not asunit:
+            return t
+
+        # If we want a unittest compatible object, we wrap our Test.
+        class MercurialTest(unittest.TestCase):
+            def runTest(self):
+                t.run()
+
+        return MercurialTest()
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
