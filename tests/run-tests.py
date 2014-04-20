@@ -551,10 +551,21 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
-    def __init__(self, path, options, count):
+    def __init__(self, path, options, count, refpath):
         self._path = path
         self._options = options
         self._count = count
+
+        # If we're not in --debug mode and reference output file exists,
+        # check test output against it.
+        if options.debug:
+            self._refout = None # to match "out is None"
+        elif os.path.exists(refpath):
+            f = open(refpath, 'r')
+            self._refout = f.read().splitlines(True)
+            f.close()
+        else:
+            self._refout = []
 
         self._threadtmp = os.path.join(HGTMP, 'child%d' % count)
         os.mkdir(self._threadtmp)
@@ -563,7 +574,7 @@ class Test(object):
         if self._threadtmp and not self._options.keep_tmpdir:
             shutil.rmtree(self._threadtmp, True)
 
-    def run(self, result, refpath):
+    def run(self, result):
         testtmp = os.path.join(self._threadtmp, os.path.basename(self._path))
         os.mkdir(testtmp)
         replacements, port = self._getreplacements(testtmp)
@@ -589,16 +600,7 @@ class Test(object):
 
         killdaemons(env['DAEMON_PIDS'])
 
-        # If we're not in --debug mode and reference output file exists,
-        # check test output against it.
-        if self._options.debug:
-            result.refout = None # to match "out is None"
-        elif os.path.exists(refpath):
-            f = open(refpath, 'r')
-            result.refout = f.read().splitlines(True)
-            f.close()
-        else:
-            result.refout = []
+        result.refout = self._refout
 
         if not self._options.keep_tmpdir:
             shutil.rmtree(testtmp)
@@ -1084,9 +1086,9 @@ def runone(options, test, count):
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
 
-    t = runner(testpath, options, count)
+    t = runner(testpath, options, count, ref)
     res = TestResult()
-    t.run(res, ref)
+    t.run(res)
     t.cleanup()
 
     if res.interrupted:
