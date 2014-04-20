@@ -1076,6 +1076,7 @@ class TestRunner(object):
             '~': [],
             's': [],
             'i': [],
+            'u': [],
         }
         self.abort = [False]
         self._createdfiles = []
@@ -1534,14 +1535,24 @@ class TestRunner(object):
                 os.mkdir(adir)
             covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
-    def _executetests(self, tests):
+    def _executetests(self, tests, result=None):
+        # We copy because we modify the list.
+        tests = list(tests)
+
         jobs = self.options.jobs
         done = queue.Queue()
         running = 0
 
-        def job(test):
+        def job(test, result):
             try:
-                done.put(test.run())
+                # If in unittest mode.
+                if result:
+                    test(result)
+                    # We need to put something here to make the logic happy.
+                    # This will get cleaned up later.
+                    done.put(('u', None, None))
+                else:
+                    done.put(test.run())
                 test.cleanup()
             except KeyboardInterrupt:
                 pass
@@ -1565,7 +1576,7 @@ class TestRunner(object):
                     if self.options.loop:
                         tests.append(test)
                     t = threading.Thread(target=job, name=test.name,
-                                         args=[test])
+                                         args=(test, result))
                     t.start()
                     running += 1
         except KeyboardInterrupt:
