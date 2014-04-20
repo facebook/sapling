@@ -1014,8 +1014,9 @@ class TestRunner(object):
         self.abort = [False]
         self._createdfiles = []
 
-    def run(self, tests):
+    def run(self, args):
         """Run the test suite."""
+        tests = self.findtests(args)
         return self._run(tests)
 
     def _run(self, tests):
@@ -1461,9 +1462,7 @@ def main(args, runner=None, parser=None):
 
     runner.checktools()
 
-    tests = runner.findtests(args)
-
-    return runner.run(tests)
+    return runner.run(args)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
