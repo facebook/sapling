@@ -627,8 +627,6 @@ class Test(object):
         try:
             ret, out = self._run(testtmp, replacements, env)
             updateduration()
-            result.ret = ret
-            result.out = out
         except KeyboardInterrupt:
             updateduration()
             log('INTERRUPTED: %s (after %d seconds)' % (self._test,
@@ -697,6 +695,14 @@ class Test(object):
             for line in out:
                 f.write(line)
             f.close()
+
+        vlog("# Ret was:", ret)
+
+        if not options.verbose:
+            iolock.acquire()
+            sys.stdout.write(res[0])
+            sys.stdout.flush()
+            iolock.release()
 
         return res
 
@@ -793,8 +799,6 @@ class TestResult(object):
     """Holds the result of a test execution."""
 
     def __init__(self):
-        self.ret = None
-        self.out = None
         self.duration = None
         self.skipped = False
 
@@ -1157,17 +1161,7 @@ def runone(options, test, count):
     res = TestResult()
     result = t.run(res)
 
-    ret = res.ret
-    out = res.out
-
     times.append((test, res.duration))
-    vlog("# Ret was:", ret)
-
-    if not options.verbose:
-        iolock.acquire()
-        sys.stdout.write(result[0])
-        sys.stdout.flush()
-        iolock.release()
 
     t.cleanup()
 
