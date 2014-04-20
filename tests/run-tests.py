@@ -998,6 +998,11 @@ class TestResult(unittest._TextTestResult):
         # sense to map it into skip some day.
         self.ignored = []
 
+        # We have a custom "warned" result that isn't present in any Python
+        # unittest implementation. It is very similar to failed. It may make
+        # sense to map it into fail some day.
+        self.warned = []
+
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
@@ -1015,6 +1020,15 @@ class TestResult(unittest._TextTestResult):
             self.stream.writeln('ignored %s' % reason)
         else:
             self.stream.write('i')
+            self.stream.flush()
+
+    def addWarn(self, test, reason):
+        self.warned.append((test, reason))
+
+        if self.showAll:
+            self.stream.writeln('warned %s' % reason)
+        else:
+            self.stream.write('~')
             self.stream.flush()
 
 class TextTestRunner(unittest.TextTestRunner):
@@ -1313,7 +1327,7 @@ class TestRunner(object):
                 if code == '!':
                     self._result.failures.append((self, msg))
                 elif code == '~':
-                    pass
+                    self._result.addWarn(self, msg)
                 elif code == '.':
                     # Success is handled automatically by the built-in run().
                     pass
