@@ -383,6 +383,8 @@ class Test(object):
             killdaemons(entry)
 
         if self._threadtmp and not self._options.keep_tmpdir:
+            # Ignore failures here. The rmtree() in the higher level runner
+            # will try again.
             shutil.rmtree(self._threadtmp, True)
 
     def setUp(self):
@@ -525,7 +527,7 @@ class Test(object):
         self._daemonpids = []
 
         if not self._options.keep_tmpdir:
-            shutil.rmtree(self._testtmp)
+            shutil.rmtree(self._testtmp, True)
 
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
             and not self._options.debug and self._out:
