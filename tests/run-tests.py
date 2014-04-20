@@ -92,8 +92,6 @@ def Popen4(cmd, wd, timeout, env=None):
 
     return p
 
-SKIPPED_PREFIX = 'skipped: '
-FAILED_PREFIX  = 'hghave check failed: '
 PYTHON = sys.executable.replace('\\', '/')
 IMPL_PATH = 'PYTHONPATH'
 if 'java' in sys.platform:
@@ -627,6 +625,9 @@ def stringescape(s):
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
+    SKIPPED_PREFIX = 'skipped: '
+    FAILED_PREFIX = 'hghave check failed: '
+
     def _run(self, testtmp, replacements, env):
         f = open(self._path)
         lines = f.readlines()
@@ -902,12 +903,12 @@ class TTest(Test):
         missing = []
         failed = []
         for line in lines:
-            if line.startswith(SKIPPED_PREFIX):
+            if line.startswith(TTest.SKIPPED_PREFIX):
                 line = line.splitlines()[0]
-                missing.append(line[len(SKIPPED_PREFIX):])
-            elif line.startswith(FAILED_PREFIX):
+                missing.append(line[len(TTest.SKIPPED_PREFIX):])
+            elif line.startswith(TTest.FAILED_PREFIX):
                 line = line.splitlines()[0]
-                failed.append(line[len(FAILED_PREFIX):])
+                failed.append(line[len(TTest.FAILED_PREFIX):])
 
         return missing, failed
 
