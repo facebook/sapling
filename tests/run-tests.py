@@ -360,6 +360,7 @@ class Test(object):
         self._ret = None
         self._out = None
         self._duration = None
+        self._result = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -388,6 +389,7 @@ class Test(object):
         self._ret = None
         self._out = None
         self._duration = None
+        self._result = None
 
     def run(self):
         """Run this test instance.
@@ -472,13 +474,13 @@ class Test(object):
                 missing = ['irrelevant']
 
             if failed:
-                res = self.fail('hg have failed checking for %s' % failed[-1],
-                                ret)
+                self._result = self.fail('hg have failed checking for %s' %
+                                         failed[-1], ret)
             else:
                 skipped = True
-                res = self.skip(missing[-1])
+                self._result = self.skip(missing[-1])
         elif ret == 'timeout':
-            res = self.fail('timed out', ret)
+            self._result = self.fail('timed out', ret)
         elif out != self._refout:
             info = {}
             if not options.nodiff:
@@ -504,11 +506,12 @@ class Test(object):
                 for line in out:
                     f.write(line)
             f.close()
-            res = self.fail(msg, ret)
+
+            self._result = self.fail(msg, ret)
         elif ret:
-            res = self.fail(describe(ret), ret)
+            self._result = self.fail(describe(ret), ret)
         else:
-            res = self.success()
+            self._result = self.success()
 
 
         vlog("# Ret was:", ret)
@@ -517,14 +520,14 @@ class Test(object):
         # by TestResult.
         if not options.verbose and not self._unittest:
             iolock.acquire()
-            sys.stdout.write(res[0])
+            sys.stdout.write(self._result[0])
             sys.stdout.flush()
             iolock.release()
 
         if not self._unittest:
             self.tearDown()
 
-        return res
+        return self._result
 
     def tearDown(self):
         """Tasks to perform after run()."""
