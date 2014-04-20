@@ -1330,7 +1330,16 @@ class TestRunner(object):
             def run(self, result):
                 self._result = result
 
-                return super(MercurialTest, self).run(result)
+                try:
+                    self.runTest()
+                except KeyboardInterrupt:
+                    raise
+                except self.failureException:
+                    result.addFailure(self, sys.exc_info())
+                except Exception:
+                    result.addError(self, sys.exc_info())
+                else:
+                    result.addSuccess(self)
 
             def runTest(self):
                 code, tname, msg = t.run()
