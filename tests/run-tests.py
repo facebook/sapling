@@ -1107,8 +1107,45 @@ class TestSuite(unittest.TestSuite):
 class TextTestRunner(unittest.TextTestRunner):
     """Custom unittest test runner that uses appropriate settings."""
 
-    def _makeResult(self):
-        return TestResult(self.stream, self.descriptions, self.verbosity)
+    def __init__(self, runner, *args, **kwargs):
+        super(TextTestRunner, self).__init__(*args, **kwargs)
+
+        self._runner = runner
+
+    def run(self, test):
+        result = TestResult(self.stream, self.descriptions, self.verbosity)
+
+        test(result)
+
+        failed = len(result.failures)
+        warned = len(result.warned)
+        skipped = len(result.skipped)
+        ignored = len(result.ignored)
+
+        self.stream.writeln('')
+
+        if not self._runner.options.noskips:
+            for test, msg in result.skipped:
+                self.stream.writeln('Skipped %s: %s' % (test.name, msg))
+        for test, msg in result.warned:
+            self.stream.writeln('Warned %s: %s' % (test.name, msg))
+        for test, msg in result.failures:
+            self.stream.writeln('Failed %s: %s' % (test.name, msg))
+        for test, msg in result.errors:
+            self.stream.writeln('Errored %s: %s' % (test.name, msg))
+
+        self._runner._checkhglib('Tested')
+
+        # This differs from unittest's default output in that we don't count
+        # skipped and ignored tests as part of the total test count.
+        self.stream.writeln('# Ran %d tests, %d skipped, %d warned, %d failed.'
+            % (result.testsRun - skipped - ignored,
+               skipped + ignored, warned, failed))
+        if failed:
+            self.stream.writeln('python hash seed: %s' %
+                os.environ['PYTHONHASHSEED'])
+        if self._runner.options.time:
+            self._runner._outputtimes()
 
 class TestRunner(object):
     """Holds context for executing tests.
@@ -1323,7 +1360,7 @@ class TestRunner(object):
                 verbosity = 1
                 if self.options.verbose:
                     verbosity = 2
-                runner = TextTestRunner(verbosity=verbosity)
+                runner = TextTestRunner(self, verbosity=verbosity)
                 runner.run(suite)
             else:
                 self._executetests(tests)
