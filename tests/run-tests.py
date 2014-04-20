@@ -1014,10 +1014,14 @@ class TestRunner(object):
         self.abort = [False]
         self._createdfiles = []
 
-    def run(self, args):
+    def run(self, args, parser=None):
         """Run the test suite."""
         oldmask = os.umask(022)
         try:
+            parser = parser or getparser()
+            options, args = parseargs(args, parser)
+            self.options = options
+
             self._checktools()
             tests = self.findtests(args)
             return self._run(tests)
@@ -1460,11 +1464,7 @@ class TestRunner(object):
 def main(args, runner=None, parser=None):
     runner = runner or TestRunner()
 
-    parser = parser or getparser()
-    (options, args) = parseargs(args, parser)
-    runner.options = options
-
-    return runner.run(args)
+    return runner.run(args, parser=parser)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
