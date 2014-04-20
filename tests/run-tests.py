@@ -1315,6 +1315,7 @@ class TestRunner(object):
                 elif code == '~':
                     pass
                 elif code == '.':
+                    # Success is handled automatically by the built-in run().
                     pass
                 elif code == 's':
                     self._result.addSkip(self, msg)
