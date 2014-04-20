@@ -617,6 +617,8 @@ class Test(object):
         self._daemonpids.append(env['DAEMON_PIDS'])
         createhgrc(env['HGRCPATH'], options)
 
+        vlog('# Test', self._test)
+
         starttime = time.time()
         try:
             ret, out = self._run(testtmp, replacements, env)
@@ -1143,8 +1145,6 @@ def runone(options, test, count):
             break
     else:
         return skip("unknown test type")
-
-    vlog("# Test", test)
 
     t = runner(test, testpath, options, count, ref, err)
     result = t.run()
