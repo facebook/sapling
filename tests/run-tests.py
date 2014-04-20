@@ -993,6 +993,11 @@ class TestResult(unittest._TextTestResult):
         # polyfill it.
         self.skipped = []
 
+        # We have a custom "ignored" result that isn't present in any Python
+        # unittest implementation. It is very similar to skipped. It may make
+        # sense to map it into skip some day.
+        self.ignored = []
+
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
@@ -1001,6 +1006,15 @@ class TestResult(unittest._TextTestResult):
             self.stream.writeln('skipped %s' % reason)
         else:
             self.stream.write('s')
+            self.stream.flush()
+
+    def addIgnore(self, test, reason):
+        self.ignored.append((test, reason))
+
+        if self.showAll:
+            self.stream.writeln('ignored %s' % reason)
+        else:
+            self.stream.write('i')
             self.stream.flush()
 
 class TextTestRunner(unittest.TextTestRunner):
@@ -1305,7 +1319,7 @@ class TestRunner(object):
                 elif code == 's':
                     self._result.addSkip(self, msg)
                 elif code == 'i':
-                    pass
+                    self._result.addIgnore(self, msg)
                 else:
                     self.fail('Unknown test result code: %s' % code)
 
