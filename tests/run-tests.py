@@ -559,11 +559,10 @@ class Test(object):
 
         self._setreplacements(count)
 
-    def run(self):
+    def run(self, result):
         env = self._getenv()
         createhgrc(env['HGRCPATH'], self._options)
 
-        result = TestResult()
         starttime = time.time()
 
         def updateduration():
@@ -582,8 +581,6 @@ class Test(object):
             result.exception = e
 
         killdaemons(env['DAEMON_PIDS'])
-
-        return result
 
     def _run(self, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -1052,7 +1049,8 @@ def runone(options, test, count):
         os.remove(err)       # Remove any previous output files
 
     t = runner(testpath, options, count)
-    res = t.run()
+    res = TestResult()
+    t.run(res)
 
     if res.interrupted:
         log('INTERRUPTED: %s (after %d seconds)' % (test, res.duration))
