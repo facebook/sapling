@@ -581,15 +581,13 @@ class Test(object):
         if self._threadtmp and not self._options.keep_tmpdir:
             shutil.rmtree(self._threadtmp, True)
 
-    def run(self, result):
+    def run(self):
         if not os.path.exists(self._path):
-            result.skipped = True
             return self.skip("Doesn't exist")
 
         options = self._options
         if not (options.whitelisted and self._test in options.whitelisted):
             if options.blacklist and self._test in options.blacklist:
-                result.skipped = True
                 return self.skip('blacklisted')
 
             if options.retest and not os.path.exists('%s.err' % self._test):
@@ -620,20 +618,14 @@ class Test(object):
         createhgrc(env['HGRCPATH'], options)
 
         starttime = time.time()
-
-        def updateduration():
-            result.duration = time.time() - starttime
-
         try:
             ret, out = self._run(testtmp, replacements, env)
-            updateduration()
+            duration = time.time() - starttime
         except KeyboardInterrupt:
-            updateduration()
-            log('INTERRUPTED: %s (after %d seconds)' % (self._test,
-                                                        result.duration))
+            duration = time.time() - starttime
+            log('INTERRUPTED: %s (after %d seconds)' % (self._test, duration))
             raise
         except Exception, e:
-            updateduration()
             return self.fail('Exception during execution: %s' % e, 255)
 
         killdaemons(env['DAEMON_PIDS'])
@@ -645,6 +637,8 @@ class Test(object):
             if ret < 0:
                 return 'killed by signal: %d' % -ret
             return 'returned error code %d' % ret
+
+        skipped = False
 
         if ret == SKIPPED_STATUS:
             if out is None: # Debug mode, nothing to parse.
@@ -660,7 +654,7 @@ class Test(object):
                 res = self.fail('hg have failed checking for %s' % failed[-1],
                                 ret)
             else:
-                result.skipped = True
+                skipped = True
                 res = self.skip(missing[-1])
         elif ret == 'timeout':
             res = self.fail('timed out', ret)
@@ -689,7 +683,7 @@ class Test(object):
         else:
             res = self.success()
 
-        if (ret != 0 or out != self._refout) and not result.skipped \
+        if (ret != 0 or out != self._refout) and not skipped \
             and not options.debug:
             f = open(self._errpath, 'wb')
             for line in out:
@@ -703,6 +697,8 @@ class Test(object):
             sys.stdout.write(res[0])
             sys.stdout.flush()
             iolock.release()
+
+        times.append((self._test, duration))
 
         return res
 
@@ -794,13 +790,6 @@ class Test(object):
 
     def ignore(self, msg):
         return 'i', self._test, msg
-
-class TestResult(object):
-    """Holds the result of a test execution."""
-
-    def __init__(self):
-        self.duration = None
-        self.skipped = False
 
 class PythonTest(Test):
     """A Python-based test."""
@@ -1158,10 +1147,7 @@ def runone(options, test, count):
     vlog("# Test", test)
 
     t = runner(test, testpath, options, count, ref, err)
-    res = TestResult()
-    result = t.run(res)
-
-    times.append((test, res.duration))
+    result = t.run()
 
     t.cleanup()
 
