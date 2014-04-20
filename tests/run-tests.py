@@ -635,6 +635,8 @@ class Test(object):
             else:
                 result.skipped = True
                 return self.skip(missing[-1])
+        elif ret == 'timeout':
+            return self.fail('timed out', ret)
 
     def _run(self, testtmp, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -1143,8 +1145,6 @@ def runone(options, test, count):
 
     if result:
         pass
-    elif ret == 'timeout':
-        result = t.fail("timed out", ret)
     elif out != refout:
         info = {}
         if not options.nodiff:
