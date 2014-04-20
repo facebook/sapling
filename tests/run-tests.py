@@ -1251,12 +1251,18 @@ class TestRunner(object):
         if not asunit:
             return t
 
-        # If we want a unittest compatible object, we wrap our Test.
         class MercurialTest(unittest.TestCase):
+            def __init__(self, name, *args, **kwargs):
+                super(MercurialTest, self).__init__(*args, **kwargs)
+                self.name = name
+
+            def shortDescription(self):
+                return self.name
+
             def runTest(self):
                 t.run()
 
-        return MercurialTest()
+        return MercurialTest(test)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
