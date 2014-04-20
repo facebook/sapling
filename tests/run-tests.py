@@ -1019,6 +1019,34 @@ class TestRunner(object):
         return self._run(tests)
 
     def _run(self, tests):
+        if self.options.with_hg:
+            self.inst = None
+            self.bindir = os.path.dirname(os.path.realpath(
+                                          self.options.with_hg))
+            self.tmpbindir = os.path.join(self.hgtmp, 'install', 'bin')
+            os.makedirs(self.tmpbindir)
+
+            # This looks redundant with how Python initializes sys.path from
+            # the location of the script being executed.  Needed because the
+            # "hg" specified by --with-hg is not the only Python script
+            # executed in the test suite that needs to import 'mercurial'
+            # ... which means it's not really redundant at all.
+            self.pythondir = self.bindir
+        else:
+            self.inst = os.path.join(self.hgtmp, "install")
+            self.bindir = os.environ["BINDIR"] = os.path.join(self.inst,
+                                                              "bin")
+            self.tmpbindir = self.bindir
+            self.pythondir = os.path.join(self.inst, "lib", "python")
+
+        os.environ["BINDIR"] = self.bindir
+        os.environ["PYTHON"] = PYTHON
+
+        path = [self.bindir] + os.environ["PATH"].split(os.pathsep)
+        if self.tmpbindir != self.bindir:
+            path = [self.tmpbindir] + path
+        os.environ["PATH"] = os.pathsep.join(path)
+
         # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
@@ -1433,33 +1461,6 @@ def main(args, runner=None, parser=None):
             d = os.getenv('TMP')
         tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
     runner.hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
-
-    if options.with_hg:
-        runner.inst = None
-        runner.bindir = os.path.dirname(os.path.realpath(options.with_hg))
-        runner.tmpbindir = os.path.join(runner.hgtmp, 'install', 'bin')
-        os.makedirs(runner.tmpbindir)
-
-        # This looks redundant with how Python initializes sys.path from
-        # the location of the script being executed.  Needed because the
-        # "hg" specified by --with-hg is not the only Python script
-        # executed in the test suite that needs to import 'mercurial'
-        # ... which means it's not really redundant at all.
-        runner.pythondir = runner.bindir
-    else:
-        runner.inst = os.path.join(runner.hgtmp, "install")
-        runner.bindir = os.environ["BINDIR"] = os.path.join(runner.inst,
-                                                            "bin")
-        runner.tmpbindir = runner.bindir
-        runner.pythondir = os.path.join(runner.inst, "lib", "python")
-
-    os.environ["BINDIR"] = runner.bindir
-    os.environ["PYTHON"] = PYTHON
-
-    path = [runner.bindir] + os.environ["PATH"].split(os.pathsep)
-    if runner.tmpbindir != runner.bindir:
-        path = [runner.tmpbindir] + path
-    os.environ["PATH"] = os.pathsep.join(path)
 
     return runner.run(tests)
 
