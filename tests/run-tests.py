@@ -1182,7 +1182,7 @@ times = []
 iolock = threading.Lock()
 abort = False
 
-def scheduletests(options, tests):
+def scheduletests(runner, options, tests):
     jobs = options.jobs
     done = queue.Queue()
     running = 0
@@ -1222,7 +1222,7 @@ def scheduletests(options, tests):
     except KeyboardInterrupt:
         abort = True
 
-def runtests(options, tests):
+def runtests(runner, options, tests):
     try:
         if INST:
             installhg(options)
@@ -1240,7 +1240,7 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
-        scheduletests(options, tests)
+        scheduletests(runner, options, tests)
 
         failed = len(results['!'])
         warned = len(results['~'])
@@ -1278,7 +1278,15 @@ def runtests(options, tests):
 testtypes = [('.py', PythonTest, '.out'),
              ('.t', TTest, '')]
 
+class TestRunner(object):
+    """Holds context for executing tests.
+
+    Tests rely on a lot of state. This object holds it for them.
+    """
+
 def main(args, parser=None):
+    runner = TestRunner()
+
     parser = parser or getparser()
     (options, args) = parseargs(args, parser)
     os.umask(022)
@@ -1397,7 +1405,7 @@ def main(args, parser=None):
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        return runtests(options, tests) or 0
+        return runtests(runner, options, tests) or 0
     finally:
         time.sleep(.1)
         cleanup(options)
