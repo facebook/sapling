@@ -607,6 +607,10 @@ class Test(object):
         if self._unittest:
             if warned:
                 raise WarnTest(msg)
+            else:
+                # unittest differentiates between errored and failed.
+                # Failed is denoted by AssertionError (by default at least).
+                raise AssertionError(msg)
 
         return warned and '~' or '!', self.name, msg
 
@@ -1347,8 +1351,6 @@ class TestRunner(object):
             # Need to stash away the TestResult since we do custom things
             # with it.
             def run(self, result):
-                self._result = result
-
                 try:
                     self.runTest()
                 except KeyboardInterrupt:
@@ -1369,13 +1371,9 @@ class TestRunner(object):
             def runTest(self):
                 code, tname, msg = t.run()
 
-                if code == '!':
-                    self._result.failures.append((self, msg))
-                # Codes handled in run().
-                elif code in ('.', 's', 'i', '~'):
-                    pass
-                else:
-                    self.fail('Unknown test result code: %s' % code)
+                # All non-success conditions should be exceptions and should
+                # be caught in run().
+                assert code == '.'
 
             # We need this proxy until tearDown() is implemented.
             def cleanup(self):
