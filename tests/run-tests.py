@@ -1287,6 +1287,7 @@ class TestRunner(object):
     Tests rely on a lot of state. This object holds it for them.
     """
     def __init__(self):
+        self.options = None
         self.testdir = None
         self.hgtmp = None
         self.inst = None
@@ -1300,6 +1301,7 @@ def main(args, parser=None):
 
     parser = parser or getparser()
     (options, args) = parseargs(args, parser)
+    runner.options = options
     os.umask(022)
 
     checktools()
