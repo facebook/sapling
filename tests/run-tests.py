@@ -927,26 +927,6 @@ class TTest(Test):
                 return '+glob'
         return False
 
-def gettest(runner, test, count):
-    """Obtain a Test by looking at its filename.
-
-    Returns a Test instance. The Test may not be runnable if it doesn't map
-    to a known type.
-    """
-
-    lctest = test.lower()
-    refpath = os.path.join(runner.testdir, test)
-
-    testcls = Test
-
-    for ext, cls, out in testtypes:
-        if lctest.endswith(ext):
-            testcls = cls
-            refpath = os.path.join(runner.testdir, test + out)
-            break
-
-    return testcls(runner, test, count, refpath)
-
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
     """Run command in a sub-process, capturing the output (stdout and stderr).
@@ -1024,7 +1004,7 @@ def scheduletests(runner, tests):
 
     def job(test, count):
         try:
-            t = gettest(runner, test, count)
+            t = runner.gettest(test, count)
             done.put(t.run())
             t.cleanup()
         except KeyboardInterrupt:
@@ -1108,14 +1088,17 @@ def runtests(runner, tests):
     if warned:
         return 80
 
-testtypes = [('.py', PythonTest, '.out'),
-             ('.t', TTest, '')]
-
 class TestRunner(object):
     """Holds context for executing tests.
 
     Tests rely on a lot of state. This object holds it for them.
     """
+
+    TESTTYPES = [
+        ('.py', PythonTest, '.out'),
+        ('.t', TTest, ''),
+    ]
+
     def __init__(self):
         self.options = None
         self.testdir = None
@@ -1126,6 +1109,25 @@ class TestRunner(object):
         self.pythondir = None
         self.coveragefile = None
         self._createdfiles = []
+
+    def gettest(self, test, count):
+        """Obtain a Test by looking at its filename.
+
+        Returns a Test instance. The Test may not be runnable if it doesn't
+        map to a known type.
+        """
+        lctest = test.lower()
+        refpath = os.path.join(self.testdir, test)
+
+        testcls = Test
+
+        for ext, cls, out in self.TESTTYPES:
+            if lctest.endswith(ext):
+                testcls = cls
+                refpath = os.path.join(self.testdir, test + out)
+                break
+
+        return testcls(self, test, count, refpath)
 
     def cleanup(self):
         """Clean up state from this test invocation."""
