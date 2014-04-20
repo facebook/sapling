@@ -1019,6 +1019,23 @@ class TestRunner(object):
         return self._run(tests)
 
     def _run(self, tests):
+        # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
+        # can run .../tests/run-tests.py test-foo where test-foo
+        # adds an extension to HGRC. Also include run-test.py directory to
+        # import modules like heredoctest.
+        pypath = [self.pythondir, self.testdir,
+                  os.path.abspath(os.path.dirname(__file__))]
+        # We have to augment PYTHONPATH, rather than simply replacing
+        # it, in case external libraries are only available via current
+        # PYTHONPATH.  (In particular, the Subversion bindings on OS X
+        # are in /opt/subversion.)
+        oldpypath = os.environ.get(IMPL_PATH)
+        if oldpypath:
+            pypath.append(oldpypath)
+        os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+
+        self.coveragefile = os.path.join(self.testdir, '.coverage')
+
         vlog("# Using TESTDIR", self.testdir)
         vlog("# Using HGTMP", self.hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
@@ -1443,23 +1460,6 @@ def main(args, runner=None, parser=None):
     if runner.tmpbindir != runner.bindir:
         path = [runner.tmpbindir] + path
     os.environ["PATH"] = os.pathsep.join(path)
-
-    # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
-    # can run .../tests/run-tests.py test-foo where test-foo
-    # adds an extension to HGRC. Also include run-test.py directory to import
-    # modules like heredoctest.
-    pypath = [runner.pythondir, runner.testdir,
-              os.path.abspath(os.path.dirname(__file__))]
-    # We have to augment PYTHONPATH, rather than simply replacing
-    # it, in case external libraries are only available via current
-    # PYTHONPATH.  (In particular, the Subversion bindings on OS X
-    # are in /opt/subversion.)
-    oldpypath = os.environ.get(IMPL_PATH)
-    if oldpypath:
-        pypath.append(oldpypath)
-    os.environ[IMPL_PATH] = os.pathsep.join(pypath)
-
-    runner.coveragefile = os.path.join(runner.testdir, ".coverage")
 
     return runner.run(tests)
 
