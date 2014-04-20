@@ -460,7 +460,7 @@ def installhg(runner, options):
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
            % {'exe': sys.executable, 'py3': py3, 'pure': pure,
               'compiler': compiler, 'base': os.path.join(runner.hgtmp, "build"),
-              'prefix': INST, 'libdir': PYTHONDIR, 'bindir': BINDIR,
+              'prefix': runner.inst, 'libdir': PYTHONDIR, 'bindir': BINDIR,
               'nohome': nohome, 'logfile': installerrs})
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
@@ -511,7 +511,7 @@ def installhg(runner, options):
         rc = os.path.join(runner.testdir, '.coveragerc')
         vlog('# Installing coverage rc to %s' % rc)
         os.environ['COVERAGE_PROCESS_START'] = rc
-        fn = os.path.join(INST, '..', '.coverage')
+        fn = os.path.join(runner.inst, '..', '.coverage')
         os.environ['COVERAGE_FILE'] = fn
 
 def outputtimes(options):
@@ -1225,7 +1225,7 @@ def scheduletests(runner, options, tests):
 
 def runtests(runner, options, tests):
     try:
-        if INST:
+        if runner.inst:
             installhg(runner, options)
             _checkhglib("Testing")
         else:
@@ -1287,6 +1287,7 @@ class TestRunner(object):
     def __init__(self):
         self.testdir = None
         self.hgtmp = None
+        self.inst = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1334,7 +1335,7 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
+    global BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1362,7 +1363,7 @@ def main(args, parser=None):
     runner.hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
 
     if options.with_hg:
-        INST = None
+        runner.inst = None
         BINDIR = os.path.dirname(os.path.realpath(options.with_hg))
         TMPBINDIR = os.path.join(runner.hgtmp, 'install', 'bin')
         os.makedirs(TMPBINDIR)
@@ -1374,10 +1375,10 @@ def main(args, parser=None):
         # ... which means it's not really redundant at all.
         PYTHONDIR = BINDIR
     else:
-        INST = os.path.join(runner.hgtmp, "install")
-        BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
+        runner.inst = os.path.join(runner.hgtmp, "install")
+        BINDIR = os.environ["BINDIR"] = os.path.join(runner.inst, "bin")
         TMPBINDIR = BINDIR
-        PYTHONDIR = os.path.join(INST, "lib", "python")
+        PYTHONDIR = os.path.join(runner.inst, "lib", "python")
 
     os.environ["BINDIR"] = BINDIR
     os.environ["PYTHON"] = PYTHON
