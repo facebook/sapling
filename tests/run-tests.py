@@ -616,6 +616,9 @@ class Test(object):
         return 's', self.name, msg
 
     def ignore(self, msg):
+        if self._unittest:
+            raise IgnoreTest(msg)
+
         return 'i', self.name, msg
 
 class PythonTest(Test):
@@ -985,6 +988,9 @@ iolock = threading.Lock()
 class SkipTest(Exception):
     """Raised to indicate that a test is to be skipped."""
 
+class IgnoreTest(Exception):
+    """Raised to indicate that a test is to be ignored."""
+
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -1342,6 +1348,8 @@ class TestRunner(object):
                     raise
                 except SkipTest, e:
                     result.addSkip(self, str(e))
+                except IgnoreTest, e:
+                    result.addIgnore(self, str(e))
                 except self.failureException:
                     result.addFailure(self, sys.exc_info())
                 except Exception:
@@ -1356,10 +1364,8 @@ class TestRunner(object):
                     self._result.failures.append((self, msg))
                 elif code == '~':
                     self._result.addWarn(self, msg)
-                elif code == 'i':
-                    self._result.addIgnore(self, msg)
                 # Codes handled in run().
-                elif code in ('.', 's'):
+                elif code in ('.', 's', 'i'):
                     pass
                 else:
                     self.fail('Unknown test result code: %s' % code)
