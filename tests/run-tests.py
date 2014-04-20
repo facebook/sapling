@@ -1016,6 +1016,7 @@ class TestRunner(object):
 
     def run(self, args):
         """Run the test suite."""
+        self._checktools()
         tests = self.findtests(args)
         return self._run(tests)
 
@@ -1440,7 +1441,7 @@ class TestRunner(object):
                 return name
         return None
 
-    def checktools(self):
+    def _checktools(self):
         # Before we go any further, check for pre-requisite tools
         # stuff from coreutils (cat, rm, etc) are not tested
         for p in self.REQUIREDTOOLS:
@@ -1459,8 +1460,6 @@ def main(args, runner=None, parser=None):
     (options, args) = parseargs(args, parser)
     runner.options = options
     os.umask(022)
-
-    runner.checktools()
 
     return runner.run(args)
 
