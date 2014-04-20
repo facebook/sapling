@@ -1019,6 +1019,8 @@ class TestRunner(object):
         return self._run(tests)
 
     def _run(self, tests):
+        self.testdir = os.environ['TESTDIR'] = os.getcwd()
+
         if 'PYTHONHASHSEED' not in os.environ:
             # use a random python hash seed all the time
             # we do the randomness ourself to know what seed is used
@@ -1460,8 +1462,6 @@ def main(args, runner=None, parser=None):
                     val *= 10
             return val
         tests.sort(key=sortkey)
-
-    runner.testdir = os.environ['TESTDIR'] = os.getcwd()
 
     return runner.run(tests)
 
