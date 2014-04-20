@@ -460,7 +460,8 @@ def installhg(runner, options):
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
            % {'exe': sys.executable, 'py3': py3, 'pure': pure,
               'compiler': compiler, 'base': os.path.join(runner.hgtmp, "build"),
-              'prefix': runner.inst, 'libdir': PYTHONDIR, 'bindir': BINDIR,
+              'prefix': runner.inst, 'libdir': PYTHONDIR,
+              'bindir': runner.bindir,
               'nohome': nohome, 'logfile': installerrs})
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
@@ -478,16 +479,16 @@ def installhg(runner, options):
 
     if options.py3k_warnings and not options.anycoverage:
         vlog("# Updating hg command to enable Py3k Warnings switch")
-        f = open(os.path.join(BINDIR, 'hg'), 'r')
+        f = open(os.path.join(runner.bindir, 'hg'), 'r')
         lines = [line.rstrip() for line in f]
         lines[0] += ' -3'
         f.close()
-        f = open(os.path.join(BINDIR, 'hg'), 'w')
+        f = open(os.path.join(runner.bindir, 'hg'), 'w')
         for line in lines:
             f.write(line + '\n')
         f.close()
 
-    hgbat = os.path.join(BINDIR, 'hg.bat')
+    hgbat = os.path.join(runner.bindir, 'hg.bat')
     if os.path.isfile(hgbat):
         # hg.bat expects to be put in bin/scripts while run-tests.py
         # installation layout put it in bin/ directly. Fix it
@@ -533,7 +534,8 @@ def outputcoverage(runner, options):
         os.system(cmd)
 
     covrun('-c')
-    omit = ','.join(os.path.join(x, '*') for x in [BINDIR, runner.testdir])
+    omit = ','.join(os.path.join(x, '*') for x in
+                    [runner.bindir, runner.testdir])
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
     if options.htmlcov:
         htmldir = os.path.join(runner.testdir, 'htmlcov')
@@ -1288,6 +1290,7 @@ class TestRunner(object):
         self.testdir = None
         self.hgtmp = None
         self.inst = None
+        self.bindir = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1335,7 +1338,7 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
+    global TMPBINDIR, PYTHONDIR, COVERAGE_FILE
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1364,7 +1367,7 @@ def main(args, parser=None):
 
     if options.with_hg:
         runner.inst = None
-        BINDIR = os.path.dirname(os.path.realpath(options.with_hg))
+        runner.bindir = os.path.dirname(os.path.realpath(options.with_hg))
         TMPBINDIR = os.path.join(runner.hgtmp, 'install', 'bin')
         os.makedirs(TMPBINDIR)
 
@@ -1373,18 +1376,19 @@ def main(args, parser=None):
         # "hg" specified by --with-hg is not the only Python script
         # executed in the test suite that needs to import 'mercurial'
         # ... which means it's not really redundant at all.
-        PYTHONDIR = BINDIR
+        PYTHONDIR = runner.bindir
     else:
         runner.inst = os.path.join(runner.hgtmp, "install")
-        BINDIR = os.environ["BINDIR"] = os.path.join(runner.inst, "bin")
-        TMPBINDIR = BINDIR
+        runner.bindir = os.environ["BINDIR"] = os.path.join(runner.inst,
+                                                            "bin")
+        TMPBINDIR = runner.bindir
         PYTHONDIR = os.path.join(runner.inst, "lib", "python")
 
-    os.environ["BINDIR"] = BINDIR
+    os.environ["BINDIR"] = runner.bindir
     os.environ["PYTHON"] = PYTHON
 
-    path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
-    if TMPBINDIR != BINDIR:
+    path = [runner.bindir] + os.environ["PATH"].split(os.pathsep)
+    if TMPBINDIR != runner.bindir:
         path = [TMPBINDIR] + path
     os.environ["PATH"] = os.pathsep.join(path)
 
