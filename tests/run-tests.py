@@ -456,8 +456,6 @@ class Test(object):
         except Exception, e:
             return self.fail('Exception during execution: %s' % e, 255)
 
-        killdaemons(env['DAEMON_PIDS'])
-
         def describe(ret):
             if ret < 0:
                 return 'killed by signal: %d' % -ret
@@ -522,6 +520,10 @@ class Test(object):
 
     def tearDown(self):
         """Tasks to perform after run()."""
+        for entry in self._daemonpids:
+            killdaemons(entry)
+        self._daemonpids = []
+
         if not self._options.keep_tmpdir:
             shutil.rmtree(self._testtmp)
 
