@@ -969,23 +969,6 @@ def run(cmd, wd, options, replacements, env, abort):
         output = re.sub(s, r, output)
     return ret, output.splitlines(True)
 
-_hgpath = None
-
-def _gethgpath():
-    """Return the path to the mercurial package that is actually found by
-    the current Python interpreter."""
-    global _hgpath
-    if _hgpath is not None:
-        return _hgpath
-
-    cmd = '%s -c "import mercurial; print (mercurial.__path__[0])"'
-    pipe = os.popen(cmd % PYTHON)
-    try:
-        _hgpath = pipe.read().strip()
-    finally:
-        pipe.close()
-    return _hgpath
-
 iolock = threading.Lock()
 
 class TestRunner(object):
@@ -1028,6 +1011,7 @@ class TestRunner(object):
         }
         self.abort = [False]
         self._createdfiles = []
+        self._hgpath = None
 
     def run(self, args, parser=None):
         """Run the test suite."""
@@ -1379,11 +1363,25 @@ class TestRunner(object):
         """Ensure that the 'mercurial' package imported by python is
         the one we expect it to be.  If not, print a warning to stderr."""
         expecthg = os.path.join(self.pythondir, 'mercurial')
-        actualhg = _gethgpath()
+        actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
                              '         (expected %s)\n'
                              % (verb, actualhg, expecthg))
+    def _gethgpath(self):
+        """Return the path to the mercurial package that is actually found by
+        the current Python interpreter."""
+        if self._hgpath is not None:
+            return self._hgpath
+
+        cmd = '%s -c "import mercurial; print (mercurial.__path__[0])"'
+        pipe = os.popen(cmd % PYTHON)
+        try:
+            self._hgpath = pipe.read().strip()
+        finally:
+            pipe.close()
+
+        return self._hgpath
 
     def _outputtimes(self):
         vlog('# Producing time report')
