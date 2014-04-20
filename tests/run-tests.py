@@ -1041,16 +1041,6 @@ def _gethgpath():
         pipe.close()
     return _hgpath
 
-def _checkhglib(runner, verb):
-    """Ensure that the 'mercurial' package imported by python is
-    the one we expect it to be.  If not, print a warning to stderr."""
-    expecthg = os.path.join(runner.pythondir, 'mercurial')
-    actualhg = _gethgpath()
-    if os.path.abspath(actualhg) != os.path.abspath(expecthg):
-        sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
-                         '         (expected %s)\n'
-                         % (verb, actualhg, expecthg))
-
 results = {'.':[], '!':[], '~': [], 's':[], 'i':[]}
 times = []
 iolock = threading.Lock()
@@ -1100,7 +1090,7 @@ def runtests(runner, tests):
     try:
         if runner.inst:
             runner.installhg()
-            _checkhglib(runner, "Testing")
+            runner.checkhglib("Testing")
         else:
             runner.usecorrectpython()
 
@@ -1130,7 +1120,7 @@ def runtests(runner, tests):
             print "Warned %s: %s" % s
         for s in results['!']:
             print "Failed %s: %s" % s
-        _checkhglib(runner, "Tested")
+        runner.checkhglib("Tested")
         print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
             tested, skipped + ignored, warned, failed)
         if results['!']:
@@ -1300,6 +1290,16 @@ class TestRunner(object):
             os.environ['COVERAGE_PROCESS_START'] = rc
             fn = os.path.join(self.inst, '..', '.coverage')
             os.environ['COVERAGE_FILE'] = fn
+
+    def checkhglib(self, verb):
+        """Ensure that the 'mercurial' package imported by python is
+        the one we expect it to be.  If not, print a warning to stderr."""
+        expecthg = os.path.join(self.pythondir, 'mercurial')
+        actualhg = _gethgpath()
+        if os.path.abspath(actualhg) != os.path.abspath(expecthg):
+            sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
+                             '         (expected %s)\n'
+                             % (verb, actualhg, expecthg))
 
 def main(args, parser=None):
     runner = TestRunner()
