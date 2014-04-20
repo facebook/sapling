@@ -604,6 +604,10 @@ class Test(object):
 
                 return '.', self.name, ''
 
+        if self._unittest:
+            if warned:
+                raise WarnTest(msg)
+
         return warned and '~' or '!', self.name, msg
 
     def skip(self, msg):
@@ -991,6 +995,9 @@ class SkipTest(Exception):
 class IgnoreTest(Exception):
     """Raised to indicate that a test is to be ignored."""
 
+class WarnTest(Exception):
+    """Raised to indicate that a test warned."""
+
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -1350,6 +1357,8 @@ class TestRunner(object):
                     result.addSkip(self, str(e))
                 except IgnoreTest, e:
                     result.addIgnore(self, str(e))
+                except WarnTest, e:
+                    result.addWarn(self, str(e))
                 except self.failureException:
                     result.addFailure(self, sys.exc_info())
                 except Exception:
@@ -1362,10 +1371,8 @@ class TestRunner(object):
 
                 if code == '!':
                     self._result.failures.append((self, msg))
-                elif code == '~':
-                    self._result.addWarn(self, msg)
                 # Codes handled in run().
-                elif code in ('.', 's', 'i'):
+                elif code in ('.', 's', 'i', '~'):
                     pass
                 else:
                     self.fail('Unknown test result code: %s' % code)
