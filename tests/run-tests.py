@@ -649,7 +649,8 @@ class PythonTest(Test):
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        return run(cmd, testtmp, self._options, replacements, env)
+        return run(cmd, testtmp, self._options, replacements, env,
+                   self._runner.abort)
 
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
@@ -681,7 +682,8 @@ class TTest(Test):
         cmd = '%s "%s"' % (self._options.shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = run(cmd, testtmp, self._options, replacements, env)
+        exitcode, output = run(cmd, testtmp, self._options, replacements, env,
+                               self._runner.abort)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
         if exitcode == SKIPPED_STATUS or output is None:
@@ -929,7 +931,7 @@ class TTest(Test):
         return False
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, options, replacements, env):
+def run(cmd, wd, options, replacements, env, abort):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
@@ -967,7 +969,7 @@ def run(cmd, wd, options, replacements, env):
     if ret:
         killdaemons(env['DAEMON_PIDS'])
 
-    if abort:
+    if abort[0]:
         raise KeyboardInterrupt()
 
     for s, r in replacements:
@@ -992,14 +994,12 @@ def _gethgpath():
     return _hgpath
 
 iolock = threading.Lock()
-abort = False
 
 def scheduletests(runner, tests):
     jobs = runner.options.jobs
     done = queue.Queue()
     running = 0
     count = 0
-    global abort
 
     def job(test, count):
         try:
@@ -1032,7 +1032,7 @@ def scheduletests(runner, tests):
                 running += 1
                 count += 1
     except KeyboardInterrupt:
-        abort = True
+        runner.abort[0] = True
 
 class TestRunner(object):
     """Holds context for executing tests.
@@ -1062,6 +1062,7 @@ class TestRunner(object):
             's': [],
             'i': [],
         }
+        self.abort = [False]
         self._createdfiles = []
 
     def runtests(self, tests):
