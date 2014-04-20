@@ -989,6 +989,20 @@ class TestResult(unittest._TextTestResult):
     def __init__(self, *args, **kwargs):
         super(TestResult, self).__init__(*args, **kwargs)
 
+        # unittest.TestResult didn't have skipped until 2.7. We need to
+        # polyfill it.
+        self.skipped = []
+
+    # Polyfill.
+    def addSkip(self, test, reason):
+        self.skipped.append((test, reason))
+
+        if self.showAll:
+            self.stream.writeln('skipped %s' % reason)
+        else:
+            self.stream.write('s')
+            self.stream.flush()
+
 class TextTestRunner(unittest.TextTestRunner):
     """Custom unittest test runner that uses appropriate settings."""
 
@@ -1289,7 +1303,7 @@ class TestRunner(object):
                 elif code == '.':
                     pass
                 elif code == 's':
-                    pass
+                    self._result.addSkip(self, msg)
                 elif code == 'i':
                     pass
                 else:
