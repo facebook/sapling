@@ -551,7 +551,10 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
-    def __init__(self, test, path, options, count, refpath, errpath):
+    def __init__(self, testdir, test, options, count, refpath):
+        path = os.path.join(testdir, test)
+        errpath = os.path.join(testdir, '%s.err' % test)
+
         self._test = test
         self._path = path
         self._options = options
@@ -1134,8 +1137,6 @@ def runone(options, test, count):
             log("\nSkipping %s: %s" % (testpath, msg))
         return 's', test, msg
 
-    testpath = os.path.join(TESTDIR, test)
-    err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
 
     for ext, cls, out in testtypes:
@@ -1146,7 +1147,7 @@ def runone(options, test, count):
     else:
         return skip("unknown test type")
 
-    t = runner(test, testpath, options, count, ref, err)
+    t = runner(TESTDIR, test, options, count, ref)
     result = t.run()
 
     t.cleanup()
