@@ -995,45 +995,6 @@ def _gethgpath():
 
 iolock = threading.Lock()
 
-def scheduletests(runner, tests):
-    jobs = runner.options.jobs
-    done = queue.Queue()
-    running = 0
-    count = 0
-
-    def job(test, count):
-        try:
-            t = runner.gettest(test, count)
-            done.put(t.run())
-            t.cleanup()
-        except KeyboardInterrupt:
-            pass
-        except: # re-raises
-            done.put(('!', test, 'run-test raised an error, see traceback'))
-            raise
-
-    try:
-        while tests or running:
-            if not done.empty() or running == jobs or not tests:
-                try:
-                    code, test, msg = done.get(True, 1)
-                    runner.results[code].append((test, msg))
-                    if runner.options.first and code not in '.si':
-                        break
-                except queue.Empty:
-                    continue
-                running -= 1
-            if tests and not running == jobs:
-                test = tests.pop(0)
-                if runner.options.loop:
-                    tests.append(test)
-                t = threading.Thread(target=job, name=test, args=(test, count))
-                t.start()
-                running += 1
-                count += 1
-    except KeyboardInterrupt:
-        runner.abort[0] = True
-
 class TestRunner(object):
     """Holds context for executing tests.
 
@@ -1083,7 +1044,7 @@ class TestRunner(object):
                     print "running all tests"
                     tests = orig
 
-            scheduletests(self, tests)
+            self._executetests(tests)
 
             failed = len(self.results['!'])
             warned = len(self.results['~'])
@@ -1310,6 +1271,46 @@ class TestRunner(object):
             if not os.path.isdir(adir):
                 os.mkdir(adir)
             covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
+
+    def _executetests(self, tests):
+        jobs = self.options.jobs
+        done = queue.Queue()
+        running = 0
+        count = 0
+
+        def job(test, count):
+            try:
+                t = self.gettest(test, count)
+                done.put(t.run())
+                t.cleanup()
+            except KeyboardInterrupt:
+                pass
+            except: # re-raises
+                done.put(('!', test, 'run-test raised an error, see traceback'))
+                raise
+
+        try:
+            while tests or running:
+                if not done.empty() or running == jobs or not tests:
+                    try:
+                        code, test, msg = done.get(True, 1)
+                        self.results[code].append((test, msg))
+                        if self.options.first and code not in '.si':
+                            break
+                    except queue.Empty:
+                        continue
+                    running -= 1
+                if tests and not running == jobs:
+                    test = tests.pop(0)
+                    if self.options.loop:
+                        tests.append(test)
+                    t = threading.Thread(target=job, name=test,
+                                         args=(test, count))
+                    t.start()
+                    running += 1
+                    count += 1
+        except KeyboardInterrupt:
+            self.abort[0] = True
 
 def main(args, parser=None):
     runner = TestRunner()
