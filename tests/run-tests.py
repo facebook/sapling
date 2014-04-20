@@ -388,15 +388,17 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def cleanup(runner, options):
-    if not options.keep_tmpdir:
-        vlog("# Cleaning up HGTMP", runner.hgtmp)
-        shutil.rmtree(runner.hgtmp, True)
-        for f in createdfiles:
-            try:
-                os.remove(f)
-            except OSError:
-                pass
+def cleanup(runner):
+    if runner.options.keep_tmpdir:
+        return
+
+    vlog("# Cleaning up HGTMP", runner.hgtmp)
+    shutil.rmtree(runner.hgtmp, True)
+    for f in createdfiles:
+        try:
+            os.remove(f)
+        except OSError:
+            pass
 
 def usecorrectpython(runner):
     # some tests run python interpreter. they must use same
@@ -432,13 +434,13 @@ def usecorrectpython(runner):
         if not findprogram(pyexename):
             print "WARNING: Cannot find %s in search path" % pyexename
 
-def installhg(runner, options):
+def installhg(runner):
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
     compiler = ''
-    if options.compiler:
-        compiler = '--compiler ' + options.compiler
-    pure = options.pure and "--pure" or ""
+    if runner.options.compiler:
+        compiler = '--compiler ' + runner.options.compiler
+    pure = runner.options.pure and "--pure" or ""
     py3 = ''
     if sys.version_info[0] == 3:
         py3 = '--c2to3'
@@ -465,7 +467,7 @@ def installhg(runner, options):
               'nohome': nohome, 'logfile': installerrs})
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
-        if not options.verbose:
+        if not runner.options.verbose:
             os.remove(installerrs)
     else:
         f = open(installerrs)
@@ -477,7 +479,7 @@ def installhg(runner, options):
 
     usecorrectpython(runner)
 
-    if options.py3k_warnings and not options.anycoverage:
+    if runner.options.py3k_warnings and not runner.options.anycoverage:
         vlog("# Updating hg command to enable Py3k Warnings switch")
         f = open(os.path.join(runner.bindir, 'hg'), 'r')
         lines = [line.rstrip() for line in f]
@@ -504,7 +506,7 @@ def installhg(runner, options):
         else:
             print 'WARNING: cannot fix hg.bat reference to python.exe'
 
-    if options.anycoverage:
+    if runner.options.anycoverage:
         custom = os.path.join(runner.testdir, 'sitecustomize.py')
         target = os.path.join(runner.pythondir, 'sitecustomize.py')
         vlog('# Installing coverage trigger to %s' % target)
@@ -523,7 +525,7 @@ def outputtimes(options):
     for test, timetaken in times:
         print cols % (timetaken, test)
 
-def outputcoverage(runner, options):
+def outputcoverage(runner):
 
     vlog('# Producing coverage report')
     os.chdir(runner.pythondir)
@@ -537,10 +539,10 @@ def outputcoverage(runner, options):
     omit = ','.join(os.path.join(x, '*') for x in
                     [runner.bindir, runner.testdir])
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
-    if options.htmlcov:
+    if runner.options.htmlcov:
         htmldir = os.path.join(runner.testdir, 'htmlcov')
         covrun('-i', '-b', '"--directory=%s"' % htmldir, '"--omit=%s"' % omit)
-    if options.annotate:
+    if runner.options.annotate:
         adir = os.path.join(runner.testdir, 'annotated')
         if not os.path.isdir(adir):
             os.mkdir(adir)
@@ -553,14 +555,14 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
-    def __init__(self, runner, test, options, count, refpath):
+    def __init__(self, runner, test, count, refpath):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
 
         self._testdir = runner.testdir
         self._test = test
         self._path = path
-        self._options = options
+        self._options = runner.options
         self._count = count
         self._daemonpids = []
         self._refpath = refpath
@@ -568,7 +570,7 @@ class Test(object):
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
-        if options.debug:
+        if runner.options.debug:
             self._refout = None # to match "out is None"
         elif os.path.exists(refpath):
             f = open(refpath, 'r')
@@ -1087,7 +1089,7 @@ class TTest(Test):
                 return '+glob'
         return False
 
-def gettest(runner, test, options, count):
+def gettest(runner, test, count):
     """Obtain a Test by looking at its filename.
 
     Returns a Test instance. The Test may not be runnable if it doesn't map
@@ -1105,7 +1107,7 @@ def gettest(runner, test, options, count):
             refpath = os.path.join(runner.testdir, test + out)
             break
 
-    return testcls(runner, test, options, count, refpath)
+    return testcls(runner, test, count, refpath)
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
@@ -1185,8 +1187,8 @@ times = []
 iolock = threading.Lock()
 abort = False
 
-def scheduletests(runner, options, tests):
-    jobs = options.jobs
+def scheduletests(runner, tests):
+    jobs = runner.options.jobs
     done = queue.Queue()
     running = 0
     count = 0
@@ -1194,7 +1196,7 @@ def scheduletests(runner, options, tests):
 
     def job(test, count):
         try:
-            t = gettest(runner, test, options, count)
+            t = gettest(runner, test, count)
             done.put(t.run())
             t.cleanup()
         except KeyboardInterrupt:
@@ -1209,14 +1211,14 @@ def scheduletests(runner, options, tests):
                 try:
                     code, test, msg = done.get(True, 1)
                     results[code].append((test, msg))
-                    if options.first and code not in '.si':
+                    if runner.options.first and code not in '.si':
                         break
                 except queue.Empty:
                     continue
                 running -= 1
             if tests and not running == jobs:
                 test = tests.pop(0)
-                if options.loop:
+                if runner.options.loop:
                     tests.append(test)
                 t = threading.Thread(target=job, name=test, args=(test, count))
                 t.start()
@@ -1225,15 +1227,15 @@ def scheduletests(runner, options, tests):
     except KeyboardInterrupt:
         abort = True
 
-def runtests(runner, options, tests):
+def runtests(runner, tests):
     try:
         if runner.inst:
-            installhg(runner, options)
+            installhg(runner)
             _checkhglib(runner, "Testing")
         else:
             usecorrectpython(runner)
 
-        if options.restart:
+        if runner.options.restart:
             orig = list(tests)
             while tests:
                 if os.path.exists(tests[0] + ".err"):
@@ -1243,7 +1245,7 @@ def runtests(runner, options, tests):
                 print "running all tests"
                 tests = orig
 
-        scheduletests(runner, options, tests)
+        scheduletests(runner, tests)
 
         failed = len(results['!'])
         warned = len(results['~'])
@@ -1252,7 +1254,7 @@ def runtests(runner, options, tests):
         ignored = len(results['i'])
 
         print
-        if not options.noskips:
+        if not runner.options.noskips:
             for s in results['s']:
                 print "Skipped %s: %s" % s
         for s in results['~']:
@@ -1264,11 +1266,11 @@ def runtests(runner, options, tests):
             tested, skipped + ignored, warned, failed)
         if results['!']:
             print 'python hash seed:', os.environ['PYTHONHASHSEED']
-        if options.time:
-            outputtimes(options)
+        if runner.options.time:
+            outputtimes(runner.options)
 
-        if options.anycoverage:
-            outputcoverage(runner, options)
+        if runner.options.anycoverage:
+            outputcoverage(runner)
     except KeyboardInterrupt:
         failed = True
         print "\ninterrupted!"
@@ -1419,10 +1421,10 @@ def main(args, parser=None):
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        return runtests(runner, options, tests) or 0
+        return runtests(runner, tests) or 0
     finally:
         time.sleep(.1)
-        cleanup(runner, options)
+        cleanup(runner)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
