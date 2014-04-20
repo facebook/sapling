@@ -1293,6 +1293,7 @@ class TestRunner(object):
         self.bindir = None
         self.tmpbinddir = None
         self.pythondir = None
+        self.coveragefile = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1340,7 +1341,6 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global COVERAGE_FILE
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1409,7 +1409,7 @@ def main(args, parser=None):
         pypath.append(oldpypath)
     os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
-    COVERAGE_FILE = os.path.join(runner.testdir, ".coverage")
+    runner.coveragefile = os.path.join(runner.testdir, ".coverage")
 
     vlog("# Using TESTDIR", runner.testdir)
     vlog("# Using HGTMP", runner.hgtmp)
