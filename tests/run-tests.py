@@ -92,8 +92,6 @@ def Popen4(cmd, wd, timeout, env=None):
 
     return p
 
-# reserved exit code to skip test (used by hghave)
-SKIPPED_STATUS = 80
 SKIPPED_PREFIX = 'skipped: '
 FAILED_PREFIX  = 'hghave check failed: '
 PYTHON = sys.executable.replace('\\', '/')
@@ -354,6 +352,9 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
+    # Status code reserved for skipped tests (used by hghave).
+    SKIPPED_STATUS = 80
+
     def __init__(self, runner, test, count, refpath):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
@@ -450,7 +451,7 @@ class Test(object):
 
         skipped = False
 
-        if ret == SKIPPED_STATUS:
+        if ret == self.SKIPPED_STATUS:
             if out is None: # Debug mode, nothing to parse.
                 missing = ['unknown']
                 failed = None
@@ -647,7 +648,7 @@ class TTest(Test):
                                self._runner.abort)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
-        if exitcode == SKIPPED_STATUS or output is None:
+        if exitcode == self.SKIPPED_STATUS or output is None:
             return exitcode, output
 
         return self._processoutput(exitcode, output, salt, after, expected)
