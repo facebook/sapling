@@ -312,25 +312,6 @@ def log(*msg):
     sys.stdout.flush()
     iolock.release()
 
-def createhgrc(path, options):
-    # create a fresh hgrc
-    hgrc = open(path, 'w')
-    hgrc.write('[ui]\n')
-    hgrc.write('slash = True\n')
-    hgrc.write('interactive = False\n')
-    hgrc.write('[defaults]\n')
-    hgrc.write('backout = -d "0 0"\n')
-    hgrc.write('commit = -d "0 0"\n')
-    hgrc.write('shelve = --date "0 0"\n')
-    hgrc.write('tag = -d "0 0"\n')
-    if options.extra_config_opt:
-        for opt in options.extra_config_opt:
-            section, key = opt.split('.', 1)
-            assert '=' in key, ('extra config opt %s must '
-                                'have an = for assignment' % opt)
-            hgrc.write('[%s]\n%s\n' % (section, key))
-    hgrc.close()
-
 def terminate(proc):
     """Terminate subprocess (with fallback for Python versions < 2.6)"""
     vlog('# Terminating process %d' % proc.pid)
@@ -422,7 +403,7 @@ class Test(object):
         replacements, port = self._getreplacements(testtmp)
         env = self._getenv(testtmp, port)
         self._daemonpids.append(env['DAEMON_PIDS'])
-        createhgrc(env['HGRCPATH'], options)
+        self._createhgrc(env['HGRCPATH'])
 
         vlog('# Test', self._test)
 
@@ -567,6 +548,25 @@ class Test(object):
                 del env[k]
 
         return env
+
+    def _createhgrc(self, path):
+        # create a fresh hgrc
+        hgrc = open(path, 'w')
+        hgrc.write('[ui]\n')
+        hgrc.write('slash = True\n')
+        hgrc.write('interactive = False\n')
+        hgrc.write('[defaults]\n')
+        hgrc.write('backout = -d "0 0"\n')
+        hgrc.write('commit = -d "0 0"\n')
+        hgrc.write('shelve = --date "0 0"\n')
+        hgrc.write('tag = -d "0 0"\n')
+        if self._options.extra_config_opt:
+            for opt in self._options.extra_config_opt:
+                section, key = opt.split('.', 1)
+                assert '=' in key, ('extra config opt %s must '
+                                    'have an = for assignment' % opt)
+                hgrc.write('[%s]\n%s\n' % (section, key))
+        hgrc.close()
 
     def success(self):
         return '.', self._test, ''
