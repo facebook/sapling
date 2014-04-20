@@ -398,14 +398,14 @@ def cleanup(runner, options):
             except OSError:
                 pass
 
-def usecorrectpython():
+def usecorrectpython(runner):
     # some tests run python interpreter. they must use same
     # interpreter we use or bad things will happen.
     pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
     if getattr(os, 'symlink', None):
         vlog("# Making python executable in test path a symlink to '%s'" %
              sys.executable)
-        mypython = os.path.join(TMPBINDIR, pyexename)
+        mypython = os.path.join(runner.tmpbindir, pyexename)
         try:
             if os.readlink(mypython) == sys.executable:
                 return
@@ -475,7 +475,7 @@ def installhg(runner, options):
         sys.exit(1)
     os.chdir(runner.testdir)
 
-    usecorrectpython()
+    usecorrectpython(runner)
 
     if options.py3k_warnings and not options.anycoverage:
         vlog("# Updating hg command to enable Py3k Warnings switch")
@@ -1231,7 +1231,7 @@ def runtests(runner, options, tests):
             installhg(runner, options)
             _checkhglib("Testing")
         else:
-            usecorrectpython()
+            usecorrectpython(runner)
 
         if options.restart:
             orig = list(tests)
@@ -1291,6 +1291,7 @@ class TestRunner(object):
         self.hgtmp = None
         self.inst = None
         self.bindir = None
+        self.tmpbinddir = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1338,7 +1339,7 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global TMPBINDIR, PYTHONDIR, COVERAGE_FILE
+    global PYTHONDIR, COVERAGE_FILE
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1368,8 +1369,8 @@ def main(args, parser=None):
     if options.with_hg:
         runner.inst = None
         runner.bindir = os.path.dirname(os.path.realpath(options.with_hg))
-        TMPBINDIR = os.path.join(runner.hgtmp, 'install', 'bin')
-        os.makedirs(TMPBINDIR)
+        runner.tmpbindir = os.path.join(runner.hgtmp, 'install', 'bin')
+        os.makedirs(runner.tmpbindir)
 
         # This looks redundant with how Python initializes sys.path from
         # the location of the script being executed.  Needed because the
@@ -1381,15 +1382,15 @@ def main(args, parser=None):
         runner.inst = os.path.join(runner.hgtmp, "install")
         runner.bindir = os.environ["BINDIR"] = os.path.join(runner.inst,
                                                             "bin")
-        TMPBINDIR = runner.bindir
+        runner.tmpbindir = runner.bindir
         PYTHONDIR = os.path.join(runner.inst, "lib", "python")
 
     os.environ["BINDIR"] = runner.bindir
     os.environ["PYTHON"] = PYTHON
 
     path = [runner.bindir] + os.environ["PATH"].split(os.pathsep)
-    if TMPBINDIR != runner.bindir:
-        path = [TMPBINDIR] + path
+    if runner.tmpbindir != runner.bindir:
+        path = [runner.tmpbindir] + path
     os.environ["PATH"] = os.pathsep.join(path)
 
     # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
