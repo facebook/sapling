@@ -1014,6 +1014,22 @@ class TestRunner(object):
         self.abort = [False]
         self._createdfiles = []
 
+    def run(self, tests):
+        """Run the test suite."""
+        return self._run(tests)
+
+    def _run(self, tests):
+        vlog("# Using TESTDIR", self.testdir)
+        vlog("# Using HGTMP", self.hgtmp)
+        vlog("# Using PATH", os.environ["PATH"])
+        vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
+
+        try:
+            return self._runtests(tests) or 0
+        finally:
+            time.sleep(.1)
+            self._cleanup()
+
     def findtests(self, args):
         """Finds possible test files from arguments.
 
@@ -1033,7 +1049,7 @@ class TestRunner(object):
                 if os.path.basename(t).startswith('test-')
                     and (t.endswith('.py') or t.endswith('.t'))]
 
-    def runtests(self, tests):
+    def _runtests(self, tests):
         try:
             if self.inst:
                 self.installhg()
@@ -1105,7 +1121,7 @@ class TestRunner(object):
 
         return testcls(self, test, count, refpath)
 
-    def cleanup(self):
+    def _cleanup(self):
         """Clean up state from this test invocation."""
 
         if self.options.keep_tmpdir:
@@ -1445,16 +1461,7 @@ def main(args, runner=None, parser=None):
 
     runner.coveragefile = os.path.join(runner.testdir, ".coverage")
 
-    vlog("# Using TESTDIR", runner.testdir)
-    vlog("# Using HGTMP", runner.hgtmp)
-    vlog("# Using PATH", os.environ["PATH"])
-    vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
-
-    try:
-        return runner.runtests(tests) or 0
-    finally:
-        time.sleep(.1)
-        runner.cleanup()
+    return runner.run(tests)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
