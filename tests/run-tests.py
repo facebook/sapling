@@ -1019,6 +1019,11 @@ class TestRunner(object):
         return self._run(tests)
 
     def _run(self, tests):
+        if 'PYTHONHASHSEED' not in os.environ:
+            # use a random python hash seed all the time
+            # we do the randomness ourself to know what seed is used
+            os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
+
         if self.options.tmpdir:
             self.options.keep_tmpdir = True
             tmpdir = self.options.tmpdir
@@ -1455,11 +1460,6 @@ def main(args, runner=None, parser=None):
                     val *= 10
             return val
         tests.sort(key=sortkey)
-
-    if 'PYTHONHASHSEED' not in os.environ:
-        # use a random python hash seed all the time
-        # we do the randomness ourself to know what seed is used
-        os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
 
