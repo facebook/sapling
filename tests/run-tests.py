@@ -283,23 +283,6 @@ def rename(src, dst):
     shutil.copy(src, dst)
     os.remove(src)
 
-def parsehghaveoutput(lines):
-    '''Parse hghave log lines.
-    Return tuple of lists (missing, failed):
-      * the missing/unknown features
-      * the features for which existence check failed'''
-    missing = []
-    failed = []
-    for line in lines:
-        if line.startswith(SKIPPED_PREFIX):
-            line = line.splitlines()[0]
-            missing.append(line[len(SKIPPED_PREFIX):])
-        elif line.startswith(FAILED_PREFIX):
-            line = line.splitlines()[0]
-            failed.append(line[len(FAILED_PREFIX):])
-
-    return missing, failed
-
 def showdiff(expected, output, ref, err):
     print
     servefail = False
@@ -472,7 +455,7 @@ class Test(object):
                 missing = ['unknown']
                 failed = None
             else:
-                missing, failed = parsehghaveoutput(out)
+                missing, failed = TTest.parsehghaveoutput(out)
 
             if not missing:
                 missing = ['irrelevant']
@@ -907,6 +890,25 @@ class TTest(Test):
             if os.altsep and l.replace('\\', '/') == el:
                 return '+glob'
         return False
+
+    @staticmethod
+    def parsehghaveoutput(lines):
+        '''Parse hghave log lines.
+
+        Return tuple of lists (missing, failed):
+          * the missing/unknown features
+          * the features for which existence check failed'''
+        missing = []
+        failed = []
+        for line in lines:
+            if line.startswith(SKIPPED_PREFIX):
+                line = line.splitlines()[0]
+                missing.append(line[len(SKIPPED_PREFIX):])
+            elif line.startswith(FAILED_PREFIX):
+                line = line.splitlines()[0]
+                failed.append(line[len(FAILED_PREFIX):])
+
+        return missing, failed
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env, abort):
