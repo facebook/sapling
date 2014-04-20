@@ -991,7 +991,6 @@ def _gethgpath():
         pipe.close()
     return _hgpath
 
-results = {'.':[], '!':[], '~': [], 's':[], 'i':[]}
 iolock = threading.Lock()
 abort = False
 
@@ -1018,7 +1017,7 @@ def scheduletests(runner, tests):
             if not done.empty() or running == jobs or not tests:
                 try:
                     code, test, msg = done.get(True, 1)
-                    results[code].append((test, msg))
+                    runner.results[code].append((test, msg))
                     if runner.options.first and code not in '.si':
                         break
                 except queue.Empty:
@@ -1055,24 +1054,24 @@ def runtests(runner, tests):
 
         scheduletests(runner, tests)
 
-        failed = len(results['!'])
-        warned = len(results['~'])
-        tested = len(results['.']) + failed + warned
-        skipped = len(results['s'])
-        ignored = len(results['i'])
+        failed = len(runner.results['!'])
+        warned = len(runner.results['~'])
+        tested = len(runner.results['.']) + failed + warned
+        skipped = len(runner.results['s'])
+        ignored = len(runner.results['i'])
 
         print
         if not runner.options.noskips:
-            for s in results['s']:
+            for s in runner.results['s']:
                 print "Skipped %s: %s" % s
-        for s in results['~']:
+        for s in runner.results['~']:
             print "Warned %s: %s" % s
-        for s in results['!']:
+        for s in runner.results['!']:
             print "Failed %s: %s" % s
         runner.checkhglib("Tested")
         print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
             tested, skipped + ignored, warned, failed)
-        if results['!']:
+        if runner.results['!']:
             print 'python hash seed:', os.environ['PYTHONHASHSEED']
         if runner.options.time:
             runner.outputtimes()
@@ -1109,6 +1108,13 @@ class TestRunner(object):
         self.pythondir = None
         self.coveragefile = None
         self.times = [] # Holds execution times of tests.
+        self.results = {
+            '.': [],
+            '!': [],
+            '~': [],
+            's': [],
+            'i': [],
+        }
         self._createdfiles = []
 
     def gettest(self, test, count):
