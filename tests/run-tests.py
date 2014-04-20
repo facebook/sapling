@@ -259,13 +259,6 @@ def parseargs(args, parser):
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
-    if options.unittest:
-        if options.jobs > 1:
-            sys.stderr.write(
-                'warning: --jobs has no effect with --unittest')
-        if options.loop:
-            sys.stderr.write(
-                'warning: --loop has no effect with --unittest')
     if options.interactive and options.debug:
         parser.error("-i/--interactive and -d/--debug are incompatible")
     if options.debug:
@@ -1033,6 +1026,19 @@ class TestResult(unittest._TextTestResult):
             self.stream.write('~')
             self.stream.flush()
 
+class TestSuite(unittest.TestSuite):
+    """Custom unitest TestSuite that knows how to execute concurrently."""
+
+    def __init__(self, runner, *args, **kwargs):
+        super(TestSuite, self).__init__(*args, **kwargs)
+
+        self._runner = runner
+
+    def run(self, result):
+        self._runner._executetests(self._tests, result=result)
+
+        return result
+
 class TextTestRunner(unittest.TextTestRunner):
     """Custom unittest test runner that uses appropriate settings."""
 
@@ -1245,7 +1251,7 @@ class TestRunner(object):
                      for i, t in enumerate(tests)]
 
             if self.options.unittest:
-                suite = unittest.TestSuite(tests=tests)
+                suite = TestSuite(self, tests=tests)
                 verbosity = 1
                 if self.options.verbose:
                     verbosity = 2
