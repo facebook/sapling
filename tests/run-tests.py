@@ -361,6 +361,7 @@ class Test(object):
         self._out = None
         self._duration = None
         self._result = None
+        self._skipped = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -390,6 +391,7 @@ class Test(object):
         self._out = None
         self._duration = None
         self._result = None
+        self._skipped = None
 
     def run(self):
         """Run this test instance.
@@ -461,7 +463,7 @@ class Test(object):
                 return 'killed by signal: %d' % -ret
             return 'returned error code %d' % ret
 
-        skipped = False
+        self._skipped = False
 
         if ret == self.SKIPPED_STATUS:
             if out is None: # Debug mode, nothing to parse.
@@ -477,7 +479,7 @@ class Test(object):
                 self._result = self.fail('hg have failed checking for %s' %
                                          failed[-1], ret)
             else:
-                skipped = True
+                self._skipped = True
                 self._result = self.skip(missing[-1])
         elif ret == 'timeout':
             self._result = self.fail('timed out', ret)
@@ -500,7 +502,7 @@ class Test(object):
             else:
                 msg += 'output changed'
 
-            if (ret != 0 or out != self._refout) and not skipped \
+            if (ret != 0 or out != self._refout) and not self._skipped \
                 and not options.debug:
                 f = open(self._errpath, 'wb')
                 for line in out:
@@ -513,6 +515,12 @@ class Test(object):
         else:
             self._result = self.success()
 
+        if (ret != 0 or out != self._refout) and not self._skipped \
+            and not options.debug:
+            f = open(self._errpath, 'wb')
+            for line in out:
+                f.write(line)
+            f.close()
 
         if not self._unittest:
             self.tearDown()
