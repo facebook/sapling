@@ -586,6 +586,12 @@ class Test(object):
             result.skipped = True
             return self.skip("Doesn't exist")
 
+        options = self._options
+        if not (options.whitelisted and self._test in options.whitelisted):
+            if options.blacklist and self._test in options.blacklist:
+                result.skipped = True
+                return self.skip('blacklisted')
+
         # Remove any previous output files.
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
@@ -595,7 +601,7 @@ class Test(object):
         replacements, port = self._getreplacements(testtmp)
         env = self._getenv(testtmp, port)
         self._daemonpids.append(env['DAEMON_PIDS'])
-        createhgrc(env['HGRCPATH'], self._options)
+        createhgrc(env['HGRCPATH'], options)
 
         starttime = time.time()
 
@@ -620,7 +626,7 @@ class Test(object):
 
         result.refout = self._refout
 
-        if not self._options.keep_tmpdir:
+        if not options.keep_tmpdir:
             shutil.rmtree(testtmp)
 
         def describe(ret):
@@ -648,10 +654,10 @@ class Test(object):
             return self.fail('timed out', ret)
         elif out != self._refout:
             info = {}
-            if not self._options.nodiff:
+            if not options.nodiff:
                 iolock.acquire()
-                if self._options.view:
-                    os.system("%s %s %s" % (self._options.view, self._refpath,
+                if options.view:
+                    os.system("%s %s %s" % (options.view, self._refpath,
                                             self._errpath))
                 else:
                     info = showdiff(self._refout, out, self._refpath,
@@ -1117,9 +1123,6 @@ def runone(options, test, count):
     lctest = test.lower()
 
     if not (options.whitelisted and test in options.whitelisted):
-        if options.blacklist and test in options.blacklist:
-            return skip("blacklisted")
-
         if options.retest and not os.path.exists(test + ".err"):
             return ignore("not retesting")
 
