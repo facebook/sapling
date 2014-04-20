@@ -377,6 +377,9 @@ class Test(object):
         if self._threadtmp and not self._options.keep_tmpdir:
             shutil.rmtree(self._threadtmp, True)
 
+    def setUp(self):
+        """Tasks to perform before run()."""
+
     def run(self):
         """Run this test instance.
 
@@ -505,6 +508,9 @@ class Test(object):
         self._runner.times.append((self.name, duration))
 
         return res
+
+    def tearDown(self):
+        """Tasks to perform after run()."""
 
     def _run(self, testtmp, replacements, env):
         # This should be implemented in child classes to run tests.
@@ -1352,6 +1358,15 @@ class TestRunner(object):
             # with it.
             def run(self, result):
                 try:
+                    t.setUp()
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except Exception:
+                    result.addError(self, sys.exc_info())
+                    return
+
+                success = False
+                try:
                     self.runTest()
                 except KeyboardInterrupt:
                     raise
@@ -1366,6 +1381,17 @@ class TestRunner(object):
                 except Exception:
                     result.addError(self, sys.exc_info())
                 else:
+                    success = True
+
+                try:
+                    t.tearDown()
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except Exception:
+                    result.addError(self, sys.exc_info())
+                    success = False
+
+                if success:
                     result.addSuccess(self)
 
             def runTest(self):
