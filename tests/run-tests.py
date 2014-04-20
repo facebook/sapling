@@ -619,6 +619,11 @@ class Test(object):
         if not self._options.keep_tmpdir:
             shutil.rmtree(testtmp)
 
+        def describe(ret):
+            if ret < 0:
+                return 'killed by signal: %d' % -ret
+            return 'returned error code %d' % ret
+
         if ret == SKIPPED_STATUS:
             if out is None: # Debug mode, nothing to parse.
                 missing = ['unknown']
@@ -637,6 +642,26 @@ class Test(object):
                 return self.skip(missing[-1])
         elif ret == 'timeout':
             return self.fail('timed out', ret)
+        elif out != self._refout:
+            info = {}
+            if not self._options.nodiff:
+                iolock.acquire()
+                if self._options.view:
+                    os.system("%s %s %s" % (self._options.view, self._refpath,
+                                            self._errpath))
+                else:
+                    info = showdiff(self._refout, out, self._refpath,
+                                    self._errpath)
+                iolock.release()
+            msg = ''
+            if info.get('servefail'):
+                msg += 'serve failed and '
+            if ret:
+                msg += 'output changed and ' + describe(ret)
+            else:
+                msg += 'output changed'
+
+            return self.fail(msg, ret)
 
     def _run(self, testtmp, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -1079,11 +1104,6 @@ def runone(options, test, count):
     def ignore(msg):
         return 'i', test, msg
 
-    def describe(ret):
-        if ret < 0:
-            return 'killed by signal %d' % -ret
-        return 'returned error code %d' % ret
-
     testpath = os.path.join(TESTDIR, test)
     err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
@@ -1145,22 +1165,6 @@ def runone(options, test, count):
 
     if result:
         pass
-    elif out != refout:
-        info = {}
-        if not options.nodiff:
-            iolock.acquire()
-            if options.view:
-                os.system("%s %s %s" % (options.view, ref, err))
-            else:
-                info = showdiff(refout, out, ref, err)
-            iolock.release()
-        msg = ""
-        if info.get('servefail'): msg += "serve failed and "
-        if ret:
-            msg += "output changed and " + describe(ret)
-        else:
-            msg += "output changed"
-        result = t.fail(msg, ret)
     elif ret:
         result = t.fail(describe(ret), ret)
     else:
