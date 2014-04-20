@@ -397,6 +397,7 @@ class Test(object):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
 
+        self._runner = runner
         self._testdir = runner.testdir
         self._test = test
         self._path = path
@@ -546,7 +547,7 @@ class Test(object):
             sys.stdout.flush()
             iolock.release()
 
-        times.append((self._test, duration))
+        self._runner.times.append((self._test, duration))
 
         return res
 
@@ -991,7 +992,6 @@ def _gethgpath():
     return _hgpath
 
 results = {'.':[], '!':[], '~': [], 's':[], 'i':[]}
-times = []
 iolock = threading.Lock()
 abort = False
 
@@ -1108,6 +1108,7 @@ class TestRunner(object):
         self.tmpbinddir = None
         self.pythondir = None
         self.coveragefile = None
+        self.times = [] # Holds execution times of tests.
         self._createdfiles = []
 
     def gettest(self, test, count):
@@ -1274,10 +1275,10 @@ class TestRunner(object):
 
     def outputtimes(self):
         vlog('# Producing time report')
-        times.sort(key=lambda t: (t[1], t[0]), reverse=True)
+        self.times.sort(key=lambda t: (t[1], t[0]), reverse=True)
         cols = '%7.3f   %s'
         print '\n%-7s   %s' % ('Time', 'Test')
-        for test, timetaken in times:
+        for test, timetaken in self.times:
             print cols % (timetaken, test)
 
     def outputcoverage(self):
