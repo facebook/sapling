@@ -362,6 +362,7 @@ class Test(object):
         self._duration = None
         self._result = None
         self._skipped = None
+        self._testtmp = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -392,6 +393,10 @@ class Test(object):
         self._duration = None
         self._result = None
         self._skipped = None
+
+        self._testtmp = os.path.join(self._threadtmp,
+                                     os.path.basename(self._path))
+        os.mkdir(self._testtmp)
 
     def run(self):
         """Run this test instance.
@@ -429,10 +434,8 @@ class Test(object):
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
 
-        testtmp = os.path.join(self._threadtmp, os.path.basename(self._path))
-        os.mkdir(testtmp)
-        replacements, port = self._getreplacements(testtmp)
-        env = self._getenv(testtmp, port)
+        replacements, port = self._getreplacements()
+        env = self._getenv(port)
         self._daemonpids.append(env['DAEMON_PIDS'])
         self._createhgrc(env['HGRCPATH'])
 
@@ -440,7 +443,7 @@ class Test(object):
 
         starttime = time.time()
         try:
-            ret, out = self._run(testtmp, replacements, env)
+            ret, out = self._run(replacements, env)
             self._duration = time.time() - starttime
             self._finished = True
             self._ret = ret
@@ -454,9 +457,6 @@ class Test(object):
             return self.fail('Exception during execution: %s' % e, 255)
 
         killdaemons(env['DAEMON_PIDS'])
-
-        if not options.keep_tmpdir:
-            shutil.rmtree(testtmp)
 
         def describe(ret):
             if ret < 0:
@@ -529,6 +529,9 @@ class Test(object):
 
     def tearDown(self):
         """Tasks to perform after run()."""
+        if not self._options.keep_tmpdir:
+            shutil.rmtree(self._testtmp)
+
         vlog("# Ret was:", self._ret)
 
         # Don't print progress in unittest mode because that is handled
@@ -541,11 +544,11 @@ class Test(object):
 
         self._runner.times.append((self.name, self._duration))
 
-    def _run(self, testtmp, replacements, env):
+    def _run(self, replacements, env):
         # This should be implemented in child classes to run tests.
         return self._skip('unknown test type')
 
-    def _getreplacements(self, testtmp):
+    def _getreplacements(self):
         port = self._options.port + self._count * 3
         r = [
             (r':%s\b' % port, ':$HGPORT'),
@@ -557,16 +560,16 @@ class Test(object):
             r.append(
                 (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
                     c in '/\\' and r'[/\\]' or c.isdigit() and c or '\\' + c
-                    for c in testtmp), '$TESTTMP'))
+                    for c in self._testtmp), '$TESTTMP'))
         else:
-            r.append((re.escape(testtmp), '$TESTTMP'))
+            r.append((re.escape(self._testtmp), '$TESTTMP'))
 
         return r, port
 
-    def _getenv(self, testtmp, port):
+    def _getenv(self, port):
         env = os.environ.copy()
-        env['TESTTMP'] = testtmp
-        env['HOME'] = testtmp
+        env['TESTTMP'] = self._testtmp
+        env['HOME'] = self._testtmp
         env["HGPORT"] = str(port)
         env["HGPORT1"] = str(port + 1)
         env["HGPORT2"] = str(port + 2)
@@ -666,13 +669,13 @@ class Test(object):
 
 class PythonTest(Test):
     """A Python-based test."""
-    def _run(self, testtmp, replacements, env):
+    def _run(self, replacements, env):
         py3kswitch = self._options.py3k_warnings and ' -3' or ''
         cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self._path)
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        return run(cmd, testtmp, self._options, replacements, env,
+        return run(cmd, self._testtmp, self._options, replacements, env,
                    self._runner.abort)
 
 class TTest(Test):
@@ -686,15 +689,15 @@ class TTest(Test):
     ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256)).update(
                      {'\\': '\\\\', '\r': r'\r'})
 
-    def _run(self, testtmp, replacements, env):
+    def _run(self, replacements, env):
         f = open(self._path)
         lines = f.readlines()
         f.close()
 
-        salt, script, after, expected = self._parsetest(lines, testtmp)
+        salt, script, after, expected = self._parsetest(lines)
 
         # Write out the generated script.
-        fname = '%s.sh' % testtmp
+        fname = '%s.sh' % self._testtmp
         f = open(fname, 'w')
         for l in script:
             f.write(l)
@@ -703,8 +706,8 @@ class TTest(Test):
         cmd = '%s "%s"' % (self._options.shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = run(cmd, testtmp, self._options, replacements, env,
-                               self._runner.abort)
+        exitcode, output = run(cmd, self._testtmp, self._options, replacements,
+                               env, self._runner.abort)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
         if exitcode == self.SKIPPED_STATUS or output is None:
@@ -712,12 +715,12 @@ class TTest(Test):
 
         return self._processoutput(exitcode, output, salt, after, expected)
 
-    def _hghave(self, reqs, testtmp):
+    def _hghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
         tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (self._options.shell, tdir, ' '.join(reqs)),
-                      testtmp, 0)
+                      self._testtmp, 0)
         stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
@@ -728,7 +731,7 @@ class TTest(Test):
 
         return ret == 0
 
-    def _parsetest(self, lines, testtmp):
+    def _parsetest(self, lines):
         # We generate a shell script which outputs unique markers to line
         # up script results with our source. These markers include input
         # line number and the last return code.
@@ -773,7 +776,7 @@ class TTest(Test):
                     after.setdefault(pos, []).append('  !!! invalid #if\n')
                 if skipping is not None:
                     after.setdefault(pos, []).append('  !!! nested #if\n')
-                skipping = not self._hghave(lsplit[1:], testtmp)
+                skipping = not self._hghave(lsplit[1:])
                 after.setdefault(pos, []).append(l)
             elif l.startswith('#else'):
                 if skipping is None:
