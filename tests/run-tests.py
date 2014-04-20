@@ -386,14 +386,6 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def outputtimes(options):
-    vlog('# Producing time report')
-    times.sort(key=lambda t: (t[1], t[0]), reverse=True)
-    cols = '%7.3f   %s'
-    print '\n%-7s   %s' % ('Time', 'Test')
-    for test, timetaken in times:
-        print cols % (timetaken, test)
-
 def outputcoverage(runner):
 
     vlog('# Producing coverage report')
@@ -1126,7 +1118,7 @@ def runtests(runner, tests):
         if results['!']:
             print 'python hash seed:', os.environ['PYTHONHASHSEED']
         if runner.options.time:
-            outputtimes(runner.options)
+            runner.outputtimes()
 
         if runner.options.anycoverage:
             outputcoverage(runner)
@@ -1300,6 +1292,14 @@ class TestRunner(object):
             sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
                              '         (expected %s)\n'
                              % (verb, actualhg, expecthg))
+
+    def outputtimes(self):
+        vlog('# Producing time report')
+        times.sort(key=lambda t: (t[1], t[0]), reverse=True)
+        cols = '%7.3f   %s'
+        print '\n%-7s   %s' % ('Time', 'Test')
+        for test, timetaken in times:
+            print cols % (timetaken, test)
 
 def main(args, parser=None):
     runner = TestRunner()
