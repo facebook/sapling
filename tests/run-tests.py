@@ -1240,11 +1240,11 @@ class TestRunner(object):
                     print "running all tests"
                     tests = orig
 
-            if self.options.unittest:
-                suite = unittest.TestSuite()
-                for count, testpath in enumerate(tests):
-                    suite.addTest(self._gettest(testpath, count, asunit=True))
+            tests = [self._gettest(t, i, asunit=self.options.unittest)
+                     for i, t in enumerate(tests)]
 
+            if self.options.unittest:
+                suite = unittest.TestSuite(tests=tests)
                 verbosity = 1
                 if self.options.verbose:
                     verbosity = 2
@@ -1538,13 +1538,11 @@ class TestRunner(object):
         jobs = self.options.jobs
         done = queue.Queue()
         running = 0
-        count = 0
 
-        def job(test, count):
+        def job(test):
             try:
-                t = self._gettest(test, count)
-                done.put(t.run())
-                t.cleanup()
+                done.put(test.run())
+                test.cleanup()
             except KeyboardInterrupt:
                 pass
             except: # re-raises
@@ -1566,11 +1564,10 @@ class TestRunner(object):
                     test = tests.pop(0)
                     if self.options.loop:
                         tests.append(test)
-                    t = threading.Thread(target=job, name=test,
-                                         args=(test, count))
+                    t = threading.Thread(target=job, name=test.name,
+                                         args=[test])
                     t.start()
                     running += 1
-                    count += 1
         except KeyboardInterrupt:
             self.abort[0] = True
 
