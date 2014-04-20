@@ -675,6 +675,9 @@ class Test(object):
 
         return env
 
+    def success(self):
+        return '.', self._test, ''
+
 class TestResult(object):
     """Holds the result of a test execution."""
 
@@ -1049,9 +1052,6 @@ def runone(options, test, count):
                 return '.', test, ''
         return warned and '~' or '!', test, msg
 
-    def success():
-        return '.', test, ''
-
     def ignore(msg):
         return 'i', test, msg
 
@@ -1099,7 +1099,6 @@ def runone(options, test, count):
     t = runner(test, testpath, options, count, ref, err)
     res = TestResult()
     t.run(res)
-    t.cleanup()
 
     if res.exception:
         return fail('Exception during execution: %s' % res.exception, 255)
@@ -1154,13 +1153,15 @@ def runone(options, test, count):
     elif ret:
         result = fail(describe(ret), ret)
     else:
-        result = success()
+        result = t.success()
 
     if not options.verbose:
         iolock.acquire()
         sys.stdout.write(result[0])
         sys.stdout.flush()
         iolock.release()
+
+    t.cleanup()
 
     return result
 
