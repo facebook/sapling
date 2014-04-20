@@ -636,7 +636,7 @@ class Test(object):
             raise
         except Exception, e:
             updateduration()
-            result.exception = e
+            return self.fail('Exception during execution: %s' % e, 255)
 
         killdaemons(env['DAEMON_PIDS'])
 
@@ -789,7 +789,6 @@ class TestResult(object):
         self.ret = None
         self.out = None
         self.duration = None
-        self.exception = None
         self.refout = None
         self.skipped = False
 
@@ -1151,9 +1150,6 @@ def runone(options, test, count):
     t = runner(test, testpath, options, count, ref, err)
     res = TestResult()
     result = t.run(res)
-
-    if res.exception:
-        return t.fail('Exception during execution: %s' % res.exception, 255)
 
     ret = res.ret
     out = res.out
