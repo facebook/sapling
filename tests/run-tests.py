@@ -188,9 +188,6 @@ def getparser():
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
-    parser.add_option("--unittest", action="store_true",
-        help="run tests with Python's unittest package"
-             " (this is an experimental feature)")
     parser.add_option("-v", "--verbose", action="store_true",
         help="output verbose messages")
     parser.add_option("--view", type="string",
@@ -340,7 +337,7 @@ class Test(object):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, runner, test, count, refpath, unittest=False):
+    def __init__(self, runner, test, count, refpath):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
 
@@ -354,7 +351,6 @@ class Test(object):
         self._daemonpids = []
         self._refpath = refpath
         self._errpath = errpath
-        self._unittest = unittest
 
         self._finished = None
         self._ret = None
@@ -412,9 +408,6 @@ class Test(object):
 
         This will return a tuple describing the result of the test.
         """
-        if not self._unittest:
-            self.setUp()
-
         if not os.path.exists(self._path):
             return self.skip("Doesn't exist")
 
@@ -518,9 +511,6 @@ class Test(object):
         else:
             self._result = self.success()
 
-        if not self._unittest:
-            self.tearDown()
-
         return self._result
 
     def tearDown(self):
@@ -540,14 +530,6 @@ class Test(object):
             f.close()
 
         vlog("# Ret was:", self._ret)
-
-        # Don't print progress in unittest mode because that is handled
-        # by TestResult.
-        if not self._options.verbose and not self._unittest:
-            iolock.acquire()
-            sys.stdout.write(self._result[0])
-            sys.stdout.flush()
-            iolock.release()
 
         self._runner.times.append((self.name, self._duration))
 
@@ -649,30 +631,18 @@ class Test(object):
 
                 return '.', self.name, ''
 
-        if self._unittest:
-            if warned:
-                raise WarnTest(msg)
-            else:
-                # unittest differentiates between errored and failed.
-                # Failed is denoted by AssertionError (by default at least).
-                raise AssertionError(msg)
-
-        return warned and '~' or '!', self.name, msg
+        if warned:
+            raise WarnTest(msg)
+        else:
+            # unittest differentiates between errored and failed.
+            # Failed is denoted by AssertionError (by default at least).
+            raise AssertionError(msg)
 
     def skip(self, msg):
-        if self._unittest:
-            raise SkipTest(msg)
-
-        if self._options.verbose:
-            log("\nSkipping %s: %s" % (self._path, msg))
-
-        return 's', self.name, msg
+        raise SkipTest(msg)
 
     def ignore(self, msg):
-        if self._unittest:
-            raise IgnoreTest(msg)
-
-        return 'i', self.name, msg
+        raise IgnoreTest(msg)
 
 class PythonTest(Test):
     """A Python-based test."""
@@ -1372,43 +1342,17 @@ class TestRunner(object):
                     print "running all tests"
                     tests = orig
 
-            tests = [self._gettest(t, i, asunit=self.options.unittest)
-                     for i, t in enumerate(tests)]
+            tests = [self._gettest(t, i) for i, t in enumerate(tests)]
 
             failed = False
             warned = False
 
-            if self.options.unittest:
-                suite = TestSuite(self, tests=tests)
-                verbosity = 1
-                if self.options.verbose:
-                    verbosity = 2
-                runner = TextTestRunner(self, verbosity=verbosity)
-                runner.run(suite)
-            else:
-                self._executetests(tests)
-
-                failed = len(self.results['!'])
-                warned = len(self.results['~'])
-                tested = len(self.results['.']) + failed + warned
-                skipped = len(self.results['s'])
-                ignored = len(self.results['i'])
-
-                print
-                if not self.options.noskips:
-                    for s in self.results['s']:
-                        print "Skipped %s: %s" % s
-                for s in self.results['~']:
-                    print "Warned %s: %s" % s
-                for s in self.results['!']:
-                    print "Failed %s: %s" % s
-                self._checkhglib("Tested")
-                print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
-                    tested, skipped + ignored, warned, failed)
-                if self.results['!']:
-                    print 'python hash seed:', os.environ['PYTHONHASHSEED']
-                if self.options.time:
-                    self._outputtimes()
+            suite = TestSuite(self, tests=tests)
+            verbosity = 1
+            if self.options.verbose:
+                verbosity = 2
+            runner = TextTestRunner(self, verbosity=verbosity)
+            runner.run(suite)
 
             if self.options.anycoverage:
                 self._outputcoverage()
@@ -1421,7 +1365,7 @@ class TestRunner(object):
         if warned:
             return 80
 
-    def _gettest(self, test, count, asunit=False):
+    def _gettest(self, test, count):
         """Obtain a Test by looking at its filename.
 
         Returns a Test instance. The Test may not be runnable if it doesn't
@@ -1438,10 +1382,7 @@ class TestRunner(object):
                 refpath = os.path.join(self.testdir, test + out)
                 break
 
-        t = testcls(self, test, count, refpath, unittest=asunit)
-
-        if not asunit:
-            return t
+        t = testcls(self, test, count, refpath)
 
         class MercurialTest(unittest.TestCase):
             def __init__(self, name, *args, **kwargs):
@@ -1500,11 +1441,7 @@ class TestRunner(object):
                     result.stopTest(self)
 
             def runTest(self):
-                code, tname, msg = t.run()
-
-                # All non-success conditions should be exceptions and should
-                # be caught in run().
-                assert code == '.'
+                t.run()
 
             # We need this proxy until tearDown() is implemented.
             def cleanup(self):
@@ -1700,8 +1637,8 @@ class TestRunner(object):
                 os.mkdir(adir)
             covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
-    def _executetests(self, tests, result=None):
-        # We copy because we modify the list.
+    def _executetests(self, tests, result):
+        # We modify the list, so copy so callers aren't confused.
         tests = list(tests)
 
         jobs = self.options.jobs
@@ -1710,15 +1647,8 @@ class TestRunner(object):
 
         def job(test, result):
             try:
-                # If in unittest mode.
-                if result:
-                    test(result)
-                    # We need to put something here to make the logic happy.
-                    # This will get cleaned up later.
-                    done.put(('u', None, None))
-                else:
-                    done.put(test.run())
-                test.cleanup()
+                test(result)
+                done.put(('u', None, None))
             except KeyboardInterrupt:
                 pass
             except: # re-raises
