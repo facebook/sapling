@@ -592,6 +592,9 @@ class Test(object):
                 result.skipped = True
                 return self.skip('blacklisted')
 
+            if options.retest and not os.path.exists('%s.err' % self._test):
+                return self.ignore('not retesting')
+
         # Remove any previous output files.
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
@@ -762,6 +765,9 @@ class Test(object):
             log("\nSkipping %s: %s" % (self._path, msg))
 
         return 's', self._test, msg
+
+    def ignore(self, msg):
+        return 'i', self._test, msg
 
 class TestResult(object):
     """Holds the result of a test execution."""
@@ -1115,17 +1121,11 @@ def runone(options, test, count):
             log("\nSkipping %s: %s" % (testpath, msg))
         return 's', test, msg
 
-    def ignore(msg):
-        return 'i', test, msg
-
     testpath = os.path.join(TESTDIR, test)
     err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
 
     if not (options.whitelisted and test in options.whitelisted):
-        if options.retest and not os.path.exists(test + ".err"):
-            return ignore("not retesting")
-
         if options.keywords:
             fp = open(test)
             t = fp.read().lower() + test.lower()
