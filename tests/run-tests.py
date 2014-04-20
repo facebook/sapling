@@ -351,9 +351,10 @@ class Test(object):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
 
+        self.name = test
+
         self._runner = runner
         self._testdir = runner.testdir
-        self._test = test
         self._path = path
         self._options = runner.options
         self._count = count
@@ -392,16 +393,16 @@ class Test(object):
             return self.skip("Doesn't exist")
 
         options = self._options
-        if not (options.whitelisted and self._test in options.whitelisted):
-            if options.blacklist and self._test in options.blacklist:
+        if not (options.whitelisted and self.name in options.whitelisted):
+            if options.blacklist and self.name in options.blacklist:
                 return self.skip('blacklisted')
 
-            if options.retest and not os.path.exists('%s.err' % self._test):
+            if options.retest and not os.path.exists('%s.err' % self.name):
                 return self.ignore('not retesting')
 
             if options.keywords:
-                f = open(self._test)
-                t = f.read().lower() + self._test.lower()
+                f = open(self.name)
+                t = f.read().lower() + self.name.lower()
                 f.close()
                 for k in options.keywords.lower().split():
                     if k in t:
@@ -409,7 +410,7 @@ class Test(object):
                     else:
                         return self.ignore("doesn't match keyword")
 
-        if not os.path.basename(self._test.lower()).startswith('test-'):
+        if not os.path.basename(self.name.lower()).startswith('test-'):
             return self.skip('not a test file')
 
         # Remove any previous output files.
@@ -423,7 +424,7 @@ class Test(object):
         self._daemonpids.append(env['DAEMON_PIDS'])
         self._createhgrc(env['HGRCPATH'])
 
-        vlog('# Test', self._test)
+        vlog('# Test', self.name)
 
         starttime = time.time()
         try:
@@ -431,7 +432,7 @@ class Test(object):
             duration = time.time() - starttime
         except KeyboardInterrupt:
             duration = time.time() - starttime
-            log('INTERRUPTED: %s (after %d seconds)' % (self._test, duration))
+            log('INTERRUPTED: %s (after %d seconds)' % (self.name, duration))
             raise
         except Exception, e:
             return self.fail('Exception during execution: %s' % e, 255)
@@ -506,7 +507,7 @@ class Test(object):
             sys.stdout.flush()
             iolock.release()
 
-        self._runner.times.append((self._test, duration))
+        self._runner.times.append((self.name, duration))
 
         return res
 
@@ -587,12 +588,12 @@ class Test(object):
         hgrc.close()
 
     def success(self):
-        return '.', self._test, ''
+        return '.', self.name, ''
 
     def fail(self, msg, ret):
         warned = ret is False
         if not self._options.nodiff:
-            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self._test,
+            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self.name,
                                  msg))
         if (not ret and self._options.interactive and
             os.path.exists(self._errpath)):
@@ -601,23 +602,23 @@ class Test(object):
             answer = sys.stdin.readline().strip()
             iolock.release()
             if answer.lower() in ('y', 'yes'):
-                if self._test.endswith('.t'):
+                if self.name.endswith('.t'):
                     rename(self._errpath, self._path)
                 else:
                     rename(self._errpath, '%s.out' % self._path)
 
-                return '.', self._test, ''
+                return '.', self.name, ''
 
-        return warned and '~' or '!', self._test, msg
+        return warned and '~' or '!', self.name, msg
 
     def skip(self, msg):
         if self._options.verbose:
             log("\nSkipping %s: %s" % (self._path, msg))
 
-        return 's', self._test, msg
+        return 's', self.name, msg
 
     def ignore(self, msg):
-        return 'i', self._test, msg
+        return 'i', self.name, msg
 
 class PythonTest(Test):
     """A Python-based test."""
