@@ -386,29 +386,6 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def outputcoverage(runner):
-
-    vlog('# Producing coverage report')
-    os.chdir(runner.pythondir)
-
-    def covrun(*args):
-        cmd = 'coverage %s' % ' '.join(args)
-        vlog('# Running: %s' % cmd)
-        os.system(cmd)
-
-    covrun('-c')
-    omit = ','.join(os.path.join(x, '*') for x in
-                    [runner.bindir, runner.testdir])
-    covrun('-i', '-r', '"--omit=%s"' % omit) # report
-    if runner.options.htmlcov:
-        htmldir = os.path.join(runner.testdir, 'htmlcov')
-        covrun('-i', '-b', '"--directory=%s"' % htmldir, '"--omit=%s"' % omit)
-    if runner.options.annotate:
-        adir = os.path.join(runner.testdir, 'annotated')
-        if not os.path.isdir(adir):
-            os.mkdir(adir)
-        covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
-
 class Test(object):
     """Encapsulates a single, runnable test.
 
@@ -1121,7 +1098,7 @@ def runtests(runner, tests):
             runner.outputtimes()
 
         if runner.options.anycoverage:
-            outputcoverage(runner)
+            runner.outputcoverage()
     except KeyboardInterrupt:
         failed = True
         print "\ninterrupted!"
@@ -1300,6 +1277,29 @@ class TestRunner(object):
         print '\n%-7s   %s' % ('Time', 'Test')
         for test, timetaken in times:
             print cols % (timetaken, test)
+
+    def outputcoverage(self):
+        vlog('# Producing coverage report')
+        os.chdir(self.pythondir)
+
+        def covrun(*args):
+            cmd = 'coverage %s' % ' '.join(args)
+            vlog('# Running: %s' % cmd)
+            os.system(cmd)
+
+        covrun('-c')
+        omit = ','.join(os.path.join(x, '*') for x in
+                        [self.bindir, self.testdir])
+        covrun('-i', '-r', '"--omit=%s"' % omit) # report
+        if self.options.htmlcov:
+            htmldir = os.path.join(self.testdir, 'htmlcov')
+            covrun('-i', '-b', '"--directory=%s"' % htmldir,
+                   '"--omit=%s"' % omit)
+        if self.options.annotate:
+            adir = os.path.join(self.testdir, 'annotated')
+            if not os.path.isdir(adir):
+                os.mkdir(adir)
+            covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
 def main(args, parser=None):
     runner = TestRunner()
