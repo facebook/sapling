@@ -662,6 +662,10 @@ class Test(object):
                 msg += 'output changed'
 
             return self.fail(msg, ret)
+        elif ret:
+            return self.fail(describe(ret), ret)
+        else:
+            return self.success()
 
     def _run(self, testtmp, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -1162,13 +1166,6 @@ def runone(options, test, count):
         for line in out:
             f.write(line)
         f.close()
-
-    if result:
-        pass
-    elif ret:
-        result = t.fail(describe(ret), ret)
-    else:
-        result = t.success()
 
     if not options.verbose:
         iolock.acquire()
