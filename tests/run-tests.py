@@ -359,6 +359,7 @@ class Test(object):
         self._finished = None
         self._ret = None
         self._out = None
+        self._duration = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -386,6 +387,7 @@ class Test(object):
         self._finished = False
         self._ret = None
         self._out = None
+        self._duration = None
 
     def run(self):
         """Run this test instance.
@@ -435,13 +437,14 @@ class Test(object):
         starttime = time.time()
         try:
             ret, out = self._run(testtmp, replacements, env)
-            duration = time.time() - starttime
+            self._duration = time.time() - starttime
             self._finished = True
             self._ret = ret
             self._out = out
         except KeyboardInterrupt:
-            duration = time.time() - starttime
-            log('INTERRUPTED: %s (after %d seconds)' % (self.name, duration))
+            self._duration = time.time() - starttime
+            log('INTERRUPTED: %s (after %d seconds)' % (self.name,
+                                                        self._duration))
             raise
         except Exception, e:
             return self.fail('Exception during execution: %s' % e, 255)
@@ -518,12 +521,14 @@ class Test(object):
             sys.stdout.flush()
             iolock.release()
 
-        self._runner.times.append((self.name, duration))
+        if not self._unittest:
+            self.tearDown()
 
         return res
 
     def tearDown(self):
         """Tasks to perform after run()."""
+        self._runner.times.append((self.name, self._duration))
 
     def _run(self, testtmp, replacements, env):
         # This should be implemented in child classes to run tests.
