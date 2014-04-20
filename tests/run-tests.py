@@ -551,12 +551,14 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
-    def __init__(self, test, path, options, count, refpath):
+    def __init__(self, test, path, options, count, refpath, errpath):
         self._test = test
         self._path = path
         self._options = options
         self._count = count
         self._daemonpids = []
+        self._refpath = refpath
+        self._errpath = errpath
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -580,6 +582,10 @@ class Test(object):
             shutil.rmtree(self._threadtmp, True)
 
     def run(self, result):
+        # Remove any previous output files.
+        if os.path.exists(self._errpath):
+            os.remove(self._errpath)
+
         testtmp = os.path.join(self._threadtmp, os.path.basename(self._path))
         os.mkdir(testtmp)
         replacements, port = self._getreplacements(testtmp)
@@ -1090,10 +1096,7 @@ def runone(options, test, count):
 
     vlog("# Test", test)
 
-    if os.path.exists(err):
-        os.remove(err)       # Remove any previous output files
-
-    t = runner(test, testpath, options, count, ref)
+    t = runner(test, testpath, options, count, ref, err)
     res = TestResult()
     t.run(res)
     t.cleanup()
