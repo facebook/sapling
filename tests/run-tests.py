@@ -398,6 +398,10 @@ class Test(object):
                                      os.path.basename(self._path))
         os.mkdir(self._testtmp)
 
+        # Remove any previous output files.
+        if os.path.exists(self._errpath):
+            os.remove(self._errpath)
+
     def run(self):
         """Run this test instance.
 
@@ -429,10 +433,6 @@ class Test(object):
 
         if not os.path.basename(self.name.lower()).startswith('test-'):
             return self.skip('not a test file')
-
-        # Remove any previous output files.
-        if os.path.exists(self._errpath):
-            os.remove(self._errpath)
 
         replacements, port = self._getreplacements()
         env = self._getenv(port)
