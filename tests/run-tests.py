@@ -555,6 +555,7 @@ class Test(object):
         self._path = path
         self._options = options
         self._count = count
+        self._daemonpids = []
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -571,6 +572,9 @@ class Test(object):
         os.mkdir(self._threadtmp)
 
     def cleanup(self):
+        for entry in self._daemonpids:
+            killdaemons(entry)
+
         if self._threadtmp and not self._options.keep_tmpdir:
             shutil.rmtree(self._threadtmp, True)
 
@@ -579,6 +583,7 @@ class Test(object):
         os.mkdir(testtmp)
         replacements, port = self._getreplacements(testtmp)
         env = self._getenv(testtmp, port)
+        self._daemonpids.append(env['DAEMON_PIDS'])
         createhgrc(env['HGRCPATH'], self._options)
 
         starttime = time.time()
