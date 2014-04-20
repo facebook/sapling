@@ -1461,10 +1461,6 @@ class TestRunner(object):
             else:
                 print "WARNING: Did not find prerequisite tool: %s " % p
 
-def main(args, runner=None, parser=None):
-    runner = runner or TestRunner()
-
-    return runner.run(args, parser=parser)
-
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    runner = TestRunner()
+    sys.exit(runner.run(sys.argv[1:]))
