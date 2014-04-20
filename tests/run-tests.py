@@ -607,6 +607,9 @@ class Test(object):
         return warned and '~' or '!', self.name, msg
 
     def skip(self, msg):
+        if self._unittest:
+            raise SkipTest(msg)
+
         if self._options.verbose:
             log("\nSkipping %s: %s" % (self._path, msg))
 
@@ -979,6 +982,9 @@ def run(cmd, wd, options, replacements, env, abort):
 
 iolock = threading.Lock()
 
+class SkipTest(Exception):
+    """Raised to indicate that a test is to be skipped."""
+
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -1334,6 +1340,8 @@ class TestRunner(object):
                     self.runTest()
                 except KeyboardInterrupt:
                     raise
+                except SkipTest, e:
+                    result.addSkip(self, str(e))
                 except self.failureException:
                     result.addFailure(self, sys.exc_info())
                 except Exception:
@@ -1348,13 +1356,11 @@ class TestRunner(object):
                     self._result.failures.append((self, msg))
                 elif code == '~':
                     self._result.addWarn(self, msg)
-                elif code == '.':
-                    # Success is handled automatically by the built-in run().
-                    pass
-                elif code == 's':
-                    self._result.addSkip(self, msg)
                 elif code == 'i':
                     self._result.addIgnore(self, msg)
+                # Codes handled in run().
+                elif code in ('.', 's'):
+                    pass
                 else:
                     self.fail('Unknown test result code: %s' % code)
 
