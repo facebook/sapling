@@ -708,7 +708,8 @@ class Test(object):
         return res
 
     def _run(self, testtmp, replacements, env):
-        raise NotImplemented('Subclasses must implement Test.run()')
+        # This should be implemented in child classes to run tests.
+        return self._skip('unknown test type')
 
     def _getreplacements(self, testtmp):
         port = self._options.port + self._count * 3
@@ -1083,6 +1084,26 @@ class TTest(Test):
                 return '+glob'
         return False
 
+def gettest(testdir, test, options, count):
+    """Obtain a Test by looking at its filename.
+
+    Returns a Test instance. The Test may not be runnable if it doesn't map
+    to a known type.
+    """
+
+    lctest = test.lower()
+    refpath = os.path.join(testdir, test)
+
+    runner = Test
+
+    for ext, cls, out in testtypes:
+        if lctest.endswith(ext):
+            runner = cls
+            refpath = os.path.join(testdir, test + out)
+            break
+
+    return runner(testdir, test, options, count, refpath)
+
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
     """Run command in a sub-process, capturing the output (stdout and stderr).
@@ -1129,31 +1150,6 @@ def run(cmd, wd, options, replacements, env):
         output = re.sub(s, r, output)
     return ret, output.splitlines(True)
 
-def runone(options, test, count):
-    '''returns a result element: (code, test, msg)'''
-
-    def skip(msg):
-        if options.verbose:
-            log("\nSkipping %s: %s" % (testpath, msg))
-        return 's', test, msg
-
-    lctest = test.lower()
-
-    for ext, cls, out in testtypes:
-        if lctest.endswith(ext):
-            runner = cls
-            ref = os.path.join(TESTDIR, test + out)
-            break
-    else:
-        return skip("unknown test type")
-
-    t = runner(TESTDIR, test, options, count, ref)
-    result = t.run()
-
-    t.cleanup()
-
-    return result
-
 _hgpath = None
 
 def _gethgpath():
@@ -1195,7 +1191,9 @@ def scheduletests(options, tests):
 
     def job(test, count):
         try:
-            done.put(runone(options, test, count))
+            t = gettest(TESTDIR, test, options, count)
+            done.put(t.run())
+            t.cleanup()
         except KeyboardInterrupt:
             pass
         except: # re-raises
