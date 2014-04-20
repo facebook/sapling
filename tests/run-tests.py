@@ -356,6 +356,8 @@ class Test(object):
         self._errpath = errpath
         self._unittest = unittest
 
+        self._finished = None
+
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
         if runner.options.debug:
@@ -379,12 +381,16 @@ class Test(object):
 
     def setUp(self):
         """Tasks to perform before run()."""
+        self._finished = False
 
     def run(self):
         """Run this test instance.
 
         This will return a tuple describing the result of the test.
         """
+        if not self._unittest:
+            self.setUp()
+
         if not os.path.exists(self._path):
             return self.skip("Doesn't exist")
 
@@ -426,6 +432,7 @@ class Test(object):
         try:
             ret, out = self._run(testtmp, replacements, env)
             duration = time.time() - starttime
+            self._finished = True
         except KeyboardInterrupt:
             duration = time.time() - starttime
             log('INTERRUPTED: %s (after %d seconds)' % (self.name, duration))
