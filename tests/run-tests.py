@@ -103,8 +103,6 @@ if 'java' in sys.platform:
 
 TESTDIR = HGTMP = INST = BINDIR = TMPBINDIR = PYTHONDIR = None
 
-requiredtools = [os.path.basename(sys.executable), "diff", "grep", "unzip",
-                 "gunzip", "bunzip2", "sed"]
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
@@ -335,14 +333,6 @@ def log(*msg):
     sys.stdout.flush()
     iolock.release()
 
-def findprogram(program):
-    """Search PATH for a executable program"""
-    for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
-        name = os.path.join(p, program)
-        if os.name == 'nt' or os.access(name, os.X_OK):
-            return name
-    return None
-
 def createhgrc(path, options):
     # create a fresh hgrc
     hgrc = open(path, 'w')
@@ -361,18 +351,6 @@ def createhgrc(path, options):
                                 'have an = for assignment' % opt)
             hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
-
-def checktools():
-    # Before we go any further, check for pre-requisite tools
-    # stuff from coreutils (cat, rm, etc) are not tested
-    for p in requiredtools:
-        if os.name == 'nt' and not p.endswith('.exe'):
-            p += '.exe'
-        found = findprogram(p)
-        if found:
-            vlog("# Found prerequisite", p, "at", found)
-        else:
-            print "WARNING: Did not find prerequisite tool: "+p
 
 def terminate(proc):
     """Terminate subprocess (with fallback for Python versions < 2.6)"""
@@ -1001,6 +979,16 @@ class TestRunner(object):
     Tests rely on a lot of state. This object holds it for them.
     """
 
+    REQUIREDTOOLS = [
+        os.path.basename(sys.executable),
+        'diff',
+        'grep',
+        'unzip',
+        'gunzip',
+        'bunzip2',
+        'sed',
+    ]
+
     TESTTYPES = [
         ('.py', PythonTest, '.out'),
         ('.t', TTest, ''),
@@ -1146,7 +1134,7 @@ class TestRunner(object):
             except OSError, err:
                 if err.errno != errno.ENOENT:
                     raise
-            if findprogram(pyexename) != sys.executable:
+            if self._findprogram(pyexename) != sys.executable:
                 try:
                     os.symlink(sys.executable, mypython)
                     self._createdfiles.append(mypython)
@@ -1162,7 +1150,7 @@ class TestRunner(object):
             while exedir in path:
                 path.remove(exedir)
             os.environ['PATH'] = os.pathsep.join([exedir] + path)
-            if not findprogram(pyexename):
+            if not self._findprogram(pyexename):
                 print "WARNING: Cannot find %s in search path" % pyexename
 
     def installhg(self):
@@ -1331,6 +1319,26 @@ class TestRunner(object):
         except KeyboardInterrupt:
             self.abort[0] = True
 
+    def _findprogram(self, program):
+        """Search PATH for a executable program"""
+        for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
+            name = os.path.join(p, program)
+            if os.name == 'nt' or os.access(name, os.X_OK):
+                return name
+        return None
+
+    def checktools(self):
+        # Before we go any further, check for pre-requisite tools
+        # stuff from coreutils (cat, rm, etc) are not tested
+        for p in self.REQUIREDTOOLS:
+            if os.name == 'nt' and not p.endswith('.exe'):
+                p += '.exe'
+            found = self._findprogram(p)
+            if found:
+                vlog("# Found prerequisite", p, "at", found)
+            else:
+                print "WARNING: Did not find prerequisite tool: %s " % p
+
 def main(args, runner=None, parser=None):
     runner = runner or TestRunner()
 
@@ -1339,7 +1347,7 @@ def main(args, runner=None, parser=None):
     runner.options = options
     os.umask(022)
 
-    checktools()
+    runner.checktools()
 
     tests = runner.findtests(args)
 
