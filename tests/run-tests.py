@@ -982,6 +982,19 @@ def run(cmd, wd, options, replacements, env, abort):
 
 iolock = threading.Lock()
 
+class TestResult(unittest._TextTestResult):
+    """Holds results when executing via unittest."""
+    # Don't worry too much about accessing the non-public _TextTestResult.
+    # It is relatively common in Python testing tools.
+    def __init__(self, *args, **kwargs):
+        super(TestResult, self).__init__(*args, **kwargs)
+
+class TextTestRunner(unittest.TextTestRunner):
+    """Custom unittest test runner that uses appropriate settings."""
+
+    def _makeResult(self):
+        return TestResult(self.stream, self.descriptions, self.verbosity)
+
 class TestRunner(object):
     """Holds context for executing tests.
 
@@ -1191,7 +1204,7 @@ class TestRunner(object):
                 verbosity = 1
                 if self.options.verbose:
                     verbosity = 2
-                runner = unittest.TextTestRunner(verbosity=verbosity)
+                runner = TextTestRunner(verbosity=verbosity)
                 runner.run(suite)
             else:
                 self._executetests(tests)
