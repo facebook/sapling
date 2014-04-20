@@ -357,6 +357,8 @@ class Test(object):
         self._unittest = unittest
 
         self._finished = None
+        self._ret = None
+        self._out = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -382,6 +384,8 @@ class Test(object):
     def setUp(self):
         """Tasks to perform before run()."""
         self._finished = False
+        self._ret = None
+        self._out = None
 
     def run(self):
         """Run this test instance.
@@ -433,6 +437,8 @@ class Test(object):
             ret, out = self._run(testtmp, replacements, env)
             duration = time.time() - starttime
             self._finished = True
+            self._ret = ret
+            self._out = out
         except KeyboardInterrupt:
             duration = time.time() - starttime
             log('INTERRUPTED: %s (after %d seconds)' % (self.name, duration))
