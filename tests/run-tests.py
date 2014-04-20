@@ -105,8 +105,6 @@ TESTDIR = HGTMP = INST = BINDIR = TMPBINDIR = PYTHONDIR = None
 
 requiredtools = [os.path.basename(sys.executable), "diff", "grep", "unzip",
                  "gunzip", "bunzip2", "sed"]
-createdfiles = []
-
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
@@ -1251,6 +1249,7 @@ class TestRunner(object):
         self.tmpbinddir = None
         self.pythondir = None
         self.coveragefile = None
+        self._createdfiles = []
 
     def cleanup(self):
         """Clean up state from this test invocation."""
@@ -1260,7 +1259,7 @@ class TestRunner(object):
 
         vlog("# Cleaning up HGTMP", self.hgtmp)
         shutil.rmtree(self.hgtmp, True)
-        for f in createdfiles:
+        for f in self._createdfiles:
             try:
                 os.remove(f)
             except OSError:
@@ -1284,7 +1283,7 @@ class TestRunner(object):
             if findprogram(pyexename) != sys.executable:
                 try:
                     os.symlink(sys.executable, mypython)
-                    createdfiles.append(mypython)
+                    self._createdfiles.append(mypython)
                 except OSError, err:
                     # child processes may race, which is harmless
                     if err.errno != errno.EEXIST:
