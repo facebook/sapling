@@ -388,10 +388,10 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def cleanup(options):
+def cleanup(runner, options):
     if not options.keep_tmpdir:
-        vlog("# Cleaning up HGTMP", HGTMP)
-        shutil.rmtree(HGTMP, True)
+        vlog("# Cleaning up HGTMP", runner.hgtmp)
+        shutil.rmtree(runner.hgtmp, True)
         for f in createdfiles:
             try:
                 os.remove(f)
@@ -459,7 +459,7 @@ def installhg(runner, options):
            ' install --force --prefix="%(prefix)s" --install-lib="%(libdir)s"'
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
            % {'exe': sys.executable, 'py3': py3, 'pure': pure,
-              'compiler': compiler, 'base': os.path.join(HGTMP, "build"),
+              'compiler': compiler, 'base': os.path.join(runner.hgtmp, "build"),
               'prefix': INST, 'libdir': PYTHONDIR, 'bindir': BINDIR,
               'nohome': nohome, 'logfile': installerrs})
     vlog("# Running", cmd)
@@ -551,11 +551,11 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
-    def __init__(self, testdir, test, options, count, refpath):
-        path = os.path.join(testdir, test)
-        errpath = os.path.join(testdir, '%s.err' % test)
+    def __init__(self, runner, test, options, count, refpath):
+        path = os.path.join(runner.testdir, test)
+        errpath = os.path.join(runner.testdir, '%s.err' % test)
 
-        self._testdir = testdir
+        self._testdir = runner.testdir
         self._test = test
         self._path = path
         self._options = options
@@ -575,7 +575,7 @@ class Test(object):
         else:
             self._refout = []
 
-        self._threadtmp = os.path.join(HGTMP, 'child%d' % count)
+        self._threadtmp = os.path.join(runner.hgtmp, 'child%d' % count)
         os.mkdir(self._threadtmp)
 
     def cleanup(self):
@@ -1103,7 +1103,7 @@ def gettest(runner, test, options, count):
             refpath = os.path.join(runner.testdir, test + out)
             break
 
-    return testcls(runner.testdir, test, options, count, refpath)
+    return testcls(runner, test, options, count, refpath)
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
@@ -1286,6 +1286,7 @@ class TestRunner(object):
     """
     def __init__(self):
         self.testdir = None
+        self.hgtmp = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1333,7 +1334,7 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global HGTMP, INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
+    global INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1358,12 +1359,12 @@ def main(args, parser=None):
             # in all lowercase, which causes troubles with paths (issue3490)
             d = os.getenv('TMP')
         tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
-    HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
+    runner.hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
 
     if options.with_hg:
         INST = None
         BINDIR = os.path.dirname(os.path.realpath(options.with_hg))
-        TMPBINDIR = os.path.join(HGTMP, 'install', 'bin')
+        TMPBINDIR = os.path.join(runner.hgtmp, 'install', 'bin')
         os.makedirs(TMPBINDIR)
 
         # This looks redundant with how Python initializes sys.path from
@@ -1373,7 +1374,7 @@ def main(args, parser=None):
         # ... which means it's not really redundant at all.
         PYTHONDIR = BINDIR
     else:
-        INST = os.path.join(HGTMP, "install")
+        INST = os.path.join(runner.hgtmp, "install")
         BINDIR = os.environ["BINDIR"] = os.path.join(INST, "bin")
         TMPBINDIR = BINDIR
         PYTHONDIR = os.path.join(INST, "lib", "python")
@@ -1404,7 +1405,7 @@ def main(args, parser=None):
     COVERAGE_FILE = os.path.join(runner.testdir, ".coverage")
 
     vlog("# Using TESTDIR", runner.testdir)
-    vlog("# Using HGTMP", HGTMP)
+    vlog("# Using HGTMP", runner.hgtmp)
     vlog("# Using PATH", os.environ["PATH"])
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
@@ -1412,7 +1413,7 @@ def main(args, parser=None):
         return runtests(runner, options, tests) or 0
     finally:
         time.sleep(.1)
-        cleanup(options)
+        cleanup(runner, options)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
