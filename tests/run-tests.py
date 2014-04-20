@@ -605,6 +605,9 @@ class Test(object):
                     else:
                         return self.ignore("doesn't match keyword")
 
+        if not os.path.basename(self._test.lower()).startswith('test-'):
+            return self.skip('not a test file')
+
         # Remove any previous output files.
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
@@ -1135,8 +1138,6 @@ def runone(options, test, count):
     err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
 
-    if not os.path.basename(lctest).startswith("test-"):
-        return skip("not a test file")
     for ext, cls, out in testtypes:
         if lctest.endswith(ext):
             runner = cls
