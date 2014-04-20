@@ -1315,6 +1315,9 @@ class TestRunner(object):
             tests = [self._gettest(t, i, asunit=self.options.unittest)
                      for i, t in enumerate(tests)]
 
+            failed = False
+            warned = False
+
             if self.options.unittest:
                 suite = TestSuite(self, tests=tests)
                 verbosity = 1
@@ -1325,27 +1328,27 @@ class TestRunner(object):
             else:
                 self._executetests(tests)
 
-            failed = len(self.results['!'])
-            warned = len(self.results['~'])
-            tested = len(self.results['.']) + failed + warned
-            skipped = len(self.results['s'])
-            ignored = len(self.results['i'])
+                failed = len(self.results['!'])
+                warned = len(self.results['~'])
+                tested = len(self.results['.']) + failed + warned
+                skipped = len(self.results['s'])
+                ignored = len(self.results['i'])
 
-            print
-            if not self.options.noskips:
-                for s in self.results['s']:
-                    print "Skipped %s: %s" % s
-            for s in self.results['~']:
-                print "Warned %s: %s" % s
-            for s in self.results['!']:
-                print "Failed %s: %s" % s
-            self._checkhglib("Tested")
-            print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
-                tested, skipped + ignored, warned, failed)
-            if self.results['!']:
-                print 'python hash seed:', os.environ['PYTHONHASHSEED']
-            if self.options.time:
-                self._outputtimes()
+                print
+                if not self.options.noskips:
+                    for s in self.results['s']:
+                        print "Skipped %s: %s" % s
+                for s in self.results['~']:
+                    print "Warned %s: %s" % s
+                for s in self.results['!']:
+                    print "Failed %s: %s" % s
+                self._checkhglib("Tested")
+                print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
+                    tested, skipped + ignored, warned, failed)
+                if self.results['!']:
+                    print 'python hash seed:', os.environ['PYTHONHASHSEED']
+                if self.options.time:
+                    self._outputtimes()
 
             if self.options.anycoverage:
                 self._outputcoverage()
