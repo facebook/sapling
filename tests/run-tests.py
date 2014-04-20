@@ -618,21 +618,16 @@ class PythonTest(Test):
         return run(cmd, testtmp, self._options, replacements, env,
                    self._runner.abort)
 
-
-needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
-escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
-escapemap = dict((chr(i), r'\x%02x' % i) for i in range(256))
-escapemap.update({'\\': '\\\\', '\r': r'\r'})
-def escapef(m):
-    return escapemap[m.group(0)]
-def stringescape(s):
-    return escapesub(escapef, s)
-
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
     SKIPPED_PREFIX = 'skipped: '
     FAILED_PREFIX = 'hghave check failed: '
+    NEEDESCAPE = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
+
+    ESCAPESUB = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
+    ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256)).update(
+                     {'\\': '\\\\', '\r': r'\r'})
 
     def _run(self, testtmp, replacements, env):
         f = open(self._path)
@@ -818,8 +813,9 @@ class TTest(Test):
                 if r:
                     postout.append('  ' + el)
                 else:
-                    if needescape(lout):
-                        lout = stringescape(lout.rstrip('\n')) + ' (esc)\n'
+                    if self.NEEDESCAPE(lout):
+                        lout = TTest.stringescape('%s (esc)\n' %
+                                                  lout.rstrip('\n'))
                     postout.append('  ' + lout) # Let diff deal with it.
                     if r != '': # If line failed.
                         warnonly = 3 # for sure not
@@ -917,6 +913,15 @@ class TTest(Test):
                 failed.append(line[len(TTest.FAILED_PREFIX):])
 
         return missing, failed
+
+    @staticmethod
+    def _escapef(m):
+        return TTest.ESCAPEMAP[m.group(0)]
+
+    @staticmethod
+    def _stringescape(s):
+        return TTest.ESCAPESUB(TTest._escapef, s)
+
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env, abort):
