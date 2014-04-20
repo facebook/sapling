@@ -619,6 +619,23 @@ class Test(object):
         if not self._options.keep_tmpdir:
             shutil.rmtree(testtmp)
 
+        if ret == SKIPPED_STATUS:
+            if out is None: # Debug mode, nothing to parse.
+                missing = ['unknown']
+                failed = None
+            else:
+                missing, failed = parsehghaveoutput(out)
+
+            if not missing:
+                missing = ['irrelevant']
+
+            if failed:
+                return self.fail('hg have failed checking for %s' % failed[-1],
+                                 ret)
+            else:
+                result.skipped = True
+                return self.skip(missing[-1])
+
     def _run(self, testtmp, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
 
@@ -699,6 +716,12 @@ class Test(object):
 
         return warned and '~' or '!', self._test, msg
 
+    def skip(self, msg):
+        if self._options.verbose:
+            log("\nSkipping %s: %s" % (self._path, msg))
+
+        return 's', self._test, msg
+
 class TestResult(object):
     """Holds the result of a test execution."""
 
@@ -708,11 +731,7 @@ class TestResult(object):
         self.duration = None
         self.exception = None
         self.refout = None
-
-    @property
-    def skipped(self):
-        """Whether the test was skipped."""
-        return self.ret == SKIPPED_STATUS
+        self.skipped = False
 
 class PythonTest(Test):
     """A Python-based test."""
@@ -1101,7 +1120,7 @@ def runone(options, test, count):
 
     t = runner(test, testpath, options, count, ref, err)
     res = TestResult()
-    t.run(res)
+    result = t.run(res)
 
     if res.exception:
         return t.fail('Exception during execution: %s' % res.exception, 255)
@@ -1122,19 +1141,8 @@ def runone(options, test, count):
             f.write(line)
         f.close()
 
-    if skipped:
-        if out is None:                 # debug mode: nothing to parse
-            missing = ['unknown']
-            failed = None
-        else:
-            missing, failed = parsehghaveoutput(out)
-        if not missing:
-            missing = ['irrelevant']
-        if failed:
-            result = t.fail("hghave failed checking for %s" % failed[-1], ret)
-            skipped = False
-        else:
-            result = skip(missing[-1])
+    if result:
+        pass
     elif ret == 'timeout':
         result = t.fail("timed out", ret)
     elif out != refout:
