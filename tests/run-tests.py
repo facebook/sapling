@@ -1026,6 +1026,25 @@ class TestRunner(object):
         self.abort = [False]
         self._createdfiles = []
 
+    def findtests(self, args):
+        """Finds possible test files from arguments.
+
+        If you wish to inject custom tests into the test harness, this would
+        be a good function to monkeypatch or override in a derived class.
+        """
+        if not args:
+            if self.options.changed:
+                proc = Popen4('hg st --rev "%s" -man0 .' %
+                              self.options.changed, None, 0)
+                stdout, stderr = proc.communicate()
+                args = stdout.strip('\0').split('\0')
+            else:
+                args = os.listdir('.')
+
+        return [t for t in args
+                if os.path.basename(t).startswith('test-')
+                    and (t.endswith('.py') or t.endswith('.t'))]
+
     def runtests(self, tests):
         try:
             if self.inst:
@@ -1322,18 +1341,7 @@ def main(args, parser=None):
 
     checktools()
 
-    if not args:
-        if options.changed:
-            proc = Popen4('hg st --rev "%s" -man0 .' % options.changed,
-                          None, 0)
-            stdout, stderr = proc.communicate()
-            args = stdout.strip('\0').split('\0')
-        else:
-            args = os.listdir(".")
-
-    tests = [t for t in args
-             if os.path.basename(t).startswith("test-")
-                 and (t.endswith(".py") or t.endswith(".t"))]
+    tests = runner.findtests(args)
 
     if options.random:
         random.shuffle(tests)
