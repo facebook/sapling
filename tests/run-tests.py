@@ -595,6 +595,16 @@ class Test(object):
             if options.retest and not os.path.exists('%s.err' % self._test):
                 return self.ignore('not retesting')
 
+            if options.keywords:
+                f = open(self._test)
+                t = f.read().lower() + self._test.lower()
+                f.close()
+                for k in options.keywords.lower().split():
+                    if k in t:
+                        break
+                    else:
+                        return self.ignore("doesn't match keyword")
+
         # Remove any previous output files.
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
@@ -1124,17 +1134,6 @@ def runone(options, test, count):
     testpath = os.path.join(TESTDIR, test)
     err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
-
-    if not (options.whitelisted and test in options.whitelisted):
-        if options.keywords:
-            fp = open(test)
-            t = fp.read().lower() + test.lower()
-            fp.close()
-            for k in options.keywords.lower().split():
-                if k in t:
-                    break
-                else:
-                    return ignore("doesn't match keyword")
 
     if not os.path.basename(lctest).startswith("test-"):
         return skip("not a test file")
