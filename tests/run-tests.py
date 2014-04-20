@@ -582,6 +582,10 @@ class Test(object):
             shutil.rmtree(self._threadtmp, True)
 
     def run(self, result):
+        if not os.path.exists(self._path):
+            result.skipped = True
+            return self.skip("Doesn't exist")
+
         # Remove any previous output files.
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
@@ -1111,9 +1115,6 @@ def runone(options, test, count):
     testpath = os.path.join(TESTDIR, test)
     err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
-
-    if not os.path.exists(testpath):
-            return skip("doesn't exist")
 
     if not (options.whitelisted and test in options.whitelisted):
         if options.blacklist and test in options.blacklist:
