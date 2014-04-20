@@ -514,16 +514,6 @@ class Test(object):
             self._result = self.success()
 
 
-        vlog("# Ret was:", ret)
-
-        # Don't print progress in unittest mode because that is handled
-        # by TestResult.
-        if not options.verbose and not self._unittest:
-            iolock.acquire()
-            sys.stdout.write(self._result[0])
-            sys.stdout.flush()
-            iolock.release()
-
         if not self._unittest:
             self.tearDown()
 
@@ -531,6 +521,16 @@ class Test(object):
 
     def tearDown(self):
         """Tasks to perform after run()."""
+        vlog("# Ret was:", self._ret)
+
+        # Don't print progress in unittest mode because that is handled
+        # by TestResult.
+        if not self._options.verbose and not self._unittest:
+            iolock.acquire()
+            sys.stdout.write(self._result[0])
+            sys.stdout.flush()
+            iolock.release()
+
         self._runner.times.append((self.name, self._duration))
 
     def _run(self, testtmp, replacements, env):
