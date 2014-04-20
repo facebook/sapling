@@ -128,6 +128,7 @@ def parselistfiles(files, listtype, warn=True):
     return entries
 
 def getparser():
+    """Obtain the OptionParser used by the CLI."""
     parser = optparse.OptionParser("%prog [options] [tests]")
 
     # keep these sorted
@@ -208,6 +209,7 @@ def getparser():
     return parser
 
 def parseargs(args, parser):
+    """Parse arguments with our OptionParser and validate results."""
     (options, args) = parser.parse_args(args)
 
     # jython is always pure
@@ -370,6 +372,10 @@ class Test(object):
             shutil.rmtree(self._threadtmp, True)
 
     def run(self):
+        """Run this test instance.
+
+        This will return a tuple describing the result of the test.
+        """
         if not os.path.exists(self._path):
             return self.skip("Doesn't exist")
 
