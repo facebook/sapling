@@ -1019,6 +1019,31 @@ class TestRunner(object):
         return self._run(tests)
 
     def _run(self, tests):
+        if self.options.tmpdir:
+            self.options.keep_tmpdir = True
+            tmpdir = self.options.tmpdir
+            if os.path.exists(tmpdir):
+                # Meaning of tmpdir has changed since 1.3: we used to create
+                # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
+                # tmpdir already exists.
+                print "error: temp dir %r already exists" % tmpdir
+                return 1
+
+                # Automatically removing tmpdir sounds convenient, but could
+                # really annoy anyone in the habit of using "--tmpdir=/tmp"
+                # or "--tmpdir=$HOME".
+                #vlog("# Removing temp dir", tmpdir)
+                #shutil.rmtree(tmpdir)
+            os.makedirs(tmpdir)
+        else:
+            d = None
+            if os.name == 'nt':
+                # without this, we get the default temp dir location, but
+                # in all lowercase, which causes troubles with paths (issue3490)
+                d = os.getenv('TMP')
+            tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
+        self.hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
+
         if self.options.with_hg:
             self.inst = None
             self.bindir = os.path.dirname(os.path.realpath(
@@ -1437,30 +1462,6 @@ def main(args, runner=None, parser=None):
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
-    if options.tmpdir:
-        options.keep_tmpdir = True
-        tmpdir = options.tmpdir
-        if os.path.exists(tmpdir):
-            # Meaning of tmpdir has changed since 1.3: we used to create
-            # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
-            # tmpdir already exists.
-            print "error: temp dir %r already exists" % tmpdir
-            return 1
-
-            # Automatically removing tmpdir sounds convenient, but could
-            # really annoy anyone in the habit of using "--tmpdir=/tmp"
-            # or "--tmpdir=$HOME".
-            #vlog("# Removing temp dir", tmpdir)
-            #shutil.rmtree(tmpdir)
-        os.makedirs(tmpdir)
-    else:
-        d = None
-        if os.name == 'nt':
-            # without this, we get the default temp dir location, but
-            # in all lowercase, which causes troubles with paths (issue3490)
-            d = os.getenv('TMP')
-        tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
-    runner.hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
 
     return runner.run(tests)
 
