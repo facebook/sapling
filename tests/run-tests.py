@@ -388,40 +388,6 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def usecorrectpython(runner):
-    # some tests run python interpreter. they must use same
-    # interpreter we use or bad things will happen.
-    pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
-    if getattr(os, 'symlink', None):
-        vlog("# Making python executable in test path a symlink to '%s'" %
-             sys.executable)
-        mypython = os.path.join(runner.tmpbindir, pyexename)
-        try:
-            if os.readlink(mypython) == sys.executable:
-                return
-            os.unlink(mypython)
-        except OSError, err:
-            if err.errno != errno.ENOENT:
-                raise
-        if findprogram(pyexename) != sys.executable:
-            try:
-                os.symlink(sys.executable, mypython)
-                createdfiles.append(mypython)
-            except OSError, err:
-                # child processes may race, which is harmless
-                if err.errno != errno.EEXIST:
-                    raise
-    else:
-        exedir, exename = os.path.split(sys.executable)
-        vlog("# Modifying search path to find %s as %s in '%s'" %
-             (exename, pyexename, exedir))
-        path = os.environ['PATH'].split(os.pathsep)
-        while exedir in path:
-            path.remove(exedir)
-        os.environ['PATH'] = os.pathsep.join([exedir] + path)
-        if not findprogram(pyexename):
-            print "WARNING: Cannot find %s in search path" % pyexename
-
 def installhg(runner):
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
@@ -465,7 +431,7 @@ def installhg(runner):
         sys.exit(1)
     os.chdir(runner.testdir)
 
-    usecorrectpython(runner)
+    runner.usecorrectpython()
 
     if runner.options.py3k_warnings and not runner.options.anycoverage:
         vlog("# Updating hg command to enable Py3k Warnings switch")
@@ -1221,7 +1187,7 @@ def runtests(runner, tests):
             installhg(runner)
             _checkhglib(runner, "Testing")
         else:
-            usecorrectpython(runner)
+            runner.usecorrectpython()
 
         if runner.options.restart:
             orig = list(tests)
@@ -1299,6 +1265,40 @@ class TestRunner(object):
                 os.remove(f)
             except OSError:
                 pass
+
+    def usecorrectpython(self):
+        # Some tests run the Python interpreter. They must use the
+        # same interpreter or bad things will happen.
+        pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
+        if getattr(os, 'symlink', None):
+            vlog("# Making python executable in test path a symlink to '%s'" %
+                 sys.executable)
+            mypython = os.path.join(self.tmpbindir, pyexename)
+            try:
+                if os.readlink(mypython) == sys.executable:
+                    return
+                os.unlink(mypython)
+            except OSError, err:
+                if err.errno != errno.ENOENT:
+                    raise
+            if findprogram(pyexename) != sys.executable:
+                try:
+                    os.symlink(sys.executable, mypython)
+                    createdfiles.append(mypython)
+                except OSError, err:
+                    # child processes may race, which is harmless
+                    if err.errno != errno.EEXIST:
+                        raise
+        else:
+            exedir, exename = os.path.split(sys.executable)
+            vlog("# Modifying search path to find %s as %s in '%s'" %
+                 (exename, pyexename, exedir))
+            path = os.environ['PATH'].split(os.pathsep)
+            while exedir in path:
+                path.remove(exedir)
+            os.environ['PATH'] = os.pathsep.join([exedir] + path)
+            if not findprogram(pyexename):
+                print "WARNING: Cannot find %s in search path" % pyexename
 
 def main(args, parser=None):
     runner = TestRunner()
