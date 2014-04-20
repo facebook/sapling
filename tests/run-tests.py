@@ -386,89 +386,6 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def installhg(runner):
-    vlog("# Performing temporary installation of HG")
-    installerrs = os.path.join("tests", "install.err")
-    compiler = ''
-    if runner.options.compiler:
-        compiler = '--compiler ' + runner.options.compiler
-    pure = runner.options.pure and "--pure" or ""
-    py3 = ''
-    if sys.version_info[0] == 3:
-        py3 = '--c2to3'
-
-    # Run installer in hg root
-    script = os.path.realpath(sys.argv[0])
-    hgroot = os.path.dirname(os.path.dirname(script))
-    os.chdir(hgroot)
-    nohome = '--home=""'
-    if os.name == 'nt':
-        # The --home="" trick works only on OS where os.sep == '/'
-        # because of a distutils convert_path() fast-path. Avoid it at
-        # least on Windows for now, deal with .pydistutils.cfg bugs
-        # when they happen.
-        nohome = ''
-    cmd = ('%(exe)s setup.py %(py3)s %(pure)s clean --all'
-           ' build %(compiler)s --build-base="%(base)s"'
-           ' install --force --prefix="%(prefix)s" --install-lib="%(libdir)s"'
-           ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
-           % {'exe': sys.executable, 'py3': py3, 'pure': pure,
-              'compiler': compiler, 'base': os.path.join(runner.hgtmp, "build"),
-              'prefix': runner.inst, 'libdir': runner.pythondir,
-              'bindir': runner.bindir,
-              'nohome': nohome, 'logfile': installerrs})
-    vlog("# Running", cmd)
-    if os.system(cmd) == 0:
-        if not runner.options.verbose:
-            os.remove(installerrs)
-    else:
-        f = open(installerrs)
-        for line in f:
-            print line,
-        f.close()
-        sys.exit(1)
-    os.chdir(runner.testdir)
-
-    runner.usecorrectpython()
-
-    if runner.options.py3k_warnings and not runner.options.anycoverage:
-        vlog("# Updating hg command to enable Py3k Warnings switch")
-        f = open(os.path.join(runner.bindir, 'hg'), 'r')
-        lines = [line.rstrip() for line in f]
-        lines[0] += ' -3'
-        f.close()
-        f = open(os.path.join(runner.bindir, 'hg'), 'w')
-        for line in lines:
-            f.write(line + '\n')
-        f.close()
-
-    hgbat = os.path.join(runner.bindir, 'hg.bat')
-    if os.path.isfile(hgbat):
-        # hg.bat expects to be put in bin/scripts while run-tests.py
-        # installation layout put it in bin/ directly. Fix it
-        f = open(hgbat, 'rb')
-        data = f.read()
-        f.close()
-        if '"%~dp0..\python" "%~dp0hg" %*' in data:
-            data = data.replace('"%~dp0..\python" "%~dp0hg" %*',
-                                '"%~dp0python" "%~dp0hg" %*')
-            f = open(hgbat, 'wb')
-            f.write(data)
-            f.close()
-        else:
-            print 'WARNING: cannot fix hg.bat reference to python.exe'
-
-    if runner.options.anycoverage:
-        custom = os.path.join(runner.testdir, 'sitecustomize.py')
-        target = os.path.join(runner.pythondir, 'sitecustomize.py')
-        vlog('# Installing coverage trigger to %s' % target)
-        shutil.copyfile(custom, target)
-        rc = os.path.join(runner.testdir, '.coveragerc')
-        vlog('# Installing coverage rc to %s' % rc)
-        os.environ['COVERAGE_PROCESS_START'] = rc
-        fn = os.path.join(runner.inst, '..', '.coverage')
-        os.environ['COVERAGE_FILE'] = fn
-
 def outputtimes(options):
     vlog('# Producing time report')
     times.sort(key=lambda t: (t[1], t[0]), reverse=True)
@@ -1182,7 +1099,7 @@ def scheduletests(runner, tests):
 def runtests(runner, tests):
     try:
         if runner.inst:
-            installhg(runner)
+            runner.installhg()
             _checkhglib(runner, "Testing")
         else:
             runner.usecorrectpython()
@@ -1298,6 +1215,91 @@ class TestRunner(object):
             os.environ['PATH'] = os.pathsep.join([exedir] + path)
             if not findprogram(pyexename):
                 print "WARNING: Cannot find %s in search path" % pyexename
+
+    def installhg(self):
+        vlog("# Performing temporary installation of HG")
+        installerrs = os.path.join("tests", "install.err")
+        compiler = ''
+        if self.options.compiler:
+            compiler = '--compiler ' + self.options.compiler
+        pure = self.options.pure and "--pure" or ""
+        py3 = ''
+        if sys.version_info[0] == 3:
+            py3 = '--c2to3'
+
+        # Run installer in hg root
+        script = os.path.realpath(sys.argv[0])
+        hgroot = os.path.dirname(os.path.dirname(script))
+        os.chdir(hgroot)
+        nohome = '--home=""'
+        if os.name == 'nt':
+            # The --home="" trick works only on OS where os.sep == '/'
+            # because of a distutils convert_path() fast-path. Avoid it at
+            # least on Windows for now, deal with .pydistutils.cfg bugs
+            # when they happen.
+            nohome = ''
+        cmd = ('%(exe)s setup.py %(py3)s %(pure)s clean --all'
+               ' build %(compiler)s --build-base="%(base)s"'
+               ' install --force --prefix="%(prefix)s"'
+               ' --install-lib="%(libdir)s"'
+               ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
+               % {'exe': sys.executable, 'py3': py3, 'pure': pure,
+                  'compiler': compiler,
+                  'base': os.path.join(self.hgtmp, "build"),
+                  'prefix': self.inst, 'libdir': self.pythondir,
+                  'bindir': self.bindir,
+                  'nohome': nohome, 'logfile': installerrs})
+        vlog("# Running", cmd)
+        if os.system(cmd) == 0:
+            if not self.options.verbose:
+                os.remove(installerrs)
+        else:
+            f = open(installerrs)
+            for line in f:
+                print line,
+            f.close()
+            sys.exit(1)
+        os.chdir(self.testdir)
+
+        self.usecorrectpython()
+
+        if self.options.py3k_warnings and not self.options.anycoverage:
+            vlog("# Updating hg command to enable Py3k Warnings switch")
+            f = open(os.path.join(self.bindir, 'hg'), 'r')
+            lines = [line.rstrip() for line in f]
+            lines[0] += ' -3'
+            f.close()
+            f = open(os.path.join(self.bindir, 'hg'), 'w')
+            for line in lines:
+                f.write(line + '\n')
+            f.close()
+
+        hgbat = os.path.join(self.bindir, 'hg.bat')
+        if os.path.isfile(hgbat):
+            # hg.bat expects to be put in bin/scripts while run-tests.py
+            # installation layout put it in bin/ directly. Fix it
+            f = open(hgbat, 'rb')
+            data = f.read()
+            f.close()
+            if '"%~dp0..\python" "%~dp0hg" %*' in data:
+                data = data.replace('"%~dp0..\python" "%~dp0hg" %*',
+                                    '"%~dp0python" "%~dp0hg" %*')
+                f = open(hgbat, 'wb')
+                f.write(data)
+                f.close()
+            else:
+                print 'WARNING: cannot fix hg.bat reference to python.exe'
+
+        if self.options.anycoverage:
+            custom = os.path.join(self.testdir, 'sitecustomize.py')
+            target = os.path.join(self.pythondir, 'sitecustomize.py')
+            vlog('# Installing coverage trigger to %s' % target)
+            shutil.copyfile(custom, target)
+            rc = os.path.join(self.testdir, '.coveragerc')
+            vlog('# Installing coverage rc to %s' % rc)
+            os.environ['COVERAGE_PROCESS_START'] = rc
+            fn = os.path.join(self.inst, '..', '.coverage')
+            os.environ['COVERAGE_FILE'] = fn
 
 def main(args, parser=None):
     runner = TestRunner()
