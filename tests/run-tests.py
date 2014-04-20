@@ -460,7 +460,7 @@ def installhg(runner, options):
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
            % {'exe': sys.executable, 'py3': py3, 'pure': pure,
               'compiler': compiler, 'base': os.path.join(runner.hgtmp, "build"),
-              'prefix': runner.inst, 'libdir': PYTHONDIR,
+              'prefix': runner.inst, 'libdir': runner.pythondir,
               'bindir': runner.bindir,
               'nohome': nohome, 'logfile': installerrs})
     vlog("# Running", cmd)
@@ -506,7 +506,7 @@ def installhg(runner, options):
 
     if options.anycoverage:
         custom = os.path.join(runner.testdir, 'sitecustomize.py')
-        target = os.path.join(PYTHONDIR, 'sitecustomize.py')
+        target = os.path.join(runner.pythondir, 'sitecustomize.py')
         vlog('# Installing coverage trigger to %s' % target)
         shutil.copyfile(custom, target)
         rc = os.path.join(runner.testdir, '.coveragerc')
@@ -526,7 +526,7 @@ def outputtimes(options):
 def outputcoverage(runner, options):
 
     vlog('# Producing coverage report')
-    os.chdir(PYTHONDIR)
+    os.chdir(runner.pythondir)
 
     def covrun(*args):
         cmd = 'coverage %s' % ' '.join(args)
@@ -1170,10 +1170,10 @@ def _gethgpath():
         pipe.close()
     return _hgpath
 
-def _checkhglib(verb):
+def _checkhglib(runner, verb):
     """Ensure that the 'mercurial' package imported by python is
     the one we expect it to be.  If not, print a warning to stderr."""
-    expecthg = os.path.join(PYTHONDIR, 'mercurial')
+    expecthg = os.path.join(runner.pythondir, 'mercurial')
     actualhg = _gethgpath()
     if os.path.abspath(actualhg) != os.path.abspath(expecthg):
         sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
@@ -1229,7 +1229,7 @@ def runtests(runner, options, tests):
     try:
         if runner.inst:
             installhg(runner, options)
-            _checkhglib("Testing")
+            _checkhglib(runner, "Testing")
         else:
             usecorrectpython(runner)
 
@@ -1259,7 +1259,7 @@ def runtests(runner, options, tests):
             print "Warned %s: %s" % s
         for s in results['!']:
             print "Failed %s: %s" % s
-        _checkhglib("Tested")
+        _checkhglib(runner, "Tested")
         print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
             tested, skipped + ignored, warned, failed)
         if results['!']:
@@ -1292,6 +1292,7 @@ class TestRunner(object):
         self.inst = None
         self.bindir = None
         self.tmpbinddir = None
+        self.pythondir = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1339,7 +1340,7 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global PYTHONDIR, COVERAGE_FILE
+    global COVERAGE_FILE
     runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
@@ -1377,13 +1378,13 @@ def main(args, parser=None):
         # "hg" specified by --with-hg is not the only Python script
         # executed in the test suite that needs to import 'mercurial'
         # ... which means it's not really redundant at all.
-        PYTHONDIR = runner.bindir
+        runner.pythondir = runner.bindir
     else:
         runner.inst = os.path.join(runner.hgtmp, "install")
         runner.bindir = os.environ["BINDIR"] = os.path.join(runner.inst,
                                                             "bin")
         runner.tmpbindir = runner.bindir
-        PYTHONDIR = os.path.join(runner.inst, "lib", "python")
+        runner.pythondir = os.path.join(runner.inst, "lib", "python")
 
     os.environ["BINDIR"] = runner.bindir
     os.environ["PYTHON"] = PYTHON
@@ -1397,7 +1398,7 @@ def main(args, parser=None):
     # can run .../tests/run-tests.py test-foo where test-foo
     # adds an extension to HGRC. Also include run-test.py directory to import
     # modules like heredoctest.
-    pypath = [PYTHONDIR, runner.testdir,
+    pypath = [runner.pythondir, runner.testdir,
               os.path.abspath(os.path.dirname(__file__))]
     # We have to augment PYTHONPATH, rather than simply replacing
     # it, in case external libraries are only available via current
