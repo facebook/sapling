@@ -388,18 +388,6 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-def cleanup(runner):
-    if runner.options.keep_tmpdir:
-        return
-
-    vlog("# Cleaning up HGTMP", runner.hgtmp)
-    shutil.rmtree(runner.hgtmp, True)
-    for f in createdfiles:
-        try:
-            os.remove(f)
-        except OSError:
-            pass
-
 def usecorrectpython(runner):
     # some tests run python interpreter. they must use same
     # interpreter we use or bad things will happen.
@@ -1298,6 +1286,20 @@ class TestRunner(object):
         self.pythondir = None
         self.coveragefile = None
 
+    def cleanup(self):
+        """Clean up state from this test invocation."""
+
+        if self.options.keep_tmpdir:
+            return
+
+        vlog("# Cleaning up HGTMP", self.hgtmp)
+        shutil.rmtree(self.hgtmp, True)
+        for f in createdfiles:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
 def main(args, parser=None):
     runner = TestRunner()
 
@@ -1424,7 +1426,7 @@ def main(args, parser=None):
         return runtests(runner, tests) or 0
     finally:
         time.sleep(.1)
-        cleanup(runner)
+        runner.cleanup()
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
