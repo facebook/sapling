@@ -1331,8 +1331,8 @@ class TestRunner(object):
         except KeyboardInterrupt:
             self.abort[0] = True
 
-def main(args, parser=None):
-    runner = TestRunner()
+def main(args, runner=None, parser=None):
+    runner = runner or TestRunner()
 
     parser = parser or getparser()
     (options, args) = parseargs(args, parser)
