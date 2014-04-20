@@ -1364,42 +1364,46 @@ class TestRunner(object):
             # Need to stash away the TestResult since we do custom things
             # with it.
             def run(self, result):
+                result.startTest(self)
                 try:
-                    t.setUp()
-                except (KeyboardInterrupt, SystemExit):
-                    raise
-                except Exception:
-                    result.addError(self, sys.exc_info())
-                    return
+                    try:
+                        t.setUp()
+                    except (KeyboardInterrupt, SystemExit):
+                        raise
+                    except Exception:
+                        result.addError(self, sys.exc_info())
+                        return
 
-                success = False
-                try:
-                    self.runTest()
-                except KeyboardInterrupt:
-                    raise
-                except SkipTest, e:
-                    result.addSkip(self, str(e))
-                except IgnoreTest, e:
-                    result.addIgnore(self, str(e))
-                except WarnTest, e:
-                    result.addWarn(self, str(e))
-                except self.failureException:
-                    result.addFailure(self, sys.exc_info())
-                except Exception:
-                    result.addError(self, sys.exc_info())
-                else:
-                    success = True
-
-                try:
-                    t.tearDown()
-                except (KeyboardInterrupt, SystemExit):
-                    raise
-                except Exception:
-                    result.addError(self, sys.exc_info())
                     success = False
+                    try:
+                        self.runTest()
+                    except KeyboardInterrupt:
+                        raise
+                    except SkipTest, e:
+                        result.addSkip(self, str(e))
+                    except IgnoreTest, e:
+                        result.addIgnore(self, str(e))
+                    except WarnTest, e:
+                        result.addWarn(self, str(e))
+                    except self.failureException:
+                        result.addFailure(self, sys.exc_info())
+                    except Exception:
+                        result.addError(self, sys.exc_info())
+                    else:
+                        success = True
 
-                if success:
-                    result.addSuccess(self)
+                    try:
+                        t.tearDown()
+                    except (KeyboardInterrupt, SystemExit):
+                        raise
+                    except Exception:
+                        result.addError(self, sys.exc_info())
+                        success = False
+
+                    if success:
+                        result.addSuccess(self)
+                finally:
+                    result.stopTest(self)
 
             def runTest(self):
                 code, tname, msg = t.run()
