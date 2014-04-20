@@ -432,7 +432,7 @@ def usecorrectpython():
         if not findprogram(pyexename):
             print "WARNING: Cannot find %s in search path" % pyexename
 
-def installhg(options):
+def installhg(runner, options):
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
     compiler = ''
@@ -472,7 +472,7 @@ def installhg(options):
             print line,
         f.close()
         sys.exit(1)
-    os.chdir(TESTDIR)
+    os.chdir(runner.testdir)
 
     usecorrectpython()
 
@@ -504,11 +504,11 @@ def installhg(options):
             print 'WARNING: cannot fix hg.bat reference to python.exe'
 
     if options.anycoverage:
-        custom = os.path.join(TESTDIR, 'sitecustomize.py')
+        custom = os.path.join(runner.testdir, 'sitecustomize.py')
         target = os.path.join(PYTHONDIR, 'sitecustomize.py')
         vlog('# Installing coverage trigger to %s' % target)
         shutil.copyfile(custom, target)
-        rc = os.path.join(TESTDIR, '.coveragerc')
+        rc = os.path.join(runner.testdir, '.coveragerc')
         vlog('# Installing coverage rc to %s' % rc)
         os.environ['COVERAGE_PROCESS_START'] = rc
         fn = os.path.join(INST, '..', '.coverage')
@@ -522,7 +522,7 @@ def outputtimes(options):
     for test, timetaken in times:
         print cols % (timetaken, test)
 
-def outputcoverage(options):
+def outputcoverage(runner, options):
 
     vlog('# Producing coverage report')
     os.chdir(PYTHONDIR)
@@ -533,13 +533,13 @@ def outputcoverage(options):
         os.system(cmd)
 
     covrun('-c')
-    omit = ','.join(os.path.join(x, '*') for x in [BINDIR, TESTDIR])
+    omit = ','.join(os.path.join(x, '*') for x in [BINDIR, runner.testdir])
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
     if options.htmlcov:
-        htmldir = os.path.join(TESTDIR, 'htmlcov')
+        htmldir = os.path.join(runner.testdir, 'htmlcov')
         covrun('-i', '-b', '"--directory=%s"' % htmldir, '"--omit=%s"' % omit)
     if options.annotate:
-        adir = os.path.join(TESTDIR, 'annotated')
+        adir = os.path.join(runner.testdir, 'annotated')
         if not os.path.isdir(adir):
             os.mkdir(adir)
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
@@ -555,6 +555,7 @@ class Test(object):
         path = os.path.join(testdir, test)
         errpath = os.path.join(testdir, '%s.err' % test)
 
+        self._testdir = testdir
         self._test = test
         self._path = path
         self._options = options
@@ -847,7 +848,7 @@ class TTest(Test):
 
     def _hghave(self, reqs, testtmp):
         # TODO do something smarter when all other uses of hghave are gone.
-        tdir = TESTDIR.replace('\\', '/')
+        tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (self._options.shell, tdir, ' '.join(reqs)),
                       testtmp, 0)
@@ -1084,7 +1085,7 @@ class TTest(Test):
                 return '+glob'
         return False
 
-def gettest(testdir, test, options, count):
+def gettest(runner, test, options, count):
     """Obtain a Test by looking at its filename.
 
     Returns a Test instance. The Test may not be runnable if it doesn't map
@@ -1092,17 +1093,17 @@ def gettest(testdir, test, options, count):
     """
 
     lctest = test.lower()
-    refpath = os.path.join(testdir, test)
+    refpath = os.path.join(runner.testdir, test)
 
-    runner = Test
+    testcls = Test
 
     for ext, cls, out in testtypes:
         if lctest.endswith(ext):
-            runner = cls
-            refpath = os.path.join(testdir, test + out)
+            testcls = cls
+            refpath = os.path.join(runner.testdir, test + out)
             break
 
-    return runner(testdir, test, options, count, refpath)
+    return testcls(runner.testdir, test, options, count, refpath)
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
 def run(cmd, wd, options, replacements, env):
@@ -1191,7 +1192,7 @@ def scheduletests(runner, options, tests):
 
     def job(test, count):
         try:
-            t = gettest(TESTDIR, test, options, count)
+            t = gettest(runner, test, options, count)
             done.put(t.run())
             t.cleanup()
         except KeyboardInterrupt:
@@ -1225,7 +1226,7 @@ def scheduletests(runner, options, tests):
 def runtests(runner, options, tests):
     try:
         if INST:
-            installhg(options)
+            installhg(runner, options)
             _checkhglib("Testing")
         else:
             usecorrectpython()
@@ -1265,7 +1266,7 @@ def runtests(runner, options, tests):
             outputtimes(options)
 
         if options.anycoverage:
-            outputcoverage(options)
+            outputcoverage(runner, options)
     except KeyboardInterrupt:
         failed = True
         print "\ninterrupted!"
@@ -1283,6 +1284,8 @@ class TestRunner(object):
 
     Tests rely on a lot of state. This object holds it for them.
     """
+    def __init__(self):
+        self.testdir = None
 
 def main(args, parser=None):
     runner = TestRunner()
@@ -1330,8 +1333,8 @@ def main(args, parser=None):
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
 
-    global TESTDIR, HGTMP, INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
-    TESTDIR = os.environ["TESTDIR"] = os.getcwd()
+    global HGTMP, INST, BINDIR, TMPBINDIR, PYTHONDIR, COVERAGE_FILE
+    runner.testdir = os.environ['TESTDIR'] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
         tmpdir = options.tmpdir
@@ -1387,7 +1390,8 @@ def main(args, parser=None):
     # can run .../tests/run-tests.py test-foo where test-foo
     # adds an extension to HGRC. Also include run-test.py directory to import
     # modules like heredoctest.
-    pypath = [PYTHONDIR, TESTDIR, os.path.abspath(os.path.dirname(__file__))]
+    pypath = [PYTHONDIR, runner.testdir,
+              os.path.abspath(os.path.dirname(__file__))]
     # We have to augment PYTHONPATH, rather than simply replacing
     # it, in case external libraries are only available via current
     # PYTHONPATH.  (In particular, the Subversion bindings on OS X
@@ -1397,9 +1401,9 @@ def main(args, parser=None):
         pypath.append(oldpypath)
     os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
-    COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
+    COVERAGE_FILE = os.path.join(runner.testdir, ".coverage")
 
-    vlog("# Using TESTDIR", TESTDIR)
+    vlog("# Using TESTDIR", runner.testdir)
     vlog("# Using HGTMP", HGTMP)
     vlog("# Using PATH", os.environ["PATH"])
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
