@@ -1019,6 +1019,25 @@ class TestRunner(object):
         return self._run(tests)
 
     def _run(self, tests):
+        if self.options.random:
+            random.shuffle(tests)
+        else:
+            # keywords for slow tests
+            slow = 'svn gendoc check-code-hg'.split()
+            def sortkey(f):
+                # run largest tests first, as they tend to take the longest
+                try:
+                    val = -os.stat(f).st_size
+                except OSError, e:
+                    if e.errno != errno.ENOENT:
+                        raise
+                    return -1e9 # file does not exist, tell early
+                for kw in slow:
+                    if kw in f:
+                        val *= 10
+                return val
+            tests.sort(key=sortkey)
+
         self.testdir = os.environ['TESTDIR'] = os.getcwd()
 
         if 'PYTHONHASHSEED' not in os.environ:
@@ -1443,25 +1462,6 @@ def main(args, runner=None, parser=None):
     runner.checktools()
 
     tests = runner.findtests(args)
-
-    if options.random:
-        random.shuffle(tests)
-    else:
-        # keywords for slow tests
-        slow = 'svn gendoc check-code-hg'.split()
-        def sortkey(f):
-            # run largest tests first, as they tend to take the longest
-            try:
-                val = -os.stat(f).st_size
-            except OSError, e:
-                if e.errno != errno.ENOENT:
-                    raise
-                return -1e9 # file does not exist, tell early
-            for kw in slow:
-                if kw in f:
-                    val *= 10
-            return val
-        tests.sort(key=sortkey)
 
     return runner.run(tests)
 
