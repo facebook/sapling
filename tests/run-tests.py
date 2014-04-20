@@ -1034,59 +1034,6 @@ def scheduletests(runner, tests):
     except KeyboardInterrupt:
         abort = True
 
-def runtests(runner, tests):
-    try:
-        if runner.inst:
-            runner.installhg()
-            runner.checkhglib("Testing")
-        else:
-            runner.usecorrectpython()
-
-        if runner.options.restart:
-            orig = list(tests)
-            while tests:
-                if os.path.exists(tests[0] + ".err"):
-                    break
-                tests.pop(0)
-            if not tests:
-                print "running all tests"
-                tests = orig
-
-        scheduletests(runner, tests)
-
-        failed = len(runner.results['!'])
-        warned = len(runner.results['~'])
-        tested = len(runner.results['.']) + failed + warned
-        skipped = len(runner.results['s'])
-        ignored = len(runner.results['i'])
-
-        print
-        if not runner.options.noskips:
-            for s in runner.results['s']:
-                print "Skipped %s: %s" % s
-        for s in runner.results['~']:
-            print "Warned %s: %s" % s
-        for s in runner.results['!']:
-            print "Failed %s: %s" % s
-        runner.checkhglib("Tested")
-        print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
-            tested, skipped + ignored, warned, failed)
-        if runner.results['!']:
-            print 'python hash seed:', os.environ['PYTHONHASHSEED']
-        if runner.options.time:
-            runner.outputtimes()
-
-        if runner.options.anycoverage:
-            runner.outputcoverage()
-    except KeyboardInterrupt:
-        failed = True
-        print "\ninterrupted!"
-
-    if failed:
-        return 1
-    if warned:
-        return 80
-
 class TestRunner(object):
     """Holds context for executing tests.
 
@@ -1116,6 +1063,59 @@ class TestRunner(object):
             'i': [],
         }
         self._createdfiles = []
+
+    def runtests(self, tests):
+        try:
+            if self.inst:
+                self.installhg()
+                self.checkhglib("Testing")
+            else:
+                self.usecorrectpython()
+
+            if self.options.restart:
+                orig = list(tests)
+                while tests:
+                    if os.path.exists(tests[0] + ".err"):
+                        break
+                    tests.pop(0)
+                if not tests:
+                    print "running all tests"
+                    tests = orig
+
+            scheduletests(self, tests)
+
+            failed = len(self.results['!'])
+            warned = len(self.results['~'])
+            tested = len(self.results['.']) + failed + warned
+            skipped = len(self.results['s'])
+            ignored = len(self.results['i'])
+
+            print
+            if not self.options.noskips:
+                for s in self.results['s']:
+                    print "Skipped %s: %s" % s
+            for s in self.results['~']:
+                print "Warned %s: %s" % s
+            for s in self.results['!']:
+                print "Failed %s: %s" % s
+            self.checkhglib("Tested")
+            print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
+                tested, skipped + ignored, warned, failed)
+            if self.results['!']:
+                print 'python hash seed:', os.environ['PYTHONHASHSEED']
+            if self.options.time:
+                self.outputtimes()
+
+            if self.options.anycoverage:
+                self.outputcoverage()
+        except KeyboardInterrupt:
+            failed = True
+            print "\ninterrupted!"
+
+        if failed:
+            return 1
+        if warned:
+            return 80
 
     def gettest(self, test, count):
         """Obtain a Test by looking at its filename.
@@ -1433,7 +1433,7 @@ def main(args, parser=None):
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        return runtests(runner, tests) or 0
+        return runner.runtests(tests) or 0
     finally:
         time.sleep(.1)
         runner.cleanup()
