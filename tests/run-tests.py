@@ -678,6 +678,27 @@ class Test(object):
     def success(self):
         return '.', self._test, ''
 
+    def fail(self, msg, ret):
+        warned = ret is False
+        if not self._options.nodiff:
+            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self._test,
+                                 msg))
+        if (not ret and self._options.interactive and
+            os.path.exists(self._errpath)):
+            iolock.acquire()
+            print 'Accept this change? [n] ',
+            answer = sys.stdin.readline().strip()
+            iolock.release()
+            if answer.lower() in ('y', 'yes').split():
+                if self._test.endswith('.t'):
+                    rename(self._errpath, self._testpath)
+                else:
+                    rename(self._errpath, '%s.out' % self._testpath)
+
+                return '.', self._test, ''
+
+        return warned and '~' or '!', self._test, msg
+
 class TestResult(object):
     """Holds the result of a test execution."""
 
@@ -1034,24 +1055,6 @@ def runone(options, test, count):
             log("\nSkipping %s: %s" % (testpath, msg))
         return 's', test, msg
 
-    def fail(msg, ret):
-        warned = ret is False
-        if not options.nodiff:
-            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', test, msg))
-        if (not ret and options.interactive
-            and os.path.exists(testpath + ".err")):
-            iolock.acquire()
-            print "Accept this change? [n] ",
-            answer = sys.stdin.readline().strip()
-            iolock.release()
-            if answer.lower() in "y yes".split():
-                if test.endswith(".t"):
-                    rename(testpath + ".err", testpath)
-                else:
-                    rename(testpath + ".err", testpath + ".out")
-                return '.', test, ''
-        return warned and '~' or '!', test, msg
-
     def ignore(msg):
         return 'i', test, msg
 
@@ -1101,7 +1104,7 @@ def runone(options, test, count):
     t.run(res)
 
     if res.exception:
-        return fail('Exception during execution: %s' % res.exception, 255)
+        return t.fail('Exception during execution: %s' % res.exception, 255)
 
     ret = res.ret
     out = res.out
@@ -1128,12 +1131,12 @@ def runone(options, test, count):
         if not missing:
             missing = ['irrelevant']
         if failed:
-            result = fail("hghave failed checking for %s" % failed[-1], ret)
+            result = t.fail("hghave failed checking for %s" % failed[-1], ret)
             skipped = False
         else:
             result = skip(missing[-1])
     elif ret == 'timeout':
-        result = fail("timed out", ret)
+        result = t.fail("timed out", ret)
     elif out != refout:
         info = {}
         if not options.nodiff:
@@ -1149,9 +1152,9 @@ def runone(options, test, count):
             msg += "output changed and " + describe(ret)
         else:
             msg += "output changed"
-        result = fail(msg, ret)
+        result = t.fail(msg, ret)
     elif ret:
-        result = fail(describe(ret), ret)
+        result = t.fail(describe(ret), ret)
     else:
         result = t.success()
 
