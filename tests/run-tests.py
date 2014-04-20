@@ -1259,8 +1259,28 @@ class TestRunner(object):
             def shortDescription(self):
                 return self.name
 
+            # Need to stash away the TestResult since we do custom things
+            # with it.
+            def run(self, result):
+                self._result = result
+
+                return super(MercurialTest, self).run(result)
+
             def runTest(self):
-                t.run()
+                code, tname, msg = t.run()
+
+                if code == '!':
+                    self._result.failures.append((self, msg))
+                elif code == '~':
+                    pass
+                elif code == '.':
+                    pass
+                elif code == 's':
+                    pass
+                elif code == 'i':
+                    pass
+                else:
+                    self.fail('Unknown test result code: %s' % code)
 
         return MercurialTest(test)
 
