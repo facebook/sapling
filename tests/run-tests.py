@@ -1158,10 +1158,10 @@ class TestRunner(object):
     def _runtests(self, tests):
         try:
             if self.inst:
-                self.installhg()
-                self.checkhglib("Testing")
+                self._installhg()
+                self._checkhglib("Testing")
             else:
-                self.usecorrectpython()
+                self._usecorrectpython()
 
             if self.options.restart:
                 orig = list(tests)
@@ -1189,16 +1189,16 @@ class TestRunner(object):
                 print "Warned %s: %s" % s
             for s in self.results['!']:
                 print "Failed %s: %s" % s
-            self.checkhglib("Tested")
+            self._checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d warned, %d failed." % (
                 tested, skipped + ignored, warned, failed)
             if self.results['!']:
                 print 'python hash seed:', os.environ['PYTHONHASHSEED']
             if self.options.time:
-                self.outputtimes()
+                self._outputtimes()
 
             if self.options.anycoverage:
-                self.outputcoverage()
+                self._outputcoverage()
         except KeyboardInterrupt:
             failed = True
             print "\ninterrupted!"
@@ -1208,7 +1208,7 @@ class TestRunner(object):
         if warned:
             return 80
 
-    def gettest(self, test, count):
+    def _gettest(self, test, count):
         """Obtain a Test by looking at its filename.
 
         Returns a Test instance. The Test may not be runnable if it doesn't
@@ -1241,7 +1241,7 @@ class TestRunner(object):
             except OSError:
                 pass
 
-    def usecorrectpython(self):
+    def _usecorrectpython(self):
         # Some tests run the Python interpreter. They must use the
         # same interpreter or bad things will happen.
         pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
@@ -1275,7 +1275,7 @@ class TestRunner(object):
             if not self._findprogram(pyexename):
                 print "WARNING: Cannot find %s in search path" % pyexename
 
-    def installhg(self):
+    def _installhg(self):
         vlog("# Performing temporary installation of HG")
         installerrs = os.path.join("tests", "install.err")
         compiler = ''
@@ -1320,7 +1320,7 @@ class TestRunner(object):
             sys.exit(1)
         os.chdir(self.testdir)
 
-        self.usecorrectpython()
+        self._usecorrectpython()
 
         if self.options.py3k_warnings and not self.options.anycoverage:
             vlog("# Updating hg command to enable Py3k Warnings switch")
@@ -1360,7 +1360,7 @@ class TestRunner(object):
             fn = os.path.join(self.inst, '..', '.coverage')
             os.environ['COVERAGE_FILE'] = fn
 
-    def checkhglib(self, verb):
+    def _checkhglib(self, verb):
         """Ensure that the 'mercurial' package imported by python is
         the one we expect it to be.  If not, print a warning to stderr."""
         expecthg = os.path.join(self.pythondir, 'mercurial')
@@ -1370,7 +1370,7 @@ class TestRunner(object):
                              '         (expected %s)\n'
                              % (verb, actualhg, expecthg))
 
-    def outputtimes(self):
+    def _outputtimes(self):
         vlog('# Producing time report')
         self.times.sort(key=lambda t: (t[1], t[0]), reverse=True)
         cols = '%7.3f   %s'
@@ -1378,7 +1378,7 @@ class TestRunner(object):
         for test, timetaken in self.times:
             print cols % (timetaken, test)
 
-    def outputcoverage(self):
+    def _outputcoverage(self):
         vlog('# Producing coverage report')
         os.chdir(self.pythondir)
 
@@ -1409,7 +1409,7 @@ class TestRunner(object):
 
         def job(test, count):
             try:
-                t = self.gettest(test, count)
+                t = self._gettest(test, count)
                 done.put(t.run())
                 t.cleanup()
             except KeyboardInterrupt:
