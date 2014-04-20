@@ -1046,8 +1046,10 @@ class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
     # Don't worry too much about accessing the non-public _TextTestResult.
     # It is relatively common in Python testing tools.
-    def __init__(self, *args, **kwargs):
+    def __init__(self, options, *args, **kwargs):
         super(TestResult, self).__init__(*args, **kwargs)
+
+        self._options = options
 
         # unittest.TestResult didn't have skipped until 2.7. We need to
         # polyfill it.
@@ -1062,6 +1064,18 @@ class TestResult(unittest._TextTestResult):
         # unittest implementation. It is very similar to failed. It may make
         # sense to map it into fail some day.
         self.warned = []
+
+    def addFailure(self, *args, **kwargs):
+        super(TestResult, self).addFailure(*args, **kwargs)
+
+        if self._options.first:
+            self.stop()
+
+    def addError(self, *args, **kwargs):
+        super(TestResult, self).addError(*args, **kwargs)
+
+        if self._options.first:
+            self.stop()
 
     # Polyfill.
     def addSkip(self, test, reason):
@@ -1084,6 +1098,9 @@ class TestResult(unittest._TextTestResult):
 
     def addWarn(self, test, reason):
         self.warned.append((test, reason))
+
+        if self._options.first:
+            self.stop()
 
         if self.showAll:
             self.stream.writeln('warned %s' % reason)
@@ -1113,7 +1130,8 @@ class TextTestRunner(unittest.TextTestRunner):
         self._runner = runner
 
     def run(self, test):
-        result = TestResult(self.stream, self.descriptions, self.verbosity)
+        result = TestResult(self._runner.options, self.stream,
+                            self.descriptions, self.verbosity)
 
         test(result)
 
@@ -1705,6 +1723,8 @@ class TestRunner(object):
                         code, test, msg = done.get(True, 1)
                         self.results[code].append((test, msg))
                         if self.options.first and code not in '.si':
+                            break
+                        if result and result.shouldStop:
                             break
                     except queue.Empty:
                         continue
