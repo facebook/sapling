@@ -347,7 +347,7 @@ class Test(object):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, runner, test, count, refpath):
+    def __init__(self, runner, test, count, refpath, unittest=False):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
 
@@ -360,6 +360,7 @@ class Test(object):
         self._daemonpids = []
         self._refpath = refpath
         self._errpath = errpath
+        self._unittest = unittest
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -1301,7 +1302,7 @@ class TestRunner(object):
                 refpath = os.path.join(self.testdir, test + out)
                 break
 
-        t = testcls(self, test, count, refpath)
+        t = testcls(self, test, count, refpath, unittest=asunit)
 
         if not asunit:
             return t
