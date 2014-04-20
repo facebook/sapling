@@ -551,7 +551,8 @@ class Test(object):
     runs cannot be run concurrently.
     """
 
-    def __init__(self, path, options, count, refpath):
+    def __init__(self, test, path, options, count, refpath):
+        self._test = test
         self._path = path
         self._options = options
         self._count = count
@@ -598,7 +599,9 @@ class Test(object):
             result.out = out
         except KeyboardInterrupt:
             updateduration()
-            result.interrupted = True
+            log('INTERRUPTED: %s (after %d seconds)' % (self._test,
+                                                        result.duration))
+            raise
         except Exception, e:
             updateduration()
             result.exception = e
@@ -673,7 +676,6 @@ class TestResult(object):
         self.ret = None
         self.out = None
         self.duration = None
-        self.interrupted = False
         self.exception = None
         self.refout = None
 
@@ -1091,14 +1093,10 @@ def runone(options, test, count):
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
 
-    t = runner(testpath, options, count, ref)
+    t = runner(test, testpath, options, count, ref)
     res = TestResult()
     t.run(res)
     t.cleanup()
-
-    if res.interrupted:
-        log('INTERRUPTED: %s (after %d seconds)' % (test, res.duration))
-        raise KeyboardInterrupt()
 
     if res.exception:
         return fail('Exception during execution: %s' % res.exception, 255)
