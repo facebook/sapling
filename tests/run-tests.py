@@ -640,8 +640,6 @@ class Test(object):
 
         killdaemons(env['DAEMON_PIDS'])
 
-        result.refout = self._refout
-
         if not options.keep_tmpdir:
             shutil.rmtree(testtmp)
 
@@ -661,13 +659,13 @@ class Test(object):
                 missing = ['irrelevant']
 
             if failed:
-                return self.fail('hg have failed checking for %s' % failed[-1],
-                                 ret)
+                res = self.fail('hg have failed checking for %s' % failed[-1],
+                                ret)
             else:
                 result.skipped = True
-                return self.skip(missing[-1])
+                res = self.skip(missing[-1])
         elif ret == 'timeout':
-            return self.fail('timed out', ret)
+            res = self.fail('timed out', ret)
         elif out != self._refout:
             info = {}
             if not options.nodiff:
@@ -687,11 +685,20 @@ class Test(object):
             else:
                 msg += 'output changed'
 
-            return self.fail(msg, ret)
+            res = self.fail(msg, ret)
         elif ret:
-            return self.fail(describe(ret), ret)
+            res = self.fail(describe(ret), ret)
         else:
-            return self.success()
+            res = self.success()
+
+        if (ret != 0 or out != self._refout) and not result.skipped \
+            and not options.debug:
+            f = open(self._errpath, 'wb')
+            for line in out:
+                f.write(line)
+            f.close()
+
+        return res
 
     def _run(self, testtmp, replacements, env):
         raise NotImplemented('Subclasses must implement Test.run()')
@@ -789,7 +796,6 @@ class TestResult(object):
         self.ret = None
         self.out = None
         self.duration = None
-        self.refout = None
         self.skipped = False
 
 class PythonTest(Test):
@@ -1156,16 +1162,6 @@ def runone(options, test, count):
 
     times.append((test, res.duration))
     vlog("# Ret was:", ret)
-
-    skipped = res.skipped
-    refout = res.refout
-
-    if (ret != 0 or out != refout) and not skipped and not options.debug:
-        # Save errors to a file for diagnosis
-        f = open(err, "wb")
-        for line in out:
-            f.write(line)
-        f.close()
 
     if not options.verbose:
         iolock.acquire()
