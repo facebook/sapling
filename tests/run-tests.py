@@ -494,7 +494,9 @@ class Test(object):
 
         vlog("# Ret was:", ret)
 
-        if not options.verbose:
+        # Don't print progress in unittest mode because that is handled
+        # by TestResult.
+        if not options.verbose and not self._unittest:
             iolock.acquire()
             sys.stdout.write(res[0])
             sys.stdout.flush()
