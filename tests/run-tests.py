@@ -1016,9 +1016,13 @@ class TestRunner(object):
 
     def run(self, args):
         """Run the test suite."""
-        self._checktools()
-        tests = self.findtests(args)
-        return self._run(tests)
+        oldmask = os.umask(022)
+        try:
+            self._checktools()
+            tests = self.findtests(args)
+            return self._run(tests)
+        finally:
+            os.umask(oldmask)
 
     def _run(self, tests):
         if self.options.random:
@@ -1459,7 +1463,6 @@ def main(args, runner=None, parser=None):
     parser = parser or getparser()
     (options, args) = parseargs(args, parser)
     runner.options = options
-    os.umask(022)
 
     return runner.run(args)
 
