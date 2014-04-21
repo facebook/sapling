@@ -1138,7 +1138,43 @@ class TestSuite(unittest.TestSuite):
         self._runner = runner
 
     def run(self, result):
-        self._runner._executetests(self._tests, result=result)
+        # We modify the list, so copy so callers aren't confused.
+        tests = list(self._tests)
+
+        jobs = self._runner.options.jobs
+        done = queue.Queue()
+        running = 0
+
+        def job(test, result):
+            try:
+                test(result)
+                done.put(None)
+            except KeyboardInterrupt:
+                pass
+            except: # re-raises
+                done.put(('!', test, 'run-test raised an error, see traceback'))
+                raise
+
+        try:
+            while tests or running:
+                if not done.empty() or running == jobs or not tests:
+                    try:
+                        done.get(True, 1)
+                        if result and result.shouldStop:
+                            break
+                    except queue.Empty:
+                        continue
+                    running -= 1
+                if tests and not running == jobs:
+                    test = tests.pop(0)
+                    if self._runner.options.loop:
+                        tests.append(test)
+                    t = threading.Thread(target=job, name=test.name,
+                                         args=(test, result))
+                    t.start()
+                    running += 1
+        except KeyboardInterrupt:
+            self._runner.abort[0] = True
 
         return result
 
@@ -1608,45 +1644,6 @@ class TestRunner(object):
             if not os.path.isdir(adir):
                 os.mkdir(adir)
             covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
-
-    def _executetests(self, tests, result):
-        # We modify the list, so copy so callers aren't confused.
-        tests = list(tests)
-
-        jobs = self.options.jobs
-        done = queue.Queue()
-        running = 0
-
-        def job(test, result):
-            try:
-                test(result)
-                done.put(None)
-            except KeyboardInterrupt:
-                pass
-            except: # re-raises
-                done.put(('!', test, 'run-test raised an error, see traceback'))
-                raise
-
-        try:
-            while tests or running:
-                if not done.empty() or running == jobs or not tests:
-                    try:
-                        done.get(True, 1)
-                        if result and result.shouldStop:
-                            break
-                    except queue.Empty:
-                        continue
-                    running -= 1
-                if tests and not running == jobs:
-                    test = tests.pop(0)
-                    if self.options.loop:
-                        tests.append(test)
-                    t = threading.Thread(target=job, name=test.name,
-                                         args=(test, result))
-                    t.start()
-                    running += 1
-        except KeyboardInterrupt:
-            self.abort[0] = True
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
