@@ -338,7 +338,7 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, runner, test, count, refpath):
+    def __init__(self, runner, test, count):
         path = os.path.join(runner.testdir, test)
         errpath = os.path.join(runner.testdir, '%s.err' % test)
 
@@ -350,7 +350,6 @@ class Test(unittest.TestCase):
         self._options = runner.options
         self._count = count
         self._daemonpids = []
-        self._refpath = refpath
         self._errpath = errpath
 
         self._finished = None
@@ -363,8 +362,8 @@ class Test(unittest.TestCase):
         # check test output against it.
         if runner.options.debug:
             self._refout = None # to match "out is None"
-        elif os.path.exists(refpath):
-            f = open(refpath, 'r')
+        elif os.path.exists(self._refpath):
+            f = open(self._refpath, 'r')
             self._refout = f.read().splitlines(True)
             f.close()
         else:
@@ -667,6 +666,11 @@ class Test(unittest.TestCase):
 
 class PythonTest(Test):
     """A Python-based test."""
+
+    @property
+    def _refpath(self):
+        return os.path.join(self._testdir, '%s.out' % self.name)
+
     def _run(self, replacements, env):
         py3kswitch = self._options.py3k_warnings and ' -3' or ''
         cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self._path)
@@ -686,6 +690,10 @@ class TTest(Test):
     ESCAPESUB = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
     ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256)).update(
                      {'\\': '\\\\', '\r': r'\r'})
+
+    @property
+    def _refpath(self):
+        return os.path.join(self._testdir, self.name)
 
     def _run(self, replacements, env):
         f = open(self._path)
@@ -1240,8 +1248,8 @@ class TestRunner(object):
     ]
 
     TESTTYPES = [
-        ('.py', PythonTest, '.out'),
-        ('.t', TTest, ''),
+        ('.py', PythonTest),
+        ('.t', TTest),
     ]
 
     def __init__(self):
@@ -1446,17 +1454,14 @@ class TestRunner(object):
         map to a known type.
         """
         lctest = test.lower()
-        refpath = os.path.join(self.testdir, test)
-
         testcls = Test
 
-        for ext, cls, out in self.TESTTYPES:
+        for ext, cls in self.TESTTYPES:
             if lctest.endswith(ext):
                 testcls = cls
-                refpath = os.path.join(self.testdir, test + out)
                 break
 
-        return testcls(self, test, count, refpath)
+        return testcls(self, test, count)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
