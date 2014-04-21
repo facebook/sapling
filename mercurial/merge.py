@@ -353,6 +353,7 @@ def _checkcollision(repo, wmf, actions):
         "dg": renamegetop,
         "dr": nop,
         "e": nop,
+        "k": nop,
         "f": addop, # untracked file should be kept in working directory
         "g": addop,
         "m": mergeop,
