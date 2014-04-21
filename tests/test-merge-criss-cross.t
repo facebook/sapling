@@ -330,9 +330,9 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
   resolving manifests
   
   auction for merging merge bids
-   x: multiple merge bids:
-    x: m
-    x: m
+   x: multiple bids for merge action:
+    versions differ -> m
+    versions differ -> m
    x: ambiguous merge - picked m action
   end of auction
   
