@@ -356,7 +356,6 @@ class Test(unittest.TestCase):
         self._ret = None
         self._out = None
         self._duration = None
-        self._result = None
         self._skipped = None
         self._testtmp = None
 
@@ -395,7 +394,6 @@ class Test(unittest.TestCase):
         self._ret = None
         self._out = None
         self._duration = None
-        self._result = None
         self._skipped = None
 
         self._testtmp = os.path.join(self._threadtmp,
@@ -521,13 +519,12 @@ class Test(unittest.TestCase):
                 missing = ['irrelevant']
 
             if failed:
-                self._result = self.fail('hg have failed checking for %s' %
-                                         failed[-1], ret)
+                self.fail('hg have failed checking for %s' % failed[-1], ret)
             else:
                 self._skipped = True
                 raise SkipTest(missing[-1])
         elif ret == 'timeout':
-            self._result = self.fail('timed out', ret)
+            self.fail('timed out', ret)
         elif out != self._refout:
             info = {}
             if not options.nodiff:
@@ -554,13 +551,9 @@ class Test(unittest.TestCase):
                     f.write(line)
             f.close()
 
-            self._result = self.fail(msg, ret)
+            self.fail(msg, ret)
         elif ret:
-            self._result = self.fail(describe(ret), ret)
-        else:
-            self._result = self.success()
-
-        return self._result
+            self.fail(describe(ret), ret)
 
     def tearDown(self):
         """Tasks to perform after run()."""
@@ -657,9 +650,6 @@ class Test(unittest.TestCase):
                                     'have an = for assignment' % opt)
                 hgrc.write('[%s]\n%s\n' % (section, key))
         hgrc.close()
-
-    def success(self):
-        return '.', self.name, ''
 
     def fail(self, msg, ret):
         warned = ret is False
