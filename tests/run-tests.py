@@ -1067,8 +1067,8 @@ class TestResult(unittest._TextTestResult):
         # sense to map it into fail some day.
         self.warned = []
 
-    def addFailure(self, *args, **kwargs):
-        super(TestResult, self).addFailure(*args, **kwargs)
+    def addFailure(self, test, reason):
+        self.failures.append((test, reason))
 
         if self._options.first:
             self.stop()
@@ -1472,8 +1472,12 @@ class TestRunner(object):
                         result.addIgnore(self, str(e))
                     except WarnTest, e:
                         result.addWarn(self, str(e))
-                    except self.failureException:
-                        result.addFailure(self, sys.exc_info())
+                    except self.failureException, e:
+                        # This differs from unittest in that we don't capture
+                        # the stack trace. This is for historical reasons and
+                        # this decision could be revisted in the future,
+                        # especially for PythonTest instances.
+                        result.addFailure(self, str(e))
                     except Exception:
                         result.addError(self, sys.exc_info())
                     else:
