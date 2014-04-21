@@ -803,6 +803,12 @@ def unbundle(repo, proto, heads):
         finally:
             fp.close()
             os.unlink(tempname)
+    except bundle2.UnknownPartError, exc:
+            bundler = bundle2.bundle20(repo.ui)
+            part = bundle2.bundlepart('B2X:ERROR:UNKNOWNPART',
+                                      [('parttype', str(exc))])
+            bundler.addpart(part)
+            return streamres(bundler.getchunks())
     except util.Abort, inst:
         # The old code we moved used sys.stderr directly.
         # We did not change it to minimise code change.

@@ -753,3 +753,9 @@ def handlereplycaps(op, inpart):
     manargs = dict(inpart.mandatoryparams)
     advargs = dict(inpart.advisoryparams)
     raise util.Abort(manargs['message'], hint=advargs.get('hint'))
+
+@parthandler('b2x:error:unknownpart')
+def handlereplycaps(op, inpart):
+    """Used to transmit unknown part error over the wire"""
+    manargs = dict(inpart.mandatoryparams)
+    raise UnknownPartError(manargs['parttype'])

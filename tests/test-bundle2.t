@@ -908,6 +908,8 @@ Setting up
   >     part = None
   >     if reason == 'abort':
   >         part = bundle2.bundlepart('test:abort')
+  >     if reason == 'unknown':
+  >         part = bundle2.bundlepart('TEST:UNKNOWN')
   >     if part is not None:
   >         bundler.addpart(part)
   >     return extradata
@@ -969,3 +971,27 @@ Doing the actual push: Abort error
   [255]
 
 
+Doing the actual push: unknown mandatory parts
+
+  $ cat << EOF >> $HGRCPATH
+  > [failpush]
+  > reason = unknown
+  > EOF
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  abort: missing support for 'test:unknown'
+  [255]
+
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  abort: missing support for "'test:unknown'"
+  [255]
+
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  abort: missing support for "'test:unknown'"
+  [255]
