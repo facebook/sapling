@@ -808,7 +808,17 @@ def unbundle(repo, proto, heads):
         # We did not change it to minimise code change.
         # This need to be moved to something proper.
         # Feel free to do it.
-        sys.stderr.write("abort: %s\n" % inst)
-        return pushres(0)
+        if getattr(inst, 'duringunbundle2', False):
+            bundler = bundle2.bundle20(repo.ui)
+            manargs = [('message', str(inst))]
+            advargs = []
+            if inst.hint is not None:
+                advargs.append(('hint', inst.hint))
+            bundler.addpart(bundle2.bundlepart('B2X:ERROR:ABORT',
+                                               manargs, advargs))
+            return streamres(bundler.getchunks())
+        else:
+            sys.stderr.write("abort: %s\n" % inst)
+            return pushres(0)
     except exchange.PushRaced, exc:
         return pusherr(str(exc))

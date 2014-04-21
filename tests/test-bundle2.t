@@ -883,3 +883,80 @@ Check final content.
      date:        Sat Apr 30 15:24:48 2011 +0200
      summary:     A
   
+
+Error Handling
+==============
+
+Check that errors are properly returned to the client during push.
+
+Setting up
+
+  $ cat > failpush.py << EOF
+  > """A small extension that makes push fails when using bundle2
+  > 
+  > used to test error handling in bundle2
+  > """
+  > 
+  > from mercurial import util
+  > from mercurial import bundle2
+  > from mercurial import exchange
+  > from mercurial import extensions
+  > 
+  > def _pushbundle2failpart(orig, pushop, bundler):
+  >     extradata = orig(pushop, bundler)
+  >     part = bundle2.bundlepart('test:abort')
+  >     bundler.addpart(part)
+  >     return extradata
+  > 
+  > @bundle2.parthandler("test:abort")
+  > def handleabort(op, part):
+  >     raise util.Abort('Abandon ship!', hint="don't panic")
+  > 
+  > def uisetup(ui):
+  >     extensions.wrapfunction(exchange, '_pushbundle2extraparts', _pushbundle2failpart)
+  > 
+  > EOF
+
+  $ cd main
+  $ hg up tip
+  3 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'I' > I
+  $ hg add I
+  $ hg ci -m 'I'
+  $ hg id
+  e7ec4e813ba6 tip
+  $ cd ..
+
+  $ cat << EOF >> $HGRCPATH
+  > [extensions]
+  > failpush=$TESTTMP/failpush.py
+  > EOF
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ cat other.pid >> $DAEMON_PIDS
+
+Doing the actual push: Abort error
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  abort: Abandon ship!
+  (don't panic)
+  [255]
+
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  abort: Abandon ship!
+  (don't panic)
+  [255]
+
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  abort: Abandon ship!
+  (don't panic)
+  [255]
+
+

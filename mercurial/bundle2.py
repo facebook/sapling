@@ -743,3 +743,9 @@ def handlereplycaps(op, inpart):
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 
+@parthandler('b2x:error:abort')
+def handlereplycaps(op, inpart):
+    """Used to transmit abort error over the wire"""
+    manargs = dict(inpart.mandatoryparams)
+    advargs = dict(inpart.advisoryparams)
+    raise util.Abort(manargs['message'], hint=advargs.get('hint'))
