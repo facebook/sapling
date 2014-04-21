@@ -678,8 +678,8 @@ class PythonTest(Test):
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        return run(cmd, self._testtmp, self._options, replacements, env,
-                   self._runner.abort)
+        return run(cmd, self._testtmp, replacements, env, self._runner.abort,
+                   debug=self._options.debug, timeout=self._options.timeout)
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -709,8 +709,9 @@ class TTest(Test):
         cmd = '%s "%s"' % (self._options.shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = run(cmd, self._testtmp, self._options, replacements,
-                               env, self._runner.abort)
+        exitcode, output = run(cmd, self._testtmp, replacements, env,
+                               self._runner.abort, debug=self._options.debug,
+                               timeout=self._options.timeout)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
         if exitcode == self.SKIPPED_STATUS or output is None:
@@ -987,16 +988,15 @@ class TTest(Test):
 
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, options, replacements, env, abort):
+def run(cmd, wd, replacements, env, abort, debug=False, timeout=None):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
-    # TODO: Use subprocess.Popen if we're running on Python 2.4
-    if options.debug:
+    if debug:
         proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
         ret = proc.wait()
         return (ret, None)
 
-    proc = Popen4(cmd, wd, options.timeout, env)
+    proc = Popen4(cmd, wd, timeout, env)
     def cleanup():
         terminate(proc)
         ret = proc.wait()
