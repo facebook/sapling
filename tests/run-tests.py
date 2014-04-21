@@ -515,13 +515,6 @@ class Test(object):
         else:
             self._result = self.success()
 
-        if (ret != 0 or out != self._refout) and not self._skipped \
-            and not options.debug:
-            f = open(self._errpath, 'wb')
-            for line in out:
-                f.write(line)
-            f.close()
-
         if not self._unittest:
             self.tearDown()
 
@@ -531,6 +524,13 @@ class Test(object):
         """Tasks to perform after run()."""
         if not self._options.keep_tmpdir:
             shutil.rmtree(self._testtmp)
+
+        if (self._ret != 0 or self._out != self._refout) and not self._skipped \
+            and not self._options.debug and self._out:
+            f = open(self._errpath, 'wb')
+            for line in self._out:
+                f.write(line)
+            f.close()
 
         vlog("# Ret was:", self._ret)
 
