@@ -327,7 +327,7 @@ def killdaemons(pidfile):
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
-class Test(object):
+class Test(unittest.TestCase):
     """Encapsulates a single, runnable test.
 
     Test instances can be run multiple times via run(). However, multiple
@@ -386,6 +386,9 @@ class Test(object):
     def __str__(self):
         return self.name
 
+    def shortDescription(self):
+        return self.name
+
     def setUp(self):
         """Tasks to perform before run()."""
         self._finished = False
@@ -403,7 +406,53 @@ class Test(object):
         if os.path.exists(self._errpath):
             os.remove(self._errpath)
 
-    def run(self):
+    def run(self, result):
+        result.startTest(self)
+        try:
+            try:
+                self.setUp()
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception:
+                result.addError(self, sys.exc_info())
+                return
+
+            success = False
+            try:
+                self.runTest()
+            except KeyboardInterrupt:
+                raise
+            except SkipTest, e:
+                result.addSkip(self, str(e))
+            except IgnoreTest, e:
+                result.addIgnore(self, str(e))
+            except WarnTest, e:
+                result.addWarn(self, str(e))
+            except self.failureException, e:
+                # This differs from unittest in that we don't capture
+                # the stack trace. This is for historical reasons and
+                # this decision could be revisted in the future,
+                # especially for PythonTest instances.
+                result.addFailure(self, str(e))
+            except Exception:
+                result.addError(self, sys.exc_info())
+            else:
+                success = True
+
+            try:
+                self.tearDown()
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception:
+                result.addError(self, sys.exc_info())
+                success = False
+
+            if success:
+                result.addSuccess(self)
+        finally:
+            result.stopTest(self)
+
+    def runTest(self):
         """Run this test instance.
 
         This will return a tuple describing the result of the test.
@@ -1382,72 +1431,7 @@ class TestRunner(object):
                 refpath = os.path.join(self.testdir, test + out)
                 break
 
-        t = testcls(self, test, count, refpath)
-
-        class MercurialTest(unittest.TestCase):
-            def __init__(self, name, *args, **kwargs):
-                super(MercurialTest, self).__init__(*args, **kwargs)
-                self.name = name
-
-            def shortDescription(self):
-                return self.name
-
-            # Need to stash away the TestResult since we do custom things
-            # with it.
-            def run(self, result):
-                result.startTest(self)
-                try:
-                    try:
-                        t.setUp()
-                    except (KeyboardInterrupt, SystemExit):
-                        raise
-                    except Exception:
-                        result.addError(self, sys.exc_info())
-                        return
-
-                    success = False
-                    try:
-                        self.runTest()
-                    except KeyboardInterrupt:
-                        raise
-                    except SkipTest, e:
-                        result.addSkip(self, str(e))
-                    except IgnoreTest, e:
-                        result.addIgnore(self, str(e))
-                    except WarnTest, e:
-                        result.addWarn(self, str(e))
-                    except self.failureException, e:
-                        # This differs from unittest in that we don't capture
-                        # the stack trace. This is for historical reasons and
-                        # this decision could be revisted in the future,
-                        # especially for PythonTest instances.
-                        result.addFailure(self, str(e))
-                    except Exception:
-                        result.addError(self, sys.exc_info())
-                    else:
-                        success = True
-
-                    try:
-                        t.tearDown()
-                    except (KeyboardInterrupt, SystemExit):
-                        raise
-                    except Exception:
-                        result.addError(self, sys.exc_info())
-                        success = False
-
-                    if success:
-                        result.addSuccess(self)
-                finally:
-                    result.stopTest(self)
-
-            def runTest(self):
-                t.run()
-
-            # We need this proxy until tearDown() is implemented.
-            def cleanup(self):
-                return t.cleanup()
-
-        return MercurialTest(test)
+        return testcls(self, test, count, refpath)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
