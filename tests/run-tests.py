@@ -355,7 +355,6 @@ class Test(unittest.TestCase):
         self._finished = None
         self._ret = None
         self._out = None
-        self._duration = None
         self._skipped = None
         self._testtmp = None
 
@@ -393,7 +392,6 @@ class Test(unittest.TestCase):
         self._finished = False
         self._ret = None
         self._out = None
-        self._duration = None
         self._skipped = None
 
         self._testtmp = os.path.join(self._threadtmp,
@@ -406,6 +404,7 @@ class Test(unittest.TestCase):
 
     def run(self, result):
         result.startTest(self)
+        starttime = time.time()
         try:
             try:
                 self.setUp()
@@ -419,6 +418,10 @@ class Test(unittest.TestCase):
             try:
                 self.runTest()
             except KeyboardInterrupt:
+                duration = time.time() - starttime
+                log('INTERRUPTED: %s (after %d seconds)' % (self.name,
+                                                            duration))
+                self._runner.times.append((self.name, duration))
                 raise
             except SkipTest, e:
                 result.addSkip(self, str(e))
@@ -436,6 +439,8 @@ class Test(unittest.TestCase):
                 result.addError(self, sys.exc_info())
             else:
                 success = True
+
+            self._runner.times.append((self.name, time.time() - starttime))
 
             try:
                 self.tearDown()
@@ -486,17 +491,12 @@ class Test(unittest.TestCase):
 
         vlog('# Test', self.name)
 
-        starttime = time.time()
         try:
             ret, out = self._run(replacements, env)
-            self._duration = time.time() - starttime
             self._finished = True
             self._ret = ret
             self._out = out
         except KeyboardInterrupt:
-            self._duration = time.time() - starttime
-            log('INTERRUPTED: %s (after %d seconds)' % (self.name,
-                                                        self._duration))
             raise
         except Exception, e:
             return self.fail('Exception during execution: %s' % e, 255)
@@ -572,8 +572,6 @@ class Test(unittest.TestCase):
             f.close()
 
         vlog("# Ret was:", self._ret)
-
-        self._runner.times.append((self.name, self._duration))
 
     def _run(self, replacements, env):
         # This should be implemented in child classes to run tests.
