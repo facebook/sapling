@@ -265,3 +265,78 @@ Verify how the output looks and and how verbose it is:
   (branch merge, don't forget to commit)
 
   $ cd ..
+
+http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-in-a-hg-merge/9430810
+
+  $ hg init ancestor-merging
+  $ cd ancestor-merging
+  $ echo a > x
+  $ hg commit -A -m a x
+  $ hg update -q 0
+  $ echo b >> x
+  $ hg commit -m b
+  $ hg update -q 0
+  $ echo c >> x
+  $ hg commit -qm c
+  $ hg update -q 1
+  $ hg merge -q --tool internal:local 2
+  $ echo c >> x
+  $ hg commit -m bc
+  $ hg update -q 2
+  $ hg merge -q --tool internal:local 1
+  $ echo b >> x
+  $ hg commit -qm cb
+
+  $ hg merge
+  note: using 70008a2163f6 as ancestor of 0d355fdef312 and 4b8b546a3eef
+        alternatively, use --config merge.preferancestor=b211bbc6eb3c
+  merging x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat x
+  a
+  c
+  b
+  c
+
+  $ hg up -qC .
+
+  $ hg merge --config merge.preferancestor=b211bbc6eb3c
+  note: using b211bbc6eb3c as ancestor of 0d355fdef312 and 4b8b546a3eef
+        alternatively, use --config merge.preferancestor=70008a2163f6
+  merging x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat x
+  a
+  b
+  c
+  b
+
+  $ hg up -qC .
+
+  $ hg merge -v --config merge.preferancestor="*"
+  
+  calculating bids for ancestor 70008a2163f6
+  resolving manifests
+  
+  calculating bids for ancestor b211bbc6eb3c
+  resolving manifests
+  
+  auction for merging merge bids
+   x: multiple merge bids:
+    x: m
+    x: m
+   x: ambiguous merge - picked m action)
+  end of auction
+  
+  merging x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat x
+  a
+  c
+  b
+  c
+
+  $ cd ..
