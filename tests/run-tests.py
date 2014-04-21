@@ -404,11 +404,12 @@ class Test(unittest.TestCase):
 
     def run(self, result):
         result.startTest(self)
-        starttime = time.time()
+        interrupted = False
         try:
             try:
                 self.setUp()
             except (KeyboardInterrupt, SystemExit):
+                interrupted = True
                 raise
             except Exception:
                 result.addError(self, sys.exc_info())
@@ -418,10 +419,7 @@ class Test(unittest.TestCase):
             try:
                 self.runTest()
             except KeyboardInterrupt:
-                duration = time.time() - starttime
-                log('INTERRUPTED: %s (after %d seconds)' % (self.name,
-                                                            duration))
-                self._runner.times.append((self.name, duration))
+                interrupted = True
                 raise
             except SkipTest, e:
                 result.addSkip(self, str(e))
@@ -440,11 +438,10 @@ class Test(unittest.TestCase):
             else:
                 success = True
 
-            self._runner.times.append((self.name, time.time() - starttime))
-
             try:
                 self.tearDown()
             except (KeyboardInterrupt, SystemExit):
+                interrupted = True
                 raise
             except Exception:
                 result.addError(self, sys.exc_info())
@@ -453,7 +450,7 @@ class Test(unittest.TestCase):
             if success:
                 result.addSuccess(self)
         finally:
-            result.stopTest(self)
+            result.stopTest(self, interrupted=interrupted)
 
     def runTest(self):
         """Run this test instance.
@@ -1071,6 +1068,9 @@ class TestResult(unittest._TextTestResult):
         # sense to map it into fail some day.
         self.warned = []
 
+        self.times = []
+        self._started = {}
+
     def addFailure(self, test, reason):
         self.failures.append((test, reason))
 
@@ -1113,6 +1113,21 @@ class TestResult(unittest._TextTestResult):
         else:
             self.stream.write('~')
             self.stream.flush()
+
+    def startTest(self, test):
+        super(TestResult, self).startTest(test)
+
+        self._started[test.name] = time.time()
+
+    def stopTest(self, test, interrupted=False):
+        super(TestResult, self).stopTest(test)
+
+        self.times.append((test.name, time.time() - self._started[test.name]))
+        del self._started[test.name]
+
+        if interrupted:
+            self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
+                test.name, self.times[-1][1]))
 
 class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute concurrently."""
@@ -1169,14 +1184,14 @@ class TextTestRunner(unittest.TextTestRunner):
             self.stream.writeln('python hash seed: %s' %
                 os.environ['PYTHONHASHSEED'])
         if self._runner.options.time:
-            self.printtimes()
+            self.printtimes(result.times)
 
-    def printtimes(self):
+    def printtimes(self, times):
         self.stream.writeln('# Producing time report')
-        self._runner.times.sort(key=lambda t: (t[1], t[0]), reverse=True)
+        times.sort(key=lambda t: (t[1], t[0]), reverse=True)
         cols = '%7.3f   %s'
         self.stream.writeln('%-7s   %s' % ('Time', 'Test'))
-        for test, timetaken in self._runner.times:
+        for test, timetaken in times:
             self.stream.writeln(cols % (timetaken, test))
 
 class TestRunner(object):
@@ -1209,7 +1224,6 @@ class TestRunner(object):
         self.tmpbinddir = None
         self.pythondir = None
         self.coveragefile = None
-        self.times = [] # Holds execution times of tests.
         self.abort = [False]
         self._createdfiles = []
         self._hgpath = None
