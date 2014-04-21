@@ -327,7 +327,7 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
    x: multiple merge bids:
     x: m
     x: m
-   x: ambiguous merge - picked m action)
+   x: ambiguous merge - picked m action
   end of auction
   
   merging x

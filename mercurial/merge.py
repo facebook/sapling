@@ -782,7 +782,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                 repo.ui.note('  %s: %s\n' % (f, a[1]))
             # Pick random action. TODO: Instead, prompt user when resolving
             a0 = bidsl[0]
-            repo.ui.warn(_(' %s: ambiguous merge - picked %s action)\n') %
+            repo.ui.warn(_(' %s: ambiguous merge - picked %s action\n') %
                          (f, a0[1]))
             actions.append(a0)
             continue
