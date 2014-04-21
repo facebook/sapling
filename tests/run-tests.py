@@ -485,15 +485,10 @@ class Test(unittest.TestCase):
 
         vlog('# Test', self.name)
 
-        try:
-            ret, out = self._run(replacements, env)
-            self._finished = True
-            self._ret = ret
-            self._out = out
-        except KeyboardInterrupt:
-            raise
-        except Exception, e:
-            return self.fail('Exception during execution: %s' % e, 255)
+        ret, out = self._run(replacements, env)
+        self._finished = True
+        self._ret = ret
+        self._out = out
 
         def describe(ret):
             if ret < 0:
