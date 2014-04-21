@@ -738,16 +738,20 @@ def unbundle(repo, cg, heads, source, url):
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
         if util.safehasattr(cg, 'params'):
-            tr = repo.transaction('unbundle')
-            tr.hookargs['bundle2-exp'] = '1'
-            r = bundle2.processbundle(repo, cg, lambda: tr).reply
-            cl = repo.unfiltered().changelog
-            p = cl.writepending() and repo.root or ""
-            repo.hook('b2x-pretransactionclose', throw=True, source=source,
-                      url=url, pending=p, **tr.hookargs)
-            tr.close()
-            repo.hook('b2x-transactionclose', source=source, url=url,
-                      **tr.hookargs)
+            try:
+                tr = repo.transaction('unbundle')
+                tr.hookargs['bundle2-exp'] = '1'
+                r = bundle2.processbundle(repo, cg, lambda: tr).reply
+                cl = repo.unfiltered().changelog
+                p = cl.writepending() and repo.root or ""
+                repo.hook('b2x-pretransactionclose', throw=True, source=source,
+                          url=url, pending=p, **tr.hookargs)
+                tr.close()
+                repo.hook('b2x-transactionclose', source=source, url=url,
+                          **tr.hookargs)
+            except Exception, exc:
+                exc.duringunbundle2 = True
+                raise
         else:
             r = changegroup.addchangegroup(repo, cg, source, url)
     finally:

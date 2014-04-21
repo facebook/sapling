@@ -1043,3 +1043,40 @@ Doing the actual push: race
   abort: push failed:
   'repository changed while pushing - please try again'
   [255]
+
+Doing the actual push: hook abort
+
+  $ cat << EOF >> $HGRCPATH
+  > [failpush]
+  > reason =
+  > [hooks]
+  > b2x-pretransactionclose.failpush = false
+  > EOF
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ cat other.pid >> $DAEMON_PIDS
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  transaction abort!
+  rollback completed
+  abort: b2x-pretransactionclose.failpush hook exited with status 1
+  [255]
+
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  abort: b2x-pretransactionclose.failpush hook exited with status 1
+  remote: transaction abort!
+  remote: rollback completed
+  [255]
+
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  abort: b2x-pretransactionclose.failpush hook exited with status 1
+  [255]
+
+
