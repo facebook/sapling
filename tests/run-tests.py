@@ -466,7 +466,7 @@ class Test(unittest.TestCase):
                 raise SkipTest('blacklisted')
 
             if options.retest and not os.path.exists('%s.err' % self.name):
-                return self.ignore('not retesting')
+                raise IgnoreTest('not retesting')
 
             if options.keywords:
                 f = open(self.name)
@@ -476,7 +476,7 @@ class Test(unittest.TestCase):
                     if k in t:
                         break
                     else:
-                        return self.ignore("doesn't match keyword")
+                        raise IgnoreTest("doesn't match keyword")
 
         if not os.path.basename(self.name.lower()).startswith('test-'):
             raise SkipTest('not a test file')
@@ -686,9 +686,6 @@ class Test(unittest.TestCase):
             # unittest differentiates between errored and failed.
             # Failed is denoted by AssertionError (by default at least).
             raise AssertionError(msg)
-
-    def ignore(self, msg):
-        raise IgnoreTest(msg)
 
 class PythonTest(Test):
     """A Python-based test."""
