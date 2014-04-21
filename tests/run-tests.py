@@ -1220,14 +1220,6 @@ class TestRunner(object):
         self.pythondir = None
         self.coveragefile = None
         self.times = [] # Holds execution times of tests.
-        self.results = {
-            '.': [],
-            '!': [],
-            '~': [],
-            's': [],
-            'i': [],
-            'u': [],
-        }
         self.abort = [False]
         self._createdfiles = []
         self._hgpath = None
@@ -1632,7 +1624,7 @@ class TestRunner(object):
         def job(test, result):
             try:
                 test(result)
-                done.put(('u', None, None))
+                done.put(None)
             except KeyboardInterrupt:
                 pass
             except: # re-raises
@@ -1643,10 +1635,7 @@ class TestRunner(object):
             while tests or running:
                 if not done.empty() or running == jobs or not tests:
                     try:
-                        code, test, msg = done.get(True, 1)
-                        self.results[code].append((test, msg))
-                        if self.options.first and code not in '.si':
-                            break
+                        done.get(True, 1)
                         if result and result.shouldStop:
                             break
                     except queue.Empty:
