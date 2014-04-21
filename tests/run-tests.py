@@ -330,8 +330,9 @@ def killdaemons(pidfile):
 class Test(unittest.TestCase):
     """Encapsulates a single, runnable test.
 
-    Test instances can be run multiple times via run(). However, multiple
-    runs cannot be run concurrently.
+    While this class conforms to the unittest.TestCase API, it differs in that
+    instances need to be instantiated manually. (Typically, unittest.TestCase
+    classes are instantiated automatically by scanning modules.)
     """
 
     # Status code reserved for skipped tests (used by hghave).
@@ -370,16 +371,6 @@ class Test(unittest.TestCase):
             self._refout = []
 
         self._threadtmp = os.path.join(runner.hgtmp, 'child%d' % count)
-        os.mkdir(self._threadtmp)
-
-    def cleanup(self):
-        for entry in self._daemonpids:
-            killdaemons(entry)
-
-        if self._threadtmp and not self._options.keep_tmpdir:
-            # Ignore failures here. The rmtree() in the higher level runner
-            # will try again.
-            shutil.rmtree(self._threadtmp, True)
 
     def __str__(self):
         return self.name
@@ -393,6 +384,12 @@ class Test(unittest.TestCase):
         self._ret = None
         self._out = None
         self._skipped = None
+
+        try:
+            os.mkdir(self._threadtmp)
+        except OSError, e:
+            if e.errno != errno.EEXIST:
+                raise
 
         self._testtmp = os.path.join(self._threadtmp,
                                      os.path.basename(self._path))
@@ -560,6 +557,7 @@ class Test(unittest.TestCase):
 
         if not self._options.keep_tmpdir:
             shutil.rmtree(self._testtmp, True)
+            shutil.rmtree(self._threadtmp, True)
 
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
             and not self._options.debug and self._out:
