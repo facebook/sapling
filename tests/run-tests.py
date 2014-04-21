@@ -1169,7 +1169,15 @@ class TextTestRunner(unittest.TextTestRunner):
             self.stream.writeln('python hash seed: %s' %
                 os.environ['PYTHONHASHSEED'])
         if self._runner.options.time:
-            self._runner._outputtimes()
+            self.printtimes()
+
+    def printtimes(self):
+        self.stream.writeln('# Producing time report')
+        self._runner.times.sort(key=lambda t: (t[1], t[0]), reverse=True)
+        cols = '%7.3f   %s'
+        self.stream.writeln('%-7s   %s' % ('Time', 'Test'))
+        for test, timetaken in self._runner.times:
+            self.stream.writeln(cols % (timetaken, test))
 
 class TestRunner(object):
     """Holds context for executing tests.
@@ -1563,14 +1571,6 @@ class TestRunner(object):
             pipe.close()
 
         return self._hgpath
-
-    def _outputtimes(self):
-        vlog('# Producing time report')
-        self.times.sort(key=lambda t: (t[1], t[0]), reverse=True)
-        cols = '%7.3f   %s'
-        print '\n%-7s   %s' % ('Time', 'Test')
-        for test, timetaken in self.times:
-            print cols % (timetaken, test)
 
     def _outputcoverage(self):
         vlog('# Producing coverage report')
