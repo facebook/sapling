@@ -458,12 +458,12 @@ class Test(unittest.TestCase):
         This will return a tuple describing the result of the test.
         """
         if not os.path.exists(self._path):
-            return self.skip("Doesn't exist")
+            raise SkipTest("Doesn't exist")
 
         options = self._options
         if not (options.whitelisted and self.name in options.whitelisted):
             if options.blacklist and self.name in options.blacklist:
-                return self.skip('blacklisted')
+                raise SkipTest('blacklisted')
 
             if options.retest and not os.path.exists('%s.err' % self.name):
                 return self.ignore('not retesting')
@@ -479,7 +479,7 @@ class Test(unittest.TestCase):
                         return self.ignore("doesn't match keyword")
 
         if not os.path.basename(self.name.lower()).startswith('test-'):
-            return self.skip('not a test file')
+            raise SkipTest('not a test file')
 
         replacements, port = self._getreplacements()
         env = self._getenv(port)
@@ -525,7 +525,7 @@ class Test(unittest.TestCase):
                                          failed[-1], ret)
             else:
                 self._skipped = True
-                self._result = self.skip(missing[-1])
+                raise SkipTest(missing[-1])
         elif ret == 'timeout':
             self._result = self.fail('timed out', ret)
         elif out != self._refout:
@@ -584,7 +584,7 @@ class Test(unittest.TestCase):
 
     def _run(self, replacements, env):
         # This should be implemented in child classes to run tests.
-        return self._skip('unknown test type')
+        raise SkipTest('unknown test type')
 
     def _getreplacements(self):
         port = self._options.port + self._count * 3
@@ -686,9 +686,6 @@ class Test(unittest.TestCase):
             # unittest differentiates between errored and failed.
             # Failed is denoted by AssertionError (by default at least).
             raise AssertionError(msg)
-
-    def skip(self, msg):
-        raise SkipTest(msg)
 
     def ignore(self, msg):
         raise IgnoreTest(msg)
