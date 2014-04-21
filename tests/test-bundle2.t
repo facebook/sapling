@@ -904,8 +904,12 @@ Setting up
   > 
   > def _pushbundle2failpart(orig, pushop, bundler):
   >     extradata = orig(pushop, bundler)
-  >     part = bundle2.bundlepart('test:abort')
-  >     bundler.addpart(part)
+  >     reason = pushop.ui.config('failpush', 'reason', None)
+  >     part = None
+  >     if reason == 'abort':
+  >         part = bundle2.bundlepart('test:abort')
+  >     if part is not None:
+  >         bundler.addpart(part)
   >     return extradata
   > 
   > @bundle2.parthandler("test:abort")
@@ -937,6 +941,11 @@ Setting up
   $ cat other.pid >> $DAEMON_PIDS
 
 Doing the actual push: Abort error
+
+  $ cat << EOF >> $HGRCPATH
+  > [failpush]
+  > reason = abort
+  > EOF
 
   $ hg -R main push other -r e7ec4e813ba6
   pushing to other
