@@ -777,7 +777,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                     continue
             # TODO: Consider other simple actions such as mode changes
             # Handle inefficient democrazy.
-            repo.ui.note(_(' %s: multiple merge bids:\n') % (f, m))
+            repo.ui.note(_(' %s: multiple merge bids:\n') % f)
             for a in bidsl:
                 repo.ui.note('  %s: %s\n' % (f, a[1]))
             # Pick random action. TODO: Instead, prompt user when resolving
