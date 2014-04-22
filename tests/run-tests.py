@@ -1161,10 +1161,6 @@ class TestSuite(unittest.TestSuite):
                     if ignored:
                         continue
 
-                if not test.name.lower().startswith('test-'):
-                    result.addSkip(test, 'not a test file')
-                    continue
-
             tests.append(test)
 
         jobs = self._runner.options.jobs
