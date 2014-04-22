@@ -730,7 +730,8 @@ def handlechangegroup(op, inpart):
         h = inpart.read(20)
     assert not h
     if heads != op.repo.heads():
-        raise error.PushRaced()
+        raise error.PushRaced('repository changed while pushing - '
+                              'please try again')
 
 @parthandler('b2x:output')
 def handleoutput(op, inpart):

@@ -139,7 +139,7 @@ Create an extension to test bundle2 API
   >         except KeyError, exc:
   >             raise util.Abort('missing support for %s' % exc)
   >         except error.PushRaced, exc:
-  >             raise util.Abort('push race')
+  >             raise util.Abort('push race: %s' % exc)
   >     finally:
   >         if tr is not None:
   >             tr.release()
@@ -615,7 +615,7 @@ Test push race detection
 
   $ hg unbundle2 < ../part-race.hg2
   0 unread bytes
-  abort: push race
+  abort: push race: repository changed while pushing - please try again
   [255]
 
 Support for changegroup
