@@ -341,7 +341,8 @@ class Test(unittest.TestCase):
     def __init__(self, options, path, tmpdir, abort, keeptmpdir=False,
                  debug=False, nodiff=False, diffviewer=None,
                  interactive=False, timeout=defaults['timeout'],
-                 startport=defaults['port'], extraconfigopts=None):
+                 startport=defaults['port'], extraconfigopts=None,
+                 py3kwarnings=False):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -377,6 +378,8 @@ class Test(unittest.TestCase):
         extraconfigopts is an iterable of extra hgrc config options. Values
         must have the form "key=value" (something understood by hgrc). Values
         of the form "foo.key=value" will result in "[foo] key=value".
+
+        py3kwarnings enables Py3k warnings.
         """
 
         self.path = path
@@ -395,6 +398,7 @@ class Test(unittest.TestCase):
         self._timeout = timeout
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
+        self._py3kwarnings = py3kwarnings
         self._daemonpids = []
 
         self._finished = None
@@ -689,7 +693,7 @@ class PythonTest(Test):
         return os.path.join(self._testdir, '%s.out' % self.name)
 
     def _run(self, replacements, env):
-        py3kswitch = self._options.py3k_warnings and ' -3' or ''
+        py3kswitch = self._py3kwarnings and ' -3' or ''
         cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self.path)
         vlog("# Running", cmd)
         if os.name == 'nt':
@@ -1522,7 +1526,8 @@ class TestRunner(object):
                        interactive=self.options.interactive,
                        timeout=self.options.timeout,
                        startport=self.options.port + count * 3,
-                       extraconfigopts=self.options.extra_config_opt)
+                       extraconfigopts=self.options.extra_config_opt,
+                       py3kwarnings=self.options.py3k_warnings)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
