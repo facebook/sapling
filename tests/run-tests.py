@@ -338,16 +338,15 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False,
+    def __init__(self, options, path, tmpdir, abort, keeptmpdir=False,
                  debug=False, nodiff=False, diffviewer=None,
-                 interactive=False, timeout=defaults['timeout']):
+                 interactive=False, timeout=defaults['timeout'],
+                 startport=defaults['port']):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
 
         path is the full path to the file defining the test.
-
-        count is an identifier used to denote this test instance.
 
         tmpdir is the main temporary directory to use for this test.
 
@@ -369,6 +368,11 @@ class Test(unittest.TestCase):
 
         timeout controls the maximum run time of the test. It is ignored when
         debug is True.
+
+        startport controls the starting port number to use for this test. Each
+        test will reserve 3 port numbers for execution. It is the caller's
+        responsibility to allocate a non-overlapping port range to Test
+        instances.
         """
 
         self.path = path
@@ -377,7 +381,6 @@ class Test(unittest.TestCase):
         self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
 
         self._options = options
-        self._count = count
         self._threadtmp = tmpdir
         self._abort = abort
         self._keeptmpdir = keeptmpdir
@@ -386,6 +389,7 @@ class Test(unittest.TestCase):
         self._diffviewer = diffviewer
         self._interactive = interactive
         self._timeout = timeout
+        self._startport = startport
         self._daemonpids = []
 
         self._finished = None
@@ -487,8 +491,8 @@ class Test(unittest.TestCase):
 
         This will return a tuple describing the result of the test.
         """
-        replacements, port = self._getreplacements()
-        env = self._getenv(port)
+        replacements = self._getreplacements()
+        env = self._getenv()
         self._daemonpids.append(env['DAEMON_PIDS'])
         self._createhgrc(env['HGRCPATH'])
 
@@ -577,11 +581,10 @@ class Test(unittest.TestCase):
         raise SkipTest('unknown test type')
 
     def _getreplacements(self):
-        port = self._options.port + self._count * 3
         r = [
-            (r':%s\b' % port, ':$HGPORT'),
-            (r':%s\b' % (port + 1), ':$HGPORT1'),
-            (r':%s\b' % (port + 2), ':$HGPORT2'),
+            (r':%s\b' % self._startport, ':$HGPORT'),
+            (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
+            (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
             ]
 
         if os.name == 'nt':
@@ -592,15 +595,15 @@ class Test(unittest.TestCase):
         else:
             r.append((re.escape(self._testtmp), '$TESTTMP'))
 
-        return r, port
+        return r
 
-    def _getenv(self, port):
+    def _getenv(self):
         env = os.environ.copy()
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
-        env["HGPORT"] = str(port)
-        env["HGPORT1"] = str(port + 1)
-        env["HGPORT2"] = str(port + 2)
+        env["HGPORT"] = str(self._startport)
+        env["HGPORT1"] = str(self._startport + 1)
+        env["HGPORT2"] = str(self._startport + 2)
         env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
         env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
@@ -1507,13 +1510,14 @@ class TestRunner(object):
         refpath = os.path.join(self.testdir, test)
         tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
 
-        return testcls(self.options, refpath, count, tmpdir, self.abort,
+        return testcls(self.options, refpath, tmpdir, self.abort,
                        keeptmpdir=self.options.keep_tmpdir,
                        debug=self.options.debug,
                        nodiff = self.options.nodiff,
                        diffviewer=self.options.view,
                        interactive=self.options.interactive,
-                       timeout=self.options.timeout)
+                       timeout=self.options.timeout,
+                       startport=self.options.port + count * 3)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
