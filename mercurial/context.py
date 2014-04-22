@@ -86,6 +86,14 @@ class basectx(object):
         """
         return s
 
+    def _poststatus(self, other, s, match, listignored, listclean, listunknown):
+        """provide a hook to allow child objects to postprocess status results
+
+        For example, this allows other contexts, such as workingctx, to filter
+        suspect symlinks in the case of FAT32 and NTFS filesytems.
+        """
+        return s
+
     def _buildstatus(self, other, s, match, listignored, listclean,
                         listunknown):
         """build a status with respect to another context"""
