@@ -228,7 +228,7 @@ def _pushbundle2(pushop):
     reply = pushop.remote.unbundle(stream, ['force'], 'push')
     try:
         op = bundle2.processbundle(pushop.repo, reply)
-    except KeyError, exc:
+    except bundle2.UnknownPartError, exc:
         raise util.Abort('missing support for %s' % exc)
     cgreplies = op.records.getreplies(cgpart.id)
     assert len(cgreplies['changegroup']) == 1
