@@ -342,7 +342,7 @@ class Test(unittest.TestCase):
                  debug=False, nodiff=False, diffviewer=None,
                  interactive=False, timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
-                 py3kwarnings=False):
+                 py3kwarnings=False, shell=None):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -380,6 +380,8 @@ class Test(unittest.TestCase):
         of the form "foo.key=value" will result in "[foo] key=value".
 
         py3kwarnings enables Py3k warnings.
+
+        shell is the shell to execute tests in.
         """
 
         self.path = path
@@ -399,6 +401,7 @@ class Test(unittest.TestCase):
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
+        self._shell = shell
         self._daemonpids = []
 
         self._finished = None
@@ -730,7 +733,7 @@ class TTest(Test):
             f.write(l)
         f.close()
 
-        cmd = '%s "%s"' % (self._options.shell, fname)
+        cmd = '%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
         exitcode, output = run(cmd, self._testtmp, replacements, env,
@@ -747,7 +750,7 @@ class TTest(Test):
         # TODO do something smarter when all other uses of hghave are gone.
         tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
-                      (self._options.shell, tdir, ' '.join(reqs)),
+                      (self._shell, tdir, ' '.join(reqs)),
                       self._testtmp, 0)
         stdout, stderr = proc.communicate()
         ret = proc.wait()
@@ -1527,7 +1530,8 @@ class TestRunner(object):
                        timeout=self.options.timeout,
                        startport=self.options.port + count * 3,
                        extraconfigopts=self.options.extra_config_opt,
-                       py3kwarnings=self.options.py3k_warnings)
+                       py3kwarnings=self.options.py3k_warnings,
+                       shell=self.options.shell)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
