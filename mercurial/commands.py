@@ -4013,7 +4013,7 @@ def log(ui, repo, *pats, **opts):
     recent changeset at the top.
     'o' is a changeset, '@' is a working directory parent, 'x' is obsolete,
     and '+' represents a fork where the changeset from the lines below is a
-    parent of the 'o' merge on the same same line.
+    parent of the 'o' merge on the same line.
 
     .. note::
 
