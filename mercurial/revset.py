@@ -395,6 +395,7 @@ def only(repo, subset, x):
     (i.e. ::<set1> - ::<set2>).
     """
     cl = repo.changelog
+    # i18n: "only" is a keyword
     args = getargs(x, 1, 2, _('only takes one or two arguments'))
     include = getset(repo, spanset(repo), args[0]).set()
     if len(args) == 1:
