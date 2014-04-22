@@ -526,6 +526,8 @@ class Test(unittest.TestCase):
                 raise SkipTest(missing[-1])
         elif ret == 'timeout':
             self.fail('timed out', ret)
+        elif ret is False:
+            raise WarnTest('no result code from test')
         elif out != self._refout:
             # The result object handles diff calculation for us.
             self._result.addOutputMismatch(self, out, self._refout)
@@ -644,7 +646,6 @@ class Test(unittest.TestCase):
         hgrc.close()
 
     def fail(self, msg, ret):
-        warned = ret is False
         if (not ret and self._interactive and
             os.path.exists(self.errpath)):
             iolock.acquire()
@@ -659,12 +660,9 @@ class Test(unittest.TestCase):
 
                 return '.', self.name, ''
 
-        if warned:
-            raise WarnTest(msg)
-        else:
-            # unittest differentiates between errored and failed.
-            # Failed is denoted by AssertionError (by default at least).
-            raise AssertionError(msg)
+        # unittest differentiates between errored and failed.
+        # Failed is denoted by AssertionError (by default at least).
+        raise AssertionError(msg)
 
 class PythonTest(Test):
     """A Python-based test."""
