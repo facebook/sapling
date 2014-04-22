@@ -338,14 +338,12 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, options, path, tmpdir, abort, keeptmpdir=False,
+    def __init__(self, path, tmpdir, abort, keeptmpdir=False,
                  debug=False, nodiff=False, diffviewer=None,
                  interactive=False, timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
                  py3kwarnings=False, shell=None):
         """Create a test from parameters.
-
-        options are parsed command line options that control test execution.
 
         path is the full path to the file defining the test.
 
@@ -389,7 +387,6 @@ class Test(unittest.TestCase):
         self._testdir = os.path.dirname(path)
         self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
 
-        self._options = options
         self._threadtmp = tmpdir
         self._abort = abort
         self._keeptmpdir = keeptmpdir
@@ -1521,7 +1518,7 @@ class TestRunner(object):
         refpath = os.path.join(self.testdir, test)
         tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
 
-        return testcls(self.options, refpath, tmpdir, self.abort,
+        return testcls(refpath, tmpdir, self.abort,
                        keeptmpdir=self.options.keep_tmpdir,
                        debug=self.options.debug,
                        nodiff = self.options.nodiff,
