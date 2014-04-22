@@ -338,19 +338,25 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, runner, test, count):
-        path = os.path.join(runner.testdir, test)
-        errpath = os.path.join(runner.testdir, '%s.err' % test)
+    def __init__(self, runner, path, count):
+        """Create a test from parameters.
 
-        self.name = test
+        runner is a TestRunner instance.
+
+        path is the full path to the file defining the test.
+
+        count is an identifier used to denote this test instance.
+        """
+
+        self._path = path
+        self.name = os.path.basename(path)
+        self._testdir = os.path.dirname(path)
+        self._errpath = os.path.join(self._testdir, '%s.err' % self.name)
 
         self._runner = runner
-        self._testdir = runner.testdir
-        self._path = path
         self._options = runner.options
         self._count = count
         self._daemonpids = []
-        self._errpath = errpath
 
         self._finished = None
         self._ret = None
@@ -1461,7 +1467,7 @@ class TestRunner(object):
                 testcls = cls
                 break
 
-        return testcls(self, test, count)
+        return testcls(self, os.path.join(self.testdir, test), count)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
