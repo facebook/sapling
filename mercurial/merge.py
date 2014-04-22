@@ -762,8 +762,8 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                                     branchmerge, force,
                                     partial, acceptremote, followcopies)
             for a in sorted(actions):
-                repo.ui.debug(' %s: %s\n' % (a[0], a[1]))
-                f = a[0]
+                f, m, args, msg = a
+                repo.ui.debug(' %s: %s -> %s\n' % (f, msg, m))
                 if f in fbids:
                     fbids[f].append(a)
                 else:
