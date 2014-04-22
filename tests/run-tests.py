@@ -338,7 +338,7 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, runner, path, count, tmpdir):
+    def __init__(self, runner, path, count, tmpdir, abort):
         """Create a test from parameters.
 
         runner is a TestRunner instance.
@@ -348,6 +348,9 @@ class Test(unittest.TestCase):
         count is an identifier used to denote this test instance.
 
         tmpdir is the main temporary directory to use for this test.
+
+        abort is a flag that turns to True if test execution should be aborted.
+        It is consulted periodically during the execution of tests.
         """
 
         self._path = path
@@ -359,6 +362,7 @@ class Test(unittest.TestCase):
         self._options = runner.options
         self._count = count
         self._threadtmp = tmpdir
+        self._abort = abort
         self._daemonpids = []
 
         self._finished = None
@@ -684,7 +688,7 @@ class PythonTest(Test):
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        return run(cmd, self._testtmp, replacements, env, self._runner.abort,
+        return run(cmd, self._testtmp, replacements, env, self._abort,
                    debug=self._options.debug, timeout=self._options.timeout)
 
 class TTest(Test):
@@ -720,7 +724,7 @@ class TTest(Test):
         vlog("# Running", cmd)
 
         exitcode, output = run(cmd, self._testtmp, replacements, env,
-                               self._runner.abort, debug=self._options.debug,
+                               self._abort, debug=self._options.debug,
                                timeout=self._options.timeout)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
@@ -1471,7 +1475,7 @@ class TestRunner(object):
         refpath = os.path.join(self.testdir, test)
         tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
 
-        return testcls(self, refpath, count, tmpdir)
+        return testcls(self, refpath, count, tmpdir, self.abort)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
