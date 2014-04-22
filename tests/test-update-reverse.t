@@ -69,11 +69,11 @@
    branchmerge: False, force: True, partial: False
    ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf
    side1: other deleted -> r
-   side2: other deleted -> r
-   main: remote created -> g
   removing side1
+   side2: other deleted -> r
   removing side2
   updating: side2 2/3 files (66.67%)
+   main: remote created -> g
   getting main
   updating: main 3/3 files (100.00%)
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved

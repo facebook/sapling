@@ -220,9 +220,9 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    branchmerge: False, force: True, partial: False
    ancestor: d79e2059b5c0+, local: d79e2059b5c0+, remote: 4bc80088dc6b
    f2.txt: other deleted -> r
-   f1.txt: remote created -> g
   removing f2.txt
   updating: f2.txt 1/2 files (50.00%)
+   f1.txt: remote created -> g
   getting f1.txt
   updating: f1.txt 2/2 files (100.00%)
    merge against 9:e31216eec445
@@ -255,9 +255,9 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    branchmerge: False, force: False, partial: False
    ancestor: 2a7f09cac94c, local: 2a7f09cac94c+, remote: d79e2059b5c0
    f1.txt: other deleted -> r
-   f2.txt: remote created -> g
   removing f1.txt
   updating: f1.txt 1/2 files (50.00%)
+   f2.txt: remote created -> g
   getting f2.txt
   updating: f2.txt 2/2 files (100.00%)
   3 changesets found

@@ -281,8 +281,8 @@ merge tests
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 6747d179aa9a, local: 20a0db6fbf6c+, remote: 7af322bc1198
+   preserving t for resolve of t
    t: versions differ -> m
-    preserving t for resolve of t
   updating: t 1/1 files (100.00%)
   picked tool 'internal:merge' for t (binary False symlink False)
   merging t

@@ -46,11 +46,11 @@
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
+   preserving a for resolve of a
    b: remote created -> g
-   a: versions differ -> m
-    preserving a for resolve of a
   getting b
   updating: b 1/2 files (50.00%)
+   a: versions differ -> m
   updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -67,11 +67,11 @@
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
+   preserving a for resolve of a
    b: other deleted -> r
-   a: versions differ -> m
-    preserving a for resolve of a
   removing b
   updating: b 1/2 files (50.00%)
+   a: versions differ -> m
   updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -100,11 +100,11 @@
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
+   preserving a for resolve of a
    b: remote created -> g
-   a: versions differ -> m
-    preserving a for resolve of a
   getting b
   updating: b 1/2 files (50.00%)
+   a: versions differ -> m
   updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -181,14 +181,14 @@ create a second head
   resolving manifests
    branchmerge: True, force: True, partial: False
    ancestor: c19d34741b0a, local: 1e71731e6fbb+, remote: 83c51d0caff4
+   preserving a for resolve of a
+   preserving b for resolve of b
    a: versions differ -> m
-    preserving a for resolve of a
-   b: versions differ -> m
-    preserving b for resolve of b
   updating: a 1/2 files (50.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@1e71731e6fbb+ other a@83c51d0caff4 ancestor a@c19d34741b0a
+   b: versions differ -> m
   updating: b 2/2 files (100.00%)
   picked tool 'true' for b (binary False symlink False)
   merging b

@@ -31,16 +31,16 @@
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
-   b: remote moved from a -> m
-    preserving a for resolve of b
-   c: remote moved from a -> m
-    preserving a for resolve of c
+   preserving a for resolve of b
+   preserving a for resolve of c
   removing a
+   b: remote moved from a -> m
   updating: b 1/2 files (50.00%)
   picked tool 'internal:merge' for b (binary False symlink False)
   merging a and b to b
   my b@add3f11052fa+ other b@17c05bb7fcb6 ancestor a@b8bf91eeebbc
    premerge successful
+   c: remote moved from a -> m
   updating: c 2/2 files (100.00%)
   picked tool 'internal:merge' for c (binary False symlink False)
   merging a and c to c

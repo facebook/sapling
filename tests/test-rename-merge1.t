@@ -36,18 +36,18 @@
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: af1939970a1c, local: 044f8520aeeb+, remote: 85c198ef2f6c
-   b2: remote created -> g
-   b: remote moved from a -> m
-    preserving a for resolve of b
-   a2: divergent renames -> dr
+   preserving a for resolve of b
   removing a
+   b2: remote created -> g
   getting b2
   updating: b2 1/3 files (33.33%)
+   b: remote moved from a -> m
   updating: b 2/3 files (66.67%)
   picked tool 'internal:merge' for b (binary False symlink False)
   merging a and b to b
   my b@044f8520aeeb+ other b@85c198ef2f6c ancestor a@af1939970a1c
    premerge successful
+   a2: divergent renames -> dr
   updating: a2 3/3 files (100.00%)
   note: possible conflict - a2 was renamed multiple times to:
    c2
@@ -182,9 +182,9 @@ Check for issue3074
    branchmerge: True, force: False, partial: False
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
    newfile: remote created -> g
-   file: rename and delete -> rd
   getting newfile
   updating: newfile 1/2 files (50.00%)
+   file: rename and delete -> rd
   updating: file 2/2 files (100.00%)
   note: possible conflict - file was deleted and renamed to:
    newfile

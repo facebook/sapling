@@ -35,15 +35,15 @@ we get conflicts that shouldn't be there
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: e6dc8efe11cc, local: 6a0df1dad128+, remote: 484bf6903104
+   preserving foo for resolve of bar
+   preserving foo for resolve of foo
    bar: remote copied from foo -> m
-    preserving foo for resolve of bar
-   foo: versions differ -> m
-    preserving foo for resolve of foo
   updating: bar 1/2 files (50.00%)
   picked tool 'internal:merge' for bar (binary False symlink False)
   merging foo and bar to bar
   my bar@6a0df1dad128+ other bar@484bf6903104 ancestor foo@e6dc8efe11cc
    premerge successful
+   foo: versions differ -> m
   updating: foo 2/2 files (100.00%)
   picked tool 'internal:merge' for foo (binary False symlink False)
   merging foo

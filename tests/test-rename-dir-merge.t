@@ -40,16 +40,16 @@
    branchmerge: True, force: False, partial: False
    ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
    a/a: other deleted -> r
-   a/b: other deleted -> r
-   b/a: remote created -> g
-   b/b: remote created -> g
-   b/c: remote directory rename - move from a/c -> dm
   removing a/a
+   a/b: other deleted -> r
   removing a/b
   updating: a/b 2/5 files (40.00%)
+   b/a: remote created -> g
   getting b/a
+   b/b: remote created -> g
   getting b/b
   updating: b/b 4/5 files (80.00%)
+   b/c: remote directory rename - move from a/c -> dm
   updating: b/c 5/5 files (100.00%)
   moving a/c to b/c (glob)
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
