@@ -1558,19 +1558,7 @@ class localrepository(object):
 
         if not parentworking:
             mf1 = ctx1._manifestmatches(match, r)
-            if working:
-                # we are comparing working dir against non-parent
-                # generate a pseudo-manifest for the working dir
-                mf2 = self['.']._manifestmatches(match, r)
-                for f in modified + added:
-                    mf2[f] = None
-                    mf2.set(f, ctx2.flags(f))
-                for f in removed:
-                    if f in mf2:
-                        del mf2[f]
-            else:
-                # we are comparing two revisions
-                mf2 = ctx2._manifestmatches(match, r)
+            mf2 = ctx2._manifestmatches(match, r)
 
             modified, added, clean = [], [], []
             deleted, unknown, ignored = r[3], [], []
