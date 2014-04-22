@@ -1278,6 +1278,14 @@ class workingctx(committablectx):
                 del mf[f]
         return mf
 
+    def _prestatus(self, other, s, match, listignored, listclean, listunknown):
+        """override the parent hook with a dirstate query
+
+        We use this prestatus hook to populate the status with information from
+        the dirstate.
+        """
+        return self._dirstatestatus(match, listignored, listclean, listunknown)
+
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
