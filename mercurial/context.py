@@ -1294,6 +1294,16 @@ class workingctx(committablectx):
         """
         return self._dirstatestatus(match, listignored, listclean, listunknown)
 
+    def _poststatus(self, other, s, match, listignored, listclean, listunknown):
+        """override the parent hook with a filter for suspect symlinks
+
+        We use this poststatus hook to filter out symlinks that might have
+        accidentally ended up with the entire contents of the file they are
+        susposed to be linking to.
+        """
+        s[0] = self._filtersuspectsymlink(s[0])
+        return s
+
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
