@@ -1550,9 +1550,7 @@ class localrepository(object):
             match.bad = bad
 
         r = [[], [], [], [], [], [], []]
-        if working: # we need to scan the working dir
-            r = ctx2._dirstatestatus(match=match, ignored=listignored,
-                                     clean=listclean, unknown=listunknown)
+        r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
 
         if not parentworking:
             r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
