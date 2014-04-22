@@ -341,7 +341,7 @@ class Test(unittest.TestCase):
     def __init__(self, options, path, tmpdir, abort, keeptmpdir=False,
                  debug=False, nodiff=False, diffviewer=None,
                  interactive=False, timeout=defaults['timeout'],
-                 startport=defaults['port']):
+                 startport=defaults['port'], extraconfigopts=None):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -373,6 +373,10 @@ class Test(unittest.TestCase):
         test will reserve 3 port numbers for execution. It is the caller's
         responsibility to allocate a non-overlapping port range to Test
         instances.
+
+        extraconfigopts is an iterable of extra hgrc config options. Values
+        must have the form "key=value" (something understood by hgrc). Values
+        of the form "foo.key=value" will result in "[foo] key=value".
         """
 
         self.path = path
@@ -390,6 +394,7 @@ class Test(unittest.TestCase):
         self._interactive = interactive
         self._timeout = timeout
         self._startport = startport
+        self._extraconfigopts = extraconfigopts or []
         self._daemonpids = []
 
         self._finished = None
@@ -643,12 +648,11 @@ class Test(unittest.TestCase):
         hgrc.write('commit = -d "0 0"\n')
         hgrc.write('shelve = --date "0 0"\n')
         hgrc.write('tag = -d "0 0"\n')
-        if self._options.extra_config_opt:
-            for opt in self._options.extra_config_opt:
-                section, key = opt.split('.', 1)
-                assert '=' in key, ('extra config opt %s must '
-                                    'have an = for assignment' % opt)
-                hgrc.write('[%s]\n%s\n' % (section, key))
+        for opt in self._extraconfigopts:
+            section, key = opt.split('.', 1)
+            assert '=' in key, ('extra config opt %s must '
+                                'have an = for assignment' % opt)
+            hgrc.write('[%s]\n%s\n' % (section, key))
         hgrc.close()
 
     def fail(self, msg, ret):
@@ -1517,7 +1521,8 @@ class TestRunner(object):
                        diffviewer=self.options.view,
                        interactive=self.options.interactive,
                        timeout=self.options.timeout,
-                       startport=self.options.port + count * 3)
+                       startport=self.options.port + count * 3,
+                       extraconfigopts=self.options.extra_config_opt)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
