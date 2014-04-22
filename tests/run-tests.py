@@ -340,7 +340,7 @@ class Test(unittest.TestCase):
 
     def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False,
                  debug=False, nodiff=False, diffviewer=None,
-                 interactive=False):
+                 interactive=False, timeout=defaults['timeout']):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -366,6 +366,9 @@ class Test(unittest.TestCase):
         used when output changes.
 
         interactive controls whether the test will run interactively.
+
+        timeout controls the maximum run time of the test. It is ignored when
+        debug is True.
         """
 
         self.path = path
@@ -382,6 +385,7 @@ class Test(unittest.TestCase):
         self._nodiff = nodiff
         self._diffviewer = diffviewer
         self._interactive = interactive
+        self._timeout = timeout
         self._daemonpids = []
 
         self._finished = None
@@ -684,7 +688,7 @@ class PythonTest(Test):
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
         return run(cmd, self._testtmp, replacements, env, self._abort,
-                   debug=self._debug, timeout=self._options.timeout)
+                   debug=self._debug, timeout=self._timeout)
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -720,7 +724,7 @@ class TTest(Test):
 
         exitcode, output = run(cmd, self._testtmp, replacements, env,
                                self._abort, debug=self._debug,
-                               timeout=self._options.timeout)
+                               timeout=self._timeout)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
         if exitcode == self.SKIPPED_STATUS or output is None:
@@ -1508,7 +1512,8 @@ class TestRunner(object):
                        debug=self.options.debug,
                        nodiff = self.options.nodiff,
                        diffviewer=self.options.view,
-                       interactive=self.options.interactive)
+                       interactive=self.options.interactive,
+                       timeout=self.options.timeout)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
