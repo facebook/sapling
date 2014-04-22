@@ -338,7 +338,7 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, path, tmpdir, abort, keeptmpdir=False,
+    def __init__(self, path, tmpdir, keeptmpdir=False,
                  debug=False, nodiff=False, diffviewer=None,
                  interactive=False, timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
@@ -348,9 +348,6 @@ class Test(unittest.TestCase):
         path is the full path to the file defining the test.
 
         tmpdir is the main temporary directory to use for this test.
-
-        abort is a flag that turns to True if test execution should be aborted.
-        It is consulted periodically during the execution of tests.
 
         keeptmpdir determines whether to keep the test's temporary directory
         after execution. It defaults to removal (False).
@@ -388,7 +385,6 @@ class Test(unittest.TestCase):
         self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
 
         self._threadtmp = tmpdir
-        self._abort = abort
         self._keeptmpdir = keeptmpdir
         self._debug = debug
         self._nodiff = nodiff
@@ -399,8 +395,9 @@ class Test(unittest.TestCase):
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
         self._shell = shell
-        self._daemonpids = []
 
+        self._aborted = False
+        self._daemonpids = []
         self._finished = None
         self._ret = None
         self._out = None
@@ -447,12 +444,11 @@ class Test(unittest.TestCase):
 
     def run(self, result):
         result.startTest(self)
-        interrupted = False
         try:
             try:
                 self.setUp()
             except (KeyboardInterrupt, SystemExit):
-                interrupted = True
+                self._aborted = True
                 raise
             except Exception:
                 result.addError(self, sys.exc_info())
@@ -462,7 +458,7 @@ class Test(unittest.TestCase):
             try:
                 self.runTest()
             except KeyboardInterrupt:
-                interrupted = True
+                self._aborted = True
                 raise
             except SkipTest, e:
                 result.addSkip(self, str(e))
@@ -484,7 +480,7 @@ class Test(unittest.TestCase):
             try:
                 self.tearDown()
             except (KeyboardInterrupt, SystemExit):
-                interrupted = True
+                self._aborted = True
                 raise
             except Exception:
                 result.addError(self, sys.exc_info())
@@ -493,7 +489,7 @@ class Test(unittest.TestCase):
             if success:
                 result.addSuccess(self)
         finally:
-            result.stopTest(self, interrupted=interrupted)
+            result.stopTest(self, interrupted=self._aborted)
 
     def runTest(self):
         """Run this test instance.
@@ -588,6 +584,10 @@ class Test(unittest.TestCase):
     def _run(self, replacements, env):
         # This should be implemented in child classes to run tests.
         raise SkipTest('unknown test type')
+
+    def abort(self):
+        """Terminate execution of this test."""
+        self._aborted = True
 
     def _getreplacements(self):
         r = [
@@ -698,8 +698,12 @@ class PythonTest(Test):
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        return run(cmd, self._testtmp, replacements, env, self._abort,
+        result = run(cmd, self._testtmp, replacements, env,
                    debug=self._debug, timeout=self._timeout)
+        if self._aborted:
+            raise KeyboardInterrupt()
+
+        return result
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -734,8 +738,11 @@ class TTest(Test):
         vlog("# Running", cmd)
 
         exitcode, output = run(cmd, self._testtmp, replacements, env,
-                               self._abort, debug=self._debug,
-                               timeout=self._timeout)
+                               debug=self._debug, timeout=self._timeout)
+
+        if self._aborted:
+            raise KeyboardInterrupt()
+
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
         if exitcode == self.SKIPPED_STATUS or output is None:
@@ -1012,7 +1019,7 @@ class TTest(Test):
 
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, replacements, env, abort, debug=False, timeout=None):
+def run(cmd, wd, replacements, env, debug=False, timeout=None):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
     if debug:
@@ -1048,9 +1055,6 @@ def run(cmd, wd, replacements, env, abort, debug=False, timeout=None):
 
     if ret:
         killdaemons(env['DAEMON_PIDS'])
-
-    if abort[0]:
-        raise KeyboardInterrupt()
 
     for s, r in replacements:
         output = re.sub(s, r, output)
@@ -1196,6 +1200,7 @@ class TestSuite(unittest.TestSuite):
 
             tests.append(test)
 
+        runtests = list(tests)
         jobs = self._runner.options.jobs
         done = queue.Queue()
         running = 0
@@ -1229,7 +1234,8 @@ class TestSuite(unittest.TestSuite):
                     t.start()
                     running += 1
         except KeyboardInterrupt:
-            self._runner.abort[0] = True
+            for test in runtests:
+                test.abort()
 
         return result
 
@@ -1315,7 +1321,6 @@ class TestRunner(object):
         self.tmpbinddir = None
         self.pythondir = None
         self.coveragefile = None
-        self.abort = [False]
         self._createdfiles = []
         self._hgpath = None
 
@@ -1518,7 +1523,7 @@ class TestRunner(object):
         refpath = os.path.join(self.testdir, test)
         tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
 
-        return testcls(refpath, tmpdir, self.abort,
+        return testcls(refpath, tmpdir,
                        keeptmpdir=self.options.keep_tmpdir,
                        debug=self.options.debug,
                        nodiff = self.options.nodiff,
