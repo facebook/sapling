@@ -1213,6 +1213,29 @@ class workingctx(committablectx):
                 pass
         return modified, fixup
 
+    def _dirstatestatus(self, match=None, ignored=False, clean=False,
+                        unknown=False):
+        '''Gets the status from the dirstate -- internal use only.'''
+        listignored, listclean, listunknown = ignored, clean, unknown
+        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
+        subrepos = []
+        if '.hgsub' in self:
+            subrepos = sorted(self.substate)
+        s = self._repo.dirstate.status(match, subrepos, listignored,
+                                       listclean, listunknown)
+        cmp, modified, added, removed, deleted, unknown, ignored, clean = s
+
+        # check for any possibly clean files
+        if cmp:
+            modified2, fixup = self._checklookup(cmp)
+            modified += modified2
+
+            # update dirstate for files that are actually clean
+            if fixup and listclean:
+                clean += fixup
+
+        return [modified, added, removed, deleted, unknown, ignored, clean]
+
     def status(self, ignored=False, clean=False, unknown=False):
         """Explicit status query
         Unless this method is used to query the working copy status, the
