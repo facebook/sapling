@@ -1554,28 +1554,11 @@ class localrepository(object):
             r = ctx2._dirstatestatus(match=match, ignored=listignored,
                                      clean=listclean, unknown=listunknown)
 
-        modified, added, removed, deleted, unknown, ignored, clean = r
-
         if not parentworking:
-            mf1 = ctx1._manifestmatches(match, r)
-            mf2 = ctx2._manifestmatches(match, r)
+            r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
+                                  listunknown)
 
-            modified, added, clean = [], [], []
-            deleted, unknown, ignored = r[3], [], []
-            withflags = mf1.withflags() | mf2.withflags()
-            for fn, mf2node in mf2.iteritems():
-                if fn in mf1:
-                    if (fn not in deleted and
-                        ((fn in withflags and mf1.flags(fn) != mf2.flags(fn)) or
-                         (mf1[fn] != mf2node and
-                          (mf2node or ctx1[fn].cmp(ctx2[fn]))))):
-                        modified.append(fn)
-                    elif listclean:
-                        clean.append(fn)
-                    del mf1[fn]
-                elif fn not in deleted:
-                    added.append(fn)
-            removed = mf1.keys()
+        modified, added, removed, deleted, unknown, ignored, clean = r
 
         if working:
             modified = ctx2._filtersuspectsymlink(modified)
