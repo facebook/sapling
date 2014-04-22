@@ -88,7 +88,7 @@ class BadDefinition(Exception):
     pass
 
 re_defold = re.compile(r'^\s*(.*?)\s+(?:-r\s*(\d+|\{REV\})\s+)?([a-zA-Z+]+://.*)\s*$')
-re_defnew = re.compile(r'^\s*(?:-r\s*(\d+|\{REV\})\s+)?((?:[a-zA-Z+]+://|\^/).*)\s+(\S+)\s*$')
+re_defnew = re.compile(r'^\s*(?:-r\s*(\d+|\{REV\})\s+)?((?:[a-zA-Z+]+://|\^/)\S*)\s+(\S+)\s*$')
 re_scheme = re.compile(r'^[a-zA-Z+]+://')
 
 def parsedefinition(line):
@@ -303,7 +303,7 @@ class externalsupdater:
             if source == exturl:
                 if extrev != rev:
                     self.ui.status(_('updating external on %s@%s\n') %
-                                   (wpath, rev or 'HEAD'))
+                                   (wpath, rev or pegrev or 'HEAD'))
                     cwd = os.path.join(self.repo.root, path)
                     self.svn(['update'] + revspec, cwd)
                 return
@@ -316,7 +316,8 @@ class externalsupdater:
             pegrev = rev
         if pegrev:
             source = '%s@%s' % (source, pegrev)
-        self.ui.status(_('fetching external %s@%s\n') % (wpath, rev or 'HEAD'))
+        self.ui.status(_('fetching external %s@%s\n') %
+                       (wpath, rev or pegrev or 'HEAD'))
         self.svn(['co'] + revspec + [source, dest], cwd)
 
     def delete(self, wpath):
@@ -339,12 +340,12 @@ class externalsupdater:
 
     def svn(self, args, cwd):
         args = ['svn'] + args
-        self.ui.debug(_('updating externals: %r, cwd=%s\n') % (args, cwd))
+        self.ui.note(_('updating externals: %r, cwd=%s\n') % (args, cwd))
         shell = os.name == 'nt'
         p = subprocess.Popen(args, cwd=cwd, shell=shell,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for line in p.stdout:
-            self.ui.note(line)
+            self.ui.debug(line)
         p.wait()
         if p.returncode != 0:
             raise hgutil.Abort("subprocess '%s' failed" % ' '.join(args))
