@@ -225,7 +225,10 @@ def _pushbundle2(pushop):
     cgpart = bundle2.bundlepart('B2X:CHANGEGROUP', data=cg.getchunks())
     bundler.addpart(cgpart)
     stream = util.chunkbuffer(bundler.getchunks())
-    reply = pushop.remote.unbundle(stream, ['force'], 'push')
+    try:
+        reply = pushop.remote.unbundle(stream, ['force'], 'push')
+    except bundle2.UnknownPartError, exc:
+        raise util.Abort('missing support for %s' % exc)
     try:
         op = bundle2.processbundle(pushop.repo, reply)
     except bundle2.UnknownPartError, exc:
