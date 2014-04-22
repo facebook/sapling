@@ -570,7 +570,7 @@ def _histedit(ui, repo, *freeargs, **opts):
         else:
             rootrevs = list(repo.set('roots(%lr)', revs))
             if len(rootrevs) != 1:
-                raise util.Abort(_('The specified revisions must have ' +
+                raise util.Abort(_('The specified revisions must have '
                     'exactly one common root'))
             root = rootrevs[0].node()
 
