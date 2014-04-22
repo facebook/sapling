@@ -353,10 +353,10 @@ class Test(unittest.TestCase):
         It is consulted periodically during the execution of tests.
         """
 
-        self._path = path
+        self.path = path
         self.name = os.path.basename(path)
         self._testdir = os.path.dirname(path)
-        self._errpath = os.path.join(self._testdir, '%s.err' % self.name)
+        self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
 
         self._options = options
         self._count = count
@@ -401,12 +401,12 @@ class Test(unittest.TestCase):
                 raise
 
         self._testtmp = os.path.join(self._threadtmp,
-                                     os.path.basename(self._path))
+                                     os.path.basename(self.path))
         os.mkdir(self._testtmp)
 
         # Remove any previous output files.
-        if os.path.exists(self._errpath):
-            os.remove(self._errpath)
+        if os.path.exists(self.errpath):
+            os.remove(self.errpath)
 
     def run(self, result):
         result.startTest(self)
@@ -463,29 +463,7 @@ class Test(unittest.TestCase):
 
         This will return a tuple describing the result of the test.
         """
-        if not os.path.exists(self._path):
-            raise SkipTest("Doesn't exist")
-
         options = self._options
-        if not (options.whitelisted and self.name in options.whitelisted):
-            if options.blacklist and self.name in options.blacklist:
-                raise SkipTest('blacklisted')
-
-            if options.retest and not os.path.exists('%s.err' % self.name):
-                raise IgnoreTest('not retesting')
-
-            if options.keywords:
-                f = open(self.name)
-                t = f.read().lower() + self.name.lower()
-                f.close()
-                for k in options.keywords.lower().split():
-                    if k in t:
-                        break
-                    else:
-                        raise IgnoreTest("doesn't match keyword")
-
-        if not os.path.basename(self.name.lower()).startswith('test-'):
-            raise SkipTest('not a test file')
 
         replacements, port = self._getreplacements()
         env = self._getenv(port)
@@ -529,10 +507,10 @@ class Test(unittest.TestCase):
                 iolock.acquire()
                 if options.view:
                     os.system("%s %s %s" % (options.view, self._refpath,
-                                            self._errpath))
+                                            self.errpath))
                 else:
                     info = showdiff(self._refout, out, self._refpath,
-                                    self._errpath)
+                                    self.errpath)
                 iolock.release()
             msg = ''
             if info.get('servefail'):
@@ -544,7 +522,7 @@ class Test(unittest.TestCase):
 
             if (ret != 0 or out != self._refout) and not self._skipped \
                 and not options.debug:
-                f = open(self._errpath, 'wb')
+                f = open(self.errpath, 'wb')
                 for line in out:
                     f.write(line)
             f.close()
@@ -565,7 +543,7 @@ class Test(unittest.TestCase):
 
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
             and not self._options.debug and self._out:
-            f = open(self._errpath, 'wb')
+            f = open(self.errpath, 'wb')
             for line in self._out:
                 f.write(line)
             f.close()
@@ -654,16 +632,16 @@ class Test(unittest.TestCase):
             log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self.name,
                                  msg))
         if (not ret and self._options.interactive and
-            os.path.exists(self._errpath)):
+            os.path.exists(self.errpath)):
             iolock.acquire()
             print 'Accept this change? [n] ',
             answer = sys.stdin.readline().strip()
             iolock.release()
             if answer.lower() in ('y', 'yes'):
                 if self.name.endswith('.t'):
-                    rename(self._errpath, self._path)
+                    rename(self.errpath, self.path)
                 else:
-                    rename(self._errpath, '%s.out' % self._path)
+                    rename(self.errpath, '%s.out' % self.path)
 
                 return '.', self.name, ''
 
@@ -683,7 +661,7 @@ class PythonTest(Test):
 
     def _run(self, replacements, env):
         py3kswitch = self._options.py3k_warnings and ' -3' or ''
-        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self._path)
+        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self.path)
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
@@ -706,7 +684,7 @@ class TTest(Test):
         return os.path.join(self._testdir, self.name)
 
     def _run(self, replacements, env):
-        f = open(self._path)
+        f = open(self.path)
         lines = f.readlines()
         f.close()
 
@@ -1149,8 +1127,45 @@ class TestSuite(unittest.TestSuite):
         self._runner = runner
 
     def run(self, result):
-        # We modify the list, so copy so callers aren't confused.
-        tests = list(self._tests)
+        options = self._runner.options
+
+        # We have a number of filters that need to be applied. We do this
+        # here instead of inside Test because it makes the running logic for
+        # Test simpler.
+        tests = []
+        for test in self._tests:
+            if not os.path.exists(test.path):
+                result.addSkip(test, "Doesn't exist")
+                continue
+
+            if not (options.whitelisted and test.name in options.whitelisted):
+                if options.blacklist and test.name in options.blacklist:
+                    result.addSkip(test, 'blacklisted')
+                    continue
+
+                if options.retest and not os.path.exists(test.errpath):
+                    result.addIgnore(test, 'not retesting')
+                    continue
+
+                if options.keywords:
+                    f = open(test.path)
+                    t = f.read().lower() + test.name.lower()
+                    f.close()
+                    ignored = False
+                    for k in options.keywords.lower().split():
+                        if k not in t:
+                            result.addIgnore(test, "doesn't match keyword")
+                            ignored = True
+                            break
+
+                    if ignored:
+                        continue
+
+                if not test.name.lower().startswith('test-'):
+                    result.addSkip(test, 'not a test file')
+                    continue
+
+            tests.append(test)
 
         jobs = self._runner.options.jobs
         done = queue.Queue()
