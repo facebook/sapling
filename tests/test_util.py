@@ -29,6 +29,7 @@ from mercurial import extensions
 
 try:
     from mercurial import obsolete
+    obsolete._enabled
 except ImportError:
     obsolete = None
 
