@@ -340,7 +340,7 @@ class Test(unittest.TestCase):
 
     def __init__(self, path, tmpdir, keeptmpdir=False,
                  debug=False,
-                 interactive=False, timeout=defaults['timeout'],
+                 timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
                  py3kwarnings=False, shell=None):
         """Create a test from parameters.
@@ -354,8 +354,6 @@ class Test(unittest.TestCase):
 
         debug mode will make the test execute verbosely, with unfiltered
         output.
-
-        interactive controls whether the test will run interactively.
 
         timeout controls the maximum run time of the test. It is ignored when
         debug is True.
@@ -382,7 +380,6 @@ class Test(unittest.TestCase):
         self._threadtmp = tmpdir
         self._keeptmpdir = keeptmpdir
         self._debug = debug
-        self._interactive = interactive
         self._timeout = timeout
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
@@ -520,17 +517,17 @@ class Test(unittest.TestCase):
                 missing = ['irrelevant']
 
             if failed:
-                self.fail('hg have failed checking for %s' % failed[-1], ret)
+                self.fail('hg have failed checking for %s' % failed[-1])
             else:
                 self._skipped = True
                 raise SkipTest(missing[-1])
         elif ret == 'timeout':
-            self.fail('timed out', ret)
+            self.fail('timed out')
         elif ret is False:
             raise WarnTest('no result code from test')
         elif out != self._refout:
             # The result object handles diff calculation for us.
-            self._result.addOutputMismatch(self, out, self._refout)
+            self._result.addOutputMismatch(self, ret, out, self._refout)
 
             if ret:
                 msg = 'output changed and ' + describe(ret)
@@ -544,9 +541,9 @@ class Test(unittest.TestCase):
                     f.write(line)
             f.close()
 
-            self.fail(msg, ret)
+            self.fail(msg)
         elif ret:
-            self.fail(describe(ret), ret)
+            self.fail(describe(ret))
 
     def tearDown(self):
         """Tasks to perform after run()."""
@@ -645,21 +642,7 @@ class Test(unittest.TestCase):
             hgrc.write('[%s]\n%s\n' % (section, key))
         hgrc.close()
 
-    def fail(self, msg, ret):
-        if (not ret and self._interactive and
-            os.path.exists(self.errpath)):
-            iolock.acquire()
-            print 'Accept this change? [n] ',
-            answer = sys.stdin.readline().strip()
-            iolock.release()
-            if answer.lower() in ('y', 'yes'):
-                if self.name.endswith('.t'):
-                    rename(self.errpath, self.path)
-                else:
-                    rename(self.errpath, '%s.out' % self.path)
-
-                return '.', self.name, ''
-
+    def fail(self, msg):
         # unittest differentiates between errored and failed.
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
@@ -1119,7 +1102,7 @@ class TestResult(unittest._TextTestResult):
             self.stream.write('~')
             self.stream.flush()
 
-    def addOutputMismatch(self, test, got, expected):
+    def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
 
         if self._options.nodiff:
@@ -1137,6 +1120,20 @@ class TestResult(unittest._TextTestResult):
                 for line in lines:
                     self.stream.write(line)
                 self.stream.flush()
+
+        if ret or not self._options.interactive or \
+            not os.path.exists(test.errpath):
+            return
+
+        iolock.acquire()
+        print 'Accept this change? [n] ',
+        answer = sys.stdin.readline().strip()
+        iolock.release()
+        if answer.lower() in ('y', 'yes'):
+            if test.name.endswith('.t'):
+                rename(test.errpath, test.path)
+            else:
+                rename(test.errpath, '%s.out' % test.path)
 
     def startTest(self, test):
         super(TestResult, self).startTest(test)
@@ -1524,7 +1521,6 @@ class TestRunner(object):
         return testcls(refpath, tmpdir,
                        keeptmpdir=self.options.keep_tmpdir,
                        debug=self.options.debug,
-                       interactive=self.options.interactive,
                        timeout=self.options.timeout,
                        startport=self.options.port + count * 3,
                        extraconfigopts=self.options.extra_config_opt,
