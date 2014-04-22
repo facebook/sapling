@@ -339,7 +339,8 @@ class Test(unittest.TestCase):
     SKIPPED_STATUS = 80
 
     def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False,
-                 debug=False, nodiff=False, diffviewer=None):
+                 debug=False, nodiff=False, diffviewer=None,
+                 interactive=False):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -363,6 +364,8 @@ class Test(unittest.TestCase):
 
         diffviewer is the program that should be used to display diffs. Only
         used when output changes.
+
+        interactive controls whether the test will run interactively.
         """
 
         self.path = path
@@ -378,6 +381,7 @@ class Test(unittest.TestCase):
         self._debug = debug
         self._nodiff = nodiff
         self._diffviewer = diffviewer
+        self._interactive = interactive
         self._daemonpids = []
 
         self._finished = None
@@ -645,7 +649,7 @@ class Test(unittest.TestCase):
         if not self._nodiff:
             log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self.name,
                                  msg))
-        if (not ret and self._options.interactive and
+        if (not ret and self._interactive and
             os.path.exists(self.errpath)):
             iolock.acquire()
             print 'Accept this change? [n] ',
@@ -1503,7 +1507,8 @@ class TestRunner(object):
                        keeptmpdir=self.options.keep_tmpdir,
                        debug=self.options.debug,
                        nodiff = self.options.nodiff,
-                       diffviewer=self.options.view)
+                       diffviewer=self.options.view,
+                       interactive=self.options.interactive)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
