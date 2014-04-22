@@ -78,6 +78,31 @@ class basectx(object):
                 del mf[fn]
         return mf
 
+    def _buildstatus(self, other, s, match, listignored, listclean,
+                        listunknown):
+        """build a status with respect to another context"""
+        mf1 = other._manifestmatches(match, s)
+        mf2 = self._manifestmatches(match, s)
+
+        modified, added, clean = [], [], []
+        deleted, unknown, ignored = s[3], [], []
+        withflags = mf1.withflags() | mf2.withflags()
+        for fn, mf2node in mf2.iteritems():
+            if fn in mf1:
+                if (fn not in deleted and
+                    ((fn in withflags and mf1.flags(fn) != mf2.flags(fn)) or
+                     (mf1[fn] != mf2node and
+                      (mf2node or self[fn].cmp(other[fn]))))):
+                    modified.append(fn)
+                elif listclean:
+                    clean.append(fn)
+                del mf1[fn]
+            elif fn not in deleted:
+                added.append(fn)
+        removed = mf1.keys()
+
+        return [modified, added, removed, deleted, unknown, ignored, clean]
+
     @propertycache
     def substate(self):
         return subrepo.state(self, self._repo.ui)
