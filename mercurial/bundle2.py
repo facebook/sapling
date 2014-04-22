@@ -760,3 +760,9 @@ def handlereplycaps(op, inpart):
     """Used to transmit unknown part error over the wire"""
     manargs = dict(inpart.mandatoryparams)
     raise UnknownPartError(manargs['parttype'])
+
+@parthandler('b2x:error:pushraced')
+def handlereplycaps(op, inpart):
+    """Used to transmit push race error over the wire"""
+    manargs = dict(inpart.mandatoryparams)
+    raise error.ResponseError(_('push failed:'), manargs['message'])

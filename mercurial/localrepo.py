@@ -134,7 +134,7 @@ class localpeer(peer.peerrepository):
                 ret = bundle2.unbundle20(self.ui, stream)
             return ret
         except error.PushRaced, exc:
-            raise error.ResponseError(_('push failed:'), exc.message)
+            raise error.ResponseError(_('push failed:'), str(exc))
 
     def lock(self):
         return self._repo.lock()

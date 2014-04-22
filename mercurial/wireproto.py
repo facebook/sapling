@@ -827,4 +827,11 @@ def unbundle(repo, proto, heads):
             sys.stderr.write("abort: %s\n" % inst)
             return pushres(0)
     except error.PushRaced, exc:
-        return pusherr(str(exc))
+        if getattr(exc, 'duringunbundle2', False):
+            bundler = bundle2.bundle20(repo.ui)
+            part = bundle2.bundlepart('B2X:ERROR:PUSHRACED',
+                                      [('message', str(exc))])
+            bundler.addpart(part)
+            return streamres(bundler.getchunks())
+        else:
+            return pusherr(str(exc))
