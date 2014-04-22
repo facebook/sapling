@@ -282,16 +282,16 @@ def rename(src, dst):
     shutil.copy(src, dst)
     os.remove(src)
 
-def showdiff(expected, output, ref, err):
-    print
+def getdiff(expected, output, ref, err):
     servefail = False
+    lines = []
     for line in difflib.unified_diff(expected, output, ref, err):
-        sys.stdout.write(line)
+        lines.append(line)
         if not servefail and line.startswith(
                              '+  abort: child process failed to start'):
             servefail = True
-    return {'servefail': servefail}
 
+    return servefail, lines
 
 verbose = False
 def vlog(*msg):
@@ -339,7 +339,7 @@ class Test(unittest.TestCase):
     SKIPPED_STATUS = 80
 
     def __init__(self, path, tmpdir, keeptmpdir=False,
-                 debug=False, nodiff=False, diffviewer=None,
+                 debug=False,
                  interactive=False, timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
                  py3kwarnings=False, shell=None):
@@ -354,11 +354,6 @@ class Test(unittest.TestCase):
 
         debug mode will make the test execute verbosely, with unfiltered
         output.
-
-        nodiff will suppress the printing of a diff when output changes.
-
-        diffviewer is the program that should be used to display diffs. Only
-        used when output changes.
 
         interactive controls whether the test will run interactively.
 
@@ -387,8 +382,6 @@ class Test(unittest.TestCase):
         self._threadtmp = tmpdir
         self._keeptmpdir = keeptmpdir
         self._debug = debug
-        self._nodiff = nodiff
-        self._diffviewer = diffviewer
         self._interactive = interactive
         self._timeout = timeout
         self._startport = startport
@@ -408,8 +401,8 @@ class Test(unittest.TestCase):
         # check test output against it.
         if debug:
             self._refout = None # to match "out is None"
-        elif os.path.exists(self._refpath):
-            f = open(self._refpath, 'r')
+        elif os.path.exists(self.refpath):
+            f = open(self.refpath, 'r')
             self._refout = f.read().splitlines(True)
             f.close()
         else:
@@ -443,6 +436,7 @@ class Test(unittest.TestCase):
             os.remove(self.errpath)
 
     def run(self, result):
+        self._result = result
         result.startTest(self)
         try:
             try:
@@ -533,23 +527,13 @@ class Test(unittest.TestCase):
         elif ret == 'timeout':
             self.fail('timed out', ret)
         elif out != self._refout:
-            info = {}
-            if not self._nodiff:
-                iolock.acquire()
-                if self._diffviewer:
-                    os.system("%s %s %s" % (self._diffviewer, self._refpath,
-                                            self.errpath))
-                else:
-                    info = showdiff(self._refout, out, self._refpath,
-                                    self.errpath)
-                iolock.release()
-            msg = ''
-            if info.get('servefail'):
-                msg += 'serve failed and '
+            # The result object handles diff calculation for us.
+            self._result.addOutputMismatch(self, out, self._refout)
+
             if ret:
-                msg += 'output changed and ' + describe(ret)
+                msg = 'output changed and ' + describe(ret)
             else:
-                msg += 'output changed'
+                msg = 'output changed'
 
             if (ret != 0 or out != self._refout) and not self._skipped \
                 and not self._debug:
@@ -661,9 +645,6 @@ class Test(unittest.TestCase):
 
     def fail(self, msg, ret):
         warned = ret is False
-        if not self._nodiff:
-            log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self.name,
-                                 msg))
         if (not ret and self._interactive and
             os.path.exists(self.errpath)):
             iolock.acquire()
@@ -689,7 +670,7 @@ class PythonTest(Test):
     """A Python-based test."""
 
     @property
-    def _refpath(self):
+    def refpath(self):
         return os.path.join(self._testdir, '%s.out' % self.name)
 
     def _run(self, replacements, env):
@@ -717,7 +698,7 @@ class TTest(Test):
                      {'\\': '\\\\', '\r': r'\r'})
 
     @property
-    def _refpath(self):
+    def refpath(self):
         return os.path.join(self._testdir, self.name)
 
     def _run(self, replacements, env):
@@ -1140,6 +1121,25 @@ class TestResult(unittest._TextTestResult):
             self.stream.write('~')
             self.stream.flush()
 
+    def addOutputMismatch(self, test, got, expected):
+        """Record a mismatch in test output for a particular test."""
+
+        if self._options.nodiff:
+            return
+
+        if self._options.view:
+            os.system("%s %s %s" % (self._view, test.refpath, test.errpath))
+        else:
+            failed, lines = getdiff(expected, got,
+                                    test.refpath, test.errpath)
+            if failed:
+                self.addFailure(test, 'diff generation failed')
+            else:
+                self.stream.write('\n')
+                for line in lines:
+                    self.stream.write(line)
+                self.stream.flush()
+
     def startTest(self, test):
         super(TestResult, self).startTest(test)
 
@@ -1526,8 +1526,6 @@ class TestRunner(object):
         return testcls(refpath, tmpdir,
                        keeptmpdir=self.options.keep_tmpdir,
                        debug=self.options.debug,
-                       nodiff = self.options.nodiff,
-                       diffviewer=self.options.view,
                        interactive=self.options.interactive,
                        timeout=self.options.timeout,
                        startport=self.options.port + count * 3,
