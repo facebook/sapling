@@ -78,6 +78,14 @@ class basectx(object):
                 del mf[fn]
         return mf
 
+    def _prestatus(self, other, s, match, listignored, listclean, listunknown):
+        """provide a hook to allow child objects to preprocess status results
+
+        For example, this allows other contexts, such as workingctx, to query
+        the dirstate before comparing the manifests.
+        """
+        return s
+
     def _buildstatus(self, other, s, match, listignored, listclean,
                         listunknown):
         """build a status with respect to another context"""
