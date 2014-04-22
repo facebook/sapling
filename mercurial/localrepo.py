@@ -1556,10 +1556,9 @@ class localrepository(object):
             r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                                   listunknown)
 
+        r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
+                             listunknown)
         modified, added, removed, deleted, unknown, ignored, clean = r
-
-        if working:
-            modified = ctx2._filtersuspectsymlink(modified)
 
         if reversed:
             added, removed = removed, added
