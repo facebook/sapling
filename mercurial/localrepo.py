@@ -1570,10 +1570,10 @@ class localrepository(object):
                         del mf2[f]
             else:
                 # we are comparing two revisions
-                deleted, unknown, ignored = [], [], []
                 mf2 = ctx2._manifestmatches(match, r)
 
             modified, added, clean = [], [], []
+            deleted, unknown, ignored = r[3], [], []
             withflags = mf1.withflags() | mf2.withflags()
             for fn, mf2node in mf2.iteritems():
                 if fn in mf1:
