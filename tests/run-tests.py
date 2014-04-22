@@ -339,7 +339,7 @@ class Test(unittest.TestCase):
     SKIPPED_STATUS = 80
 
     def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False,
-                 debug=False):
+                 debug=False, nodiff=False, diffviewer=None):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -358,6 +358,11 @@ class Test(unittest.TestCase):
 
         debug mode will make the test execute verbosely, with unfiltered
         output.
+
+        nodiff will suppress the printing of a diff when output changes.
+
+        diffviewer is the program that should be used to display diffs. Only
+        used when output changes.
         """
 
         self.path = path
@@ -371,6 +376,8 @@ class Test(unittest.TestCase):
         self._abort = abort
         self._keeptmpdir = keeptmpdir
         self._debug = debug
+        self._nodiff = nodiff
+        self._diffviewer = diffviewer
         self._daemonpids = []
 
         self._finished = None
@@ -472,8 +479,6 @@ class Test(unittest.TestCase):
 
         This will return a tuple describing the result of the test.
         """
-        options = self._options
-
         replacements, port = self._getreplacements()
         env = self._getenv(port)
         self._daemonpids.append(env['DAEMON_PIDS'])
@@ -512,10 +517,10 @@ class Test(unittest.TestCase):
             self.fail('timed out', ret)
         elif out != self._refout:
             info = {}
-            if not options.nodiff:
+            if not self._nodiff:
                 iolock.acquire()
-                if options.view:
-                    os.system("%s %s %s" % (options.view, self._refpath,
+                if self._diffviewer:
+                    os.system("%s %s %s" % (self._diffviewer, self._refpath,
                                             self.errpath))
                 else:
                     info = showdiff(self._refout, out, self._refpath,
@@ -530,7 +535,7 @@ class Test(unittest.TestCase):
                 msg += 'output changed'
 
             if (ret != 0 or out != self._refout) and not self._skipped \
-                and not options.debug:
+                and not self._debug:
                 f = open(self.errpath, 'wb')
                 for line in out:
                     f.write(line)
@@ -637,7 +642,7 @@ class Test(unittest.TestCase):
 
     def fail(self, msg, ret):
         warned = ret is False
-        if not self._options.nodiff:
+        if not self._nodiff:
             log("\n%s: %s %s" % (warned and 'Warning' or 'ERROR', self.name,
                                  msg))
         if (not ret and self._options.interactive and
@@ -1496,7 +1501,9 @@ class TestRunner(object):
 
         return testcls(self.options, refpath, count, tmpdir, self.abort,
                        keeptmpdir=self.options.keep_tmpdir,
-                       debug=self.options.debug)
+                       debug=self.options.debug,
+                       nodiff = self.options.nodiff,
+                       diffviewer=self.options.view)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
