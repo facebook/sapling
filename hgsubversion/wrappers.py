@@ -191,7 +191,10 @@ def push(repo, dest, force, revs):
     ui = repo.ui
     old_encoding = util.swap_out_encoding()
 
-    hasobsolete = obsolete and obsolete._enabled
+    try:
+        hasobsolete = obsolete._enabled
+    except:
+        hasobsolete = False
 
     temporary_commits = []
     try:
