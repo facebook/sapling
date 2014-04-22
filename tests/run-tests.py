@@ -387,6 +387,9 @@ class Test(object):
             # will try again.
             shutil.rmtree(self._threadtmp, True)
 
+    def __str__(self):
+        return self.name
+
     def setUp(self):
         """Tasks to perform before run()."""
         self._finished = False
