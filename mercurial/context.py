@@ -1236,21 +1236,28 @@ class workingctx(committablectx):
 
         return [modified, added, removed, deleted, unknown, ignored, clean]
 
-    def status(self, ignored=False, clean=False, unknown=False):
+    def status(self, ignored=False, clean=False, unknown=False, match=None):
         """Explicit status query
         Unless this method is used to query the working copy status, the
         _status property will implicitly read the status using its default
         arguments."""
-        stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
+        listignored, listclean, listunknown = ignored, clean, unknown
+        s = self._dirstatestatus(match=match, ignored=listignored,
+                                 clean=listclean, unknown=listunknown)
+        modified, added, removed, deleted, unknown, ignored, clean = s
+
+        modified = self._filtersuspectsymlink(modified)
+
         self._unknown = self._ignored = self._clean = None
-        if unknown:
-            self._unknown = stat[4]
-        if ignored:
-            self._ignored = stat[5]
-        if clean:
-            self._clean = stat[6]
-        self._status = stat[:4]
-        return stat
+        if listunknown:
+            self._unknown = unknown
+        if listignored:
+            self._ignored = ignored
+        if listclean:
+            self._clean = clean
+        self._status = modified, added, removed, deleted
+
+        return modified, added, removed, deleted, unknown, ignored, clean
 
 
 class committablefilectx(basefilectx):
