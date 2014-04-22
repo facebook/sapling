@@ -170,6 +170,10 @@ def _makefpartparamsizes(nbparams):
     """
     return '>'+('BB'*nbparams)
 
+class UnknownPartError(KeyError):
+    """error raised when no handler is found for a Mandatory part"""
+    pass
+
 parthandlermapping = {}
 
 def parthandler(parttype):
@@ -297,7 +301,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if key != parttype: # mandatory parts
                     # todo:
                     # - use a more precise exception
-                    raise
+                    raise UnknownPartError(key)
                 op.ui.debug('ignoring unknown advisory part %r\n' % key)
                 # consuming the part
                 part.read()
