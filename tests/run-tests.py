@@ -338,7 +338,7 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, options, path, count, tmpdir, abort):
+    def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -351,6 +351,9 @@ class Test(unittest.TestCase):
 
         abort is a flag that turns to True if test execution should be aborted.
         It is consulted periodically during the execution of tests.
+
+        keeptmpdir determines whether to keep the test's temporary directory
+        after execution. It defaults to removal (False).
         """
 
         self.path = path
@@ -362,6 +365,7 @@ class Test(unittest.TestCase):
         self._count = count
         self._threadtmp = tmpdir
         self._abort = abort
+        self._keeptmpdir = keeptmpdir
         self._daemonpids = []
 
         self._finished = None
@@ -537,7 +541,7 @@ class Test(unittest.TestCase):
             killdaemons(entry)
         self._daemonpids = []
 
-        if not self._options.keep_tmpdir:
+        if not self._keeptmpdir:
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
 
@@ -1485,7 +1489,8 @@ class TestRunner(object):
         refpath = os.path.join(self.testdir, test)
         tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
 
-        return testcls(self.options, refpath, count, tmpdir, self.abort)
+        return testcls(self.options, refpath, count, tmpdir, self.abort,
+                       keeptmpdir=self.options.keep_tmpdir)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
