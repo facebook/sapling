@@ -338,7 +338,8 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False):
+    def __init__(self, options, path, count, tmpdir, abort, keeptmpdir=False,
+                 debug=False):
         """Create a test from parameters.
 
         options are parsed command line options that control test execution.
@@ -354,6 +355,9 @@ class Test(unittest.TestCase):
 
         keeptmpdir determines whether to keep the test's temporary directory
         after execution. It defaults to removal (False).
+
+        debug mode will make the test execute verbosely, with unfiltered
+        output.
         """
 
         self.path = path
@@ -366,6 +370,7 @@ class Test(unittest.TestCase):
         self._threadtmp = tmpdir
         self._abort = abort
         self._keeptmpdir = keeptmpdir
+        self._debug = debug
         self._daemonpids = []
 
         self._finished = None
@@ -376,7 +381,7 @@ class Test(unittest.TestCase):
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
-        if options.debug:
+        if debug:
             self._refout = None # to match "out is None"
         elif os.path.exists(self._refpath):
             f = open(self._refpath, 'r')
@@ -546,7 +551,7 @@ class Test(unittest.TestCase):
             shutil.rmtree(self._threadtmp, True)
 
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
-            and not self._options.debug and self._out:
+            and not self._debug and self._out:
             f = open(self.errpath, 'wb')
             for line in self._out:
                 f.write(line)
@@ -670,7 +675,7 @@ class PythonTest(Test):
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
         return run(cmd, self._testtmp, replacements, env, self._abort,
-                   debug=self._options.debug, timeout=self._options.timeout)
+                   debug=self._debug, timeout=self._options.timeout)
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -705,7 +710,7 @@ class TTest(Test):
         vlog("# Running", cmd)
 
         exitcode, output = run(cmd, self._testtmp, replacements, env,
-                               self._abort, debug=self._options.debug,
+                               self._abort, debug=self._debug,
                                timeout=self._options.timeout)
         # Do not merge output if skipped. Return hghave message instead.
         # Similarly, with --debug, output is None.
@@ -761,7 +766,7 @@ class TTest(Test):
         # can generate the surrounding doctest magic.
         inpython = False
 
-        if self._options.debug:
+        if self._debug:
             script.append('set -x\n')
         if os.getenv('MSYSTEM'):
             script.append('alias pwd="pwd -W"\n')
@@ -1490,7 +1495,8 @@ class TestRunner(object):
         tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
 
         return testcls(self.options, refpath, count, tmpdir, self.abort,
-                       keeptmpdir=self.options.keep_tmpdir)
+                       keeptmpdir=self.options.keep_tmpdir,
+                       debug=self.options.debug)
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
