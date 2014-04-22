@@ -323,13 +323,19 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                                      data=output)
                 op.reply.addpart(outpart)
             part.read()
-    except Exception:
+    except Exception, exc:
         if part is not None:
             # consume the bundle content
             part.read()
         for part in iterparts:
             # consume the bundle content
             part.read()
+        # Small hack to let caller code distinguish exceptions from bundle2
+        # processing fron the ones from bundle1 processing. This is mostly
+        # needed to handle different return codes to unbundle according to the
+        # type of bundle. We should probably clean up or drop this return code
+        # craziness in a future version.
+        exc.duringunbundle2 = True
         raise
     return op
 
