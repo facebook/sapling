@@ -8,7 +8,7 @@
 from i18n import _
 from node import hex, nullid
 import errno, urllib
-import util, scmutil, changegroup, base85
+import util, scmutil, changegroup, base85, error
 import discovery, phases, obsolete, bookmarks, bundle2
 
 def readbundle(ui, fh, fname, vfs=None):
@@ -708,9 +708,6 @@ def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
     """hook function to let extensions add parts to the requested bundle"""
     pass
 
-class PushRaced(RuntimeError):
-    """An exception raised during unbundling that indicate a push race"""
-
 def check_heads(repo, their_heads, context):
     """check if the heads of a repo have been modified
 
@@ -722,8 +719,8 @@ def check_heads(repo, their_heads, context):
             their_heads == ['hashed', heads_hash]):
         # someone else committed/pushed/unbundled while we
         # were transferring data
-        raise PushRaced('repository changed while %s - '
-                        'please try again' % context)
+        raise error.PushRaced('repository changed while %s - '
+                              'please try again' % context)
 
 def unbundle(repo, cg, heads, source, url):
     """Apply a bundle to a repo.

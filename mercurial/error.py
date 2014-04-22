@@ -94,3 +94,7 @@ class SignalInterrupt(KeyboardInterrupt):
 
 class SignatureError(Exception):
     pass
+
+class PushRaced(RuntimeError):
+    """An exception raised during unbundling that indicate a push race"""
+

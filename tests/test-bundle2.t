@@ -15,6 +15,7 @@ Create an extension to test bundle2 API
   > from mercurial import scmutil
   > from mercurial import discovery
   > from mercurial import changegroup
+  > from mercurial import error
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > 
@@ -59,6 +60,7 @@ Create an extension to test bundle2 API
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),
   >           ('', 'reply', False, 'produce a reply bundle'),
+  >           ('', 'pushrace', False, 'includes a check:head part with unknown nodes'),
   >           ('r', 'rev', [], 'includes those changeset in the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
@@ -74,6 +76,10 @@ Create an extension to test bundle2 API
   >     if opts['reply']:
   >         capsstring = 'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
   >         bundler.addpart(bundle2.bundlepart('b2x:replycaps', data=capsstring))
+  > 
+  >     if opts['pushrace']:
+  >         dummynode = '01234567890123456789'
+  >         bundler.addpart(bundle2.bundlepart('b2x:check:heads', data=dummynode))
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -132,6 +138,8 @@ Create an extension to test bundle2 API
   >             tr.close()
   >         except KeyError, exc:
   >             raise util.Abort('missing support for %s' % exc)
+  >         except error.PushRaced, exc:
+  >             raise util.Abort('push race')
   >     finally:
   >         if tr is not None:
   >             tr.release()
@@ -600,6 +608,15 @@ Unbundle the reply to get the output:
   remote: received ping request (id 6)
   remote: replying to ping request (id 6)
   0 unread bytes
+
+Test push race detection
+
+  $ hg bundle2 --pushrace ../part-race.hg2
+
+  $ hg unbundle2 < ../part-race.hg2
+  0 unread bytes
+  abort: push race
+  [255]
 
 Support for changegroup
 ===================================

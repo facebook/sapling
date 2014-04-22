@@ -145,7 +145,7 @@ import struct
 import urllib
 import string
 
-import changegroup
+import changegroup, error
 from i18n import _
 
 _pack = struct.pack
@@ -730,7 +730,7 @@ def handlechangegroup(op, inpart):
         h = inpart.read(20)
     assert not h
     if heads != op.repo.heads():
-        raise exchange.PushRaced()
+        raise error.PushRaced()
 
 @parthandler('b2x:output')
 def handleoutput(op, inpart):

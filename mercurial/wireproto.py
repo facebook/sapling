@@ -826,5 +826,5 @@ def unbundle(repo, proto, heads):
         else:
             sys.stderr.write("abort: %s\n" % inst)
             return pushres(0)
-    except exchange.PushRaced, exc:
+    except error.PushRaced, exc:
         return pusherr(str(exc))
