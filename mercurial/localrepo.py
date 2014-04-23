@@ -1532,12 +1532,7 @@ class localrepository(object):
             reversed = True
             ctx1, ctx2 = ctx2, ctx1
 
-        working = ctx2.rev() is None
         listignored, listclean, listunknown = ignored, clean, unknown
-
-        # load earliest manifest first for caching reasons
-        if not working and ctx2.rev() < ctx1.rev():
-            ctx2.manifest()
 
         r = [[], [], [], [], [], [], []]
         match = ctx2._matchstatus(ctx1, r, match, listignored, listclean,
