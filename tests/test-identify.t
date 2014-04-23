@@ -109,6 +109,12 @@ test remote identify with bookmarks
   $ hg id --bookmarks -r . http://localhost:$HGPORT1/
   Y Z
 
+test invalid lookup
+
+  $ hg id -r noNoNO http://localhost:$HGPORT1/
+  abort: unknown revision 'noNoNO'!
+  [255]
+
 Make sure we do not obscure unknown requires file entries (issue2649)
 
   $ echo fake >> .hg/requires

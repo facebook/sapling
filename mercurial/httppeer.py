@@ -237,6 +237,9 @@ class httppeer(wireproto.wirepeer):
         stream =  self._callstream(cmd, **args)
         return util.chunkbuffer(zgenerator(stream))
 
+    def _abort(self, exception):
+        raise exception
+
 class httpspeer(httppeer):
     def __init__(self, ui, path):
         if not url.has_https:
