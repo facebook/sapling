@@ -93,6 +93,9 @@ class basectx(object):
         For example, this allows other contexts, such as workingctx, to query
         the dirstate before comparing the manifests.
         """
+        # load earliest manifest first for caching reasons
+        if self.rev() < other.rev():
+            self.manifest()
         return s
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
