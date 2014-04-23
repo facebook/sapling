@@ -1310,6 +1310,9 @@ class workingctx(committablectx):
         We use this prestatus hook to populate the status with information from
         the dirstate.
         """
+        # doesn't need to call super; if that changes, be aware that super
+        # calls self.manifest which would slow down the common case of calling
+        # status against a workingctx's parent
         return self._dirstatestatus(match, listignored, listclean, listunknown)
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
