@@ -1558,12 +1558,12 @@ class localrepository(object):
 
         r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
                              listunknown)
-        modified, added, removed, deleted, unknown, ignored, clean = r
 
         if reversed:
-            added, removed = removed, added
-
-        r = modified, added, removed, deleted, unknown, ignored, clean
+            # since we are maintaining whether we reversed ctx1 and ctx2 (due
+            # to comparing the workingctx with its parent), we need to switch
+            # back added files (r[1]) and removed files (r[2])
+            r[1], r[2] = r[2], r[1]
 
         if listsubrepos:
             for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
