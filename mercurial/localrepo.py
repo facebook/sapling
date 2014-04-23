@@ -1533,23 +1533,15 @@ class localrepository(object):
             ctx1, ctx2 = ctx2, ctx1
 
         working = ctx2.rev() is None
-        parentworking = working and ctx1 == self['.']
-        match = match or matchmod.always(self.root, self.getcwd())
         listignored, listclean, listunknown = ignored, clean, unknown
 
         # load earliest manifest first for caching reasons
         if not working and ctx2.rev() < ctx1.rev():
             ctx2.manifest()
 
-        if not parentworking:
-            def bad(f, msg):
-                # 'f' may be a directory pattern from 'match.files()',
-                # so 'f not in ctx1' is not enough
-                if f not in ctx1 and f not in ctx1.dirs():
-                    self.ui.warn('%s: %s\n' % (self.dirstate.pathto(f), msg))
-            match.bad = bad
-
         r = [[], [], [], [], [], [], []]
+        match = ctx2._matchstatus(ctx1, r, match, listignored, listclean,
+                                  listunknown)
         r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
