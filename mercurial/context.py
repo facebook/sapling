@@ -78,6 +78,15 @@ class basectx(object):
                 del mf[fn]
         return mf
 
+    def _matchstatus(self, other, s, match, listignored, listclean,
+                     listunknown):
+        """return match.always if match is none
+
+        This internal method provides a way for child objects to override the
+        match operator.
+        """
+        return match or matchmod.always(self._repo.root, self._repo.getcwd())
+
     def _prestatus(self, other, s, match, listignored, listclean, listunknown):
         """provide a hook to allow child objects to preprocess status results
 
