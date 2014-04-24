@@ -269,6 +269,66 @@ class basectx(object):
     def dirty(self):
         return False
 
+    def status(self, other=None, match=None, listignored=False,
+               listclean=False, listunknown=False, listsubrepos=False):
+        """return status of files between two nodes or node and working
+        directory.
+
+        If other is None, compare this node with working directory.
+        """
+
+        ctx1 = self
+        ctx2 = self._repo[other]
+
+        # This next code block is, admittedly, fragile logic that tests for
+        # reversing the contexts and wouldn't need to exist if it weren't for
+        # the fast (and common) code path of comparing the working directory
+        # with its first parent.
+        #
+        # What we're aiming for here is the ability to call:
+        #
+        # workingctx.status(parentctx)
+        #
+        # If we always built the manifest for each context and compared those,
+        # then we'd be done. But the special case of the above call means we
+        # just copy the manifest of the parent.
+        reversed = False
+        if (not isinstance(ctx1, changectx)
+            and isinstance(ctx2, changectx)):
+            reversed = True
+            ctx1, ctx2 = ctx2, ctx1
+
+        r = [[], [], [], [], [], [], []]
+        match = ctx2._matchstatus(ctx1, r, match, listignored, listclean,
+                                  listunknown)
+        r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
+        r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
+                                 listunknown)
+        r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
+                             listunknown)
+
+        if reversed:
+            r[1], r[2], r[3], r[4] = r[2], r[1], r[4], r[3]
+
+        if listsubrepos:
+            for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
+                rev2 = ctx2.subrev(subpath)
+                try:
+                    submatch = matchmod.narrowmatcher(subpath, match)
+                    s = sub.status(rev2, match=submatch, ignored=listignored,
+                                   clean=listclean, unknown=listunknown,
+                                   listsubrepos=True)
+                    for rfiles, sfiles in zip(r, s):
+                        rfiles.extend("%s/%s" % (subpath, f) for f in sfiles)
+                except error.LookupError:
+                    self._repo.ui.status(_("skipping missing "
+                                           "subrepository: %s\n") % subpath)
+
+        for l in r:
+            l.sort()
+        return r
+
+
 def makememctx(repo, parents, text, user, date, branch, files, store,
                editor=None):
     def getfilectx(repo, memctx, path):
