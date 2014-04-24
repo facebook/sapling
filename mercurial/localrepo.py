@@ -1551,11 +1551,8 @@ class localrepository(object):
 
         r = [[], [], [], [], [], [], []]
         r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
-
-        if not parentworking:
-            r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
-                                  listunknown)
-
+        r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
+                              listunknown)
         r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
                              listunknown)
 

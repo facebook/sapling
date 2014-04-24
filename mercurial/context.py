@@ -1327,6 +1327,21 @@ class workingctx(committablectx):
 
         return [modified, added, removed, deleted, unknown, ignored, clean]
 
+    def _buildstatus(self, other, s, match, listignored, listclean,
+                        listunknown):
+        """build a status with respect to another context
+
+        This includes logic for maintaining the fast path of status when
+        comparing the working directory against its parent, which is to skip
+        building a new manifest if self (working directory) is not comparing
+        against its parent (repo['.']).
+        """
+        if other != self._repo['.']:
+            s = super(workingctx, self)._buildstatus(other, s, match,
+                                                     listignored, listclean,
+                                                     listunknown)
+        return s
+
     def status(self, ignored=False, clean=False, unknown=False, match=None):
         """Explicit status query
         Unless this method is used to query the working copy status, the
