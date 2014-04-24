@@ -1351,6 +1351,30 @@ class workingctx(committablectx):
                                                      listunknown)
         return s
 
+    def _matchstatus(self, other, s, match, listignored, listclean,
+                     listunknown):
+        """override the match method with a filter for directory patterns
+
+        We use inheritance to customize the match.bad method only in cases of
+        workingctx since it belongs only to the working directory when
+        comparing against the parent changeset.
+
+        If we aren't comparing against the working directory's parent, then we
+        just use the default match object sent to us.
+        """
+        superself = super(workingctx, self)
+        match = superself._matchstatus(other, s, match, listignored, listclean,
+                                       listunknown)
+        if other != self._repo['.']:
+            def bad(f, msg):
+                # 'f' may be a directory pattern from 'match.files()',
+                # so 'f not in ctx1' is not enough
+                if f not in other and f not in other.dirs():
+                    self._repo.ui.warn('%s: %s\n' %
+                                       (self._repo.dirstate.pathto(f), msg))
+            match.bad = bad
+        return match
+
     def status(self, ignored=False, clean=False, unknown=False, match=None):
         """Explicit status query
         Unless this method is used to query the working copy status, the
