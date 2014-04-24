@@ -892,14 +892,7 @@ class committablectx(basectx):
         if user:
             self._user = user
         if changes:
-            self._status = list(changes[:4])
-            self._unknown = changes[4]
-            self._ignored = changes[5]
-            self._clean = changes[6]
-        else:
-            self._unknown = None
-            self._ignored = None
-            self._clean = None
+            self._status = changes
 
         self._extra = {}
         if extra:
@@ -974,7 +967,7 @@ class committablectx(basectx):
 
         copied = self._repo.dirstate.copies()
         ff = self._flagfunc
-        modified, added, removed, deleted = self._status
+        modified, added, removed, deleted = self._status[:4]
         for i, l in (("a", added), ("m", modified)):
             for f in l:
                 orig = copied.get(f, f)
@@ -992,7 +985,7 @@ class committablectx(basectx):
 
     @propertycache
     def _status(self):
-        return self._repo.status()[:4]
+        return self._repo.status()
 
     @propertycache
     def _user(self):
@@ -1023,14 +1016,11 @@ class committablectx(basectx):
     def deleted(self):
         return self._status[3]
     def unknown(self):
-        assert self._unknown is not None  # must call status first
-        return self._unknown
+        return self._status[4]
     def ignored(self):
-        assert self._ignored is not None  # must call status first
-        return self._ignored
+        return self._status[5]
     def clean(self):
-        assert self._clean is not None  # must call status first
-        return self._clean
+        return self._status[6]
     def branch(self):
         return encoding.tolocal(self._extra['branch'])
     def closesbranch(self):
@@ -1395,20 +1385,10 @@ class workingctx(committablectx):
         listignored, listclean, listunknown = ignored, clean, unknown
         s = self._dirstatestatus(match=match, ignored=listignored,
                                  clean=listclean, unknown=listunknown)
-        modified, added, removed, deleted, unknown, ignored, clean = s
 
-        modified = self._filtersuspectsymlink(modified)
-
-        self._unknown = self._ignored = self._clean = None
-        if listunknown:
-            self._unknown = unknown
-        if listignored:
-            self._ignored = ignored
-        if listclean:
-            self._clean = clean
-        self._status = modified, added, removed, deleted
-
-        return modified, added, removed, deleted, unknown, ignored, clean
+        s[0] = self._filtersuspectsymlink(s[0])
+        self._status = s
+        return s
 
 
 class committablefilectx(basefilectx):
