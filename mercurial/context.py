@@ -63,6 +63,21 @@ class basectx(object):
         for f in sorted(self._manifest):
             yield f
 
+    def _manifestmatches(self, match, s):
+        """generate a new manifest filtered by the match argument
+
+        This method is for internal use only and mainly exists to provide an
+        object oriented way for other contexts to customize the manifest
+        generation.
+        """
+        mf = self.manifest().copy()
+        if match.always():
+            return mf
+        for fn in mf.keys():
+            if not match(fn):
+                del mf[fn]
+        return mf
+
     @propertycache
     def substate(self):
         return subrepo.state(self, self._repo.ui)
