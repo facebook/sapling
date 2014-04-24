@@ -313,7 +313,11 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             newhs = candidate_newhs
         unsynced = sorted(h for h in unsyncedheads if h not in discardedheads)
         if unsynced:
-            heads = ' '.join(short(h) for h in unsynced)
+            if len(unsynced) <= 4 or repo.ui.verbose:
+                heads = ' '.join(short(h) for h in unsynced)
+            else:
+                heads = (' '.join(short(h) for h in unsynced[:4]) +
+                         ' ' + _("and %s others") % (len(unsynced) - 4))
             if branch is None:
                 repo.ui.status(_("remote has heads that are "
                                  "not known locally: %s\n") % heads)

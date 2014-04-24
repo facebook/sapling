@@ -378,7 +378,7 @@ Pushing multi headed new branch:
   added 3 changesets with 3 changes to 1 files (+1 heads)
 
 Checking prepush logic does not allow silently pushing
-multiple new heads:
+multiple new heads but also doesn't report too many heads:
 
   $ cd ..
   $ hg init h
@@ -404,10 +404,29 @@ multiple new heads:
   adding c
   created new head
 
+  $ for i in `seq 3`; do hg -R h up -q 0; echo $i > h/b; hg -R h ci -qAm$i; done
+
   $ hg -R i push h
   pushing to h
   searching for changes
-  remote has heads on branch 'default' that are not known locally: ce4212fc8847
+  remote has heads on branch 'default' that are not known locally: 534543e22c29 764f8ec07b96 afe7cc7679f5 ce4212fc8847
+  abort: push creates new remote head 97bd0c84d346!
+  (pull and merge or see "hg help push" for details about pushing new heads)
+  [255]
+  $ hg -R h up -q 0; echo x > h/b; hg -R h ci -qAmx
+  $ hg -R i push h
+  pushing to h
+  searching for changes
+  remote has heads on branch 'default' that are not known locally: 18ddb72c4590 534543e22c29 764f8ec07b96 afe7cc7679f5 and 1 others
+  abort: push creates new remote head 97bd0c84d346!
+  (pull and merge or see "hg help push" for details about pushing new heads)
+  [255]
+  $ hg -R i push h -v
+  pushing to h
+  searching for changes
+  remote has heads on branch 'default' that are not known locally: 18ddb72c4590 534543e22c29 764f8ec07b96 afe7cc7679f5 ce4212fc8847
+  new remote heads on branch 'default':
+   97bd0c84d346
   abort: push creates new remote head 97bd0c84d346!
   (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
