@@ -1313,6 +1313,7 @@ class workingctx(committablectx):
         susposed to be linking to.
         """
         s[0] = self._filtersuspectsymlink(s[0])
+        self._status = s
         return s
 
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
