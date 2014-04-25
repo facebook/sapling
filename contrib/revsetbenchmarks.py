@@ -66,6 +66,10 @@ def getrevs(spec):
 
 
 
+if len(sys.argv) < 2:
+    print >> sys.stderr, 'usage: %s <revs> [file]' % sys.argv[0]
+    sys.exit(255)
+
 target_rev = sys.argv[1]
 
 revsetsfile = sys.stdin
