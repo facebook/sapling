@@ -1338,13 +1338,13 @@ class TestRunner(object):
 
     def __init__(self):
         self.options = None
-        self.testdir = None
-        self.hgtmp = None
-        self.inst = None
-        self.bindir = None
-        self.tmpbinddir = None
-        self.pythondir = None
-        self.coveragefile = None
+        self._testdir = None
+        self._hgtmp = None
+        self._installdir = None
+        self._bindir = None
+        self._tmpbinddir = None
+        self._pythondir = None
+        self._coveragefile = None
         self._createdfiles = []
         self._hgpath = None
 
@@ -1382,7 +1382,7 @@ class TestRunner(object):
                 return val
             tests.sort(key=sortkey)
 
-        self.testdir = os.environ['TESTDIR'] = os.getcwd()
+        self._testdir = os.environ['TESTDIR'] = os.getcwd()
 
         if 'PYTHONHASHSEED' not in os.environ:
             # use a random python hash seed all the time
@@ -1412,41 +1412,41 @@ class TestRunner(object):
                 # in all lowercase, which causes troubles with paths (issue3490)
                 d = os.getenv('TMP')
             tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
-        self.hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
+        self._hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
 
         if self.options.with_hg:
-            self.inst = None
-            self.bindir = os.path.dirname(os.path.realpath(
-                                          self.options.with_hg))
-            self.tmpbindir = os.path.join(self.hgtmp, 'install', 'bin')
-            os.makedirs(self.tmpbindir)
+            self._installdir = None
+            self._bindir = os.path.dirname(os.path.realpath(
+                                           self.options.with_hg))
+            self._tmpbindir = os.path.join(self._hgtmp, 'install', 'bin')
+            os.makedirs(self._tmpbindir)
 
             # This looks redundant with how Python initializes sys.path from
             # the location of the script being executed.  Needed because the
             # "hg" specified by --with-hg is not the only Python script
             # executed in the test suite that needs to import 'mercurial'
             # ... which means it's not really redundant at all.
-            self.pythondir = self.bindir
+            self._pythondir = self._bindir
         else:
-            self.inst = os.path.join(self.hgtmp, "install")
-            self.bindir = os.environ["BINDIR"] = os.path.join(self.inst,
-                                                              "bin")
-            self.tmpbindir = self.bindir
-            self.pythondir = os.path.join(self.inst, "lib", "python")
+            self._installdir = os.path.join(self._hgtmp, "install")
+            self._bindir = os.environ["BINDIR"] = \
+                os.path.join(self._installdir, "bin")
+            self._tmpbindir = self._bindir
+            self._pythondir = os.path.join(self._installdir, "lib", "python")
 
-        os.environ["BINDIR"] = self.bindir
+        os.environ["BINDIR"] = self._bindir
         os.environ["PYTHON"] = PYTHON
 
-        path = [self.bindir] + os.environ["PATH"].split(os.pathsep)
-        if self.tmpbindir != self.bindir:
-            path = [self.tmpbindir] + path
+        path = [self._bindir] + os.environ["PATH"].split(os.pathsep)
+        if self._tmpbindir != self._bindir:
+            path = [self._tmpbindir] + path
         os.environ["PATH"] = os.pathsep.join(path)
 
         # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
-        pypath = [self.pythondir, self.testdir,
+        pypath = [self._pythondir, self._testdir,
                   os.path.abspath(os.path.dirname(__file__))]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current
@@ -1457,10 +1457,10 @@ class TestRunner(object):
             pypath.append(oldpypath)
         os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
-        self.coveragefile = os.path.join(self.testdir, '.coverage')
+        self._coveragefile = os.path.join(self._testdir, '.coverage')
 
-        vlog("# Using TESTDIR", self.testdir)
-        vlog("# Using HGTMP", self.hgtmp)
+        vlog("# Using TESTDIR", self._testdir)
+        vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
         vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
@@ -1491,7 +1491,7 @@ class TestRunner(object):
 
     def _runtests(self, tests):
         try:
-            if self.inst:
+            if self._installdir:
                 self._installhg()
                 self._checkhglib("Testing")
             else:
@@ -1512,7 +1512,7 @@ class TestRunner(object):
             failed = False
             warned = False
 
-            suite = TestSuite(self.testdir,
+            suite = TestSuite(self._testdir,
                               jobs=self.options.jobs,
                               whitelist=self.options.whitelisted,
                               blacklist=self.options.blacklist,
@@ -1551,8 +1551,8 @@ class TestRunner(object):
                 testcls = cls
                 break
 
-        refpath = os.path.join(self.testdir, test)
-        tmpdir = os.path.join(self.hgtmp, 'child%d' % count)
+        refpath = os.path.join(self._testdir, test)
+        tmpdir = os.path.join(self._hgtmp, 'child%d' % count)
 
         return testcls(refpath, tmpdir,
                        keeptmpdir=self.options.keep_tmpdir,
@@ -1569,8 +1569,8 @@ class TestRunner(object):
         if self.options.keep_tmpdir:
             return
 
-        vlog("# Cleaning up HGTMP", self.hgtmp)
-        shutil.rmtree(self.hgtmp, True)
+        vlog("# Cleaning up HGTMP", self._hgtmp)
+        shutil.rmtree(self._hgtmp, True)
         for f in self._createdfiles:
             try:
                 os.remove(f)
@@ -1584,7 +1584,7 @@ class TestRunner(object):
         if getattr(os, 'symlink', None):
             vlog("# Making python executable in test path a symlink to '%s'" %
                  sys.executable)
-            mypython = os.path.join(self.tmpbindir, pyexename)
+            mypython = os.path.join(self._tmpbindir, pyexename)
             try:
                 if os.readlink(mypython) == sys.executable:
                     return
@@ -1640,9 +1640,9 @@ class TestRunner(object):
                ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
                % {'exe': sys.executable, 'py3': py3, 'pure': pure,
                   'compiler': compiler,
-                  'base': os.path.join(self.hgtmp, "build"),
-                  'prefix': self.inst, 'libdir': self.pythondir,
-                  'bindir': self.bindir,
+                  'base': os.path.join(self._hgtmp, "build"),
+                  'prefix': self._installdir, 'libdir': self._pythondir,
+                  'bindir': self._bindir,
                   'nohome': nohome, 'logfile': installerrs})
         vlog("# Running", cmd)
         if os.system(cmd) == 0:
@@ -1654,22 +1654,22 @@ class TestRunner(object):
                 print line,
             f.close()
             sys.exit(1)
-        os.chdir(self.testdir)
+        os.chdir(self._testdir)
 
         self._usecorrectpython()
 
         if self.options.py3k_warnings and not self.options.anycoverage:
             vlog("# Updating hg command to enable Py3k Warnings switch")
-            f = open(os.path.join(self.bindir, 'hg'), 'r')
+            f = open(os.path.join(self._bindir, 'hg'), 'r')
             lines = [line.rstrip() for line in f]
             lines[0] += ' -3'
             f.close()
-            f = open(os.path.join(self.bindir, 'hg'), 'w')
+            f = open(os.path.join(self._bindir, 'hg'), 'w')
             for line in lines:
                 f.write(line + '\n')
             f.close()
 
-        hgbat = os.path.join(self.bindir, 'hg.bat')
+        hgbat = os.path.join(self._bindir, 'hg.bat')
         if os.path.isfile(hgbat):
             # hg.bat expects to be put in bin/scripts while run-tests.py
             # installation layout put it in bin/ directly. Fix it
@@ -1686,20 +1686,20 @@ class TestRunner(object):
                 print 'WARNING: cannot fix hg.bat reference to python.exe'
 
         if self.options.anycoverage:
-            custom = os.path.join(self.testdir, 'sitecustomize.py')
-            target = os.path.join(self.pythondir, 'sitecustomize.py')
+            custom = os.path.join(self._testdir, 'sitecustomize.py')
+            target = os.path.join(self._pythondir, 'sitecustomize.py')
             vlog('# Installing coverage trigger to %s' % target)
             shutil.copyfile(custom, target)
-            rc = os.path.join(self.testdir, '.coveragerc')
+            rc = os.path.join(self._testdir, '.coveragerc')
             vlog('# Installing coverage rc to %s' % rc)
             os.environ['COVERAGE_PROCESS_START'] = rc
-            fn = os.path.join(self.inst, '..', '.coverage')
+            fn = os.path.join(self._installdir, '..', '.coverage')
             os.environ['COVERAGE_FILE'] = fn
 
     def _checkhglib(self, verb):
         """Ensure that the 'mercurial' package imported by python is
         the one we expect it to be.  If not, print a warning to stderr."""
-        expecthg = os.path.join(self.pythondir, 'mercurial')
+        expecthg = os.path.join(self._pythondir, 'mercurial')
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
@@ -1722,7 +1722,7 @@ class TestRunner(object):
 
     def _outputcoverage(self):
         vlog('# Producing coverage report')
-        os.chdir(self.pythondir)
+        os.chdir(self._pythondir)
 
         def covrun(*args):
             cmd = 'coverage %s' % ' '.join(args)
@@ -1731,14 +1731,14 @@ class TestRunner(object):
 
         covrun('-c')
         omit = ','.join(os.path.join(x, '*') for x in
-                        [self.bindir, self.testdir])
+                        [self._bindir, self._testdir])
         covrun('-i', '-r', '"--omit=%s"' % omit) # report
         if self.options.htmlcov:
-            htmldir = os.path.join(self.testdir, 'htmlcov')
+            htmldir = os.path.join(self._testdir, 'htmlcov')
             covrun('-i', '-b', '"--directory=%s"' % htmldir,
                    '"--omit=%s"' % omit)
         if self.options.annotate:
-            adir = os.path.join(self.testdir, 'annotated')
+            adir = os.path.join(self._testdir, 'annotated')
             if not os.path.isdir(adir):
                 os.mkdir(adir)
             covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
