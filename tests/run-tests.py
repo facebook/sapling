@@ -1154,7 +1154,7 @@ class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, runner, jobs=1, whitelist=None, blacklist=None,
-                 retest=False,
+                 retest=False, keywords=None,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
@@ -1171,6 +1171,9 @@ class TestSuite(unittest.TestSuite):
 
         retest denotes whether to retest failed tests. This arguably belongs
         outside of TestSuite.
+
+        keywords denotes key words that will be used to filter which tests
+        to execute. This arguably belongs outside of TestSuite.
         """
         super(TestSuite, self).__init__(*args, **kwargs)
 
@@ -1179,10 +1182,9 @@ class TestSuite(unittest.TestSuite):
         self._whitelist = whitelist
         self._blacklist = blacklist
         self._retest = retest
+        self._keywords = keywords
 
     def run(self, result):
-        options = self._runner.options
-
         # We have a number of filters that need to be applied. We do this
         # here instead of inside Test because it makes the running logic for
         # Test simpler.
@@ -1201,12 +1203,12 @@ class TestSuite(unittest.TestSuite):
                     result.addIgnore(test, 'not retesting')
                     continue
 
-                if options.keywords:
+                if self._keywords:
                     f = open(test.path)
                     t = f.read().lower() + test.name.lower()
                     f.close()
                     ignored = False
-                    for k in options.keywords.lower().split():
+                    for k in self._keywords.lower().split():
                         if k not in t:
                             result.addIgnore(test, "doesn't match keyword")
                             ignored = True
@@ -1508,6 +1510,7 @@ class TestRunner(object):
                               whitelist=self.options.whitelisted,
                               blacklist=self.options.blacklist,
                               retest=self.options.retest,
+                              keywords=self.options.keywords,
                               tests=tests)
             verbosity = 1
             if self.options.verbose:
