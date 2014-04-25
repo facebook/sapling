@@ -1504,68 +1504,9 @@ class localrepository(object):
     def status(self, node1='.', node2=None, match=None,
                ignored=False, clean=False, unknown=False,
                listsubrepos=False):
-        """return status of files between two nodes or node and working
-        directory.
-
-        If node1 is None, use the first dirstate parent instead.
-        If node2 is None, compare node1 with working directory.
-        """
-
-        ctx1 = self[node1]
-        ctx2 = self[node2]
-
-        # This next code block is, admittedly, fragile logic that tests for
-        # reversing the contexts and wouldn't need to exist if it weren't for
-        # the fast (and common) code path of comparing the working directory
-        # with its first parent.
-        #
-        # What we're aiming for here is the ability to call:
-        #
-        # workingctx.status(parentctx)
-        #
-        # If we always built the manifest for each context and compared those,
-        # then we'd be done. But the special case of the above call means we
-        # just copy the manifest of the parent.
-        reversed = False
-        if (not isinstance(ctx1, context.changectx)
-            and isinstance(ctx2, context.changectx)):
-            reversed = True
-            ctx1, ctx2 = ctx2, ctx1
-
-        listignored, listclean, listunknown = ignored, clean, unknown
-
-        r = [[], [], [], [], [], [], []]
-        match = ctx2._matchstatus(ctx1, r, match, listignored, listclean,
-                                  listunknown)
-        r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
-        r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
-                              listunknown)
-        r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
-                             listunknown)
-
-        if reversed:
-            # since we are maintaining whether we reversed ctx1 and ctx2 (due
-            # to comparing the workingctx with its parent), we need to switch
-            # back added files (r[1]) and removed files (r[2])
-            r[1], r[2] = r[2], r[1]
-
-        if listsubrepos:
-            for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
-                rev2 = ctx2.subrev(subpath)
-                try:
-                    submatch = matchmod.narrowmatcher(subpath, match)
-                    s = sub.status(rev2, match=submatch, ignored=listignored,
-                                   clean=listclean, unknown=listunknown,
-                                   listsubrepos=True)
-                    for rfiles, sfiles in zip(r, s):
-                        rfiles.extend("%s/%s" % (subpath, f) for f in sfiles)
-                except error.LookupError:
-                    self.ui.status(_("skipping missing subrepository: %s\n")
-                                   % subpath)
-
-        for l in r:
-            l.sort()
-        return r
+        '''a convenience method that calls node1.status(node2)'''
+        return self[node1].status(node2, match, ignored, clean, unknown,
+                                  listsubrepos)
 
     def heads(self, start=None):
         heads = self.changelog.heads(start)
