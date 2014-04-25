@@ -2342,7 +2342,8 @@ class lazyset(object):
     def __contains__(self, x):
         c = self._cache
         if x not in c:
-            c[x] = x in self._subset and self._condition(x)
+            v = c[x] = x in self._subset and self._condition(x)
+            return v
         return c[x]
 
     def __iter__(self):
