@@ -1153,17 +1153,27 @@ class TestResult(unittest._TextTestResult):
 class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
 
-    def __init__(self, runner, jobs=1, *args, **kwargs):
+    def __init__(self, runner, jobs=1, whitelist=None, blacklist=None,
+                 *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
         jobs specifies the number of jobs to run concurrently. Each test
         executes on its own thread. Tests actually spawn new processes, so
         state mutation should not be an issue.
+
+        whitelist and blacklist denote tests that have been whitelisted and
+        blacklisted, respectively. These arguments don't belong in TestSuite.
+        Instead, whitelist and blacklist should be handled by the thing that
+        populates the TestSuite with tests. They are present to preserve
+        backwards compatible behavior which reports skipped tests as part
+        of the results.
         """
         super(TestSuite, self).__init__(*args, **kwargs)
 
         self._runner = runner
         self._jobs = jobs
+        self._whitelist = whitelist
+        self._blacklist = blacklist
 
     def run(self, result):
         options = self._runner.options
@@ -1177,8 +1187,8 @@ class TestSuite(unittest.TestSuite):
                 result.addSkip(test, "Doesn't exist")
                 continue
 
-            if not (options.whitelisted and test.name in options.whitelisted):
-                if options.blacklist and test.name in options.blacklist:
+            if not (self._whitelist and test.name in self._whitelist):
+                if self._blacklist and test.name in self._blacklist:
                     result.addSkip(test, 'blacklisted')
                     continue
 
@@ -1489,7 +1499,10 @@ class TestRunner(object):
             failed = False
             warned = False
 
-            suite = TestSuite(self, jobs=self.options.jobs, tests=tests)
+            suite = TestSuite(self, jobs=self.options.jobs,
+                              whitelist=self.options.whitelisted,
+                              blacklist=self.options.blacklist,
+                              tests=tests)
             verbosity = 1
             if self.options.verbose:
                 verbosity = 2
