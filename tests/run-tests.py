@@ -1154,7 +1154,7 @@ class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, runner, jobs=1, whitelist=None, blacklist=None,
-                 retest=False, keywords=None,
+                 retest=False, keywords=None, loop=False,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
@@ -1174,6 +1174,8 @@ class TestSuite(unittest.TestSuite):
 
         keywords denotes key words that will be used to filter which tests
         to execute. This arguably belongs outside of TestSuite.
+
+        loop denotes whether to loop over tests forever.
         """
         super(TestSuite, self).__init__(*args, **kwargs)
 
@@ -1183,6 +1185,7 @@ class TestSuite(unittest.TestSuite):
         self._blacklist = blacklist
         self._retest = retest
         self._keywords = keywords
+        self._loop = loop
 
     def run(self, result):
         # We have a number of filters that need to be applied. We do this
@@ -1245,7 +1248,7 @@ class TestSuite(unittest.TestSuite):
                     running -= 1
                 if tests and not running == self._jobs:
                     test = tests.pop(0)
-                    if self._runner.options.loop:
+                    if self._loop:
                         tests.append(test)
                     t = threading.Thread(target=job, name=test.name,
                                          args=(test, result))
@@ -1511,6 +1514,7 @@ class TestRunner(object):
                               blacklist=self.options.blacklist,
                               retest=self.options.retest,
                               keywords=self.options.keywords,
+                              loop=self.options.loop,
                               tests=tests)
             verbosity = 1
             if self.options.verbose:
