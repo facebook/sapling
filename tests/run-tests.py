@@ -1151,12 +1151,19 @@ class TestResult(unittest._TextTestResult):
                 test.name, self.times[-1][1]))
 
 class TestSuite(unittest.TestSuite):
-    """Custom unitest TestSuite that knows how to execute concurrently."""
+    """Custom unitest TestSuite that knows how to execute Mercurial tests."""
 
-    def __init__(self, runner, *args, **kwargs):
+    def __init__(self, runner, jobs=1, *args, **kwargs):
+        """Create a new instance that can run tests with a configuration.
+
+        jobs specifies the number of jobs to run concurrently. Each test
+        executes on its own thread. Tests actually spawn new processes, so
+        state mutation should not be an issue.
+        """
         super(TestSuite, self).__init__(*args, **kwargs)
 
         self._runner = runner
+        self._jobs = jobs
 
     def run(self, result):
         options = self._runner.options
@@ -1196,7 +1203,6 @@ class TestSuite(unittest.TestSuite):
             tests.append(test)
 
         runtests = list(tests)
-        jobs = self._runner.options.jobs
         done = queue.Queue()
         running = 0
 
@@ -1212,7 +1218,7 @@ class TestSuite(unittest.TestSuite):
 
         try:
             while tests or running:
-                if not done.empty() or running == jobs or not tests:
+                if not done.empty() or running == self._jobs or not tests:
                     try:
                         done.get(True, 1)
                         if result and result.shouldStop:
@@ -1220,7 +1226,7 @@ class TestSuite(unittest.TestSuite):
                     except queue.Empty:
                         continue
                     running -= 1
-                if tests and not running == jobs:
+                if tests and not running == self._jobs:
                     test = tests.pop(0)
                     if self._runner.options.loop:
                         tests.append(test)
@@ -1483,7 +1489,7 @@ class TestRunner(object):
             failed = False
             warned = False
 
-            suite = TestSuite(self, tests=tests)
+            suite = TestSuite(self, jobs=self.options.jobs, tests=tests)
             verbosity = 1
             if self.options.verbose:
                 verbosity = 2
