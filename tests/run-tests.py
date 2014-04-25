@@ -1154,6 +1154,7 @@ class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, runner, jobs=1, whitelist=None, blacklist=None,
+                 retest=False,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
@@ -1167,6 +1168,9 @@ class TestSuite(unittest.TestSuite):
         populates the TestSuite with tests. They are present to preserve
         backwards compatible behavior which reports skipped tests as part
         of the results.
+
+        retest denotes whether to retest failed tests. This arguably belongs
+        outside of TestSuite.
         """
         super(TestSuite, self).__init__(*args, **kwargs)
 
@@ -1174,6 +1178,7 @@ class TestSuite(unittest.TestSuite):
         self._jobs = jobs
         self._whitelist = whitelist
         self._blacklist = blacklist
+        self._retest = retest
 
     def run(self, result):
         options = self._runner.options
@@ -1192,7 +1197,7 @@ class TestSuite(unittest.TestSuite):
                     result.addSkip(test, 'blacklisted')
                     continue
 
-                if options.retest and not os.path.exists(test.errpath):
+                if self._retest and not os.path.exists(test.errpath):
                     result.addIgnore(test, 'not retesting')
                     continue
 
@@ -1502,6 +1507,7 @@ class TestRunner(object):
             suite = TestSuite(self, jobs=self.options.jobs,
                               whitelist=self.options.whitelisted,
                               blacklist=self.options.blacklist,
+                              retest=self.options.retest,
                               tests=tests)
             verbosity = 1
             if self.options.verbose:
