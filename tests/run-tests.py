@@ -1153,10 +1153,14 @@ class TestResult(unittest._TextTestResult):
 class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
 
-    def __init__(self, runner, jobs=1, whitelist=None, blacklist=None,
+    def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
                  retest=False, keywords=None, loop=False,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
+
+        testdir specifies the directory where tests are executed from. This
+        is typically the ``tests`` directory from Mercurial's source
+        repository.
 
         jobs specifies the number of jobs to run concurrently. Each test
         executes on its own thread. Tests actually spawn new processes, so
@@ -1179,7 +1183,6 @@ class TestSuite(unittest.TestSuite):
         """
         super(TestSuite, self).__init__(*args, **kwargs)
 
-        self._runner = runner
         self._jobs = jobs
         self._whitelist = whitelist
         self._blacklist = blacklist
@@ -1509,7 +1512,8 @@ class TestRunner(object):
             failed = False
             warned = False
 
-            suite = TestSuite(self, jobs=self.options.jobs,
+            suite = TestSuite(self.testdir,
+                              jobs=self.options.jobs,
                               whitelist=self.options.whitelisted,
                               blacklist=self.options.blacklist,
                               retest=self.options.retest,
