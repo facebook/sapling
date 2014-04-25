@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import extensions, util, cmdutil, commands, error, bundlerepo
-from mercurial import hg, time, changegroup
+from mercurial import hg, time, changegroup, exchange
 from mercurial.extensions import wrapfunction
 from hgext import pager
 from mercurial.node import hex, nullrev, nullid
@@ -90,8 +90,8 @@ def backups(ui, repo, *pats, **opts):
                     if recovernode in other:
                         ui.status("Unbundling %s\n" % (recovernode))
                         f = hg.openpath(ui, source)
-                        gen = changegroup.readbundle(f, source)
-                        modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + source)
+                        gen = exchange.readbundle(ui, f, source)
+                        modheads = changegroup.addchangegroup(repo, gen, 'unbundle', 'bundle:' + source)
                         break
                 else:
                     backupdate = os.path.getmtime(source)
