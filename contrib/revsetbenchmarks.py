@@ -22,7 +22,7 @@ def check_output(*args, **kwargs):
     proc = Popen(*args, **kwargs)
     output, error = proc.communicate()
     if proc.returncode != 0:
-        raise CalledProcessError(proc.returncode, ' '.join(args))
+        raise CalledProcessError(proc.returncode, ' '.join(args[0]))
     return output
 
 def update(rev):
