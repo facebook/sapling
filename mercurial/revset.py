@@ -2793,9 +2793,11 @@ class _spanset(_orderedsetmixin):
                 yield r
 
     def __contains__(self, rev):
-        return (((self._end < rev <= self._start)
-                  or (self._start <= rev < self._end))
-                and not (self._hiddenrevs and rev in self._hiddenrevs))
+        start = self._start
+        end = self._end
+        hidden = self._hiddenrevs
+        return (((end < rev <= start) or (start <= rev and rev < end))
+                and not (hidden and rev in hidden))
 
     def __nonzero__(self):
         for r in self:
