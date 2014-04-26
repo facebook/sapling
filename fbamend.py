@@ -40,7 +40,7 @@ def uisetup(ui):
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
         # commit --amend default behavior is to prompt for edit
-        opts['edit'] = True
+        opts['ignoremessage'] = True
         return amend(ui, repo, *pats, **opts)
     else:
         return orig(ui, repo, *pats, **opts)
@@ -54,7 +54,6 @@ def amend(ui, repo, *pats, **opts):
     '''
     rebase = opts.get('rebase')
     fixup = opts.get('fixup')
-    edit = opts.get('edit')
 
     if fixup:
         fixupamend(ui, repo)
@@ -68,7 +67,8 @@ def amend(ui, repo, *pats, **opts):
 
     haschildren = len(old.children()) > 0
 
-    if not edit:
+    ignoremessage = opts.get('ignoremessage')
+    if not ignoremessage:
         opts['message'] = old.description()
 
     tempnode = []
