@@ -214,8 +214,18 @@ Test copies and moves from a directory other than root (issue3516)
   ./baz/largefile
   ./dirb
   ./dirb/largefile
-  ./foo
-  $ cd ../../a
+  $ cd ..
+  $ hg mv dira dirc
+  moving .hglf/dira/baz/largefile to .hglf/dirc/baz/largefile (glob)
+  moving .hglf/dira/dirb/largefile to .hglf/dirc/dirb/largefile (glob)
+  $ find * | sort
+  dirc
+  dirc/baz
+  dirc/baz/largefile
+  dirc/dirb
+  dirc/dirb/largefile
+  $ hg up -qC
+  $ cd ../a
 
 #if serve
 Test display of largefiles in hgweb

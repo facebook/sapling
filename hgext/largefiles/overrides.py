@@ -579,6 +579,10 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
                         os.makedirs(destlfiledir)
                     if rename:
                         os.rename(repo.wjoin(srclfile), repo.wjoin(destlfile))
+
+                        # The file is gone, but this deletes any empty parent
+                        # directories as a side-effect.
+                        util.unlinkpath(repo.wjoin(srclfile), True)
                         lfdirstate.remove(srclfile)
                     else:
                         util.copyfile(repo.wjoin(srclfile),
