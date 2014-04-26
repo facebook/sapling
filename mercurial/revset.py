@@ -2822,8 +2822,10 @@ class spanset(_orderedsetmixin):
             return abs(self._end - self._start)
         else:
             count = 0
+            start = self._start
+            end = self._end
             for rev in self._hiddenrevs:
-                if self._contained(rev):
+                if (end < rev <= start) or (start <= rev and rev < end):
                     count += 1
             return abs(self._end - self._start) - count
 
