@@ -81,6 +81,7 @@ defaults.tag=-d "0 0"
 ui.slash=True
 ui.interactive=False
 ui.foo=bar
+ui.nontty=true
  runcommand init foo
  runcommand -R foo showconfig ui defaults
 defaults.backout=-d "0 0"
@@ -89,6 +90,7 @@ defaults.shelve=--date "0 0"
 defaults.tag=-d "0 0"
 ui.slash=True
 ui.interactive=False
+ui.nontty=true
 
 testing hookoutput:
 
@@ -237,6 +239,11 @@ popping 0.diff
 patch queue now empty
  runcommand qqueue --active
 foo
+
+testing getpass:
+
+ runcommand debuggetpass --config ui.interactive=True
+password: 1234
 
 testing hellomessage:
 

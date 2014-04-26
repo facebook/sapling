@@ -689,7 +689,12 @@ class ui(object):
             return default
         try:
             self.write_err(self.label(prompt or _('password: '), 'ui.prompt'))
-            return getpass.getpass('')
+            # disable getpass() only if explicitly specified. it's still valid
+            # to interact with tty even if fin is not a tty.
+            if self.configbool('ui', 'nontty'):
+                return self.fin.readline().rstrip('\n')
+            else:
+                return getpass.getpass('')
         except EOFError:
             raise util.Abort(_('response expected'))
     def status(self, *msg, **opts):

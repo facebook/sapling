@@ -294,6 +294,11 @@ def mqoutsidechanges(server):
     # repo.mq should be recreated to point to new queue
     runcommand(server, ['qqueue', '--active'])
 
+def getpass(server):
+    readchannel(server)
+    runcommand(server, ['debuggetpass', '--config', 'ui.interactive=True'],
+               input=cStringIO.StringIO('1234\n'))
+
 def startwithoutrepo(server):
     readchannel(server)
     runcommand(server, ['init', 'repo2'])
@@ -334,6 +339,19 @@ if __name__ == '__main__':
     hgrc.write('[extensions]\nmq=\n')
     hgrc.close()
     check(mqoutsidechanges)
+    dbg = open('dbgui.py', 'w')
+    dbg.write('from mercurial import cmdutil, commands\n'
+              'commands.norepo += " debuggetpass"\n'
+              'cmdtable = {}\n'
+              'command = cmdutil.command(cmdtable)\n'
+              '@command("debuggetpass")\n'
+              'def debuggetpass(ui):\n'
+              '    ui.write("%s\\n" % ui.getpass())\n')
+    dbg.close()
+    hgrc = open('.hg/hgrc', 'a')
+    hgrc.write('[extensions]\ndbgui=dbgui.py\n')
+    hgrc.close()
+    check(getpass)
 
     os.chdir('..')
     check(hellomessage)

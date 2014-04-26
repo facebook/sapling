@@ -187,13 +187,19 @@ class server(object):
         # copy the uis so changes (e.g. --config or --verbose) don't
         # persist between requests
         copiedui = self.ui.copy()
+        uis = [copiedui]
         if self.repo:
             self.repo.baseui = copiedui
             # clone ui without using ui.copy because this is protected
             repoui = self.repoui.__class__(self.repoui)
             repoui.copy = copiedui.copy # redo copy protection
+            uis.append(repoui)
             self.repo.ui = self.repo.dirstate._ui = repoui
             self.repo.invalidateall()
+
+        for ui in uis:
+            # any kind of interaction must use server channels
+            ui.setconfig('ui', 'nontty', 'true', 'commandserver')
 
         req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
