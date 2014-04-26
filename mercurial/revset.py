@@ -2797,9 +2797,9 @@ class spanset(_orderedsetmixin):
         if isinstance(x, baseset):
             x = x.set()
         if self._start <= self._end:
-            return orderedlazyset(self, lambda r: r in x)
+            return orderedlazyset(self, x.__contains__)
         else:
-            return orderedlazyset(self, lambda r: r in x, ascending=False)
+            return orderedlazyset(self, x.__contains__, ascending=False)
 
     def __sub__(self, x):
         if isinstance(x, baseset):
