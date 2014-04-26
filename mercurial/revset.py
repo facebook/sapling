@@ -2764,10 +2764,6 @@ class spanset(_orderedsetmixin):
         if self._start < self._end:
             self.reverse()
 
-    def _contained(self, rev):
-        return (rev <= self._start and rev > self._end) or (rev >= self._start
-                and rev < self._end)
-
     def __iter__(self):
         if self._start <= self._end:
             iterrange = xrange(self._start, self._end)
