@@ -341,6 +341,7 @@ class colorui(uimod.ui):
         if self._colormode is None:
             return super(colorui, self).popbuffer(labeled)
 
+        self._bufferstates.pop()
         if labeled:
             return ''.join(self.label(a, label) for a, label
                            in self._buffers.pop())
@@ -366,6 +367,8 @@ class colorui(uimod.ui):
             return super(colorui, self).write_err(*args, **opts)
 
         label = opts.get('label', '')
+        if self._bufferstates and self._bufferstates[-1]:
+            return self.write(*args, **opts)
         if self._colormode == 'win32':
             for a in args:
                 win32print(a, super(colorui, self).write_err, **opts)
