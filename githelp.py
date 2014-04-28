@@ -48,7 +48,7 @@ def backups(ui, repo, *args, **kwargs):
 
     cmd = args[0]
     if not cmd in gitcommands:
-        ui.warn("error: unknown git command %s\n" % (cmd))
+        raise GitUnknownError("error: unknown git command %s" % (cmd))
 
     args = args[1:]
     return gitcommands[cmd](ui, repo, *args, **kwargs)
