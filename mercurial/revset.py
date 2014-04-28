@@ -585,8 +585,8 @@ def closed(repo, subset, x):
 
 def contains(repo, subset, x):
     """``contains(pattern)``
-    Revision contains a file matching pattern. See :hg:`help patterns`
-    for information about file patterns.
+    The revision's manifest contains a file matching pattern (but might not
+    modify it). See :hg:`help patterns` for information about file patterns.
 
     The pattern without explicit kind like ``glob:`` is expected to be
     relative to the current directory and match against a file exactly
@@ -784,9 +784,10 @@ def filelog(repo, subset, x):
     """``filelog(pattern)``
     Changesets connected to the specified filelog.
 
-    For performance reasons, ``filelog()`` does not show every changeset
-    that affects the requested file(s). See :hg:`help log` for details. For
-    a slower, more accurate result, use ``file()``.
+    For performance reasons, visits only revisions mentioned in the file-level
+    filelog, rather than filtering through all changesets (much faster, but
+    doesn't include deletes or duplicate changes). For a slower, more accurate
+    result, use ``file()``.
 
     The pattern without explicit kind like ``glob:`` is expected to be
     relative to the current directory and match against a file exactly
