@@ -2783,8 +2783,8 @@ class spanset(_orderedsetmixin):
             for r in iterrange:
                 yield r
 
-    def __contains__(self, x):
-        return self._contained(x) and not (self._hiddenrevs and rev in
+    def __contains__(self, rev):
+        return self._contained(rev) and not (self._hiddenrevs and rev in
                 self._hiddenrevs)
 
     def __nonzero__(self):
