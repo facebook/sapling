@@ -14,3 +14,7 @@ min(0:tip)
 min(0::)
 roots((tip~100::) - (tip~100::tip))
 ::p1(p1(tip))::
+public()
+:10000 and public()
+draft()
+:10000 and draft()
