@@ -32,6 +32,7 @@ for line in sys.stdin:
             r"imported but unused",
             r"local variable '.*' is assigned to but never used",
             r"unable to detect undefined names",
+            r"undefined name '.*'",
            ]
     for msgtype, pat in enumerate(pats):
         if re.search(pat, line):
