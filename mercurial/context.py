@@ -256,8 +256,7 @@ class basectx(object):
         if ctx2 is not None:
             ctx2 = self._repo[ctx2]
         diffopts = patch.diffopts(self._repo.ui, opts)
-        return patch.diff(self._repo, ctx2.node(), self.node(),
-                          match=match, opts=diffopts)
+        return patch.diff(self._repo, ctx2, self, match=match, opts=diffopts)
 
     @propertycache
     def _dirs(self):
