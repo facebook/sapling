@@ -14,6 +14,7 @@
 # to compare performance.
 
 import sys
+import os
 from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
 # cannot use argparse, python 2.7 only
 from optparse import OptionParser
@@ -42,7 +43,8 @@ def perf(revset):
     try:
         output = check_output(['./hg',
                                '--config',
-                               'extensions.perf=contrib/perf.py',
+                               'extensions.perf='
+                               + os.path.join(contribdir, 'perf.py'),
                                'perfrevset',
                                revset],
                                stderr=STDOUT)
@@ -79,6 +81,8 @@ if len(sys.argv) < 2:
     parser.print_help()
     sys.exit(255)
 
+# the directory where both this script and the perf.py extension live.
+contribdir = os.path.dirname(__file__)
 
 target_rev = args[0]
 
