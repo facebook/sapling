@@ -331,3 +331,14 @@ Test listfile and listfile0
   f  mammals/skunk  mammals/skunk  exact
 
   $ cd ..
+
+Test split patterns on overflow
+
+  $ cd t
+  $ echo fennel > overflow.list
+  $ python -c "for i in xrange(20000 / 100): print 'x' * 100" >> overflow.list
+  $ echo fenugreek >> overflow.list
+  $ hg debugwalk 'listfile:overflow.list' 2>&1 | grep -v '^xxx'
+  f  fennel     fennel     exact
+  f  fenugreek  fenugreek  exact
+  $ cd ..

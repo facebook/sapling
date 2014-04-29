@@ -343,7 +343,7 @@ def _buildregexmatch(kindpats, globsuffix):
             raise
         regexa, a = _buildregexmatch(kindpats[:l//2], globsuffix)
         regexb, b = _buildregexmatch(kindpats[l//2:], globsuffix)
-        return pat, lambda s: a(s) or b(s)
+        return regex, lambda s: a(s) or b(s)
     except re.error:
         for k, p in kindpats:
             try:
