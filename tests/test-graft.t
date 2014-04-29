@@ -571,3 +571,14 @@ All copies of a cset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
+
+graft works on complex revset
+
+  $ hg graft 'origin(13) or destination(origin(13))'
+  skipping ancestor revision 21
+  skipping ancestor revision 22
+  skipping revision 2 (already grafted to 22)
+  grafting revision 7
+  grafting revision 13
+  grafting revision 19
+  merging b
