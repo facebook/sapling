@@ -1015,7 +1015,7 @@ class committablectx(basectx):
 
     @propertycache
     def _manifest(self):
-        """generate a manifest corresponding to the working directory"""
+        """generate a manifest corresponding to the values in self._status"""
 
         man = self._parents[0].manifest().copy()
         if len(self._parents) > 1:
