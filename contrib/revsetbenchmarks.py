@@ -38,16 +38,19 @@ def update(rev):
         print >> sys.stderr, 'update to revision %s failed, aborting' % rev
         sys.exit(exc.returncode)
 
-def perf(revset):
+def perf(revset, target=None):
     """run benchmark for this very revset"""
     try:
-        output = check_output(['./hg',
-                               '--config',
-                               'extensions.perf='
-                               + os.path.join(contribdir, 'perf.py'),
-                               'perfrevset',
-                               revset],
-                               stderr=STDOUT)
+        cmd = ['./hg',
+               '--config',
+               'extensions.perf='
+               + os.path.join(contribdir, 'perf.py'),
+               'perfrevset',
+               revset]
+        if target is not None:
+            cmd.append('-R')
+            cmd.append(target)
+        output = check_output(cmd, stderr=STDOUT)
         output = output.lstrip('!') # remove useless ! in this context
         return output.strip()
     except CalledProcessError, exc:
@@ -74,6 +77,8 @@ def getrevs(spec):
 parser = OptionParser(usage="usage: %prog [options] <revs>")
 parser.add_option("-f", "--file",
                   help="read revset from FILE", metavar="FILE")
+parser.add_option("-R", "--repo",
+                  help="run benchmark on REPO", metavar="REPO")
 
 (options, args) = parser.parse_args()
 
@@ -113,7 +118,7 @@ for r in revs:
     res = []
     results.append(res)
     for idx, rset in enumerate(revsets):
-        data = perf(rset)
+        data = perf(rset, target=options.repo)
         res.append(data)
         print "%i)" % idx, data
         sys.stdout.flush()
