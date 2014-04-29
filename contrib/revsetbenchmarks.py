@@ -15,6 +15,10 @@
 
 import sys
 from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
+# cannot use argparse, python 2.7 only
+from optparse import OptionParser
+
+
 
 def check_output(*args, **kwargs):
     kwargs.setdefault('stderr', PIPE)
@@ -65,16 +69,22 @@ def getrevs(spec):
     return [r for r in out.split() if r]
 
 
+parser = OptionParser(usage="usage: %prog [options] <revs>")
+parser.add_option("-f", "--file",
+                  help="read revset from FILE", metavar="FILE")
+
+(options, args) = parser.parse_args()
 
 if len(sys.argv) < 2:
-    print >> sys.stderr, 'usage: %s <revs> [file]' % sys.argv[0]
+    parser.print_help()
     sys.exit(255)
 
-target_rev = sys.argv[1]
+
+target_rev = args[0]
 
 revsetsfile = sys.stdin
-if len(sys.argv) > 2:
-    revsetsfile = open(sys.argv[2])
+if options.file:
+    revsetsfile = open(options.file)
 
 revsets = [l.strip() for l in revsetsfile]
 
