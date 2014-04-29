@@ -43,7 +43,7 @@ if os.name =='nt':
             elif r == WAIT_TIMEOUT:
                 logfn('# Daemon process %d is stuck')
             else:
-                check(r) # any error
+                _check(r) # any error
         except: #re-raises
             ctypes.windll.kernel32.CloseHandle(handle) # no _check, keep error
             raise
