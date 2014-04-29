@@ -587,7 +587,7 @@ def _pullbundle2(pullop):
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
-    except UnknownPartError, exc:
+    except bundle2.UnknownPartError, exc:
         raise util.Abort('missing support for %s' % exc)
     assert len(op.records['changegroup']) == 1
     pullop.cgresult = op.records['changegroup'][0]['return']
