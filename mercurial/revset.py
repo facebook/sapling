@@ -2672,9 +2672,11 @@ class _generatorset(object):
             i += 1
 
     def _consumegen(self):
+        cache = self._cache
+        genlist = self._genlist.append
         for item in self._gen:
-            self._cache[item] = True
-            self._genlist.append(item)
+            cache[item] = True
+            genlist(item)
             yield item
         self._finished = True
 
