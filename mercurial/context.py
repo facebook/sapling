@@ -394,7 +394,7 @@ class changectx(basectx):
         return filectx(self._repo, path, fileid=fileid,
                        changectx=self, filelog=filelog)
 
-    def ancestor(self, c2):
+    def ancestor(self, c2, warn=False):
         """
         return the "best" ancestor context of self and c2
         """
@@ -415,12 +415,13 @@ class changectx(basectx):
                     break
             else:
                 anc = self._repo.changelog.ancestor(self._node, n2)
-            self._repo.ui.status(
-                (_("note: using %s as ancestor of %s and %s\n") %
-                 (short(anc), short(self._node), short(n2))) +
-                ''.join(_("      alternatively, use --config "
-                          "merge.preferancestor=%s\n") %
-                        short(n) for n in sorted(cahs) if n != anc))
+            if warn:
+                self._repo.ui.status(
+                    (_("note: using %s as ancestor of %s and %s\n") %
+                     (short(anc), short(self._node), short(n2))) +
+                    ''.join(_("      alternatively, use --config "
+                              "merge.preferancestor=%s\n") %
+                            short(n) for n in sorted(cahs) if n != anc))
         return changectx(self._repo, anc)
 
     def descendant(self, other):
