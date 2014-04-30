@@ -2655,9 +2655,7 @@ class _generatorset(object):
 
     def __iter__(self):
         if self._finished:
-            for x in self._genlist:
-                yield x
-            return
+            return iter(self._genlist)
 
         # We have to use this complex iteration strategy to allow multiple
         # iterations at the same time. We need to be able to catch revision
@@ -2665,16 +2663,18 @@ class _generatorset(object):
         #
         # Getting rid of it would provide an about 15% speed up on this
         # iteration.
-        i = 0
         genlist = self._genlist
         nextrev = self._consumegen().next
         _len = len # cache global lookup
-        while True:
-            if i < _len(genlist):
-                yield genlist[i]
-            else:
-                yield nextrev()
-            i += 1
+        def gen():
+            i = 0
+            while True:
+                if i < _len(genlist):
+                    yield genlist[i]
+                else:
+                    yield nextrev()
+                i += 1
+        return gen()
 
     def _consumegen(self):
         cache = self._cache
