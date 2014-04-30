@@ -2851,5 +2851,14 @@ class spanset(_orderedsetmixin):
     def filter(self, l):
         return orderedlazyset(self, l, ascending=self.isascending())
 
+class fullreposet(spanset):
+    """a set containing all revisions in the repo
+
+    This class exists to host special optimisation.
+    """
+
+    def __init__(self, repo):
+        super(fullreposet, self).__init__(repo)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
