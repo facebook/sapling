@@ -220,6 +220,7 @@ class transaction(object):
         if self.count != 0:
             return
         self.file.close()
+        self.backupsfile.close()
         self.entries = []
         if self.after:
             self.after()
@@ -243,6 +244,7 @@ class transaction(object):
         self.count = 0
         self.usages = 0
         self.file.close()
+        self.backupsfile.close()
 
         if self.onabort is not None:
             self.onabort()
