@@ -2,6 +2,7 @@ all()
 draft()
 ::tip
 draft() and ::tip
+::tip and draft()
 0::tip
 roots(0::tip)
 author(lmoscovicz)
