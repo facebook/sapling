@@ -2356,7 +2356,7 @@ class lazyset(object):
                 yield x
 
     def __and__(self, x):
-        return lazyset(self, lambda r: r in x)
+        return lazyset(self, x.__contains__)
 
     def __sub__(self, x):
         return lazyset(self, lambda r: r not in x)
