@@ -567,15 +567,14 @@ def batchremove(repo, actions):
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
-        if True:
-            if verbose:
-                repo.ui.note(_("removing %s\n") % f)
-            audit(f)
-            try:
-                unlink(wjoin(f), ignoremissing=True)
-            except OSError, inst:
-                repo.ui.warn(_("update failed to remove %s: %s!\n") %
-                             (f, inst.strerror))
+        if verbose:
+            repo.ui.note(_("removing %s\n") % f)
+        audit(f)
+        try:
+            unlink(wjoin(f), ignoremissing=True)
+        except OSError, inst:
+            repo.ui.warn(_("update failed to remove %s: %s!\n") %
+                         (f, inst.strerror))
         if i == 100:
             yield i, f
             i = 0
@@ -596,10 +595,9 @@ def batchget(repo, mctx, actions):
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> g\n" % (f, msg))
-        if True:
-            if verbose:
-                repo.ui.note(_("getting %s\n") % f)
-            wwrite(f, fctx(f).data(), args[0])
+        if verbose:
+            repo.ui.note(_("getting %s\n") % f)
+        wwrite(f, fctx(f).data(), args[0])
         if i == 100:
             yield i, f
             i = 0
@@ -626,21 +624,20 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
     # prescan for merges
     for f, args, msg in actions['m']:
-        if True:
-            f1, f2, fa, move, anc = args
-            if f == '.hgsubstate': # merged internally
-                continue
-            repo.ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
-            fcl = wctx[f1]
-            fco = mctx[f2]
-            actx = repo[anc]
-            if fa in actx:
-                fca = actx[fa]
-            else:
-                fca = repo.filectx(f1, fileid=nullrev)
-            ms.add(fcl, fco, fca, f)
-            if f1 != f and move:
-                moves.append(f1)
+        f1, f2, fa, move, anc = args
+        if f == '.hgsubstate': # merged internally
+            continue
+        repo.ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
+        fcl = wctx[f1]
+        fco = mctx[f2]
+        actx = repo[anc]
+        if fa in actx:
+            fca = actx[fa]
+        else:
+            fca = repo.filectx(f1, fileid=nullrev)
+        ms.add(fcl, fco, fca, f)
+        if f1 != f and move:
+            moves.append(f1)
 
     audit = repo.wopener.audit
     _updating = _('updating')
@@ -677,98 +674,96 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     if [a for a in actions['g'] if a[0] == '.hgsubstate']:
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
 
-    if True:
+    # forget (manifest only, just log it) (must come first)
+    for f, args, msg in actions['f']:
+        repo.ui.debug(" %s: %s -> f\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
 
-        # forget (manifest only, just log it) (must come first)
-        for f, args, msg in actions['f']:
-            repo.ui.debug(" %s: %s -> f\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
+    # re-add (manifest only, just log it)
+    for f, args, msg in actions['a']:
+        repo.ui.debug(" %s: %s -> a\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
 
-        # re-add (manifest only, just log it)
-        for f, args, msg in actions['a']:
-            repo.ui.debug(" %s: %s -> a\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
+    # keep (noop, just log it)
+    for f, args, msg in actions['k']:
+        repo.ui.debug(" %s: %s -> k\n" % (f, msg))
+        # no progress
 
-        # keep (noop, just log it)
-        for f, args, msg in actions['k']:
-            repo.ui.debug(" %s: %s -> k\n" % (f, msg))
-            # no progress
-
-        # merge
-        for f, args, msg in actions['m']:
-            repo.ui.debug(" %s: %s -> m\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            f1, f2, fa, move, anc = args
-            if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
-                                 overwrite)
-                continue
-            audit(f)
-            r = ms.resolve(f, wctx, labels=labels)
-            if r is not None and r > 0:
-                unresolved += 1
+    # merge
+    for f, args, msg in actions['m']:
+        repo.ui.debug(" %s: %s -> m\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        f1, f2, fa, move, anc = args
+        if f == '.hgsubstate': # subrepo states need updating
+            subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
+                             overwrite)
+            continue
+        audit(f)
+        r = ms.resolve(f, wctx, labels=labels)
+        if r is not None and r > 0:
+            unresolved += 1
+        else:
+            if r is None:
+                updated += 1
             else:
-                if r is None:
-                    updated += 1
-                else:
-                    merged += 1
+                merged += 1
 
-        # directory rename, move local
-        for f, args, msg in actions['dm']:
-            repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            f0, flags = args
-            repo.ui.note(_("moving %s to %s\n") % (f0, f))
-            audit(f)
-            repo.wwrite(f, wctx.filectx(f0).data(), flags)
-            util.unlinkpath(repo.wjoin(f0))
-            updated += 1
+    # directory rename, move local
+    for f, args, msg in actions['dm']:
+        repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        f0, flags = args
+        repo.ui.note(_("moving %s to %s\n") % (f0, f))
+        audit(f)
+        repo.wwrite(f, wctx.filectx(f0).data(), flags)
+        util.unlinkpath(repo.wjoin(f0))
+        updated += 1
 
-        # local directory rename, get
-        for f, args, msg in actions['dg']:
-            repo.ui.debug(" %s: %s -> dg\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            f0, flags = args
-            repo.ui.note(_("getting %s to %s\n") % (f0, f))
-            repo.wwrite(f, mctx.filectx(f0).data(), flags)
-            updated += 1
+    # local directory rename, get
+    for f, args, msg in actions['dg']:
+        repo.ui.debug(" %s: %s -> dg\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        f0, flags = args
+        repo.ui.note(_("getting %s to %s\n") % (f0, f))
+        repo.wwrite(f, mctx.filectx(f0).data(), flags)
+        updated += 1
 
-        # divergent renames
-        for f, args, msg in actions['dr']:
-            repo.ui.debug(" %s: %s -> dr\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            fl, = args
-            repo.ui.warn(_("note: possible conflict - %s was renamed "
-                           "multiple times to:\n") % f)
-            for nf in fl:
-                repo.ui.warn(" %s\n" % nf)
+    # divergent renames
+    for f, args, msg in actions['dr']:
+        repo.ui.debug(" %s: %s -> dr\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        fl, = args
+        repo.ui.warn(_("note: possible conflict - %s was renamed "
+                       "multiple times to:\n") % f)
+        for nf in fl:
+            repo.ui.warn(" %s\n" % nf)
 
-        # rename and delete
-        for f, args, msg in actions['rd']:
-            repo.ui.debug(" %s: %s -> rd\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            fl, = args
-            repo.ui.warn(_("note: possible conflict - %s was deleted "
-                           "and renamed to:\n") % f)
-            for nf in fl:
-                repo.ui.warn(" %s\n" % nf)
+    # rename and delete
+    for f, args, msg in actions['rd']:
+        repo.ui.debug(" %s: %s -> rd\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        fl, = args
+        repo.ui.warn(_("note: possible conflict - %s was deleted "
+                       "and renamed to:\n") % f)
+        for nf in fl:
+            repo.ui.warn(" %s\n" % nf)
 
-        # exec
-        for f, args, msg in actions['e']:
-            repo.ui.debug(" %s: %s -> e\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            flags, = args
-            audit(f)
-            util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
-            updated += 1
+    # exec
+    for f, args, msg in actions['e']:
+        repo.ui.debug(" %s: %s -> e\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        flags, = args
+        audit(f)
+        util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
+        updated += 1
 
     ms.commit()
     progress(_updating, None, total=numupdates, unit=_files)
@@ -848,25 +843,24 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
         repo.ui.note(_('end of auction\n\n'))
 
     # Prompt and create actions. TODO: Move this towards resolve phase.
-    if True:
-        for f, args, msg in actions['cd']:
-            if repo.ui.promptchoice(
-                _("local changed %s which remote deleted\n"
-                  "use (c)hanged version or (d)elete?"
-                  "$$ &Changed $$ &Delete") % f, 0):
-                actions['r'].append((f, None, "prompt delete"))
-            else:
-                actions['a'].append((f, None, "prompt keep"))
-        del actions['cd'][:]
+    for f, args, msg in actions['cd']:
+        if repo.ui.promptchoice(
+            _("local changed %s which remote deleted\n"
+              "use (c)hanged version or (d)elete?"
+              "$$ &Changed $$ &Delete") % f, 0):
+            actions['r'].append((f, None, "prompt delete"))
+        else:
+            actions['a'].append((f, None, "prompt keep"))
+    del actions['cd'][:]
 
-        for f, args, msg in actions['dc']:
-            flags, = args
-            if repo.ui.promptchoice(
-                _("remote changed %s which local deleted\n"
-                  "use (c)hanged version or leave (d)eleted?"
-                  "$$ &Changed $$ &Deleted") % f, 0) == 0:
-                actions['g'].append((f, (flags,), "prompt recreating"))
-        del actions['dc'][:]
+    for f, args, msg in actions['dc']:
+        flags, = args
+        if repo.ui.promptchoice(
+            _("remote changed %s which local deleted\n"
+              "use (c)hanged version or leave (d)eleted?"
+              "$$ &Changed $$ &Deleted") % f, 0) == 0:
+            actions['g'].append((f, (flags,), "prompt recreating"))
+    del actions['dc'][:]
 
     if wctx.rev() is None:
         ractions, factions = _forgetremoved(wctx, mctx, branchmerge)
@@ -877,85 +871,84 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
 def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
-    if True:
-        # remove (must come first)
-        for f, args, msg in actions['r']:
-            if branchmerge:
-                repo.dirstate.remove(f)
-            else:
-                repo.dirstate.drop(f)
-
-        # forget (must come first)
-        for f, args, msg in actions['f']:
+    # remove (must come first)
+    for f, args, msg in actions['r']:
+        if branchmerge:
+            repo.dirstate.remove(f)
+        else:
             repo.dirstate.drop(f)
 
-        # re-add
-        for f, args, msg in actions['a']:
-            if not branchmerge:
-                repo.dirstate.add(f)
+    # forget (must come first)
+    for f, args, msg in actions['f']:
+        repo.dirstate.drop(f)
 
-        # exec change
-        for f, args, msg in actions['e']:
-            repo.dirstate.normallookup(f)
+    # re-add
+    for f, args, msg in actions['a']:
+        if not branchmerge:
+            repo.dirstate.add(f)
 
-        # keep
-        for f, args, msg in actions['k']:
-            pass
+    # exec change
+    for f, args, msg in actions['e']:
+        repo.dirstate.normallookup(f)
 
-        # get
-        for f, args, msg in actions['g']:
-            if branchmerge:
-                repo.dirstate.otherparent(f)
-            else:
-                repo.dirstate.normal(f)
+    # keep
+    for f, args, msg in actions['k']:
+        pass
 
-        # merge
-        for f, args, msg in actions['m']:
-            f1, f2, fa, move, anc = args
-            if branchmerge:
-                # We've done a branch merge, mark this file as merged
-                # so that we properly record the merger later
-                repo.dirstate.merge(f)
-                if f1 != f2: # copy/rename
-                    if move:
-                        repo.dirstate.remove(f1)
-                    if f1 != f:
-                        repo.dirstate.copy(f1, f)
-                    else:
-                        repo.dirstate.copy(f2, f)
-            else:
-                # We've update-merged a locally modified file, so
-                # we set the dirstate to emulate a normal checkout
-                # of that file some time in the past. Thus our
-                # merge will appear as a normal local file
-                # modification.
-                if f2 == f: # file not locally copied/moved
-                    repo.dirstate.normallookup(f)
+    # get
+    for f, args, msg in actions['g']:
+        if branchmerge:
+            repo.dirstate.otherparent(f)
+        else:
+            repo.dirstate.normal(f)
+
+    # merge
+    for f, args, msg in actions['m']:
+        f1, f2, fa, move, anc = args
+        if branchmerge:
+            # We've done a branch merge, mark this file as merged
+            # so that we properly record the merger later
+            repo.dirstate.merge(f)
+            if f1 != f2: # copy/rename
                 if move:
-                    repo.dirstate.drop(f1)
+                    repo.dirstate.remove(f1)
+                if f1 != f:
+                    repo.dirstate.copy(f1, f)
+                else:
+                    repo.dirstate.copy(f2, f)
+        else:
+            # We've update-merged a locally modified file, so
+            # we set the dirstate to emulate a normal checkout
+            # of that file some time in the past. Thus our
+            # merge will appear as a normal local file
+            # modification.
+            if f2 == f: # file not locally copied/moved
+                repo.dirstate.normallookup(f)
+            if move:
+                repo.dirstate.drop(f1)
 
-        # directory rename, move local
-        for f, args, msg in actions['dm']:
-            f0, flag = args
-            if f0 not in repo.dirstate:
-                # untracked file moved
-                continue
-            if branchmerge:
-                repo.dirstate.add(f)
-                repo.dirstate.remove(f0)
-                repo.dirstate.copy(f0, f)
-            else:
-                repo.dirstate.normal(f)
-                repo.dirstate.drop(f0)
+    # directory rename, move local
+    for f, args, msg in actions['dm']:
+        f0, flag = args
+        if f0 not in repo.dirstate:
+            # untracked file moved
+            continue
+        if branchmerge:
+            repo.dirstate.add(f)
+            repo.dirstate.remove(f0)
+            repo.dirstate.copy(f0, f)
+        else:
+            repo.dirstate.normal(f)
+            repo.dirstate.drop(f0)
 
-        # directory rename, get
-        for f, args, msg in actions['dg']:
-            f0, flag = args
-            if branchmerge:
-                repo.dirstate.add(f)
-                repo.dirstate.copy(f0, f)
-            else:
-                repo.dirstate.normal(f)
+    # directory rename, get
+    for f, args, msg in actions['dg']:
+        f0, flag = args
+        if branchmerge:
+            repo.dirstate.add(f)
+            repo.dirstate.copy(f0, f)
+        else:
+            repo.dirstate.normal(f)
 
 def update(repo, node, branchmerge, force, partial, ancestor=None,
            mergeancestor=False, labels=None):
