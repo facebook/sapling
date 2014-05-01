@@ -5245,13 +5245,10 @@ def serve(ui, repo, **opts):
     if opts["stdio"] and opts["cmdserver"]:
         raise util.Abort(_("cannot use --stdio with --cmdserver"))
 
-    def checkrepo():
+    if opts["stdio"]:
         if repo is None:
             raise error.RepoError(_("there is no Mercurial repository here"
                               " (.hg not found)"))
-
-    if opts["stdio"]:
-        checkrepo()
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
