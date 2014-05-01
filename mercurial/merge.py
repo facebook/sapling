@@ -571,8 +571,11 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     return actions
 
+actionpriority = dict((m, p) for p, m in enumerate(
+    ['r', 'f', 'g', 'a', 'k', 'm', 'dm', 'dg', 'dr', 'cd', 'dc', 'rd', 'e']))
+
 def actionkey(a):
-    return a[1] in "rf" and -1 or 0, a
+    return actionpriority[a[1]], a
 
 def getremove(repo, mctx, overwrite, args):
     """apply usually-non-interactive updates to the working directory
@@ -848,16 +851,16 @@ def recordupdates(repo, actions, branchmerge):
 
     for a in actions:
         f, m, args, msg = a
-        if m == "r": # remove
+        if m == "r": # remove (must come first)
             if branchmerge:
                 repo.dirstate.remove(f)
             else:
                 repo.dirstate.drop(f)
+        elif m == "f": # forget (must come first)
+            repo.dirstate.drop(f)
         elif m == "a": # re-add
             if not branchmerge:
                 repo.dirstate.add(f)
-        elif m == "f": # forget
-            repo.dirstate.drop(f)
         elif m == "e": # exec change
             repo.dirstate.normallookup(f)
         elif m == "k": # keep

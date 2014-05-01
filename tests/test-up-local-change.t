@@ -46,9 +46,9 @@
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
+   b: remote created -> g
    a: versions differ -> m
     preserving a for resolve of a
-   b: remote created -> g
   getting b
   updating: b 1/2 files (50.00%)
   updating: a 2/2 files (100.00%)
@@ -100,9 +100,9 @@
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
+   b: remote created -> g
    a: versions differ -> m
     preserving a for resolve of a
-   b: remote created -> g
   getting b
   updating: b 1/2 files (50.00%)
   updating: a 2/2 files (100.00%)

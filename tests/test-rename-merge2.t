@@ -379,20 +379,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: fe905ef2c33e
-   a: divergent renames -> dr
    c: remote created -> g
    rev: versions differ -> m
     preserving rev for resolve of rev
+   a: divergent renames -> dr
   getting c
   updating: c 1/3 files (33.33%)
-  updating: a 2/3 files (66.67%)
-  note: possible conflict - a was renamed multiple times to:
-   b
-   c
-  updating: rev 3/3 files (100.00%)
+  updating: rev 2/3 files (66.67%)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@02963e448370+ other rev@fe905ef2c33e ancestor rev@924404dff337
+  updating: a 3/3 files (100.00%)
+  note: possible conflict - a was renamed multiple times to:
+   b
+   c
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------
@@ -746,9 +746,9 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 2b958612230f
+   c: remote created -> g
    b: local copied/moved from a -> m
     preserving b for resolve of b
-   c: remote created -> g
    rev: versions differ -> m
     preserving rev for resolve of rev
   getting c
@@ -836,6 +836,7 @@ Expected result:
    ancestor: e6cb3cf11019, local: ec44bf929ab5+, remote: c62e34d0b898
   remote changed 8/f which local deleted
   use (c)hanged version or leave (d)eleted? c
+   8/f: prompt recreating -> g
    0/f: versions differ -> m
     preserving 0/f for resolve of 0/f
    1/g: versions differ -> m
@@ -856,7 +857,6 @@ Expected result:
     preserving 6/g for resolve of 6/g
    7/f: remote differs from untracked local -> m
     preserving 7/f for resolve of 7/f
-   8/f: prompt recreating -> g
   removing 4/f
   getting 8/f
   $ hg mani

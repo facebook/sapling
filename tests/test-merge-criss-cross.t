@@ -196,8 +196,8 @@ The other way around:
    f2: picking 'get' action
   end of auction
   
-   f1: keep -> k
    f2: remote is newer -> g
+   f1: keep -> k
   getting f2
   updating: f2 1/1 files (100.00%)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
