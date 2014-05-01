@@ -2419,7 +2419,7 @@ class orderedlazyset(_orderedsetmixin, lazyset):
             self.reverse()
 
     def __and__(self, x):
-        return orderedlazyset(self, lambda r: r in x,
+        return orderedlazyset(self, x.__contains__,
                 ascending=self._ascending)
 
     def __sub__(self, x):
