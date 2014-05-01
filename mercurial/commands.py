@@ -5248,7 +5248,7 @@ def serve(ui, repo, **opts):
     if opts["stdio"]:
         if repo is None:
             raise error.RepoError(_("there is no Mercurial repository here"
-                              " (.hg not found)"))
+                                    " (.hg not found)"))
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
 
