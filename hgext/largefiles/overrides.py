@@ -270,6 +270,9 @@ def overridelog(orig, ui, repo, *pats, **opts):
         pats = set(p)
         # TODO: handling of patterns in both cases below
         if m._cwd:
+            if os.path.isabs(m._cwd):
+                # TODO: handle largefile magic when invoked from other cwd
+                return matchandpats
             back = (m._cwd.count('/') + 1) * '../'
             pats.update(back + lfutil.standin(m._cwd + '/' + f) for f in p)
         else:

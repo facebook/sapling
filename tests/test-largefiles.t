@@ -773,6 +773,18 @@ Test graph log
   @  7:daea875e9014
   |
   $ cd ..
+
+Test log from outside repo
+
+  $ hg log  b/sub -T '{rev}:{node|short}  {desc|firstline}\n'
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  1:ce8896473775  edit files
+  0:30d30fe6a5be  add files
+
+Test clone at revision
+
   $ hg clone a -r 3 c
   adding changesets
   adding manifests
