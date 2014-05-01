@@ -259,6 +259,10 @@ def has_system_sh():
 def has_serve():
     return os.name != 'nt' # gross approximation
 
+def has_test_repo():
+    t = os.environ["TESTDIR"]
+    return os.path.isdir(os.path.join(t, "..", ".hg"))
+
 def has_tic():
     try:
         import curses
@@ -317,6 +321,7 @@ checks = {
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
     "system-sh": (has_system_sh, "system() uses sh"),
+    "test-repo": (has_test_repo, "running tests from repository"),
     "tic": (has_tic, "terminfo compiler and curses module"),
     "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),

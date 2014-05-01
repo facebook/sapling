@@ -1,8 +1,10 @@
-  $ "$TESTDIR/hghave" pyflakes || exit 80
+#if test-repo pyflakes
+
   $ cd "`dirname "$TESTDIR"`"
 
 run pyflakes on all tracked files ending in .py or without a file ending
 (skipping binary file random-seed)
+
   $ hg manifest 2>/dev/null | egrep "\.py$|^[^.]*$" | grep -v /random_seed$ \
   > | xargs pyflakes 2>/dev/null | "$TESTDIR/filterpyflakes.py"
   contrib/win32/hgwebdir_wsgi.py:*: 'win32traceutil' imported but unused (glob)
@@ -16,4 +18,4 @@ run pyflakes on all tracked files ending in .py or without a file ending
   tests/hghave.py:*: 'ssl' imported but unused (glob)
   contrib/win32/hgwebdir_wsgi.py:93: 'from isapi.install import *' used; unable to detect undefined names (glob)
   
-
+#endif
