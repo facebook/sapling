@@ -32,7 +32,7 @@ tar
 zip
 
   $ cd "$origdir"
-  $ unzip archive.zip > /dev/null
+  $ unzip archive.zip > /dev/null 2>&1
   $ cd zip
   $ "$TESTDIR/readlink.py" dangling
   dangling -> nothing
