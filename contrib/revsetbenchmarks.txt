@@ -8,6 +8,7 @@ roots(0::tip)
 author(lmoscovicz)
 author(mpm)
 author(lmoscovicz) or author(mpm)
+author(mpm) or author(lmoscovicz)
 tip:0
 max(tip:0)
 min(0:tip)
