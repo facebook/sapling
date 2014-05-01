@@ -283,7 +283,7 @@ def dagrange(repo, subset, x, y):
     r = spanset(repo)
     xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
     s = subset.set()
-    return xs.filter(lambda r: r in s)
+    return xs.filter(s.__contains__)
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
@@ -348,7 +348,7 @@ def _ancestors(repo, subset, x, followfirst=False):
     if not args:
         return baseset([])
     s = _revancestors(repo, args, followfirst)
-    return subset.filter(lambda r: r in s)
+    return subset.filter(s.__contains__)
 
 def ancestors(repo, subset, x):
     """``ancestors(set)``
@@ -376,7 +376,7 @@ def ancestorspec(repo, subset, x, n):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
-    return subset.filter(lambda r: r in ps)
+    return subset.filter(ps.__contains__)
 
 def author(repo, subset, x):
     """``author(string)``
@@ -406,7 +406,7 @@ def only(repo, subset, x):
         exclude = getset(repo, spanset(repo), args[1])
 
     results = set(ancestormod.missingancestors(include, exclude, cl.parentrevs))
-    return lazyset(subset, lambda x: x in results)
+    return lazyset(subset, results.__contains__)
 
 def bisect(repo, subset, x):
     """``bisect(string)``
@@ -423,7 +423,7 @@ def bisect(repo, subset, x):
     # i18n: "bisect" is a keyword
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))
-    return subset.filter(lambda r: r in state)
+    return subset.filter(state.__contains__)
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
@@ -466,7 +466,7 @@ def bookmark(repo, subset, x):
 
     bms = set([repo[r].rev()
                for r in repo._bookmarks.values()])
-    return subset.filter(lambda r: r in bms)
+    return subset.filter(bms.__contains__)
 
 def branch(repo, subset, x):
     """``branch(string or set)``
@@ -725,7 +725,7 @@ def destination(repo, subset, x):
             r = src
             src = _getrevsource(repo, r)
 
-    return subset.filter(lambda r: r in dests)
+    return subset.filter(dests.__contains__)
 
 def divergent(repo, subset, x):
     """``divergent()``
@@ -734,7 +734,7 @@ def divergent(repo, subset, x):
     # i18n: "divergent" is a keyword
     getargs(x, 0, 0, _("divergent takes no arguments"))
     divergent = obsmod.getrevs(repo, 'divergent')
-    return subset.filter(lambda r: r in divergent)
+    return subset.filter(divergent.__contains__)
 
 def draft(repo, subset, x):
     """``draft()``
@@ -811,7 +811,7 @@ def filelog(repo, subset, x):
                 for fr in fl:
                     s.add(fl.linkrev(fr))
 
-    return subset.filter(lambda r: r in s)
+    return subset.filter(s.__contains__)
 
 def first(repo, subset, x):
     """``first(set, [n])``
@@ -834,7 +834,7 @@ def _follow(repo, subset, x, name, followfirst=False):
     else:
         s = _revancestors(repo, baseset([c.rev()]), followfirst)
 
-    return subset.filter(lambda r: r in s)
+    return subset.filter(s.__contains__)
 
 def follow(repo, subset, x):
     """``follow([file])``
@@ -1176,7 +1176,7 @@ def origin(repo, subset, x):
             src = prev
 
     o = set([_firstsrc(r) for r in args])
-    return subset.filter(lambda r: r in o)
+    return subset.filter(o.__contains__)
 
 def outgoing(repo, subset, x):
     """``outgoing([path])``
@@ -1199,7 +1199,7 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in outgoing.missing])
-    return subset.filter(lambda r: r in o)
+    return subset.filter(o.__contains__)
 
 def p1(repo, subset, x):
     """``p1([set])``
