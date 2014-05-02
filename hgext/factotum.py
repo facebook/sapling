@@ -52,6 +52,8 @@ import os, urllib2
 
 ERRMAX = 128
 
+_executable = _mountpoint = _service = None
+
 def auth_getkey(self, params):
     if not self.ui.interactive():
         raise util.Abort(_('factotum not interactive'))
