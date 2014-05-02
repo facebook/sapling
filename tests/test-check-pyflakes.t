@@ -5,7 +5,7 @@
 run pyflakes on all tracked files ending in .py or without a file ending
 (skipping binary file random-seed)
 
-  $ hg manifest 2>/dev/null | egrep "\.py$|^[^.]*$" | grep -v /random_seed$ \
+  $ hg locate 'set:**.py or grep("^!#.*python")' 2>/dev/null \
   > | xargs pyflakes 2>/dev/null | "$TESTDIR/filterpyflakes.py"
   contrib/win32/hgwebdir_wsgi.py:*: 'win32traceutil' imported but unused (glob)
   setup.py:*: 'sha' imported but unused (glob)
