@@ -105,7 +105,7 @@ function! s:HGChangeToCurrentFileDir(fileName)
   let fileName=<SID>HGResolveLink(a:fileName)
   let newCwd=fnamemodify(fileName, ':h')
   if strlen(newCwd) > 0
-    execute 'cd' escape(newCwd, ' ')
+    try | execute 'cd' escape(newCwd, ' ') | catch | | endtry
   endif
   return oldCwd
 endfunction
@@ -396,7 +396,7 @@ function! s:HGGetStatusVars(revisionVar, branchVar, repositoryVar)
 
     return returnExpression
   finally
-    execute 'cd' escape(oldCwd, ' ')
+    try | execute 'cd' escape(oldCwd, ' ') | catch | | endtry
   endtry
 endfunction
 
