@@ -230,7 +230,7 @@ try:
                         'cyan': (False, curses.COLOR_CYAN),
                         'white': (False, curses.COLOR_WHITE)}
 except ImportError:
-    _terminfo_params = False
+    _terminfo_params = {}
 
 _styles = {'grep.match': 'red bold',
            'grep.linenumber': 'green',
