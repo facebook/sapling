@@ -1026,6 +1026,7 @@ class queue(object):
            msg: a string or a no-argument function returning a string
         """
         msg = opts.get('msg')
+        editor = opts.get('editor')
         user = opts.get('user')
         date = opts.get('date')
         if date:
@@ -1078,12 +1079,23 @@ class queue(object):
                         p.write("# User " + user + "\n")
                     if date:
                         p.write("# Date %s %s\n\n" % date)
-                if util.safehasattr(msg, '__call__'):
-                    msg = msg()
-                    repo.savecommitmessage(msg)
-                commitmsg = msg and msg or ("[mq]: %s" % patchfn)
+
+                defaultmsg = "[mq]: %s" % patchfn
+                if editor:
+                    origeditor = editor
+                    def desceditor(repo, ctx, subs):
+                        desc = origeditor(repo, ctx, subs)
+                        if desc.rstrip():
+                            return desc
+                        else:
+                            return defaultmsg
+                    commitmsg = msg
+                    editor = desceditor
+                else:
+                    commitmsg = msg or defaultmsg
+
                 n = newcommit(repo, None, commitmsg, user, date, match=match,
-                              force=True)
+                              force=True, editor=editor)
                 if n is None:
                     raise util.Abort(_("repo commit failed"))
                 try:
@@ -1092,8 +1104,9 @@ class queue(object):
                     self.parseseries()
                     self.seriesdirty = True
                     self.applieddirty = True
-                    if msg:
-                        msg = msg + "\n\n"
+                    nctx = repo[n]
+                    if nctx.description() != defaultmsg.rstrip():
+                        msg = nctx.description() + "\n\n"
                         p.write(msg)
                     if commitfiles:
                         parent = self.qparents(repo, n)
@@ -2417,14 +2430,12 @@ def new(ui, repo, patch, *args, **opts):
     Returns 0 on successful creation of a new patch.
     """
     msg = cmdutil.logmessage(ui, opts)
-    def getmsg():
-        return ui.edit(msg, opts.get('user') or ui.username())
     q = repo.mq
     opts['msg'] = msg
     if opts.get('edit'):
-        opts['msg'] = getmsg
-    else:
-        opts['msg'] = msg
+        def editor(repo, ctx, subs):
+            return ui.edit(ctx.description() + "\n", ctx.user())
+        opts['editor'] = editor
     setupheaderopts(ui, opts)
     q.new(repo, patch, *args, **opts)
     q.savedirty()

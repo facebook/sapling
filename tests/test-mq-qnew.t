@@ -247,8 +247,9 @@ Test saving last-message.txt
   >             raise util.Abort('emulating unexpected abort')
   >     repo.__class__ = commitfailure
   > EOF
-  $ cat > .hg/hgrc <<EOF
+  $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > # this failure occurs before editor invocation
   > commitfailure = $TESTTMP/commitfailure.py
   > EOF
 
@@ -259,13 +260,62 @@ Test saving last-message.txt
   > echo "test saving last-message.txt" >> \$1
   > EOF
 
+(test that editor is not invoked before transaction starting)
+
   $ rm -f .hg/last-message.txt
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e patch
-  ==== before editing
-  ====
   abort: emulating unexpected abort
   [255]
   $ cat .hg/last-message.txt
+  cat: .hg/last-message.txt: No such file or directory
+  [1]
+
+(test that editor is invoked and commit message is saved into
+"last-message.txt")
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > commitfailure = !
+  > [hooks]
+  > # this failure occurs after editor invocation
+  > pretxncommit.unexpectedabort = false
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e patch
+  ==== before editing
+  
+  ====
+  transaction abort!
+  rollback completed
+  note: commit message saved in .hg/last-message.txt
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+  $ cat .hg/last-message.txt
+  
   test saving last-message.txt
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.unexpectedabort =
+  > EOF
+
+Test handling default message with the patch filename with tail whitespaces
+
+  $ cat > $TESTTMP/editor.sh << EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > echo "[mq]: patch        " > \$1
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e "patch "
+  ==== before editing
+  
+  ====
+  $ cat ".hg/patches/patch "
+  # HG changeset patch
+  # Parent 0000000000000000000000000000000000000000
 
   $ cd ..
