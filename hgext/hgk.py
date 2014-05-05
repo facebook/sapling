@@ -35,12 +35,22 @@ vdiff on hovered and selected revisions.
 '''
 
 import os
-from mercurial import commands, util, patch, revlog, scmutil
+from mercurial import cmdutil, commands, util, patch, revlog, scmutil
 from mercurial.node import nullid, nullrev, short
 from mercurial.i18n import _
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+@command('debug-diff-tree',
+    [('p', 'patch', None, _('generate patch')),
+    ('r', 'recursive', None, _('recursive')),
+    ('P', 'pretty', None, _('pretty')),
+    ('s', 'stdin', None, _('stdin')),
+    ('C', 'copy', None, _('detect copies')),
+    ('S', 'search', "", _('search'))],
+    ('hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]...'))
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
@@ -125,6 +135,7 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     if prefix:
         ui.write('\0')
 
+@command('debug-merge-base', [], _('hg debug-merge-base REV REV'))
 def base(ui, repo, node1, node2):
     """output common ancestor information"""
     node1 = repo.lookup(node1)
@@ -132,6 +143,9 @@ def base(ui, repo, node1, node2):
     n = repo.changelog.ancestor(node1, node2)
     ui.write(short(n) + "\n")
 
+@command('debug-cat-file',
+    [('s', 'stdin', None, _('stdin'))],
+    _('hg debug-cat-file [OPTION]... TYPE FILE'))
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
     # in stdin mode, every line except the commit is prefixed with two
@@ -276,6 +290,9 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                 break
             count += 1
 
+@command('debug-rev-parse',
+    [('', 'default', '', _('ignored'))],
+    _('hg debug-rev-parse REV'))
 def revparse(ui, repo, *revs, **opts):
     """parse given revisions"""
     def revstr(rev):
@@ -292,6 +309,12 @@ def revparse(ui, repo, *revs, **opts):
 # git rev-list tries to order things by date, and has the ability to stop
 # at a given commit without walking the whole repo.  TODO add the stop
 # parameter
+@command('debug-rev-list',
+    [('H', 'header', None, _('header')),
+    ('t', 'topo-order', None, _('topo-order')),
+    ('p', 'parents', None, _('parents')),
+    ('n', 'max-count', 0, _('max-count'))],
+    ('hg debug-rev-list [OPTION]... REV...'))
 def revlist(ui, repo, *revs, **opts):
     """print revisions"""
     if opts['header']:
@@ -301,6 +324,7 @@ def revlist(ui, repo, *revs, **opts):
     copy = [x for x in revs]
     revtree(ui, copy, repo, full, opts['max_count'], opts['parents'])
 
+@command('debug-config', [], _('hg debug-config'))
 def config(ui, repo, **opts):
     """print extension options"""
     def writeopt(name, value):
@@ -309,6 +333,10 @@ def config(ui, repo, **opts):
     writeopt('vdiff', ui.config('hgk', 'vdiff', ''))
 
 
+@command('view',
+    [('l', 'limit', '',
+     _('limit number of changes displayed'), _('NUM'))],
+    _('hg view [-l LIMIT] [REVRANGE]'))
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     os.chdir(repo.root)
@@ -316,41 +344,5 @@ def view(ui, repo, *etc, **opts):
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
     util.system(cmd)
-
-cmdtable = {
-    "^view":
-        (view,
-         [('l', 'limit', '',
-           _('limit number of changes displayed'), _('NUM'))],
-         _('hg view [-l LIMIT] [REVRANGE]')),
-    "debug-diff-tree":
-        (difftree,
-         [('p', 'patch', None, _('generate patch')),
-          ('r', 'recursive', None, _('recursive')),
-          ('P', 'pretty', None, _('pretty')),
-          ('s', 'stdin', None, _('stdin')),
-          ('C', 'copy', None, _('detect copies')),
-          ('S', 'search', "", _('search'))],
-         _('hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]...')),
-    "debug-cat-file":
-        (catfile,
-         [('s', 'stdin', None, _('stdin'))],
-         _('hg debug-cat-file [OPTION]... TYPE FILE')),
-    "debug-config":
-        (config, [], _('hg debug-config')),
-    "debug-merge-base":
-        (base, [], _('hg debug-merge-base REV REV')),
-    "debug-rev-parse":
-        (revparse,
-         [('', 'default', '', _('ignored'))],
-         _('hg debug-rev-parse REV')),
-    "debug-rev-list":
-        (revlist,
-         [('H', 'header', None, _('header')),
-          ('t', 'topo-order', None, _('topo-order')),
-          ('p', 'parents', None, _('parents')),
-          ('n', 'max-count', 0, _('max-count'))],
-         _('hg debug-rev-list [OPTION]... REV...')),
-}
 
 commands.inferrepo += " debug-diff-tree debug-cat-file"
