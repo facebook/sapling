@@ -10,13 +10,34 @@
 import convcmd
 import cvsps
 import subversion
-from mercurial import commands, templatekw
+from mercurial import cmdutil, commands, templatekw
 from mercurial.i18n import _
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 # Commands definition was moved elsewhere to ease demandload job.
 
+@command('convert',
+    [('', 'authors', '',
+      _('username mapping filename (DEPRECATED, use --authormap instead)'),
+      _('FILE')),
+    ('s', 'source-type', '', _('source repository type'), _('TYPE')),
+    ('d', 'dest-type', '', _('destination repository type'), _('TYPE')),
+    ('r', 'rev', '', _('import up to source revision REV'), _('REV')),
+    ('A', 'authormap', '', _('remap usernames using this file'), _('FILE')),
+    ('', 'filemap', '', _('remap file names using contents of file'),
+     _('FILE')),
+    ('', 'splicemap', '', _('splice synthesized history into place'),
+     _('FILE')),
+    ('', 'branchmap', '', _('change branch names while converting'),
+     _('FILE')),
+    ('', 'branchsort', None, _('try to sort changesets by branches')),
+    ('', 'datesort', None, _('try to sort changesets by date')),
+    ('', 'sourcesort', None, _('preserve source changesets order')),
+    ('', 'closesort', None, _('try to reorder closed revisions'))],
+   _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]'))
 def convert(ui, src, dest=None, revmapfile=None, **opts):
     """convert a foreign SCM repository to a Mercurial one.
 
@@ -282,9 +303,28 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     """
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 
+@command('debugsvnlog', [], 'hg debugsvnlog')
 def debugsvnlog(ui, **opts):
     return subversion.debugsvnlog(ui, **opts)
 
+@command('debugcvsps',
+    [
+    # Main options shared with cvsps-2.1
+    ('b', 'branches', [], _('only return changes on specified branches')),
+    ('p', 'prefix', '', _('prefix to remove from file names')),
+    ('r', 'revisions', [],
+     _('only return changes after or between specified tags')),
+    ('u', 'update-cache', None, _("update cvs log cache")),
+    ('x', 'new-cache', None, _("create new cvs log cache")),
+    ('z', 'fuzz', 60, _('set commit time fuzz in seconds')),
+    ('', 'root', '', _('specify cvsroot')),
+    # Options specific to builtin cvsps
+    ('', 'parents', '', _('show parent changesets')),
+    ('', 'ancestors', '', _('show current changeset in ancestor branches')),
+    # Options that are ignored for compatibility with cvsps-2.1
+    ('A', 'cvs-direct', None, _('ignored for compatibility')),
+    ],
+    _('hg debugcvsps [OPTION]... [PATH]...'))
 def debugcvsps(ui, *args, **opts):
     '''create changeset information from CVS
 
@@ -299,57 +339,6 @@ def debugcvsps(ui, *args, **opts):
     return cvsps.debugcvsps(ui, *args, **opts)
 
 commands.norepo += " convert debugsvnlog debugcvsps"
-
-cmdtable = {
-    "convert":
-        (convert,
-         [('', 'authors', '',
-           _('username mapping filename (DEPRECATED, use --authormap instead)'),
-           _('FILE')),
-          ('s', 'source-type', '',
-           _('source repository type'), _('TYPE')),
-          ('d', 'dest-type', '',
-           _('destination repository type'), _('TYPE')),
-          ('r', 'rev', '',
-           _('import up to source revision REV'), _('REV')),
-          ('A', 'authormap', '',
-           _('remap usernames using this file'), _('FILE')),
-          ('', 'filemap', '',
-           _('remap file names using contents of file'), _('FILE')),
-          ('', 'splicemap', '',
-           _('splice synthesized history into place'), _('FILE')),
-          ('', 'branchmap', '',
-           _('change branch names while converting'), _('FILE')),
-          ('', 'branchsort', None, _('try to sort changesets by branches')),
-          ('', 'datesort', None, _('try to sort changesets by date')),
-          ('', 'sourcesort', None, _('preserve source changesets order')),
-          ('', 'closesort', None, _('try to reorder closed revisions'))],
-         _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]')),
-    "debugsvnlog":
-        (debugsvnlog,
-         [],
-         'hg debugsvnlog'),
-    "debugcvsps":
-        (debugcvsps,
-         [
-          # Main options shared with cvsps-2.1
-          ('b', 'branches', [], _('only return changes on specified branches')),
-          ('p', 'prefix', '', _('prefix to remove from file names')),
-          ('r', 'revisions', [],
-           _('only return changes after or between specified tags')),
-          ('u', 'update-cache', None, _("update cvs log cache")),
-          ('x', 'new-cache', None, _("create new cvs log cache")),
-          ('z', 'fuzz', 60, _('set commit time fuzz in seconds')),
-          ('', 'root', '', _('specify cvsroot')),
-          # Options specific to builtin cvsps
-          ('', 'parents', '', _('show parent changesets')),
-          ('', 'ancestors', '',
-           _('show current changeset in ancestor branches')),
-          # Options that are ignored for compatibility with cvsps-2.1
-          ('A', 'cvs-direct', None, _('ignored for compatibility')),
-         ],
-         _('hg debugcvsps [OPTION]... [PATH]...')),
-}
 
 def kwconverted(ctx, name):
     rev = ctx.extra().get('convert_revision', '')
