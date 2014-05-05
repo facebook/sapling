@@ -18,8 +18,15 @@ from mercurial import cmdutil, commands
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+@command('children',
+    [('r', 'rev', '',
+     _('show children of the specified revision'), _('REV')),
+    ] + templateopts,
+    _('hg children [-r REV] [FILE]'))
 def children(ui, repo, file_=None, **opts):
     """show the children of the given or working directory revision
 
@@ -39,14 +46,5 @@ def children(ui, repo, file_=None, **opts):
     for cctx in ctx.children():
         displayer.show(cctx)
     displayer.close()
-
-cmdtable = {
-    "children":
-        (children,
-         [('r', 'rev', '',
-           _('show children of the specified revision'), _('REV')),
-         ] + templateopts,
-         _('hg children [-r REV] [FILE]')),
-}
 
 commands.inferrepo += " children"
