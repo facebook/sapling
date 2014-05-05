@@ -12,8 +12,18 @@ from mercurial.node import nullid, short
 from mercurial import commands, cmdutil, hg, util, error
 from mercurial.lock import release
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+@command('fetch',
+    [('r', 'rev', [],
+     _('a specific revision you would like to pull'), _('REV')),
+    ('e', 'edit', None, _('edit commit message')),
+    ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
+    ('', 'switch-parent', None, _('switch parents when merging')),
+    ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,
+    _('hg fetch [SOURCE]'))
 def fetch(ui, repo, source='default', **opts):
     '''pull changes from a remote repository, merge new changes if needed.
 
@@ -144,15 +154,3 @@ def fetch(ui, repo, source='default', **opts):
 
     finally:
         release(lock, wlock)
-
-cmdtable = {
-    'fetch':
-        (fetch,
-        [('r', 'rev', [],
-          _('a specific revision you would like to pull'), _('REV')),
-         ('e', 'edit', None, _('edit commit message')),
-         ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
-         ('', 'switch-parent', None, _('switch parents when merging')),
-        ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,
-        _('hg fetch [SOURCE]')),
-}
