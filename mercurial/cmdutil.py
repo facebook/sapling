@@ -2045,12 +2045,12 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
-            editmsg = False
+            editor = commiteditor
             if not message:
-                editmsg = True
+                editor = commitforceeditor
                 message = old.description()
             elif opts.get('edit'):
-                editmsg = True
+                editor = commitforceeditor
 
             pureextra = extra.copy()
             extra['amend_source'] = old.hex()
@@ -2062,10 +2062,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  filectxfn=filectxfn,
                                  user=user,
                                  date=date,
-                                 extra=extra)
-            if editmsg:
-                new._text = commitforceeditor(repo, new, [])
-            repo.savecommitmessage(new.description())
+                                 extra=extra,
+                                 editor=editor)
 
             newdesc =  changelog.stripdesc(new.description())
             if ((not node)
