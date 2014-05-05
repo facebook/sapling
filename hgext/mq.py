@@ -1508,8 +1508,6 @@ class queue(object):
 
             ph = patchheader(self.join(patchfn), self.plainmode)
             diffopts = self.diffopts({'git': opts.get('git')}, patchfn)
-            if msg:
-                ph.setmessage(msg)
             if newuser:
                 ph.setuser(newuser)
             if newdate:
@@ -1518,10 +1516,6 @@ class queue(object):
 
             # only commit new patch when write is complete
             patchf = self.opener(patchfn, 'w', atomictemp=True)
-
-            comments = str(ph)
-            if comments:
-                patchf.write(comments)
 
             # update the dirstate in place, strip off the qtip commit
             # and then commit.
@@ -1642,14 +1636,6 @@ class queue(object):
                 for f in forget:
                     repo.dirstate.drop(f)
 
-                if not msg:
-                    if not ph.message:
-                        message = "[mq]: %s\n" % patchfn
-                    else:
-                        message = "\n".join(ph.message)
-                else:
-                    message = msg
-
                 user = ph.user or changes[1]
 
                 oldphase = repo[top].phase()
@@ -1666,6 +1652,15 @@ class queue(object):
             try:
                 # might be nice to attempt to roll back strip after this
 
+                if not msg:
+                    if not ph.message:
+                        message = "[mq]: %s\n" % patchfn
+                    else:
+                        message = "\n".join(ph.message)
+                else:
+                    message = msg
+                    ph.setmessage(msg)
+
                 # Ensure we create a new changeset in the same phase than
                 # the old one.
                 n = newcommit(repo, oldphase, message, user, ph.date,
@@ -1676,6 +1671,9 @@ class queue(object):
                     self.putsubstate2changes(substatestate, c)
                 chunks = patchmod.diff(repo, patchparent,
                                        changes=c, opts=diffopts)
+                comments = str(ph)
+                if comments:
+                    patchf.write(comments)
                 for chunk in chunks:
                     patchf.write(chunk)
                 patchf.close()
