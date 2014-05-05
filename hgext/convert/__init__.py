@@ -10,7 +10,7 @@
 import convcmd
 import cvsps
 import subversion
-from mercurial import cmdutil, commands, templatekw
+from mercurial import cmdutil, templatekw
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -37,7 +37,8 @@ testedwith = 'internal'
     ('', 'datesort', None, _('try to sort changesets by date')),
     ('', 'sourcesort', None, _('preserve source changesets order')),
     ('', 'closesort', None, _('try to reorder closed revisions'))],
-   _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]'))
+   _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]'),
+   norepo=True)
 def convert(ui, src, dest=None, revmapfile=None, **opts):
     """convert a foreign SCM repository to a Mercurial one.
 
@@ -303,7 +304,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     """
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 
-@command('debugsvnlog', [], 'hg debugsvnlog')
+@command('debugsvnlog', [], 'hg debugsvnlog', norepo=True)
 def debugsvnlog(ui, **opts):
     return subversion.debugsvnlog(ui, **opts)
 
@@ -324,7 +325,8 @@ def debugsvnlog(ui, **opts):
     # Options that are ignored for compatibility with cvsps-2.1
     ('A', 'cvs-direct', None, _('ignored for compatibility')),
     ],
-    _('hg debugcvsps [OPTION]... [PATH]...'))
+    _('hg debugcvsps [OPTION]... [PATH]...'),
+    norepo=True)
 def debugcvsps(ui, *args, **opts):
     '''create changeset information from CVS
 
@@ -337,8 +339,6 @@ def debugcvsps(ui, *args, **opts):
     series of changesets based on matching commit log entries and
     dates.'''
     return cvsps.debugcvsps(ui, *args, **opts)
-
-commands.norepo += " convert debugsvnlog debugcvsps"
 
 def kwconverted(ctx, name):
     rev = ctx.extra().get('convert_revision', '')
