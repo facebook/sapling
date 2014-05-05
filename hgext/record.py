@@ -460,7 +460,10 @@ def qrefresh(origfn, ui, repo, *pats, **opts):
     dorecord(ui, repo, committomq, 'qrefresh', True, *pats, **opts)
 
 # This command registration is replaced during uisetup().
-@command('qrecord', [], _('hg qrecord [OPTION]... PATCH [FILE]...'))
+@command('qrecord',
+    [],
+    _('hg qrecord [OPTION]... PATCH [FILE]...'),
+    inferrepo=True)
 def qrecord(ui, repo, patch, *pats, **opts):
     '''interactively record a new patch
 
@@ -659,5 +662,3 @@ def uisetup(ui):
 def _wrapcmd(cmd, table, wrapfn, msg):
     entry = extensions.wrapcommand(table, cmd, wrapfn)
     entry[1].append(('i', 'interactive', None, msg))
-
-commands.inferrepo += " record qrecord"
