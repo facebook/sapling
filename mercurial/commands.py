@@ -29,8 +29,10 @@ command = cmdutil.command(table)
 # Space delimited list of commands that don't require local repositories.
 # This should be populated by passing norepo=True into the @command decorator.
 norepo = ''
-optionalrepo = ("identify paths serve config showconfig debugancestor debugdag"
-                " debugdata debugindex debugindexdot debugrevlog")
+# Space delimited list of commands that optionally require local repositories.
+# This should be populated by passing optionalrepo=True into the @command
+# decorator.
+optionalrepo = ''
 inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
              " remove resolve status debugwalk")
 # common command options
@@ -1466,7 +1468,8 @@ def commit(ui, repo, *pats, **opts):
      ('e', 'edit', None, _('edit user config')),
      ('l', 'local', None, _('edit repository config')),
      ('g', 'global', None, _('edit global config'))],
-      _('[-u] [NAME]...'))
+    _('[-u] [NAME]...'),
+    optionalrepo=True)
 def config(ui, repo, *values, **opts):
     """show combined config settings from all hgrc files
 
@@ -1585,7 +1588,7 @@ def copy(ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
-@command('debugancestor', [], _('[INDEX] REV1 REV2'))
+@command('debugancestor', [], _('[INDEX] REV1 REV2'), optionalrepo=True)
 def debugancestor(ui, repo, *args):
     """find the ancestor revision of two revisions in a given index"""
     if len(args) == 3:
@@ -1877,7 +1880,8 @@ def debugcomplete(ui, cmd='', **opts):
     ('b', 'branches', None, _('annotate with branch names')),
     ('', 'dots', None, _('use dots for runs')),
     ('s', 'spaces', None, _('separate elements by spaces'))],
-    _('[OPTION]... [FILE [REV]...]'))
+    _('[OPTION]... [FILE [REV]...]'),
+    optionalrepo=True)
 def debugdag(ui, repo, file_=None, *revs, **opts):
     """format the changelog or an index DAG as a concise textual description
 
@@ -1952,7 +1956,7 @@ def debugdata(ui, repo, file_, rev=None, **opts):
 @command('debugdate',
     [('e', 'extended', None, _('try extended date formats'))],
     _('[-e] DATE [RANGE]'),
-    norepo=True)
+    norepo=True, optionalrepo=True)
 def debugdate(ui, date, range=None, **opts):
     """parse and display a date"""
     if opts["extended"]:
@@ -2104,7 +2108,8 @@ def debugignore(ui, repo, *values, **opts):
     [('c', 'changelog', False, _('open changelog')),
      ('m', 'manifest', False, _('open manifest')),
      ('f', 'format', 0, _('revlog format'), _('FORMAT'))],
-    _('[-f FORMAT] -c|-m|FILE'))
+    _('[-f FORMAT] -c|-m|FILE'),
+    optionalrepo=True)
 def debugindex(ui, repo, file_=None, **opts):
     """dump the contents of an index file"""
     r = cmdutil.openrevlog(repo, 'debugindex', file_, opts)
@@ -2146,7 +2151,7 @@ def debugindex(ui, repo, file_=None, **opts):
                     i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
                     base, r.linkrev(i), pr[0], pr[1], short(node)))
 
-@command('debugindexdot', [], _('FILE'))
+@command('debugindexdot', [], _('FILE'), optionalrepo=True)
 def debugindexdot(ui, repo, file_):
     """dump an index DAG as a graphviz dot file"""
     r = None
@@ -2485,7 +2490,8 @@ def debugrename(ui, repo, file1, *pats, **opts):
     [('c', 'changelog', False, _('open changelog')),
      ('m', 'manifest', False, _('open manifest')),
      ('d', 'dump', False, _('dump index data'))],
-     _('-c|-m|FILE'))
+    _('-c|-m|FILE'),
+    optionalrepo=True)
 def debugrevlog(ui, repo, file_=None, **opts):
     """show data and statistics about a revlog"""
     r = cmdutil.openrevlog(repo, 'debugrevlog', file_, opts)
@@ -3577,7 +3583,8 @@ def help_(ui, name=None, **opts):
     ('t', 'tags', None, _('show tags')),
     ('B', 'bookmarks', None, _('show bookmarks')),
     ] + remoteopts,
-    _('[-nibtB] [-r REV] [SOURCE]'))
+    _('[-nibtB] [-r REV] [SOURCE]'),
+    optionalrepo=True)
 def identify(ui, repo, source=None, rev=None,
              num=None, id=None, branch=None, tags=None, bookmarks=None, **opts):
     """identify the working copy or specified revision
@@ -4441,7 +4448,7 @@ def parents(ui, repo, file_=None, **opts):
             displayer.show(repo[n])
     displayer.close()
 
-@command('paths', [], _('[NAME]'))
+@command('paths', [], _('[NAME]'), optionalrepo=True)
 def paths(ui, repo, search=None):
     """show aliases for remote repositories
 
@@ -5193,7 +5200,8 @@ def root(ui, repo):
     ('', 'style', '', _('template style to use'), _('STYLE')),
     ('6', 'ipv6', None, _('use IPv6 in addition to IPv4')),
     ('', 'certificate', '', _('SSL certificate file'), _('FILE'))],
-    _('[OPTION]...'))
+    _('[OPTION]...'),
+    optionalrepo=True)
 def serve(ui, repo, **opts):
     """start stand-alone webserver
 
