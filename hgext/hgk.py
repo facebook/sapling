@@ -50,7 +50,8 @@ testedwith = 'internal'
     ('s', 'stdin', None, _('stdin')),
     ('C', 'copy', None, _('detect copies')),
     ('S', 'search', "", _('search'))],
-    ('hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]...'))
+    ('hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]...'),
+    inferrepo=True)
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):
@@ -145,7 +146,8 @@ def base(ui, repo, node1, node2):
 
 @command('debug-cat-file',
     [('s', 'stdin', None, _('stdin'))],
-    _('hg debug-cat-file [OPTION]... TYPE FILE'))
+    _('hg debug-cat-file [OPTION]... TYPE FILE'),
+    inferrepo=True)
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
     # in stdin mode, every line except the commit is prefixed with two
@@ -344,5 +346,3 @@ def view(ui, repo, *etc, **opts):
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
     util.system(cmd)
-
-commands.inferrepo += " debug-diff-tree debug-cat-file"
