@@ -654,7 +654,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                                             opts.get('date') or date,
                                             branch, files, store,
                                             editor=commiteditor)
-                repo.savecommitmessage(memctx.description())
                 n = memctx.commit()
             finally:
                 store.close()
