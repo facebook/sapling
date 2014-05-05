@@ -331,7 +331,9 @@ class buildhgextindex(Command):
 
     def run(self):
         if os.path.exists(self._indexfilename):
-            os.unlink(self._indexfilename)
+            f = open(self._indexfilename, 'w')
+            f.write('# empty\n')
+            f.close()
 
         # here no extension enabled, disabled() lists up everything
         code = ('import pprint; from mercurial import extensions; '
