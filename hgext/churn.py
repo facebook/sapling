@@ -14,6 +14,8 @@ from mercurial import encoding
 import os
 import time, datetime
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 def maketemplater(ui, repo, tmpl):
@@ -88,6 +90,21 @@ def countrate(ui, repo, amap, *pats, **opts):
     return rate
 
 
+@command('churn',
+    [('r', 'rev', [],
+     _('count rate for the specified revision or range'), _('REV')),
+    ('d', 'date', '',
+     _('count rate for revisions matching date spec'), _('DATE')),
+    ('t', 'template', '{author|email}',
+     _('template to group changesets'), _('TEMPLATE')),
+    ('f', 'dateformat', '',
+     _('strftime-compatible format for grouping by date'), _('FORMAT')),
+    ('c', 'changesets', False, _('count rate by number of changesets')),
+    ('s', 'sort', False, _('sort by key (default: sort by count)')),
+    ('', 'diffstat', False, _('display added/removed lines separately')),
+    ('', 'aliases', '', _('file with email aliases'), _('FILE')),
+    ] + commands.walkopts,
+    _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"))
 def churn(ui, repo, *pats, **opts):
     '''histogram of changes to the repository
 
@@ -180,26 +197,5 @@ def churn(ui, repo, *pats, **opts):
 
     for name, count in rate:
         ui.write(format(name, count))
-
-
-cmdtable = {
-    "churn":
-        (churn,
-         [('r', 'rev', [],
-           _('count rate for the specified revision or range'), _('REV')),
-          ('d', 'date', '',
-           _('count rate for revisions matching date spec'), _('DATE')),
-          ('t', 'template', '{author|email}',
-           _('template to group changesets'), _('TEMPLATE')),
-          ('f', 'dateformat', '',
-           _('strftime-compatible format for grouping by date'), _('FORMAT')),
-          ('c', 'changesets', False, _('count rate by number of changesets')),
-          ('s', 'sort', False, _('sort by key (default: sort by count)')),
-          ('', 'diffstat', False, _('display added/removed lines separately')),
-          ('', 'aliases', '',
-           _('file with email aliases'), _('FILE')),
-          ] + commands.walkopts,
-         _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]")),
-}
 
 commands.inferrepo += " churn"
