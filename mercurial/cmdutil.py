@@ -2493,8 +2493,11 @@ def command(table):
     The norepo argument defines whether the command does not require a
     local repository. Most commands operate against a repository, thus the
     default is False.
+
+    The optionalrepo argument defines whether the command optionally requires
+    a local repository.
     """
-    def cmd(name, options=(), synopsis=None, norepo=False):
+    def cmd(name, options=(), synopsis=None, norepo=False, optionalrepo=False):
         def decorator(func):
             if synopsis:
                 table[name] = func, list(options), synopsis
@@ -2505,6 +2508,10 @@ def command(table):
                 # Avoid import cycle.
                 import commands
                 commands.norepo += ' %s' % ' '.join(parsealiases(name))
+
+            if optionalrepo:
+                import commands
+                commands.optionalrepo += ' %s' % ' '.join(parsealiases(name))
 
             return func
         return decorator
