@@ -248,7 +248,8 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
     ('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV')),
     ] + commands.walkopts,
-    _('hg extdiff [OPT]... [FILE]...'))
+    _('hg extdiff [OPT]... [FILE]...'),
+    inferrepo=True)
 def extdiff(ui, repo, *pats, **opts):
     '''use external program to diff repository (or selected files)
 
@@ -325,5 +326,3 @@ use %(path)s to diff repository (or selected files)
         cmdtable[cmd] = (save(cmd, path, diffopts),
                          cmdtable['extdiff'][1][1:],
                          _('hg %s [OPTION]... [FILE]...') % cmd)
-
-commands.inferrepo += " extdiff"
