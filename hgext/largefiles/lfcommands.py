@@ -24,8 +24,6 @@ import basestore
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-commands.inferrepo += " lfconvert"
-
 @command('lfconvert',
     [('s', 'size', '',
       _('minimum size (MB) for files to be converted as largefiles'), 'SIZE'),
@@ -33,7 +31,8 @@ commands.inferrepo += " lfconvert"
      _('convert from a largefiles repo to a normal repo')),
     ],
     _('hg lfconvert SOURCE DEST [FILE ...]'),
-    norepo=True)
+    norepo=True,
+    inferrepo=True)
 def lfconvert(ui, src, dest, *pats, **opts):
     '''convert a normal repository to a largefiles repository
 
