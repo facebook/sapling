@@ -2489,14 +2489,23 @@ def command(table):
 
     The synopsis argument defines a short, one line summary of how to use the
     command. This shows up in the help output.
-    """
 
-    def cmd(name, options=(), synopsis=None):
+    The norepo argument defines whether the command does not require a
+    local repository. Most commands operate against a repository, thus the
+    default is False.
+    """
+    def cmd(name, options=(), synopsis=None, norepo=False):
         def decorator(func):
             if synopsis:
                 table[name] = func, list(options), synopsis
             else:
                 table[name] = func, list(options)
+
+            if norepo:
+                # Avoid import cycle.
+                import commands
+                commands.norepo += ' %s' % ' '.join(parsealiases(name))
+
             return func
         return decorator
 

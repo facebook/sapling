@@ -26,6 +26,13 @@ table = {}
 
 command = cmdutil.command(table)
 
+norepo = ("clone init version help debugcommands debugcomplete"
+          " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
+          " debugknown debuggetbundle debugbundle")
+optionalrepo = ("identify paths serve config showconfig debugancestor debugdag"
+                " debugdata debugindex debugindexdot debugrevlog")
+inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
+             " remove resolve status debugwalk")
 # common command options
 
 globalopts = [
@@ -5977,11 +5984,3 @@ def version_(ui):
         "There is NO\nwarranty; "
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
     ))
-
-norepo = ("clone init version help debugcommands debugcomplete"
-          " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
-          " debugknown debuggetbundle debugbundle")
-optionalrepo = ("identify paths serve config showconfig debugancestor debugdag"
-                " debugdata debugindex debugindexdot debugrevlog")
-inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
-             " remove resolve status debugwalk")
