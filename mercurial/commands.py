@@ -33,8 +33,11 @@ norepo = ''
 # This should be populated by passing optionalrepo=True into the @command
 # decorator.
 optionalrepo = ''
-inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
-             " remove resolve status debugwalk")
+# Space delimited list of commands that will examine arguments looking for
+# a repository. This should be populated by passing inferrepo=True into the
+# @command decorator.
+inferrepo = ''
+
 # common command options
 
 globalopts = [
@@ -156,7 +159,8 @@ subrepoopts = [
 
 @command('^add',
     walkopts + subrepoopts + dryrunopts,
-    _('[OPTION]... [FILE]...'))
+    _('[OPTION]... [FILE]...'),
+    inferrepo=True)
 def add(ui, repo, *pats, **opts):
     """add the specified files on the next commit
 
@@ -192,7 +196,8 @@ def add(ui, repo, *pats, **opts):
 
 @command('addremove',
     similarityopts + walkopts + dryrunopts,
-    _('[OPTION]... [FILE]...'))
+    _('[OPTION]... [FILE]...'),
+    inferrepo=True)
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files
 
@@ -236,7 +241,8 @@ def addremove(ui, repo, *pats, **opts):
     ('c', 'changeset', None, _('list the changeset')),
     ('l', 'line-number', None, _('show line number at the first appearance'))
     ] + diffwsopts + walkopts,
-    _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'))
+    _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'),
+    inferrepo=True)
 def annotate(ui, repo, *pats, **opts):
     """show changeset information by line for each file
 
@@ -1178,7 +1184,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     ('r', 'rev', '', _('print the given revision'), _('REV')),
     ('', 'decode', None, _('apply any matching decode filter')),
     ] + walkopts,
-    _('[OPTION]... FILE...'))
+    _('[OPTION]... FILE...'),
+    inferrepo=True)
 def cat(ui, repo, file1, *pats, **opts):
     """output the current or given revision of files
 
@@ -1334,7 +1341,8 @@ def clone(ui, source, dest=None, **opts):
     ('e', 'edit', None,
      _('further edit commit message already specified')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
-    _('[OPTION]... [FILE]...'))
+    _('[OPTION]... [FILE]...'),
+    inferrepo=True)
 def commit(ui, repo, *pats, **opts):
     """commit the specified files or all outstanding changes
 
@@ -2798,7 +2806,7 @@ def debugsuccessorssets(ui, repo, *revs):
                     ui.write(node2str(node))
             ui.write('\n')
 
-@command('debugwalk', walkopts, _('[OPTION]... [FILE]...'))
+@command('debugwalk', walkopts, _('[OPTION]... [FILE]...'), inferrepo=True)
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
     m = scmutil.match(repo[None], pats, opts)
@@ -2841,7 +2849,8 @@ def debugwireargs(ui, repopath, *vals, **opts):
     [('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV'))
     ] + diffopts + diffopts2 + walkopts + subrepoopts,
-    _('[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...'))
+    _('[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...'),
+    inferrepo=True)
 def diff(ui, repo, *pats, **opts):
     """diff repository (or selected files)
 
@@ -3003,7 +3012,7 @@ def export(ui, repo, *changesets, **opts):
                  switch_parent=opts.get('switch_parent'),
                  opts=patch.diffopts(ui, opts))
 
-@command('^forget', walkopts, _('[OPTION]... FILE...'))
+@command('^forget', walkopts, _('[OPTION]... FILE...'), inferrepo=True)
 def forget(ui, repo, *pats, **opts):
     """forget the specified files on the next commit
 
@@ -3268,7 +3277,8 @@ def graft(ui, repo, *revs, **opts):
     ('u', 'user', None, _('list the author (long with -v)')),
     ('d', 'date', None, _('list the date (short with -q)')),
     ] + walkopts,
-    _('[OPTION]... PATTERN [FILE]...'))
+    _('[OPTION]... PATTERN [FILE]...'),
+    inferrepo=True)
 def grep(ui, repo, pattern, *pats, **opts):
     """search for a pattern in specified files and revisions
 
@@ -4047,7 +4057,8 @@ def locate(ui, repo, *pats, **opts):
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
     ] + logopts + walkopts,
-    _('[OPTION]... [FILE]'))
+    _('[OPTION]... [FILE]'),
+    inferrepo=True)
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files
 
@@ -4405,7 +4416,8 @@ def outgoing(ui, repo, dest=None, **opts):
 @command('parents',
     [('r', 'rev', '', _('show parents of the specified revision'), _('REV')),
     ] + templateopts,
-    _('[-r REV] [FILE]'))
+    _('[-r REV] [FILE]'),
+    inferrepo=True)
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision
 
@@ -4802,7 +4814,8 @@ def recover(ui, repo):
     ('f', 'force', None,
      _('remove (and delete) file even if added or modified')),
     ] + walkopts,
-    _('[OPTION]... FILE...'))
+    _('[OPTION]... FILE...'),
+    inferrepo=True)
 def remove(ui, repo, *pats, **opts):
     """remove the specified files on the next commit
 
@@ -4931,7 +4944,8 @@ def rename(ui, repo, *pats, **opts):
     ('u', 'unmark', None, _('mark files as unresolved')),
     ('n', 'no-status', None, _('hide status prefix'))]
     + mergetoolopts + walkopts,
-    _('[OPTION]... [FILE]...'))
+    _('[OPTION]... [FILE]...'),
+    inferrepo=True)
 def resolve(ui, repo, *pats, **opts):
     """redo merges or set/view the merge status of files
 
@@ -5327,7 +5341,8 @@ class httpservice(object):
     ('', 'rev', [], _('show difference from revision'), _('REV')),
     ('', 'change', '', _('list the changed files of a revision'), _('REV')),
     ] + walkopts + subrepoopts,
-    _('[OPTION]... [FILE]...'))
+    _('[OPTION]... [FILE]...'),
+    inferrepo=True)
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
 
