@@ -26,9 +26,9 @@ table = {}
 
 command = cmdutil.command(table)
 
-norepo = ("clone init version help debugcommands debugcomplete"
-          " debugdate debuginstall debugfsinfo debugpushkey debugwireargs"
-          " debugknown debuggetbundle debugbundle")
+# Space delimited list of commands that don't require local repositories.
+# This should be populated by passing norepo=True into the @command decorator.
+norepo = ''
 optionalrepo = ("identify paths serve config showconfig debugancestor debugdag"
                 " debugdata debugindex debugindexdot debugrevlog")
 inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
@@ -1212,7 +1212,8 @@ def cat(ui, repo, file1, *pats, **opts):
     ('', 'pull', None, _('use pull protocol to copy metadata')),
     ('', 'uncompressed', None, _('use uncompressed transfer (fast over LAN)')),
     ] + remoteopts,
-    _('[OPTION]... SOURCE [DEST]'))
+    _('[OPTION]... SOURCE [DEST]'),
+    norepo=True)
 def clone(ui, source, dest=None, **opts):
     """make a copy of an existing repository
 
@@ -1754,7 +1755,10 @@ def debugbuilddag(ui, repo, text=None,
         ui.progress(_('building'), None)
         release(tr, lock)
 
-@command('debugbundle', [('a', 'all', None, _('show all details'))], _('FILE'))
+@command('debugbundle',
+        [('a', 'all', None, _('show all details'))],
+        _('FILE'),
+        norepo=True)
 def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
     f = hg.openpath(ui, bundlepath)
@@ -1832,7 +1836,7 @@ def debugcheckstate(ui, repo):
         error = _(".hg/dirstate inconsistent with current parent's manifest")
         raise util.Abort(error)
 
-@command('debugcommands', [], _('[COMMAND]'))
+@command('debugcommands', [], _('[COMMAND]'), norepo=True)
 def debugcommands(ui, cmd='', *args):
     """list all available commands and options"""
     for cmd, vals in sorted(table.iteritems()):
@@ -1842,7 +1846,8 @@ def debugcommands(ui, cmd='', *args):
 
 @command('debugcomplete',
     [('o', 'options', None, _('show the command options'))],
-    _('[-o] CMD'))
+    _('[-o] CMD'),
+    norepo=True)
 def debugcomplete(ui, cmd='', **opts):
     """returns the completion list associated with the given command"""
 
@@ -1946,7 +1951,8 @@ def debugdata(ui, repo, file_, rev=None, **opts):
 
 @command('debugdate',
     [('e', 'extended', None, _('try extended date formats'))],
-    _('[-e] DATE [RANGE]'))
+    _('[-e] DATE [RANGE]'),
+    norepo=True)
 def debugdate(ui, date, range=None, **opts):
     """parse and display a date"""
     if opts["extended"]:
@@ -2042,7 +2048,7 @@ def debugfileset(ui, repo, expr, **opts):
     for f in ctx.getfileset(expr):
         ui.write("%s\n" % f)
 
-@command('debugfsinfo', [], _('[PATH]'))
+@command('debugfsinfo', [], _('[PATH]'), norepo=True)
 def debugfsinfo(ui, path="."):
     """show information detected about current filesystem"""
     util.writefile('.debugfsinfo', '')
@@ -2057,7 +2063,8 @@ def debugfsinfo(ui, path="."):
     [('H', 'head', [], _('id of head node'), _('ID')),
     ('C', 'common', [], _('id of common node'), _('ID')),
     ('t', 'type', 'bzip2', _('bundle compression type to use'), _('TYPE'))],
-    _('REPO FILE [-H|-C ID]...'))
+    _('REPO FILE [-H|-C ID]...'),
+    norepo=True)
 def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     """retrieves a bundle from a repo
 
@@ -2158,7 +2165,7 @@ def debugindexdot(ui, repo, file_):
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
-@command('debuginstall', [], '')
+@command('debuginstall', [], '', norepo=True)
 def debuginstall(ui):
     '''test Mercurial installation
 
@@ -2256,7 +2263,7 @@ def debuginstall(ui):
 
     return problems
 
-@command('debugknown', [], _('REPO ID...'))
+@command('debugknown', [], _('REPO ID...'), norepo=True)
 def debugknown(ui, repopath, *ids, **opts):
     """test whether node ids are known to a repo
 
@@ -2393,7 +2400,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
     ui.write('\n'.join(repo.pathto(p, cwd) for p in sorted(files)))
     ui.write('\n')
 
-@command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
+@command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'), norepo=True)
 def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
     '''access the pushkey key/value protocol
 
@@ -2807,7 +2814,8 @@ def debugwalk(ui, repo, *pats, **opts):
     ('', 'four', '', 'four'),
     ('', 'five', '', 'five'),
     ] + remoteopts,
-    _('REPO [OPTIONS]... [ONE [TWO]]'))
+    _('REPO [OPTIONS]... [ONE [TWO]]'),
+    norepo=True)
 def debugwireargs(ui, repopath, *vals, **opts):
     repo = hg.peer(ui, opts, repopath)
     for opt in remoteopts:
@@ -3533,7 +3541,8 @@ def heads(ui, repo, *branchrevs, **opts):
      ('c', 'command', None, _('show only help for commands')),
      ('k', 'keyword', '', _('show topics matching keyword')),
      ],
-    _('[-ec] [TOPIC]'))
+    _('[-ec] [TOPIC]'),
+    norepo=True)
 def help_(ui, name=None, **opts):
     """show help for a given topic or a help overview
 
@@ -3950,7 +3959,8 @@ def incoming(ui, repo, source="default", **opts):
         del repo._subtoppath
 
 
-@command('^init', remoteopts, _('[-e CMD] [--remotecmd CMD] [DEST]'))
+@command('^init', remoteopts, _('[-e CMD] [--remotecmd CMD] [DEST]'),
+         norepo=True)
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
 
@@ -5972,7 +5982,7 @@ def verify(ui, repo):
     """
     return hg.verify(repo)
 
-@command('version', [])
+@command('version', [], norepo=True)
 def version_(ui):
     """output version and copyright information"""
     ui.write(_("Mercurial Distributed SCM (version %s)\n")
