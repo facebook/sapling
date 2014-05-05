@@ -1,10 +1,7 @@
+#if test-repo
+
   $ check_code="$TESTDIR"/../contrib/check-code.py
   $ cd "$TESTDIR"/..
-  $ if hg identify -q > /dev/null 2>&1; then :
-  > else
-  >     echo "skipped: not a Mercurial working dir" >&2
-  >     exit 80
-  > fi
 
 Prepare check for Python files without py extension
 
@@ -34,3 +31,5 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/socketutil.py it has no-che?k-code (glob)
+
+#endif
