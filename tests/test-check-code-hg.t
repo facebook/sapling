@@ -6,7 +6,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ hg manifest 2>/dev/null | sed 's-\\-/-g' |
+  $ hg locate | sed 's-\\-/-g' |
   >   xargs "$check_code" --warnings --per-file=0 || false
   Skipping hgext/zeroconf/Zeroconf.py it has no-che?k-code (glob)
   Skipping i18n/polib.py it has no-che?k-code (glob)
