@@ -208,9 +208,7 @@ def makememctx(repo, parents, text, user, date, branch, files, store,
     if branch:
         extra['branch'] = encoding.fromlocal(branch)
     ctx =  memctx(repo, parents, text, files, getfilectx, user,
-                          date, extra)
-    if editor:
-        ctx._text = editor(repo, ctx, [])
+                          date, extra, editor)
     return ctx
 
 class changectx(basectx):
@@ -1287,7 +1285,7 @@ class memctx(object):
     is a dictionary of metadata or is left empty.
     """
     def __init__(self, repo, parents, text, files, filectxfn, user=None,
-                 date=None, extra=None):
+                 date=None, extra=None, editor=False):
         self._repo = repo
         self._rev = None
         self._node = None
@@ -1304,6 +1302,10 @@ class memctx(object):
         self._extra = extra and extra.copy() or {}
         if self._extra.get('branch', '') == '':
             self._extra['branch'] = 'default'
+
+        if editor:
+            self._text = editor(self._repo, self, [])
+            self._repo.savecommitmessage(self._text)
 
     def __str__(self):
         return str(self._parents[0]) + "+"
