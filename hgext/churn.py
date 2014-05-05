@@ -104,7 +104,8 @@ def countrate(ui, repo, amap, *pats, **opts):
     ('', 'diffstat', False, _('display added/removed lines separately')),
     ('', 'aliases', '', _('file with email aliases'), _('FILE')),
     ] + commands.walkopts,
-    _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"))
+    _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"),
+    inferrepo=True)
 def churn(ui, repo, *pats, **opts):
     '''histogram of changes to the repository
 
@@ -197,5 +198,3 @@ def churn(ui, repo, *pats, **opts):
 
     for name, count in rate:
         ui.write(format(name, count))
-
-commands.inferrepo += " churn"
