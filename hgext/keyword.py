@@ -89,7 +89,6 @@ from mercurial.hgweb import webcommands
 from mercurial.i18n import _
 import os, re, shutil, tempfile
 
-commands.optionalrepo += ' kwdemo'
 commands.inferrepo += ' kwexpand kwfiles kwshrink'
 
 cmdtable = {}
@@ -363,7 +362,8 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
          [('d', 'default', None, _('show default keyword template maps')),
           ('f', 'rcfile', '',
            _('read maps from rcfile'), _('FILE'))],
-         _('hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]...'))
+         _('hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]...'),
+         optionalrepo=True)
 def demo(ui, repo, *args, **opts):
     '''print [keywordmaps] configuration and an expansion example
 
