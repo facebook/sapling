@@ -2473,8 +2473,23 @@ def _performrevert(repo, parents, ctx, actions):
             repo.dirstate.copy(copied[f], f)
 
 def command(table):
-    '''returns a function object bound to table which can be used as
-    a decorator for populating table as a command table'''
+    """Returns a function object to be used as a decorator for making commands.
+
+    This function receives a command table as its argument. The table should
+    be a dict.
+
+    The returned function can be used as a decorator for adding commands
+    to that command table. This function accepts multiple arguments to define
+    a command.
+
+    The first argument is the command name.
+
+    The options argument is an iterable of tuples defining command arguments.
+    See ``mercurial.fancyopts.fancyopts()`` for the format of each tuple.
+
+    The synopsis argument defines a short, one line summary of how to use the
+    command. This shows up in the help output.
+    """
 
     def cmd(name, options=(), synopsis=None):
         def decorator(func):
