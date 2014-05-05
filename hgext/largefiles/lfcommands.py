@@ -32,7 +32,8 @@ commands.inferrepo += " lfconvert"
     ('', 'to-normal', False,
      _('convert from a largefiles repo to a normal repo')),
     ],
-    _('hg lfconvert SOURCE DEST [FILE ...]'))
+    _('hg lfconvert SOURCE DEST [FILE ...]'),
+    norepo=True)
 def lfconvert(ui, src, dest, *pats, **opts):
     '''convert a normal repository to a largefiles repository
 

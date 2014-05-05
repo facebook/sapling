@@ -105,7 +105,7 @@ explicitly do so with the --large flag passed to the :hg:`add`
 command.
 '''
 
-from mercurial import commands, hg, localrepo
+from mercurial import hg, localrepo
 
 import lfcommands
 import proto
@@ -124,7 +124,5 @@ def uisetup(ui):
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
     hg.wirepeersetupfuncs.append(proto.wirereposetup)
     uisetupmod.uisetup(ui)
-
-commands.norepo += " lfconvert"
 
 cmdtable = lfcommands.cmdtable
