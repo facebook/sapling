@@ -43,7 +43,8 @@ testedwith = 'internal'
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
     ] + commands.logopts + commands.walkopts,
-    _('[OPTION]... [FILE]'))
+    _('[OPTION]... [FILE]'),
+    inferrepo=True)
 def graphlog(ui, repo, *pats, **opts):
     """show revision history alongside an ASCII revision graph
 
@@ -54,5 +55,3 @@ def graphlog(ui, repo, *pats, **opts):
     directory.
     """
     return cmdutil.graphlog(ui, repo, *pats, **opts)
-
-commands.inferrepo += " glog"
