@@ -14,7 +14,7 @@ This extension is deprecated. You should use :hg:`log -r
 "children(REV)"` instead.
 '''
 
-from mercurial import cmdutil, commands
+from mercurial import cmdutil
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 
@@ -26,7 +26,8 @@ testedwith = 'internal'
     [('r', 'rev', '',
      _('show children of the specified revision'), _('REV')),
     ] + templateopts,
-    _('hg children [-r REV] [FILE]'))
+    _('hg children [-r REV] [FILE]'),
+    inferrepo=True)
 def children(ui, repo, file_=None, **opts):
     """show the children of the given or working directory revision
 
@@ -46,5 +47,3 @@ def children(ui, repo, file_=None, **opts):
     for cctx in ctx.children():
         displayer.show(cctx)
     displayer.close()
-
-commands.inferrepo += " children"
