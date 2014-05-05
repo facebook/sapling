@@ -153,8 +153,9 @@ Test saving last-message.txt:
   >     repo.__class__ = commitfailure
   > EOF
 
-  $ cat > .hg/hgrc <<EOF
+  $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > # this failure occurs before editor invocation
   > commitfailure = $TESTTMP/commitfailure.py
   > EOF
 
@@ -165,15 +166,65 @@ Test saving last-message.txt:
   > (echo; echo "test saving last-message.txt") >> \$1
   > EOF
 
+  $ hg qapplied
+  p1
+  git
+  $ hg tip --template "{files}\n"
+  aa
+
+(test that editor is not invoked before transaction starting)
+
   $ rm -f .hg/last-message.txt
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e p3
-  ==== before editing
-  original message====
   refresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: emulating unexpected abort
   [255]
   $ cat .hg/last-message.txt
+  cat: .hg/last-message.txt: No such file or directory
+  [1]
+
+(reset applied patches and directory status)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > # this failure occurs after editor invocation
+  > commitfailure = !
+  > EOF
+
+  $ hg qapplied
+  p1
+  $ hg status -A aa
+  ? aa
+  $ rm aa
+  $ hg status -m
+  M a
+  $ hg revert --no-backup -q a
+  $ hg qpush -q git
+  now at: git
+
+(test that editor is invoked and commit message is saved into
+"last-message.txt")
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > # this failure occurs after editor invocation
+  > pretxncommit.unexpectedabort = false
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e p3
+  ==== before editing
   original message
+  ====
+  transaction abort!
+  rollback completed
+  note: commit message saved in .hg/last-message.txt
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+  $ cat .hg/last-message.txt
+  original message
+  
   test saving last-message.txt
 
   $ cd ..

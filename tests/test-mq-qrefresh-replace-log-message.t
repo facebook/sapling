@@ -59,3 +59,86 @@ Should display 'Fifth commit message\\\n This is the 5th log message'
   $ hg log -l1 --template "{desc}\n"
   Fifth commit message
    This is the 5th log message
+
+Test saving last-message.txt:
+
+  $ cat > $TESTTMP/editor.sh << EOF
+  > echo "==== before editing"
+  > cat \$1
+  > echo "===="
+  > (echo; echo "test saving last-message.txt") >> \$1
+  > EOF
+
+  $ cat > $TESTTMP/commitfailure.py <<EOF
+  > from mercurial import util
+  > def reposetup(ui, repo):
+  >     class commitfailure(repo.__class__):
+  >         def commit(self, *args, **kwargs):
+  >             raise util.Abort('emulating unexpected abort')
+  >     repo.__class__ = commitfailure
+  > EOF
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > # this failure occurs before editor invocation
+  > commitfailure = $TESTTMP/commitfailure.py
+  > EOF
+
+  $ hg qapplied
+  first-patch
+  second-patch
+  $ hg tip --template "{files}\n"
+  file2
+
+(test that editor is not invoked before transaction starting)
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qrefresh -e
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: emulating unexpected abort
+  [255]
+  $ cat .hg/last-message.txt
+  cat: .hg/last-message.txt: No such file or directory
+  [1]
+
+(reset applied patches and directory status)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > commitfailure = !
+  > EOF
+
+  $ hg qapplied
+  first-patch
+  $ hg status -A file2
+  ? file2
+  $ rm file2
+  $ hg qpush -q second-patch
+  now at: second-patch
+
+(test that editor is invoked and commit message is saved into
+"last-message.txt")
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > # this failure occurs after editor invocation
+  > pretxncommit.unexpectedabort = false
+  > EOF
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qrefresh -e
+  ==== before editing
+  Fifth commit message
+   This is the 5th log message
+  ====
+  transaction abort!
+  rollback completed
+  note: commit message saved in .hg/last-message.txt
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+  $ cat .hg/last-message.txt
+  Fifth commit message
+   This is the 5th log message
+  
+  test saving last-message.txt

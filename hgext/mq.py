@@ -1484,6 +1484,7 @@ class queue(object):
             self.ui.write(_("no patches applied\n"))
             return 1
         msg = opts.get('msg', '').rstrip()
+        editor = opts.get('editor')
         newuser = opts.get('user')
         newdate = opts.get('date')
         if newdate:
@@ -1652,9 +1653,20 @@ class queue(object):
             try:
                 # might be nice to attempt to roll back strip after this
 
-                if not msg:
+                defaultmsg = "[mq]: %s" % patchfn
+                if editor:
+                    origeditor = editor
+                    def desceditor(repo, ctx, subs):
+                        desc = origeditor(repo, ctx, subs)
+                        if desc.rstrip():
+                            ph.setmessage(desc)
+                            return desc
+                        return defaultmsg
+                    message = msg or "\n".join(ph.message)
+                    editor = desceditor
+                elif not msg:
                     if not ph.message:
-                        message = "[mq]: %s\n" % patchfn
+                        message = defaultmsg
                     else:
                         message = "\n".join(ph.message)
                 else:
@@ -1664,7 +1676,7 @@ class queue(object):
                 # Ensure we create a new changeset in the same phase than
                 # the old one.
                 n = newcommit(repo, oldphase, message, user, ph.date,
-                              match=match, force=True)
+                              match=match, force=True, editor=editor)
                 # only write patch after a successful commit
                 c = [list(x) for x in refreshchanges]
                 if inclsubs:
@@ -2478,20 +2490,16 @@ def refresh(ui, repo, *pats, **opts):
     q = repo.mq
     message = cmdutil.logmessage(ui, opts)
     if opts.get('edit'):
-        if not q.applied:
-            ui.write(_("no patches applied\n"))
-            return 1
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
-        patch = q.applied[-1].name
-        ph = patchheader(q.join(patch), q.plainmode)
-        message = ui.edit('\n'.join(ph.message), ph.user or ui.username())
-        # We don't want to lose the patch message if qrefresh fails (issue2062)
-        repo.savecommitmessage(message)
+        def editor(repo, ctx, subs):
+            return ui.edit(ctx.description() + "\n", ctx.user())
+    else:
+        editor = False
     setupheaderopts(ui, opts)
     wlock = repo.wlock()
     try:
-        ret = q.refresh(repo, pats, msg=message, **opts)
+        ret = q.refresh(repo, pats, msg=message, editor=editor, **opts)
         q.savedirty()
         return ret
     finally:
@@ -2582,13 +2590,15 @@ def fold(ui, repo, *files, **opts):
         message = '\n'.join(message)
 
     if opts.get('edit'):
-        message = ui.edit(message, user or ui.username())
-        repo.savecommitmessage(message)
+        def editor(repo, ctx, subs):
+            return ui.edit(ctx.description() + "\n", ctx.user())
+    else:
+        editor = False
 
     diffopts = q.patchopts(q.diffopts(), *patches)
     wlock = repo.wlock()
     try:
-        q.refresh(repo, msg=message, git=diffopts.git)
+        q.refresh(repo, msg=message, git=diffopts.git, editor=editor)
         q.delete(repo, patches, opts)
         q.savedirty()
     finally:
