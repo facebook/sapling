@@ -459,6 +459,8 @@ def qrefresh(origfn, ui, repo, *pats, **opts):
     # backup all changed files
     dorecord(ui, repo, committomq, 'qrefresh', True, *pats, **opts)
 
+# This command registration is replaced during uisetup().
+@command('qrecord', [], _('hg qrecord [OPTION]... PATCH [FILE]...'))
 def qrecord(ui, repo, patch, *pats, **opts):
     '''interactively record a new patch
 
@@ -636,10 +638,6 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         return cmdutil.commit(ui, repo, recordfunc, pats, opts)
     finally:
         ui.write = oldwrite
-
-cmdtable["qrecord"] = \
-    (qrecord, [], # placeholder until mq is available
-     _('hg qrecord [OPTION]... PATCH [FILE]...'))
 
 def uisetup(ui):
     try:
