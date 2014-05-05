@@ -72,8 +72,6 @@ from mercurial import localrepo
 from mercurial import subrepo
 import os, re, errno, shutil
 
-commands.norepo += " qclone"
-
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 cmdtable = {}
@@ -2255,7 +2253,8 @@ def init(ui, repo, **opts):
           ('p', 'patches', '',
            _('location of source patch repository'), _('REPO')),
          ] + commands.remoteopts,
-         _('hg qclone [OPTION]... SOURCE [DEST]'))
+         _('hg qclone [OPTION]... SOURCE [DEST]'),
+         norepo=True)
 def clone(ui, source, dest=None, **opts):
     '''clone main and patch repository at same time
 
