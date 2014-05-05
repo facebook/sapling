@@ -63,9 +63,11 @@ pretty fast (at least faster than having to compare the entire tree).
 
 from mercurial.i18n import _
 from mercurial.node import short, nullid
-from mercurial import scmutil, scmutil, util, commands, encoding
+from mercurial import cmdutil, scmutil, scmutil, util, commands, encoding
 import os, shlex, shutil, tempfile, re
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 def snapshot(ui, repo, files, node, tmproot):
@@ -238,6 +240,15 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         ui.note(_('cleaning up temp directory\n'))
         shutil.rmtree(tmproot)
 
+@command('extdiff',
+    [('p', 'program', '',
+     _('comparison program to run'), _('CMD')),
+    ('o', 'option', [],
+     _('pass option to comparison program'), _('OPT')),
+    ('r', 'rev', [], _('revision'), _('REV')),
+    ('c', 'change', '', _('change made by revision'), _('REV')),
+    ] + commands.walkopts,
+    _('hg extdiff [OPT]... [FILE]...'))
 def extdiff(ui, repo, *pats, **opts):
     '''use external program to diff repository (or selected files)
 
@@ -261,21 +272,6 @@ def extdiff(ui, repo, *pats, **opts):
         program = 'diff'
         option = option or ['-Npru']
     return dodiff(ui, repo, program, option, pats, opts)
-
-cmdtable = {
-    "extdiff":
-    (extdiff,
-     [('p', 'program', '',
-       _('comparison program to run'), _('CMD')),
-      ('o', 'option', [],
-       _('pass option to comparison program'), _('OPT')),
-      ('r', 'rev', [],
-       _('revision'), _('REV')),
-      ('c', 'change', '',
-       _('change made by revision'), _('REV')),
-     ] + commands.walkopts,
-     _('hg extdiff [OPT]... [FILE]...')),
-    }
 
 def uisetup(ui):
     for cmd, path in ui.configitems('extdiff'):
