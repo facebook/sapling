@@ -2333,7 +2333,8 @@ def clone(ui, source, dest=None, **opts):
 
 @command("qcommit|qci",
          commands.table["^commit|ci"][1],
-         _('hg qcommit [OPTION]... [FILE]...'))
+         _('hg qcommit [OPTION]... [FILE]...'),
+         inferrepo=True)
 def commit(ui, repo, *pats, **opts):
     """commit changes in the queue repository (DEPRECATED)
 
@@ -2416,7 +2417,8 @@ def setupheaderopts(ui, opts):
           ('d', 'date', '',
            _('add "Date: <DATE>" to patch'), _('DATE'))
           ] + commands.walkopts + commands.commitopts,
-         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...'))
+         _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...'),
+         inferrepo=True)
 def new(ui, repo, patch, *args, **opts):
     """create a new patch
 
@@ -2464,7 +2466,8 @@ def new(ui, repo, patch, *args, **opts):
           ('d', 'date', '',
            _('add/update date field in patch with given date'), _('DATE'))
           ] + commands.walkopts + commands.commitopts,
-         _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'))
+         _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'),
+         inferrepo=True)
 def refresh(ui, repo, *pats, **opts):
     """update the current patch
 
@@ -2499,7 +2502,8 @@ def refresh(ui, repo, *pats, **opts):
 
 @command("^qdiff",
          commands.diffopts + commands.diffopts2 + commands.walkopts,
-         _('hg qdiff [OPTION]... [FILE]...'))
+         _('hg qdiff [OPTION]... [FILE]...'),
+         inferrepo=True)
 def diff(ui, repo, *pats, **opts):
     """diff of the current patch and subsequent modifications
 
@@ -3456,5 +3460,3 @@ colortable = {'qguard.negative': 'red',
               'qseries.guarded': 'black bold',
               'qseries.missing': 'red bold',
               'qseries.unapplied': 'black bold'}
-
-commands.inferrepo += " qnew qrefresh qdiff qcommit"
