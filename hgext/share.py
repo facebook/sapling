@@ -6,7 +6,7 @@
 '''share a common history between several working directories'''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, hg, commands, util
+from mercurial import cmdutil, hg, util
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -14,7 +14,8 @@ testedwith = 'internal'
 
 @command('share',
     [('U', 'noupdate', None, _('do not create a working copy'))],
-    _('[-U] SOURCE [DEST]'))
+    _('[-U] SOURCE [DEST]'),
+    norepo=True)
 def share(ui, source, dest=None, noupdate=False):
     """create a new shared repository
 
@@ -66,5 +67,3 @@ def unshare(ui, repo):
 
     # update store, spath, sopener and sjoin of repo
     repo.unfiltered().__init__(repo.baseui, repo.root)
-
-commands.norepo += " share"
