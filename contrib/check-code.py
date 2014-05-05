@@ -368,15 +368,15 @@ inrevlogpats = [
 ]
 
 checks = [
-    ('python', r'.*\.(py|cgi)$', pyfilters, pypats),
-    ('test script', r'(.*/)?test-[^.~]*$', testfilters, testpats),
-    ('c', r'.*\.[ch]$', cfilters, cpats),
-    ('unified test', r'.*\.t$', utestfilters, utestpats),
-    ('layering violation repo in revlog', r'mercurial/revlog\.py', pyfilters,
-     inrevlogpats),
-    ('layering violation ui in util', r'mercurial/util\.py', pyfilters,
+    ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
+    ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
+    ('c', r'.*\.[ch]$', '', cfilters, cpats),
+    ('unified test', r'.*\.t$', '', utestfilters, utestpats),
+    ('layering violation repo in revlog', r'mercurial/revlog\.py', '',
+     pyfilters, inrevlogpats),
+    ('layering violation ui in util', r'mercurial/util\.py', '', pyfilters,
      inutilpats),
-    ('txt', r'.*\.txt$', txtfilters, txtpats),
+    ('txt', r'.*\.txt$', '', txtfilters, txtpats),
 ]
 
 def _preparepats():
@@ -392,7 +392,7 @@ def _preparepats():
                 p = re.sub(r'(?<!\\)\[\^', r'[^\\n', p)
 
                 pats[i] = (re.compile(p, re.MULTILINE),) + pseq[1:]
-        filters = c[2]
+        filters = c[3]
         for i, flt in enumerate(filters):
             filters[i] = re.compile(flt[0]), flt[1]
 _preparepats()
@@ -446,22 +446,24 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     """
     blamecache = None
     result = True
-    for name, match, filters, pats in checks:
+
+    try:
+        fp = open(f)
+    except IOError, e:
+        print "Skipping %s, %s" % (f, str(e).split(':', 1)[0])
+        return result
+    pre = post = fp.read()
+    fp.close()
+
+    for name, match, magic, filters, pats in checks:
         if debug:
             print name, f
         fc = 0
-        if not re.match(match, f):
+        if not (re.match(match, f) or (magic and re.search(magic, f))):
             if debug:
                 print "Skipping %s for %s it doesn't match %s" % (
                        name, match, f)
             continue
-        try:
-            fp = open(f)
-        except IOError, e:
-            print "Skipping %s, %s" % (f, str(e).split(':', 1)[0])
-            continue
-        pre = post = fp.read()
-        fp.close()
         if "no-" "check-code" in pre:
             print "Skipping %s it has no-" "check-code" % f
             return "Skip" # skip checking this file
