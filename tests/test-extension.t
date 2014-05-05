@@ -18,11 +18,10 @@ Test basic extension support
   > def foo(ui, *args, **kwargs):
   >     ui.write("Foo\\n")
   > 
-  > @command('bar', [], 'hg bar')
+  > @command('bar', [], 'hg bar', norepo=True)
   > def bar(ui, *args, **kwargs):
   >     ui.write("Bar\\n")
   > 
-  > commands.norepo += ' bar'
   > EOF
   $ abspath=`pwd`/foobar.py
 
@@ -481,11 +480,10 @@ Test help topic with same name as extension
   > command = cmdutil.command(cmdtable)
   > """multirevs extension
   > Big multi-line module docstring."""
-  > @command('multirevs', [], 'ARG')
+  > @command('multirevs', [], 'ARG', norepo=True)
   > def multirevs(ui, repo, arg, *args, **opts):
   >     """multirevs command"""
   >     pass
-  > commands.norepo += ' multirevs'
   > EOF
   $ echo "multirevs = multirevs.py" >> $HGRCPATH
 
@@ -537,12 +535,11 @@ Issue811: Problem loading extensions twice (by site and by user)
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > 
-  > @command('debugextensions', [], 'hg debugextensions')
+  > @command('debugextensions', [], 'hg debugextensions', norepo=True)
   > def debugextensions(ui):
   >     "yet another debug command"
   >     ui.write("%s\n" % '\n'.join([x for x, y in extensions.extensions()]))
   > 
-  > commands.norepo += " debugextensions"
   > EOF
   $ echo "debugissue811 = $debugpath" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
@@ -631,11 +628,10 @@ Broken disabled extension and command:
   > command = cmdutil.command(cmdtable)
   > class Bogon(Exception): pass
   > 
-  > @command('throw', [], 'hg throw')
+  > @command('throw', [], 'hg throw', norepo=True)
   > def throw(ui, **opts):
   >     """throws an exception"""
   >     raise Bogon()
-  > commands.norepo += " throw"
   > EOF
 No declared supported version, extension complains:
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'

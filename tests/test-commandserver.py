@@ -341,10 +341,9 @@ if __name__ == '__main__':
     check(mqoutsidechanges)
     dbg = open('dbgui.py', 'w')
     dbg.write('from mercurial import cmdutil, commands\n'
-              'commands.norepo += " debuggetpass"\n'
               'cmdtable = {}\n'
               'command = cmdutil.command(cmdtable)\n'
-              '@command("debuggetpass")\n'
+              '@command("debuggetpass", norepo=True)\n'
               'def debuggetpass(ui):\n'
               '    ui.write("%s\\n" % ui.getpass())\n')
     dbg.close()

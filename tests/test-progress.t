@@ -18,7 +18,8 @@
   >     [('', 'total', '', 'override for total'),
   >     ('', 'nested', False, 'show nested results'),
   >     ('', 'parallel', False, 'show parallel sets of results')],
-  >     'hg loop LOOPS')
+  >     'hg loop LOOPS',
+  >     norepo=True)
   > def loop(ui, loops, **opts):
   >     loops = int(loops)
   >     total = None
@@ -46,7 +47,6 @@
   >               'nested', None, 'nested.done', 'nestnum', nested_steps)
   >     ui.progress('loop', None, 'loop.done', 'loopnum', total)
   > 
-  > commands.norepo += " loop"
   > EOF
 
   $ cp $HGRCPATH $HGRCPATH.orig

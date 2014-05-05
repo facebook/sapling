@@ -639,12 +639,12 @@ Test command without options
   >     [('', 'longdesc', 3, 'x'*90),
   >     ('n', '', None, 'normal desc'),
   >     ('', 'newline', '', 'line1\nline2')],
-  >     'hg nohelp')
+  >     'hg nohelp',
+  >     norepo=True)
   > @command('debugoptDEP', [('', 'dopt', None, 'option is DEPRECATED')])
   > def nohelp(ui, *args, **kwargs):
   >     pass
   > 
-  > commands.norepo += ' nohelp'
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "helpext = `pwd`/helpext.py" >> $HGRCPATH
