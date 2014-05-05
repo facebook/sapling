@@ -2496,8 +2496,14 @@ def command(table):
 
     The optionalrepo argument defines whether the command optionally requires
     a local repository.
+
+    The inferrepo argument defines whether to try to find a repository from the
+    command line arguments. If True, arguments will be examined for potential
+    repository locations. See ``findrepo()``. If a repository is found, it
+    will be used.
     """
-    def cmd(name, options=(), synopsis=None, norepo=False, optionalrepo=False):
+    def cmd(name, options=(), synopsis=None, norepo=False, optionalrepo=False,
+            inferrepo=False):
         def decorator(func):
             if synopsis:
                 table[name] = func, list(options), synopsis
@@ -2512,6 +2518,10 @@ def command(table):
             if optionalrepo:
                 import commands
                 commands.optionalrepo += ' %s' % ' '.join(parsealiases(name))
+
+            if inferrepo:
+                import commands
+                commands.inferrepo += ' %s' % ' '.join(parsealiases(name))
 
             return func
         return decorator
