@@ -225,8 +225,11 @@ test custom commit messages
 
 at first, test saving last-message.txt
 
+(test that editor is not invoked before transaction starting)
+
   $ cat > .hg/hgrc << '__EOF__'
   > [hooks]
+  > # this failure occurs before editor invocation
   > pretag.test-saving-lastmessage = false
   > __EOF__
   $ rm -f .hg/last-message.txt
@@ -234,12 +237,37 @@ at first, test saving last-message.txt
   abort: pretag.test-saving-lastmessage hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
-  custom tag message
-  second line
-  $ cat > .hg/hgrc << '__EOF__'
+  cat: .hg/last-message.txt: No such file or directory
+  [1]
+
+(test that editor is invoked and commit message is saved into
+"last-message.txt")
+
+  $ cat >> .hg/hgrc << '__EOF__'
   > [hooks]
   > pretag.test-saving-lastmessage =
+  > # this failure occurs after editor invocation
+  > pretxncommit.unexpectedabort = false
   > __EOF__
+
+  $ rm -f .hg/last-message.txt
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
+  transaction abort!
+  rollback completed
+  note: commit message saved in .hg/last-message.txt
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+  $ cat .hg/last-message.txt
+  custom tag message
+  second line
+
+  $ cat >> .hg/hgrc << '__EOF__'
+  > [hooks]
+  > pretxncommit.unexpectedabort =
+  > __EOF__
+  $ hg status .hgtags
+  M .hgtags
+  $ hg revert --no-backup -q .hgtags
 
 then, test custom commit message itself
 

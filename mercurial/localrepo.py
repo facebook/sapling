@@ -479,7 +479,8 @@ class localrepository(object):
         return hook.hook(self.ui, self, name, throw, **args)
 
     @unfilteredmethod
-    def _tag(self, names, node, message, local, user, date, extra={}):
+    def _tag(self, names, node, message, local, user, date, extra={},
+             editor=False):
         if isinstance(names, str):
             names = (names,)
 
@@ -539,14 +540,15 @@ class localrepository(object):
             self[None].add(['.hgtags'])
 
         m = matchmod.exact(self.root, '', ['.hgtags'])
-        tagnode = self.commit(message, user, date, extra=extra, match=m)
+        tagnode = self.commit(message, user, date, extra=extra, match=m,
+                              editor=editor)
 
         for name in names:
             self.hook('tag', node=hex(node), tag=name, local=local)
 
         return tagnode
 
-    def tag(self, names, node, message, local, user, date):
+    def tag(self, names, node, message, local, user, date, editor=False):
         '''tag a revision with one or more symbolic names.
 
         names is a list of strings or, when adding a single tag, names may be a
@@ -574,7 +576,7 @@ class localrepository(object):
                                        '(please commit .hgtags manually)'))
 
         self.tags() # instantiate the cache
-        self._tag(names, node, message, local, user, date)
+        self._tag(names, node, message, local, user, date, editor=editor)
 
     @filteredpropertycache
     def _tagscache(self):

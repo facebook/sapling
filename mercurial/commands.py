@@ -5684,15 +5684,18 @@ def tag(ui, repo, name1, *names, **opts):
             date = util.parsedate(date)
 
         if opts.get('edit'):
-            message = ui.edit(message, ui.username())
-            repo.savecommitmessage(message)
+            def editor(repo, ctx, subs):
+                return ui.edit(ctx.description() + "\n", ctx.user())
+        else:
+            editor = False
 
         # don't allow tagging the null rev
         if (not opts.get('remove') and
             scmutil.revsingle(repo, rev_).rev() == nullrev):
             raise util.Abort(_("cannot tag null revision"))
 
-        repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
+        repo.tag(names, r, message, opts.get('local'), opts.get('user'), date,
+                 editor=editor)
     finally:
         release(lock, wlock)
 
