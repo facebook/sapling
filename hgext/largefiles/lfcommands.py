@@ -21,6 +21,18 @@ import basestore
 
 # -- Commands ----------------------------------------------------------
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
+commands.inferrepo += " lfconvert"
+
+@command('lfconvert',
+    [('s', 'size', '',
+      _('minimum size (MB) for files to be converted as largefiles'), 'SIZE'),
+    ('', 'to-normal', False,
+     _('convert from a largefiles repo to a normal repo')),
+    ],
+    _('hg lfconvert SOURCE DEST [FILE ...]'))
 def lfconvert(ui, src, dest, *pats, **opts):
     '''convert a normal repository to a largefiles repository
 
@@ -519,6 +531,10 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
     finally:
         wlock.release()
 
+@command('lfpull',
+    [('r', 'rev', [], _('pull largefiles for these revisions'))
+    ] + commands.remoteopts,
+    _('-r REV... [-e CMD] [--remotecmd CMD] [SOURCE]'))
 def lfpull(ui, repo, source="default", **opts):
     """pull largefiles for the specified revisions from the specified source
 
@@ -553,24 +569,3 @@ def lfpull(ui, repo, source="default", **opts):
         (cached, missing) = cachelfiles(ui, repo, rev)
         numcached += len(cached)
     ui.status(_("%d largefiles cached\n") % numcached)
-
-# -- hg commands declarations ------------------------------------------------
-
-cmdtable = {
-    'lfconvert': (lfconvert,
-                  [('s', 'size', '',
-                    _('minimum size (MB) for files to be converted '
-                      'as largefiles'),
-                    'SIZE'),
-                  ('', 'to-normal', False,
-                   _('convert from a largefiles repo to a normal repo')),
-                  ],
-                  _('hg lfconvert SOURCE DEST [FILE ...]')),
-    'lfpull': (lfpull,
-               [('r', 'rev', [], _('pull largefiles for these revisions'))
-                ] +  commands.remoteopts,
-               _('-r REV... [-e CMD] [--remotecmd CMD] [SOURCE]')
-               ),
-    }
-
-commands.inferrepo += " lfconvert"
