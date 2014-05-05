@@ -4,6 +4,10 @@
 import sys
 import mercurial
 import code
+from mercurial import cmdutil
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 def pdb(ui, repo, msg, **opts):
     objects = {
@@ -24,6 +28,7 @@ def ipdb(ui, repo, msg, **opts):
 
     IPython.embed()
 
+@command('debugshell|dbsh', [])
 def debugshell(ui, repo, **opts):
     bannermsg = "loaded repo : %s\n" \
                 "using source: %s" % (repo.root,
@@ -47,7 +52,3 @@ def debugshell(ui, repo, **opts):
         debugger = 'pdb'
 
     getattr(sys.modules[__name__], debugger)(ui, repo, bannermsg, **opts)
-
-cmdtable = {
-    "debugshell|dbsh": (debugshell, [])
-}
