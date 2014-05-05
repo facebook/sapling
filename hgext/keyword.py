@@ -89,8 +89,6 @@ from mercurial.hgweb import webcommands
 from mercurial.i18n import _
 import os, re, shutil, tempfile
 
-commands.inferrepo += ' kwexpand kwfiles kwshrink'
-
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
@@ -454,7 +452,10 @@ def demo(ui, repo, *args, **opts):
     ui.write(repo.wread(fn))
     shutil.rmtree(tmpdir, ignore_errors=True)
 
-@command('kwexpand', commands.walkopts, _('hg kwexpand [OPTION]... [FILE]...'))
+@command('kwexpand',
+    commands.walkopts,
+    _('hg kwexpand [OPTION]... [FILE]...'),
+    inferrepo=True)
 def expand(ui, repo, *pats, **opts):
     '''expand keywords in the working directory
 
@@ -470,7 +471,8 @@ def expand(ui, repo, *pats, **opts):
           ('i', 'ignore', None, _('show files excluded from expansion')),
           ('u', 'unknown', None, _('only show unknown (not tracked) files')),
          ] + commands.walkopts,
-         _('hg kwfiles [OPTION]... [FILE]...'))
+         _('hg kwfiles [OPTION]... [FILE]...'),
+         inferrepo=True)
 def files(ui, repo, *pats, **opts):
     '''show files configured for keyword expansion
 
@@ -524,7 +526,10 @@ def files(ui, repo, *pats, **opts):
                      repo.pathto(f, cwd), label=label)
     fm.end()
 
-@command('kwshrink', commands.walkopts, _('hg kwshrink [OPTION]... [FILE]...'))
+@command('kwshrink',
+    commands.walkopts,
+    _('hg kwshrink [OPTION]... [FILE]...'),
+    inferrepo=True)
 def shrink(ui, repo, *pats, **opts):
     '''revert expanded keywords in the working directory
 
