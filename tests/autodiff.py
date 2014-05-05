@@ -1,8 +1,14 @@
 # Extension dedicated to test patch.diff() upgrade modes
 #
 #
-from mercurial import scmutil, patch, util
+from mercurial import cmdutil, scmutil, patch, util
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
+@command('autodiff',
+    [('', 'git', '', 'git upgrade mode (yes/no/auto/warn/abort)')],
+    '[OPTION]... [FILE]...')
 def autodiff(ui, repo, *pats, **opts):
     diffopts = patch.diffopts(ui, opts)
     git = opts.get('git', 'no')
@@ -36,11 +42,3 @@ def autodiff(ui, repo, *pats, **opts):
         ui.write(chunk)
     for fn in sorted(brokenfiles):
         ui.write(('data lost for: %s\n' % fn))
-
-cmdtable = {
-    "autodiff":
-        (autodiff,
-         [('', 'git', '', 'git upgrade mode (yes/no/auto/warn/abort)'),
-          ],
-         '[OPTION]... [FILE]...'),
-}

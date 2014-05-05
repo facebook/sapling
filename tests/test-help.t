@@ -652,18 +652,19 @@ Test command without options
 
   $ cat > helpext.py <<EOF
   > import os
-  > from mercurial import commands
+  > from mercurial import cmdutil, commands
   > 
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > @command('nohelp',
+  >     [('', 'longdesc', 3, 'x'*90),
+  >     ('n', '', None, 'normal desc'),
+  >     ('', 'newline', '', 'line1\nline2')],
+  >     'hg nohelp')
+  > @command('debugoptDEP', [('', 'dopt', None, 'option is DEPRECATED')])
   > def nohelp(ui, *args, **kwargs):
   >     pass
-  > 
-  > cmdtable = {
-  >     "debugoptDEP": (nohelp, [('', 'dopt', None, 'option is DEPRECATED')],),
-  >     "nohelp": (nohelp, [('', 'longdesc', 3, 'x'*90),
-  >                         ('n', '', None, 'normal desc'),
-  >                         ('', 'newline', '', 'line1\nline2'),
-  >                        ], "hg nohelp"),
-  > }
   > 
   > commands.norepo += ' nohelp'
   > EOF

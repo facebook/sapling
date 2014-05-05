@@ -16,19 +16,18 @@ Test alignment of multibyte characters
   > f = file('l', 'w'); f.write(l); f.close()
   > # instant extension to show list of options
   > f = file('showoptlist.py', 'w'); f.write("""# encoding: utf-8
+  > from mercurial import cmdutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > @command('showoptlist',
+  >     [('s', 'opt1', '', 'short width'  + ' %(s)s' * 8, '%(s)s'),
+  >     ('m', 'opt2', '', 'middle width' + ' %(m)s' * 8, '%(m)s'),
+  >     ('l', 'opt3', '', 'long width'   + ' %(l)s' * 8, '%(l)s')],
+  >     '')
   > def showoptlist(ui, repo, *pats, **opts):
   >     '''dummy command to show option descriptions'''
   >     return 0
-  > cmdtable = {
-  >     'showoptlist':
-  >         (showoptlist,
-  >          [('s', 'opt1', '', 'short width'  + ' %(s)s' * 8, '%(s)s'),
-  >           ('m', 'opt2', '', 'middle width' + ' %(m)s' * 8, '%(m)s'),
-  >           ('l', 'opt3', '', 'long width'   + ' %(l)s' * 8, '%(l)s')
-  >          ],
-  >          ""
-  >         )
-  > }
   > """ % globals())
   > f.close()
   > EOF
