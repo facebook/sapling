@@ -111,10 +111,12 @@ disable color.
 
 import os
 
-from mercurial import commands, dispatch, extensions, ui as uimod, util
+from mercurial import cmdutil, commands, dispatch, extensions, ui as uimod, util
 from mercurial import templater, error
 from mercurial.i18n import _
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 # start and stop parameters for effects
@@ -440,6 +442,7 @@ def extsetup(ui):
          _("when to colorize (boolean, always, auto, or never)"),
          _('TYPE')))
 
+@command('debugcolor', [], 'hg debugcolor')
 def debugcolor(ui, repo, **opts):
     global _styles
     _styles = {}
@@ -579,8 +582,3 @@ else:
         finally:
             # Explicitly reset original attributes
             _kernel32.SetConsoleTextAttribute(stdout, origattr)
-
-cmdtable = {
-    'debugcolor':
-        (debugcolor, [], ('hg debugcolor'))
-}
