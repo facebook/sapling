@@ -149,6 +149,8 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
         subj = '[PATCH %0*d of %d%s] %s' % (tlen, idx, total, flag, subj)
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     msg['X-Mercurial-Node'] = node
+    msg['X-Mercurial-Series-Index'] = '%i' % idx
+    msg['X-Mercurial-Series-Total'] = '%i' % total
     return msg, subj, ds
 
 emailopts = [
