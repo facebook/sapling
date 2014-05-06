@@ -281,7 +281,7 @@ def disabled():
         return dict((name, gettext(desc))
                     for name, desc in __index__.docs.iteritems()
                     if name not in _order)
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     paths = _disabledpaths()
@@ -304,7 +304,7 @@ def disabledext(name):
             return
         else:
             return gettext(__index__.docs.get(name))
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
 
     paths = _disabledpaths()

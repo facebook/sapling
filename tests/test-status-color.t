@@ -319,4 +319,17 @@ hg resolve with one unresolved, one resolved:
   \x1b[0;31;1mU a\x1b[0m (esc)
   \x1b[0;32;1mR b\x1b[0m (esc)
 
+color coding of error message with current availability of curses
+
+  $ hg unknowncommand > /dev/null
+  hg: unknown command 'unknowncommand'
+  [255]
+
+color coding of error message without curses
+
+  $ echo 'raise ImportError' > curses.py
+  $ PYTHONPATH=`pwd`:$PYTHONPATH hg unknowncommand > /dev/null
+  hg: unknown command 'unknowncommand'
+  [255]
+
   $ cd ..
