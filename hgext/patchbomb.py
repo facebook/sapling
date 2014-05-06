@@ -519,6 +519,7 @@ def patchbomb(ui, repo, *revs, **opts):
             m['References'] = parent
         if not parent or 'X-Mercurial-Node' not in m:
             parent = m['Message-Id']
+        m['X-Mercurial-Series-Id'] = parent
 
         m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
         m['Date'] = email.Utils.formatdate(start_time[0], localtime=True)
