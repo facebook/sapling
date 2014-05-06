@@ -205,12 +205,13 @@ def submerge(repo, wctx, mctx, actx, overwrite):
                 sm[s] = r
             else:
                 debug(s, "both sides changed")
+                srepo = wctx.sub(s)
                 option = repo.ui.promptchoice(
                     _(' subrepository %s diverged (local revision: %s, '
                       'remote revision: %s)\n'
                       '(M)erge, keep (l)ocal or keep (r)emote?'
                       '$$ &Merge $$ &Local $$ &Remote')
-                    % (s, l[1][:12], r[1][:12]), 0)
+                    % (s, srepo.shortid(l[1]), srepo.shortid(r[1])), 0)
                 if option == 0:
                     wctx.sub(s).merge(r)
                     sm[s] = l

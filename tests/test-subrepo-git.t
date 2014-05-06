@@ -155,7 +155,7 @@ user a pulls, merges, commits
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge 2>/dev/null
-   subrepository s diverged (local revision: 796959400868, remote revision: aa84837ccfbd)
+   subrepository s diverged (local revision: 7969594, remote revision: aa84837)
   (M)erge, keep (l)ocal or keep (r)emote? m
   pulling subrepo s from $TESTTMP/gitroot
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -464,7 +464,7 @@ Sticky subrepositories, file changes
   da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
   $ cd ..
   $ hg update 4
-   subrepository s diverged (local revision: da5f5b1d8ffc, remote revision: aa84837ccfbd)
+   subrepository s diverged (local revision: da5f5b1, remote revision: aa84837)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
   use (l)ocal source (da5f5b1) or (r)emote source (aa84837)?
@@ -491,7 +491,7 @@ Sticky subrepository, revision updates
   HEAD is now at aa84837... f
   $ cd ..
   $ hg update 1
-   subrepository s diverged (local revision: 32a343883b74, remote revision: da5f5b1d8ffc)
+   subrepository s diverged (local revision: 32a3438, remote revision: da5f5b1)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ (in checked out version)
   use (l)ocal source (32a3438) or (r)emote source (da5f5b1)?
@@ -514,7 +514,7 @@ Sticky subrepository, file changes and revision updates
   $ hg id -n
   1+
   $ hg update 7
-   subrepository s diverged (local revision: 32a343883b74, remote revision: 32a343883b74)
+   subrepository s diverged (local revision: 32a3438, remote revision: 32a3438)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
   use (l)ocal source (32a3438) or (r)emote source (32a3438)?
