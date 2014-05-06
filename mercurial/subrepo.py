@@ -501,6 +501,9 @@ class abstractsubrepo(object):
             % (substate[0], substate[2]))
         return []
 
+    def shortid(self, revid):
+        return revid
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -865,6 +868,9 @@ class hgsubrepo(abstractsubrepo):
         else:
             pats = []
         cmdutil.revert(ui, self._repo, ctx, parents, *pats, **opts)
+
+    def shortid(self, revid):
+        return revid[:12]
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
@@ -1560,6 +1566,9 @@ class gitsubrepo(abstractsubrepo):
 
         deleted = unknown = ignored = clean = []
         return modified, added, removed, deleted, unknown, ignored, clean
+
+    def shortid(self, revid):
+        return revid[:7]
 
 types = {
     'hg': hgsubrepo,
