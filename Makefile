@@ -132,6 +132,29 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	msgmerge --no-location --update $@.tmp $^
 	mv -f $@.tmp $@
 
+# Packaging targets
+
+fedora:
+	mkdir -p build/fedora
+	echo y | contrib/buildrpm
+	cp rpmbuild/RPMS/*/* build/fedora
+	cp rpmbuild/SRPMS/* build/fedora
+	rm -rf rpmbuild
+
+docker-fedora:
+	mkdir -p build/fedora
+	contrib/dockerrpm fedora
+
+centos6:
+	mkdir -p build/centos6
+	echo y | contrib/buildrpm
+	cp rpmbuild/RPMS/*/* build/centos6
+	cp rpmbuild/SRPMS/* build/centos6
+
+docker-centos6:
+	mkdir -p build/centos6
+	contrib/dockerrpm centos6
+
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc dist dist-notests tests \
-	update-pot
+	update-pot fedora docker-fedora

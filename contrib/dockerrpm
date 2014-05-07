@@ -1,0 +1,14 @@
+#!/bin/bash
+
+BUILDDIR=$(dirname $0)
+ROOTDIR=$(cd $BUILDDIR/..; pwd)
+
+if which docker >> /dev/null ; then
+  DOCKER=docker
+elif which docker.io >> /dev/null ; then
+  DOCKER=docker.io
+fi
+
+$DOCKER build --tag "hg-dockerrpm-$1" - < $BUILDDIR/docker/$1
+$DOCKER run --rm -v $ROOTDIR:/hg "hg-dockerrpm-$1" bash -c \
+    "cp -a hg hg-build; cd hg-build; make clean local $1; cp build/$1/* /hg/build/$1/"
