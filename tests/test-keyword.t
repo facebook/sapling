@@ -1049,11 +1049,11 @@ conflict: keyword should stay outside conflict zone
   [1]
   $ cat m
   $Id$
-  <<<<<<< local
+  <<<<<<< local: 88a80c8d172e - test: "8bar"
   bar
   =======
   foo
-  >>>>>>> other
+  >>>>>>> other: 85d2d2d732a5  - test: "simplemerge"
 
 resolve to local
 

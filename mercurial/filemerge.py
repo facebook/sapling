@@ -7,7 +7,7 @@
 
 from node import short
 from i18n import _
-import util, simplemerge, match, error
+import util, simplemerge, match, error, templater, templatekw
 import os, tempfile, re, filecmp
 
 def _toolstr(ui, tool, part, default=""):
@@ -269,6 +269,55 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         return True, r
     return False, 0
 
+def _formatconflictmarker(repo, ctx, template, label, pad):
+    """Applies the given template to the ctx, prefixed by the label.
+
+    Pad is the minimum width of the label prefix, so that multiple markers
+    can have aligned templated parts.
+    """
+    if ctx.node() is None:
+        ctx = ctx.p1()
+
+    props = templatekw.keywords.copy()
+    props['templ'] = template
+    props['ctx'] = ctx
+    props['repo'] = repo
+    templateresult = template('conflictmarker', **props)
+
+    label = ('%s:' % label).ljust(pad + 1)
+    mark = '%s %s' % (label, templater.stringify(templateresult))
+
+    # The <<< marks add 8 to the length, and '...' adds three, so max
+    # length of the actual marker is 69.
+    maxlength = 80 - 8 - 3
+    if len(mark) > maxlength:
+        mark = mark[:maxlength] + '...'
+    return mark
+
+_defaultconflictmarker = ('{node|short} ' +
+    '{ifeq(tags, "tip", "", "{tags} ")}' +
+    '{if(bookmarks, "{bookmarks} ")}' +
+    '{ifeq(branch, "default", "", "{branch} ")}' +
+    '- {author|user}: "{desc|firstline}"')
+
+def _formatlabels(repo, fcd, fco, labels):
+    """Formats the given labels using the conflict marker template.
+
+    Returns a list of formatted labels.
+    """
+    cd = fcd.changectx()
+    co = fco.changectx()
+
+    ui = repo.ui
+    template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
+    template = templater.parsestring(template, quoted=False)
+    tmpl = templater.templater(None, cache={ 'conflictmarker' : template })
+
+    pad = max(len(labels[0]), len(labels[1]))
+
+    return [_formatconflictmarker(repo, cd, tmpl, labels[0], pad),
+            _formatconflictmarker(repo, co, tmpl, labels[1], pad)]
+
 def filemerge(repo, mynode, orig, fcd, fco, fca):
     """perform a 3-way merge in the working directory
 
@@ -326,9 +375,15 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
+    markerstyle = ui.config('ui', 'mergemarkers', 'detailed')
     labels = ['local', 'other']
+    if markerstyle == 'basic':
+        formattedlabels = labels
+    else:
+        formattedlabels = _formatlabels(repo, fcd, fco, labels)
+
     needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                        (a, b, c, back), labels=labels)
+                        (a, b, c, back), labels=formattedlabels)
     if not needcheck:
         if r:
             if onfailure:

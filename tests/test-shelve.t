@@ -210,11 +210,11 @@ ensure that we have a merge with unresolved conflicts
   +++ b/a/a
   @@ -1,2 +1,6 @@
    a
-  +<<<<<<< local
+  +<<<<<<< local: *  - shelve: "pending changes temporary commit" (glob)
    c
   +=======
   +a
-  +>>>>>>> other
+  +>>>>>>> other: * - shelve: "changes to '[mq]: second.patch'" (glob)
   diff --git a/b.rename/b b/b.rename/b
   new file mode 100644
   --- /dev/null
@@ -604,11 +604,11 @@ unshelve and conflicts with tracked and untracked files
   M f
   ? f.orig
   $ cat f
-  <<<<<<< local
+  <<<<<<< local: 5f6b880e719b  - shelve: "pending changes temporary commit"
   g
   =======
   f
-  >>>>>>> other
+  >>>>>>> other: 23b29cada8ba - shelve: "changes to 'commit stuff'"
   $ cat f.orig
   g
   $ hg unshelve --abort
@@ -647,11 +647,11 @@ unshelve and conflicts with tracked and untracked files
   M f
   ? f.orig
   $ cat f
-  <<<<<<< local
+  <<<<<<< local: 6b563750f973  - test: "intermediate other change"
   g
   =======
   f
-  >>>>>>> other
+  >>>>>>> other: 23b29cada8ba - shelve: "changes to 'commit stuff'"
   $ cat f.orig
   g
   $ hg unshelve --abort

@@ -1208,6 +1208,20 @@ User interface controls.
     For more information on merge tools see :hg:`help merge-tools`.
     For configuring merge tools see the ``[merge-tools]`` section.
 
+``mergemarkers``
+    Sets the merge conflict marker label styling. The default ``detailed``
+    style uses the ``mergemarkertemplate`` setting to style the labels.
+    The ``basic`` style just uses 'local' and 'other' as the marker label.
+    One of ``basic`` or ``detailed``.
+    Default is ``detailed``.
+
+``mergemarkertemplate``
+    The template used to print the commit description next to each conflict
+    marker during merge conflicts. See :hg:`help templates` for the template
+    format.
+    Defaults to showing the hash, tags, branches, bookmarks, author, and
+    the first line of the commit description.
+
 ``portablefilenames``
     Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.
     Default is ``warn``.

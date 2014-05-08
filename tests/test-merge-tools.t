@@ -66,11 +66,11 @@ running from a devel copy, not a temp installation
   [1]
   $ aftermerge
   # cat f
-  <<<<<<< local
+  <<<<<<< local: ef83787e2614  - test: "revision 1"
   revision 1
   =======
   revision 2
-  >>>>>>> other
+  >>>>>>> other: 0185f4e0cf02  - test: "revision 2"
   space
   # hg stat
   M f

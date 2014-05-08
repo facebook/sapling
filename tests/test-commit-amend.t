@@ -589,7 +589,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   no more unresolved files
   $ hg ci -m 'merge bar'
   $ hg log --config diff.git=1 -pr .
-  changeset:   23:d51446492733
+  changeset:   23:29ee7aa200c8
   tag:         tip
   parent:      22:30d96aeaf27b
   parent:      21:1aa437659d19
@@ -604,11 +604,11 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   --- a/cc
   +++ b/cc
   @@ -1,1 +1,5 @@
-  +<<<<<<< local
+  +<<<<<<< local: 30d96aeaf27b - test: "aa"
    dd
   +=======
   +cc
-  +>>>>>>> other
+  +>>>>>>> other: 1aa437659d19  bar - test: "aazzcc"
   diff --git a/z b/zz
   rename from z
   rename to zz
@@ -621,7 +621,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   cc not renamed
   $ hg ci --amend -m 'merge bar (amend message)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   24:59de3dce7a79
+  changeset:   24:ba3eb3e8e8c2
   tag:         tip
   parent:      22:30d96aeaf27b
   parent:      21:1aa437659d19
@@ -636,11 +636,11 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   --- a/cc
   +++ b/cc
   @@ -1,1 +1,5 @@
-  +<<<<<<< local
+  +<<<<<<< local: 30d96aeaf27b - test: "aa"
    dd
   +=======
   +cc
-  +>>>>>>> other
+  +>>>>>>> other: 1aa437659d19  bar - test: "aazzcc"
   diff --git a/z b/zz
   rename from z
   rename to zz
@@ -654,7 +654,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   $ hg mv zz z
   $ hg ci --amend -m 'merge bar (undo rename)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   26:7fb89c461f81
+  changeset:   26:0ce8747233f6
   tag:         tip
   parent:      22:30d96aeaf27b
   parent:      21:1aa437659d19
@@ -669,11 +669,11 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   --- a/cc
   +++ b/cc
   @@ -1,1 +1,5 @@
-  +<<<<<<< local
+  +<<<<<<< local: 30d96aeaf27b - test: "aa"
    dd
   +=======
   +cc
-  +>>>>>>> other
+  +>>>>>>> other: 1aa437659d19  bar - test: "aazzcc"
   
   $ hg debugrename z
   z not renamed
@@ -690,9 +690,9 @@ Amend a merge changeset (with renames during the merge):
   $ echo aa >> aaa
   $ hg ci -m 'merge bar again'
   $ hg log --config diff.git=1 -pr .
-  changeset:   28:982d7a34ffee
+  changeset:   28:b8235574e741
   tag:         tip
-  parent:      26:7fb89c461f81
+  parent:      26:0ce8747233f6
   parent:      27:4c94d5bc65f5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -725,9 +725,9 @@ Amend a merge changeset (with renames during the merge):
   $ hg mv aaa aa
   $ hg ci --amend -m 'merge bar again (undo rename)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   30:522688c0e71b
+  changeset:   30:dbafc132c18a
   tag:         tip
-  parent:      26:7fb89c461f81
+  parent:      26:0ce8747233f6
   parent:      27:4c94d5bc65f5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -765,9 +765,9 @@ Amend a merge changeset (with manifest-level conflicts):
   use (c)hanged version or (d)elete? c
   $ hg ci -m 'merge bar (with conflicts)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   33:5f9904c491b8
+  changeset:   33:8b0c83445ff5
   tag:         tip
-  parent:      32:01780b896f58
+  parent:      32:f60ace0fe178
   parent:      31:67db8847a540
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -777,9 +777,9 @@ Amend a merge changeset (with manifest-level conflicts):
   $ hg rm aa
   $ hg ci --amend -m 'merge bar (with conflicts, amended)'
   $ hg log --config diff.git=1 -pr .
-  changeset:   35:6ce0c89781a3
+  changeset:   35:f9b6726d8bd2
   tag:         tip
-  parent:      32:01780b896f58
+  parent:      32:f60ace0fe178
   parent:      31:67db8847a540
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
