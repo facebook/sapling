@@ -574,8 +574,8 @@ def _pullbundle2(pullop):
     # pulling changegroup
     pullop.todosteps.remove('changegroup')
     if not pullop.fetch:
-            pullop.repo.ui.status(_("no changes found\n"))
-            pullop.cgresult = 0
+        pullop.repo.ui.status(_("no changes found\n"))
+        pullop.cgresult = 0
     else:
         kwargs['common'] = pullop.common
         kwargs['heads'] = pullop.heads or pullop.rheads
