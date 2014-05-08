@@ -142,3 +142,25 @@ def canonpath(root, cwd, myname, auditor=None):
             name = dirname
 
         raise util.Abort(_("%s not under root '%s'") % (myname, root))
+
+def normasprefix(path):
+    '''normalize the specified path as path prefix
+
+    Returned vaule can be used safely for "p.startswith(prefix)",
+    "p[len(prefix):]", and so on.
+
+    For efficiency, this expects "path" argument to be already
+    normalized by "os.path.normpath", "os.path.realpath", and so on.
+
+    See also issue3033 for detail about need of this function.
+
+    >>> normasprefix('/foo/bar').replace(os.sep, '/')
+    '/foo/bar/'
+    >>> normasprefix('/').replace(os.sep, '/')
+    '/'
+    '''
+    d, p = os.path.splitdrive(path)
+    if len(p) != len(os.sep):
+        return path + os.sep
+    else:
+        return path
