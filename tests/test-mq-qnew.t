@@ -302,6 +302,8 @@ Test saving last-message.txt
   > pretxncommit.unexpectedabort =
   > EOF
 
+#if unix-permissions
+
 Test handling default message with the patch filename with tail whitespaces
 
   $ cat > $TESTTMP/editor.sh << EOF
@@ -321,3 +323,5 @@ Test handling default message with the patch filename with tail whitespaces
   # Parent 0000000000000000000000000000000000000000
 
   $ cd ..
+
+#endif
