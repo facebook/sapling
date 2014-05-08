@@ -676,4 +676,10 @@ Test sanitizing ".hg/hgrc" in subrepo
   cat: s/sub/.hg/hgrc: No such file or directory
   [1]
 
+Test that sanitizing is omitted in meta data area:
+
+  $ mkdir s/.svn/.hg
+  $ echo '.hg/hgrc in svn metadata area' > s/.svn/.hg/hgrc
+  $ hg update -q -C '.^1'
+
   $ cd ../..
