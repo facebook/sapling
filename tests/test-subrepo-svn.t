@@ -632,3 +632,48 @@ well.
   Checked out revision 15.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
+
+Test sanitizing ".hg/hgrc" in subrepo
+
+  $ cd sub/t
+  $ hg update -q -C tip
+  $ cd s
+  $ mkdir .hg
+  $ echo '.hg/hgrc in svn repo' > .hg/hgrc
+  $ mkdir -p sub/.hg
+  $ echo 'sub/.hg/hgrc in svn repo' > sub/.hg/hgrc
+  $ svn add .hg sub
+  A         .hg
+  A         .hg/hgrc (glob)
+  A         sub
+  A         sub/.hg (glob)
+  A         sub/.hg/hgrc (glob)
+  $ svn ci -m 'add .hg/hgrc to be sanitized at hg update'
+  Adding         .hg
+  Adding         .hg/hgrc (glob)
+  Adding         sub
+  Adding         sub/.hg (glob)
+  Adding         sub/.hg/hgrc (glob)
+  Transmitting file data ..
+  Committed revision 16.
+  $ svn up -q
+  $ cd ..
+  $ hg commit -S -m 'commit with svn revision including .hg/hgrc'
+  $ grep ' s$' .hgsubstate
+  16 s
+  $ cd ..
+
+  $ cd tc
+  $ hg pull -u -q 2>&1 | sort
+  warning: removing potentially hostile 'hgrc' in 's/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in 's/sub/.hg' (glob)
+  $ grep ' s$' .hgsubstate
+  16 s
+  $ cat s/.hg/hgrc
+  cat: s/.hg/hgrc: No such file or directory
+  [1]
+  $ cat s/sub/.hg/hgrc
+  cat: s/sub/.hg/hgrc: No such file or directory
+  [1]
+
+  $ cd ../..

@@ -566,3 +566,45 @@ traceback
 #endif
 
   $ cd ..
+
+Test sanitizing ".hg/hgrc" in subrepo
+
+  $ cd t
+  $ hg tip -q
+  7:af6d2edbb0d3
+  $ hg update -q -C af6d2edbb0d3
+  $ cd s
+  $ git checkout -q -b sanitize-test
+  $ mkdir .hg
+  $ echo '.hg/hgrc in git repo' > .hg/hgrc
+  $ mkdir -p sub/.hg
+  $ echo 'sub/.hg/hgrc in git repo' > sub/.hg/hgrc
+  $ git add .hg sub
+  $ git commit -qm 'add .hg/hgrc to be sanitized at hg update'
+  $ git push -q origin sanitize-test
+  $ cd ..
+  $ grep ' s$' .hgsubstate
+  32a343883b74769118bb1d3b4b1fbf9156f4dddc s
+  $ hg commit -qm 'commit with git revision including .hg/hgrc'
+  $ hg parents -q
+  8:3473d20bddcf
+  $ grep ' s$' .hgsubstate
+  c4069473b459cf27fd4d7c2f50c4346b4e936599 s
+  $ cd ..
+
+  $ cd tc
+  $ hg pull -q
+  $ hg update -q -C 3473d20bddcf 2>&1 | sort
+  warning: removing potentially hostile 'hgrc' in 's/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in 's/sub/.hg' (glob)
+  $ hg parents -q
+  8:3473d20bddcf
+  $ grep ' s$' .hgsubstate
+  c4069473b459cf27fd4d7c2f50c4346b4e936599 s
+  $ cat s/.hg/hgrc
+  cat: s/.hg/hgrc: No such file or directory
+  [1]
+  $ cat s/sub/.hg/hgrc
+  cat: s/sub/.hg/hgrc: No such file or directory
+  [1]
+  $ cd ..

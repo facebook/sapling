@@ -315,16 +315,14 @@ def _abssource(repo, push=False, abort=True):
         raise util.Abort(_("default path for subrepository not found"))
 
 def _sanitize(ui, path):
-    def v(arg, dirname, names):
+    for dirname, dirs, names in os.walk(path):
         if os.path.basename(dirname).lower() != '.hg':
-            return
+            continue
         for f in names:
             if f.lower() == 'hgrc':
-                ui.warn(
-                    _("warning: removing potentially hostile .hg/hgrc in '%s'")
-                      % path)
+                ui.warn(_("warning: removing potentially hostile 'hgrc' "
+                          "in '%s'\n") % dirname)
                 os.unlink(os.path.join(dirname, f))
-    os.walk(path, v, None)
 
 def subrepo(ctx, path):
     """return instance of the right subrepo class for subrepo in path"""
