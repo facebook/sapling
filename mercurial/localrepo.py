@@ -857,7 +857,8 @@ class localrepository(object):
         # abort here if the journal already exists
         if self.svfs.exists("journal"):
             raise error.RepoError(
-                _("abandoned transaction found - run hg recover"))
+                _("abandoned transaction found"),
+                hint=_("run 'hg recover' to clean up transaction"))
 
         def onclose():
             self.store.write(tr)
