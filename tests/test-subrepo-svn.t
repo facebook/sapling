@@ -663,10 +663,10 @@ Test sanitizing ".hg/hgrc" in subrepo
   16 s
   $ cd ..
 
+  $ hg -R tc pull -u -q 2>&1 | sort
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/sub/tc/s/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/sub/tc/s/sub/.hg' (glob)
   $ cd tc
-  $ hg pull -u -q 2>&1 | sort
-  warning: removing potentially hostile 'hgrc' in 's/.hg' (glob)
-  warning: removing potentially hostile 'hgrc' in 's/sub/.hg' (glob)
   $ grep ' s$' .hgsubstate
   16 s
   $ cat s/.hg/hgrc

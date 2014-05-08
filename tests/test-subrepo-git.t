@@ -592,11 +592,11 @@ Test sanitizing ".hg/hgrc" in subrepo
   c4069473b459cf27fd4d7c2f50c4346b4e936599 s
   $ cd ..
 
+  $ hg -R tc pull -q
+  $ hg -R tc update -q -C 3473d20bddcf 2>&1 | sort
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/sub/.hg' (glob)
   $ cd tc
-  $ hg pull -q
-  $ hg update -q -C 3473d20bddcf 2>&1 | sort
-  warning: removing potentially hostile 'hgrc' in 's/.hg' (glob)
-  warning: removing potentially hostile 'hgrc' in 's/sub/.hg' (glob)
   $ hg parents -q
   8:3473d20bddcf
   $ grep ' s$' .hgsubstate
@@ -642,10 +642,12 @@ additional test for "git merge --ff" route:
   $ cat s/sub/.hg/hgrc
   cat: s/sub/.hg/hgrc: No such file or directory
   [1]
-  $ hg pull -q
-  $ hg update -q -C ed23f7fe024e 2>&1 | sort
-  warning: removing potentially hostile 'hgrc' in 's/.hg' (glob)
-  warning: removing potentially hostile 'hgrc' in 's/sub/.hg' (glob)
+  $ cd ..
+  $ hg -R tc pull -q
+  $ hg -R tc update -q -C ed23f7fe024e 2>&1 | sort
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/sub/.hg' (glob)
+  $ cd tc
   $ hg parents -q
   9:ed23f7fe024e
   $ grep ' s$' .hgsubstate
