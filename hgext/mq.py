@@ -2581,7 +2581,7 @@ def fold(ui, repo, *files, **opts):
 
     if not message:
         ph = patchheader(q.join(parent), q.plainmode)
-        message, user = ph.message, ph.user
+        message = ph.message
         for msg in messages:
             if msg:
                 if message:
