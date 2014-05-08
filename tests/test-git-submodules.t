@@ -187,7 +187,11 @@ same name has existed at any point historically, so use alpha instead of subrepo
   6e4ad8da50204560c00fa25e4987eb2e239029ba subrepo2
   $ hg cat -r 4 .hgsub
   subrepo2 = [git]../gitsubrepo
-  $ hg cat -r 4 subrepo
+  $ hg manifest -r 4
+  .gitmodules
+  .hgsub
+  .hgsubstate
+  alpha
   subrepo
   $ hg gverify -r 4
   verifying rev e233b0858578 against git commit f6436a472da00f581d8d257e9bbaf3c358a5e88c
@@ -199,9 +203,11 @@ same name has existed at any point historically, so use alpha instead of subrepo
   $ hg cat -r 5 .hgsub
   subrepo2 = [git]../gitsubrepo
   alpha = [git]../gitsubrepo
-  $ hg cat -r 5 alpha
-  alpha: no such file in rev 97f89374a0ce
-  [1]
+  $ hg manifest -r 5
+  .gitmodules
+  .hgsub
+  .hgsubstate
+  subrepo
   $ hg gverify -r 5
   verifying rev 97f89374a0ce against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
 
