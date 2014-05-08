@@ -531,7 +531,8 @@ def rebasenode(repo, rev, p1, state, collapse):
         repo.ui.debug("   detach base %d:%s\n" % (repo[base].rev(), repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
-    return merge.update(repo, rev, True, True, False, base, collapse)
+    return merge.update(repo, rev, True, True, False, base, collapse,
+                        labels=['dest', 'source'])
 
 def nearestrebased(repo, rev, state):
     """return the nearest ancestors of rev in the rebase result"""
