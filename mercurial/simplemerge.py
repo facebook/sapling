@@ -416,11 +416,11 @@ def simplemerge(ui, local, base, other, **opts):
     name_a = local
     name_b = other
     labels = opts.get('label', [])
-    if labels:
-        name_a = labels.pop(0)
-    if labels:
-        name_b = labels.pop(0)
-    if labels:
+    if len(labels) > 0:
+        name_a = labels[0]
+    if len(labels) > 1:
+        name_b = labels[1]
+    if len(labels) > 2:
         raise util.Abort(_("can only specify two labels."))
 
     try:
