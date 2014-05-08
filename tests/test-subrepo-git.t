@@ -608,3 +608,52 @@ Test sanitizing ".hg/hgrc" in subrepo
   cat: s/sub/.hg/hgrc: No such file or directory
   [1]
   $ cd ..
+
+additional test for "git merge --ff" route:
+
+  $ cd t
+  $ hg tip -q
+  8:3473d20bddcf
+  $ hg update -q -C af6d2edbb0d3
+  $ cd s
+  $ git checkout -q testing
+  $ mkdir .hg
+  $ echo '.hg/hgrc in git repo' > .hg/hgrc
+  $ mkdir -p sub/.hg
+  $ echo 'sub/.hg/hgrc in git repo' > sub/.hg/hgrc
+  $ git add .hg sub
+  $ git commit -qm 'add .hg/hgrc to be sanitized at hg update (git merge --ff)'
+  $ git push -q origin testing
+  $ cd ..
+  $ grep ' s$' .hgsubstate
+  32a343883b74769118bb1d3b4b1fbf9156f4dddc s
+  $ hg commit -qm 'commit with git revision including .hg/hgrc'
+  $ hg parents -q
+  9:ed23f7fe024e
+  $ grep ' s$' .hgsubstate
+  f262643c1077219fbd3858d54e78ef050ef84fbf s
+  $ cd ..
+
+  $ cd tc
+  $ hg update -q -C af6d2edbb0d3
+  $ cat s/.hg/hgrc
+  cat: s/.hg/hgrc: No such file or directory
+  [1]
+  $ cat s/sub/.hg/hgrc
+  cat: s/sub/.hg/hgrc: No such file or directory
+  [1]
+  $ hg pull -q
+  $ hg update -q -C ed23f7fe024e 2>&1 | sort
+  warning: removing potentially hostile 'hgrc' in 's/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in 's/sub/.hg' (glob)
+  $ hg parents -q
+  9:ed23f7fe024e
+  $ grep ' s$' .hgsubstate
+  f262643c1077219fbd3858d54e78ef050ef84fbf s
+  $ cat s/.hg/hgrc
+  cat: s/.hg/hgrc: No such file or directory
+  [1]
+  $ cat s/sub/.hg/hgrc
+  cat: s/sub/.hg/hgrc: No such file or directory
+  [1]
+  $ cd ..

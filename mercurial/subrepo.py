@@ -1392,6 +1392,7 @@ class gitsubrepo(abstractsubrepo):
             if tracking[remote] != self._gitcurrentbranch():
                 checkout([tracking[remote]])
             self._gitcommand(['merge', '--ff', remote])
+            _sanitize(self._ui, self._path)
         else:
             # a real merge would be required, just checkout the revision
             rawcheckout()
