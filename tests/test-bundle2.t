@@ -799,6 +799,12 @@ pull
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
+pull empty
+
+  $ hg -R other pull -r 24b6387c8c8c
+  pulling from $TESTTMP/main (glob)
+  no changes found
+
 push
 
   $ hg -R main push other --rev eea13746799a
