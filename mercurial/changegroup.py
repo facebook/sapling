@@ -493,14 +493,14 @@ def getlocalbundle(repo, source, outgoing, bundlecaps=None):
     bundler = bundle10(repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
-def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
-    """Like changegroupsubset, but returns the set difference between the
-    ancestors of heads and the ancestors common.
+def _computeoutgoing(repo, heads, common):
+    """Computes which revs are outgoing given a set of common
+    and a set of heads.
 
-    If heads is None, use the local heads. If common is None, use [nullid].
+    This is a separate function so extensions can have access to
+    the logic.
 
-    The nodes in common might not all be known locally due to the way the
-    current discovery protocol works.
+    Returns a discovery.outgoing object.
     """
     cl = repo.changelog
     if common:
@@ -510,7 +510,18 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
         common = [nullid]
     if not heads:
         heads = cl.heads()
-    outgoing = discovery.outgoing(cl, common, heads)
+    return discovery.outgoing(cl, common, heads)
+
+def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
+    """Like changegroupsubset, but returns the set difference between the
+    ancestors of heads and the ancestors common.
+
+    If heads is None, use the local heads. If common is None, use [nullid].
+
+    The nodes in common might not all be known locally due to the way the
+    current discovery protocol works.
+    """
+    outgoing = _computeoutgoing(repo, heads, common)
     return getlocalbundle(repo, source, outgoing, bundlecaps=bundlecaps)
 
 def changegroup(repo, basenodes, source):
