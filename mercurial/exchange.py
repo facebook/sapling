@@ -573,12 +573,13 @@ def _pullbundle2(pullop):
     kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
     # pulling changegroup
     pullop.todosteps.remove('changegroup')
+
+    kwargs['common'] = pullop.common
+    kwargs['heads'] = pullop.heads or pullop.rheads
     if not pullop.fetch:
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
     else:
-        kwargs['common'] = pullop.common
-        kwargs['heads'] = pullop.heads or pullop.rheads
         if pullop.heads is None and list(pullop.common) == [nullid]:
             pullop.repo.ui.status(_("requesting all changes\n"))
     _pullbundle2extraprepare(pullop, kwargs)
@@ -589,8 +590,10 @@ def _pullbundle2(pullop):
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
     except bundle2.UnknownPartError, exc:
         raise util.Abort('missing support for %s' % exc)
-    assert len(op.records['changegroup']) == 1
-    pullop.cgresult = op.records['changegroup'][0]['return']
+
+    if pullop.fetch:
+        assert len(op.records['changegroup']) == 1
+        pullop.cgresult = op.records['changegroup'][0]['return']
 
 def _pullbundle2extraprepare(pullop, kwargs):
     """hook function so that extensions can extend the getbundle call"""
@@ -684,7 +687,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     The implementation is at a very early stage and will get massive rework
     when the API of bundle is refined.
     """
-    # build bundle here.
+    # build changegroup bundle here.
     cg = changegroup.getbundle(repo, source, heads=heads,
                                common=common, bundlecaps=bundlecaps)
     if bundlecaps is None or 'HG2X' not in bundlecaps:
@@ -697,8 +700,9 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
             blob = urllib.unquote(bcaps[len('bundle2='):])
             b2caps.update(bundle2.decodecaps(blob))
     bundler = bundle2.bundle20(repo.ui, b2caps)
-    part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
-    bundler.addpart(part)
+    if cg:
+        part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
+        bundler.addpart(part)
     _getbundleextrapart(bundler, repo, source, heads=heads, common=common,
                         bundlecaps=bundlecaps, **kwargs)
     return util.chunkbuffer(bundler.getchunks())
