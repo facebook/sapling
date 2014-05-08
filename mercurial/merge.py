@@ -55,6 +55,8 @@ class mergestate(object):
 
     def reset(self, node=None, other=None):
         self._state = {}
+        self._local = None
+        self._other = None
         if node:
             self._local = node
             self._other = other
@@ -68,6 +70,8 @@ class mergestate(object):
         of on disk file.
         """
         self._state = {}
+        self._local = None
+        self._other = None
         records = self._readrecords()
         for rtype, record in records:
             if rtype == 'L':
