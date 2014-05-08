@@ -699,8 +699,8 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     bundler = bundle2.bundle20(repo.ui, b2caps)
     part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
     bundler.addpart(part)
-    _getbundleextrapart(bundler, repo, source, heads=None, common=None,
-                        bundlecaps=None, **kwargs)
+    _getbundleextrapart(bundler, repo, source, heads=heads, common=common,
+                        bundlecaps=bundlecaps, **kwargs)
     return util.chunkbuffer(bundler.getchunks())
 
 def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
