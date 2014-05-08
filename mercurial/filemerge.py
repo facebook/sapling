@@ -169,7 +169,7 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
     used to resolve these conflicts."""
     return 1
 
-def _premerge(repo, toolconf, files):
+def _premerge(repo, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
     if symlink:
         return 1
@@ -190,7 +190,7 @@ def _premerge(repo, toolconf, files):
                                     (tool, premerge, _valid))
 
     if premerge:
-        r = simplemerge.simplemerge(ui, a, b, c, quiet=True)
+        r = simplemerge.simplemerge(ui, a, b, c, quiet=True, label=labels)
         if not r:
             ui.debug(" premerge successful\n")
             return 0
@@ -201,7 +201,7 @@ def _premerge(repo, toolconf, files):
 @internaltool('merge', True,
               _("merging %s incomplete! "
                 "(edit conflicts, then use 'hg resolve --mark')\n"))
-def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
+def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
     files. It will fail if there are any conflicts and leave markers in
@@ -211,19 +211,18 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
         repo.ui.warn(_('warning: internal:merge cannot merge symlinks '
                        'for %s\n') % fcd.path())
         return False, 1
-
-    r = _premerge(repo, toolconf, files)
+    r = _premerge(repo, toolconf, files, labels=labels)
     if r:
         a, b, c, back = files
 
         ui = repo.ui
 
-        r = simplemerge.simplemerge(ui, a, b, c, label=['local', 'other'])
+        r = simplemerge.simplemerge(ui, a, b, c, label=labels)
         return True, r
     return False, 0
 
 @internaltool('dump', True)
-def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files):
+def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Creates three versions of the files to merge, containing the
     contents of local, other and base. These files can then be used to
@@ -231,7 +230,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files):
     ``a.txt``, these files will accordingly be named ``a.txt.local``,
     ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
     same directory as ``a.txt``."""
-    r = _premerge(repo, toolconf, files)
+    r = _premerge(repo, toolconf, files, labels=labels)
     if r:
         a, b, c, back = files
 
@@ -242,8 +241,8 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files):
         repo.wwrite(fd + ".base", fca.data(), fca.flags())
     return False, r
 
-def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
-    r = _premerge(repo, toolconf, files)
+def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    r = _premerge(repo, toolconf, files, labels=labels)
     if r:
         tool, toolpath, binary, symlink = toolconf
         a, b, c, back = files
@@ -327,8 +326,9 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
 
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
+    labels = ['local', 'other']
     needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                        (a, b, c, back))
+                        (a, b, c, back), labels=labels)
     if not needcheck:
         if r:
             if onfailure:
