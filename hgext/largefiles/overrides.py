@@ -282,6 +282,8 @@ def overridelog(orig, ui, repo, *pats, **opts):
             standin = lfutil.standin(m._files[i])
             if standin in repo[ctx.node()]:
                 m._files[i] = standin
+            elif m._files[i] not in repo[ctx.node()]:
+                m._files.append(standin)
             pats.add(standin)
 
         m._fmap = set(m._files)

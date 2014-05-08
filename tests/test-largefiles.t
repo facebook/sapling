@@ -390,6 +390,14 @@ Committing directories containing only largefiles.
   A sub2/large7
   A z/y/x/large2
   A z/y/x/m/large1
+
+(and a bit of log testing)
+
+  $ hg log -T '{rev}\n' z/y/x/m/large1
+  7
+  $ hg log -T '{rev}\n' z/y/x/m  # with only a largefile
+  7
+
   $ hg rollback --quiet
   $ touch z/y/x/m/normal
   $ hg add z/y/x/m/normal
