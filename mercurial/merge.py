@@ -264,7 +264,7 @@ class mergestate(object):
             if entry[0] == 'u':
                 yield f
 
-    def resolve(self, dfile, wctx):
+    def resolve(self, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] == 'r':
             return 0
@@ -287,7 +287,8 @@ class mergestate(object):
         f = self._repo.opener("merge/" + hash)
         self._repo.wwrite(dfile, f.read(), flags)
         f.close()
-        r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca)
+        r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca,
+                                labels=labels)
         if r is None:
             # no real conflict
             del self._state[dfile]
@@ -629,7 +630,7 @@ def batchget(repo, mctx, actions):
     if i > 0:
         yield i, f
 
-def applyupdates(repo, actions, wctx, mctx, overwrite):
+def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """apply the merge action list to the working directory
 
     wctx is the working copy context
@@ -734,7 +735,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
                                  overwrite)
                 continue
             audit(f)
-            r = ms.resolve(f, wctx)
+            r = ms.resolve(f, wctx, labels=labels)
             if r is not None and r > 0:
                 unresolved += 1
             else:
@@ -990,7 +991,7 @@ def recordupdates(repo, actions, branchmerge):
                 repo.dirstate.normal(f)
 
 def update(repo, node, branchmerge, force, partial, ancestor=None,
-           mergeancestor=False):
+           mergeancestor=False, labels=None):
     """
     Perform a merge between the working directory and the given node
 
@@ -1170,7 +1171,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             # note that we're in the middle of an update
             repo.vfs.write('updatestate', p2.hex())
 
-        stats = applyupdates(repo, actions, wc, p2, overwrite)
+        stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
 
         if not partial:
             repo.setparents(fp1, fp2)

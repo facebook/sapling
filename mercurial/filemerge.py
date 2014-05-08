@@ -300,6 +300,8 @@ _defaultconflictmarker = ('{node|short} ' +
     '{ifeq(branch, "default", "", "{branch} ")}' +
     '- {author|user}: "{desc|firstline}"')
 
+_defaultconflictlabels = ['local', 'other']
+
 def _formatlabels(repo, fcd, fco, labels):
     """Formats the given labels using the conflict marker template.
 
@@ -318,7 +320,7 @@ def _formatlabels(repo, fcd, fco, labels):
     return [_formatconflictmarker(repo, cd, tmpl, labels[0], pad),
             _formatconflictmarker(repo, co, tmpl, labels[1], pad)]
 
-def filemerge(repo, mynode, orig, fcd, fco, fca):
+def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
 
     mynode = parent node before merge
@@ -376,10 +378,12 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
     markerstyle = ui.config('ui', 'mergemarkers', 'detailed')
-    labels = ['local', 'other']
     if markerstyle == 'basic':
-        formattedlabels = labels
+        formattedlabels = _defaultconflictlabels
     else:
+        if not labels:
+            labels = _defaultconflictlabels
+
         formattedlabels = _formatlabels(repo, fcd, fco, labels)
 
     needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,

@@ -452,9 +452,9 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
 # Override filemerge to prompt the user about how they wish to merge
 # largefiles. This will handle identical edits without prompting the user.
-def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
+def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca, labels=None):
     if not lfutil.isstandin(orig):
-        return origfn(repo, mynode, orig, fcd, fco, fca)
+        return origfn(repo, mynode, orig, fcd, fco, fca, labels=labels)
 
     ahash = fca.data().strip().lower()
     dhash = fcd.data().strip().lower()
