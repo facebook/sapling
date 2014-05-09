@@ -1032,12 +1032,12 @@ class GitHandler(object):
     ## REFERENCES HANDLING
 
     def filter_refs(self, refs, heads):
-        '''For a dictionary of refs: shas, if heads has any elements then return refs
+        '''For a dictionary of refs: shas, if heads is None then return refs
         that match the heads. Otherwise, return refs that are heads or tags.
 
         '''
         filteredrefs = {}
-        if heads:
+        if heads is not None:
             # contains pairs of ('refs/(heads|tags|...)/foo', 'foo')
             # if ref is just '<foo>', then we get ('foo', 'foo')
             stripped_refs = [
