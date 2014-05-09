@@ -128,9 +128,9 @@ def uisetup(ui):
             usepager = False
         else:
             attend = ui.configlist('pager', 'attend', attended)
+            ignore = ui.configlist('pager', 'ignore')
             cmds, _ = cmdutil.findcmd(cmd, commands.table)
 
-            ignore = ui.configlist('pager', 'ignore')
             for cmd in cmds:
                 if (cmd in attend or
                      (cmd not in ignore and not attend)):
