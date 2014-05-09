@@ -39,12 +39,20 @@ paged.
 
 If pager.attend is present, pager.ignore will be ignored.
 
+Lastly, you can enable and disable paging for individual commands with
+the attend-<command> option. This setting takes precedence over
+existing attend and ignore options and defaults::
+
+  [pager]
+  attend-cat = false
+
 To ignore global commands like :hg:`version` or :hg:`help`, you have
 to specify them in your user configuration file.
 
 The --pager=... option can also be used to control when the pager is
 used. Use a boolean value like yes, no, on, off, or use auto for
 normal behavior.
+
 '''
 
 import atexit, sys, os, signal, subprocess, errno, shlex
@@ -132,6 +140,10 @@ def uisetup(ui):
             cmds, _ = cmdutil.findcmd(cmd, commands.table)
 
             for cmd in cmds:
+                var = 'attend-%s' % cmd
+                if ui.config('pager', var):
+                    usepager = ui.configbool('pager', var)
+                    break
                 if (cmd in attend or
                      (cmd not in ignore and not attend)):
                     usepager = True
