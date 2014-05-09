@@ -577,23 +577,19 @@ actionpriority = dict((m, p) for p, m in enumerate(
 def actionkey(a):
     return actionpriority[a[1]], a
 
-def getremove(repo, mctx, overwrite, args):
-    """apply usually-non-interactive updates to the working directory
-
-    mctx is the context to be merged into the working copy
+def batchremove(repo, actions):
+    """apply removes to the working directory
 
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
     unlink = util.unlinkpath
     wjoin = repo.wjoin
-    fctx = mctx.filectx
-    wwrite = repo.wwrite
     audit = repo.wopener.audit
     i = 0
-    for f, m, args, msg in args:
-        repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
-        if m == 'r':
+    for f, m, args, msg in actions:
+        repo.ui.debug(" %s: %s -> r\n" % (f, msg))
+        if True:
             if verbose:
                 repo.ui.note(_("removing %s\n") % f)
             audit(f)
@@ -602,7 +598,27 @@ def getremove(repo, mctx, overwrite, args):
             except OSError, inst:
                 repo.ui.warn(_("update failed to remove %s: %s!\n") %
                              (f, inst.strerror))
-        else:
+        if i == 100:
+            yield i, f
+            i = 0
+        i += 1
+    if i > 0:
+        yield i, f
+
+def batchget(repo, mctx, actions):
+    """apply gets to the working directory
+
+    mctx is the context to get from
+
+    yields tuples for progress updates
+    """
+    verbose = repo.ui.verbose
+    fctx = mctx.filectx
+    wwrite = repo.wwrite
+    i = 0
+    for f, m, args, msg in actions:
+        repo.ui.debug(" %s: %s -> g\n" % (f, msg))
+        if True:
             if verbose:
                 repo.ui.note(_("getting %s\n") % f)
             wwrite(f, fctx(f).data(), args[0])
@@ -674,15 +690,13 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
 
     # remove in parallel (must come first)
     z = 0
-    prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
-                         removeactions)
+    prog = worker.worker(repo.ui, 0.001, batchremove, (repo,), removeactions)
     for i, item in prog:
         z += i
         progress(_updating, z, item=item, total=numupdates, unit=_files)
 
     # get in parallel
-    prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
-                         updateactions)
+    prog = worker.worker(repo.ui, 0.001, batchget, (repo, mctx), updateactions)
     for i, item in prog:
         z += i
         progress(_updating, z, item=item, total=numupdates, unit=_files)
