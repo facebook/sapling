@@ -118,21 +118,22 @@ def uisetup(ui):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
         usepager = False
         always = util.parsebool(options['pager'])
+        auto = options['pager'] == 'auto'
 
         if not p:
             pass
         elif always:
             usepager = True
+        elif not auto:
+            usepager = False
         else:
             attend = ui.configlist('pager', 'attend', attended)
-            auto = options['pager'] == 'auto'
             cmds, _ = cmdutil.findcmd(cmd, commands.table)
 
             ignore = ui.configlist('pager', 'ignore')
             for cmd in cmds:
-                if (auto and
-                    (cmd in attend or
-                     (cmd not in ignore and not attend))):
+                if (cmd in attend or
+                     (cmd not in ignore and not attend)):
                     usepager = True
                     break
 
