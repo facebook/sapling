@@ -433,6 +433,10 @@ class Test(unittest.TestCase):
             os.remove(self.errpath)
 
     def run(self, result):
+        """Run this test and report results against a TestResult instance."""
+        # This function is extremely similar to unittest.TestCase.run(). Once
+        # we require Python 2.7 (or at least its version of unittest), this
+        # function can largely go away.
         self._result = result
         result.startTest(self)
         try:
@@ -573,6 +577,12 @@ class Test(unittest.TestCase):
         self._aborted = True
 
     def _getreplacements(self):
+        """Obtain a mapping of text replacements to apply to test output.
+
+        Test output needs to be normalized so it can be compared to expected
+        output. This function defines how some of that normalization will
+        occur.
+        """
         r = [
             (r':%s\b' % self._startport, ':$HGPORT'),
             (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
@@ -590,6 +600,7 @@ class Test(unittest.TestCase):
         return r
 
     def _getenv(self):
+        """Obtain environment variables to use during test execution."""
         env = os.environ.copy()
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
@@ -625,7 +636,7 @@ class Test(unittest.TestCase):
         return env
 
     def _createhgrc(self, path):
-        # create a fresh hgrc
+        """Create an hgrc file for this test."""
         hgrc = open(path, 'w')
         hgrc.write('[ui]\n')
         hgrc.write('slash = True\n')
@@ -1321,6 +1332,7 @@ class TestRunner(object):
     Tests rely on a lot of state. This object holds it for them.
     """
 
+    # Programs required to run tests.
     REQUIREDTOOLS = [
         os.path.basename(sys.executable),
         'diff',
@@ -1331,6 +1343,7 @@ class TestRunner(object):
         'sed',
     ]
 
+    # Maps file extensions to test class.
     TESTTYPES = [
         ('.py', PythonTest),
         ('.t', TTest),
@@ -1578,8 +1591,8 @@ class TestRunner(object):
                 pass
 
     def _usecorrectpython(self):
-        # Some tests run the Python interpreter. They must use the
-        # same interpreter or bad things will happen.
+        """Configure the environment to use the appropriate Python in tests."""
+        # Tests must use the same interpreter as us or bad things will happen.
         pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
         if getattr(os, 'symlink', None):
             vlog("# Making python executable in test path a symlink to '%s'" %
@@ -1612,6 +1625,10 @@ class TestRunner(object):
                 print "WARNING: Cannot find %s in search path" % pyexename
 
     def _installhg(self):
+        """Install hg into the test environment.
+
+        This will also configure hg with the appropriate testing settings.
+        """
         vlog("# Performing temporary installation of HG")
         installerrs = os.path.join("tests", "install.err")
         compiler = ''
@@ -1721,6 +1738,7 @@ class TestRunner(object):
         return self._hgpath
 
     def _outputcoverage(self):
+        """Produce code coverage output."""
         vlog('# Producing coverage report')
         os.chdir(self._pythondir)
 
@@ -1752,8 +1770,7 @@ class TestRunner(object):
         return None
 
     def _checktools(self):
-        # Before we go any further, check for pre-requisite tools
-        # stuff from coreutils (cat, rm, etc) are not tested
+        """Ensure tools required to run tests are present."""
         for p in self.REQUIREDTOOLS:
             if os.name == 'nt' and not p.endswith('.exe'):
                 p += '.exe'
