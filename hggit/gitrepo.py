@@ -48,13 +48,10 @@ class gitrepo(peerrepository):
             if self.localrepo is not None:
                 handler = self.localrepo.githandler
                 handler.export_commits()
-                refs = handler.fetch_pack(self.path)
-                reqrefs = refs
-                convertlist, commits = handler.getnewgitcommits(reqrefs)
-                newcommits = [bin(c) for c in commits]
-                b = overlayrepo(handler, newcommits, refs)
+                refs = handler.fetch_pack(self.path, heads=[])
+                # map any git shas that exist in hg to hg shas
                 stripped_refs = dict([
-                    (ref[11:], b.node(refs[ref]))
+                    (ref[11:], handler.map_hg_get(refs[ref]) or refs[ref])
                         for ref in refs.keys()
                             if ref.startswith('refs/heads/')])
                 return stripped_refs
