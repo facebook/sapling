@@ -295,17 +295,17 @@ def getdiff(expected, output, ref, err):
 
 verbose = False
 def vlog(*msg):
-    if verbose is not False:
-        iolock.acquire()
-        if verbose:
-            print verbose,
-        for m in msg:
-            print m,
-        print
-        sys.stdout.flush()
-        iolock.release()
+    """Log only when in verbose mode."""
+    if verbose is False:
+        return
+
+    return log(*msg)
 
 def log(*msg):
+    """Log something to stdout.
+
+    Arguments are strings to print.
+    """
     iolock.acquire()
     if verbose:
         print verbose,
