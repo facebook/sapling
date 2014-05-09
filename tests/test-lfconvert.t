@@ -132,7 +132,7 @@ add some changesets to rename/remove/merge
   [1]
   $ hg cat -r . sub/maybelarge.dat > stuff/maybelarge.dat
   $ hg resolve -m stuff/maybelarge.dat
-  no unresolved files; you may continue your unfinished operation
+  no more unresolved files
   $ hg commit -m"merge"
   $ hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
   @    5:4884f215abda  merge

@@ -352,7 +352,7 @@ Branchy history
   [1]
   $ hg --cwd b revert -r 2 b
   $ hg --cwd b resolve -m b
-  no unresolved files; you may continue your unfinished operation
+  no more unresolved files
   $ hg --cwd b ci -d '5 0' -m 'merge'
 
 Expect 4 changes

@@ -586,7 +586,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   merging cc incomplete! (edit conflicts, then use 'hg resolve --mark')
   [1]
   $ hg resolve -m cc
-  no unresolved files; you may continue your unfinished operation
+  no more unresolved files
   $ hg ci -m 'merge bar'
   $ hg log --config diff.git=1 -pr .
   changeset:   23:d51446492733

@@ -50,7 +50,7 @@ Symlink is local parent, executable is other:
   a is a symlink:
   a -> symlink
   $ hg resolve a --tool internal:other
-  no unresolved files; you may continue your unfinished operation
+  no more unresolved files
   $ tellmeabout a
   a is an executable file with content:
   a

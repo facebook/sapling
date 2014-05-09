@@ -41,7 +41,7 @@ Correct the conflict without marking the file as resolved
 Mark the conflict as resolved and commit
 
   $ hg resolve -m A
-  no unresolved files; you may continue your unfinished operation
+  no more unresolved files
   $ hg commit -m "Merged"
 
   $ cd ..

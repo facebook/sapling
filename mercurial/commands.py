@@ -4981,8 +4981,7 @@ def resolve(ui, repo, *pats, **opts):
     # this with the list/show operation because we want list/show to remain
     # machine readable.
     if not list(ms.unresolved()) and not show:
-        ui.write(_('no unresolved files; '))
-        ui.write(_('you may continue your unfinished operation\n'))
+        ui.status(_('no more unresolved files\n'))
 
     return ret
 

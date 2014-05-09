@@ -490,7 +490,7 @@ Test usage of `hg resolve` in case of conflict
   merging foo
   my foo@b71750c4b0fd+ other foo@a30dd8addae3 ancestor foo@913609522437
    premerge successful
-  no unresolved files; you may continue your unfinished operation
+  no more unresolved files
   $ hg status
   M foo
   ? foo.orig
