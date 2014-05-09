@@ -1521,14 +1521,11 @@ def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
     patcher = ui.config('ui', 'patch')
     if files is None:
         files = set()
-    try:
-        if patcher:
-            return _externalpatch(ui, repo, patcher, patchname, strip,
-                                  files, similarity)
-        return internalpatch(ui, repo, patchname, strip, files, eolmode,
-                             similarity)
-    except PatchError, err:
-        raise util.Abort(str(err))
+    if patcher:
+        return _externalpatch(ui, repo, patcher, patchname, strip,
+                              files, similarity)
+    return internalpatch(ui, repo, patchname, strip, files, eolmode,
+                         similarity)
 
 def changedfiles(ui, repo, patchpath, strip=1):
     backend = fsbackend(ui, repo.root)

@@ -3685,6 +3685,8 @@ def identify(ui, repo, source=None, rev=None,
      _("don't commit, just update the working directory")),
     ('', 'bypass', None,
      _("apply patch without touching the working directory")),
+    ('', 'partial', None,
+     _('commit even if some hunks fail')),
     ('', 'exact', None,
      _('apply patch to the nodes from which it was generated')),
     ('', 'import-branch', None,
@@ -3726,6 +3728,16 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     With -s/--similarity, hg will attempt to discover renames and
     copies in the patch in the same way as :hg:`addremove`.
 
+    Use --partial to ensure a changeset will be created from the patch
+    even if some hunks fail to apply. Hunks that fail to apply will be
+    written to a <target-file>.rej file. Conflicts can then be resolved
+    by hand before :hg:`commit --amend` is run to update the created
+    changeset. This flag exists to let people import patches that
+    partially apply without losing the associated metadata (author,
+    date, description, ...), Note that when none of the hunk applies
+    cleanly, :hg:`import --partial` will create an empty changeset,
+    importing only the patch metadata.
+
     To read a patch from standard input, use "-" as the patch name. If
     a URL is specified, the patch will be downloaded from it.
     See :hg:`help dates` for a list of formats valid for -d/--date.
@@ -3751,7 +3763,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
           hg import --exact proposed-fix.patch
 
-    Returns 0 on success.
+    Returns 0 on success, 1 on partial success (see --partial).
     """
 
     if not patch1:
@@ -3783,6 +3795,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     base = opts["base"]
     wlock = lock = tr = None
     msgs = []
+    ret = 0
 
 
     try:
@@ -3804,8 +3817,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
                 haspatch = False
                 for hunk in patch.split(patchfile):
-                    (msg, node) = cmdutil.tryimportone(ui, repo, hunk, parents,
-                                                       opts, msgs, hg.clean)
+                    (msg, node, rej) = cmdutil.tryimportone(ui, repo, hunk,
+                                                            parents, opts,
+                                                            msgs, hg.clean)
                     if msg:
                         haspatch = True
                         ui.note(msg + '\n')
@@ -3813,6 +3827,12 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                         parents = repo.parents()
                     else:
                         parents = [repo[node]]
+                    if rej:
+                        ui.write_err(_("patch applied partially\n"))
+                        ui.write_err(("(fix the .rej files and run "
+                                      "`hg commit --amend`)\n"))
+                        ret = 1
+                        break
 
                 if not haspatch:
                     raise util.Abort(_('%s: no diffs found') % patchurl)
@@ -3821,6 +3841,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 tr.close()
             if msgs:
                 repo.savecommitmessage('\n* * *\n'.join(msgs))
+            return ret
         except: # re-raises
             # wlock.release() indirectly calls dirstate.write(): since
             # we're crashing, we do not want to change the working dir

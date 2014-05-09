@@ -1181,5 +1181,272 @@ Test corner case involving fuzz and skew
   3
   4
   line
-
   $ cd ..
+
+Test partial application
+------------------------
+
+prepare a stack of patches depending on each other
+
+  $ hg init partial
+  $ cd partial
+  $ cat << EOF > a
+  > one
+  > two
+  > three
+  > four
+  > five
+  > six
+  > seven
+  > EOF
+  $ hg add a
+  $ echo 'b' > b
+  $ hg add b
+  $ hg commit -m 'initial' -u Babar
+  $ cat << EOF > a
+  > one
+  > two
+  > 3
+  > four
+  > five
+  > six
+  > seven
+  > EOF
+  $ hg commit -m 'three' -u Celeste
+  $ cat << EOF > a
+  > one
+  > two
+  > 3
+  > 4
+  > five
+  > six
+  > seven
+  > EOF
+  $ hg commit -m 'four' -u Rataxes
+  $ cat << EOF > a
+  > one
+  > two
+  > 3
+  > 4
+  > 5
+  > six
+  > seven
+  > EOF
+  $ echo bb >> b
+  $ hg commit -m 'five' -u Arthur
+  $ echo 'Babar' > jungle
+  $ hg add jungle
+  $ hg ci -m 'jungle' -u Zephir
+  $ echo 'Celeste' >> jungle
+  $ hg ci -m 'extended jungle' -u Cornelius
+  $ hg log -G --template '{desc|firstline} [{author}] {diffstat}\n'
+  @  extended jungle [Cornelius] 1: +1/-0
+  |
+  o  jungle [Zephir] 1: +1/-0
+  |
+  o  five [Arthur] 2: +2/-1
+  |
+  o  four [Rataxes] 1: +1/-1
+  |
+  o  three [Celeste] 1: +1/-1
+  |
+  o  initial [Babar] 2: +8/-0
+  
+
+Importing with some success and some errors:
+
+  $ hg update --rev 'desc(initial)'
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg export --rev 'desc(five)' | hg import --partial -
+  applying patch from stdin
+  patching file a
+  Hunk #1 FAILED at 1
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  patch applied partially
+  (fix the .rej files and run `hg commit --amend`)
+  [1]
+
+  $ hg log -G --template '{desc|firstline} [{author}] {diffstat}\n'
+  @  five [Arthur] 1: +1/-0
+  |
+  | o  extended jungle [Cornelius] 1: +1/-0
+  | |
+  | o  jungle [Zephir] 1: +1/-0
+  | |
+  | o  five [Arthur] 2: +2/-1
+  | |
+  | o  four [Rataxes] 1: +1/-1
+  | |
+  | o  three [Celeste] 1: +1/-1
+  |/
+  o  initial [Babar] 2: +8/-0
+  
+  $ hg export
+  # HG changeset patch
+  # User Arthur
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 26e6446bb2526e2be1037935f5fca2b2706f1509
+  # Parent  8e4f0351909eae6b9cf68c2c076cb54c42b54b2e
+  five
+  
+  diff -r 8e4f0351909e -r 26e6446bb252 b
+  --- a/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   b
+  +bb
+  $ hg status -c .
+  C a
+  C b
+  $ ls
+  a
+  a.rej
+  b
+
+Importing with zero success:
+
+  $ hg update --rev 'desc(initial)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg export --rev 'desc(four)' | hg import --partial -
+  applying patch from stdin
+  patching file a
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  patch applied partially
+  (fix the .rej files and run `hg commit --amend`)
+  [1]
+
+  $ hg log -G --template '{desc|firstline} [{author}] {diffstat}\n'
+  @  four [Rataxes] 0: +0/-0
+  |
+  | o  five [Arthur] 1: +1/-0
+  |/
+  | o  extended jungle [Cornelius] 1: +1/-0
+  | |
+  | o  jungle [Zephir] 1: +1/-0
+  | |
+  | o  five [Arthur] 2: +2/-1
+  | |
+  | o  four [Rataxes] 1: +1/-1
+  | |
+  | o  three [Celeste] 1: +1/-1
+  |/
+  o  initial [Babar] 2: +8/-0
+  
+  $ hg export
+  # HG changeset patch
+  # User Rataxes
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID cb9b1847a74d9ad52e93becaf14b98dbcc274e1e
+  # Parent  8e4f0351909eae6b9cf68c2c076cb54c42b54b2e
+  four
+  
+  $ hg status -c .
+  C a
+  C b
+  $ ls
+  a
+  a.rej
+  b
+
+Importing with unknown file:
+
+  $ hg update --rev 'desc(initial)'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg export --rev 'desc("extended jungle")' | hg import --partial -
+  applying patch from stdin
+  unable to find 'jungle' for patching
+  1 out of 1 hunks FAILED -- saving rejects to file jungle.rej
+  patch applied partially
+  (fix the .rej files and run `hg commit --amend`)
+  [1]
+
+  $ hg log -G --template '{desc|firstline} [{author}] {diffstat}\n'
+  @  extended jungle [Cornelius] 0: +0/-0
+  |
+  | o  four [Rataxes] 0: +0/-0
+  |/
+  | o  five [Arthur] 1: +1/-0
+  |/
+  | o  extended jungle [Cornelius] 1: +1/-0
+  | |
+  | o  jungle [Zephir] 1: +1/-0
+  | |
+  | o  five [Arthur] 2: +2/-1
+  | |
+  | o  four [Rataxes] 1: +1/-1
+  | |
+  | o  three [Celeste] 1: +1/-1
+  |/
+  o  initial [Babar] 2: +8/-0
+  
+  $ hg export
+  # HG changeset patch
+  # User Cornelius
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 1fb1f86bef43c5a75918178f8d23c29fb0a7398d
+  # Parent  8e4f0351909eae6b9cf68c2c076cb54c42b54b2e
+  extended jungle
+  
+  $ hg status -c .
+  C a
+  C b
+  $ ls
+  a
+  a.rej
+  b
+  jungle.rej
+
+Importing multiple failing patches:
+
+  $ hg update --rev 'desc(initial)'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 'B' > b # just to make another commit
+  $ hg commit -m "a new base"
+  created new head
+  $ hg export --rev 'desc("extended jungle") + desc("four")' | hg import --partial -
+  applying patch from stdin
+  patching file a
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  patch applied partially
+  (fix the .rej files and run `hg commit --amend`)
+  [1]
+  $ hg log -G --template '{desc|firstline} [{author}] {diffstat}\n'
+  @  four [Rataxes] 0: +0/-0
+  |
+  o  a new base [test] 1: +1/-1
+  |
+  | o  extended jungle [Cornelius] 0: +0/-0
+  |/
+  | o  four [Rataxes] 0: +0/-0
+  |/
+  | o  five [Arthur] 1: +1/-0
+  |/
+  | o  extended jungle [Cornelius] 1: +1/-0
+  | |
+  | o  jungle [Zephir] 1: +1/-0
+  | |
+  | o  five [Arthur] 2: +2/-1
+  | |
+  | o  four [Rataxes] 1: +1/-1
+  | |
+  | o  three [Celeste] 1: +1/-1
+  |/
+  o  initial [Babar] 2: +8/-0
+  
+  $ hg export
+  # HG changeset patch
+  # User Rataxes
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID a9d7b6d0ffbb4eb12b7d5939250fcd42e8930a1d
+  # Parent  f59f8d2e95a8ca5b1b4ca64320140da85f3b44fd
+  four
+  
+  $ hg status -c .
+  C a
+  C b

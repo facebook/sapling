@@ -591,8 +591,10 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     strip = opts["strip"]
     sim = float(opts.get('similarity') or 0)
     if not tmpname:
-        return (None, None)
+        return (None, None, False)
     msg = _('applied to working directory')
+
+    rejects = False
 
     try:
         cmdline_message = logmessage(ui, opts)
@@ -639,9 +641,17 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             if opts.get('exact') or opts.get('import_branch'):
                 repo.dirstate.setbranch(branch or 'default')
 
+            partial = opts.get('partial', False)
             files = set()
-            patch.patch(ui, repo, tmpname, strip=strip, files=files,
-                        eolmode=None, similarity=sim / 100.0)
+            try:
+                patch.patch(ui, repo, tmpname, strip=strip, files=files,
+                            eolmode=None, similarity=sim / 100.0)
+            except patch.PatchError, e:
+                if not partial:
+                    raise util.Abort(str(e))
+                if partial:
+                    rejects = True
+
             files = list(files)
             if opts.get('no_commit'):
                 if message:
@@ -656,7 +666,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     m = scmutil.matchfiles(repo, files or [])
                 n = repo.commit(message, opts.get('user') or user,
                                 opts.get('date') or date, match=m,
-                                editor=editor)
+                                editor=editor, force=partial)
         else:
             if opts.get('exact') or opts.get('import_branch'):
                 branch = branch or 'default'
@@ -684,7 +694,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
         if n:
             # i18n: refers to a short changeset id
             msg = _('created %s') % short(n)
-        return (msg, n)
+        return (msg, n, rejects)
     finally:
         os.unlink(tmpname)
 
