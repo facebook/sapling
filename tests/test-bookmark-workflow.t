@@ -91,6 +91,11 @@ Cloning transfers all bookmarks from remote to local
 
 No changes
   $ cd purehglocalrepo
+  $ hg incoming -B
+  comparing with $TESTTMP/hgremoterepo
+  searching for changed bookmarks
+  no changed bookmarks found
+  [1]
   $ hg outgoing
   comparing with $TESTTMP/hgremoterepo
   searching for changes
@@ -108,6 +113,11 @@ No changes
   [1]
   $ cd ..
   $ cd hggitlocalrepo
+  $ hg incoming -B
+  comparing with $TESTTMP/gitremoterepo
+  searching for changed bookmarks
+  no changed bookmarks found
+  [1]
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
   searching for changes
@@ -125,7 +135,24 @@ No changes
   [1]
   $ cd ..
 
-Changed bookmarks, but not revs
+Bookmarks on existing revs:
+- change b1 on local repo
+- introduce b2 on local repo
+- introduce b3 on remote repo
+Bookmarks on new revs
+- introduce b4 on a new rev on the remote
+  $ cd hgremoterepo
+  $ hg bookmark -r master b3
+  $ hg bookmark -r master b4
+  $ hg update -q b4
+  $ echo epsilon > epsilon; hg add epsilon; hgcommit -m 'add epsilon'
+  $ hgstate
+    4 d979bb8e0fbb "add epsilon" bookmarks: [b4]
+    3 fc2664cac217 "add delta" bookmarks: [b3 master]
+    2 d85ced7ae9d6 "add gamma" bookmarks: []
+    1 7bcd915dc873 "add beta" bookmarks: [b1]
+    0 3442585be8a6 "add alpha" bookmarks: []
+  $ cd ..
   $ cd purehglocalrepo
   $ hg bookmark -fr 2 b1
   $ hg bookmark -r 0 b2
@@ -134,6 +161,11 @@ Changed bookmarks, but not revs
     2 d85ced7ae9d6 "add gamma" bookmarks: [b1]
     1 7bcd915dc873 "add beta" bookmarks: []
     0 3442585be8a6 "add alpha" bookmarks: [b2]
+  $ hg incoming -B
+  comparing with $TESTTMP/hgremoterepo
+  searching for changed bookmarks
+     b3                        fc2664cac217
+     b4                        d979bb8e0fbb
   $ hg outgoing
   comparing with $TESTTMP/hgremoterepo
   searching for changes
@@ -146,6 +178,21 @@ It only shows "new" bookmarks.  Thus, b1 doesn't show up.
   searching for changed bookmarks
      b2                        3442585be8a6
   $ cd ..
+
+  $ cd gitremoterepo
+  $ git branch b3 master
+  $ git checkout -b b4 master
+  Switched to a new branch 'b4'
+  $ echo epsilon > epsilon
+  $ git add epsilon
+  $ gitcommit -m 'add epsilon'
+  $ gitstate
+    fcfd2c0 "add epsilon" refs: (b4)
+    55b133e "add delta" refs: (master, b3)
+    d338971 "add gamma" refs:
+    9497a4e "add beta" refs: (b1)
+    7eeab2e "add alpha" refs:
+  $ cd ..
   $ cd hggitlocalrepo
   $ hg bookmark -fr 2 b1
   $ hg bookmark -r 0 b2
@@ -154,6 +201,11 @@ It only shows "new" bookmarks.  Thus, b1 doesn't show up.
     2 d85ced7ae9d6 "add gamma" bookmarks: [b1]
     1 7bcd915dc873 "add beta" bookmarks: []
     0 3442585be8a6 "add alpha" bookmarks: [b2]
+  $ hg incoming -B
+  comparing with $TESTTMP/gitremoterepo
+  searching for changed bookmarks
+     b3                        fc2664cac217
+     b4                        fcfd2c0262db
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
   searching for changes
