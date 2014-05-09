@@ -116,8 +116,11 @@ def uisetup(ui):
 
     def pagecmd(orig, ui, options, cmd, cmdfunc):
         p = ui.config("pager", "pager", os.environ.get("PAGER"))
+        usepager = False
 
-        if p:
+        if not p:
+            pass
+        else:
             attend = ui.configlist('pager', 'attend', attended)
             auto = options['pager'] == 'auto'
             always = util.parsebool(options['pager'])
@@ -129,12 +132,15 @@ def uisetup(ui):
                 if (always or auto and
                     (cmd in attend or
                      (cmd not in ignore and not attend))):
-                    ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
-                    ui.setconfig('ui', 'interactive', False, 'pager')
-                    if util.safehasattr(signal, "SIGPIPE"):
-                        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-                    _runpager(ui, p)
+                    usepager = True
                     break
+
+        if usepager:
+            ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
+            ui.setconfig('ui', 'interactive', False, 'pager')
+            if util.safehasattr(signal, "SIGPIPE"):
+                signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+            _runpager(ui, p)
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
