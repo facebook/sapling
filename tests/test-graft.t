@@ -76,10 +76,24 @@ Can't graft with dirty wd:
   $ hg revert a
 
 Graft a rename:
+(this also tests that editor is invoked if '--edit' is specified)
 
-  $ hg graft 2 -u foo
+  $ hg status --rev "2^1" --rev 2
+  A b
+  R a
+  $ HGEDITOR=cat hg graft 2 -u foo --edit
   grafting revision 2
   merging a and b to b
+  2
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: foo
+  HG: branch 'default'
+  HG: changed b
+  HG: removed a
   $ hg export tip --git
   # HG changeset patch
   # User foo
@@ -114,6 +128,7 @@ Look for extra:source
   
 
 Graft out of order, skipping a merge and a duplicate
+(this also tests that editor is not invoked if '--edit' is not specified)
 
   $ hg graft 1 5 4 3 'merge()' 2 -n
   skipping ungraftable merge revision 6
@@ -123,7 +138,7 @@ Graft out of order, skipping a merge and a duplicate
   grafting revision 4
   grafting revision 3
 
-  $ hg graft 1 5 4 3 'merge()' 2 --debug
+  $ HGEDITOR=cat hg graft 1 5 4 3 'merge()' 2 --debug
   skipping ungraftable merge revision 6
   scanning for duplicate grafts
   skipping revision 2 (already grafted to 7)
