@@ -52,13 +52,6 @@ def bytesformatter(format, args):
     return ret.encode('utf-8', 'surrogateescape')
 builtins.bytesformatter = bytesformatter
 
-# Create bytes equivalents for os.environ values
-for key in list(os.environ.keys()):
-    # UTF-8 is fine for us
-    bkey = key.encode('utf-8', 'surrogateescape')
-    bvalue = os.environ[key].encode('utf-8', 'surrogateescape')
-    os.environ[bkey] = bvalue
-
 origord = builtins.ord
 def fakeord(char):
     if isinstance(char, int):
