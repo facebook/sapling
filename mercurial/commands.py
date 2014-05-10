@@ -3178,7 +3178,8 @@ def graft(ui, repo, *revs, **opts):
                     repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                       'graft')
                     stats = mergemod.update(repo, ctx.node(), True, True, False,
-                                            ctx.p1().node())
+                                            ctx.p1().node(),
+                                            labels=['local', 'graft'])
                 finally:
                     repo.ui.setconfig('ui', 'forcemerge', '', 'graft')
                 # report any conflicts
