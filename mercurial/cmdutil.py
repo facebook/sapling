@@ -109,10 +109,27 @@ def logmessage(ui, opts):
                              (logfile, inst.strerror))
     return message
 
-def getcommiteditor(edit=False, **opts):
-    """get appropriate commit message editor according to '--edit' option"""
-    if edit:
-        return commitforceeditor
+def getcommiteditor(edit=False, finishdesc=None, extramsg=None, **opts):
+    """get appropriate commit message editor according to '--edit' option
+
+    'finishdesc' is a function to be called with edited commit message
+    (= 'description' of the new changeset) just after editing, but
+    before checking empty-ness. It should return actual text to be
+    stored into history. This allows to change description before
+    storing.
+
+    'extramsg' is a extra message to be shown in the editor instead of
+    'Leave message empty to abort commit' line. 'HG: ' prefix and EOL
+    is automatically added.
+
+    'getcommiteditor' returns 'commitforceeditor' regardless of
+    'edit', if one of 'finishdesc' or 'extramsg' is specified, because
+    they are specific for usage in MQ.
+    """
+    if edit or finishdesc or extramsg:
+        return lambda r, c, s: commitforceeditor(r, c, s,
+                                                 finishdesc=finishdesc,
+                                                 extramsg=extramsg)
     else:
         return commiteditor
 
@@ -2130,7 +2147,7 @@ def commiteditor(repo, ctx, subs):
         return ctx.description()
     return commitforceeditor(repo, ctx, subs)
 
-def commitforceeditor(repo, ctx, subs):
+def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     if ctx.description():
@@ -2139,7 +2156,10 @@ def commitforceeditor(repo, ctx, subs):
     edittext.append("") # Empty line between message and comments.
     edittext.append(_("HG: Enter commit message."
                       "  Lines beginning with 'HG:' are removed."))
-    edittext.append(_("HG: Leave message empty to abort commit."))
+    if extramsg:
+        edittext.append("HG: %s" % extramsg)
+    else:
+        edittext.append(_("HG: Leave message empty to abort commit."))
     edittext.append("HG: --")
     edittext.append(_("HG: user: %s") % ctx.user())
     if ctx.p2():
@@ -2162,6 +2182,8 @@ def commitforceeditor(repo, ctx, subs):
     text = re.sub("(?m)^HG:.*(\n|$)", "", text)
     os.chdir(olddir)
 
+    if finishdesc:
+        text = finishdesc(text)
     if not text.strip():
         raise util.Abort(_("empty commit message"))
 
