@@ -23,6 +23,8 @@ generate patches for the test
 
 
 import exported patch
+(this also tests that editor is not invoked, if the patch contains the
+commit message and '--edit' is not specified)
 
   $ hg clone -r0 a b
   adding changesets
@@ -31,7 +33,7 @@ import exported patch
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd b import ../exported-tip.patch
+  $ HGEDITOR=cat hg --cwd b import ../exported-tip.patch
   applying ../exported-tip.patch
 
 message and committer and date should be same
@@ -47,6 +49,8 @@ message and committer and date should be same
 
 
 import exported patch with external patcher
+(this also tests that editor is invoked, if the '--edit' is specified,
+regardless of the commit message in the patch)
 
   $ cat > dummypatch.py <<EOF
   > print 'patching file a'
@@ -59,14 +63,25 @@ import exported patch with external patcher
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --config ui.patch='python ../dummypatch.py' --cwd b import ../exported-tip.patch
+  $ HGEDITOR=cat hg --config ui.patch='python ../dummypatch.py' --cwd b import --edit ../exported-tip.patch
   applying ../exported-tip.patch
+  second change
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: someone
+  HG: branch 'default'
+  HG: changed a
   $ cat b/a
   line2
   $ rm -r b
 
 
 import of plain diff should fail without message
+(this also tests that editor is invoked, if the patch doesn't contain
+the commit message, regardless of '--edit')
 
   $ hg clone -r0 a b
   adding changesets
@@ -75,8 +90,16 @@ import of plain diff should fail without message
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd b import ../diffed-tip.patch
+  $ HGEDITOR=cat hg --cwd b import ../diffed-tip.patch
   applying ../diffed-tip.patch
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: changed a
   abort: empty commit message
   [255]
   $ rm -r b
@@ -97,6 +120,8 @@ import of plain diff should be ok with message
 
 
 import of plain diff with specific date and user
+(this also tests that editor is not invoked, if
+'--message'/'--logfile' is specified and '--edit' is not)
 
   $ hg clone -r0 a b
   adding changesets
@@ -128,6 +153,8 @@ import of plain diff with specific date and user
 
 
 import of plain diff should be ok with --no-commit
+(this also tests that editor is not invoked, if '--no-commit' is
+specified, regardless of '--edit')
 
   $ hg clone -r0 a b
   adding changesets
@@ -136,7 +163,7 @@ import of plain diff should be ok with --no-commit
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg --cwd b import --no-commit ../diffed-tip.patch
+  $ HGEDITOR=cat hg --cwd b import --no-commit --edit ../diffed-tip.patch
   applying ../diffed-tip.patch
   $ hg --cwd b diff --nodates
   diff -r 80971e65b431 a

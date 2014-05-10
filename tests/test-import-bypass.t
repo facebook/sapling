@@ -22,8 +22,10 @@ Test --bypass with other options
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Test importing an existing revision
+(this also tests that editor is not invoked for '--bypass', if the
+patch contains the commit message, regardless of '--edit')
 
-  $ hg import --bypass --exact ../test.diff
+  $ HGEDITOR=cat hg import --bypass --exact --edit ../test.diff
   applying ../test.diff
   $ shortlog
   o  1:4e322f7ce8e3 test 0 0 - foo - changea
@@ -107,6 +109,8 @@ Test unsupported combinations
   [255]
 
 Test commit editor
+(this also tests that editor is invoked, if the patch doesn't contain
+the commit message, regardless of '--edit')
 
   $ cat > ../test.diff <<EOF
   > diff -r 07f494440405 -r 4e322f7ce8e3 a
@@ -131,10 +135,12 @@ Test commit editor
   [255]
 
 Test patch.eol is handled
+(this also tests that editor is not invoked for '--bypass', if the
+commit message is explicitly specified, regardless of '--edit')
 
   $ python -c 'file("a", "wb").write("a\r\n")'
   $ hg ci -m makeacrlf
-  $ hg import -m 'should fail because of eol' --bypass ../test.diff
+  $ HGEDITOR=cat hg import -m 'should fail because of eol' --edit --bypass ../test.diff
   applying ../test.diff
   patching file a
   Hunk #1 FAILED at 0
