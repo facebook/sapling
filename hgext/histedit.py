@@ -680,11 +680,9 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
         if action in ('f', 'fold'):
             message = 'fold-temp-revision %s' % currentnode
         else:
-            message = ctx.description() + '\n'
-        if action in ('e', 'edit', 'm', 'mess'):
-            editor = cmdutil.commitforceeditor
-        else:
-            editor = False
+            message = ctx.description()
+        editopt = action in ('e', 'edit', 'm', 'mess')
+        editor = cmdutil.getcommiteditor(edit=editopt)
         commit = commitfuncfor(repo, ctx)
         new = commit(text=message, user=ctx.user(),
                      date=ctx.date(), extra=ctx.extra(),

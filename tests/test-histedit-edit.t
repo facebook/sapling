@@ -156,7 +156,19 @@ check histedit_source
   update: 1 new changesets (update)
   hist:   1 remaining (histedit --continue)
 
-  $ HGEDITOR='true' hg histedit --continue
+(test also that editor is invoked if histedit is continued for
+"edit" action)
+
+  $ HGEDITOR='cat' hg histedit --continue
+  f
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added f
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-backup.hg (glob)
 
@@ -270,6 +282,25 @@ check saving last-message.txt, at first
   
   
   check saving last-message.txt
+
+(test also that editor is invoked if histedit is continued for "message"
+action)
+
+  $ HGEDITOR=cat hg histedit --continue
+  f
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added f
+  transaction abort!
+  rollback completed
+  note: commit message saved in .hg/last-message.txt
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
 
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
