@@ -109,6 +109,13 @@ def logmessage(ui, opts):
                              (logfile, inst.strerror))
     return message
 
+def getcommiteditor(edit=False, **opts):
+    """get appropriate commit message editor according to '--edit' option"""
+    if edit:
+        return commitforceeditor
+    else:
+        return commiteditor
+
 def loglimit(opts):
     """get the log limit according to option -l/--limit"""
     limit = opts.get('limit')
