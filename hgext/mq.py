@@ -1486,7 +1486,7 @@ class queue(object):
             self.ui.write(_("no patches applied\n"))
             return 1
         msg = opts.get('msg', '').rstrip()
-        editor = opts.get('editor')
+        edit = opts.get('edit')
         newuser = opts.get('user')
         newdate = opts.get('date')
         if newdate:
@@ -1656,10 +1656,11 @@ class queue(object):
                 # might be nice to attempt to roll back strip after this
 
                 defaultmsg = "[mq]: %s" % patchfn
-                if editor:
-                    origeditor = editor
+                editor = False
+                if edit:
                     def desceditor(repo, ctx, subs):
-                        desc = origeditor(repo, ctx, subs)
+                        desc = self.ui.edit(ctx.description() + "\n",
+                                            ctx.user())
                         if desc.rstrip():
                             ph.setmessage(desc)
                             return desc
@@ -2490,14 +2491,10 @@ def refresh(ui, repo, *pats, **opts):
     if opts.get('edit'):
         if message:
             raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
-        def editor(repo, ctx, subs):
-            return ui.edit(ctx.description() + "\n", ctx.user())
-    else:
-        editor = False
     setupheaderopts(ui, opts)
     wlock = repo.wlock()
     try:
-        ret = q.refresh(repo, pats, msg=message, editor=editor, **opts)
+        ret = q.refresh(repo, pats, msg=message, **opts)
         q.savedirty()
         return ret
     finally:
@@ -2587,16 +2584,10 @@ def fold(ui, repo, *files, **opts):
                 message.extend(msg)
         message = '\n'.join(message)
 
-    if opts.get('edit'):
-        def editor(repo, ctx, subs):
-            return ui.edit(ctx.description() + "\n", ctx.user())
-    else:
-        editor = False
-
     diffopts = q.patchopts(q.diffopts(), *patches)
     wlock = repo.wlock()
     try:
-        q.refresh(repo, msg=message, git=diffopts.git, editor=editor)
+        q.refresh(repo, msg=message, git=diffopts.git, edit=opts.get('edit'))
         q.delete(repo, patches, opts)
         q.savedirty()
     finally:
