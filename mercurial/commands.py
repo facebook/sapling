@@ -1345,8 +1345,6 @@ def commit(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if nothing changed.
     """
-    forceeditor = opts.get('edit')
-
     if opts.get('subrepos'):
         if opts.get('amend'):
             raise util.Abort(_('cannot amend with --subrepos'))
@@ -1408,10 +1406,6 @@ def commit(ui, repo, *pats, **opts):
                     bookmarks.setcurrent(repo, bm)
             newmarks.write()
     else:
-        e = cmdutil.commiteditor
-        if forceeditor:
-            e = cmdutil.commitforceeditor
-
         def commitfunc(ui, repo, message, match, opts):
             try:
                 if opts.get('secret'):
@@ -1421,7 +1415,9 @@ def commit(ui, repo, *pats, **opts):
                                           'commit')
 
                 return repo.commit(message, opts.get('user'), opts.get('date'),
-                                   match, editor=e, extra=extra)
+                                   match,
+                                   editor=cmdutil.getcommiteditor(**opts),
+                                   extra=extra)
             finally:
                 ui.setconfig('phases', 'new-commit', oldcommitphase, 'commit')
                 repo.baseui.setconfig('phases', 'new-commit', oldcommitphase,
