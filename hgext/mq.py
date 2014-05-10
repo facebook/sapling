@@ -1026,7 +1026,7 @@ class queue(object):
            msg: a string or a no-argument function returning a string
         """
         msg = opts.get('msg')
-        editor = opts.get('editor')
+        edit = opts.get('edit')
         user = opts.get('user')
         date = opts.get('date')
         if date:
@@ -1081,10 +1081,11 @@ class queue(object):
                         p.write("# Date %s %s\n\n" % date)
 
                 defaultmsg = "[mq]: %s" % patchfn
-                if editor:
-                    origeditor = editor
+                editor = False
+                if edit:
                     def desceditor(repo, ctx, subs):
-                        desc = origeditor(repo, ctx, subs)
+                        desc = self.ui.edit(ctx.description() + "\n",
+                                            ctx.user())
                         if desc.rstrip():
                             return desc
                         else:
@@ -2442,10 +2443,6 @@ def new(ui, repo, patch, *args, **opts):
     msg = cmdutil.logmessage(ui, opts)
     q = repo.mq
     opts['msg'] = msg
-    if opts.get('edit'):
-        def editor(repo, ctx, subs):
-            return ui.edit(ctx.description() + "\n", ctx.user())
-        opts['editor'] = editor
     setupheaderopts(ui, opts)
     q.new(repo, patch, *args, **opts)
     q.savedirty()
