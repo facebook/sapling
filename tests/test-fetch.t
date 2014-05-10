@@ -68,8 +68,9 @@ should merge c into a
   $ cat a/hg.pid >> "$DAEMON_PIDS"
 
 fetch over http, no auth
+(this also tests that editor is invoked if '--edit' is specified)
 
-  $ hg --cwd d fetch http://localhost:$HGPORT/
+  $ HGEDITOR=cat hg --cwd d fetch --edit http://localhost:$HGPORT/
   pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
@@ -80,13 +81,29 @@ fetch over http, no auth
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging with 1:d36c0562f908
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Automated merge with http://localhost:$HGPORT/
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch merge
+  HG: branch 'default'
+  HG: changed c
   new changeset 3:* merges remote changes with local (glob)
   $ hg --cwd d tip --template '{desc}\n'
   Automated merge with http://localhost:$HGPORT/
+  $ hg --cwd d status --rev 'tip^1' --rev tip
+  A c
+  $ hg --cwd d status --rev 'tip^2' --rev tip
+  A b
 
 fetch over http with auth (should be hidden in desc)
+(this also tests that editor is not invoked if '--edit' is not
+specified, even though commit message is not specified explicitly)
 
-  $ hg --cwd e fetch http://user:password@localhost:$HGPORT/
+  $ HGEDITOR=cat hg --cwd e fetch http://user:password@localhost:$HGPORT/
   pulling from http://user:***@localhost:$HGPORT/
   searching for changes
   adding changesets

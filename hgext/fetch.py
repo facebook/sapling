@@ -142,10 +142,9 @@ def fetch(ui, repo, source='default', **opts):
             message = (cmdutil.logmessage(ui, opts) or
                        ('Automated merge with %s' %
                         util.removeauth(other.url())))
-            editor = cmdutil.commiteditor
-            if opts.get('force_editor') or opts.get('edit'):
-                editor = cmdutil.commitforceeditor
-            n = repo.commit(message, opts['user'], opts['date'], editor=editor)
+            editopt = opts.get('edit') or opts.get('force_editor')
+            n = repo.commit(message, opts['user'], opts['date'],
+                            editor=cmdutil.getcommiteditor(edit=editopt))
             ui.status(_('new changeset %d:%s merges remote changes '
                         'with local\n') % (repo.changelog.rev(n),
                                            short(n)))
