@@ -1656,17 +1656,18 @@ class queue(object):
                 # might be nice to attempt to roll back strip after this
 
                 defaultmsg = "[mq]: %s" % patchfn
-                editor = False
+                editor = cmdutil.getcommiteditor()
                 if edit:
-                    def desceditor(repo, ctx, subs):
-                        desc = self.ui.edit(ctx.description() + "\n",
-                                            ctx.user())
+                    def finishdesc(desc):
                         if desc.rstrip():
                             ph.setmessage(desc)
                             return desc
                         return defaultmsg
+                    # i18n: this message is shown in editor with "HG: " prefix
+                    extramsg = _('Leave message empty to use default message.')
+                    editor = cmdutil.getcommiteditor(finishdesc=finishdesc,
+                                                     extramsg=extramsg)
                     message = msg or "\n".join(ph.message)
-                    editor = desceditor
                 elif not msg:
                     if not ph.message:
                         message = defaultmsg

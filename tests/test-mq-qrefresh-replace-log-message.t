@@ -6,6 +6,8 @@ Environment setup for MQ
   $ hg qinit
 
 Should fail if no patches applied
+(this tests also that editor is not invoked if '--edit' is not
+specified)
 
   $ hg qrefresh
   no patches applied
@@ -16,7 +18,7 @@ Should fail if no patches applied
   $ hg qnew -m "First commit message" first-patch
   $ echo aaaa > file
   $ hg add file
-  $ hg qrefresh
+  $ HGEDITOR=cat hg qrefresh
 
 Should display 'First commit message'
 
@@ -126,10 +128,20 @@ Test saving last-message.txt:
   > EOF
 
   $ rm -f .hg/last-message.txt
+  $ hg status --rev "second-patch^1" -arm
+  A file2
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qrefresh -e
   ==== before editing
   Fifth commit message
    This is the 5th log message
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to use default message.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added file2
   ====
   transaction abort!
   rollback completed
@@ -140,5 +152,7 @@ Test saving last-message.txt:
   $ cat .hg/last-message.txt
   Fifth commit message
    This is the 5th log message
+  
+  
   
   test saving last-message.txt

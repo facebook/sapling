@@ -20,6 +20,8 @@ init:
   $ hg qnew -f p3
 
 Fold in the middle of the queue:
+(this tests also that editor is not invoked if '--edit' is not
+specified)
 
   $ hg qpop p1
   popping p3
@@ -34,7 +36,7 @@ Fold in the middle of the queue:
    a
   +a
 
-  $ hg qfold p2
+  $ HGEDITOR=cat hg qfold p2
   $ grep git .hg/patches/p1 && echo 'git patch found!'
   [1]
 
@@ -215,6 +217,15 @@ Test saving last-message.txt:
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e p3
   ==== before editing
   original message
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to use default message.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added aa
+  HG: changed a
   ====
   transaction abort!
   rollback completed
@@ -225,7 +236,26 @@ Test saving last-message.txt:
   $ cat .hg/last-message.txt
   original message
   
+  
+  
   test saving last-message.txt
+
+(confirm whether files listed up in the commit message editing are correct)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.unexpectedabort =
+  > EOF
+  $ hg status -u | while read f; do rm ${f}; done
+  $ hg revert --no-backup -q --all
+  $ hg qpush -q git
+  now at: git
+  $ hg qpush -q --move p3
+  now at: p3
+
+  $ hg status --rev "git^1" --rev . -arm
+  M a
+  A aa
 
   $ cd ..
 
