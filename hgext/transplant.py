@@ -80,13 +80,13 @@ class transplants(object):
             self.dirty = True
 
 class transplanter(object):
-    def __init__(self, ui, repo):
+    def __init__(self, ui, repo, opts):
         self.ui = ui
         self.path = repo.join('transplant')
         self.opener = scmutil.opener(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
-        self.editor = None
+        self.editor = cmdutil.getcommiteditor(**opts)
 
     def applied(self, repo, node, parent):
         '''returns True if a node is already an ancestor of parent
@@ -599,9 +599,7 @@ def transplant(ui, repo, *revs, **opts):
     if not opts.get('filter'):
         opts['filter'] = ui.config('transplant', 'filter')
 
-    tp = transplanter(ui, repo)
-    if opts.get('edit'):
-        tp.editor = cmdutil.commitforceeditor
+    tp = transplanter(ui, repo, opts)
 
     cmdutil.checkunfinished(repo)
     p1, p2 = repo.dirstate.parents()

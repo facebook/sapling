@@ -43,8 +43,9 @@
   1 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
 rebase b onto r1
+(this also tests that editor is not invoked if '--edit' is not specified)
 
-  $ hg transplant -a -b tip
+  $ HGEDITOR=cat hg transplant -a -b tip
   applying 37a1297eb21b
   37a1297eb21b transplanted to e234d668f844
   applying 722f4667af76
@@ -85,13 +86,26 @@ test transplanted keyword
 
 test destination() revset predicate with a transplant of a transplant; new
 clone so subsequent rollback isn't affected
+(this also tests that editor is invoked if '--edit' is specified)
+
   $ hg clone -q . ../destination
   $ cd ../destination
   $ hg up -Cq 0
   $ hg branch -q b4
   $ hg ci -qm "b4"
-  $ hg transplant 7
+  $ hg status --rev "7^1" --rev 7
+  A b3
+  $ HGEDITOR=cat hg transplant --edit 7
   applying ffd6818a3975
+  b3
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'b4'
+  HG: added b3
   ffd6818a3975 transplanted to 502236fa76bb
 
 
