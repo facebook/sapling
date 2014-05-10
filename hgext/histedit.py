@@ -402,11 +402,10 @@ def message(ui, repo, ctx, ha, opts):
         raise error.InterventionRequired(
             _('Fix up the change and run hg histedit --continue'))
     message = oldctx.description()
-    def editor(repo, ctx, subs):
-        return ui.edit(ctx.description() + "\n", ctx.user())
     commit = commitfuncfor(repo, oldctx)
     new = commit(text=message, user=oldctx.user(), date=oldctx.date(),
-                 extra=oldctx.extra(), editor=editor)
+                 extra=oldctx.extra(),
+                 editor=cmdutil.getcommiteditor(edit=True))
     newctx = repo[new]
     if oldctx.node() != newctx.node():
         return newctx, [(oldctx.node(), (new,))]

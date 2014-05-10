@@ -240,20 +240,35 @@ check saving last-message.txt, at first
   > pretxncommit.unexpectedabort = false
   > EOF
 
+  $ hg status --rev '1fd3b2fe7754^1' --rev 1fd3b2fe7754
+  A f
+
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - 2>&1 << EOF | fixbundle
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - 2>&1 << EOF
   > mess 1fd3b2fe7754 f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding f
   ==== before editing
   f
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added f
   ====
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt
   abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
   $ cat .hg/last-message.txt
   f
+  
+  
   check saving last-message.txt
 
   $ cat >> .hg/hgrc <<EOF
