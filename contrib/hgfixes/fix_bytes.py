@@ -12,10 +12,10 @@ _re = re.compile(r'[rR]?[\'\"]')
 # XXX: Implementing a blacklist in 2to3 turned out to be more troublesome than
 # blacklisting some modules inside the fixers. So, this is what I came with.
 
-blacklist = ['mercurial/demandimport.py',
+blacklist = ('mercurial/demandimport.py',
              'mercurial/py3kcompat.py', # valid python 3 already
              'mercurial/i18n.py',
-            ]
+            )
 
 def isdocstring(node):
     def isclassorfunction(ancestor):
@@ -83,7 +83,8 @@ class FixBytes(fixer_base.BaseFix):
     PATTERN = 'STRING'
 
     def transform(self, node, results):
-        if self.filename in blacklist:
+        # The filename may be prefixed with a build directory.
+        if self.filename.endswith(blacklist):
             return
         if node.type == token.STRING:
             if _re.match(node.value):
