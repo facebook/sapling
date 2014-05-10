@@ -483,7 +483,8 @@ def updaterepo(repo, node, overwrite):
     When overwrite is set, changes are clobbered, merged else
 
     returns stats (see pydoc mercurial.merge.applyupdates)"""
-    return mergemod.update(repo, node, False, overwrite, None)
+    return mergemod.update(repo, node, False, overwrite, None,
+                           labels=['working copy', 'destination'])
 
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
