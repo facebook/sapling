@@ -299,7 +299,7 @@ def collapse(repo, first, last, commitopts):
                          user=user,
                          date=date,
                          extra=extra,
-                         editor=cmdutil.commitforceeditor)
+                         editor=cmdutil.getcommiteditor(edit=True))
     return repo.commitctx(new)
 
 def pick(ui, repo, ctx, ha, opts):
