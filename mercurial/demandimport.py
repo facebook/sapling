@@ -24,13 +24,17 @@ These imports will not be delayed:
   b = __import__(a)
 '''
 
-import __builtin__, os
+import __builtin__, os, sys
 _origimport = __import__
 
 nothing = object()
 
 try:
-    _origimport(__builtin__.__name__, {}, {}, None, -1)
+    # Python 3 doesn't have relative imports nor level -1.
+    level = -1
+    if sys.version_info[0] >= 3:
+        level = 0
+    _origimport(__builtin__.__name__, {}, {}, None, level)
 except TypeError: # no level argument
     def _import(name, globals, locals, fromlist, level):
         "call _origimport with no level argument"
@@ -55,7 +59,7 @@ def _hgextimport(importfunc, name, globals, *args):
 
 class _demandmod(object):
     """module demand-loader and proxy"""
-    def __init__(self, name, globals, locals, level=-1):
+    def __init__(self, name, globals, locals, level=level):
         if '.' in name:
             head, rest = name.split('.', 1)
             after = [rest]
@@ -105,7 +109,7 @@ class _demandmod(object):
         self._load()
         setattr(self._module, attr, val)
 
-def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
+def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
     if not locals or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
         return _hgextimport(_import, name, globals, locals, fromlist, level)
