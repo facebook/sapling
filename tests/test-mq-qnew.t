@@ -284,9 +284,17 @@ Test saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
+  $ hg status
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e patch
   ==== before editing
   
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to use default message.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: no files changed
   ====
   transaction abort!
   rollback completed
@@ -294,6 +302,7 @@ Test saving last-message.txt
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
+  
   
   test saving last-message.txt
 
@@ -314,9 +323,17 @@ Test handling default message with the patch filename with tail whitespaces
   > EOF
 
   $ rm -f .hg/last-message.txt
+  $ hg status
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e "patch "
   ==== before editing
   
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to use default message.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: no files changed
   ====
   $ cat ".hg/patches/patch "
   # HG changeset patch

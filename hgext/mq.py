@@ -1081,17 +1081,18 @@ class queue(object):
                         p.write("# Date %s %s\n\n" % date)
 
                 defaultmsg = "[mq]: %s" % patchfn
-                editor = False
+                editor = cmdutil.getcommiteditor()
                 if edit:
-                    def desceditor(repo, ctx, subs):
-                        desc = self.ui.edit(ctx.description() + "\n",
-                                            ctx.user())
+                    def finishdesc(desc):
                         if desc.rstrip():
                             return desc
                         else:
                             return defaultmsg
+                    # i18n: this message is shown in editor with "HG: " prefix
+                    extramsg = _('Leave message empty to use default message.')
+                    editor = cmdutil.getcommiteditor(finishdesc=finishdesc,
+                                                     extramsg=extramsg)
                     commitmsg = msg
-                    editor = desceditor
                 else:
                     commitmsg = msg or defaultmsg
 
