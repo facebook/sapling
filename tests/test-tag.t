@@ -16,7 +16,10 @@
   abort: tag names cannot consist entirely of whitespace
   [255]
 
-  $ hg tag "bleah"
+(this tests also that editor is not invoked, if '--edit' is not
+specified)
+
+  $ HGEDITOR=cat hg tag "bleah"
   $ hg history
   changeset:   1:d4f0d2909abc
   tag:         tip
@@ -219,6 +222,9 @@ tag and branch using same name
 test custom commit messages
 
   $ cat > editor.sh << '__EOF__'
+  > echo "==== before editing"
+  > cat "$1"
+  > echo "===="
   > echo "custom tag message" > "$1"
   > echo "second line" >> "$1"
   > __EOF__
@@ -250,8 +256,22 @@ at first, test saving last-message.txt
   > pretxncommit.unexpectedabort = false
   > __EOF__
 
+(this tests also that editor is invoked, if '--edit' is specified,
+regardless of '--message')
+
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e -m "foo bar"
+  ==== before editing
+  foo bar
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'tag-and-branch-same-name'
+  HG: changed .hgtags
+  ====
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt
@@ -272,6 +292,17 @@ at first, test saving last-message.txt
 then, test custom commit message itself
 
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
+  ==== before editing
+  Added tag custom-tag for changeset 75a534207be6
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'tag-and-branch-same-name'
+  HG: changed .hgtags
+  ====
   $ hg log -l1 --template "{desc}\n"
   custom tag message
   second line

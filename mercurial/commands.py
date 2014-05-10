@@ -5695,11 +5695,7 @@ def tag(ui, repo, name1, *names, **opts):
         if date:
             date = util.parsedate(date)
 
-        if opts.get('edit'):
-            def editor(repo, ctx, subs):
-                return ui.edit(ctx.description() + "\n", ctx.user())
-        else:
-            editor = False
+        editor = cmdutil.getcommiteditor(**opts)
 
         # don't allow tagging the null rev
         if (not opts.get('remove') and
