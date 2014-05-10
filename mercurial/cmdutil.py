@@ -2051,12 +2051,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
-            editor = commiteditor
+            editor = getcommiteditor(**opts)
             if not message:
-                editor = commitforceeditor
+                editor = getcommiteditor(edit=True)
                 message = old.description()
-            elif opts.get('edit'):
-                editor = commitforceeditor
 
             pureextra = extra.copy()
             extra['amend_source'] = old.hex()
