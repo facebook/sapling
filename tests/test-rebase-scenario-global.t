@@ -25,6 +25,7 @@
 
 Rebasing
 D onto H - simple rebase:
+(this also tests that editor is invoked if '--edit' is specified)
 
   $ hg clone -q -u . a a1
   $ cd a1
@@ -47,7 +48,18 @@ D onto H - simple rebase:
   o  0: 'A'
   
 
-  $ hg rebase -s 3 -d 7
+  $ hg status --rev "3^1" --rev 3
+  A D
+  $ HGEDITOR=cat hg rebase -s 3 -d 7 --edit
+  D
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: Nicolas Dumazet <nicdumz.commits@gmail.com>
+  HG: branch 'default'
+  HG: changed D
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
@@ -71,11 +83,12 @@ D onto H - simple rebase:
 
 
 D onto F - intermediate point:
+(this also tests that editor is not invoked if '--edit' is not specified)
 
   $ hg clone -q -u . a a2
   $ cd a2
 
-  $ hg rebase -s 3 -d 5
+  $ HGEDITOR=cat hg rebase -s 3 -d 5
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
