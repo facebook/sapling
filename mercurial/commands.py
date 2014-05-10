@@ -487,13 +487,12 @@ def backout(ui, repo, node=None, rev=None, **opts):
             cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
 
 
-        e = cmdutil.commiteditor
-        if not opts['message'] and not opts['logfile']:
-            # we don't translate commit messages
-            opts['message'] = "Backed out changeset %s" % short(node)
-            e = cmdutil.commitforceeditor
-
         def commitfunc(ui, repo, message, match, opts):
+            e = cmdutil.commiteditor
+            if not message:
+                # we don't translate commit messages
+                message = "Backed out changeset %s" % short(node)
+                e = cmdutil.commitforceeditor
             return repo.commit(message, opts.get('user'), opts.get('date'),
                                match, editor=e)
         newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
