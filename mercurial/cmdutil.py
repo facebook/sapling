@@ -2320,10 +2320,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   action if not in target manifest
             #   make backup if in target manifest
             #   make backup if not in target manifest
-            (modified, revert, remove, True, True),
-            (added, revert, remove, True, False),
-            (removed, undelete, None, True, False),
-            (deleted, revert, remove, False, False),
+            (modified, revert,   remove, True,  True),
+            (added,    revert,   remove, True,  False),
+            (removed,  undelete, None,   True,  False),
+            (deleted,  revert,   remove, False, False),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
