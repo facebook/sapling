@@ -807,7 +807,9 @@ Example::
 ---------------
 
 This section configures external merge tools to use for file-level
-merges.
+merges. This section has likely been preconfigured at install time.
+Use :hg:`config merge-tools` to check the existing configuration.
+Also see :hg:`help merge-tools` for more details.
 
 Example ``~/.hgrc``::
 
