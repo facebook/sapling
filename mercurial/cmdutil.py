@@ -2259,18 +2259,22 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
     # so have to walk both. do not print errors if files exist in one
     # but not other.
 
+    # `names` is a mapping for all elements in working copy and target revision
+    # The mapping is in the form:
+    #   <asb path in repo> -> (<path from CWD>, <exactly specified by matcher?>)
     names = {}
 
     wlock = repo.wlock()
     try:
-        # walk dirstate.
+        ## filling of the `names` mapping
+        # walk dirstate to fill `names`
 
         m = scmutil.match(repo[None], pats, opts)
         m.bad = lambda x, y: False
         for abs in repo.walk(m):
             names[abs] = m.rel(abs), m.exact(abs)
 
-        # walk target manifest.
+        # walk target manifest to fill `names`
 
         def badfn(path, msg):
             if path in names:
@@ -2291,11 +2295,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         # get the list of subrepos that must be reverted
         targetsubs = sorted(s for s in ctx.substate if m(s))
+
+        # Find status of all file in `names`. (Against working directory parent)
         m = scmutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
         modified, added, removed, deleted = map(set, changes)
 
-        # if f is a rename, also revert the source
+        # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
         for f in added:
             src = repo.dirstate.copied(f)
@@ -2303,11 +2309,15 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 removed.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
 
+        ## computation of the action to performs on `names` content.
+
         def removeforget(abs):
             if repo.dirstate[abs] == 'a':
                 return _('forgetting %s\n')
             return _('removing %s\n')
 
+        # action to be actually performed by revert
+        # (<list of file>, message>) tuple
         revert = ([], _('reverting %s\n'))
         add = ([], _('adding %s\n'))
         remove = ([], removeforget)
@@ -2327,7 +2337,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             )
 
         for abs, (rel, exact) in sorted(names.items()):
+            # hash on file in target manifest (or None if missing from target)
             mfentry = mf.get(abs)
+            # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
             def handle(xlist, dobackup):
                 xlist[0].append(abs)
@@ -2344,6 +2356,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     if not isinstance(msg, basestring):
                         msg = msg(abs)
                     ui.status(msg % rel)
+            # search the entry in the dispatch table.
+            # if the file is in any of this sets, it was touched in the working
+            # directory parent and we are sure it needs to be reverted.
             for table, hitlist, misslist, backuphit, backupmiss in disptable:
                 if abs not in table:
                     continue
@@ -2354,17 +2369,22 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     handle(misslist, backupmiss)
                 break
             else:
+                # Not touched in current dirstate.
+
+                # file is unknown in parent, restore older version or ignore.
                 if abs not in repo.dirstate:
                     if mfentry:
                         handle(add, True)
                     elif exact:
                         ui.warn(_('file not managed: %s\n') % rel)
                     continue
-                # file has not changed in dirstate
+
+                # parent is target, no changes mean no changes
                 if node == parent:
                     if exact:
                         ui.warn(_('no changes needed to %s\n') % rel)
                     continue
+                # no change in dirstate but parent and target may differ
                 if pmf is None:
                     # only need parent manifest in this unlikely case,
                     # so do not read by default
