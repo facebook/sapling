@@ -2318,10 +2318,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
-        revert = ([], _('reverting %s\n'))
-        add = ([], _('adding %s\n'))
-        remove = ([], removeforget)
-        undelete = ([], _('undeleting %s\n'))
+        actions = {'revert': ([], _('reverting %s\n')),
+                   'add': ([], _('adding %s\n')),
+                   'remove': ([], removeforget),
+                   'undelete': ([], _('undeleting %s\n'))}
 
         disptable = (
             # dispatch table:
@@ -2330,10 +2330,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   action if not in target manifest
             #   make backup if in target manifest
             #   make backup if not in target manifest
-            (modified, revert,   remove, True,  True),
-            (added,    revert,   remove, True,  False),
-            (removed,  undelete, None,   True,  False),
-            (deleted,  revert,   remove, False, False),
+            (modified, actions['revert'],   actions['remove'], True,  True),
+            (added,    actions['revert'],   actions['remove'], True,  False),
+            (removed,  actions['undelete'], None,              True,  False),
+            (deleted,  actions['revert'],   actions['remove'], False, False),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
@@ -2374,7 +2374,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 # file is unknown in parent, restore older version or ignore.
                 if abs not in repo.dirstate:
                     if mfentry:
-                        handle(add, True)
+                        handle(actions['add'], True)
                     elif exact:
                         ui.warn(_('file not managed: %s\n') % rel)
                     continue
@@ -2394,11 +2394,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     # manifests, do nothing
                     if (pmf[abs] != mfentry or
                         pmf.flags(abs) != mf.flags(abs)):
-                        handle(revert, False)
+                        handle(actions['revert'], False)
                 else:
-                    handle(remove, False)
+                    handle(actions['remove'], False)
+
         if not opts.get('dry_run'):
-            _performrevert(repo, parents, ctx, revert, add, remove, undelete)
+            _performrevert(repo, parents, ctx, actions)
 
             if targetsubs:
                 # Revert the subrepos on the revert list
@@ -2407,8 +2408,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
     finally:
         wlock.release()
 
-def _performrevert(repo, parents, ctx, revert, add, remove, undelete):
-    """function that actually perform all the action computed for revert
+def _performrevert(repo, parents, ctx, actions):
+    """function that actually perform all the actions computed for revert
 
     This is an independent function to let extension to plug in and react to
     the imminent revert.
@@ -2422,7 +2423,7 @@ def _performrevert(repo, parents, ctx, revert, add, remove, undelete):
         repo.wwrite(f, fc.data(), fc.flags())
 
     audit_path = pathutil.pathauditor(repo.root)
-    for f in remove[0]:
+    for f in actions['remove'][0]:
         if repo.dirstate[f] == 'a':
             repo.dirstate.drop(f)
             continue
@@ -2442,25 +2443,25 @@ def _performrevert(repo, parents, ctx, revert, add, remove, undelete):
             normal = repo.dirstate.normallookup
         else:
             normal = repo.dirstate.normal
-    for f in revert[0]:
+    for f in actions['revert'][0]:
         checkout(f)
         if normal:
             normal(f)
 
-    for f in add[0]:
+    for f in actions['add'][0]:
         checkout(f)
         repo.dirstate.add(f)
 
     normal = repo.dirstate.normallookup
     if node == parent and p2 == nullid:
         normal = repo.dirstate.normal
-    for f in undelete[0]:
+    for f in actions['undelete'][0]:
         checkout(f)
         normal(f)
 
     copied = copies.pathcopies(repo[parent], ctx)
 
-    for f in add[0] + undelete[0] + revert[0]:
+    for f in actions['add'][0] + actions['undelete'][0] + actions['revert'][0]:
         if f in copied:
             repo.dirstate.copy(copied[f], f)
 
