@@ -22,9 +22,9 @@ tests-%:
 
 # This is intended to be the authoritative list of Hg versions that this
 # extension is tested with.  Versions prior to the version that ships in the
-# latest Ubuntu LTS release (2.0.2 for 12.04 LTS) may be dropped if they
+# latest Ubuntu LTS release (2.8.2 for 14.04 LTS) may be dropped if they
 # interfere with new development.  The latest released minor version should be
 # listed for each major version; earlier minor versions are not needed.
-all-version-tests: tests-2.0.2 tests-2.1.2 tests-2.2.3 tests-2.8.1 tests-tip
+all-version-tests: tests-2.8.2 tests-tip
 
 .PHONY: tests all-version-tests
