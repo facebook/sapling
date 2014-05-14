@@ -14,6 +14,10 @@ while [ "$1" ]; do
         shift
         BUILD=
         ;;
+    --withpython | --with-python)
+        shift
+        PYTHONVER=2.7.8
+        ;;
     * )
         echo "Invalid parameter $1!" 1>&2
         exit 1
@@ -23,7 +27,7 @@ done
 
 cd "`dirname $0`/.."
 
-specfile=contrib/mercurial.spec
+specfile=$PWD/contrib/mercurial.spec
 if [ ! -f $specfile ]; then
     echo "Cannot find $specfile!" 1>&2
     exit 1
@@ -56,8 +60,28 @@ else
     version=`echo $hgversion | sed -e 's/+.*//'`
     release='0'
 fi
+if [ "$PYTHONVER" ]; then
+    release=$release+$PYTHONVER
+    RPMPYTHONVER=$PYTHONVER
+else
+    RPMPYTHONVER=%{nil}
+fi
 
 $HG archive -t tgz $rpmdir/SOURCES/mercurial-$version-$release.tar.gz
+if [ "$PYTHONVER" ]; then
+(
+    cd build
+    PYTHON_SRCFILE=Python-$PYTHONVER.tgz
+    [ -f $PYTHON_SRCFILE ] || curl -Lo $PYTHON_SRCFILE http://www.python.org/ftp/python/$PYTHONVER/$PYTHON_SRCFILE
+    ln -f $PYTHON_SRCFILE $rpmdir/SOURCES/$PYTHON_SRCFILE
+
+    DOCUTILSVER=`sed -ne "s/^%global docutilsname docutils-//p" $specfile`
+    DOCUTILS_SRCFILE=docutils-$DOCUTILSVER.tar.gz
+    [ -f $DOCUTILS_SRCFILE ] || curl -Lo $DOCUTILS_SRCFILE http://downloads.sourceforge.net/project/docutils/docutils/$DOCUTILSVER/$DOCUTILS_SRCFILE
+    ln -f $DOCUTILS_SRCFILE $rpmdir/SOURCES/$DOCUTILS_SRCFILE
+)
+fi
+
 rpmspec=$rpmdir/SPECS/mercurial.spec
 
 sed -e "s,^Version:.*,Version: $version," \
@@ -108,6 +132,10 @@ for l in sys.stdin.readlines():
 ' >> $rpmspec
 
 fi
+
+sed -i \
+    -e "s/^%define withpython.*$/%define withpython $RPMPYTHONVER/" \
+    $rpmspec
 
 if [ "$BUILD" ]; then
     rpmbuild --define "_topdir $rpmdir" -ba $rpmspec --clean
