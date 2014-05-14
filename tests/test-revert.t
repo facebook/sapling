@@ -299,4 +299,88 @@ copies and renames, you have no chance to survive make your time (issue3920)
     removed
   R ignored
 
-  $ cd ..
+Test revert of a file added by one side of the merge
+
+(remove any pending change)
+
+  $ hg revert --all
+  forgetting allyour
+  forgetting base
+  undeleting ignored
+  $ hg purge --all --config extensions.purge=
+
+(Adds a new commit)
+
+  $ echo foo > newadd
+  $ hg add newadd
+  $ hg commit -m 'other adds'
+  created new head
+
+
+(merge it with the other head)
+
+  $ hg merge # merge 1 into 2
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg summary
+  parent: 2:b8ec310b2d4e tip
+   other adds
+  parent: 1:f6180deb8fbe 
+   rename
+  branch: default
+  commit: 2 modified, 1 removed (merge)
+  update: (current)
+
+(clarifies who added what)
+
+  $ hg status
+  M allyour
+  M base
+  R ignored
+  $ hg status --change 'p1()'
+  A newadd
+  $ hg status --change 'p2()'
+  A allyour
+  A base
+  R ignored
+
+(revert file added by p1() to p1() state)
+
+  $ hg revert -r 'p1()' 'glob:newad?'
+  $ hg status
+  M allyour
+  M base
+  R ignored
+
+(revert file added by p1() to p2() state)
+
+  $ hg revert -r 'p2()' 'glob:newad?'
+  removing newadd
+  $ hg status
+  M allyour
+  M base
+  R ignored
+  R newadd
+
+(revert file added by p2() to p2() state)
+spurious message comes from revert confusion when using p2. To be fixed soon.
+
+  $ hg revert -r 'p2()' 'glob:allyou?'
+  reverting allyour
+  $ hg status
+  M allyour
+  M base
+  R ignored
+  R newadd
+
+(revert file added by p2() to p1() state)
+
+  $ hg revert -r 'p1()' 'glob:allyou?'
+  removing allyour
+  $ hg status
+  M base
+  R allyour
+  R ignored
+  R newadd
+
+
