@@ -32,11 +32,10 @@ for line in sys.stdin:
             (r"imported but unused", None),
             (r"local variable '.*' is assigned to but never used", None),
             (r"unable to detect undefined names", None),
+            (r"undefined name '.*'",
+             r"undefined name 'memoryview'")
            ]
-    if sys.version_info >= (2, 7):
-        pats.append((r"undefined name '.*'", None))
-    else:
-        pats.append((r"undefined name '.*'", r"undefined name 'memoryview'"))
+
     for msgtype, (pat, excl) in enumerate(pats):
         if re.search(pat, line) and (not excl or not re.search(excl, line)):
             break # pattern matches
