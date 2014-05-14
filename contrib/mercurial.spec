@@ -1,3 +1,6 @@
+%global emacs_lispdir %{_datadir}/emacs/site-lisp
+%global pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
+
 Summary: A fast, lightweight Source Control Management system
 Name: mercurial
 Version: snapshot
@@ -13,9 +16,6 @@ Provides: hg = %{version}-%{release}
 Requires: python >= 2.4
 # The hgk extension uses the wish tcl interpreter, but we don't enforce it
 #Requires: tk
-
-%define pythonver %(python -c 'import sys;print ".".join(map(str, sys.version_info[:2]))')
-%define emacs_lispdir %{_datadir}/emacs/site-lisp
 
 %description
 Mercurial is a fast, lightweight source control management system designed

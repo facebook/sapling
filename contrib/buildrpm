@@ -8,9 +8,6 @@
 # - centOS 6
 
 cd "`dirname $0`/.."
-HG="$PWD/hg"
-PYTHONPATH="$PWD/mercurial/pure"
-export PYTHONPATH
 
 specfile=contrib/mercurial.spec
 if [ ! -f $specfile ]; then
@@ -31,13 +28,17 @@ if $HG id -i | grep '+$' > /dev/null 2>&1; then
     fi
 fi
 
+# build local hg and use it
+python setup.py build_py -c -d .
+HG="$PWD/hg"
+PYTHONPATH="$PWD/mercurial/pure"
+export PYTHONPATH
+
 rpmdir="$PWD/rpmbuild"
 
 rm -rf $rpmdir
 mkdir -p $rpmdir/SOURCES $rpmdir/SPECS $rpmdir/RPMS $rpmdir/SRPMS $rpmdir/BUILD
 
-# make setup.py build the version string
-python setup.py build_py -c -d .
 hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
 
 if echo $hgversion | grep -- '-' > /dev/null 2>&1; then
