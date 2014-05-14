@@ -33,7 +33,7 @@ for line in sys.stdin:
             (r"local variable '.*' is assigned to but never used", None),
             (r"unable to detect undefined names", None),
             (r"undefined name '.*'",
-             r"undefined name 'memoryview'")
+             r"undefined name '(WindowsError|memoryview)'")
            ]
 
     for msgtype, (pat, excl) in enumerate(pats):
