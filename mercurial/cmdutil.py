@@ -2298,7 +2298,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         # Find status of all file in `names`. (Against working directory parent)
         m = scmutil.matchfiles(repo, names)
-        changes = repo.status(match=m)[:4]
+        changes = repo.status(node1=parent, match=m)[:4]
         modified, added, removed, deleted = map(set, changes)
 
         # if f is a rename, update `names` to also revert the source
