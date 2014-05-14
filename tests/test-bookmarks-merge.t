@@ -32,6 +32,7 @@
 
   $ hg up -C 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark c)
   $ echo d > d
   $ hg add d
   $ hg commit -m'd'
@@ -54,6 +55,7 @@
 
   $ hg up -C 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark e)
   $ hg merge
   abort: heads are bookmarked - please merge with an explicit rev
   (run 'hg heads' to see all heads)
@@ -72,6 +74,7 @@
 
   $ hg up -C 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark e)
   $ echo f > f
   $ hg commit -Am "f"
   adding f
@@ -114,6 +117,7 @@
 
   $ hg up -C 6
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark e)
   $ echo g > g
   $ hg commit -Am 'g'
   adding g

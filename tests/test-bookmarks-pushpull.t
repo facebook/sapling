@@ -411,6 +411,7 @@ bookmark, not all outgoing changes:
   $ hg commit -m 'add bar'
   $ hg co "tip^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark @)
   $ hg book add-foo
   $ hg book -r tip add-bar
 Note: this push *must* push only a single changeset, as that's the point

@@ -82,6 +82,7 @@ working dir unaffected by rollback: do not restore dirstate et. al.
   0  default  add a again
   $ hg update default
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark foo)
   $ hg bookmark bar
   $ cat .hg/undo.branch ; echo
   test

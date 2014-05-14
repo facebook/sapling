@@ -582,6 +582,7 @@ test stripping a non-checked-out but bookmarked revision
   $ hg book should-end-on-two
   $ hg co --clean 4
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark should-end-on-two)
   $ hg book four
   $ hg --config extensions.mq= strip 3
   saved backup bundle to * (glob)

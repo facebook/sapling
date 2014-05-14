@@ -34,6 +34,7 @@ http://mercurial.selenic.com/bts/issue1877
   
   $ hg up 1e6c11564562
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark main)
   $ hg merge main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

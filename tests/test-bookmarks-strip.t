@@ -38,6 +38,7 @@ update to -2 (deactivates the active bookmark)
 
   $ hg update -r -2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark test2)
 
   $ echo eee>>qqq.txt
 

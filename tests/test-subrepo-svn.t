@@ -470,6 +470,7 @@ test having obstructions when switching branches on checkout:
   $ hg book other
   $ hg co -r 'p1(tip)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark other)
   $ echo "obstruct =        [svn]       $SVNREPOURL/src" >> .hgsub
   $ svn co -r5 --quiet "$SVNREPOURL"/src obstruct
   $ hg commit -m 'Other branch which will be obstructed'
@@ -543,6 +544,7 @@ First, create that condition in the repository.
   A    *recreated/somethingold (glob)
   Checked out revision 10.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark other)
   $ test -f recreated/somethingold
 
 Test archive

@@ -24,6 +24,7 @@
   $ hg ci -m 'merge local copy' -d '3 0'
   $ hg up -C 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark premerge1)
   $ hg bookmark premerge2
   $ hg merge 2
   merging foo and baz to baz
