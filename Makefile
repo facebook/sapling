@@ -144,7 +144,7 @@ osx:
 
 fedora:
 	mkdir -p packages/fedora
-	echo y | contrib/buildrpm
+	contrib/buildrpm
 	cp rpmbuild/RPMS/*/* packages/fedora
 	cp rpmbuild/SRPMS/* packages/fedora
 	rm -rf rpmbuild
@@ -155,7 +155,7 @@ docker-fedora:
 
 centos6:
 	mkdir -p packages/centos6
-	echo y | contrib/buildrpm
+	contrib/buildrpm
 	cp rpmbuild/RPMS/*/* packages/centos6
 	cp rpmbuild/SRPMS/* packages/centos6
 
