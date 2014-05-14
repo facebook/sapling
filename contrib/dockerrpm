@@ -18,6 +18,7 @@ $DOCKER version | grep -q "^Server version:" || { echo "Error: could not get doc
 
 PLATFORM="$1"
 [ "$PLATFORM" ] || { echo "Error: platform name must be specified"; exit 1; }
+shift # extra params are passed to buildrpm
 
 DFILE="$ROOTDIR/contrib/docker/$PLATFORM"
 [ -f "$DFILE" ] || { echo "Error: docker file $DFILE not found"; exit 1; }
@@ -32,7 +33,7 @@ echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
 ) | $DOCKER build --tag $CONTAINER -
 
 RPMBUILDDIR=$ROOTDIR/packages/$PLATFORM
-contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare
+contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare $*
 
 DSHARED=/mnt/shared
 $DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \

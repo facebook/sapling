@@ -155,6 +155,16 @@ docker-fedora20:
 	mkdir -p packages/fedora20
 	contrib/dockerrpm fedora20
 
+centos5:
+	mkdir -p packages/centos5
+	contrib/buildrpm --withpython
+	cp rpmbuild/RPMS/*/* packages/centos5
+	cp rpmbuild/SRPMS/* packages/centos5
+
+docker-centos5:
+	mkdir -p packages/centos5
+	contrib/dockerrpm centos5 --withpython
+
 centos6:
 	mkdir -p packages/centos6
 	contrib/buildrpm
