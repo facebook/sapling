@@ -2250,6 +2250,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
     node = ctx.node()
 
     mf = ctx.manifest()
+    if node == p2:
+        parent = p2
     if node == parent:
         pmf = mf
     else:

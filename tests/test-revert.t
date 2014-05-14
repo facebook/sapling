@@ -363,10 +363,8 @@ Test revert of a file added by one side of the merge
   R newadd
 
 (revert file added by p2() to p2() state)
-spurious message comes from revert confusion when using p2. To be fixed soon.
 
   $ hg revert -r 'p2()' 'glob:allyou?'
-  reverting allyour
   $ hg status
   M allyour
   M base
