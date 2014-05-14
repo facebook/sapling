@@ -2330,10 +2330,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   action if not in target manifest
             #   make backup if in target manifest
             #   make backup if not in target manifest
-            (modified, actions['revert'],   actions['remove'], True,  True),
-            (added,    actions['revert'],   actions['remove'], True,  False),
-            (removed,  actions['undelete'], None,              True,  False),
-            (deleted,  actions['revert'],   actions['remove'], False, False),
+            (modified, (actions['revert'],   True),
+                       (actions['remove'],   True)),
+            (added,    (actions['revert'],   True),
+                       (actions['remove'],   False)),
+            (removed,  (actions['undelete'], True),
+                       (None,                False)),
+            (deleted,  (actions['revert'], False),
+                       (actions['remove'], False)),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
@@ -2359,14 +2363,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # search the entry in the dispatch table.
             # if the file is in any of this sets, it was touched in the working
             # directory parent and we are sure it needs to be reverted.
-            for table, hitlist, misslist, backuphit, backupmiss in disptable:
+            for table, hit, miss in disptable:
                 if abs not in table:
                     continue
                 # file has changed in dirstate
                 if mfentry:
-                    handle(hitlist, backuphit)
-                elif misslist is not None:
-                    handle(misslist, backupmiss)
+                    handle(*hit)
+                elif miss[0] is not None:
+                    handle(*miss)
                 break
             else:
                 # Not touched in current dirstate.
