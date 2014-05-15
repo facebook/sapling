@@ -650,6 +650,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
                 moves.append(f1)
 
     audit = repo.wopener.audit
+    _updating = _('updating')
+    _files = _('files')
+    progress = repo.ui.progress
 
     # remove renamed files after safely stored
     for f in moves:
@@ -670,26 +673,23 @@ def applyupdates(repo, actions, wctx, mctx, overwrite):
     if hgsub and hgsub[0] == 'r':
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
 
+    # remove in parallel (must come first)
     z = 0
     prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
                          removeactions)
     for i, item in prog:
         z += i
-        repo.ui.progress(_('updating'), z, item=item, total=numupdates,
-                         unit=_('files'))
+        progress(_updating, z, item=item, total=numupdates, unit=_files)
+
+    # get in parallel
     prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
                          updateactions)
     for i, item in prog:
         z += i
-        repo.ui.progress(_('updating'), z, item=item, total=numupdates,
-                         unit=_('files'))
+        progress(_updating, z, item=item, total=numupdates, unit=_files)
 
     if hgsub and hgsub[0] == 'g':
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
-
-    _updating = _('updating')
-    _files = _('files')
-    progress = repo.ui.progress
 
     for i, a in enumerate(actions):
         f, m, args, msg = a
