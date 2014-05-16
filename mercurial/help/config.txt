@@ -843,7 +843,13 @@ Supported arguments:
 ``args``
   The arguments to pass to the tool executable. You can refer to the
   files being merged as well as the output file through these
-  variables: ``$base``, ``$local``, ``$other``, ``$output``.
+  variables: ``$base``, ``$local``, ``$other``, ``$output``. The meaning
+  of ``$local`` and ``$other`` can vary depending on which action is being
+  performed. During and update or merge, ``$local`` represents the original
+  state of the file, while ``$other`` represents the commit you are updating
+  to or the commit you are merging with. During a rebase ``$local``
+  represents the destination of the rebase, and ``$other`` represents the
+  commit being rebased.
   Default: ``$local $base $other``
 
 ``premerge``
