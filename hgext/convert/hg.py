@@ -394,7 +394,9 @@ class mercurial_source(converter_source):
                       sortkey=ctx.rev())
 
     def gettags(self):
-        tags = [t for t in self.repo.tagslist() if t[0] != 'tip']
+        # This will get written to .hgtags, filter non global tags out.
+        tags = [t for t in self.repo.tagslist()
+                if self.repo.tagtype(t[0]) == 'global']
         return dict([(name, hex(node)) for name, node in tags
                      if self.keep(node)])
 

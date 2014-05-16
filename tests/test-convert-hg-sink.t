@@ -16,8 +16,10 @@
   $ echo file > foo/file
   $ hg ci -qAm 'add foo/file'
   $ hg tag some-tag
+  $ hg tag -l local-tag
   $ hg log
   changeset:   3:593cbf6fb2b4
+  tag:         local-tag
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
