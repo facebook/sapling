@@ -590,9 +590,9 @@ class Test(object):
             iolock.release()
             if answer.lower() in ('y', 'yes'):
                 if self._test.endswith('.t'):
-                    rename(self._errpath, self._testpath)
+                    rename(self._errpath, self._path)
                 else:
-                    rename(self._errpath, '%s.out' % self._testpath)
+                    rename(self._errpath, '%s.out' % self._path)
 
                 return '.', self._test, ''
 
