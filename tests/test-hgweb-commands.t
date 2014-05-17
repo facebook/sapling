@@ -235,6 +235,180 @@ Logs and changes
    </entry>
   
   </feed>
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/?style=rss'
+  200 Script output follows
+  
+  <?xml version="1.0" encoding="ascii"?>
+  <rss version="2.0">
+    <channel>
+      <link>http://*:$HGPORT/</link> (glob)
+      <language>en-us</language>
+  
+      <title>test Changelog</title>
+      <description>test Changelog</description>
+      <item>
+      <title>[unstable] branch commit with null character: </title>
+      <guid isPermaLink="true">http://*:$HGPORT/rev/cad8025a2e87</guid> (glob)
+               <link>http://*:$HGPORT/rev/cad8025a2e87</link> (glob)
+      <description>
+                <![CDATA[
+  	<table>
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>cad8025a2e87</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>unstable</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
+  		<td>something</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td>tip</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>branch commit with null character: </td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td></td>
+  	</tr>
+  	</table>
+  	]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  <item>
+      <title>[stable] branch</title>
+      <guid isPermaLink="true">http://*:$HGPORT/rev/1d22e65f027e</guid> (glob)
+               <link>http://*:$HGPORT/rev/1d22e65f027e</link> (glob)
+      <description>
+                <![CDATA[
+  	<table>
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>1d22e65f027e</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>stable</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>branch</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td>foo<br /></td>
+  	</tr>
+  	</table>
+  	]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  <item>
+      <title>[default] Added tag 1.0 for changeset 2ef0ac749a14</title>
+      <guid isPermaLink="true">http://*:$HGPORT/rev/a4f92ed23982</guid> (glob)
+               <link>http://*:$HGPORT/rev/a4f92ed23982</link> (glob)
+      <description>
+                <![CDATA[
+  	<table>
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>a4f92ed23982</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td>.hgtags<br /></td>
+  	</tr>
+  	</table>
+  	]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  <item>
+      <title>base</title>
+      <guid isPermaLink="true">http://*:$HGPORT/rev/2ef0ac749a14</guid> (glob)
+               <link>http://*:$HGPORT/rev/2ef0ac749a14</link> (glob)
+      <description>
+                <![CDATA[
+  	<table>
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>2ef0ac749a14</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
+  		<td>anotherthing</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td>1.0</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>base</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td>da/foo<br />foo<br /></td>
+  	</tr>
+  	</table>
+  	]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  
+    </channel>
+  </rss> (no-eol)
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/?style=atom'
   200 Script output follows
   
@@ -335,6 +509,100 @@ Logs and changes
    </entry>
   
   </feed>
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/?style=rss'
+  200 Script output follows
+  
+  <?xml version="1.0" encoding="ascii"?>
+  <rss version="2.0">
+    <channel>
+      <link>http://*:$HGPORT/</link> (glob)
+      <language>en-us</language>
+  
+      <title>test Changelog</title>
+      <description>test Changelog</description>
+      <item>
+      <title>[default] Added tag 1.0 for changeset 2ef0ac749a14</title>
+      <guid isPermaLink="true">http://*:$HGPORT/rev/a4f92ed23982</guid> (glob)
+               <link>http://*:$HGPORT/rev/a4f92ed23982</link> (glob)
+      <description>
+                <![CDATA[
+  	<table>
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>a4f92ed23982</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td>default</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td></td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td>.hgtags<br /></td>
+  	</tr>
+  	</table>
+  	]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  <item>
+      <title>base</title>
+      <guid isPermaLink="true">http://*:$HGPORT/rev/2ef0ac749a14</guid> (glob)
+               <link>http://*:$HGPORT/rev/2ef0ac749a14</link> (glob)
+      <description>
+                <![CDATA[
+  	<table>
+  	<tr>
+  		<th style="text-align:left;">changeset</th>
+  		<td>2ef0ac749a14</td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">branch</th>
+                                <td></td>
+                </tr>
+                <tr>
+                                <th style="text-align:left;">bookmark</th>
+  		<td>anotherthing</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;">tag</th>
+  		<td>1.0</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">user</th>
+  		<td>&#116;&#101;&#115;&#116;</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">description</th>
+  		<td>base</td>
+  	</tr>
+  	<tr>
+  		<th style="text-align:left;vertical-align:top;">files</th>
+  		<td>da/foo<br />foo<br /></td>
+  	</tr>
+  	</table>
+  	]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  
+    </channel>
+  </rss> (no-eol)
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/foo/?style=atom'
   200 Script output follows
   
@@ -390,6 +658,27 @@ Logs and changes
    </entry>
   
   </feed>
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/foo/?style=rss'
+  200 Script output follows
+  
+  <?xml version="1.0" encoding="ascii"?>
+  <rss version="2.0">
+    <channel>
+      <link>http://*:$HGPORT/</link> (glob)
+      <language>en-us</language>
+  
+      <title>test: foo history</title>
+      <description>foo revision history</description>
+      <item>
+      <title>base</title>
+      <link>http://*:$HGPORT/log2ef0ac749a14/foo</link> (glob)
+      <description><![CDATA[base]]></description>
+      <author>&#116;&#101;&#115;&#116;</author>
+      <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
+  </item>
+  
+    </channel>
+  </rss>
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog/'
   200 Script output follows
   
