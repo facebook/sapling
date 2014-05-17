@@ -31,10 +31,13 @@ Set up the repo
   $ hg ci -l msg
   $ rm msg
 
-  $ echo [graph] >> .hg/hgrc
-  $ echo default.width = 3 >> .hg/hgrc
-  $ echo stable.width = 3 >> .hg/hgrc
-  $ echo stable.color = FF0000 >> .hg/hgrc
+  $ cat > .hg/hgrc <<EOF
+  > [graph]
+  > default.width = 3
+  > stable.width = 3
+  > stable.color = FF0000
+  > EOF
+
   $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg log -G --template '{rev}:{node|short} {desc}\n'
