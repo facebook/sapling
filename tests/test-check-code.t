@@ -284,3 +284,19 @@
    > print _(
    don't use % inside _()
   [1]
+
+web templates
+
+  $ mkdir -p mercurial/templates
+  $ cat > mercurial/templates/example.tmpl <<EOF
+  > {desc}
+  > {desc|escape}
+  > {desc|firstline}
+  > {desc|websub}
+  > EOF
+
+  $ "$check_code" --warnings mercurial/templates/example.tmpl
+  mercurial/templates/example.tmpl:2:
+   > {desc|escape}
+   warning: follow desc keyword with either firstline or websub
+  [1]

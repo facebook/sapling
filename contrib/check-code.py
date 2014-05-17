@@ -367,6 +367,16 @@ inrevlogpats = [
   []
 ]
 
+webtemplatefilters = []
+
+webtemplatepats = [
+  [],
+  [
+    (r'{desc(\|(?!websub|firstline)[^\|]*)+}',
+     'follow desc keyword with either firstline or websub'),
+  ]
+]
+
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
@@ -377,6 +387,8 @@ checks = [
     ('layering violation ui in util', r'mercurial/util\.py', '', pyfilters,
      inutilpats),
     ('txt', r'.*\.txt$', '', txtfilters, txtpats),
+    ('web template', r'mercurial/templates/.*\.tmpl', '',
+     webtemplatefilters, webtemplatepats),
 ]
 
 def _preparepats():
