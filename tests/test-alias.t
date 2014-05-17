@@ -4,6 +4,7 @@
   > # should clobber ci but not commit (issue2993)
   > ci = version
   > myinit = init
+  > mycommit = commit
   > optionalrepo = showconfig alias.myinit
   > cleanstatus = status -c
   > unknown = bargle
@@ -41,6 +42,7 @@
   > escaped2 = !sh -c 'echo "HGFOO is \$\$HGFOO"'
   > escaped3 = !sh -c 'echo "\$1 is \$\$\$1"'
   > escaped4 = !printf '\$\$0 \$\$@\n'
+  > exit1 = !sh -c 'exit 1'
   > 
   > [defaults]
   > mylog = -q
@@ -58,6 +60,7 @@ unknown
 
   $ hg unknown
   alias 'unknown' resolves to unknown command 'bargle'
+  [1]
   $ hg help unknown
   alias 'unknown' resolves to unknown command 'bargle'
 
@@ -66,6 +69,7 @@ ambiguous
 
   $ hg ambiguous
   alias 'ambiguous' resolves to ambiguous command 's'
+  [1]
   $ hg help ambiguous
   alias 'ambiguous' resolves to ambiguous command 's'
 
@@ -74,6 +78,7 @@ recursive
 
   $ hg recursive
   alias 'recursive' resolves to unknown command 'recursive'
+  [1]
   $ hg help recursive
   alias 'recursive' resolves to unknown command 'recursive'
 
@@ -82,6 +87,7 @@ no definition
 
   $ hg nodef
   no definition for alias 'nodefinition'
+  [1]
   $ hg help nodef
   no definition for alias 'nodefinition'
 
@@ -90,22 +96,27 @@ invalid options
 
   $ hg no--cwd
   error in definition for alias 'no--cwd': --cwd may only be given on the command line
+  [1]
   $ hg help no--cwd
   error in definition for alias 'no--cwd': --cwd may only be given on the command line
   $ hg no-R
   error in definition for alias 'no-R': -R may only be given on the command line
+  [1]
   $ hg help no-R
   error in definition for alias 'no-R': -R may only be given on the command line
   $ hg no--repo
   error in definition for alias 'no--repo': --repo may only be given on the command line
+  [1]
   $ hg help no--repo
   error in definition for alias 'no--repo': --repo may only be given on the command line
   $ hg no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
+  [1]
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
   $ hg no--config
   error in definition for alias 'no--config': --config may only be given on the command line
+  [1]
 
 optional repository
 
@@ -125,6 +136,7 @@ no usage
 
   $ hg nousage
   no rollback information available
+  [1]
 
   $ echo foo > foo
   $ hg commit -Amfoo
@@ -442,3 +454,11 @@ This shouldn't:
   $ hg --config alias.log='id' history
 
   $ cd ../..
+
+return code of command and shell aliases:
+
+  $ hg mycommit -R alias
+  nothing changed
+  [1]
+  $ hg exit1
+  [1]
