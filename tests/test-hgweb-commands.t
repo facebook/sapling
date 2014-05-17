@@ -36,6 +36,8 @@ Set up the repo
   > default.width = 3
   > stable.width = 3
   > stable.color = FF0000
+  > [websub]
+  > append = s|(.*)|\1(websub)|
   > EOF
 
   $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
@@ -98,7 +100,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>branch commit with null character: </td>
+  		<td>branch commit with null character: (websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -141,7 +143,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>branch</td>
+  		<td>branch(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -184,7 +186,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+  		<td>Added tag 1.0 for changeset 2ef0ac749a14(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -227,7 +229,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>base</td>
+  		<td>base(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -278,7 +280,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>branch commit with null character: </td>
+  		<td>branch commit with null character: (websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -318,7 +320,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>branch</td>
+  		<td>branch(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -358,7 +360,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+  		<td>Added tag 1.0 for changeset 2ef0ac749a14(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -398,7 +400,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>base</td>
+  		<td>base(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -458,7 +460,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+  		<td>Added tag 1.0 for changeset 2ef0ac749a14(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -501,7 +503,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>base</td>
+  		<td>base(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -552,7 +554,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>Added tag 1.0 for changeset 2ef0ac749a14</td>
+  		<td>Added tag 1.0 for changeset 2ef0ac749a14(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -592,7 +594,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>base</td>
+  		<td>base(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -650,7 +652,7 @@ Logs and changes
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>base</td>
+  		<td>base(websub)</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;vertical-align:top;">files</th>
@@ -675,7 +677,7 @@ Logs and changes
       <item>
       <title>base</title>
       <link>http://*:$HGPORT/log2ef0ac749a14/foo</link> (glob)
-      <description><![CDATA[base]]></description>
+      <description><![CDATA[base(websub)]]></description>
       <author>&#116;&#101;&#115;&#116;</author>
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
   </item>
@@ -862,7 +864,7 @@ Logs and changes
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   
-  <div class="description">base</div>
+  <div class="description">base(websub)</div>
   
   <table id="changesetEntry">
   <tr>
@@ -1284,7 +1286,7 @@ File-related
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   
-  <div class="description">Added tag 1.0 for changeset 2ef0ac749a14</div>
+  <div class="description">Added tag 1.0 for changeset 2ef0ac749a14(websub)</div>
   
   <table id="changesetEntry">
   <tr>
@@ -1408,7 +1410,7 @@ File-related
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   
-  <div class="description">branch</div>
+  <div class="description">branch(websub)</div>
   
   <table id="changesetEntry">
   <tr>
