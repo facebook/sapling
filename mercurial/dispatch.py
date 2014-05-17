@@ -357,12 +357,13 @@ class cmdalias(object):
         self.name = self.cmd = name
         self.cmdname = ''
         self.definition = definition
+        self.fn = None
         self.args = []
         self.opts = []
         self.help = ''
         self.norepo = True
         self.optionalrepo = False
-        self.badalias = False
+        self.badalias = None
 
         try:
             aliases, entry = cmdutil.findcmd(self.name, cmdtable)
@@ -375,11 +376,7 @@ class cmdalias(object):
             self.shadows = False
 
         if not self.definition:
-            def fn(ui, *args):
-                ui.warn(_("no definition for alias '%s'\n") % self.name)
-                return -1
-            self.fn = fn
-            self.badalias = True
+            self.badalias = _("no definition for alias '%s'") % self.name
             return
 
         if self.definition.startswith('!'):
@@ -405,26 +402,17 @@ class cmdalias(object):
         try:
             args = shlex.split(self.definition)
         except ValueError, inst:
-            def fn(ui, *args):
-                ui.warn(_("error in definition for alias '%s': %s\n")
-                        % (self.name, inst))
-                return -1
-            self.fn = fn
-            self.badalias = True
+            self.badalias = (_("error in definition for alias '%s': %s")
+                             % (self.name, inst))
             return
         self.cmdname = cmd = args.pop(0)
         args = map(util.expandpath, args)
 
         for invalidarg in ("--cwd", "-R", "--repository", "--repo", "--config"):
             if _earlygetopt([invalidarg], args):
-                def fn(ui, *args):
-                    ui.warn(_("error in definition for alias '%s': %s may only "
-                              "be given on the command line\n")
-                            % (self.name, invalidarg))
-                    return -1
-
-                self.fn = fn
-                self.badalias = True
+                self.badalias = (_("error in definition for alias '%s': %s may "
+                                   "only be given on the command line")
+                                 % (self.name, invalidarg))
                 return
 
         try:
@@ -446,8 +434,6 @@ class cmdalias(object):
 
         except error.UnknownCommand:
             def fn(ui, *args):
-                ui.warn(_("alias '%s' resolves to unknown command '%s'\n") \
-                            % (self.name, cmd))
                 try:
                     # check if the command is in a disabled extension
                     commands.help_(ui, cmd, unknowncmd=True)
@@ -455,16 +441,18 @@ class cmdalias(object):
                     pass
                 return -1
             self.fn = fn
-            self.badalias = True
+            self.badalias = (_("alias '%s' resolves to unknown command '%s'")
+                             % (self.name, cmd))
         except error.AmbiguousCommand:
-            def fn(ui, *args):
-                ui.warn(_("alias '%s' resolves to ambiguous command '%s'\n") \
-                            % (self.name, cmd))
-                return -1
-            self.fn = fn
-            self.badalias = True
+            self.badalias = (_("alias '%s' resolves to ambiguous command '%s'")
+                             % (self.name, cmd))
 
     def __call__(self, ui, *args, **opts):
+        if self.badalias:
+            ui.warn(self.badalias + '\n')
+            if self.fn:
+                return self.fn(ui, *args, **opts)
+            return -1
         if self.shadows:
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
