@@ -588,7 +588,7 @@ class Test(object):
             print 'Accept this change? [n] ',
             answer = sys.stdin.readline().strip()
             iolock.release()
-            if answer.lower() in ('y', 'yes').split():
+            if answer.lower() in ('y', 'yes'):
                 if self._test.endswith('.t'):
                     rename(self._errpath, self._testpath)
                 else:
