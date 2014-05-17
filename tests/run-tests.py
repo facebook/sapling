@@ -1340,6 +1340,10 @@ class TestRunner(object):
                 else:
                     self.fail('Unknown test result code: %s' % code)
 
+            # We need this proxy until tearDown() is implemented.
+            def cleanup(self):
+                return t.cleanup()
+
         return MercurialTest(test)
 
     def _cleanup(self):
