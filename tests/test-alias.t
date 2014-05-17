@@ -10,6 +10,7 @@
   > unknown = bargle
   > ambiguous = s
   > recursive = recursive
+  > disabled = email
   > nodefinition =
   > noclosingquotation = '
   > no--cwd = status --cwd elsewhere
@@ -83,6 +84,25 @@ recursive
   [255]
   $ hg help recursive
   alias 'recursive' resolves to unknown command 'recursive'
+
+
+disabled
+
+  $ hg disabled
+  alias 'disabled' resolves to unknown command 'email'
+  'email' is provided by the following extension:
+  
+      patchbomb     command to send changesets as (a series of) patch emails
+  
+  (use "hg help extensions" for information on enabling extensions)
+  [255]
+  $ hg help disabled
+  alias 'disabled' resolves to unknown command 'email'
+  'email' is provided by the following extension:
+  
+      patchbomb     command to send changesets as (a series of) patch emails
+  
+  (use "hg help extensions" for information on enabling extensions)
 
 
 no definition
