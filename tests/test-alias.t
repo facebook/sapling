@@ -61,7 +61,7 @@ unknown
 
   $ hg unknown
   alias 'unknown' resolves to unknown command 'bargle'
-  [1]
+  [255]
   $ hg help unknown
   alias 'unknown' resolves to unknown command 'bargle'
 
@@ -70,7 +70,7 @@ ambiguous
 
   $ hg ambiguous
   alias 'ambiguous' resolves to ambiguous command 's'
-  [1]
+  [255]
   $ hg help ambiguous
   alias 'ambiguous' resolves to ambiguous command 's'
 
@@ -79,7 +79,7 @@ recursive
 
   $ hg recursive
   alias 'recursive' resolves to unknown command 'recursive'
-  [1]
+  [255]
   $ hg help recursive
   alias 'recursive' resolves to unknown command 'recursive'
 
@@ -88,7 +88,7 @@ no definition
 
   $ hg nodef
   no definition for alias 'nodefinition'
-  [1]
+  [255]
   $ hg help nodef
   no definition for alias 'nodefinition'
 
@@ -97,7 +97,7 @@ no closing quotation
 
   $ hg noclosing
   error in definition for alias 'noclosingquotation': No closing quotation
-  [1]
+  [255]
   $ hg help noclosing
   error in definition for alias 'noclosingquotation': No closing quotation
 
@@ -106,27 +106,27 @@ invalid options
 
   $ hg no--cwd
   error in definition for alias 'no--cwd': --cwd may only be given on the command line
-  [1]
+  [255]
   $ hg help no--cwd
   error in definition for alias 'no--cwd': --cwd may only be given on the command line
   $ hg no-R
   error in definition for alias 'no-R': -R may only be given on the command line
-  [1]
+  [255]
   $ hg help no-R
   error in definition for alias 'no-R': -R may only be given on the command line
   $ hg no--repo
   error in definition for alias 'no--repo': --repo may only be given on the command line
-  [1]
+  [255]
   $ hg help no--repo
   error in definition for alias 'no--repo': --repo may only be given on the command line
   $ hg no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
-  [1]
+  [255]
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
   $ hg no--config
   error in definition for alias 'no--config': --config may only be given on the command line
-  [1]
+  [255]
 
 optional repository
 
