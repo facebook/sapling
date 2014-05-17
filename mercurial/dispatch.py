@@ -383,7 +383,16 @@ class cmdalias(object):
             self.fn = fn
             return
 
-        args = shlex.split(self.definition)
+        try:
+            args = shlex.split(self.definition)
+        except ValueError, inst:
+            def fn(ui, *args):
+                ui.warn(_("error in definition for alias '%s': %s\n")
+                        % (self.name, inst))
+                return 1
+            self.fn = fn
+            self.badalias = True
+            return
         self.cmdname = cmd = args.pop(0)
         args = map(util.expandpath, args)
 

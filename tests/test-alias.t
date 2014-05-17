@@ -11,6 +11,7 @@
   > ambiguous = s
   > recursive = recursive
   > nodefinition =
+  > noclosingquotation = '
   > no--cwd = status --cwd elsewhere
   > no-R = status -R elsewhere
   > no--repo = status --repo elsewhere
@@ -90,6 +91,15 @@ no definition
   [1]
   $ hg help nodef
   no definition for alias 'nodefinition'
+
+
+no closing quotation
+
+  $ hg noclosing
+  error in definition for alias 'noclosingquotation': No closing quotation
+  [1]
+  $ hg help noclosing
+  error in definition for alias 'noclosingquotation': No closing quotation
 
 
 invalid options
