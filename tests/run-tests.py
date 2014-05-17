@@ -473,18 +473,18 @@ class Test(object):
             else:
                 msg += 'output changed'
 
+            if (ret != 0 or out != self._refout) and not skipped \
+                and not options.debug:
+                f = open(self._errpath, 'wb')
+                for line in out:
+                    f.write(line)
+            f.close()
             res = self.fail(msg, ret)
         elif ret:
             res = self.fail(describe(ret), ret)
         else:
             res = self.success()
 
-        if (ret != 0 or out != self._refout) and not skipped \
-            and not options.debug:
-            f = open(self._errpath, 'wb')
-            for line in out:
-                f.write(line)
-            f.close()
 
         vlog("# Ret was:", ret)
 
