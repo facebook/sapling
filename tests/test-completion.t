@@ -212,7 +212,7 @@ Show all commands + options
   serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude, subrepos
   summary: remote
-  update: clean, check, date, rev
+  update: clean, check, date, rev, tool
   addremove: similarity, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
   backout: merge, parent, rev, tool, include, exclude, message, logfile, date, user

@@ -5797,9 +5797,11 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     ('c', 'check', None,
      _('update across branches if no uncommitted changes')),
     ('d', 'date', '', _('tipmost revision matching date'), _('DATE')),
-    ('r', 'rev', '', _('revision'), _('REV'))],
+    ('r', 'rev', '', _('revision'), _('REV'))
+     ] + mergetoolopts,
     _('[-c] [-C] [-d DATE] [[-r] REV]'))
-def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
+def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
+           tool=None):
     """update working directory (or switch revisions)
 
     Update the repository's working directory to the specified
@@ -5879,6 +5881,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
         if rev is None:
             rev = repo[repo[None].branch()].rev()
         mergemod._checkunknown(repo, repo[None], repo[rev])
+
+    repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
     if clean:
         ret = hg.clean(repo, rev)
