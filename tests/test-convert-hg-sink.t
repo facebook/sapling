@@ -526,8 +526,11 @@ Conversion after rollback
   scanning source...
   sorting...
   converting...
+  0 extra f+a-only change
 
   $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
+  o  3 extra f+a-only change (f)
+  |
   o  2 x (f)
   |
   @  1 a (f)

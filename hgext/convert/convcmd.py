@@ -173,8 +173,12 @@ class converter(object):
         parents = {}
         while visit:
             n = visit.pop(0)
-            if n in known or n in self.map:
+            if n in known:
                 continue
+            if n in self.map:
+                m = self.map[n]
+                if m == SKIPREV or self.dest.hascommitfrommap(m):
+                    continue
             known.add(n)
             self.ui.progress(_('scanning'), len(known), unit=_('revisions'))
             commit = self.cachecommit(n)
