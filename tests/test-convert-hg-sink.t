@@ -392,3 +392,145 @@ More source changes
   o  0 a4a1dae0fe35 "1: add a and dir/b" files: 0 a
   
   $ cd ..
+
+Two way tests
+
+  $ hg init 0
+  $ echo f > 0/f
+  $ echo a > 0/a-only
+  $ echo b > 0/b-only
+  $ hg -R 0 ci -Aqm0
+
+  $ cat << EOF > filemap-a
+  > exclude b-only
+  > EOF
+  $ cat << EOF > filemap-b
+  > exclude a-only
+  > EOF
+  $ hg convert --filemap filemap-a 0 a
+  initializing destination a repository
+  scanning source...
+  sorting...
+  converting...
+  0 0
+  $ hg -R a up -q
+  $ echo a > a/f
+  $ hg -R a ci -ma
+
+  $ hg convert --filemap filemap-b 0 b
+  initializing destination b repository
+  scanning source...
+  sorting...
+  converting...
+  0 0
+  $ hg -R b up -q
+  $ echo b > b/f
+  $ hg -R b ci -mb
+
+  $ tail */.hg/shamap
+  ==> 0/.hg/shamap <==
+  86f3f774ffb682bffb5dc3c1d3b3da637cb9a0d6 8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a
+  dd9f218eb91fb857f2a62fe023e1d64a4e7812fe 8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a
+  
+  ==> a/.hg/shamap <==
+  8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a 86f3f774ffb682bffb5dc3c1d3b3da637cb9a0d6
+  
+  ==> b/.hg/shamap <==
+  8a028c7c77f6c7bd6d63bc3f02ca9f779eabf16a dd9f218eb91fb857f2a62fe023e1d64a4e7812fe
+
+  $ hg convert a 0
+  scanning source...
+  sorting...
+  converting...
+  0 a
+
+  $ hg convert b 0
+  scanning source...
+  sorting...
+  converting...
+  0 b
+
+  $ hg -R 0 log -G
+  o  changeset:   2:637fbbbe96b6
+  |  tag:         tip
+  |  parent:      0:8a028c7c77f6
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     b
+  |
+  | o  changeset:   1:ec7b9c96e692
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     a
+  |
+  @  changeset:   0:8a028c7c77f6
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+  $ hg convert --filemap filemap-b 0 a --config convert.hg.revs=1::
+  scanning source...
+  sorting...
+  converting...
+
+  $ hg -R 0 up -r1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo f >> 0/f
+  $ hg -R 0 ci -mx
+
+  $ hg convert --filemap filemap-b 0 a --config convert.hg.revs=1::
+  scanning source...
+  sorting...
+  converting...
+  0 x
+
+  $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
+  o  2 x (f)
+  |
+  @  1 a (f)
+  |
+  o  0 0 (a-only f)
+  
+  $ hg -R a mani -r tip
+  a-only
+  f
+
+An additional round, demonstrating that unchanged files don't get converted
+
+  $ echo f >> 0/f
+  $ echo f >> 0/a-only
+  $ hg -R 0 ci -m "extra f+a-only change"
+
+  $ hg convert --filemap filemap-b 0 a --config convert.hg.revs=1::
+  scanning source...
+  sorting...
+  converting...
+  0 extra f+a-only change
+
+  $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
+  o  3 extra f+a-only change (f)
+  |
+  o  2 x (f)
+  |
+  @  1 a (f)
+  |
+  o  0 0 (a-only f)
+  
+
+Conversion after rollback
+
+  $ hg -R a rollback -f
+  repository tip rolled back to revision 2 (undo commit)
+
+  $ hg convert --filemap filemap-b 0 a --config convert.hg.revs=1::
+  scanning source...
+  sorting...
+  converting...
+
+  $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
+  o  2 x (f)
+  |
+  @  1 a (f)
+  |
+  o  0 0 (a-only f)
+  
