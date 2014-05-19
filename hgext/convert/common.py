@@ -260,6 +260,11 @@ class converter_sink(object):
         """
         pass
 
+    def hascommitfrommap(self, rev):
+        """Return False if a rev mentioned in a filemap is known to not be
+        present."""
+        raise NotImplementedError
+
     def hascommitforsplicemap(self, rev):
         """This method is for the special needs for splicemap handling and not
         for general use. Returns True if the sink contains rev, aborts on some
