@@ -260,8 +260,10 @@ class converter_sink(object):
         """
         pass
 
-    def hascommit(self, rev):
-        """Return True if the sink contains rev"""
+    def hascommitforsplicemap(self, rev):
+        """This method is for the special needs for splicemap handling and not
+        for general use. Returns True if the sink contains rev, aborts on some
+        special cases."""
         raise NotImplementedError
 
 class commandline(object):

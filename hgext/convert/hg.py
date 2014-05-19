@@ -253,7 +253,7 @@ class mercurial_sink(converter_sink):
             destmarks[bookmark] = bin(updatedbookmark[bookmark])
         destmarks.write()
 
-    def hascommit(self, rev):
+    def hascommitforsplicemap(self, rev):
         if rev not in self.repo and self.clonebranches:
             raise util.Abort(_('revision %s not found in destination '
                                'repository (lookups with clonebranches=true '

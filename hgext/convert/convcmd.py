@@ -193,7 +193,7 @@ class converter(object):
         """
         for c in sorted(splicemap):
             if c not in parents:
-                if not self.dest.hascommit(self.map.get(c, c)):
+                if not self.dest.hascommitforsplicemap(self.map.get(c, c)):
                     # Could be in source but not converted during this run
                     self.ui.warn(_('splice map revision %s is not being '
                                    'converted, ignoring\n') % c)
@@ -201,7 +201,7 @@ class converter(object):
             pc = []
             for p in splicemap[c]:
                 # We do not have to wait for nodes already in dest.
-                if self.dest.hascommit(self.map.get(p, p)):
+                if self.dest.hascommitforsplicemap(self.map.get(p, p)):
                     continue
                 # Parent is not in dest and not being converted, not good
                 if p not in parents:
