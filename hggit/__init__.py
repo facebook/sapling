@@ -158,8 +158,9 @@ if (getattr(dirstate, 'rootcache', False) and
     extensions.wrapfunction(ignore, 'ignore', gitdirstate.gignore)
     dirstate.dirstate = gitdirstate.gitdirstate
 
-@command('git-cleanup', [], _('Cleans up git repository after history editing'))
+@command('git-cleanup')
 def git_cleanup(ui, repo):
+    '''clean up Git commit map after history editing'''
     new_map = []
     for line in repo.opener(GitHandler.mapfile):
         gitsha, hgsha = line.strip().split(' ', 1)
