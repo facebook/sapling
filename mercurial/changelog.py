@@ -127,6 +127,7 @@ class changelog(revlog.revlog):
             self._generaldelta = False
         self._realopener = opener
         self._delayed = False
+        self._delaybuf = []
         self._divert = False
         self.filteredrevs = frozenset()
 
