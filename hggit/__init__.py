@@ -131,8 +131,9 @@ def gexport(ui, repo):
     '''export commits from Mercurial to Git'''
     repo.githandler.export_commits()
 
-@command('gclear', [], _('Clears out the Git cached data'))
+@command('gclear')
 def gclear(ui, repo):
+    '''clear out the Git cached data'''
     repo.ui.status(_("clearing out the git cache data\n"))
     repo.githandler.clear()
 
