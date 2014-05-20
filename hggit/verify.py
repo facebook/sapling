@@ -16,7 +16,7 @@ from mercurial import scmutil
 from dulwich import diff_tree
 from dulwich.objects import Commit, S_IFGITLINK
 
-def verify(ui, repo, **opts):
+def verify(ui, repo, hgctx):
     '''verify that a Mercurial rev matches the corresponding Git rev
 
     Given a Mercurial revision that has a corresponding Git revision in the map,
@@ -24,8 +24,6 @@ def verify(ui, repo, **opts):
     corresponding Git revision.
 
     '''
-    hgctx = scmutil.revsingle(repo, opts.get('rev'), '.')
-
     handler = repo.githandler
 
     gitsha = handler.map_git_get(hgctx.hex())

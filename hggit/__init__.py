@@ -33,6 +33,7 @@ from mercurial import ignore
 from mercurial import localrepo
 from mercurial.node import hex
 from mercurial import revset
+from mercurial import scmutil
 from mercurial import templatekw
 from mercurial import util as hgutil
 from mercurial import url
@@ -125,6 +126,17 @@ def gexport(ui, repo):
 def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
     repo.githandler.clear()
+
+def gverify(ui, repo, **opts):
+    '''verify that a Mercurial rev matches the corresponding Git rev
+
+    Given a Mercurial revision that has a corresponding Git revision in the map,
+    this attempts to answer whether that revision has the same contents as the
+    corresponding Git revision.
+
+    '''
+    ctx = scmutil.revsingle(repo, opts.get('rev'), '.')
+    return verify.verify(ui, repo, ctx)
 
 if (getattr(dirstate, 'rootcache', False) and
     getattr(ignore, 'readpats', False)):
@@ -226,6 +238,6 @@ cmdtable = {
       (gclear, [], _('Clears out the Git cached data')),
   "git-cleanup": (git_cleanup, [], _(
         "Cleans up git repository after history editing")),
-  "gverify": (verify.verify,
+  "gverify": (gverify,
     [('r', 'rev', '', _('revision to verify'), _('REV'))], _('[-r REV]')),
 }
