@@ -126,8 +126,9 @@ def gimport(ui, repo, remote_name=None):
     '''import commits from Git to Mercurial'''
     repo.githandler.import_commits(remote_name)
 
-@command('gexport', [], _('hg gexport'))
+@command('gexport')
 def gexport(ui, repo):
+    '''export commits from Mercurial to Git'''
     repo.githandler.export_commits()
 
 @command('gclear', [], _('Clears out the Git cached data'))
