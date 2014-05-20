@@ -23,9 +23,9 @@ Dependencies
 
 This plugin is implemented entirely in Python - there are no Git
 binary dependencies, you do not need to have Git installed on your
-system.  The only dependencies are Mercurial and Dulwich.  The plugin
-is known to work on Hg versions 2.0.2 through 2.3.1 and requires at least
-Dulwich 0.8.6.
+system.  The only dependencies are Mercurial and Dulwich. See the
+Makefile for information about which versions of Mercurial are
+known to work, and setup.py for which versions of Dulwich are required.
 
 Usage
 =====
