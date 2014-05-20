@@ -22,6 +22,7 @@ import inspect
 import os
 
 from mercurial import bundlerepo
+from mercurial import cmdutil
 from mercurial import commands
 from mercurial import demandimport
 from mercurial import dirstate
@@ -49,6 +50,9 @@ import verify
 
 testedwith = '2.8.2 3.0'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
 # also hg clone git+ssh://git@github.com/schacon/simplegit.git
@@ -117,16 +121,22 @@ def reposetup(ui, repo):
         klass = hgrepo.generate_repo_subclass(repo.__class__)
         repo.__class__ = klass
 
+@command('gimport', [], _('hg gimport'))
 def gimport(ui, repo, remote_name=None):
     repo.githandler.import_commits(remote_name)
 
+@command('gexport', [], _('hg gexport'))
 def gexport(ui, repo):
     repo.githandler.export_commits()
 
+@command('gclear', [], _('Clears out the Git cached data'))
 def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
     repo.githandler.clear()
 
+@command('gverify',
+         [('r', 'rev', '', _('revision to verify'), _('REV'))],
+         _('[-r REV]'))
 def gverify(ui, repo, **opts):
     '''verify that a Mercurial rev matches the corresponding Git rev
 
@@ -145,6 +155,7 @@ if (getattr(dirstate, 'rootcache', False) and
     extensions.wrapfunction(ignore, 'ignore', gitdirstate.gignore)
     dirstate.dirstate = gitdirstate.gitdirstate
 
+@command('git-cleanup', [], _('Cleans up git repository after history editing'))
 def git_cleanup(ui, repo):
     new_map = []
     for line in repo.opener(GitHandler.mapfile):
@@ -229,15 +240,3 @@ def gitnodekw(**args):
         gitnode = ''
     return gitnode
 
-cmdtable = {
-  "gimport":
-        (gimport, [], _('hg gimport')),
-  "gexport":
-        (gexport, [], _('hg gexport')),
-  "gclear":
-      (gclear, [], _('Clears out the Git cached data')),
-  "git-cleanup": (git_cleanup, [], _(
-        "Cleans up git repository after history editing")),
-  "gverify": (gverify,
-    [('r', 'rev', '', _('revision to verify'), _('REV'))], _('[-r REV]')),
-}
