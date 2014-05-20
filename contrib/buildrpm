@@ -43,8 +43,8 @@ else
     release='0'
 fi
 
-$HG archive -t tgz $rpmdir/SOURCES/mercurial-$version.tar.gz
-rpmspec=$rpmdir/SPECS/mercurial-$version.spec
+$HG archive -t tgz $rpmdir/SOURCES/mercurial-$version-$release.tar.gz
+rpmspec=$rpmdir/SPECS/mercurial.spec
 
 sed -e "s,^Version:.*,Version: $version," \
     -e "s,^Release:.*,Release: $release," \

@@ -8,7 +8,7 @@ Release: 0
 License: GPLv2+
 Group: Development/Tools
 URL: http://mercurial.selenic.com/
-Source0: http://mercurial.selenic.com/release/%{name}-%{version}.tar.gz
+Source0: %{name}-%{version}-%{release}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 BuildRequires: python >= 2.4, python-devel, make, gcc, python-docutils >= 0.5, gettext
@@ -22,7 +22,7 @@ Mercurial is a fast, lightweight source control management system designed
 for efficient handling of very large distributed projects.
 
 %prep
-%setup -q
+%setup -q -n mercurial-%{version}-%{release}
 
 %build
 make all
