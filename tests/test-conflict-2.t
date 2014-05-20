@@ -23,7 +23,7 @@ Load commonly used test logic
   use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 resolve using second parent
   $ echo B > afile
-  $ hg resolve -m afile
+  $ hg resolve -m afile | egrep -v '^no more unresolved files$' || true
   $ hg ci -m "merge to B"
 
   $ hg log --graph --style compact | sed 's/\[.*\]//g'
