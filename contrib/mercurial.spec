@@ -8,15 +8,6 @@ URL: http://mercurial.selenic.com/
 Source0: http://mercurial.selenic.com/release/%{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-# From the README:
-#
-#   Note: some distributions fails to include bits of distutils by
-#   default, you'll need python-dev to install. You'll also need a C
-#   compiler and a 3-way merge tool like merge, tkdiff, or kdiff3.
-#
-# python-devel provides an adequate python-dev.  The merge tool is a
-# run-time dependency.
-#
 BuildRequires: python >= 2.4, python-devel, make, gcc, python-docutils >= 0.5, gettext
 Provides: hg = %{version}-%{release}
 Requires: python >= 2.4
@@ -40,8 +31,8 @@ make all
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT PREFIX=%{_prefix} MANDIR=%{_mandir}
 
-install -m 755 contrib/hgk $RPM_BUILD_ROOT%{_bindir}
-install -m 755 contrib/hg-ssh $RPM_BUILD_ROOT%{_bindir}
+install -m 755 contrib/hgk $RPM_BUILD_ROOT%{_bindir}/
+install -m 755 contrib/hg-ssh $RPM_BUILD_ROOT%{_bindir}/
 
 bash_completion_dir=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 mkdir -p $bash_completion_dir
@@ -52,8 +43,8 @@ mkdir -p $zsh_completion_dir
 install -m 644 contrib/zsh_completion $zsh_completion_dir/_mercurial
 
 mkdir -p $RPM_BUILD_ROOT%{emacs_lispdir}
-install -m 644 contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}
-install -m 644 contrib/mq.el $RPM_BUILD_ROOT%{emacs_lispdir}
+install -m 644 contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}/
+install -m 644 contrib/mq.el $RPM_BUILD_ROOT%{emacs_lispdir}/
 
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/mercurial/hgrc.d
 install -m 644 contrib/mergetools.hgrc $RPM_BUILD_ROOT%{_sysconfdir}/mercurial/hgrc.d/mergetools.rc

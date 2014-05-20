@@ -1,11 +1,11 @@
-#!/bin/sh
+#!/bin/sh -e
 #
-# Build a Mercurial RPM in place.
+# Build a Mercurial RPM from the current repo
 #
 # Tested on
-# - Fedora 8 (with docutils 0.5)
-# - Fedora 11
-# - OpenSuse 11.2
+# - Fedora 20
+# - CentOS 5
+# - centOS 6
 
 cd "`dirname $0`/.."
 HG="$PWD/hg"
