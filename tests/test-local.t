@@ -36,6 +36,8 @@
 
 # diff
 
+  $ hg debugrebuilddirstate # fixes dirstate non-determinism
+  $ hg add a
   $ clearcache
   $ hg diff
   diff -r f3d0bb0d1e48 x
@@ -50,7 +52,7 @@
   @@ -1,1 +1,1 @@
   -y
   +yy
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
 
 # local commit
 
@@ -59,7 +61,7 @@
   $ echo xxx > x
   $ echo yyy > y
   $ hg commit -m a
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
 # rebase
 
@@ -85,10 +87,11 @@
 # strip
 
   $ clearcache
+  $ hg debugrebuilddirstate # fixes dirstate non-determinism
   $ hg strip -r .
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/19edf50f4de7-backup.hg
-  3 files fetched over 2 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
 
 # unbundle
 
@@ -99,6 +102,7 @@
   y
   z
 
+  $ hg debugrebuilddirstate # fixes dirstate non-determinism
   $ hg unbundle .hg/strip-backup/19edf50f4de7-backup.hg
   adding changesets
   adding manifests
@@ -108,7 +112,7 @@
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
   $ cat a
   a
 
