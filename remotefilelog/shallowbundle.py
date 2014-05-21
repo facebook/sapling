@@ -179,7 +179,8 @@ class shallowbundle(changegroup.bundle10):
 
 def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None):
     if not requirement in repo.requirements:
-        return orig(repo, source, revmap, trp, pr, needfiles)
+        return orig(repo, source, heads=heads, common=common,
+                    bundlecaps=bundlecaps)
 
     original = repo.shallowmatch
     try:
