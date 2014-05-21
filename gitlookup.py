@@ -14,8 +14,17 @@
 # - get the hg equivalent of git 6916a3c30f53878032dea8d01074d8c2a03927bd
 #     hg identify --id -r _gitlookup_git_6916a3c30f53878032dea8d01074d8c2a03927bd ssh://server/repo
 #
+# This also provides client and server commands to download all the Git metadata
+# via bundle2.
 
-from mercurial import encoding, util, wireproto
+from mercurial import bundle2, cmdutil, exchange, extensions, encoding, hg
+from mercurial import util, wireproto
+from mercurial.node import nullid
+from mercurial.i18n import _
+import urllib
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 def wrapwireprotocommand(command, wrapper):
     '''Wrap the wire proto command named `command' in table
@@ -61,6 +70,66 @@ def _dolookup(repo, key):
             return gitsha
     return None
 
+@command('gitgetmeta', [], '[SOURCE]')
+def gitgetmeta(ui, repo, source='default'):
+    '''get git metadata from a server that supports fb_gitmeta'''
+    source, branch = hg.parseurl(ui.expandpath(source))
+    other = hg.peer(repo, {}, source)
+    ui.status(_('getting git metadata from %s\n') %
+              util.hidepassword(source))
+    kwargs = {'bundlecaps': set(['HG2X'])}
+    capsblob = bundle2.encodecaps(repo.bundle2caps)
+    kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
+    # this would ideally not be in the bundlecaps at all, but adding new kwargs
+    # for wire transmissions is not possible as of Mercurial d19164a018a1
+    kwargs['bundlecaps'].add('fb_gitmeta')
+    kwargs['heads'] = [nullid]
+    bundle = other.getbundle('pull', **kwargs)
+    try:
+        op = bundle2.processbundle(repo, bundle)
+    except bundle2.UnknownPartError, exc:
+        raise util.Abort('missing support for %s' % exc)
+    writebytes = op.records['fb:gitmeta:writebytes']
+    ui.status(_('wrote %d files (%d bytes)\n') %
+              (len(writebytes), sum(writebytes)))
+
+gitmetafiles = set(['git-mapfile', 'git-tags', 'git-remote-refs'])
+
+def _getbundleextrapart(orig, bundler, repo, source, **kwargs):
+    '''send git metadata via bundle2'''
+    if 'fb_gitmeta' in kwargs['bundlecaps']:
+        for fname in sorted(gitmetafiles):
+            try:
+                f = repo.opener(fname)
+            except (IOError, OSError), e:
+                repo.ui.warn(_("warning: unable to read %s: %s\n") % (fname, e))
+                continue
+            part = bundle2.bundlepart('b2x:fb:gitmeta',
+                                      [('filename', fname)],
+                                      data=f.read())
+            bundler.addpart(part)
+
+@bundle2.parthandler('b2x:fb:gitmeta')
+def bundle2getgitmeta(op, part):
+    '''unbundle a bundle2 containing git metadata on the client'''
+    params = dict(part.mandatoryparams)
+    if 'filename' not in params:
+        raise util.Abort(_("gitmeta: 'filename' missing"))
+    fname = params['filename']
+    if fname not in gitmetafiles:
+        ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n") % fname)
+        return
+    f = op.repo.opener(fname, 'w+', atomictemp=True)
+    try:
+        data = part.read()
+        op.repo.ui.note(_('writing .hg/%s\n') % fname)
+        f.write(data)
+        op.records.add('fb:gitmeta:writebytes', len(data))
+    finally:
+        f.close()
+
 def extsetup(ui):
     wrapwireprotocommand('lookup', remotelookup)
+    extensions.wrapfunction(exchange, '_getbundleextrapart',
+                            _getbundleextrapart)
 
