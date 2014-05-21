@@ -93,6 +93,8 @@ class fileserverclient(object):
         self.repo = repo
         self.ui = ui
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
+        if self.cacheprocess:
+            self.cacheprocess = util.expandpath(self.cacheprocess)
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.localcache = localcache(repo)
@@ -305,6 +307,8 @@ class localcache(object):
         self.ui = repo.ui
         self.repo = repo
         self.cachepath = self.ui.config("remotefilelog", "cachepath")
+        if self.cachepath:
+            self.cachepath = util.expandpath(self.cachepath)
         self.uid = os.getuid()
 
         if not os.path.exists(self.cachepath):
