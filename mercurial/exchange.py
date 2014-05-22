@@ -624,8 +624,8 @@ def _pullchangeset(pullop):
         cg = pullop.remote.changegroup(pullop.fetch, 'pull')
     elif not pullop.remote.capable('changegroupsubset'):
         raise util.Abort(_("partial pull cannot be done because "
-                                   "other repository doesn't support "
-                                   "changegroupsubset."))
+                           "other repository doesn't support "
+                           "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
     pullop.cgresult = changegroup.addchangegroup(pullop.repo, cg, 'pull',
