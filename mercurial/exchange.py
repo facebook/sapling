@@ -330,37 +330,6 @@ def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
     unfi = pushop.repo.unfiltered()
     cheads = pushop.commonheads
-    if pushop.ret:
-        # push succeed, synchronize target of the push
-        cheads = pushop.outgoing.missingheads
-    elif pushop.revs is None:
-        # All out push fails. synchronize all common
-        cheads = pushop.outgoing.commonheads
-    else:
-        # I want cheads = heads(::missingheads and ::commonheads)
-        # (missingheads is revs with secret changeset filtered out)
-        #
-        # This can be expressed as:
-        #     cheads = ( (missingheads and ::commonheads)
-        #              + (commonheads and ::missingheads))"
-        #              )
-        #
-        # while trying to push we already computed the following:
-        #     common = (::commonheads)
-        #     missing = ((commonheads::missingheads) - commonheads)
-        #
-        # We can pick:
-        # * missingheads part of common (::commonheads)
-        common = set(pushop.outgoing.common)
-        nm = pushop.repo.changelog.nodemap
-        cheads = [node for node in pushop.revs if nm[node] in common]
-        # and
-        # * commonheads parents on missing
-        revset = unfi.set('%ln and parents(roots(%ln))',
-                         pushop.outgoing.commonheads,
-                         pushop.outgoing.missing)
-        cheads.extend(c.node() for c in revset)
-    pushop.commonheads = cheads
     # even when we don't push, exchanging phase data is useful
     remotephases = pushop.remote.listkeys('phases')
     if (pushop.ui.configbool('ui', '_usedassubrepo', False)
