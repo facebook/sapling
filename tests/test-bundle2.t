@@ -106,10 +106,11 @@ Create an extension to test bundle2 API
   >        bundler.newpart('test:empty')
   >        bundler.newpart('test:song', data=ELEPHANTSSONG)
   >        bundler.newpart('test:debugreply')
-  >        bundler.newpart('test:math',
-  >                                  [('pi', '3.14'), ('e', '2.72')],
-  >                                  [('cooking', 'raw')],
-  >                                  '42')
+  >        mathpart = bundler.newpart('test:math')
+  >        mathpart.addparam('pi', '3.14')
+  >        mathpart.addparam('e', '2.72')
+  >        mathpart.addparam('cooking', 'raw', mandatory=False)
+  >        mathpart.data = '42'
   >     if opts['unknown']:
   >        bundler.newpart('test:UNKNOWN', data='some random content')
   >     if opts['parts']:

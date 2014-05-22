@@ -556,8 +556,13 @@ class bundlepart(object):
     handler.
 
     The part payload is contained in ``part.data``. It could be raw bytes or a
-    generator of byte chunks. The data attribute cannot be modified after the
-    generation has begun.
+    generator of byte chunks.
+
+    You can add parameters to the part using the ``addparam`` method.
+    Parameters can be either mandatory (default) or advisory. Remote side
+    should be able to safely ignore the advisory ones.
+
+    Both data and parameters cannot be modified after the generation has begun.
     """
 
     def __init__(self, parttype, mandatoryparams=(), advisoryparams=(),
@@ -565,8 +570,8 @@ class bundlepart(object):
         self.id = None
         self.type = parttype
         self._data = data
-        self.mandatoryparams = mandatoryparams
-        self.advisoryparams = advisoryparams
+        self._mandatoryparams = list(mandatoryparams)
+        self._advisoryparams = list(advisoryparams)
         # status of the part's generation:
         # - None: not started,
         # - False: currently generated,
@@ -581,6 +586,24 @@ class bundlepart(object):
     def __getdata(self):
         return self._data
     data = property(__getdata, __setdata)
+
+    @property
+    def mandatoryparams(self):
+        # make it an immutable tuple to force people through ``addparam``
+        return tuple(self._mandatoryparams)
+
+    @property
+    def advisoryparams(self):
+        # make it an immutable tuple to force people through ``addparam``
+        return tuple(self._advisoryparams)
+
+    def addparam(self, name, value='', mandatory=True):
+        if self._generated is not None:
+            raise ReadOnlyPartError('part is being generated')
+        params = self._advisoryparams
+        if mandatory:
+            params = self._mandatoryparams
+        params.append((name, value))
 
     # methods used to generates the bundle2 stream
     def getchunks(self):
