@@ -208,13 +208,13 @@ def _pushbundle2(pushop):
 
     The only currently supported type of data is changegroup but this will
     evolve in the future."""
-    # Send known head to the server for race detection.
     capsblob = urllib.unquote(pushop.remote.capable('bundle2-exp'))
     caps = bundle2.decodecaps(capsblob)
     bundler = bundle2.bundle20(pushop.ui, caps)
     # create reply capability
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
+    # Send known heads to the server for race detection.
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
     extrainfo = _pushbundle2extraparts(pushop, bundler)
