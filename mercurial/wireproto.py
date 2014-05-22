@@ -190,6 +190,20 @@ def unescapearg(escaped):
             .replace(':,', ',')
             .replace('::', ':'))
 
+# mapping of options accepted by getbundle and their types
+#
+# Meant to be extended by extensions. It is extensions responsibility to ensure
+# such options are properly processed in exchange.getbundle.
+#
+# supported types are:
+#
+# :nodes: list of binary nodes
+# :csv:   list of comma-separated values
+# :plain: string with no transformation needed.
+gboptsmap = {'heads':  'nodes',
+             'common': 'nodes',
+             'bundlecaps': 'csv'}
+
 # client side
 
 class wirepeer(peer.peerrepository):
@@ -325,18 +339,25 @@ class wirepeer(peer.peerrepository):
                                    bases=bases, heads=heads)
         return changegroupmod.unbundle10(f, 'UN')
 
-    def getbundle(self, source, heads=None, common=None, bundlecaps=None,
-                  **kwargs):
+    def getbundle(self, source, **kwargs):
         self.requirecap('getbundle', _('look up remote changes'))
         opts = {}
-        if heads is not None:
-            opts['heads'] = encodelist(heads)
-        if common is not None:
-            opts['common'] = encodelist(common)
-        if bundlecaps is not None:
-            opts['bundlecaps'] = ','.join(bundlecaps)
-        opts.update(kwargs)
+        for key, value in kwargs.iteritems():
+            if value is None:
+                continue
+            keytype = gboptsmap.get(key)
+            if keytype is None:
+                assert False, 'unexpected'
+            elif keytype == 'nodes':
+                value = encodelist(value)
+            elif keytype == 'csv':
+                value = ','.join(value)
+            elif keytype != 'plain':
+                raise KeyError('unknown getbundle option type %s'
+                               % keytype)
+            opts[key] = value
         f = self._callcompressable("getbundle", **opts)
+        bundlecaps = kwargs.get('bundlecaps')
         if bundlecaps is not None and 'HG2X' in bundlecaps:
             return bundle2.unbundle20(self.ui, f)
         else:
@@ -627,12 +648,16 @@ gboptslist = ['heads', 'common', 'bundlecaps']
 
 @wireprotocommand('getbundle', '*')
 def getbundle(repo, proto, others):
-    opts = options('getbundle', gboptslist, others)
+    opts = options('getbundle', gboptsmap.keys(), others)
     for k, v in opts.iteritems():
-        if k in ('heads', 'common'):
+        keytype = gboptsmap[k]
+        if keytype == 'nodes':
             opts[k] = decodelist(v)
-        elif k == 'bundlecaps':
+        elif keytype == 'csv':
             opts[k] = set(v.split(','))
+        elif keytype != 'plain':
+            raise KeyError('unknown getbundle option type %s'
+                           % keytype)
     cg = exchange.getbundle(repo, 'serve', **opts)
     return streamres(proto.groupchunks(cg))
 
