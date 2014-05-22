@@ -858,7 +858,7 @@ class localrepository(object):
                 _("abandoned transaction found - run hg recover"))
 
         def onclose():
-            self.store.write(tr)
+            self.store.write(self._transref())
 
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
