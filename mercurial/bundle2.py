@@ -391,6 +391,7 @@ class bundle20(object):
         self._parts = []
         self.capabilities = dict(capabilities)
 
+    # methods used to defines the bundle2 content
     def addparam(self, name, value=None):
         """add a stream level parameter"""
         if not name:
@@ -407,6 +408,7 @@ class bundle20(object):
         part.id = len(self._parts) # very cheap counter
         self._parts.append(part)
 
+    # methods used to generate the bundle2 stream
     def getchunks(self):
         self.ui.debug('start emission of %s stream\n' % _magicstring)
         yield _magicstring
