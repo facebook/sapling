@@ -113,6 +113,8 @@ Binary format is as follow
 
             Mandatory parameters comes first, then the advisory ones.
 
+            Each parameter's key MUST be unique within the part.
+
 :payload:
 
     payload is a series of `<chunksize><chunkdata>`.
@@ -570,6 +572,12 @@ class bundlepart(object):
         self._data = data
         self._mandatoryparams = list(mandatoryparams)
         self._advisoryparams = list(advisoryparams)
+        # checking for duplicated entries
+        self._seenparams = set()
+        for pname, __ in self._mandatoryparams + self._advisoryparams:
+            if pname in self._seenparams:
+                raise RuntimeError('duplicated params: %s' % pname)
+            self._seenparams.add(pname)
         # status of the part's generation:
         # - None: not started,
         # - False: currently generated,
@@ -598,6 +606,9 @@ class bundlepart(object):
     def addparam(self, name, value='', mandatory=True):
         if self._generated is not None:
             raise ReadOnlyPartError('part is being generated')
+        if name in self._seenparams:
+            raise ValueError('duplicated params: %s' % name)
+        self._seenparams.add(name)
         params = self._advisoryparams
         if mandatory:
             params = self._mandatoryparams
