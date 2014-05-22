@@ -552,8 +552,17 @@ class bundlepart(object):
         self.data = data
         self.mandatoryparams = mandatoryparams
         self.advisoryparams = advisoryparams
+        # status of the part's generation:
+        # - None: not started,
+        # - False: currently generated,
+        # - True: generation done.
+        self._generated = None
 
+    # methods used to generates the bundle2 stream
     def getchunks(self):
+        if self._generated is not None:
+            raise RuntimeError('part can only be consumed once')
+        self._generated = False
         #### header
         ## parttype
         header = [_pack(_fparttypesize, len(self.type)),
@@ -591,6 +600,7 @@ class bundlepart(object):
             yield chunk
         # end of payload
         yield _pack(_fpayloadsize, 0)
+        self._generated = True
 
     def _payloadchunks(self):
         """yield chunks of a the part payload
