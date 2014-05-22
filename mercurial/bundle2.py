@@ -554,13 +554,17 @@ class bundlepart(object):
 
     The part `type` is used to route the part to the application level
     handler.
+
+    The part payload is contained in ``part.data``. It could be raw bytes or a
+    generator of byte chunks. The data attribute cannot be modified after the
+    generation has begun.
     """
 
     def __init__(self, parttype, mandatoryparams=(), advisoryparams=(),
                  data=''):
         self.id = None
         self.type = parttype
-        self.data = data
+        self._data = data
         self.mandatoryparams = mandatoryparams
         self.advisoryparams = advisoryparams
         # status of the part's generation:
@@ -568,6 +572,15 @@ class bundlepart(object):
         # - False: currently generated,
         # - True: generation done.
         self._generated = None
+
+    # methods used to defines the part content
+    def __setdata(self, data):
+        if self._generated is not None:
+            raise ReadOnlyPartError('part is being generated')
+        self._data = data
+    def __getdata(self):
+        return self._data
+    data = property(__getdata, __setdata)
 
     # methods used to generates the bundle2 stream
     def getchunks(self):

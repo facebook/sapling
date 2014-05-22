@@ -84,8 +84,9 @@ Create an extension to test bundle2 API
   >         bundler.newpart('b2x:replycaps', data=capsstring)
   > 
   >     if opts['pushrace']:
-  >         dummynode = '01234567890123456789'
-  >         bundler.newpart('b2x:check:heads', data=dummynode)
+  >         # also serve to test the assignement of data outside of init
+  >         part = bundler.newpart('b2x:check:heads')
+  >         part.data = '01234567890123456789'
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
