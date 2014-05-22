@@ -532,9 +532,7 @@ def _pullbundle2(pullop):
     """pull data using bundle2
 
     For now, the only supported data are changegroup."""
-    kwargs = {'bundlecaps': set(['HG2X'])}
-    capsblob = bundle2.encodecaps(pullop.repo.bundle2caps)
-    kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
+    kwargs = {'bundlecaps': caps20to10(pullop.repo)}
     # pulling changegroup
     pullop.todosteps.remove('changegroup')
 
@@ -635,6 +633,13 @@ def _pullobsolete(pullop):
                     pullop.repo.obsstore.mergemarkers(tr, data)
             pullop.repo.invalidatevolatilesets()
     return tr
+
+def caps20to10(repo):
+    """return a set with appropriate options to use bundle20 during getbundle"""
+    caps = set(['HG2X'])
+    capsblob = bundle2.encodecaps(repo.bundle2caps)
+    caps.add('bundle2=' + urllib.quote(capsblob))
+    return caps
 
 def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
               **kwargs):
