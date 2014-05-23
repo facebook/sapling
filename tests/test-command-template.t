@@ -1819,6 +1819,11 @@ Test revset function
   1 not current rev
   0 not current rev
 
+  $ hg log --template '{rev} {ifcontains(rev, revset(". + .^"), "match rev", "not match rev")}\n'
+  2 match rev
+  1 match rev
+  0 not match rev
+
   $ hg log --template '{rev} Parents: {revset("parents(%s)", rev)}\n'
   2 Parents: 1
   1 Parents: 0
