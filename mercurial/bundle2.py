@@ -325,10 +325,8 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if output is not None:
                     output = op.ui.popbuffer()
             if output:
-                op.reply.newpart('b2x:output',
-                                 advisoryparams=[('in-reply-to',
-                                                  str(part.id))],
-                                 data=output)
+                outpart = op.reply.newpart('b2x:output', data=output)
+                outpart.addparam('in-reply-to', str(part.id), mandatory=False)
             part.read()
     except Exception, exc:
         if part is not None:
@@ -769,9 +767,9 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitly not the final form of this
         # return. But one need to start somewhere.
-        op.reply.newpart('b2x:reply:changegroup', (),
-                         [('in-reply-to', str(inpart.id)),
-                          ('return', '%i' % ret)])
+        part = op.reply.newpart('b2x:reply:changegroup')
+        part.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        part.addparam('return', '%i' % ret, mandatory=False)
     assert not inpart.read()
 
 @parthandler('b2x:reply:changegroup')
