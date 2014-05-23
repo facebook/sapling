@@ -321,11 +321,10 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if output is not None:
                     output = op.ui.popbuffer()
             if output:
-                outpart = bundlepart('b2x:output',
-                                     advisoryparams=[('in-reply-to',
-                                                      str(part.id))],
-                                     data=output)
-                op.reply.addpart(outpart)
+                op.reply.newpart('b2x:output',
+                                 advisoryparams=[('in-reply-to',
+                                                  str(part.id))],
+                                 data=output)
             part.read()
     except Exception, exc:
         if part is not None:
@@ -409,7 +408,7 @@ class bundle20(object):
         self._parts.append(part)
 
     def newpart(self, typeid, *args, **kwargs):
-        """create a new part for the containers"""
+        """create a new part and add it to the containers"""
         part = bundlepart(typeid, *args, **kwargs)
         self.addpart(part)
         return part

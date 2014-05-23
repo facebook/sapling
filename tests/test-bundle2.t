@@ -47,9 +47,7 @@ Create an extension to test bundle2 API
   >     op.ui.write('received ping request (id %i)\n' % part.id)
   >     if op.reply is not None and 'ping-pong' in op.reply.capabilities:
   >         op.ui.write_err('replying to ping request (id %i)\n' % part.id)
-  >         rpart = bundle2.bundlepart('test:pong',
-  >                                    [('in-reply-to', str(part.id))])
-  >         op.reply.addpart(rpart)
+  >         op.reply.newpart('test:pong', [('in-reply-to', str(part.id))])
   > 
   > @bundle2.parthandler('test:debugreply')
   > def debugreply(op, part):
@@ -83,11 +81,11 @@ Create an extension to test bundle2 API
   > 
   >     if opts['reply']:
   >         capsstring = 'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
-  >         bundler.addpart(bundle2.bundlepart('b2x:replycaps', data=capsstring))
+  >         bundler.newpart('b2x:replycaps', data=capsstring)
   > 
   >     if opts['pushrace']:
   >         dummynode = '01234567890123456789'
-  >         bundler.addpart(bundle2.bundlepart('b2x:check:heads', data=dummynode))
+  >         bundler.newpart('b2x:check:heads', data=dummynode)
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -99,31 +97,22 @@ Create an extension to test bundle2 API
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
   >             outgoing = discovery.outgoing(repo.changelog, headcommon, headmissing)
   >             cg = changegroup.getlocalbundle(repo, 'test:bundle2', outgoing, None)
-  >             part = bundle2.bundlepart('b2x:changegroup', data=cg.getchunks())
-  >             bundler.addpart(part)
+  >             bundler.newpart('b2x:changegroup', data=cg.getchunks())
   > 
   >     if opts['parts']:
-  >        part = bundle2.bundlepart('test:empty')
-  >        bundler.addpart(part)
+  >        bundler.newpart('test:empty')
   >        # add a second one to make sure we handle multiple parts
-  >        part = bundle2.bundlepart('test:empty')
-  >        bundler.addpart(part)
-  >        part = bundle2.bundlepart('test:song', data=ELEPHANTSSONG)
-  >        bundler.addpart(part)
-  >        part = bundle2.bundlepart('test:debugreply')
-  >        bundler.addpart(part)
-  >        part = bundle2.bundlepart('test:math',
+  >        bundler.newpart('test:empty')
+  >        bundler.newpart('test:song', data=ELEPHANTSSONG)
+  >        bundler.newpart('test:debugreply')
+  >        bundler.newpart('test:math',
   >                                  [('pi', '3.14'), ('e', '2.72')],
   >                                  [('cooking', 'raw')],
   >                                  '42')
-  >        bundler.addpart(part)
   >     if opts['unknown']:
-  >        part = bundle2.bundlepart('test:UNKNOWN',
-  >                                  data='some random content')
-  >        bundler.addpart(part)
+  >        bundler.newpart('test:UNKNOWN', data='some random content')
   >     if opts['parts']:
-  >        part = bundle2.bundlepart('test:ping')
-  >        bundler.addpart(part)
+  >        bundler.newpart('test:ping')
   > 
   >     if path is None:
   >        file = sys.stdout
@@ -938,14 +927,12 @@ Setting up
   >     reason = pushop.ui.config('failpush', 'reason', None)
   >     part = None
   >     if reason == 'abort':
-  >         part = bundle2.bundlepart('test:abort')
+  >         bundler.newpart('test:abort')
   >     if reason == 'unknown':
-  >         part = bundle2.bundlepart('TEST:UNKNOWN')
+  >         bundler.newpart('TEST:UNKNOWN')
   >     if reason == 'race':
   >         # 20 Bytes of crap
-  >         part = bundle2.bundlepart('b2x:check:heads', data='01234567890123456789')
-  >     if part is not None:
-  >         bundler.addpart(part)
+  >         bundler.newpart('b2x:check:heads', data='01234567890123456789')
   >     return extradata
   > 
   > @bundle2.parthandler("test:abort")

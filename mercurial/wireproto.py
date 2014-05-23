@@ -805,9 +805,7 @@ def unbundle(repo, proto, heads):
             os.unlink(tempname)
     except bundle2.UnknownPartError, exc:
             bundler = bundle2.bundle20(repo.ui)
-            part = bundle2.bundlepart('B2X:ERROR:UNKNOWNPART',
-                                      [('parttype', str(exc))])
-            bundler.addpart(part)
+            bundler.newpart('B2X:ERROR:UNKNOWNPART', [('parttype', str(exc))])
             return streamres(bundler.getchunks())
     except util.Abort, inst:
         # The old code we moved used sys.stderr directly.
@@ -829,9 +827,7 @@ def unbundle(repo, proto, heads):
     except error.PushRaced, exc:
         if getattr(exc, 'duringunbundle2', False):
             bundler = bundle2.bundle20(repo.ui)
-            part = bundle2.bundlepart('B2X:ERROR:PUSHRACED',
-                                      [('message', str(exc))])
-            bundler.addpart(part)
+            bundler.newpart('B2X:ERROR:PUSHRACED', [('message', str(exc))])
             return streamres(bundler.getchunks())
         else:
             return pusherr(str(exc))
