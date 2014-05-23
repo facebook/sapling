@@ -408,7 +408,14 @@ class bundle20(object):
         self._parts.append(part)
 
     def newpart(self, typeid, *args, **kwargs):
-        """create a new part and add it to the containers"""
+        """create a new part and add it to the containers
+
+        As the part is directly added to the containers. For now, this means
+        that any failure to properly initialize the part after calling
+        ``newpart`` should result in a failure of the whole bundling process.
+
+        You can still fall back to manually create and add if you need better
+        control."""
         part = bundlepart(typeid, *args, **kwargs)
         self.addpart(part)
         return part
