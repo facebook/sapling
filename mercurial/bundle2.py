@@ -381,7 +381,7 @@ def encodecaps(caps):
 class bundle20(object):
     """represent an outgoing bundle2 container
 
-    Use the `addparam` method to add stream level parameter. and `addpart` to
+    Use the `addparam` method to add stream level parameter. and `newpart` to
     populate it. Then call `getchunks` to retrieve all the binary chunks of
     data that compose the bundle2 container."""
 
@@ -411,6 +411,7 @@ class bundle20(object):
     def newpart(self, typeid, *args, **kwargs):
         """create a new part for the containers"""
         part = bundlepart(typeid, *args, **kwargs)
+        self.addpart(part)
         return part
 
     # methods used to generate the bundle2 stream
@@ -712,10 +713,9 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitly not the final form of this
         # return. But one need to start somewhere.
-        part = op.reply.newpart('b2x:reply:changegroup', (),
-                                [('in-reply-to', str(inpart.id)),
-                                ('return', '%i' % ret)])
-        op.reply.addpart(part)
+        op.reply.newpart('b2x:reply:changegroup', (),
+                         [('in-reply-to', str(inpart.id)),
+                          ('return', '%i' % ret)])
     assert not inpart.read()
 
 @parthandler('b2x:reply:changegroup')
