@@ -408,6 +408,11 @@ class bundle20(object):
         part.id = len(self._parts) # very cheap counter
         self._parts.append(part)
 
+    def newpart(self, typeid, *args, **kwargs):
+        """create a new part for the containers"""
+        part = bundlepart(typeid, *args, **kwargs)
+        return part
+
     # methods used to generate the bundle2 stream
     def getchunks(self):
         self.ui.debug('start emission of %s stream\n' % _magicstring)
@@ -707,9 +712,9 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitly not the final form of this
         # return. But one need to start somewhere.
-        part = bundlepart('b2x:reply:changegroup', (),
-                           [('in-reply-to', str(inpart.id)),
-                            ('return', '%i' % ret)])
+        part = op.reply.newpart('b2x:reply:changegroup', (),
+                                [('in-reply-to', str(inpart.id)),
+                                ('return', '%i' % ret)])
         op.reply.addpart(part)
     assert not inpart.read()
 
