@@ -42,9 +42,12 @@ resolve the failure
   no more unresolved files
   $ hg commit -m 'resolved'
 
-resolve -l should error since no merge in progress
+resolve -l should be empty
 
   $ hg resolve -l
+
+resolve -m should abort since no merge in progress
+  $ hg resolve -m
   abort: resolve command not applicable when not merging
   [255]
 

@@ -4922,7 +4922,7 @@ def resolve(ui, repo, *pats, **opts):
 
     ms = mergemod.mergestate(repo)
 
-    if not ms.active():
+    if not ms.active() and not show:
         raise util.Abort(_('resolve command not applicable when not merging'))
 
     m = scmutil.match(repo[None], pats, opts)

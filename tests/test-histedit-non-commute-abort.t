@@ -85,8 +85,6 @@ abort the edit
 
 log after abort
   $ hg resolve -l
-  abort: resolve command not applicable when not merging
-  [255]
   $ hg log --graph
   @  changeset:   6:bfa474341cc9
   |  tag:         tip

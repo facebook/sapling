@@ -262,8 +262,6 @@ abort the unshelve and be happy
   summary:     second
   
   $ hg resolve -l
-  abort: resolve command not applicable when not merging
-  [255]
   $ hg status
   A foo/foo
   ? a/a.orig
