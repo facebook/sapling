@@ -769,6 +769,13 @@ class unbundlepart(unpackermixin):
             self.consumed = True
         return data
 
+def bundle2caps(remote):
+    """return the bundlecapabilities of a peer as dict"""
+    raw = remote.capable('bundle2-exp')
+    if not raw and raw != '':
+        return {}
+    capsblob = urllib.unquote(remote.capable('bundle2-exp'))
+    return decodecaps(capsblob)
 
 @parthandler('b2x:changegroup')
 def handlechangegroup(op, inpart):

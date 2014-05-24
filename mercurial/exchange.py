@@ -208,9 +208,7 @@ def _pushbundle2(pushop):
 
     The only currently supported type of data is changegroup but this will
     evolve in the future."""
-    capsblob = urllib.unquote(pushop.remote.capable('bundle2-exp'))
-    caps = bundle2.decodecaps(capsblob)
-    bundler = bundle2.bundle20(pushop.ui, caps)
+    bundler = bundle2.bundle20(pushop.ui, bundle2.bundle2caps(pushop.remote))
     # create reply capability
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
