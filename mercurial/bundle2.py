@@ -708,8 +708,9 @@ class unbundlepart(unpackermixin):
 
     def _initparams(self, mandatoryparams, advisoryparams):
         """internal function to setup all logic related parameters"""
-        self.mandatoryparams = mandatoryparams
-        self.advisoryparams  = advisoryparams
+        # make it read only to prevent people touching it by mistake.
+        self.mandatoryparams = tuple(mandatoryparams)
+        self.advisoryparams  = tuple(advisoryparams)
 
     def _readheader(self):
         """read the header and setup the object"""
