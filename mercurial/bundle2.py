@@ -174,6 +174,10 @@ class UnknownPartError(KeyError):
     """error raised when no handler is found for a Mandatory part"""
     pass
 
+class ReadOnlyPartError(RuntimeError):
+    """error raised when code tries to alter a part being generated"""
+    pass
+
 parthandlermapping = {}
 
 def parthandler(parttype):
