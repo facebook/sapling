@@ -690,6 +690,7 @@ class unbundlepart(unpackermixin):
         self.mandatoryparams = None
         self.advisoryparams = None
         self.params = None
+        self.mandatorykeys = ()
         self._payloadstream = None
         self._readheader()
 
@@ -715,6 +716,7 @@ class unbundlepart(unpackermixin):
         # user friendly UI
         self.params = dict(self.mandatoryparams)
         self.params.update(dict(self.advisoryparams))
+        self.mandatorykeys = frozenset(p[0] for p in mandatoryparams)
 
     def _readheader(self):
         """read the header and setup the object"""
