@@ -689,6 +689,7 @@ class unbundlepart(unpackermixin):
         self.type = None
         self.mandatoryparams = None
         self.advisoryparams = None
+        self.params = None
         self._payloadstream = None
         self._readheader()
 
@@ -711,6 +712,9 @@ class unbundlepart(unpackermixin):
         # make it read only to prevent people touching it by mistake.
         self.mandatoryparams = tuple(mandatoryparams)
         self.advisoryparams  = tuple(advisoryparams)
+        # user friendly UI
+        self.params = dict(self.mandatoryparams)
+        self.params.update(dict(self.advisoryparams))
 
     def _readheader(self):
         """read the header and setup the object"""
