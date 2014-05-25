@@ -686,8 +686,8 @@ class TTest(Test):
     NEEDESCAPE = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 
     ESCAPESUB = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
-    ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256)).update(
-                     {'\\': '\\\\', '\r': r'\r'})
+    ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256))
+    ESCAPEMAP.update({'\\': '\\\\', '\r': r'\r'})
 
     @property
     def refpath(self):
