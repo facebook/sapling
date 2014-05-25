@@ -882,8 +882,8 @@ class TTest(Test):
                     postout.append('  ' + el)
                 else:
                     if self.NEEDESCAPE(lout):
-                        lout = TTest.stringescape('%s (esc)\n' %
-                                                  lout.rstrip('\n'))
+                        lout = TTest._stringescape('%s (esc)\n' %
+                                                   lout.rstrip('\n'))
                     postout.append('  ' + lout) # Let diff deal with it.
                     if r != '': # If line failed.
                         warnonly = 3 # for sure not
