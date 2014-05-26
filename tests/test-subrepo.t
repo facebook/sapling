@@ -298,11 +298,11 @@ merge tests
 should conflict
 
   $ cat t/t
-  <<<<<<< local: 20a0db6fbf6c - test: "10"
+  <<<<<<< local: 20a0db6fbf6c - test: 10
   conflict
   =======
   t3
-  >>>>>>> other: 7af322bc1198  - test: "7"
+  >>>>>>> other: 7af322bc1198  - test: 7
 
 clone
 

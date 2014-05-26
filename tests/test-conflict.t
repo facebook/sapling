@@ -22,11 +22,11 @@
   32e80765d7fe+75234512624c+ tip
 
   $ cat a
-  <<<<<<< local: 32e80765d7fe - test: "branch2"
+  <<<<<<< local: 32e80765d7fe - test: branch2
   something else
   =======
   something
-  >>>>>>> other: 75234512624c  - test: "branch1"
+  >>>>>>> other: 75234512624c  - test: branch1
 
   $ hg status
   M a

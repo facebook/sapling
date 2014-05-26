@@ -98,11 +98,11 @@ pull and merge from test-a again
 
   $ cat test.txt
   one
-  <<<<<<< local: 50c3a7e29886  - test: "Merge 1"
+  <<<<<<< local: 50c3a7e29886  - test: Merge 1
   two-point-five
   =======
   two-point-one
-  >>>>>>> other: 40d11a4173a8 - test: "two -> two-point-one"
+  >>>>>>> other: 40d11a4173a8 - test: two -> two-point-one
   three
 
   $ hg debugindex test.txt

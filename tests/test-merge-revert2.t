@@ -57,11 +57,11 @@
   @@ -1,3 +1,7 @@
    added file1
    another line of text
-  +<<<<<<< working copy: c3fa057dd86f  - test: "added file1 and file2"
+  +<<<<<<< working copy: c3fa057dd86f  - test: added file1 and file2
   +changed file1 different
   +=======
    changed file1
-  +>>>>>>> destination:  dfab7f3c2efb - test: "changed file1"
+  +>>>>>>> destination:  dfab7f3c2efb - test: changed file1
 
   $ hg status
   M file1
