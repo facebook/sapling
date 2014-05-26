@@ -109,6 +109,13 @@ class converter_source(object):
         """Return the commit object for version"""
         raise NotImplementedError
 
+    def numcommits(self):
+        """Return the number of commits in this source.
+
+        If unknown, return None.
+        """
+        return None
+
     def gettags(self):
         """Return the tags as a dictionary of name: revision
 

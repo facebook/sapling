@@ -171,6 +171,7 @@ class converter(object):
         visit = heads
         known = set()
         parents = {}
+        numcommits = self.source.numcommits()
         while visit:
             n = visit.pop(0)
             if n in known:
@@ -180,7 +181,8 @@ class converter(object):
                 if m == SKIPREV or self.dest.hascommitfrommap(m):
                     continue
             known.add(n)
-            self.ui.progress(_('scanning'), len(known), unit=_('revisions'))
+            self.ui.progress(_('scanning'), len(known), unit=_('revisions'),
+                             total=numcommits)
             commit = self.cachecommit(n)
             parents[n] = []
             for p in commit.parents:
