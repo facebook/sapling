@@ -310,7 +310,9 @@ def ifcontains(context, mapping, args):
     item = stringify(args[0][0](context, mapping, args[0][1]))
     items = args[1][0](context, mapping, args[1][1])
 
-    if item in items:
+    # Iterating over items gives a formatted string, so we iterate
+    # directly over the raw values.
+    if item in [i.values()[0] for i in items()]:
         yield _evalifliteral(args[2], context, mapping)
     elif len(args) == 4:
         yield _evalifliteral(args[3], context, mapping)

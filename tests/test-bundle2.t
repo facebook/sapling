@@ -8,6 +8,14 @@ Create an extension to test bundle2 API
   > code. We still need to be able to test it while it grow up.
   > """
   > 
+  > try:
+  >     import msvcrt
+  >     msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+  >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+  >     msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+  > except ImportError:
+  >     pass
+  > 
   > import sys
   > from mercurial import cmdutil
   > from mercurial import util

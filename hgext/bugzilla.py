@@ -1,7 +1,7 @@
 # bugzilla.py - bugzilla integration for mercurial
 #
 # Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
-# Copyright 2011-2 Jim Hague <jim.hague@acm.org>
+# Copyright 2011-4 Jim Hague <jim.hague@acm.org>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
@@ -523,7 +523,7 @@ class cookietransportrequest(object):
 
     The regular xmlrpclib transports ignore cookies. Which causes
     a bit of a problem when you need a cookie-based login, as with
-    the Bugzilla XMLRPC interface.
+    the Bugzilla XMLRPC interface prior to 4.4.3.
 
     So this is a helper for defining a Transport which looks for
     cookies being set in responses and saves them to add to all future
@@ -620,7 +620,9 @@ class bzxmlrpc(bzaccess):
         ver = self.bzproxy.Bugzilla.version()['version'].split('.')
         self.bzvermajor = int(ver[0])
         self.bzverminor = int(ver[1])
-        self.bzproxy.User.login({'login': user, 'password': passwd})
+        login = self.bzproxy.User.login({'login': user, 'password': passwd,
+                                         'restrict_login': True})
+        self.bztoken = login.get('token', '')
 
     def transport(self, uri):
         if urlparse.urlparse(uri, "http")[0] == "https":
@@ -631,13 +633,15 @@ class bzxmlrpc(bzaccess):
     def get_bug_comments(self, id):
         """Return a string with all comment text for a bug."""
         c = self.bzproxy.Bug.comments({'ids': [id],
-                                       'include_fields': ['text']})
+                                       'include_fields': ['text'],
+                                       'token': self.bztoken})
         return ''.join([t['text'] for t in c['bugs'][str(id)]['comments']])
 
     def filter_real_bug_ids(self, bugs):
         probe = self.bzproxy.Bug.get({'ids': sorted(bugs.keys()),
                                       'include_fields': [],
                                       'permissive': True,
+                                      'token': self.bztoken,
                                       })
         for badbug in probe['faults']:
             id = badbug['id']
@@ -662,6 +666,7 @@ class bzxmlrpc(bzaccess):
             if 'fix' in newstate:
                 args['status'] = self.fixstatus
                 args['resolution'] = self.fixresolution
+            args['token'] = self.bztoken
             self.bzproxy.Bug.update(args)
         else:
             if 'fix' in newstate:
@@ -719,10 +724,12 @@ class bzxmlrpcemail(bzxmlrpc):
         than the subject line, and leave a blank line after it.
         '''
         user = self.map_committer(committer)
-        matches = self.bzproxy.User.get({'match': [user]})
+        matches = self.bzproxy.User.get({'match': [user],
+                                         'token': self.bztoken})
         if not matches['users']:
             user = self.ui.config('bugzilla', 'user', 'bugs')
-            matches = self.bzproxy.User.get({'match': [user]})
+            matches = self.bzproxy.User.get({'match': [user],
+                                             'token': self.bztoken})
             if not matches['users']:
                 raise util.Abort(_("default bugzilla user %s email not found") %
                                  user)

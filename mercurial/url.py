@@ -225,7 +225,6 @@ def _generic_proxytunnel(self):
     proxyheaders = dict(
             [(x, self.headers[x]) for x in self.headers
              if x.lower().startswith('proxy-')])
-    self._set_hostport(self.host, self.port)
     self.send('CONNECT %s HTTP/1.0\r\n' % self.realhostport)
     for header in proxyheaders.iteritems():
         self.send('%s: %s\r\n' % header)
