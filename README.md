@@ -76,7 +76,7 @@ the meantime and give you a new head that you can merge in.
 
 Hg-Git can also be used to convert a Mercurial repository to Git.  You can use
 a local repository or a remote repository accessed via SSH, HTTP or HTTPS.  Use
-the following commands to convert the repository (it assumes your running this
+the following commands to convert the repository (it assumes you're running this
 in $HOME).
 
     $ mkdir git-repo; cd git-repo; git init; cd ..
