@@ -41,3 +41,11 @@ def encodekeys(keys):
     """encode the content of a pushkey namespace for exchange over the wire"""
     enc = encoding.fromlocal
     return '\n'.join(['%s\t%s' % (enc(k), enc(v)) for k, v in keys])
+
+def decodekeys(data):
+    """decode the content of a pushkey namespace from exchange over the wire"""
+    result = {}
+    for l in data.splitlines():
+        k, v = l.split('\t')
+        result[encoding.tolocal(k)] = encoding.tolocal(v)
+    return result
