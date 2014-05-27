@@ -178,6 +178,9 @@ class abstractvfs(object):
     def islink(self, path=None):
         return os.path.islink(self.join(path))
 
+    def lexists(self, path=None):
+        return os.path.lexists(self.join(path))
+
     def lstat(self, path=None):
         return os.lstat(self.join(path))
 
