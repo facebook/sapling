@@ -174,7 +174,7 @@ def _makefpartparamsizes(nbparams):
 
 parthandlermapping = {}
 
-def parthandler(parttype):
+def parthandler(parttype, params=()):
     """decorator that register a function as a bundle2 part handler
 
     eg::
@@ -188,6 +188,7 @@ def parthandler(parttype):
         lparttype = parttype.lower() # enforce lower case matching.
         assert lparttype not in parthandlermapping
         parthandlermapping[lparttype] = func
+        func.params = frozenset(params)
         return func
     return _decorator
 
@@ -839,7 +840,7 @@ def handlereplycaps(op, inpart):
 
     raise error.BundleValueError(**kwargs)
 
-@parthandler('b2x:error:pushraced')
+@parthandler('b2x:error:pushraced', ('message',))
 def handlereplycaps(op, inpart):
     """Used to transmit push race error over the wire"""
     raise error.ResponseError(_('push failed:'), inpart.params['message'])
