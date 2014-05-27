@@ -595,8 +595,12 @@ def _pullchangeset(pullop):
 
 def _pullphase(pullop):
     # Get remote phases data from remote
-    pullop.todosteps.remove('phases')
     remotephases = pullop.remote.listkeys('phases')
+    _pullapplyphases(pullop, remotephases)
+
+def _pullapplyphases(pullop, remotephases):
+    """apply phase movement from observed remote state"""
+    pullop.todosteps.remove('phases')
     publishing = bool(remotephases.get('publishing', False))
     if remotephases and not publishing:
         # remote is new and unpublishing
