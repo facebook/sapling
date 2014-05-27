@@ -294,23 +294,24 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
             # part key are matched lower case
             key = parttype.lower()
             try:
-                handler = parthandlermapping[key]
-                op.ui.debug('found a handler for part %r\n' % parttype)
-            except KeyError:
-                if key != parttype: # mandatory parts
-                    # todo:
-                    # - use a more precise exception
+                handler = parthandlermapping.get(key)
+                if handler is None:
                     raise error.BundleValueError(parttype=key)
-                op.ui.debug('ignoring unknown advisory part %r\n' % key)
+                op.ui.debug('found a handler for part %r\n' % parttype)
+                unknownparams = part.mandatorykeys - handler.params
+                if unknownparams:
+                    unknownparams = list(unknownparams)
+                    unknownparams.sort()
+                    raise error.BundleValueError(parttype=key,
+                                                   params=unknownparams)
+            except error.BundleValueError, exc:
+                if key != parttype: # mandatory parts
+                    raise
+                op.ui.debug('ignoring unsupported advisory part %s\n' % exc)
                 # consuming the part
                 part.read()
                 continue
 
-            unknownparams = part.mandatorykeys - handler.params
-            if unknownparams:
-                unknownparams = list(unknownparams)
-                unknownparams.sort()
-                raise error.BundleValueError(parttype=key, params=unknownparams)
 
             # handler is called outside the above try block so that we don't
             # risk catching KeyErrors from anything other than the

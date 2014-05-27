@@ -112,6 +112,8 @@ Create an extension to test bundle2 API
   >        mathpart.addparam('e', '2.72')
   >        mathpart.addparam('cooking', 'raw', mandatory=False)
   >        mathpart.data = '42'
+  >        # advisory known part with unknown mandatory param
+  >        bundler.newpart('test:song', [('randomparam','')])
   >     if opts['unknown']:
   >        bundler.newpart('test:UNKNOWN', data='some random content')
   >     if opts['unknownparams']:
@@ -366,6 +368,7 @@ Test part
   bundle part: "test:song"
   bundle part: "test:debugreply"
   bundle part: "test:math"
+  bundle part: "test:song"
   bundle part: "test:ping"
   end of bundle
 
@@ -374,7 +377,7 @@ Test part
   test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
   test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x16\x0ftest:debugreply\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x04\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x16\x0ftest:debugreply\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x04\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x1d	test:song\x00\x00\x00\x05\x01\x00\x0b\x00randomparam\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg statbundle2 < ../parts.hg2
@@ -399,11 +402,15 @@ Test part
       mandatory: 2
       advisory: 1
       payload: 2 bytes
+    :test:song:
+      mandatory: 1
+      advisory: 0
+      payload: 0 bytes
     :test:ping:
       mandatory: 0
       advisory: 0
       payload: 0 bytes
-  parts count:   6
+  parts count:   7
 
   $ hg statbundle2 --debug < ../parts.hg2
   start processing of HG2X stream
@@ -457,9 +464,18 @@ Test part
   payload chunk size: 2
   payload chunk size: 0
       payload: 2 bytes
+  part header size: 29
+  part type: "test:song"
+  part id: "5"
+  part parameters: 1
+    :test:song:
+      mandatory: 1
+      advisory: 0
+  payload chunk size: 0
+      payload: 0 bytes
   part header size: 16
   part type: "test:ping"
-  part id: "5"
+  part id: "6"
   part parameters: 0
     :test:ping:
       mandatory: 0
@@ -468,7 +484,7 @@ Test part
       payload: 0 bytes
   part header size: 0
   end of bundle2 stream
-  parts count:   6
+  parts count:   7
 
 Test actual unbundling of test part
 =======================================
@@ -483,13 +499,13 @@ Process the bundle
   part type: "test:empty"
   part id: "0"
   part parameters: 0
-  ignoring unknown advisory part 'test:empty'
+  ignoring unsupported advisory part test:empty
   payload chunk size: 0
   part header size: 17
   part type: "test:empty"
   part id: "1"
   part parameters: 0
-  ignoring unknown advisory part 'test:empty'
+  ignoring unsupported advisory part test:empty
   payload chunk size: 0
   part header size: 16
   part type: "test:song"
@@ -513,15 +529,22 @@ Process the bundle
   part type: "test:math"
   part id: "4"
   part parameters: 3
-  ignoring unknown advisory part 'test:math'
+  ignoring unsupported advisory part test:math
   payload chunk size: 2
+  payload chunk size: 0
+  part header size: 29
+  part type: "test:song"
+  part id: "5"
+  part parameters: 1
+  found a handler for part 'test:song'
+  ignoring unsupported advisory part test:song - randomparam
   payload chunk size: 0
   part header size: 16
   part type: "test:ping"
-  part id: "5"
+  part id: "6"
   part parameters: 0
   found a handler for part 'test:ping'
-  received ping request (id 5)
+  received ping request (id 6)
   payload chunk size: 0
   part header size: 0
   end of bundle2 stream
@@ -576,9 +599,9 @@ The reply is a bundle
   debugreply:         'babar'
   debugreply:         'celeste'
   debugreply:     'ping-pong'
-  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to6\x00\x00\x00\x00\x00\x1f (esc)
-  b2x:output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to6\x00\x00\x00=received ping request (id 6) (esc)
-  replying to ping request (id 6)
+  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to7\x00\x00\x00\x00\x00\x1f (esc)
+  b2x:output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to7\x00\x00\x00=received ping request (id 7) (esc)
+  replying to ping request (id 7)
   \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 The reply is valid
@@ -617,8 +640,8 @@ Unbundle the reply to get the output:
   remote: debugreply:         'babar'
   remote: debugreply:         'celeste'
   remote: debugreply:     'ping-pong'
-  remote: received ping request (id 6)
-  remote: replying to ping request (id 6)
+  remote: received ping request (id 7)
+  remote: replying to ping request (id 7)
   0 unread bytes
 
 Test push race detection
