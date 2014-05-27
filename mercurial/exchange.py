@@ -532,12 +532,15 @@ def _pullbundle2(pullop):
     """pull data using bundle2
 
     For now, the only supported data are changegroup."""
+    remotecaps = bundle2.bundle2caps(pullop.remote)
     kwargs = {'bundlecaps': caps20to10(pullop.repo)}
     # pulling changegroup
     pullop.todosteps.remove('changegroup')
 
     kwargs['common'] = pullop.common
     kwargs['heads'] = pullop.heads or pullop.rheads
+    if 'b2x:listkeys' in remotecaps:
+        kwargs['listkeys'] = ['phase']
     if not pullop.fetch:
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
@@ -556,6 +559,11 @@ def _pullbundle2(pullop):
     if pullop.fetch:
         assert len(op.records['changegroup']) == 1
         pullop.cgresult = op.records['changegroup'][0]['return']
+
+    # processing phases change
+    for namespace, value in op.records['listkeys']:
+        if namespace == 'phases':
+            _pullapplyphases(pullop, value)
 
 def _pullbundle2extraprepare(pullop, kwargs):
     """hook function so that extensions can extend the getbundle call"""
