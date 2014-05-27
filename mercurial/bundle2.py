@@ -868,3 +868,29 @@ def handlelistkeys(op, inpart):
     namespace = inpart.params['namespace']
     r = pushkey.decodekeys(inpart.read())
     op.records.add('listkeys', (namespace, r))
+
+@parthandler('b2x:pushkey', ('namespace', 'key', 'old', 'new'))
+def handlepushkey(op, inpart):
+    """process a pushkey request"""
+    dec = pushkey.decode
+    namespace = dec(inpart.params['namespace'])
+    key = dec(inpart.params['key'])
+    old = dec(inpart.params['old'])
+    new = dec(inpart.params['new'])
+    ret = op.repo.pushkey(namespace, key, old, new)
+    record = {'namespace': namespace,
+              'key': key,
+              'old': old,
+              'new': new}
+    op.records.add('pushkey', record)
+    if op.reply is not None:
+        rpart = op.reply.newpart('b2x:reply:pushkey')
+        rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        rpart.addparam('return', '%i' % ret, mandatory=False)
+
+@parthandler('b2x:reply:pushkey', ('return', 'in-reply-to'))
+def handlepushkeyreply(op, inpart):
+    """retrieve the result of a pushkey request"""
+    ret = int(inpart.params['return'])
+    partid = int(inpart.params['in-reply-to'])
+    op.records.add('pushkey', {'return': ret}, partid)
