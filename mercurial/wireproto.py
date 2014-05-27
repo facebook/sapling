@@ -8,7 +8,7 @@
 import urllib, tempfile, os, sys
 from i18n import _
 from node import bin, hex
-import changegroup as changegroupmod, bundle2
+import changegroup as changegroupmod, bundle2, pushkey as pushkeymod
 import peer, error, encoding, util, store, exchange
 
 
@@ -680,9 +680,7 @@ def hello(repo, proto):
 @wireprotocommand('listkeys', 'namespace')
 def listkeys(repo, proto, namespace):
     d = repo.listkeys(encoding.tolocal(namespace)).items()
-    t = '\n'.join(['%s\t%s' % (encoding.fromlocal(k), encoding.fromlocal(v))
-                   for k, v in d])
-    return t
+    return pushkeymod.encodekeys(d)
 
 @wireprotocommand('lookup', 'key')
 def lookup(repo, proto, key):
