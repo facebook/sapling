@@ -202,7 +202,8 @@ def unescapearg(escaped):
 # :plain: string with no transformation needed.
 gboptsmap = {'heads':  'nodes',
              'common': 'nodes',
-             'bundlecaps': 'csv'}
+             'bundlecaps': 'csv',
+             'listkeys': 'csv'}
 
 # client side
 

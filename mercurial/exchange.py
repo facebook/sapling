@@ -9,7 +9,7 @@ from i18n import _
 from node import hex, nullid
 import errno, urllib
 import util, scmutil, changegroup, base85, error
-import discovery, phases, obsolete, bookmarks, bundle2
+import discovery, phases, obsolete, bookmarks, bundle2, pushkey
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
@@ -678,6 +678,12 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     bundler = bundle2.bundle20(repo.ui, b2caps)
     if cg:
         bundler.newpart('b2x:changegroup', data=cg.getchunks())
+    listkeys = kwargs.get('listkeys', ())
+    for namespace in listkeys:
+        part = bundler.newpart('b2x:listkeys')
+        part.addparam('namespace', namespace)
+        keys = repo.listkeys(namespace).items()
+        part.data = pushkey.encodekeys(keys)
     _getbundleextrapart(bundler, repo, source, heads=heads, common=common,
                         bundlecaps=bundlecaps, **kwargs)
     return util.chunkbuffer(bundler.getchunks())

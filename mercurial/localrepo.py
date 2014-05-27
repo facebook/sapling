@@ -180,7 +180,8 @@ class localrepository(object):
     requirements = ['revlogv1']
     filtername = None
 
-    bundle2caps = {'HG2X': ()}
+    bundle2caps = {'HG2X': (),
+                   'b2x:listkeys': ()}
 
     # a list of (ui, featureset) functions.
     # only functions defined in module of enabled extensions are invoked
