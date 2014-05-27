@@ -190,6 +190,7 @@ Create an extension to test bundle2 API
   > bundle2-exp=True
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
+  > logtemplate={rev}:{node|short} {phase} {author} {desc|firstline}
   > [web]
   > push_ssl = false
   > allow_push = *
@@ -664,57 +665,23 @@ Support for changegroup
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg log -G
-  o  changeset:   8:02de42196ebe
-  |  tag:         tip
-  |  parent:      6:24b6387c8c8c
-  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |  date:        Sat Apr 30 15:24:48 2011 +0200
-  |  summary:     H
+  o  8:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com> H
   |
-  | o  changeset:   7:eea13746799a
-  |/|  parent:      6:24b6387c8c8c
-  | |  parent:      5:9520eea781bc
-  | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | |  date:        Sat Apr 30 15:24:48 2011 +0200
-  | |  summary:     G
+  | o  7:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com> G
+  |/|
+  o |  6:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com> F
   | |
-  o |  changeset:   6:24b6387c8c8c
-  | |  parent:      1:cd010b8cd998
-  | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | |  date:        Sat Apr 30 15:24:48 2011 +0200
-  | |  summary:     F
+  | o  5:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  | o  4:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com> D
   | |
-  | o  changeset:   5:9520eea781bc
-  |/   parent:      1:cd010b8cd998
-  |    user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |    date:        Sat Apr 30 15:24:48 2011 +0200
-  |    summary:     E
-  |
-  | o  changeset:   4:32af7686d403
-  | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | |  date:        Sat Apr 30 15:24:48 2011 +0200
-  | |  summary:     D
+  | o  3:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> C
   | |
-  | o  changeset:   3:5fddd98957c8
-  | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | |  date:        Sat Apr 30 15:24:48 2011 +0200
-  | |  summary:     C
-  | |
-  | o  changeset:   2:42ccdea3bb16
-  |/   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |    date:        Sat Apr 30 15:24:48 2011 +0200
-  |    summary:     B
-  |
-  o  changeset:   1:cd010b8cd998
-     parent:      -1:000000000000
-     user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-     date:        Sat Apr 30 15:24:48 2011 +0200
-     summary:     A
+  | o  2:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com> B
+  |/
+  o  1:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
-  @  changeset:   0:3903775176ed
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  @  0:3903775176ed draft test a
   
 
   $ hg bundle2 --debug --rev '8+7+5+4' ../rev.hg2
@@ -803,16 +770,9 @@ clone --pull
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
-  @  changeset:   1:9520eea781bc
-  |  tag:         tip
-  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |  date:        Sat Apr 30 15:24:48 2011 +0200
-  |  summary:     E
+  @  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
   |
-  o  changeset:   0:cd010b8cd998
-     user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-     date:        Sat Apr 30 15:24:48 2011 +0200
-     summary:     A
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
 
 pull
@@ -895,51 +855,21 @@ push over http
 Check final content.
 
   $ hg -R other log -G
-  o  changeset:   7:32af7686d403
-  |  tag:         tip
-  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |  date:        Sat Apr 30 15:24:48 2011 +0200
-  |  summary:     D
+  o  7:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com> D
   |
-  o  changeset:   6:5fddd98957c8
-  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |  date:        Sat Apr 30 15:24:48 2011 +0200
-  |  summary:     C
+  o  6:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com> C
   |
-  o  changeset:   5:42ccdea3bb16
-  |  parent:      0:cd010b8cd998
-  |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |  date:        Sat Apr 30 15:24:48 2011 +0200
-  |  summary:     B
+  o  5:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com> B
   |
-  | o  changeset:   4:02de42196ebe
-  | |  parent:      2:24b6387c8c8c
-  | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | |  date:        Sat Apr 30 15:24:48 2011 +0200
-  | |  summary:     H
+  | o  4:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com> H
   | |
-  | | o  changeset:   3:eea13746799a
-  | |/|  parent:      2:24b6387c8c8c
-  | | |  parent:      1:9520eea781bc
-  | | |  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | | |  date:        Sat Apr 30 15:24:48 2011 +0200
-  | | |  summary:     G
-  | | |
-  | o |  changeset:   2:24b6387c8c8c
-  |/ /   parent:      0:cd010b8cd998
-  | |    user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  | |    date:        Sat Apr 30 15:24:48 2011 +0200
-  | |    summary:     F
-  | |
-  | @  changeset:   1:9520eea781bc
-  |/   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-  |    date:        Sat Apr 30 15:24:48 2011 +0200
-  |    summary:     E
-  |
-  o  changeset:   0:cd010b8cd998
-     user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
-     date:        Sat Apr 30 15:24:48 2011 +0200
-     summary:     A
+  | | o  3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> G
+  | |/|
+  | o |  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  |/ /
+  | @  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
 
 Error Handling
