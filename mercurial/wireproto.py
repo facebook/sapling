@@ -317,11 +317,7 @@ class wirepeer(peer.peerrepository):
         self.ui.debug('preparing listkeys for "%s"\n' % namespace)
         yield {'namespace': encoding.fromlocal(namespace)}, f
         d = f.value
-        r = {}
-        for l in d.splitlines():
-            k, v = l.split('\t')
-            r[encoding.tolocal(k)] = encoding.tolocal(v)
-        yield r
+        yield pushkeymod.decodekeys(d)
 
     def stream_out(self):
         return self._callstream('stream_out')
