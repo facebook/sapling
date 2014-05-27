@@ -445,7 +445,7 @@ class cmdalias(object):
             return self.fn(ui, *args, **opts)
         else:
             try:
-                util.checksignature(self.fn)(ui, *args, **opts)
+                return util.checksignature(self.fn)(ui, *args, **opts)
             except error.SignatureError:
                 args = ' '.join([self.cmdname] + self.args)
                 ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
