@@ -306,6 +306,12 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 part.read()
                 continue
 
+            unknownparams = part.mandatorykeys - handler.params
+            if unknownparams:
+                unknownparams = list(unknownparams)
+                unknownparams.sort()
+                raise error.BundleValueError(parttype=key, params=unknownparams)
+
             # handler is called outside the above try block so that we don't
             # risk catching KeyErrors from anything other than the
             # parthandlermapping lookup (any KeyError raised by handler()

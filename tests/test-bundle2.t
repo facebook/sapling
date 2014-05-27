@@ -64,6 +64,7 @@ Create an extension to test bundle2 API
   > @command('bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
+  >           ('', 'unknownparams', False, 'include an unknown part parameters in the bundle'),
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),
   >           ('', 'reply', False, 'produce a reply bundle'),
   >           ('', 'pushrace', False, 'includes a check:head part with unknown nodes'),
@@ -113,6 +114,8 @@ Create an extension to test bundle2 API
   >        mathpart.data = '42'
   >     if opts['unknown']:
   >        bundler.newpart('test:UNKNOWN', data='some random content')
+  >     if opts['unknownparams']:
+  >        bundler.newpart('test:SONG', [('randomparams', '')])
   >     if opts['parts']:
   >        bundler.newpart('test:ping')
   > 
@@ -538,6 +541,16 @@ Unbundle with an unknown mandatory part
   debugreply: no reply
   0 unread bytes
   abort: missing support for test:unknown
+  [255]
+
+Unbundle with an unknown mandatory part parameters
+(should abort)
+
+  $ hg bundle2 --unknownparams ../unknown.hg2
+
+  $ hg unbundle2 < ../unknown.hg2
+  0 unread bytes
+  abort: missing support for test:song - randomparams
   [255]
 
 unbundle with a reply
