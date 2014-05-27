@@ -26,6 +26,7 @@ tests/htmlcov
 build
 contrib/hgsh/hgsh
 dist
+packages
 doc/common.txt
 doc/*.[0-9]
 doc/*.[0-9].txt

@@ -138,29 +138,29 @@ osx:
 	@which -s bdist_mpkg || \
 	   (echo "Missing bdist_mpkg (easy_install bdist_mpkg)"; false)
 	bdist_mpkg setup.py
-	mkdir -p build/osx
+	mkdir -p packages/osx
 	rm -rf dist/mercurial-*.mpkg
-	mv dist/mercurial*macosx*.zip build/osx
+	mv dist/mercurial*macosx*.zip packages/osx
 
 fedora:
-	mkdir -p build/fedora
+	mkdir -p packages/fedora
 	echo y | contrib/buildrpm
-	cp rpmbuild/RPMS/*/* build/fedora
-	cp rpmbuild/SRPMS/* build/fedora
+	cp rpmbuild/RPMS/*/* packages/fedora
+	cp rpmbuild/SRPMS/* packages/fedora
 	rm -rf rpmbuild
 
 docker-fedora:
-	mkdir -p build/fedora
+	mkdir -p packages/fedora
 	contrib/dockerrpm fedora
 
 centos6:
-	mkdir -p build/centos6
+	mkdir -p packages/centos6
 	echo y | contrib/buildrpm
-	cp rpmbuild/RPMS/*/* build/centos6
-	cp rpmbuild/SRPMS/* build/centos6
+	cp rpmbuild/RPMS/*/* packages/centos6
+	cp rpmbuild/SRPMS/* packages/centos6
 
 docker-centos6:
-	mkdir -p build/centos6
+	mkdir -p packages/centos6
 	contrib/dockerrpm centos6
 
 .PHONY: help all local build doc clean install install-bin install-doc \
