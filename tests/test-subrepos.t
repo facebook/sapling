@@ -104,7 +104,7 @@ bring working copy to HEAD state (it's not bare repo)
   (run 'hg update' to get a working copy)
 We grep off the updating to active bookmark message from newer versions. When
 only 2.7 or later (or so) is supported, this grep should be dropped.
-  $ hg checkout -C | grep -v 'updating to active bookmark master'
+  $ hg checkout -C | grep -v 'updating to active bookmark master' | egrep -v '^\(activating bookmark master\)$' 
   cloning subrepo hgsub from $TESTTMP/hgsub
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..

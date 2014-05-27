@@ -118,7 +118,7 @@ issue3228 was fixed in 2.1
 
 hg-git issue103 -- directories can lose information at hg-git export time
 
-  $ hg up master
+  $ hg up master | egrep -v '^\(activating bookmark master\)$'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir dir1
   $ echo alpha > dir1/alpha
