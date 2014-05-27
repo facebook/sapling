@@ -253,8 +253,6 @@ static inline int getintat(PyObject *tuple, int off, uint32_t *v)
 	return 0;
 }
 
-static PyObject *dirstate_unset;
-
 /*
  * Efficiently pack a dirstate object into its on-disk format.
  */
@@ -2033,8 +2031,6 @@ static void module_init(PyObject *mod)
 				  -1, -1, -1, -1, nullid, 20);
 	if (nullentry)
 		PyObject_GC_UnTrack(nullentry);
-
-	dirstate_unset = Py_BuildValue("ciii", 'n', 0, -1, -1);
 }
 
 static int check_python_version(void)
