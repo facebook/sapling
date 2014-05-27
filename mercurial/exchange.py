@@ -359,16 +359,54 @@ def _pushsyncphase(pushop):
         # Get the list of all revs draft on remote by public here.
         # XXX Beware that revset break if droots is not strictly
         # XXX root we may want to ensure it is but it is costly
-        outdated =  unfi.set('heads((%ln::%ln) and public())',
-                             droots, cheads)
-        for newremotehead in outdated:
-            r = pushop.remote.pushkey('phases',
-                                      newremotehead.hex(),
-                                      str(phases.draft),
-                                      str(phases.public))
-            if not r:
-                pushop.ui.warn(_('updating %s to public failed!\n')
-                                       % newremotehead)
+        outdated = unfi.set('heads((%ln::%ln) and public())',
+                            droots, cheads)
+
+        b2caps = bundle2.bundle2caps(pushop.remote)
+        if 'b2x:pushkey' in b2caps:
+            # server supports bundle2, let's do a batched push through it
+            #
+            # This will eventually be unified with the changesets bundle2 push
+            bundler = bundle2.bundle20(pushop.ui, b2caps)
+            capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
+            bundler.newpart('b2x:replycaps', data=capsblob)
+            part2node = []
+            enc = pushkey.encode
+            for newremotehead in outdated:
+                part = bundler.newpart('b2x:pushkey')
+                part.addparam('namespace', enc('phases'))
+                part.addparam('key', enc(newremotehead.hex()))
+                part.addparam('old', enc(str(phases.draft)))
+                part.addparam('new', enc(str(phases.public)))
+                part2node.append((part.id, newremotehead))
+            stream = util.chunkbuffer(bundler.getchunks())
+            try:
+                reply = pushop.remote.unbundle(stream, ['force'], 'push')
+                op = bundle2.processbundle(pushop.repo, reply)
+            except error.BundleValueError, exc:
+                raise util.Abort('missing support for %s' % exc)
+            for partid, node in part2node:
+                partrep = op.records.getreplies(partid)
+                results = partrep['pushkey']
+                assert len(results) <= 1
+                msg = None
+                if not results:
+                    msg = _('server ignored update of %s to public!\n') % node
+                elif not int(results[0]['return']):
+                    msg = _('updating %s to public failed!\n') % node
+                if msg is not None:
+                    pushop.ui.warn(msg)
+
+        else:
+            # fallback to independant pushkey command
+            for newremotehead in outdated:
+                r = pushop.remote.pushkey('phases',
+                                          newremotehead.hex(),
+                                          str(phases.draft),
+                                          str(phases.public))
+                if not r:
+                    pushop.ui.warn(_('updating %s to public failed!\n')
+                                   % newremotehead)
 
 def _localphasemove(pushop, nodes, phase=phases.public):
     """move <nodes> to <phase> in the local source repo"""
