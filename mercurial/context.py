@@ -326,7 +326,9 @@ class basectx(object):
 
         for l in r:
             l.sort()
-        return r
+
+        # we return a tuple to signify that this list isn't changing
+        return tuple(r)
 
 
 def makememctx(repo, parents, text, user, date, branch, files, store,
@@ -1446,8 +1448,9 @@ class workingctx(committablectx):
                                            listunknown, listsubrepos)
         # calling 'super' subtly reveresed the contexts, so we flip the results
         # (s[1] is 'added' and s[2] is 'removed')
+        s = list(s)
         s[1], s[2] = s[2], s[1]
-        return s
+        return tuple(s)
 
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context
