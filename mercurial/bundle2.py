@@ -828,9 +828,9 @@ def handlereplycaps(op, inpart):
     """Used to transmit abort error over the wire"""
     raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
 
-@parthandler('b2x:error:unknownpart')
+@parthandler('b2x:error:unsupportedcontent')
 def handlereplycaps(op, inpart):
-    """Used to transmit unknown part error over the wire"""
+    """Used to transmit unknown content error over the wire"""
     raise error.BundleValueError(inpart.params['parttype'])
 
 @parthandler('b2x:error:pushraced')
