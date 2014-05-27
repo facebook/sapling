@@ -794,9 +794,9 @@ def handlechangegroup(op, inpart):
 
 @parthandler('b2x:reply:changegroup')
 def handlechangegroup(op, inpart):
-    p = dict(inpart.advisoryparams)
-    ret = int(p['return'])
-    op.records.add('changegroup', {'return': ret}, int(p['in-reply-to']))
+    ret = int(inpart.params['return'])
+    replyto = int(inpart.params['in-reply-to'])
+    op.records.add('changegroup', {'return': ret}, replyto)
 
 @parthandler('b2x:check:heads')
 def handlechangegroup(op, inpart):
@@ -832,18 +832,14 @@ def handlereplycaps(op, inpart):
 @parthandler('b2x:error:abort')
 def handlereplycaps(op, inpart):
     """Used to transmit abort error over the wire"""
-    manargs = dict(inpart.mandatoryparams)
-    advargs = dict(inpart.advisoryparams)
-    raise util.Abort(manargs['message'], hint=advargs.get('hint'))
+    raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
 
 @parthandler('b2x:error:unknownpart')
 def handlereplycaps(op, inpart):
     """Used to transmit unknown part error over the wire"""
-    manargs = dict(inpart.mandatoryparams)
-    raise UnknownPartError(manargs['parttype'])
+    raise UnknownPartError(inpart.params['parttype'])
 
 @parthandler('b2x:error:pushraced')
 def handlereplycaps(op, inpart):
     """Used to transmit push race error over the wire"""
-    manargs = dict(inpart.mandatoryparams)
-    raise error.ResponseError(_('push failed:'), manargs['message'])
+    raise error.ResponseError(_('push failed:'), inpart.params['message'])
