@@ -11,4 +11,4 @@ fi
 
 $DOCKER build --tag "hg-dockerrpm-$1" - < $BUILDDIR/docker/$1
 $DOCKER run --rm -v $ROOTDIR:/hg "hg-dockerrpm-$1" bash -c \
-    "cp -a hg hg-build; cd hg-build; make clean local $1; cp build/$1/* /hg/build/$1/"
+    "cp -a hg hg-build; cd hg-build; make clean local $1; cp packages/$1/* /hg/packages/$1/"
