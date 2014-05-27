@@ -128,11 +128,11 @@ add branches/tags
 
 check alignment of branches
 
-  $ hg tags
-  tip                                5:d745ff46155b
-  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19 (esc)
-  MIDDLE_                            3:b06c5b6def9e
-  \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8 (esc)
+  $ hg branches
+  \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                   5:d745ff46155b (esc)
+  MIDDLE_                        4:9259be597f19 (inactive)
+  \xe7\x9f\xad\xe5\x90\x8d                           3:b06c5b6def9e (inactive) (esc)
+  default                        2:64a70663cee8 (inactive)
 
 check alignment of tags
 
