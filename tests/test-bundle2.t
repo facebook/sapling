@@ -764,6 +764,7 @@ Real world exchange
 clone --pull
 
   $ cd ..
+  $ hg -R main phase --public cd010b8cd998
   $ hg clone main other --pull --rev 9520eea781bc
   adding changesets
   adding manifests
@@ -774,11 +775,12 @@ clone --pull
   $ hg -R other log -G
   @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
   |
-  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
 
 pull
 
+  $ hg -R main phase --public 9520eea781bc
   $ hg -R other pull -r 24b6387c8c8c
   pulling from $TESTTMP/main (glob)
   searching for changes
@@ -787,15 +789,43 @@ pull
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg -R other log -G
+  o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  |
+  | @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  
 
+pull empty (with phase movement)
+
+  $ hg -R main phase --public 24b6387c8c8c
+  $ hg -R other pull -r 24b6387c8c8c
+  pulling from $TESTTMP/main (glob)
+  no changes found
+  $ hg -R other log -G
+  o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  |
+  | @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  
 pull empty
 
   $ hg -R other pull -r 24b6387c8c8c
   pulling from $TESTTMP/main (glob)
   no changes found
+  $ hg -R other log -G
+  o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  |
+  | @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  
 
 push
 
+  $ hg -R main phase --public eea13746799a
   $ hg -R main push other --rev eea13746799a
   pushing to other
   searching for changes
@@ -803,6 +833,15 @@ push
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
+  $ hg -R other log -G
+  o    3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> G
+  |\
+  | o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  | |
+  @ |  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  
 
 pull over ssh
 
@@ -839,12 +878,28 @@ push over ssh
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  $ hg -R other log -G
+  o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> C
+  |
+  o  5:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com> B
+  |
+  | o  4:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com> H
+  | |
+  | | o  3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> G
+  | |/|
+  | o |  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  |/ /
+  | @  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  |/
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  
 
 push over http
 
   $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
+  $ hg -R main phase --public 32af7686d403
   $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403
   pushing to http://localhost:$HGPORT2/
   searching for changes
@@ -857,21 +912,21 @@ push over http
 Check final content.
 
   $ hg -R other log -G
-  o  7:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com> D
+  o  7:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com> D
   |
-  o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> C
+  o  6:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com> C
   |
-  o  5:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com> B
+  o  5:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com> B
   |
   | o  4:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com> H
   | |
-  | | o  3:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com> G
+  | | o  3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> G
   | |/|
-  | o |  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  | o |  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
   |/ /
-  | @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  | @  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
   |/
-  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
 
 Error Handling
