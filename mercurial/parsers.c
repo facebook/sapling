@@ -261,7 +261,7 @@ static PyObject *dirstate_unset;
 static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 {
 	PyObject *packobj = NULL;
-	PyObject *map, *copymap, *pl;
+	PyObject *map, *copymap, *pl, *mtime_unset = NULL;
 	Py_ssize_t nbytes, pos, l;
 	PyObject *k, *v, *pn;
 	char *p, *s;
@@ -342,9 +342,15 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		if (*s == 'n' && mtime == (uint32_t)now) {
 			/* See pure/parsers.py:pack_dirstate for why we do
 			 * this. */
-			if (PyDict_SetItem(map, k, dirstate_unset) == -1)
-				goto bail;
 			mtime = -1;
+			mtime_unset = Py_BuildValue(
+				"ciii", *s, mode, size, mtime);
+			if (!mtime_unset)
+				goto bail;
+			if (PyDict_SetItem(map, k, mtime_unset) == -1)
+				goto bail;
+			Py_DECREF(mtime_unset);
+			mtime_unset = NULL;
 		}
 		putbe32(mode, p);
 		putbe32(size, p + 4);
@@ -374,6 +380,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 
 	return packobj;
 bail:
+	Py_XDECREF(mtime_unset);
 	Py_XDECREF(packobj);
 	return NULL;
 }
