@@ -1438,19 +1438,16 @@ class workingctx(committablectx):
             match.bad = bad
         return match
 
-    def status(self, ignored=False, clean=False, unknown=False, match=None):
-        """Explicit status query
-        Unless this method is used to query the working copy status, the
-        _status property will implicitly read the status using its default
-        arguments."""
-        listignored, listclean, listunknown = ignored, clean, unknown
-        s = self._dirstatestatus(match=match, ignored=listignored,
-                                 clean=listclean, unknown=listunknown)
-
-        s[0] = self._filtersuspectsymlink(s[0])
-        self._status = s
+    def status(self, other='.', match=None, listignored=False,
+               listclean=False, listunknown=False, listsubrepos=False):
+        # yet to be determined: what to do if 'other' is a 'workingctx' or a
+        # 'memctx'?
+        s = super(workingctx, self).status(other, match, listignored, listclean,
+                                           listunknown, listsubrepos)
+        # calling 'super' subtly reveresed the contexts, so we flip the results
+        # (s[1] is 'added' and s[2] is 'removed')
+        s[1], s[2] = s[2], s[1]
         return s
-
 
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context
