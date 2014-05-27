@@ -194,6 +194,8 @@ Create an extension to test bundle2 API
   > [web]
   > push_ssl = false
   > allow_push = *
+  > [phases]
+  > publish=False
   > EOF
 
 The extension requires a repo (currently unused)
@@ -770,9 +772,9 @@ clone --pull
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
-  @  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
   |
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
 
 pull
@@ -855,21 +857,21 @@ push over http
 Check final content.
 
   $ hg -R other log -G
-  o  7:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com> D
+  o  7:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com> D
   |
-  o  6:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com> C
+  o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> C
   |
-  o  5:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com> B
+  o  5:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com> B
   |
-  | o  4:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com> H
+  | o  4:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com> H
   | |
-  | | o  3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> G
+  | | o  3:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com> G
   | |/|
-  | o |  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com> F
+  | o |  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com> F
   |/ /
-  | @  1:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com> E
+  | @  1:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com> E
   |/
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com> A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com> A
   
 
 Error Handling
