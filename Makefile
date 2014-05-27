@@ -134,6 +134,14 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 # Packaging targets
 
+osx:
+	@which -s bdist_mpkg || \
+	   (echo "Missing bdist_mpkg (easy_install bdist_mpkg)"; false)
+	bdist_mpkg setup.py
+	mkdir -p build/osx
+	rm -rf dist/mercurial-*.mpkg
+	mv dist/mercurial*macosx*.zip build/osx
+
 fedora:
 	mkdir -p build/fedora
 	echo y | contrib/buildrpm
