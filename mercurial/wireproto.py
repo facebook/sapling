@@ -507,7 +507,7 @@ def options(cmd, keys, others):
             opts[k] = others[k]
             del others[k]
     if others:
-        sys.stderr.write("abort: %s got unexpected arguments %s\n"
+        sys.stderr.write("warning: %s ignored unexpected arguments %s\n"
                          % (cmd, ",".join(others)))
     return opts
 
