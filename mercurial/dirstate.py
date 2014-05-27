@@ -14,9 +14,7 @@ propertycache = util.propertycache
 filecache = scmutil.filecache
 _rangemask = 0x7fffffff
 
-def dirstatetuple(*x):
-    # x is a tuple
-    return x
+dirstatetuple = parsers.dirstatetuple
 
 class repocache(filecache):
     """filecache for files in .hg/"""

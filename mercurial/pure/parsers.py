@@ -15,6 +15,12 @@ _compress = zlib.compress
 _decompress = zlib.decompress
 _sha = util.sha1
 
+# Some code below makes tuples directly because it's more convenient. However,
+# code outside this module should always use dirstatetuple.
+def dirstatetuple(*x):
+    # x is a tuple
+    return x
+
 def parse_manifest(mfdict, fdict, lines):
     for l in lines.splitlines():
         f, n = l.split('\0')
@@ -104,7 +110,7 @@ def pack_dirstate(dmap, copymap, pl, now):
             # dirstate, forcing future 'status' calls to compare the
             # contents of the file if the size is the same. This prevents
             # mistakenly treating such files as clean.
-            e = (e[0], e[1], e[2], -1)
+            e = dirstatetuple(e[0], e[1], e[2], -1)
             dmap[f] = e
 
         if f in copymap:

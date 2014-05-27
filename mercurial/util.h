@@ -151,6 +151,17 @@ typedef unsigned __int64 uint64_t;
 #define inline __inline
 #endif
 
+typedef struct {
+	PyObject_HEAD
+	char state;
+	int mode;
+	int size;
+	int mtime;
+} dirstateTupleObject;
+
+PyTypeObject dirstateTupleType;
+#define dirstate_tuple_check(op) (Py_TYPE(op) == &dirstateTupleType)
+
 static inline uint32_t getbe32(const char *c)
 {
 	const unsigned char *d = (const unsigned char *)c;

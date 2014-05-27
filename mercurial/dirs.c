@@ -138,25 +138,12 @@ static int dirs_fromdict(PyObject *dirs, PyObject *source, char skipchar)
 			return -1;
 		}
 		if (skipchar) {
-			PyObject *st;
-
-			if (!PyTuple_Check(value) ||
-			    PyTuple_GET_SIZE(value) == 0) {
+			if (!dirstate_tuple_check(value)) {
 				PyErr_SetString(PyExc_TypeError,
-						"expected non-empty tuple");
+						"expected a dirstate tuple");
 				return -1;
 			}
-
-			st = PyTuple_GET_ITEM(value, 0);
-
-			if (!PyString_Check(st) || PyString_GET_SIZE(st) == 0) {
-				PyErr_SetString(PyExc_TypeError,
-						"expected non-empty string "
-						"at tuple index 0");
-				return -1;
-			}
-
-			if (PyString_AS_STRING(st)[0] == skipchar)
+			if (((dirstateTupleObject *)value)->state == skipchar)
 				continue;
 		}
 
