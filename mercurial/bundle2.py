@@ -146,6 +146,7 @@ import util
 import struct
 import urllib
 import string
+import pushkey
 
 import changegroup, error
 from i18n import _
@@ -860,3 +861,10 @@ def handlereplycaps(op, inpart):
 def handlereplycaps(op, inpart):
     """Used to transmit push race error over the wire"""
     raise error.ResponseError(_('push failed:'), inpart.params['message'])
+
+@parthandler('b2x:listkeys', ('namespace',))
+def handlelistkeys(op, inpart):
+    """retrieve pushkey namespace content stored in a bundle2"""
+    namespace = inpart.params['namespace']
+    r = pushkey.decodekeys(inpart.read())
+    op.records.add('listkeys', (namespace, r))
