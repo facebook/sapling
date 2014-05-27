@@ -513,7 +513,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
         version = version[0]
         xcode4 = (version.startswith('Xcode') and
                   StrictVersion(version.split()[1]) >= StrictVersion('4.0'))
-        xcode51 = re.match(r'^Xcode\s+5\.1\.', version) is not None
+        xcode51 = re.match(r'^Xcode\s+5\.1', version) is not None
     else:
         # xcodebuild returns empty on OS X Lion with XCode 4.3 not
         # installed, but instead with only command-line tools. Assume
