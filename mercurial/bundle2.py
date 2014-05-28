@@ -706,6 +706,11 @@ class unbundlepart(unpackermixin):
         data = self._fromheader(struct.calcsize(format))
         return _unpack(format, data)
 
+    def _initparams(self, mandatoryparams, advisoryparams):
+        """internal function to setup all logic related parameters"""
+        self.mandatoryparams = mandatoryparams
+        self.advisoryparams  = advisoryparams
+
     def _readheader(self):
         """read the header and setup the object"""
         typesize = self._unpackheader(_fparttypesize)[0]
@@ -732,8 +737,7 @@ class unbundlepart(unpackermixin):
         advparams = []
         for key, value in advsizes:
             advparams.append((self._fromheader(key), self._fromheader(value)))
-        self.mandatoryparams = manparams
-        self.advisoryparams  = advparams
+        self._initparams(manparams, advparams)
         ## part payload
         def payloadchunks():
             payloadsize = self._unpack(_fpayloadsize)[0]
