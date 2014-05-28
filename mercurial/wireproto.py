@@ -807,6 +807,8 @@ def unbundle(repo, proto, heads):
             bundler = bundle2.bundle20(repo.ui)
             errpart = bundler.newpart('B2X:ERROR:UNSUPPORTEDCONTENT')
             errpart.addparam('parttype', exc.parttype)
+            if exc.params:
+                errpart.addparam('params', '\0'.join(exc.params))
             return streamres(bundler.getchunks())
     except util.Abort, inst:
         # The old code we moved used sys.stderr directly.

@@ -831,8 +831,13 @@ def handlereplycaps(op, inpart):
 @parthandler('b2x:error:unsupportedcontent')
 def handlereplycaps(op, inpart):
     """Used to transmit unknown content error over the wire"""
-    parttype = inpart.params['parttype']
-    raise error.BundleValueError(parttype=parttype)
+    kwargs = {}
+    kwargs['parttype'] = inpart.params['parttype']
+    params = inpart.params.get('params')
+    if params is not None:
+        kwargs['params'] = params.split('\0')
+
+    raise error.BundleValueError(**kwargs)
 
 @parthandler('b2x:error:pushraced')
 def handlereplycaps(op, inpart):
