@@ -46,6 +46,18 @@ class convert_git(converter_source):
                     del os.environ['GIT_DIR']
                 else:
                     os.environ['GIT_DIR'] = prevgitdir
+
+        def gitpipe(self, s):
+            prevgitdir = os.environ.get('GIT_DIR')
+            os.environ['GIT_DIR'] = self.path
+            try:
+                return util.popen3(s)
+            finally:
+                if prevgitdir is None:
+                    del os.environ['GIT_DIR']
+                else:
+                    os.environ['GIT_DIR'] = prevgitdir
+
     else:
         def gitopen(self, s, err=None):
             if err == subprocess.PIPE:
@@ -55,6 +67,9 @@ class convert_git(converter_source):
                     return self.popen_with_stderr(s)
             else:
                 return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
+
+        def gitpipe(self, s):
+            return util.popen3('GIT_DIR=%s %s' % (self.path, s))
 
     def popen_with_stderr(self, s):
         p = subprocess.Popen(s, shell=True, bufsize=-1,
@@ -84,6 +99,12 @@ class convert_git(converter_source):
         self.path = path
         self.submodules = []
 
+        self.catfilepipe = self.gitpipe('git cat-file --batch')
+
+    def after(self):
+        for f in self.catfilepipe:
+            f.close()
+
     def getheads(self):
         if not self.rev:
             heads, ret = self.gitread('git rev-parse --branches --remotes')
@@ -98,9 +119,17 @@ class convert_git(converter_source):
     def catfile(self, rev, type):
         if rev == hex(nullid):
             raise IOError
-        data, ret = self.gitread("git cat-file %s %s" % (type, rev))
-        if ret:
+        self.catfilepipe[0].write(rev+'\n')
+        self.catfilepipe[0].flush()
+        info = self.catfilepipe[1].readline().split()
+        if info[1] != type:
             raise util.Abort(_('cannot read %r object at %s') % (type, rev))
+        size = int(info[2])
+        data = self.catfilepipe[1].read(size)
+        if len(data) < size:
+            raise util.Abort(_('cannot read %r object at %s: %s') % (type, rev))
+        # read the trailing newline
+        self.catfilepipe[1].read(1)
         return data
 
     def getfile(self, name, rev):
