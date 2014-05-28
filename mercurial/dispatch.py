@@ -355,7 +355,7 @@ class cmdalias(object):
         if not self.definition:
             def fn(ui, *args):
                 ui.warn(_("no definition for alias '%s'\n") % self.name)
-                return 1
+                return -1
             self.fn = fn
             self.badalias = True
             return
@@ -383,7 +383,16 @@ class cmdalias(object):
             self.fn = fn
             return
 
-        args = shlex.split(self.definition)
+        try:
+            args = shlex.split(self.definition)
+        except ValueError, inst:
+            def fn(ui, *args):
+                ui.warn(_("error in definition for alias '%s': %s\n")
+                        % (self.name, inst))
+                return -1
+            self.fn = fn
+            self.badalias = True
+            return
         self.cmdname = cmd = args.pop(0)
         args = map(util.expandpath, args)
 
@@ -393,7 +402,7 @@ class cmdalias(object):
                     ui.warn(_("error in definition for alias '%s': %s may only "
                               "be given on the command line\n")
                             % (self.name, invalidarg))
-                    return 1
+                    return -1
 
                 self.fn = fn
                 self.badalias = True
@@ -425,14 +434,14 @@ class cmdalias(object):
                     commands.help_(ui, cmd, unknowncmd=True)
                 except error.UnknownCommand:
                     pass
-                return 1
+                return -1
             self.fn = fn
             self.badalias = True
         except error.AmbiguousCommand:
             def fn(ui, *args):
                 ui.warn(_("alias '%s' resolves to ambiguous command '%s'\n") \
                             % (self.name, cmd))
-                return 1
+                return -1
             self.fn = fn
             self.badalias = True
 
