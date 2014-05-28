@@ -98,3 +98,14 @@ class SignatureError(Exception):
 class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
 
+# bundle2 related errors
+class BundleValueError(ValueError):
+    """error raised when bundle2 cannot be processed
+
+    Current main usecase is unsupported part types."""
+    pass
+
+class ReadOnlyPartError(RuntimeError):
+    """error raised when code tries to alter a part being generated"""
+    pass
+

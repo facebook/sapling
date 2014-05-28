@@ -803,7 +803,7 @@ def unbundle(repo, proto, heads):
         finally:
             fp.close()
             os.unlink(tempname)
-    except bundle2.BundleValueError, exc:
+    except error.BundleValueError, exc:
             bundler = bundle2.bundle20(repo.ui)
             bundler.newpart('B2X:ERROR:UNKNOWNPART', [('parttype', str(exc))])
             return streamres(bundler.getchunks())

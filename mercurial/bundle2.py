@@ -172,16 +172,6 @@ def _makefpartparamsizes(nbparams):
     """
     return '>'+('BB'*nbparams)
 
-class BundleValueError(ValueError):
-    """error raised when bundle2 cannot be processed
-
-    Current main usecase is unsupported part types."""
-    pass
-
-class ReadOnlyPartError(RuntimeError):
-    """error raised when code tries to alter a part being generated"""
-    pass
-
 parthandlermapping = {}
 
 def parthandler(parttype):
@@ -309,7 +299,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if key != parttype: # mandatory parts
                     # todo:
                     # - use a more precise exception
-                    raise BundleValueError(key)
+                    raise error.BundleValueError(key)
                 op.ui.debug('ignoring unknown advisory part %r\n' % key)
                 # consuming the part
                 part.read()
@@ -589,7 +579,7 @@ class bundlepart(object):
     # methods used to defines the part content
     def __setdata(self, data):
         if self._generated is not None:
-            raise ReadOnlyPartError('part is being generated')
+            raise error.ReadOnlyPartError('part is being generated')
         self._data = data
     def __getdata(self):
         return self._data
@@ -607,7 +597,7 @@ class bundlepart(object):
 
     def addparam(self, name, value='', mandatory=True):
         if self._generated is not None:
-            raise ReadOnlyPartError('part is being generated')
+            raise error.ReadOnlyPartError('part is being generated')
         if name in self._seenparams:
             raise ValueError('duplicated params: %s' % name)
         self._seenparams.add(name)
@@ -841,7 +831,7 @@ def handlereplycaps(op, inpart):
 @parthandler('b2x:error:unknownpart')
 def handlereplycaps(op, inpart):
     """Used to transmit unknown part error over the wire"""
-    raise BundleValueError(inpart.params['parttype'])
+    raise error.BundleValueError(inpart.params['parttype'])
 
 @parthandler('b2x:error:pushraced')
 def handlereplycaps(op, inpart):

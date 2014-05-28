@@ -135,7 +135,7 @@ Create an extension to test bundle2 API
   >             unbundler = bundle2.unbundle20(ui, sys.stdin)
   >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
   >             tr.close()
-  >         except bundle2.BundleValueError, exc:
+  >         except error.BundleValueError, exc:
   >             raise util.Abort('missing support for %s' % exc)
   >         except error.PushRaced, exc:
   >             raise util.Abort('push race: %s' % exc)
