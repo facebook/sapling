@@ -523,7 +523,7 @@ class unbundle20(unpackermixin):
         if name[0].islower():
             self.ui.debug("ignoring unknown parameter %r\n" % name)
         else:
-            raise KeyError(name)
+            raise error.BundleValueError(params=(name,))
 
 
     def iterparts(self):

@@ -166,7 +166,7 @@ Create an extension to test bundle2 API
   >     unbundler = bundle2.unbundle20(ui, sys.stdin)
   >     try:
   >         params = unbundler.params
-  >     except KeyError, exc:
+  >     except error.BundleValueError, exc:
   >        raise util.Abort('unknown parameters: %s' % exc)
   >     ui.write('options count: %i\n' % len(params))
   >     for key in sorted(params):
@@ -304,7 +304,7 @@ Test unknown mandatory option
 ---------------------------------------------------
 
   $ hg bundle2 --param 'Gravity' | hg statbundle2
-  abort: unknown parameters: 'Gravity'
+  abort: unknown parameters: Stream Parameter - Gravity
   [255]
 
 Test debug output
