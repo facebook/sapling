@@ -179,7 +179,7 @@ def parthandler(parttype, params=()):
 
     eg::
 
-        @parthandler('myparttype')
+        @parthandler('myparttype', ('mandatory', 'param', 'handled'))
         def myparttypehandler(...):
             '''process a part of type "my part".'''
             ...
@@ -787,7 +787,7 @@ def handlechangegroup(op, inpart):
         part.addparam('return', '%i' % ret, mandatory=False)
     assert not inpart.read()
 
-@parthandler('b2x:reply:changegroup')
+@parthandler('b2x:reply:changegroup', ('return', 'in-reply-to'))
 def handlechangegroup(op, inpart):
     ret = int(inpart.params['return'])
     replyto = int(inpart.params['in-reply-to'])
@@ -824,12 +824,12 @@ def handlereplycaps(op, inpart):
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 
-@parthandler('b2x:error:abort')
+@parthandler('b2x:error:abort', ('message', 'hint'))
 def handlereplycaps(op, inpart):
     """Used to transmit abort error over the wire"""
     raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
 
-@parthandler('b2x:error:unsupportedcontent')
+@parthandler('b2x:error:unsupportedcontent', ('parttype', 'params'))
 def handlereplycaps(op, inpart):
     """Used to transmit unknown content error over the wire"""
     kwargs = {}
