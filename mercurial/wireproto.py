@@ -806,7 +806,8 @@ def unbundle(repo, proto, heads):
     except error.BundleValueError, exc:
             bundler = bundle2.bundle20(repo.ui)
             errpart = bundler.newpart('B2X:ERROR:UNSUPPORTEDCONTENT')
-            errpart.addparam('parttype', exc.parttype)
+            if exc.parttype is not None:
+                errpart.addparam('parttype', exc.parttype)
             if exc.params:
                 errpart.addparam('params', '\0'.join(exc.params))
             return streamres(bundler.getchunks())

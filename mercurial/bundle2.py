@@ -840,7 +840,9 @@ def handlereplycaps(op, inpart):
 def handlereplycaps(op, inpart):
     """Used to transmit unknown content error over the wire"""
     kwargs = {}
-    kwargs['parttype'] = inpart.params['parttype']
+    parttype = inpart.params.get('parttype')
+    if parttype is not None:
+        kwargs['parttype'] = parttype
     params = inpart.params.get('params')
     if params is not None:
         kwargs['params'] = params.split('\0')

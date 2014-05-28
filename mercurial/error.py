@@ -102,10 +102,13 @@ class PushRaced(RuntimeError):
 class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed"""
 
-    def __init__(self, parttype, params=()):
+    def __init__(self, parttype=None, params=()):
         self.parttype = parttype
         self.params = params
-        msg = parttype
+        if self.parttype is None:
+            msg = 'Stream Parameter'
+        else:
+            msg = parttype
         if self.params:
             msg = '%s - %s' % (msg, ', '.join(self.params))
         super(BundleValueError, self).__init__(msg)
