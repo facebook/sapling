@@ -299,7 +299,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if key != parttype: # mandatory parts
                     # todo:
                     # - use a more precise exception
-                    raise error.BundleValueError(key)
+                    raise error.BundleValueError(parttype=key)
                 op.ui.debug('ignoring unknown advisory part %r\n' % key)
                 # consuming the part
                 part.read()
@@ -831,7 +831,8 @@ def handlereplycaps(op, inpart):
 @parthandler('b2x:error:unsupportedcontent')
 def handlereplycaps(op, inpart):
     """Used to transmit unknown content error over the wire"""
-    raise error.BundleValueError(inpart.params['parttype'])
+    parttype = inpart.params['parttype']
+    raise error.BundleValueError(parttype=parttype)
 
 @parthandler('b2x:error:pushraced')
 def handlereplycaps(op, inpart):

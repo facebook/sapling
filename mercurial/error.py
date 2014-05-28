@@ -103,7 +103,10 @@ class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed
 
     Current main usecase is unsupported part types."""
-    pass
+
+    def __init__(self, parttype):
+        self.parttype = parttype
+        super(BundleValueError, self).__init__(parttype)
 
 class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
