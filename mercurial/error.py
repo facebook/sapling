@@ -100,13 +100,15 @@ class PushRaced(RuntimeError):
 
 # bundle2 related errors
 class BundleValueError(ValueError):
-    """error raised when bundle2 cannot be processed
+    """error raised when bundle2 cannot be processed"""
 
-    Current main usecase is unsupported part types."""
-
-    def __init__(self, parttype):
+    def __init__(self, parttype, params=()):
         self.parttype = parttype
-        super(BundleValueError, self).__init__(parttype)
+        self.params = params
+        msg = parttype
+        if self.params:
+            msg = '%s - %s' % (msg, ', '.join(self.params))
+        super(BundleValueError, self).__init__(msg)
 
 class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
