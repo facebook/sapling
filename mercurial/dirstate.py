@@ -14,6 +14,10 @@ propertycache = util.propertycache
 filecache = scmutil.filecache
 _rangemask = 0x7fffffff
 
+def dirstatetuple(*x):
+    # x is a tuple
+    return x
+
 class repocache(filecache):
     """filecache for files in .hg/"""
     def join(self, obj, fname):
@@ -335,7 +339,7 @@ class dirstate(object):
         if oldstate in "?r" and "_dirs" in self.__dict__:
             self._dirs.addpath(f)
         self._dirty = True
-        self._map[f] = (state, mode, size, mtime)
+        self._map[f] = dirstatetuple(state, mode, size, mtime)
 
     def normal(self, f):
         '''Mark a file normal and clean.'''
@@ -400,7 +404,7 @@ class dirstate(object):
                 size = -1
             elif entry[0] == 'n' and entry[2] == -2: # other parent
                 size = -2
-        self._map[f] = ('r', 0, size, 0)
+        self._map[f] = dirstatetuple('r', 0, size, 0)
         if size == 0 and f in self._copymap:
             del self._copymap[f]
 
@@ -493,9 +497,9 @@ class dirstate(object):
                 self._map[f] = oldmap[f]
             else:
                 if 'x' in allfiles.flags(f):
-                    self._map[f] = ('n', 0777, -1, 0)
+                    self._map[f] = dirstatetuple('n', 0777, -1, 0)
                 else:
-                    self._map[f] = ('n', 0666, -1, 0)
+                    self._map[f] = dirstatetuple('n', 0666, -1, 0)
         self._pl = (parent, nullid)
         self._dirty = True
 
