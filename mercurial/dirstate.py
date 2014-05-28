@@ -823,7 +823,18 @@ class dirstate(object):
                     uadd(fn)
                 continue
 
-            state, mode, size, time = dmap[fn]
+            # This is equivalent to 'state, mode, size, time = dmap[fn]' but not
+            # written like that for performance reasons. dmap[fn] is not a
+            # Python tuple in compiled builds. The CPython UNPACK_SEQUENCE
+            # opcode has fast paths when the value to be unpacked is a tuple or
+            # a list, but falls back to creating a full-fledged iterator in
+            # general. That is much slower than simply accessing and storing the
+            # tuple members one by one.
+            t = dmap[fn]
+            state = t[0]
+            mode = t[1]
+            size = t[2]
+            time = t[3]
 
             if not st and state in "nma":
                 dadd(fn)
