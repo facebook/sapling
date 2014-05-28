@@ -1318,6 +1318,8 @@ class TextTestRunner(unittest.TextTestRunner):
         if self._runner.options.time:
             self.printtimes(result.times)
 
+        return result
+
     def printtimes(self, times):
         self.stream.writeln('# Producing time report')
         times.sort(key=lambda t: (t[1], t[0]), reverse=True)
@@ -1537,7 +1539,12 @@ class TestRunner(object):
             if self.options.verbose:
                 verbosity = 2
             runner = TextTestRunner(self, verbosity=verbosity)
-            runner.run(suite)
+            result = runner.run(suite)
+
+            if result.failures:
+                failed = True
+            if result.warned:
+                warned = True
 
             if self.options.anycoverage:
                 self._outputcoverage()
