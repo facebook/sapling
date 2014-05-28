@@ -530,6 +530,14 @@ class Test(unittest.TestCase):
         elif ret is False:
             raise WarnTest('no result code from test')
         elif out != self._refout:
+            # Diff generation may rely on written .err file.
+            if (ret != 0 or out != self._refout) and not self._skipped \
+                and not self._debug:
+                f = open(self.errpath, 'wb')
+                for line in out:
+                    f.write(line)
+                f.close()
+
             # The result object handles diff calculation for us.
             self._result.addOutputMismatch(self, ret, out, self._refout)
 
@@ -537,13 +545,6 @@ class Test(unittest.TestCase):
                 msg = 'output changed and ' + describe(ret)
             else:
                 msg = 'output changed'
-
-            if (ret != 0 or out != self._refout) and not self._skipped \
-                and not self._debug:
-                f = open(self.errpath, 'wb')
-                for line in out:
-                    f.write(line)
-            f.close()
 
             self.fail(msg)
         elif ret:
