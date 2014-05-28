@@ -172,8 +172,10 @@ def _makefpartparamsizes(nbparams):
     """
     return '>'+('BB'*nbparams)
 
-class UnknownPartError(KeyError):
-    """error raised when no handler is found for a Mandatory part"""
+class BundleValueError(ValueError):
+    """error raised when bundle2 cannot be processed
+
+    Current main usecase is unsupported part types."""
     pass
 
 class ReadOnlyPartError(RuntimeError):
@@ -307,7 +309,7 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
                 if key != parttype: # mandatory parts
                     # todo:
                     # - use a more precise exception
-                    raise UnknownPartError(key)
+                    raise BundleValueError(key)
                 op.ui.debug('ignoring unknown advisory part %r\n' % key)
                 # consuming the part
                 part.read()
@@ -839,7 +841,7 @@ def handlereplycaps(op, inpart):
 @parthandler('b2x:error:unknownpart')
 def handlereplycaps(op, inpart):
     """Used to transmit unknown part error over the wire"""
-    raise UnknownPartError(inpart.params['parttype'])
+    raise BundleValueError(inpart.params['parttype'])
 
 @parthandler('b2x:error:pushraced')
 def handlereplycaps(op, inpart):

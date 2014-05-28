@@ -224,11 +224,11 @@ def _pushbundle2(pushop):
     stream = util.chunkbuffer(bundler.getchunks())
     try:
         reply = pushop.remote.unbundle(stream, ['force'], 'push')
-    except bundle2.UnknownPartError, exc:
+    except bundle2.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
     try:
         op = bundle2.processbundle(pushop.repo, reply)
-    except bundle2.UnknownPartError, exc:
+    except bundle2.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
     cgreplies = op.records.getreplies(cgpart.id)
     assert len(cgreplies['changegroup']) == 1
@@ -554,7 +554,7 @@ def _pullbundle2(pullop):
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
-    except bundle2.UnknownPartError, exc:
+    except bundle2.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
 
     if pullop.fetch:

@@ -135,7 +135,7 @@ Create an extension to test bundle2 API
   >             unbundler = bundle2.unbundle20(ui, sys.stdin)
   >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
   >             tr.close()
-  >         except KeyError, exc:
+  >         except bundle2.BundleValueError, exc:
   >             raise util.Abort('missing support for %s' % exc)
   >         except error.PushRaced, exc:
   >             raise util.Abort('push race: %s' % exc)
@@ -537,7 +537,7 @@ Unbundle with an unknown mandatory part
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
   debugreply: no reply
   0 unread bytes
-  abort: missing support for 'test:unknown'
+  abort: missing support for test:unknown
   [255]
 
 unbundle with a reply
@@ -1004,19 +1004,19 @@ Doing the actual push: unknown mandatory parts
   $ hg -R main push other -r e7ec4e813ba6
   pushing to other
   searching for changes
-  abort: missing support for 'test:unknown'
+  abort: missing support for test:unknown
   [255]
 
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
-  abort: missing support for "'test:unknown'"
+  abort: missing support for test:unknown
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
   searching for changes
-  abort: missing support for "'test:unknown'"
+  abort: missing support for test:unknown
   [255]
 
 Doing the actual push: race
