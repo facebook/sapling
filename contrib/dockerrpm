@@ -3,10 +3,10 @@
 BUILDDIR=$(dirname $0)
 ROOTDIR=$(cd $BUILDDIR/..; pwd)
 
-if which docker >> /dev/null ; then
-  DOCKER=docker
-elif which docker.io >> /dev/null ; then
+if which docker.io >> /dev/null ; then
   DOCKER=docker.io
+elif which docker >> /dev/null ; then
+  DOCKER=docker
 fi
 
 $DOCKER build --tag "hg-dockerrpm-$1" - < $BUILDDIR/docker/$1
