@@ -37,6 +37,8 @@ def list(repo, namespace):
     lk = _get(namespace)[1]
     return lk(repo)
 
+decode = encoding.tolocal
+
 def encodekeys(keys):
     """encode the content of a pushkey namespace for exchange over the wire"""
     enc = encoding.fromlocal
@@ -47,5 +49,5 @@ def decodekeys(data):
     result = {}
     for l in data.splitlines():
         k, v = l.split('\t')
-        result[encoding.tolocal(k)] = encoding.tolocal(v)
+        result[decode(k)] = decode(v)
     return result
