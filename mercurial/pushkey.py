@@ -37,12 +37,13 @@ def list(repo, namespace):
     lk = _get(namespace)[1]
     return lk(repo)
 
+encode = encoding.fromlocal
+
 decode = encoding.tolocal
 
 def encodekeys(keys):
     """encode the content of a pushkey namespace for exchange over the wire"""
-    enc = encoding.fromlocal
-    return '\n'.join(['%s\t%s' % (enc(k), enc(v)) for k, v in keys])
+    return '\n'.join(['%s\t%s' % (encode(k), encode(v)) for k, v in keys])
 
 def decodekeys(data):
     """decode the content of a pushkey namespace from exchange over the wire"""
