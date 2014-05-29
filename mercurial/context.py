@@ -1578,8 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def unknown(self):
-        return self._status[4]
     def ignored(self):
         return self._status[5]
     def clean(self):
