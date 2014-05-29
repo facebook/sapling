@@ -664,6 +664,9 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     cg = changegroup.getbundle(repo, source, heads=heads,
                                common=common, bundlecaps=bundlecaps)
     if bundlecaps is None or 'HG2X' not in bundlecaps:
+        if kwargs:
+            raise ValueError(_('unsupported getbundle arguments: %s')
+                             % ', '.join(sorted(kwargs.keys())))
         return cg
     # very crude first implementation,
     # the bundle API will change and the generation will be done lazily.
