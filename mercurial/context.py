@@ -13,6 +13,7 @@ import os, errno, stat
 import obsolete as obsmod
 import repoview
 import fileset
+import revlog
 
 propertycache = util.propertycache
 
@@ -1586,6 +1587,27 @@ class memctx(committablectx):
     def commit(self):
         """commit context to the repo"""
         return self._repo.commitctx(self)
+
+    @propertycache
+    def _manifest(self):
+        """generate a manifest based on the return values of filectxfn"""
+
+        # keep this simple for now; just worry about p1
+        pctx = self._parents[0]
+        man = pctx.manifest().copy()
+
+        for f, fnode in man.iteritems():
+            p1node = nullid
+            p2node = nullid
+            p = pctx[f].parents()
+            if len(p) > 0:
+                p1node = p[0].node()
+                if len(p) > 1:
+                    p2node = p[1].node()
+            man[f] = revlog.hash(self[f].data(), p1node, p2node)
+
+        return man
+
 
 class memfilectx(committablefilectx):
     """memfilectx represents an in-memory file to commit.
