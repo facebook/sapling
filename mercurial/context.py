@@ -107,7 +107,7 @@ class basectx(object):
         return s
 
     def _buildstatus(self, other, s, match, listignored, listclean,
-                        listunknown):
+                     listunknown):
         """build a status with respect to another context"""
         mf1 = other._manifestmatches(match, s)
         mf2 = self._manifestmatches(match, s)
@@ -303,7 +303,7 @@ class basectx(object):
                                   listunknown)
         r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
-                                 listunknown)
+                              listunknown)
         r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
                              listunknown)
 
@@ -1402,7 +1402,7 @@ class workingctx(committablectx):
         return [modified, added, removed, deleted, unknown, ignored, clean]
 
     def _buildstatus(self, other, s, match, listignored, listclean,
-                        listunknown):
+                     listunknown):
         """build a status with respect to another context
 
         This includes logic for maintaining the fast path of status when
