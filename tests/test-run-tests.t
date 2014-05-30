@@ -193,3 +193,13 @@ Accept the fix
 
 (reinstall)
   $ mv backup test-failure.t
+
+No Diff
+===============
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --nodiff
+  !.
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
