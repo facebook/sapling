@@ -24,6 +24,12 @@ DFILE="$ROOTDIR/contrib/docker/$PLATFORM"
 
 CONTAINER="hg-dockerrpm-$PLATFORM"
 
-$DOCKER build --tag $CONTAINER - < $DFILE
-$DOCKER run --rm -v $ROOTDIR:/hg $CONTAINER bash -c \
+DBUILDUSER=build
+(
+cat $DFILE
+echo RUN groupadd $DBUILDUSER -g `id -g`
+echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
+) | $DOCKER build --tag $CONTAINER -
+
+$DOCKER run -u $DBUILDUSER --rm -v $ROOTDIR:/hg $CONTAINER bash -c \
     "cp -a hg hg-build; cd hg-build; make clean local $PLATFORM; cp packages/$PLATFORM/* /hg/packages/$PLATFORM/"
