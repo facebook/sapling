@@ -352,7 +352,7 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     if not incoming:
         try:
             if bundlename:
-                repo.vfs.unlink(bundlename)
+                os.unlink(bundlename)
         except OSError:
             pass
         return repo, [], other.close
@@ -394,7 +394,7 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
         if bundlerepo:
             bundlerepo.close()
         if bundle:
-            repo.vfs.unlink(bundle)
+            os.unlink(bundle)
         other.close()
 
     return (localrepo, csets, cleanup)
