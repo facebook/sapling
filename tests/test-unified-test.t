@@ -1,3 +1,6 @@
+Test that the syntax of "unified tests" is properly processed
+==============================================================
+
 Simple commands:
 
   $ echo foo
