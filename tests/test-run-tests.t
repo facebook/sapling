@@ -143,3 +143,53 @@ Parallel runs
 (delete the duplicated test file)
   $ rm test-failure-copy.t
 
+
+Interactive run
+===============
+
+(backup the failing test)
+  $ cp test-failure.t backup
+
+Refuse the fix
+
+  $ echo 'n' | $TESTDIR/run-tests.py --with-hg=`which hg` -i
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+  
+  ERROR: test-failure.t output changed
+  Accept this change? [n] !.
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+  $ cat test-failure.t
+    $ echo babar
+    rataxes
+
+Accept the fix
+
+  $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` -i
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+  
+  ERROR: test-failure.t output changed
+  Accept this change? [n] ..
+  # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
+
+  $ cat test-failure.t
+    $ echo babar
+    babar
+
+(reinstall)
+  $ mv backup test-failure.t
