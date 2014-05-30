@@ -168,7 +168,7 @@ def _terminfosetup(ui, mode):
 def _modesetup(ui, coloropt):
     global _terminfo_params
 
-    auto = coloropt == 'auto'
+    auto = (coloropt == 'auto')
     always = not auto and util.parsebool(coloropt)
     if not always and not auto:
         return None
