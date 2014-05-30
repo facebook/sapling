@@ -42,3 +42,22 @@ failing test
   # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+
+test for --retest
+====================
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --retest
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
