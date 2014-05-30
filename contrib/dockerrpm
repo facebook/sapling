@@ -1,13 +1,20 @@
-#!/bin/bash
+#!/bin/bash -e
 
 BUILDDIR=$(dirname $0)
 ROOTDIR=$(cd $BUILDDIR/..; pwd)
 
-if which docker.io >> /dev/null ; then
+if which docker.io >> /dev/null 2>&1 ; then
   DOCKER=docker.io
-elif which docker >> /dev/null ; then
+elif which docker >> /dev/null 2>&1 ; then
   DOCKER=docker
+else
+  echo "Error: docker must be installed"
+  exit 1
 fi
+
+$DOCKER -h 2> /dev/null | grep -q Jansens && { echo "Error: $DOCKER is the Docking System Tray - install docker.io instead"; exit 1; }
+$DOCKER version | grep -q "^Client version:" || { echo "Error: unexpected output from \"$DOCKER version\""; exit 1; }
+$DOCKER version | grep -q "^Server version:" || { echo "Error: could not get docker server version - check it is running and your permissions"; exit 1; }
 
 $DOCKER build --tag "hg-dockerrpm-$1" - < $BUILDDIR/docker/$1
 $DOCKER run --rm -v $ROOTDIR:/hg "hg-dockerrpm-$1" bash -c \
