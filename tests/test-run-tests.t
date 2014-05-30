@@ -88,3 +88,22 @@ failed
   # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+
+Running In Debug Mode
+======================
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --debug
+  + echo SALT* 0 0 (glob)
+  SALT* 0 0 (glob)
+  + echo babar
+  babar
+  + echo SALT* 2 0 (glob)
+  SALT* 2 0 (glob)
+  .+ echo SALT* 0 0 (glob)
+  SALT* 0 0 (glob)
+  + echo babar
+  babar
+  + echo SALT* 2 0 (glob)
+  SALT* 2 0 (glob)
+  .
+  # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
