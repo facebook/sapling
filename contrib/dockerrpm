@@ -31,5 +31,9 @@ echo RUN groupadd $DBUILDUSER -g `id -g`
 echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
 ) | $DOCKER build --tag $CONTAINER -
 
-$DOCKER run -u $DBUILDUSER --rm -v $ROOTDIR:/hg $CONTAINER bash -c \
-    "cp -a hg hg-build; cd hg-build; make clean local $PLATFORM; cp packages/$PLATFORM/* /hg/packages/$PLATFORM/"
+RPMBUILDDIR=$ROOTDIR/packages/$PLATFORM
+contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare
+
+DSHARED=/mnt/shared
+$DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
+    rpmbuild --define "_topdir $DSHARED" -ba $DSHARED/SPECS/mercurial.spec --clean
