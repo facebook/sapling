@@ -16,6 +16,14 @@ $DOCKER -h 2> /dev/null | grep -q Jansens && { echo "Error: $DOCKER is the Docki
 $DOCKER version | grep -q "^Client version:" || { echo "Error: unexpected output from \"$DOCKER version\""; exit 1; }
 $DOCKER version | grep -q "^Server version:" || { echo "Error: could not get docker server version - check it is running and your permissions"; exit 1; }
 
-$DOCKER build --tag "hg-dockerrpm-$1" - < $BUILDDIR/docker/$1
-$DOCKER run --rm -v $ROOTDIR:/hg "hg-dockerrpm-$1" bash -c \
-    "cp -a hg hg-build; cd hg-build; make clean local $1; cp packages/$1/* /hg/packages/$1/"
+PLATFORM="$1"
+[ "$PLATFORM" ] || { echo "Error: platform name must be specified"; exit 1; }
+
+DFILE="$ROOTDIR/contrib/docker/$PLATFORM"
+[ -f "$DFILE" ] || { echo "Error: docker file $DFILE not found"; exit 1; }
+
+CONTAINER="hg-dockerrpm-$PLATFORM"
+
+$DOCKER build --tag $CONTAINER - < $DFILE
+$DOCKER run --rm -v $ROOTDIR:/hg $CONTAINER bash -c \
+    "cp -a hg hg-build; cd hg-build; make clean local $PLATFORM; cp packages/$PLATFORM/* /hg/packages/$PLATFORM/"
