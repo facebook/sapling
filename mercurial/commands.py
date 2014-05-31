@@ -386,6 +386,7 @@ def archive(ui, repo, dest, **opts):
     ('', 'parent', '',
      _('parent to choose when backing out merge (DEPRECATED)'), _('REV')),
     ('r', 'rev', '', _('revision to backout'), _('REV')),
+    ('e', 'edit', False, _('invoke editor on commit messages')),
     ] + mergetoolopts + walkopts + commitopts + commitopts2,
     _('[OPTION]... [-r] REV'))
 def backout(ui, repo, node=None, rev=None, **opts):
@@ -488,7 +489,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
 
 
         def commitfunc(ui, repo, message, match, opts):
-            e = cmdutil.getcommiteditor()
+            e = cmdutil.getcommiteditor(**opts)
             if not message:
                 # we don't translate commit messages
                 message = "Backed out changeset %s" % short(node)

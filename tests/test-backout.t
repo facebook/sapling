@@ -355,9 +355,21 @@ without --merge
   update: (current)
 
 with --merge
+(this also tests that editor is invoked if '--edit' is specified
+explicitly regardless of '--message')
+
   $ hg update -qC
-  $ hg backout --merge -d '3 0' -r 1 -m 'backout on branch1' --tool=true
+  $ HGEDITOR=cat hg backout --merge -d '3 0' -r 1 -m 'backout on branch1' --tool=true --edit
   removing file1
+  backout on branch1
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'branch2'
+  HG: removed file1
   created new head
   changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3
   merging with changeset 3:d4e8f6db59fb

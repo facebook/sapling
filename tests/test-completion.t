@@ -215,7 +215,7 @@ Show all commands + options
   update: clean, check, date, rev, tool
   addremove: similarity, include, exclude, dry-run
   archive: no-decode, prefix, rev, type, subrepos, include, exclude
-  backout: merge, parent, rev, tool, include, exclude, message, logfile, date, user
+  backout: merge, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate
   bookmarks: force, rev, delete, rename, inactive
   branch: force, clean
