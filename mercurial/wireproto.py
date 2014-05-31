@@ -203,7 +203,8 @@ def unescapearg(escaped):
 gboptsmap = {'heads':  'nodes',
              'common': 'nodes',
              'bundlecaps': 'csv',
-             'listkeys': 'csv'}
+             'listkeys': 'csv',
+             'cg': 'boolean'}
 
 # client side
 

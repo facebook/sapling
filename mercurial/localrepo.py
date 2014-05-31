@@ -182,7 +182,9 @@ class localrepository(object):
 
     bundle2caps = {'HG2X': (),
                    'b2x:listkeys': (),
-                   'b2x:pushkey': ()}
+                   'b2x:pushkey': (),
+                   'b2x:changegroup': (),
+                  }
 
     # a list of (ui, featureset) functions.
     # only functions defined in module of enabled extensions are invoked

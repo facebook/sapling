@@ -726,9 +726,13 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     The implementation is at a very early stage and will get massive rework
     when the API of bundle is refined.
     """
-    # build changegroup bundle here.
-    cg = changegroup.getbundle(repo, source, heads=heads,
-                               common=common, bundlecaps=bundlecaps)
+    cg = None
+    if kwargs.get('cg', True):
+        # build changegroup bundle here.
+        cg = changegroup.getbundle(repo, source, heads=heads,
+                                   common=common, bundlecaps=bundlecaps)
+    elif 'HG2X' not in bundlecaps:
+        raise ValueError(_('request for bundle10 must include changegroup'))
     if bundlecaps is None or 'HG2X' not in bundlecaps:
         if kwargs:
             raise ValueError(_('unsupported getbundle arguments: %s')
