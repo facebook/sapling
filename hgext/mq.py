@@ -2489,9 +2489,6 @@ def refresh(ui, repo, *pats, **opts):
     """
     q = repo.mq
     message = cmdutil.logmessage(ui, opts)
-    if opts.get('edit'):
-        if message:
-            raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
     setupheaderopts(ui, opts)
     wlock = repo.wlock()
     try:

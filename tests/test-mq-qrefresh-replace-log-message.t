@@ -26,9 +26,19 @@ Should display 'First commit message'
   First commit message
 
 Testing changing message with -m
+(this tests also that '--edit' can be used with '--message')
 
   $ echo bbbb > file
-  $ hg qrefresh -m "Second commit message"
+  $ HGEDITOR=cat hg qrefresh -m "Second commit message" -e
+  Second commit message
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to use default message.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added file
 
 Should display 'Second commit message'
 
