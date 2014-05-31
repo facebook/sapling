@@ -204,6 +204,7 @@ def keystr(ui, key):
            _('the key id to sign with'), _('ID')),
           ('m', 'message', '',
            _('commit message'), _('TEXT')),
+          ('e', 'edit', False, _('invoke editor on commit messages')),
          ] + commands.commitopts2,
          _('hg sign [OPTION]... [REV]...'))
 def sign(ui, repo, *revs, **opts):
@@ -276,7 +277,8 @@ def sign(ui, repo, *revs, **opts):
                              % hgnode.short(n)
                              for n in nodes])
     try:
-        repo.commit(message, opts['user'], opts['date'], match=msigs)
+        repo.commit(message, opts['user'], opts['date'], match=msigs,
+                    editor=cmdutil.getcommiteditor(**opts))
     except ValueError, inst:
         raise util.Abort(str(inst))
 

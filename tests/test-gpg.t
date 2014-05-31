@@ -16,8 +16,17 @@ Test the GPG extension
 
   $ hg sigs
 
-  $ hg sign 0
+  $ HGEDITOR=cat hg sign -e 0
   signing 0:e63c23eaa88a
+  Added signature for changeset e63c23eaa88a
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added .hgsigs
 
   $ hg sigs
   hgtest                             0:e63c23eaa88ae77967edcf4ea194d31167c478b0
