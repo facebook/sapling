@@ -2546,9 +2546,6 @@ def fold(ui, repo, *files, **opts):
     q.checklocalchanges(repo)
 
     message = cmdutil.logmessage(ui, opts)
-    if opts.get('edit'):
-        if message:
-            raise util.Abort(_('option "-e" incompatible with "-m" or "-l"'))
 
     parent = q.lookup('qtip')
     patches = []

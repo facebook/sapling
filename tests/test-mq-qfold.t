@@ -174,10 +174,11 @@ Test saving last-message.txt:
   $ hg tip --template "{files}\n"
   aa
 
-(test that editor is not invoked before transaction starting)
+(test that editor is not invoked before transaction starting,
+and that combination of '--edit' and '--message' doesn't abort execution)
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e p3
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e -m MESSAGE p3
   refresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: emulating unexpected abort
   [255]
