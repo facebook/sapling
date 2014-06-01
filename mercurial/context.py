@@ -275,6 +275,8 @@ class basectx(object):
         directory.
 
         If other is None, compare this node with working directory.
+
+        returns (modified, added, removed, deleted, unknown, ignored, clean)
         """
 
         ctx1 = self
