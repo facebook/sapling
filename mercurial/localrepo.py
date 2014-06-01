@@ -863,7 +863,7 @@ class localrepository(object):
                 hint=_("run 'hg recover' to clean up transaction"))
 
         def onclose():
-            self.store.write(tr)
+            self.store.write(self._transref())
 
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]

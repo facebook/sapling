@@ -21,7 +21,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2014-01-29 16:47+0100\n"
-"PO-Revision-Date: 2013-09-30 20:52+0100\n"
+"PO-Revision-Date: 2014-05-07 09:14+0200\n"
 "Last-Translator: Simon Heimberg <simohe@besonet.ch>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -3437,11 +3437,11 @@ msgid "hg fetch [SOURCE]"
 msgstr "hg fetch [QUELLE]"
 
 msgid "commands to sign and verify changesets"
-msgstr "Nutzt eine Programm um den Fehlerstatus zu bestimmen"
+msgstr "Kommandos um Änderungssätze zu signieren und Signaturen zu verifizieren"
 
 #, python-format
 msgid "%s Unknown key ID \"%s\"\n"
-msgstr ""
+msgstr "%s unbekannte Schlüssel-ID \"%s\"\n"
 
 #, python-format
 msgid "%s Bad signature from \"%s\"\n"
