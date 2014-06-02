@@ -103,7 +103,7 @@ class SVNMeta(object):
             val = util.load(f, default=default)
 
             # prefer the non-default, and the one sent from command-line
-            if c and c != val and c != default:
+            if c is not None and c != val and c != default:
                 val = c
 
             # set the value as the one from disk (or default if not found)
