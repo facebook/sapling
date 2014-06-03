@@ -1609,6 +1609,8 @@ class memfilectx(committablefilectx):
 
     def data(self):
         return self._data
+    def size(self):
+        return len(self.data())
     def flags(self):
         return self._flags
     def isexec(self):
