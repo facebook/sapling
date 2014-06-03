@@ -16,6 +16,7 @@ from hgsubversion import util
 from hgsubversion import svncommands
 from hgsubversion import verify
 from hgsubversion import wrappers
+from hgsubversion import compathacks
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s
 Repository Root: %(repourl)s
@@ -160,11 +161,12 @@ class UtilityTests(test_util.TestBase):
         u.pushbuffer()
         parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='added',
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='added',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         ctx = context.memctx(self.repo,
                              parents,
                              'automated test',
@@ -203,11 +205,12 @@ class UtilityTests(test_util.TestBase):
         u = self.ui()
         parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='added',
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='added',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         ctx = context.memctx(self.repo,
                              parents,
                              'automated test',
@@ -233,11 +236,12 @@ class UtilityTests(test_util.TestBase):
         self._load_fixture_and_fetch('two_revs.svndump')
         parents = (self.repo[0].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='added',
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='added',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         ctx = context.memctx(self.repo,
                              parents,
                              'automated test',
