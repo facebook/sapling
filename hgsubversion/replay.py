@@ -164,10 +164,12 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                             '%s\n' % current_file)
             else:
                 data = parentctx.filectx(path).data()
-            return context.memfilectx(path=path,
-                                      data=data,
-                                      islink=islink, isexec=isexec,
-                                      copied=copied)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data=data,
+                                              islink=islink,
+                                              isexec=isexec,
+                                              copied=copied)
 
         meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
