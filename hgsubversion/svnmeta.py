@@ -8,6 +8,7 @@ from mercurial import util as hgutil
 from mercurial import revlog
 from mercurial import node
 
+import compathacks
 import util
 import maps
 import layouts
@@ -571,11 +572,12 @@ class SVNMeta(object):
         tagdata += '%s %s\n' % (node.hex(hash), self.tagmap.get(tag, tag))
         def hgtagsfn(repo, memctx, path):
             assert path == '.hgtags'
-            return context.memfilectx(path=path,
-                                      data=tagdata,
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data=tagdata,
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         revnum, branch = self.get_source_rev(ctx=parentctx)[:2]
         newparent = None
         for child in parentctx.children():
@@ -641,9 +643,12 @@ class SVNMeta(object):
 
             # add new changeset containing updated .hgtags
             def fctxfun(repo, memctx, path):
-                return context.memfilectx(path='.hgtags', data=src,
-                                          islink=False, isexec=False,
-                                          copied=None)
+                return compathacks.makememfilectx(repo,
+                                                  path='.hgtags',
+                                                  data=src,
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=None)
 
             extra = self.genextra(rev.revnum, b)
             if fromtag:
