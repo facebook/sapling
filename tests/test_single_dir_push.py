@@ -23,17 +23,19 @@ class TestSingleDirPush(test_util.TestBase):
                                               subdir='')
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             elif path == 'adding_binary':
-                return context.memfilectx(path=path,
-                                          data='\0binary',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='\0binary',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
@@ -62,11 +64,12 @@ class TestSingleDirPush(test_util.TestBase):
                                             layout='single',
                                             subdir='trunk')
         def filectxfn(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='contents of %s' % path,
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='contents of %s' % path,
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
                              'automated test',
@@ -95,11 +98,12 @@ class TestSingleDirPush(test_util.TestBase):
                                               subdir='trunk')
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         def file_callback(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='data of %s' % path,
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='data of %s' % path,
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         for fn in ['one', 'two']:
             ctx = context.memctx(repo,
                                  (repo['tip'].node(), node.nullid),
@@ -126,11 +130,12 @@ class TestSingleDirPush(test_util.TestBase):
         def file_callback(data):
             def cb(repo, memctx, path):
                 if path == data:
-                    return context.memfilectx(path=path,
-                                              data=data,
-                                              islink=False,
-                                              isexec=False,
-                                              copied=False)
+                    return compathacks.makememfilectx(repo,
+                                                      path=path,
+                                                      data=data,
+                                                      islink=False,
+                                                      isexec=False,
+                                                      copied=False)
                 raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
             return cb
 
@@ -174,11 +179,12 @@ class TestSingleDirPush(test_util.TestBase):
 
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(self.repo,
                              (self.repo['tip'].node(), node.nullid),
