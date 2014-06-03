@@ -27,6 +27,8 @@ from mercurial import ui
 from mercurial import util
 from mercurial import extensions
 
+from hgsubversion import compathacks
+
 try:
     from mercurial import obsolete
     obsolete._enabled
@@ -665,11 +667,12 @@ class TestBase(unittest.TestCase):
             copied = None
             if source != dest:
                 copied = source
-            return context.memfilectx(path=dest,
-                                      data=newdata,
-                                      islink=False,
-                                      isexec=False,
-                                      copied=copied)
+            return compathacks.makememfilectx(repo,
+                                              path=dest,
+                                              data=newdata,
+                                              islink=False,
+                                              isexec=False,
+                                              copied=copied)
 
         ctx = context.memctx(repo,
                              (parentctx.node(), node.nullid),
