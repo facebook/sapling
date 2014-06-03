@@ -386,8 +386,12 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
         # and this may actually imply a bug in getcopies
         if copied not in parentctx.manifest():
             copied = None
-        return context.memfilectx(path=path, data=data, islink=islink,
-                                  isexec=isexe, copied=copied)
+        return compathacks.makememfilectx(repo,
+                                          path=path,
+                                          data=data,
+                                          islink=islink,
+                                          isexec=isexe,
+                                          copied=copied)
 
     return list(touched_files), filectxfn
 
@@ -591,8 +595,12 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
         # and this may actually imply a bug in getcopies
         if copied not in parentctx.manifest():
             copied = None
-        return context.memfilectx(path=path, data=data, islink=islink,
-                                  isexec=isexec, copied=copied)
+        return compathacks.makememfilectx(repo,
+                                          path=path,
+                                          data=data,
+                                          islink=islink,
+                                          isexec=isexec,
+                                          copied=copied)
 
     return files, filectxfn
 
@@ -755,9 +763,12 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             if path in externals:
                 if externals[path] is None:
                     raise IOError(errno.ENOENT, 'no externals')
-                return context.memfilectx(path=path, data=externals[path],
-                                          islink=False, isexec=False,
-                                          copied=None)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data=externals[path],
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=None)
             for bad in bad_branch_paths[b]:
                 if path.startswith(bad):
                     raise IOError(errno.ENOENT, 'Path %s is bad' % path)
