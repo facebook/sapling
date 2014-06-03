@@ -18,6 +18,7 @@ from mercurial import revlog
 from mercurial import util as hgutil
 
 from hgsubversion import util
+from hgsubversion import compathacks
 
 import time
 
@@ -33,11 +34,12 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError()
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
@@ -58,11 +60,12 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError()
         p1 = repo['default'].node()
         ctx = context.memctx(repo,
@@ -105,9 +108,12 @@ class PushTests(test_util.TestBase):
     def test_cant_push_with_changes(self):
         repo = self.repo
         def file_callback(repo, memctx, path):
-            return context.memfilectx(
-                path=path, data='foo', islink=False,
-                isexec=False, copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='foo',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
                              'automated test',
@@ -154,11 +160,12 @@ class PushTests(test_util.TestBase):
             expected_parent = repo['default'].node()
             def file_callback(repo, memctx, path):
                 if path == 'adding_file':
-                    return context.memfilectx(path=path,
-                                              data='foo',
-                                              islink=False,
-                                              isexec=False,
-                                              copied=False)
+                    return compathacks.makememfilectx(repo,
+                                                      path=path,
+                                                      data='foo',
+                                                      islink=False,
+                                                      isexec=False,
+                                                      copied=False)
                 raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
             ctx = context.memctx(repo,
                                  parents=(repo['default'].node(), node.nullid),
@@ -201,11 +208,12 @@ class PushTests(test_util.TestBase):
         expected_parent = repo['default'].node()
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
@@ -229,11 +237,12 @@ class PushTests(test_util.TestBase):
 
     def test_push_two_revs_different_local_branch(self):
         def filectxfn(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data=path,
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data=path,
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         oldtiphash = self.repo['default'].node()
         ctx = context.memctx(self.repo,
                              (self.repo[0].node(), revlog.nullid,),
@@ -269,11 +278,12 @@ class PushTests(test_util.TestBase):
         expected_parent = repo['tip'].parents()[0].node()
         def file_callback(repo, memctx, path):
             if path == 'adding_file2':
-                return context.memfilectx(path=path,
-                                          data='foo2',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo2',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
@@ -304,11 +314,12 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['the_branch'].node(), node.nullid),
@@ -385,11 +396,12 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             if path == 'gamma':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=False,
-                                          isexec=True,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=False,
+                                                  isexec=True,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
@@ -415,11 +427,12 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             if path == 'gamma':
-                return context.memfilectx(path=path,
-                                          data='foo',
-                                          islink=True,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='foo',
+                                                  islink=True,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['tip'].node(), node.nullid),
@@ -449,11 +462,12 @@ class PushTests(test_util.TestBase):
         self.test_push_to_default()
         repo = self.repo
         def file_callback(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='foo',
-                                      islink=link,
-                                      isexec=execute,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='foo',
+                                              islink=link,
+                                              isexec=execute,
+                                              copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
                              'message',
@@ -474,11 +488,12 @@ class PushTests(test_util.TestBase):
         # works
         repo = self.repo
         def file_callback2(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='bar',
-                                      islink=link,
-                                      isexec=execute,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='bar',
+                                              islink=link,
+                                              isexec=execute,
+                                              copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
                              'message',
@@ -498,11 +513,12 @@ class PushTests(test_util.TestBase):
         # now test removing the property entirely
         repo = self.repo
         def file_callback3(repo, memctx, path):
-            return context.memfilectx(path=path,
-                                      data='bar',
-                                      islink=False,
-                                      isexec=False,
-                                      copied=False)
+            return compathacks.makememfilectx(repo,
+                                              path=path,
+                                              data='bar',
+                                              islink=False,
+                                              isexec=False,
+                                              copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
                              'message',
@@ -646,11 +662,12 @@ class PushTests(test_util.TestBase):
                 testData = 'fooFirstFile'
                 if path == 'newdir/new_file':
                     testData = 'fooNewFile'
-                return context.memfilectx(path=path,
-                                          data=testData,
-                                          islink=False,
-                                          isexec=False,
-                                          copied=False)
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data=testData,
+                                                  islink=False,
+                                                  isexec=False,
+                                                  copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
