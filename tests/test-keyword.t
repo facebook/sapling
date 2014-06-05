@@ -1271,4 +1271,17 @@ Test restricted mode with backout
    $Xinfo$
   -xxxx
 
+Test restricted mode with histedit
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > histedit =
+  > EOF
+
+  $ hg commit -m 'backout #11'
+  $ hg histedit -q --command - 13 <<EOF
+  > pick 49f5f2d940c3 14 backout #11
+  > pick 01a68de1003a 13 9foobranch
+  > EOF
+
   $ cd ..
