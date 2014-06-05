@@ -1137,6 +1137,7 @@ Keywords shrunk in working directory, but not yet disabled
 
 Now disable keyword expansion
 
+  $ cp $HGRCPATH $HGRCPATH.backup
   $ rm "$HGRCPATH"
   $ cat a b
   expand $Id$
@@ -1151,5 +1152,51 @@ Now disable keyword expansion
   $Xinfo$
   ignore $Id$
   a
+
+enable keyword expansion again
+
+  $ cat $HGRCPATH.backup >> $HGRCPATH
+
+Test restricted mode with unshelve
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > shelve =
+  > EOF
+
+  $ echo xxxx >> a
+  $ hg diff
+  diff -r 800511b3a22d a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -2,3 +2,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+  $ hg shelve -q --name tmp
+  $ hg shelve --list --patch
+  tmp             (*)    changes to 'localresolve' (glob)
+  
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -2,3 +2,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+  $ hg update -q -C 10
+  $ hg unshelve -q tmp
+  $ hg diff
+  diff -r 4aa30d025d50 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -3,3 +3,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
 
   $ cd ..

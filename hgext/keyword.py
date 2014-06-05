@@ -102,7 +102,8 @@ nokwcommands = ('add addremove annotate bundle export grep incoming init log'
 
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
-restricted = 'merge kwexpand kwshrink record qrecord resolve transplant'
+restricted = ('merge kwexpand kwshrink record qrecord resolve transplant'
+              ' unshelve')
 
 # names of extensions using dorecord
 recordextensions = 'record'
