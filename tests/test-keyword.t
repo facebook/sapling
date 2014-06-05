@@ -1199,4 +1199,48 @@ Test restricted mode with unshelve
    $Xinfo$
   +xxxx
 
+Test restricted mode with rebase
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > rebase =
+  > EOF
+
+  $ hg update -q -C 9
+
+  $ echo xxxx >> a
+  $ hg commit -m '#11'
+  $ hg diff -c 11
+  diff -r 800511b3a22d -r b07670694489 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -2,3 +2,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+  $ hg diff -c 10
+  diff -r 27d48ee14f67 -r 4aa30d025d50 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,4 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+
+  $ hg rebase -q -s 10 -d 11 --keep
+  $ hg diff -r 9 -r 12 a
+  diff -r 800511b3a22d -r 1939b927726c a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,4 +1,6 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
   $ cd ..
