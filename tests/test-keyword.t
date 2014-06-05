@@ -1243,4 +1243,19 @@ Test restricted mode with rebase
    $Xinfo$
   +xxxx
 
+Test restricted mode with graft
+
+  $ hg graft -q 10
+  $ hg diff -r 9 -r 13 a
+  diff -r 800511b3a22d -r 01a68de1003a a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,4 +1,6 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
   $ cd ..
