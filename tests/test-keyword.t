@@ -1284,4 +1284,27 @@ Test restricted mode with histedit
   > pick 01a68de1003a 13 9foobranch
   > EOF
 
+Test restricted mode with fetch (with merge)
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > fetch =
+  > EOF
+
+  $ hg clone -q -r 9 . ../fetch-merge
+  $ cd ../fetch-merge
+  $ hg -R ../Test export 10 | hg import -q -
+  $ hg fetch -q -r 11
+  $ hg diff -r 9 a
+  diff -r 800511b3a22d a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -1,4 +1,6 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
   $ cd ..
