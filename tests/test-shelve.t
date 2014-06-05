@@ -90,6 +90,10 @@ ensure that our shelved changes exist
    a
   +a
 
+  $ hg shelve --list --addremove
+  abort: options '--list' and '--addremove' may not be used together
+  [255]
+
 delete our older shelved change
 
   $ hg shelve -d default
@@ -395,6 +399,16 @@ test keep and cleanup
   $ hg shelve --cleanup
   $ hg shelve --list
 
+  $ hg shelve --cleanup --delete
+  abort: options '--cleanup' and '--delete' may not be used together
+  [255]
+  $ hg shelve --cleanup --patch
+  abort: options '--cleanup' and '--patch' may not be used together
+  [255]
+  $ hg shelve --cleanup --message MESSAGE
+  abort: options '--cleanup' and '--message' may not be used together
+  [255]
+
 test bookmarks
 
   $ hg bookmark test
@@ -663,5 +677,12 @@ unshelve and conflicts with tracked and untracked files
   $ cat f.orig
   g
   $ hg shelve --delete default
+
+  $ hg shelve --delete --stat
+  abort: options '--delete' and '--stat' may not be used together
+  [255]
+  $ hg shelve --delete --name NAME
+  abort: options '--delete' and '--name' may not be used together
+  [255]
 
   $ cd ..
