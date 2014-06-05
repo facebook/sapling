@@ -109,7 +109,7 @@ def _getbundleextrapart(orig, bundler, repo, source, **kwargs):
                                       data=f.read())
             bundler.addpart(part)
 
-@bundle2.parthandler('b2x:fb:gitmeta')
+@bundle2.parthandler('b2x:fb:gitmeta', ('filename',))
 def bundle2getgitmeta(op, part):
     '''unbundle a bundle2 containing git metadata on the client'''
     params = dict(part.mandatoryparams)
