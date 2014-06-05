@@ -1258,4 +1258,17 @@ Test restricted mode with graft
    $Xinfo$
   +xxxx
 
+Test restricted mode with backout
+
+  $ hg backout -q 11
+  $ hg diff a
+  diff -r 01a68de1003a a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -3,4 +3,3 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  -xxxx
+
   $ cd ..
