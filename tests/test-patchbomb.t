@@ -1,3 +1,13 @@
+Note for future hackers of patchbomb: this file is a bit heavy on
+wildcards in test expectations due to how many things like hostnames
+tend to make it into outputs. As a result, you may need to perform the
+following regular expression substitutions:
+@$HOSTNAME> -> @*> (glob)
+Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
+/mixed; boundary="===+[0-9]+==" -> /mixed; boundary="===*== (glob)"
+--===+[0-9]+=+--$ -> --===*=-- (glob)
+--===+[0-9]+=+$ -> --===*= (glob)
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "patchbomb=" >> $HGRCPATH
 
@@ -210,7 +220,7 @@ test bundle and description:
   1 changesets found
   
   displaying test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: test
   Message-Id: <patchbomb.180@*> (glob)
@@ -221,7 +231,7 @@ test bundle and description:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -230,7 +240,7 @@ test bundle and description:
   
   description
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: application/x-mercurial-bundle
   MIME-Version: 1.0
   Content-Disposition: attachment; filename="bundle.hg"
@@ -243,7 +253,7 @@ test bundle and description:
   SlIBpFisgGkyRjX//TMtfcUAEsGu56+YnE1OlTZmzKm8BSu2rvo4rHAYYaadIFFuTy0LYgIkgLVD
   sgVa2F19D1tx9+hgbAygLgQwaIqcDdgA4BjQgIiz/AEP72++llgDKhKducqodGE4B0ETqF3JFOFC
   Q70eyNw=
-  --===*-- (glob)
+  --===*=-- (glob)
 
 utf-8 patch:
   $ python -c 'fp = open("utf", "wb"); fp.write("h\xC3\xB6mma!\n"); fp.close();'
@@ -687,7 +697,7 @@ test inline for single patch:
   
   
   displaying [PATCH] test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -701,7 +711,7 @@ test inline for single patch:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -721,7 +731,7 @@ test inline for single patch:
   @@ -0,0 +1,1 @@
   +c
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 
 test inline for single patch (quoted-printable):
@@ -730,7 +740,7 @@ test inline for single patch (quoted-printable):
   
   
   displaying [PATCH] test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -744,7 +754,7 @@ test inline for single patch (quoted-printable):
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
@@ -780,7 +790,7 @@ test inline for single patch (quoted-printable):
   +
   +bar
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test inline for multiple patches:
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i \
@@ -806,7 +816,7 @@ test inline for multiple patches:
   
   
   displaying [PATCH 1 of 3] a ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 1 of 3] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -822,7 +832,7 @@ test inline for multiple patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -842,9 +852,9 @@ test inline for multiple patches:
   @@ -0,0 +1,1 @@
   +a
   
-  --===*-- (glob)
+  --===*=-- (glob)
   displaying [PATCH 2 of 3] b ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 2 of 3] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -860,7 +870,7 @@ test inline for multiple patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -880,9 +890,9 @@ test inline for multiple patches:
   @@ -0,0 +1,1 @@
   +b
   
-  --===*-- (glob)
+  --===*=-- (glob)
   displaying [PATCH 3 of 3] long line ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 3 of 3] long line
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -898,7 +908,7 @@ test inline for multiple patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
@@ -934,7 +944,7 @@ test inline for multiple patches:
   +
   +bar
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test attach for single patch:
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a -r 2
@@ -942,7 +952,7 @@ test attach for single patch:
   
   
   displaying [PATCH] test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -956,7 +966,7 @@ test attach for single patch:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -965,7 +975,7 @@ test attach for single patch:
   
   
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -985,7 +995,7 @@ test attach for single patch:
   @@ -0,0 +1,1 @@
   +c
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test attach for single patch (quoted-printable):
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a -r 4
@@ -993,7 +1003,7 @@ test attach for single patch (quoted-printable):
   
   
   displaying [PATCH] test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -1007,7 +1017,7 @@ test attach for single patch (quoted-printable):
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1016,7 +1026,7 @@ test attach for single patch (quoted-printable):
   
   
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
@@ -1052,7 +1062,7 @@ test attach for single patch (quoted-printable):
   +
   +bar
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test attach and body for single patch:
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a --body -r 2
@@ -1060,7 +1070,7 @@ test attach and body for single patch:
   
   
   displaying [PATCH] test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -1074,7 +1084,7 @@ test attach and body for single patch:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1093,7 +1103,7 @@ test attach and body for single patch:
   @@ -0,0 +1,1 @@
   +c
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1113,7 +1123,7 @@ test attach and body for single patch:
   @@ -0,0 +1,1 @@
   +c
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test attach for multiple patches:
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a \
@@ -1139,7 +1149,7 @@ test attach for multiple patches:
   
   
   displaying [PATCH 1 of 3] a ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 1 of 3] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -1155,7 +1165,7 @@ test attach for multiple patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1164,7 +1174,7 @@ test attach for multiple patches:
   
   
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1184,9 +1194,9 @@ test attach for multiple patches:
   @@ -0,0 +1,1 @@
   +a
   
-  --===*-- (glob)
+  --===*=-- (glob)
   displaying [PATCH 2 of 3] b ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 2 of 3] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -1202,7 +1212,7 @@ test attach for multiple patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1211,7 +1221,7 @@ test attach for multiple patches:
   
   
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1231,9 +1241,9 @@ test attach for multiple patches:
   @@ -0,0 +1,1 @@
   +b
   
-  --===*-- (glob)
+  --===*=-- (glob)
   displaying [PATCH 3 of 3] long line ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 3 of 3] long line
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -1249,7 +1259,7 @@ test attach for multiple patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1258,7 +1268,7 @@ test attach for multiple patches:
   
   
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
@@ -1294,7 +1304,7 @@ test attach for multiple patches:
   +
   +bar
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test intro for single patch:
   $ hg email --date '1970-1-1 0:1' -n --intro -f quux -t foo -c bar -s test \
@@ -1582,7 +1592,7 @@ test inline for single named patch:
   
   
   displaying [PATCH] test ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -1596,7 +1606,7 @@ test inline for single named patch:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1616,7 +1626,7 @@ test inline for single named patch:
   @@ -0,0 +1,1 @@
   +c
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 test inline for multiple named/unnamed patches:
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -i -r 0:1
@@ -1641,7 +1651,7 @@ test inline for multiple named/unnamed patches:
   
   
   displaying [PATCH 1 of 2] a ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -1657,7 +1667,7 @@ test inline for multiple named/unnamed patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1677,9 +1687,9 @@ test inline for multiple named/unnamed patches:
   @@ -0,0 +1,1 @@
   +a
   
-  --===*-- (glob)
+  --===*=-- (glob)
   displaying [PATCH 2 of 2] b ...
-  Content-Type: multipart/mixed; boundary="===*" (glob)
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
   MIME-Version: 1.0
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -1695,7 +1705,7 @@ test inline for multiple named/unnamed patches:
   To: foo
   Cc: bar
   
-  --===* (glob)
+  --===*= (glob)
   Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1715,7 +1725,7 @@ test inline for multiple named/unnamed patches:
   @@ -0,0 +1,1 @@
   +b
   
-  --===*-- (glob)
+  --===*=-- (glob)
 
 
 test inreplyto:
