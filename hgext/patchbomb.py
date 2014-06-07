@@ -509,9 +509,12 @@ def patchbomb(ui, repo, *revs, **opts):
     sender_addr = email.Utils.parseaddr(sender)[1]
     sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
     sendmail = None
+    firstpatch = None
     for i, (m, subj, ds) in enumerate(msgs):
         try:
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
+            if not firstpatch:
+                firstpatch = m['Message-Id']
         except TypeError:
             m['Message-Id'] = genmsgid('patchbomb')
         if parent:
@@ -519,7 +522,10 @@ def patchbomb(ui, repo, *revs, **opts):
             m['References'] = parent
         if not parent or 'X-Mercurial-Node' not in m:
             parent = m['Message-Id']
-        m['X-Mercurial-Series-Id'] = parent
+        # For 0 of N messages, we won't have seen a patch yet, so
+        # don't try and produce an X-Mercurial-Series-Id.
+        if firstpatch:
+            m['X-Mercurial-Series-Id'] = firstpatch
 
         m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
         m['Date'] = email.Utils.formatdate(start_time[0], localtime=True)
