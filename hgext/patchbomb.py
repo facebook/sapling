@@ -515,6 +515,7 @@ def patchbomb(ui, repo, *revs, **opts):
             m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
             if not firstpatch:
                 firstpatch = m['Message-Id']
+            m['X-Mercurial-Series-Id'] = firstpatch
         except TypeError:
             m['Message-Id'] = genmsgid('patchbomb')
         if parent:
@@ -522,10 +523,6 @@ def patchbomb(ui, repo, *revs, **opts):
             m['References'] = parent
         if not parent or 'X-Mercurial-Node' not in m:
             parent = m['Message-Id']
-        # For 0 of N messages, we won't have seen a patch yet, so
-        # don't try and produce an X-Mercurial-Series-Id.
-        if firstpatch:
-            m['X-Mercurial-Series-Id'] = firstpatch
 
         m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
         m['Date'] = email.Utils.formatdate(start_time[0], localtime=True)
