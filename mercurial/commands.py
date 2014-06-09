@@ -4943,56 +4943,62 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to remerge all files'))
 
-    ms = mergemod.mergestate(repo)
+    wlock = repo.wlock()
+    try:
+        ms = mergemod.mergestate(repo)
 
-    if not ms.active() and not show:
-        raise util.Abort(_('resolve command not applicable when not merging'))
+        if not ms.active() and not show:
+            raise util.Abort(
+                _('resolve command not applicable when not merging'))
 
-    m = scmutil.match(repo[None], pats, opts)
-    ret = 0
+        m = scmutil.match(repo[None], pats, opts)
+        ret = 0
+        didwork = False
 
-    didwork = False
-    for f in ms:
-        if not m(f):
-            continue
+        for f in ms:
+            if not m(f):
+                continue
 
-        didwork = True
+            didwork = True
 
-        if show:
-            if nostatus:
-                ui.write("%s\n" % f)
+            if show:
+                if nostatus:
+                    ui.write("%s\n" % f)
+                else:
+                    ui.write("%s %s\n" % (ms[f].upper(), f),
+                             label='resolve.' +
+                             {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
+            elif mark:
+                ms.mark(f, "r")
+            elif unmark:
+                ms.mark(f, "u")
             else:
-                ui.write("%s %s\n" % (ms[f].upper(), f),
-                         label='resolve.' +
-                         {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
-        elif mark:
-            ms.mark(f, "r")
-        elif unmark:
-            ms.mark(f, "u")
-        else:
-            wctx = repo[None]
+                wctx = repo[None]
 
-            # backup pre-resolve (merge uses .orig for its own purposes)
-            a = repo.wjoin(f)
-            util.copyfile(a, a + ".resolve")
+                # backup pre-resolve (merge uses .orig for its own purposes)
+                a = repo.wjoin(f)
+                util.copyfile(a, a + ".resolve")
 
-            try:
-                # resolve file
-                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                             'resolve')
-                if ms.resolve(f, wctx):
-                    ret = 1
-            finally:
-                ui.setconfig('ui', 'forcemerge', '', 'resolve')
-                ms.commit()
+                try:
+                    # resolve file
+                    ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                                 'resolve')
+                    if ms.resolve(f, wctx):
+                        ret = 1
+                finally:
+                    ui.setconfig('ui', 'forcemerge', '', 'resolve')
+                    ms.commit()
 
-            # replace filemerge's .orig file with our resolve file
-            util.rename(a + ".resolve", a + ".orig")
+                # replace filemerge's .orig file with our resolve file
+                util.rename(a + ".resolve", a + ".orig")
 
-    ms.commit()
+        ms.commit()
 
-    if not didwork and pats:
-        ui.warn(_("arguments do not match paths that need resolved\n"))
+        if not didwork and pats:
+            ui.warn(_("arguments do not match paths that need resolved\n"))
+
+    finally:
+        wlock.release()
 
     # Nudge users into finishing an unfinished operation. We don't print
     # this with the list/show operation because we want list/show to remain

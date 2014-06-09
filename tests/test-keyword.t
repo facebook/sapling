@@ -1138,6 +1138,7 @@ Keywords shrunk in working directory, but not yet disabled
 
 Now disable keyword expansion
 
+  $ cp $HGRCPATH $HGRCPATH.backup
   $ rm "$HGRCPATH"
   $ cat a b
   expand $Id$
@@ -1152,5 +1153,159 @@ Now disable keyword expansion
   $Xinfo$
   ignore $Id$
   a
+
+enable keyword expansion again
+
+  $ cat $HGRCPATH.backup >> $HGRCPATH
+
+Test restricted mode with unshelve
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > shelve =
+  > EOF
+
+  $ echo xxxx >> a
+  $ hg diff
+  diff -r 800511b3a22d a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -2,3 +2,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+  $ hg shelve -q --name tmp
+  $ hg shelve --list --patch
+  tmp             (*)    changes to 'localresolve' (glob)
+  
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -2,3 +2,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+  $ hg update -q -C 10
+  $ hg unshelve -q tmp
+  $ hg diff
+  diff -r 4aa30d025d50 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -3,3 +3,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+Test restricted mode with rebase
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > rebase =
+  > EOF
+
+  $ hg update -q -C 9
+
+  $ echo xxxx >> a
+  $ hg commit -m '#11'
+  $ hg diff -c 11
+  diff -r 800511b3a22d -r b07670694489 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -2,3 +2,4 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+  $ hg diff -c 10
+  diff -r 27d48ee14f67 -r 4aa30d025d50 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,4 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+
+  $ hg rebase -q -s 10 -d 11 --keep
+  $ hg diff -r 9 -r 12 a
+  diff -r 800511b3a22d -r 1939b927726c a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,4 +1,6 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+Test restricted mode with graft
+
+  $ hg graft -q 10
+  $ hg diff -r 9 -r 13 a
+  diff -r 800511b3a22d -r 01a68de1003a a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,4 +1,6 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
+
+Test restricted mode with backout
+
+  $ hg backout -q 11
+  $ hg diff a
+  diff -r 01a68de1003a a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -3,4 +3,3 @@
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  -xxxx
+
+Test restricted mode with histedit
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > histedit =
+  > EOF
+
+  $ hg commit -m 'backout #11'
+  $ hg histedit -q --command - 13 <<EOF
+  > pick 49f5f2d940c3 14 backout #11
+  > pick 01a68de1003a 13 9foobranch
+  > EOF
+
+Test restricted mode with fetch (with merge)
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > fetch =
+  > EOF
+
+  $ hg clone -q -r 9 . ../fetch-merge
+  $ cd ../fetch-merge
+  $ hg -R ../Test export 10 | hg import -q -
+  $ hg fetch -q -r 11
+  $ hg diff -r 9 a
+  diff -r 800511b3a22d a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -1,4 +1,6 @@
+  +foobranch
+   expand $Id$
+   do not process $Id:
+   xxx $
+   $Xinfo$
+  +xxxx
 
   $ cd ..
