@@ -4995,7 +4995,7 @@ def resolve(ui, repo, *pats, **opts):
         ms.commit()
 
         if not didwork and pats:
-            ui.warn(_("arguments do not match paths that need resolved\n"))
+            ui.warn(_("arguments do not match paths that need resolving\n"))
 
     finally:
         wlock.release()

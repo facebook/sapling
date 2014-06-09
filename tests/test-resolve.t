@@ -33,7 +33,7 @@ resolve -l should contain an unresolved entry
 
 resolving an unknown path emits a warning
   $ hg resolve -m does-not-exist
-  arguments do not match paths that need resolved
+  arguments do not match paths that need resolving
 
 resolve the failure
 
