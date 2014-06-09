@@ -1,12 +1,36 @@
   $ hg init
-  $ echo "nothing" > a
+  $ cat << EOF > a
+  > Small Mathematical Series.
+  > One
+  > Two
+  > Three
+  > Four
+  > Five
+  > Hop we are done.
+  > EOF
   $ hg add a
   $ hg commit -m ancestor
-  $ echo "something" > a
+  $ cat << EOF > a
+  > Small Mathematical Series.
+  > 1
+  > 2
+  > 3
+  > 4
+  > 5
+  > Hop we are done.
+  > EOF
   $ hg commit -m branch1
   $ hg co 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo "something else" > a
+  $ cat << EOF > a
+  > Small Mathematical Series.
+  > 1
+  > 2
+  > 3
+  > 6
+  > 8
+  > Hop we are done.
+  > EOF
   $ hg commit -m branch2
   created new head
 
@@ -19,14 +43,21 @@
   [1]
 
   $ hg id
-  32e80765d7fe+75234512624c+ tip
+  618808747361+c0c68e4fe667+ tip
 
   $ cat a
-  <<<<<<< local: 32e80765d7fe - test: branch2
-  something else
+  Small Mathematical Series.
+  1
+  2
+  3
+  <<<<<<< local: 618808747361 - test: branch2
+  6
+  8
   =======
-  something
-  >>>>>>> other: 75234512624c  - test: branch1
+  4
+  5
+  >>>>>>> other: c0c68e4fe667  - test: branch1
+  Hop we are done.
 
   $ hg status
   M a
@@ -46,11 +77,18 @@ Verify custom conflict markers
   [1]
 
   $ cat a
+  Small Mathematical Series.
+  1
+  2
+  3
   <<<<<<< local: test 2
-  something else
+  6
+  8
   =======
-  something
+  4
+  5
   >>>>>>> other: test 1
+  Hop we are done.
 
 Verify line splitting of custom conflict marker which causes multiple lines
 
@@ -66,11 +104,18 @@ Verify line splitting of custom conflict marker which causes multiple lines
   [1]
 
   $ cat a
+  Small Mathematical Series.
+  1
+  2
+  3
   <<<<<<< local: test 2
-  something else
+  6
+  8
   =======
-  something
+  4
+  5
   >>>>>>> other: test 1
+  Hop we are done.
 
 Verify line trimming of custom conflict marker using multi-byte characters
 
@@ -99,11 +144,18 @@ Verify line trimming of custom conflict marker using multi-byte characters
   [1]
 
   $ cat a
+  Small Mathematical Series.
+  1
+  2
+  3
   <<<<<<< local: 123456789012345678901234567890123456789012345678901234567890\xe3\x81\x82... (esc)
-  something else
+  6
+  8
   =======
-  something
+  4
+  5
   >>>>>>> other: branch1
+  Hop we are done.
 
 Verify basic conflict markers
 
@@ -119,8 +171,15 @@ Verify basic conflict markers
   [1]
 
   $ cat a
+  Small Mathematical Series.
+  1
+  2
+  3
   <<<<<<< local
-  something else
+  6
+  8
   =======
-  something
+  4
+  5
   >>>>>>> other
+  Hop we are done.
