@@ -43,11 +43,7 @@ def uisetup(ui):
             elif char == "x":
                 color = "\033[30m\033[1m"
             if color is not None:
-                newtext = []
-                for line in text:
-                    line = color + line + "\033[0m"
-                    newtext.append(line)
-                text = newtext
+                text = [color + line + "\033[0m" for line in text]
         return orig(ui, state, type, char, text, coldata)
     wrapfunction(graphmod, 'ascii', ascii)
 
