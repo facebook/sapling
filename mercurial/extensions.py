@@ -367,3 +367,16 @@ def enabled(shortname=True):
         exts[ename] = doc.splitlines()[0].strip()
 
     return exts
+
+def moduleversion(module):
+    '''return version information from given module as a string'''
+    if (util.safehasattr(module, 'getversion')
+          and callable(module.getversion)):
+        version = module.getversion()
+    elif util.safehasattr(module, '__version__'):
+        version = module.__version__
+    else:
+        version = ''
+    if isinstance(version, (list, tuple)):
+        version = '.'.join(str(o) for o in version)
+    return version

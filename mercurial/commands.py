@@ -14,6 +14,7 @@ import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, commandserver
+import extensions
 from hgweb import server as hgweb_server
 import merge as mergemod
 import minirst, revset, fileset
@@ -6016,3 +6017,15 @@ def version_(ui):
         "There is NO\nwarranty; "
         "not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
     ))
+
+    ui.note(_("\nEnabled extensions:\n\n"))
+    if ui.verbose:
+        # format names and versions into columns
+        names = []
+        vers = []
+        for name, module in extensions.extensions():
+            names.append(name)
+            vers.append(extensions.moduleversion(module))
+        maxnamelen = max(len(n) for n in names)
+        for i, name in enumerate(names):
+            ui.write("  %-*s  %s\n" % (maxnamelen, name, vers[i]))
