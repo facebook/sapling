@@ -388,16 +388,13 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
     markerstyle = ui.config('ui', 'mergemarkers', 'basic')
-    if markerstyle == 'basic':
-        formattedlabels = _defaultconflictlabels
-    else:
-        if not labels:
-            labels = _defaultconflictlabels
-
-        formattedlabels = _formatlabels(repo, fcd, fco, labels)
+    if not labels:
+        labels = _defaultconflictlabels
+    if markerstyle != 'basic':
+        labels = _formatlabels(repo, fcd, fco, labels)
 
     needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                        (a, b, c, back), labels=formattedlabels)
+                        (a, b, c, back), labels=labels)
     if not needcheck:
         if r:
             if onfailure:
