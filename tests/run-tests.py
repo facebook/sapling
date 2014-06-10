@@ -1724,6 +1724,11 @@ class TestRunner(object):
     def _checkhglib(self, verb):
         """Ensure that the 'mercurial' package imported by python is
         the one we expect it to be.  If not, print a warning to stderr."""
+        if ((self._bindir == self._pythondir) and
+            (self._bindir != self._tmpbindir)):
+            # The pythondir has been infered from --with-hg flag.
+            # We cannot expect anything sensible here
+            return
         expecthg = os.path.join(self._pythondir, 'mercurial')
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
