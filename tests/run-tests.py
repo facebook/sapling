@@ -1076,6 +1076,9 @@ class TestResult(unittest._TextTestResult):
 
         if self._options.first:
             self.stop()
+        else:
+            if not self._options.nodiff:
+                self.stream.write('\nERROR: %s output changed\n' % test)
 
     def addError(self, *args, **kwargs):
         super(TestResult, self).addError(*args, **kwargs)
