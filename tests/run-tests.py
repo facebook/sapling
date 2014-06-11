@@ -1106,7 +1106,8 @@ class TestResult(unittest._TextTestResult):
         if self.showAll:
             self.stream.writeln('ignored %s' % reason)
         else:
-            self.stream.write('i')
+            if reason != 'not retesting':
+                self.stream.write('i')
             self.stream.flush()
 
     def addWarn(self, test, reason):
