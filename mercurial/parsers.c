@@ -1299,7 +1299,7 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 	static const Py_ssize_t capacity = 24;
 	int *depth, *interesting = NULL;
 	int i, j, v, ninteresting;
-	PyObject *dict = NULL, *keys;
+	PyObject *dict = NULL, *keys = NULL;
 	long *seen = NULL;
 	int maxrev = -1;
 	long final;
@@ -1403,8 +1403,10 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 		final |= i;
 		j -= 1;
 	}
-	if (final == 0)
-		return PyList_New(0);
+	if (final == 0) {
+		keys = PyList_New(0);
+		goto bail;
+	}
 
 	dict = PyDict_New();
 	if (dict == NULL)
@@ -1428,19 +1430,13 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 
 	keys = PyDict_Keys(dict);
 
-	free(depth);
-	free(seen);
-	free(interesting);
-	Py_DECREF(dict);
-
-	return keys;
 bail:
 	free(depth);
 	free(seen);
 	free(interesting);
 	Py_XDECREF(dict);
 
-	return NULL;
+	return keys;
 }
 
 /*
