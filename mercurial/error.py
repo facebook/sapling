@@ -111,7 +111,7 @@ class BundleValueError(ValueError):
             msg = parttype
         if self.params:
             msg = '%s - %s' % (msg, ', '.join(self.params))
-        super(BundleValueError, self).__init__(msg)
+        ValueError.__init__(self, msg)
 
 class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
