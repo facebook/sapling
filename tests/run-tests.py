@@ -1316,6 +1316,14 @@ class TextTestRunner(unittest.TextTestRunner):
 
         self._runner._checkhglib('Tested')
 
+        # When '--retest' is enabled, only failure tests run. At this point
+        # "result.testsRun" holds the count of failure test that has run. But
+        # as while printing output, we have subtracted the skipped and ignored
+        # count from "result.testsRun". Therefore, to make the count remain
+        # the same, we need to add skipped and ignored count in here.
+        if self._runner.options.retest:
+            result.testsRun = result.testsRun + skipped + ignored
+
         # This differs from unittest's default output in that we don't count
         # skipped and ignored tests as part of the total test count.
         self.stream.writeln('# Ran %d tests, %d skipped, %d warned, %d failed.'
