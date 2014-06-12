@@ -14,12 +14,15 @@ except it doesn't prompt for the commit message unless --edit is provided.
 Allows amending commits that have children and can automatically rebase
 the children onto the new version of the commit
 
+This extension is incompatible with changeset evolution. The command will
+automatically disable itself if changeset evolution is enabled.
 """
 
 from hgext import rebase
 from mercurial import util, cmdutil, phases, commands, bookmarks, repair
 from mercurial import merge, extensions
 from mercurial.node import hex
+from mercurial import obsolete
 from mercurial.i18n import _
 import errno, os, re
 
@@ -32,10 +35,28 @@ amendopts = [('', 'rebase', None, _('rebases children commits after the amend'))
 ]
 
 def uisetup(ui):
+    if obsolete._enabled:
+        msg = ('fbamend and evolve extension are imcompatible, '
+               'fbamend deactivated.\n'
+               'You can either disable it globally:\n'
+               '- type `hg config --edit`\n'
+               '- drop the `fbamend=` line from the `[extensions]` section\n'
+               'or disable it for a specific repo:\n'
+               '- type `hg config --local --edit`\n'
+               '- add a `fbamend=!%s` line in the `[extensions]` section\n')
+        msg %= ui.config('extensions', 'fbamend')
+        ui.write_err(msg)
+        return
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
         entry[1].append(opt)
+    # manual call of the decorator
+    command('^amend', [
+           ('e', 'edit', None, _('prompt to edit the commit message')),
+       ] + amendopts + commands.walkopts + commands.commitopts,
+       _('hg amend [OPTION]...'))(amend)
+
 
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
@@ -45,10 +66,6 @@ def commit(orig, ui, repo, *pats, **opts):
     else:
         return orig(ui, repo, *pats, **opts)
 
-@command('^amend', [
-        ('e', 'edit', None, _('prompt to edit the commit message')),
-    ] + amendopts + commands.walkopts + commands.commitopts,
-    _('hg amend [OPTION]...'))
 def amend(ui, repo, *pats, **opts):
     '''amend the current commit with more changes
     '''
