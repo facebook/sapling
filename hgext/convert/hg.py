@@ -165,6 +165,24 @@ class mercurial_sink(converter_sink):
                 text = text.replace(sha1, newrev[:len(sha1)])
 
         extra = commit.extra.copy()
+
+        for label in ('source', 'transplant_source', 'rebase_source'):
+            node = extra.get(label)
+
+            if node is None:
+                continue
+
+            # Only transplant stores its reference in binary
+            if label == 'transplant_source':
+                node = hex(node)
+
+            newrev = revmap.get(node)
+            if newrev is not None:
+                if label == 'transplant_source':
+                    newrev = bin(newrev)
+
+                extra[label] = newrev
+
         if self.branchnames and commit.branch:
             extra['branch'] = commit.branch
         if commit.rev:

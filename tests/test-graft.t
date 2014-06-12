@@ -461,6 +461,37 @@ Now transplant a graft to test following through copies
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
+Test that the graft and transplant markers in extra are converted, allowing
+origin() to still work.  Note that these recheck the immediately preceeding two
+tests.
+  $ hg --quiet --config extensions.convert= --config convert.hg.saverev=True convert . ../converted
+
+The graft case
+  $ hg -R ../converted log -r 7 --template "{rev}: {node}\n{join(extras, '\n')}\n"
+  7: 7ae846e9111fc8f57745634250c7b9ac0a60689b
+  branch=default
+  convert_revision=ef0ef43d49e79e81ddafdc7997401ba0041efc82
+  source=e0213322b2c1a5d5d236c74e79666441bee67a7d
+  $ hg -R ../converted log -r 'origin(7)'
+  changeset:   2:e0213322b2c1
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+The transplant case
+  $ hg -R ../converted log -r tip --template "{rev}: {node}\n{join(extras, '\n')}\n"
+  21: fbb6c5cc81002f2b4b49c9d731404688bcae5ade
+  branch=dev
+  convert_revision=7e61b508e709a11d28194a5359bc3532d910af21
+  transplant_source=z\xe8F\xe9\x11\x1f\xc8\xf5wEcBP\xc7\xb9\xac (esc)
+  `h\x9b (esc)
+  $ hg -R ../converted log -r 'origin(tip)'
+  changeset:   2:e0213322b2c1
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+
 Test simple destination
   $ hg log -r 'destination()'
   changeset:   7:ef0ef43d49e7
