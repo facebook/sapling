@@ -30,3 +30,19 @@ ctx.commit()
 for enc in "ASCII", "Latin-1", "UTF-8":
     encoding.encoding = enc
     print "%-8s: %s" % (enc, repo["tip"].description())
+
+# test performing a status
+
+def getfilectx(repo, memctx, f):
+    fctx = memctx.parents()[0][f]
+    data, flags = fctx.data(), fctx.flags()
+    if f == 'foo':
+        data += 'bar\n'
+    return context.memfilectx(repo, f, data, 'l' in flags, 'x' in flags)
+
+ctxa = repo.changectx(0)
+ctxb = context.memctx(repo, [ctxa.node(), None],
+                      "test diff",
+                      ["foo"], getfilectx)
+
+print ctxb.status(ctxa)

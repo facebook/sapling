@@ -2,3 +2,4 @@ workingfilectx.date = (1000, 0)
 ASCII   : Gr?ezi!
 Latin-1 : Grüezi!
 UTF-8   : GrÃ¼ezi!
+(['foo'], [], [], [], [], [], [])
