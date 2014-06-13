@@ -286,6 +286,9 @@ def getdiff(expected, output, ref, err):
     servefail = False
     lines = []
     for line in difflib.unified_diff(expected, output, ref, err):
+        if line.startswith('+++') or line.startswith('---'):
+            if line.endswith(' \n'):
+                line = line[:-2] + '\n'
         lines.append(line)
         if not servefail and line.startswith(
                              '+  abort: child process failed to start'):
