@@ -1911,3 +1911,9 @@ Test startswith
   |
   o  line 1
      line 2
+
+Test bad template with better error message
+
+  $ hg log -Gv -R a --template '{desc|user()}'
+  hg: parse error: expected a symbol, got 'func'
+  [255]

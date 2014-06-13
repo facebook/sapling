@@ -111,7 +111,7 @@ def compileexp(exp, context):
 def getsymbol(exp):
     if exp[0] == 'symbol':
         return exp[1]
-    raise error.ParseError(_("expected a symbol"))
+    raise error.ParseError(_("expected a symbol, got '%s'") % exp[0])
 
 def getlist(x):
     if not x:
