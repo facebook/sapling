@@ -1859,3 +1859,28 @@ Test stringify on sub expressions
   $ hg log -R a -r 8 --template '{strip(if("1", if("1", "-abc-")), if("1", if("1", "-")))}\n'
   abc
 
+Test splitlines
+
+  $ hg log -Gv -R a --template "{splitlines(desc) % 'foo {line}\n'}"
+  @  foo future
+  |
+  o  foo third
+  |
+  o  foo second
+  
+  o    foo merge
+  |\
+  | o  foo new head
+  | |
+  o |  foo new branch
+  |/
+  o  foo no user, no domain
+  |
+  o  foo no person
+  |
+  o  foo other 1
+  |  foo other 2
+  |  foo
+  |  foo other 3
+  o  foo line 1
+     foo line 2

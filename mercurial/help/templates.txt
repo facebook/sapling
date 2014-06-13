@@ -84,6 +84,10 @@ Some sample command line templates:
 
    $ hg log -r 0 --template "files: {join(files, ', ')}\n"
 
+- Modify each line of a commit description::
+
+   $ hg log --template "{splitlines(desc) % '**** {line}\n'}"
+
 - Format date::
 
    $ hg log -r 0 --template "{date(date, '%Y')}\n"

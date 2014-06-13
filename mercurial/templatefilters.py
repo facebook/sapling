@@ -8,6 +8,7 @@
 import cgi, re, os, time, urllib
 import encoding, node, util
 import hbisect
+import templatekw
 
 def addbreaks(text):
     """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
@@ -302,6 +303,10 @@ def shortdate(text):
     """:shortdate: Date. Returns a date like "2006-09-18"."""
     return util.shortdate(text)
 
+def splitlines(text):
+    """:splitlines: Any text. Split text into a list of lines."""
+    return templatekw.showlist('line', text.splitlines(), 'lines')
+
 def stringescape(text):
     return text.encode('string_escape')
 
@@ -384,6 +389,7 @@ filters = {
     "short": short,
     "shortbisect": shortbisect,
     "shortdate": shortdate,
+    "splitlines": splitlines,
     "stringescape": stringescape,
     "stringify": stringify,
     "strip": strip,
