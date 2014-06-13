@@ -466,6 +466,17 @@ def sub(context, mapping, args):
     src = stringify(_evalifliteral(args[2], context, mapping))
     yield re.sub(pat, rpl, src)
 
+def startswith(context, mapping, args):
+    if len(args) != 2:
+        raise error.ParseError(_("startswith expects two arguments"))
+
+    patn = stringify(args[0][0](context, mapping, args[0][1]))
+    text = stringify(args[1][0](context, mapping, args[1][1]))
+    if text.startswith(patn):
+        return text
+    return ''
+
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "rawstring": lambda e, c: (runrawstring, e[1]),
@@ -490,6 +501,7 @@ funcs = {
     "revset": revset,
     "rstdoc": rstdoc,
     "shortest": shortest,
+    "startswith": startswith,
     "strip": strip,
     "sub": sub,
 }

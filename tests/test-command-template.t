@@ -1884,3 +1884,30 @@ Test splitlines
   |  foo other 3
   o  foo line 1
      foo line 2
+
+Test startswith
+  $ hg log -Gv -R a --template "{startswith(desc)}"
+  hg: parse error: startswith expects two arguments
+  [255]
+
+  $ hg log -Gv -R a --template "{startswith('line', desc)}"
+  @
+  |
+  o
+  |
+  o
+  
+  o
+  |\
+  | o
+  | |
+  o |
+  |/
+  o
+  |
+  o
+  |
+  o
+  |
+  o  line 1
+     line 2
