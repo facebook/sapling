@@ -469,7 +469,8 @@ class Test(unittest.TestCase):
                 # the stack trace. This is for historical reasons and
                 # this decision could be revisted in the future,
                 # especially for PythonTest instances.
-                result.addFailure(self, str(e))
+                if result.addFailure(self, str(e)):
+                    success = True
             except Exception:
                 result.addError(self, sys.exc_info())
             else:
