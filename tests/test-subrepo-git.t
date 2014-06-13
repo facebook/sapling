@@ -601,11 +601,9 @@ Test sanitizing ".hg/hgrc" in subrepo
   8:3473d20bddcf
   $ grep ' s$' .hgsubstate
   c4069473b459cf27fd4d7c2f50c4346b4e936599 s
-  $ cat s/.hg/hgrc
-  cat: s/.hg/hgrc: No such file or directory
+  $ test -f s/.hg/hgrc
   [1]
-  $ cat s/sub/.hg/hgrc
-  cat: s/sub/.hg/hgrc: No such file or directory
+  $ test -f s/sub/.hg/hgrc
   [1]
   $ cd ..
 
@@ -636,11 +634,9 @@ additional test for "git merge --ff" route:
 
   $ cd tc
   $ hg update -q -C af6d2edbb0d3
-  $ cat s/.hg/hgrc
-  cat: s/.hg/hgrc: No such file or directory
+  $ test -f s/.hg/hgrc
   [1]
-  $ cat s/sub/.hg/hgrc
-  cat: s/sub/.hg/hgrc: No such file or directory
+  $ test -f s/sub/.hg/hgrc
   [1]
   $ cd ..
   $ hg -R tc pull -q
@@ -652,11 +648,9 @@ additional test for "git merge --ff" route:
   9:ed23f7fe024e
   $ grep ' s$' .hgsubstate
   f262643c1077219fbd3858d54e78ef050ef84fbf s
-  $ cat s/.hg/hgrc
-  cat: s/.hg/hgrc: No such file or directory
+  $ test -f s/.hg/hgrc
   [1]
-  $ cat s/sub/.hg/hgrc
-  cat: s/sub/.hg/hgrc: No such file or directory
+  $ test -f s/sub/.hg/hgrc
   [1]
 
 Test that sanitizing is omitted in meta data area:
