@@ -41,8 +41,12 @@ def getfilectx(repo, memctx, f):
     return context.memfilectx(repo, f, data, 'l' in flags, 'x' in flags)
 
 ctxa = repo.changectx(0)
-ctxb = context.memctx(repo, [ctxa.node(), None],
-                      "test diff",
-                      ["foo"], getfilectx)
+ctxb = context.memctx(repo, [ctxa.node(), None], "test diff", ["foo"],
+                      getfilectx, ctxa.user(), ctxa.date())
 
 print ctxb.status(ctxa)
+
+# test performing a diff on a memctx
+
+for d in ctxb.diff(ctxa, git=True):
+    print d

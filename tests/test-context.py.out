@@ -3,3 +3,11 @@ ASCII   : Gr?ezi!
 Latin-1 : Grüezi!
 UTF-8   : GrÃ¼ezi!
 (['foo'], [], [], [], [], [], [])
+diff --git a/foo b/foo
+
+--- a/foo
++++ b/foo
+@@ -1,1 +1,2 @@
+ foo
++bar
+
