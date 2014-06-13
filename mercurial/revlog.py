@@ -972,13 +972,14 @@ class revlog(object):
             node = nodeorrev
             rev = None
 
+        _cache = self._cache # grab local copy of cache to avoid thread race
         cachedrev = None
         if node == nullid:
             return ""
-        if self._cache:
-            if self._cache[0] == node:
-                return self._cache[2]
-            cachedrev = self._cache[1]
+        if _cache:
+            if _cache[0] == node:
+                return _cache[2]
+            cachedrev = _cache[1]
 
         # look up what we need to read
         text = None
@@ -1006,7 +1007,7 @@ class revlog(object):
 
         if iterrev == cachedrev:
             # cache hit
-            text = self._cache[2]
+            text = _cache[2]
         else:
             chain.append(iterrev)
         chain.reverse()
