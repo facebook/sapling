@@ -1083,6 +1083,20 @@ class TestResult(unittest._TextTestResult):
         else:
             if not self._options.nodiff:
                 self.stream.write('\nERROR: %s output changed\n' % test)
+
+            if self._options.interactive:
+                iolock.acquire()
+                self.stream.write('Accept this change? [n] ')
+                answer = sys.stdin.readline().strip()
+                iolock.release()
+                if answer.lower() in ('y', 'yes'):
+                    if test.name.endswith('.t'):
+                        rename(test.errpath, test.path)
+                    else:
+                        rename(test.errpath, '%s.out' % test.path)
+                    self.failures.pop()
+                    return 1
+
             self.stream.write('!')
 
     def addError(self, *args, **kwargs):
@@ -1145,16 +1159,6 @@ class TestResult(unittest._TextTestResult):
         if ret or not self._options.interactive or \
             not os.path.exists(test.errpath):
             return
-
-        iolock.acquire()
-        print 'Accept this change? [n] ',
-        answer = sys.stdin.readline().strip()
-        iolock.release()
-        if answer.lower() in ('y', 'yes'):
-            if test.name.endswith('.t'):
-                rename(test.errpath, test.path)
-            else:
-                rename(test.errpath, '%s.out' % test.path)
 
     def startTest(self, test):
         super(TestResult, self).startTest(test)
