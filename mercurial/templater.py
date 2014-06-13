@@ -477,6 +477,25 @@ def startswith(context, mapping, args):
     return ''
 
 
+def word(context, mapping, args):
+    """return nth word from a string"""
+    if not (2 <= len(args) <= 3):
+        raise error.ParseError(_("word expects two or three arguments, got %d")
+                               % len(args))
+
+    num = int(stringify(args[0][0](context, mapping, args[0][1])))
+    text = stringify(args[1][0](context, mapping, args[1][1]))
+    if len(args) == 3:
+        splitter = stringify(args[2][0](context, mapping, args[2][1]))
+    else:
+        splitter = None
+
+    tokens = text.split(splitter)
+    if num >= len(tokens):
+        return ''
+    else:
+        return tokens[num]
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "rawstring": lambda e, c: (runrawstring, e[1]),
@@ -504,6 +523,7 @@ funcs = {
     "startswith": startswith,
     "strip": strip,
     "sub": sub,
+    "word": word,
 }
 
 # template engine

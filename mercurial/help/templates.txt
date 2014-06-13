@@ -72,6 +72,8 @@ In addition to filters, there are some basic built-in functions:
 
 - sub(pat, repl, expr)
 
+- word(number, text[, separator])
+
 Also, for any expression that returns a list, there is a list operator:
 
 - expr % "{template}"
@@ -130,3 +132,7 @@ Some sample command line templates:
 - Show only commit descriptions that start with "template"::
 
    $ hg log --template "{startswith(\"template\", firstline(desc))}\n"
+
+- Print the first word of each line of a commit message::
+
+   $ hg log --template "{word(\"0\", desc)}\n"
