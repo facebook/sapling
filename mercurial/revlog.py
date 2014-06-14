@@ -919,7 +919,7 @@ class revlog(object):
 
         # preload the cache
         try:
-            while 1:
+            while True:
                 # ensure that the cache doesn't change out from under us
                 _cache = self._chunkcache
                 self._chunkraw(revs[0], revs[-1])
