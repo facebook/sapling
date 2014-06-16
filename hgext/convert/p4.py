@@ -108,7 +108,7 @@ class p4_source(converter_source):
             cmd = "p4 -G describe -s %s" % change
             stdout = util.popen(cmd, mode='rb')
             d = marshal.load(stdout)
-            desc = self.recode(d["desc"])
+            desc = self.recode(d.get("desc", ""))
             shortdesc = desc.split("\n", 1)[0]
             t = '%s %s' % (d["change"], repr(shortdesc)[1:-1])
             ui.status(util.ellipsis(t, 80) + '\n')
