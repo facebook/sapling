@@ -48,7 +48,7 @@ noisy warning
   or disable it for a specific repo:
   - type `hg config --local --edit`
   - add a `fbamend=!$TESTTMP/fbamend.py` line in the `[extensions]` section
-  Mercurial Distributed SCM (version 3.0.1+46-c00822e0b8ea)
+  Mercurial Distributed SCM (version *) (glob)
   (see http://mercurial.selenic.com for more information)
   
   Copyright (C) 2005-2014 Matt Mackall and others
