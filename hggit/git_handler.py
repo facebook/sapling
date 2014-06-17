@@ -817,7 +817,16 @@ class GitHandler(object):
                 e = fc.flags()
                 copied_path = fc.renamed()
 
-            return context.memfilectx(f, data, 'l' in e, 'x' in e, copied_path)
+            try:
+                return context.memfilectx(self.repo, f, data,
+                                          islink='l' in e,
+                                          isexec='x' in e,
+                                          copied=copied_path)
+            except TypeError:
+                return context.memfilectx(f, data,
+                                          islink='l' in e,
+                                          isexec='x' in e,
+                                          copied=copied_path)
 
         p1, p2 = (nullid, nullid)
         octopus = False
