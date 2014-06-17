@@ -48,7 +48,7 @@ import gitrepo, hgrepo
 from git_handler import GitHandler
 import verify
 
-testedwith = '2.8.2 3.0'
+testedwith = '2.8.2 3.0.1'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
 
 cmdtable = {}
