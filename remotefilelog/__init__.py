@@ -147,15 +147,15 @@ def onetimeclientsetup(ui):
     wrapfunction(store, 'store', storewrapper)
 
     # prefetch files before update
-    def applyupdates(orig, repo, actions, wctx, mctx, overwrite):
+    def applyupdates(orig, repo, actions, wctx, mctx, overwrite, labels=None):
         if shallowrepo.requirement in repo.requirements:
             manifest = mctx.manifest()
             files = []
-            for f, m, args, msg in [a for a in actions if a[1] == 'g']:
+            for f, args, msg in actions['g']:
                 files.append((f, hex(manifest[f])))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
-        return orig(repo, actions, wctx, mctx, overwrite)
+        return orig(repo, actions, wctx, mctx, overwrite, labels=labels)
     wrapfunction(merge, 'applyupdates', applyupdates)
 
     # prefetch files before mergecopies check
