@@ -837,6 +837,8 @@ class GitHandler(object):
                 ctx = context.memctx(self.repo, (p1, p2), text,
                                      list(files) + findconvergedfiles(p1, p2),
                                      getfilectx, author, date, {'hg-git': 'octopus'})
+                # See comment below about setting substate to None.
+                ctx.substate = None
                 return hex(self.repo.commitctx(ctx))
 
             octopus = len(gparents) > 2
@@ -878,7 +880,14 @@ class GitHandler(object):
         ctx = context.memctx(self.repo, (p1, p2), text,
                              list(files) + findconvergedfiles(p1, p2),
                              getfilectx, author, date, extra)
-
+        # Starting Mercurial commit d2743be1bb06, memctx imports from
+        # committablectx. This means that it has a 'substate' property that
+        # contains the subrepo state. Ordinarily, Mercurial expects the subrepo
+        # to be present while making a new commit -- since hg-git is importing
+        # purely in-memory commits without backing stores for the subrepos, that
+        # won't work. Forcibly set the substate to None so that there's no
+        # attempt to read subrepos.
+        ctx.substate = None
         node = self.repo.commitctx(ctx)
 
         self.swap_out_encoding(oldenc)
