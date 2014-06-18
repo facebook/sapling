@@ -795,31 +795,45 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     ('i', 'inactive', False, _('mark a bookmark inactive'))],
     _('hg bookmarks [OPTIONS]... [NAME]...'))
 def bookmark(ui, repo, *names, **opts):
-    '''track a line of development with movable markers
+    '''create a new bookmark or list existing bookmarks
 
-    Bookmarks are pointers to certain commits that move when committing.
-    Bookmarks are local. They can be renamed, copied and deleted. It is
-    possible to use :hg:`merge NAME` to merge from a given bookmark, and
-    :hg:`update NAME` to update to a given bookmark.
+    Bookmarks are labels on changesets to help track lines of development.
+    Bookmarks are unversioned and can be moved, renamed and deleted.
+    Deleting or moving a bookmark has no effect on the associated changesets.
 
-    You can use :hg:`bookmark NAME` to set a bookmark on the working
-    directory's parent revision with the given name. If you specify
-    a revision using -r REV (where REV may be an existing bookmark),
-    the bookmark is assigned to that revision.
+    Creating or updating to a bookmark causes it to be marked as 'active'.
+    Active bookmarks are indicated with a '*'.
+    When a commit is made, an active bookmark will advance to the new commit.
+    A plain :hg:`update` will also advance an active bookmark, if possible.
+    Updating away from a bookmark will cause it to be deactivated.
 
-    Bookmarks can be pushed and pulled between repositories (see :hg:`help
-    push` and :hg:`help pull`). This requires both the local and remote
-    repositories to support bookmarks. For versions prior to 1.8, this means
-    the bookmarks extension must be enabled.
+    Bookmarks can be pushed and pulled between repositories (see
+    :hg:`help push` and :hg:`help pull`). If a shared bookmark has
+    diverged, a new 'divergent bookmark' of the form 'name@path' will
+    be created. Using :hg:'merge' will resolve the divergence.
 
-    If you set a bookmark called '@', new clones of the repository will
-    have that revision checked out (and the bookmark made active) by
-    default.
+    A bookmark named '@' has the special property that :hg:`clone` will
+    check it out by default if it exists.
 
-    With -i/--inactive, the new bookmark will not be made the active
-    bookmark. If -r/--rev is given, the new bookmark will not be made
-    active even if -i/--inactive is not given. If no NAME is given, the
-    current active bookmark will be marked inactive.
+    .. container:: verbose
+
+      Examples:
+
+      - create an active bookmark for a new line of development::
+
+          hg book new-feature
+
+      - create an inactive bookmark as a place marker::
+
+          hg book -i reviewed
+
+      - create an inactive bookmark on another changeset::
+
+          hg book -r .^ tested
+
+      - move the '@' bookmark from another branch::
+
+          hg book -f @
     '''
     force = opts.get('force')
     rev = opts.get('rev')

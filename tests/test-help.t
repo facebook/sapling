@@ -55,7 +55,7 @@ Short help:
    archive       create an unversioned archive of a repository revision
    backout       reverse effect of earlier changeset
    bisect        subdivision search of changesets
-   bookmarks     track a line of development with movable markers
+   bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
    bundle        create a changegroup file
@@ -131,7 +131,7 @@ Short help:
    archive       create an unversioned archive of a repository revision
    backout       reverse effect of earlier changeset
    bisect        subdivision search of changesets
-   bookmarks     track a line of development with movable markers
+   bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
    bundle        create a changegroup file
@@ -687,7 +687,7 @@ Test that default list of commands omits extension commands
    archive       create an unversioned archive of a repository revision
    backout       reverse effect of earlier changeset
    bisect        subdivision search of changesets
-   bookmarks     track a line of development with movable markers
+   bookmarks     create a new bookmark or list existing bookmarks
    branch        set or show the current branch name
    branches      list repository named branches
    bundle        create a changegroup file
@@ -952,7 +952,7 @@ Test keyword search help
   
   Commands:
   
-   bookmarks track a line of development with movable markers
+   bookmarks create a new bookmark or list existing bookmarks
    clone     make a copy of an existing repository
    paths     show aliases for remote repositories
    update    update working directory (or switch revisions)
@@ -1402,7 +1402,7 @@ Dish up an empty repo; serve it cold.
   bookmarks
   </a>
   </td><td>
-  track a line of development with movable markers
+  create a new bookmark or list existing bookmarks
   </td></tr>
   <tr><td>
   <a href="/help/branch">
