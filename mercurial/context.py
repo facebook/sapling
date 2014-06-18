@@ -1645,7 +1645,7 @@ class memctx(committablectx):
         for f, fnode in man.iteritems():
             p1node = nullid
             p2node = nullid
-            p = pctx[f].parents()
+            p = pctx[f].parents() # if file isn't in pctx, check p2?
             if len(p) > 0:
                 p1node = p[0].node()
                 if len(p) > 1:
