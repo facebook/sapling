@@ -276,7 +276,7 @@ class basectx(object):
     def dirs(self):
         return self._dirs
 
-    def dirty(self):
+    def dirty(self, missing=False, merge=True, branch=True):
         return False
 
     def status(self, other=None, match=None, listignored=False,
