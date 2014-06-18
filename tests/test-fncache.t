@@ -227,7 +227,7 @@ Aborting transaction prevents fncache change
   > cmdtable = {}
   > 
   > EOF
-  $ rm "${extpath}c"
+  $ rm -f "${extpath}c"
   $ touch z
   $ hg ci -qAm z
   transaction abort!
