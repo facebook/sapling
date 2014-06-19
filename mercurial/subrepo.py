@@ -586,14 +586,16 @@ class hgsubrepo(abstractsubrepo):
         '''
         cachefile = self._getstorehashcachepath(remotepath)
         lock = self._repo.lock()
-        storehash = list(self._calcstorehash(remotepath))
-        cachedir = os.path.dirname(cachefile)
-        if not os.path.exists(cachedir):
-            util.makedirs(cachedir, notindexed=True)
-        fd = open(cachefile, 'w')
-        fd.writelines(storehash)
-        fd.close()
-        lock.release()
+        try:
+            storehash = list(self._calcstorehash(remotepath))
+            cachedir = os.path.dirname(cachefile)
+            if not os.path.exists(cachedir):
+                util.makedirs(cachedir, notindexed=True)
+            fd = open(cachefile, 'w')
+            fd.writelines(storehash)
+            fd.close()
+        finally:
+            lock.release()
 
     @annotatesubrepoerror
     def _initrepo(self, parentrepo, source, create):
