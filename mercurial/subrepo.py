@@ -596,8 +596,10 @@ class hgsubrepo(abstractsubrepo):
             if not os.path.exists(cachedir):
                 util.makedirs(cachedir, notindexed=True)
             fd = open(cachefile, 'w')
-            fd.writelines(storehash)
-            fd.close()
+            try:
+                fd.writelines(storehash)
+            finally:
+                fd.close()
         finally:
             lock.release()
 
