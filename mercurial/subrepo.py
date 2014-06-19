@@ -576,8 +576,10 @@ class hgsubrepo(abstractsubrepo):
         if not os.path.exists(cachefile):
             return ''
         fd = open(cachefile, 'r')
-        pullstate = fd.readlines()
-        fd.close()
+        try:
+            pullstate = fd.readlines()
+        finally:
+            fd.close()
         return pullstate
 
     def _cachestorehash(self, remotepath):
