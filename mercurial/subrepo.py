@@ -609,12 +609,11 @@ class hgsubrepo(abstractsubrepo):
         self._repo._subsource = source
 
         if create:
-            fp = self._repo.opener("hgrc", "w", text=True)
-            fp.write('[paths]\n')
+            lines = ['[paths]\n']
 
             def addpathconfig(key, value):
                 if value:
-                    fp.write('%s = %s\n' % (key, value))
+                    lines.append('%s = %s\n' % (key, value))
                     self._repo.ui.setconfig('paths', key, value, 'subrepo')
 
             defpath = _abssource(self._repo, abort=False)
@@ -622,7 +621,12 @@ class hgsubrepo(abstractsubrepo):
             addpathconfig('default', defpath)
             if defpath != defpushpath:
                 addpathconfig('default-push', defpushpath)
-            fp.close()
+
+            fp = self._repo.opener("hgrc", "w", text=True)
+            try:
+                fp.write(''.join(lines))
+            finally:
+                fp.close()
 
     @annotatesubrepoerror
     def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
