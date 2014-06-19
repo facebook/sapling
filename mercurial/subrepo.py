@@ -525,8 +525,14 @@ class hgsubrepo(abstractsubrepo):
         self._initrepo(r, state[0], create)
 
     def storeclean(self, path):
-        clean = True
         lock = self._repo.lock()
+        try:
+            return self._storeclean(path)
+        finally:
+            lock.release()
+
+    def _storeclean(self, path):
+        clean = True
         itercache = self._calcstorehash(path)
         try:
             for filehash in self._readstorehashcache(path):
@@ -543,7 +549,6 @@ class hgsubrepo(abstractsubrepo):
                 clean = False
             except StopIteration:
                 pass
-        lock.release()
         return clean
 
     def _calcstorehash(self, remotepath):
