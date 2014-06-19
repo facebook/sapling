@@ -109,8 +109,6 @@ class hgweb(object):
         # compare changelog size in addition to mtime to catch
         # rollbacks made less than a second ago
         if st.st_mtime != self.mtime or st.st_size != self.size:
-            self.mtime = st.st_mtime
-            self.size = st.st_size
             r = hg.repository(self.repo.baseui, self.repo.root)
             self.repo = self._getview(r)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
@@ -121,6 +119,9 @@ class hgweb(object):
             self.allowpull = self.configbool("web", "allowpull", True)
             encoding.encoding = self.config("web", "encoding",
                                             encoding.encoding)
+            # update these last to avoid threads seeing empty settings
+            self.mtime = st.st_mtime
+            self.size = st.st_size
         if request:
             self.repo.ui.environ = request.env
 

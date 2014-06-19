@@ -281,7 +281,7 @@ def _pushchangeset(pushop):
         # ssh: return remote's addchangegroup()
         # http: return remote's addchangegroup() or 0 for error
         pushop.ret = pushop.remote.unbundle(cg, remoteheads,
-                                            'push')
+                                            pushop.repo.url())
     else:
         # we return an integer indicating remote head count
         # change
