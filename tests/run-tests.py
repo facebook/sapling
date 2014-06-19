@@ -543,7 +543,9 @@ class Test(unittest.TestCase):
                 f.close()
 
             # The result object handles diff calculation for us.
-            self._result.addOutputMismatch(self, ret, out, self._refout)
+            if self._result.addOutputMismatch(self, ret, out, self._refout):
+                # change was accepted, skip failing
+                return
 
             if ret:
                 msg = 'output changed and ' + describe(ret)
@@ -1084,19 +1086,6 @@ class TestResult(unittest._TextTestResult):
             if not self._options.nodiff:
                 self.stream.write('\nERROR: %s output changed\n' % test)
 
-            if self._options.interactive:
-                iolock.acquire()
-                self.stream.write('Accept this change? [n] ')
-                answer = sys.stdin.readline().strip()
-                iolock.release()
-                if answer.lower() in ('y', 'yes'):
-                    if test.name.endswith('.t'):
-                        rename(test.errpath, test.path)
-                    else:
-                        rename(test.errpath, '%s.out' % test.path)
-                    self.failures.pop()
-                    return 1
-
             self.stream.write('!')
 
     def addError(self, *args, **kwargs):
@@ -1140,10 +1129,12 @@ class TestResult(unittest._TextTestResult):
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
 
-        if self._options.nodiff:
-            return
+        accepted = False
 
-        if self._options.view:
+        iolock.acquire()
+        if self._options.nodiff:
+            pass
+        elif self._options.view:
             os.system("%s %s %s" % (self._view, test.refpath, test.errpath))
         else:
             failed, lines = getdiff(expected, got,
@@ -1156,9 +1147,20 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write(line)
                 self.stream.flush()
 
-        if ret or not self._options.interactive or \
-            not os.path.exists(test.errpath):
-            return
+            # handle interactive prompt without releasing iolock
+            if self._options.interactive:
+                self.stream.write('Accept this change? [n] ')
+                answer = sys.stdin.readline().strip()
+                if answer.lower() in ('y', 'yes'):
+                    if test.name.endswith('.t'):
+                        rename(test.errpath, test.path)
+                    else:
+                        rename(test.errpath, '%s.out' % test.path)
+                    accepted = True
+
+        iolock.release()
+
+        return accepted
 
     def startTest(self, test):
         super(TestResult, self).startTest(test)

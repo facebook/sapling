@@ -160,9 +160,9 @@ Refuse the fix
      $ echo babar
   -  rataxes
   +  babar
-  
+  Accept this change? [n] 
   ERROR: test-failure.t output changed
-  Accept this change? [n] !.
+  !.
   Failed test-failure.t: output changed
   # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
@@ -182,8 +182,6 @@ Accept the fix
      $ echo babar
   -  rataxes
   +  babar
-  
-  ERROR: test-failure.t output changed
   Accept this change? [n] ..
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
