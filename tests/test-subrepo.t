@@ -1359,3 +1359,32 @@ Test that commit --secret works on both repo and subrepo (issue4182)
   $ hg phase -r .
   6: secret
   $ cd ../../
+
+Test that '[paths]' is configured correctly at subrepo creation
+
+  $ cd $TESTTMP/tc
+  $ cat > .hgsub <<EOF
+  > # to clear bogus subrepo path 'bogus=[boguspath'
+  > s = s
+  > t = t
+  > EOF
+  $ hg update -q --clean null
+  $ rm -rf s t
+  $ cat >> .hg/hgrc <<EOF
+  > [paths]
+  > default-push = /foo/bar
+  > EOF
+  $ hg update -q
+  $ cat s/.hg/hgrc
+  [paths]
+  default = $TESTTMP/t/s
+  default-push = /foo/bar/s
+  $ cat s/ss/.hg/hgrc
+  [paths]
+  default = $TESTTMP/t/s/ss
+  default-push = /foo/bar/s/ss
+  $ cat t/.hg/hgrc
+  [paths]
+  default = $TESTTMP/t/t
+  default-push = /foo/bar/t
+  $ cd ..
