@@ -35,8 +35,10 @@ def _calcfilehash(filename):
     data = ''
     if os.path.exists(filename):
         fd = open(filename, 'rb')
-        data = fd.read()
-        fd.close()
+        try:
+            data = fd.read()
+        finally:
+            fd.close()
     return util.sha1(data).hexdigest()
 
 class SubrepoAbort(error.Abort):
