@@ -16,8 +16,10 @@
   $ hg addremove -q
 
 shelving in an empty repo should be possible
+(this tests also that editor is not invoked, if '--edit' is not
+specified)
 
-  $ hg shelve
+  $ HGEDITOR=cat hg shelve
   shelved as default
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
 
@@ -132,6 +134,7 @@ apply it and make sure our state is as expected
   [255]
 
 named shelves, specific filenames, and "commit messages" should all work
+(this tests also that editor is invoked, if '--edit' is specified)
 
   $ hg status -C
   M a/a
@@ -140,7 +143,16 @@ named shelves, specific filenames, and "commit messages" should all work
   A c.copy
     c
   R b/b
-  $ hg shelve -q -n wibble -m wat a
+  $ HGEDITOR=cat hg shelve -q -n wibble -m wat -e a
+  wat
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: shelve@localhost
+  HG: branch 'default'
+  HG: changed a/a
 
 expect "a" to no longer be present, but status otherwise unchanged
 

@@ -178,7 +178,8 @@ def createcmd(ui, repo, pats, opts):
         if hasmq:
             saved, repo.mq.checkapplied = repo.mq.checkapplied, False
         try:
-            return repo.commit(message, user, opts.get('date'), match)
+            return repo.commit(message, user, opts.get('date'), match,
+                               editor=cmdutil.getcommiteditor(**opts))
         finally:
             if hasmq:
                 repo.mq.checkapplied = saved
@@ -635,6 +636,8 @@ def unshelve(ui, repo, *shelved, **opts):
            _('shelve with the specified commit date'), _('DATE')),
           ('d', 'delete', None,
            _('delete the named shelved change(s)')),
+          ('e', 'edit', False,
+           _('invoke editor on commit messages')),
           ('l', 'list', None,
            _('list current shelves')),
           ('m', 'message', '',
@@ -680,6 +683,7 @@ def shelvecmd(ui, repo, *pats, **opts):
         ('cleanup', 'cleanup'),
 #       ('date', 'create'), # ignored for passing '--date "0 0"' in tests
         ('delete', 'delete'),
+        ('edit', 'create'),
         ('list', 'list'),
         ('message', 'create'),
         ('name', 'create'),
