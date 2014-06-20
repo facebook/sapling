@@ -184,6 +184,9 @@ class abstractvfs(object):
     def lstat(self, path=None):
         return os.lstat(self.join(path))
 
+    def listdir(self, path=None):
+        return os.listdir(self.join(path))
+
     def makedir(self, path=None, notindexed=True):
         return util.makedir(self.join(path), notindexed)
 
