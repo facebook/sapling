@@ -311,8 +311,10 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
     if not dest:
         raise util.Abort(_("empty destination path is not valid"))
-    if os.path.exists(dest):
-        if not os.path.isdir(dest):
+
+    destvfs = scmutil.vfs(dest, expandpath=True)
+    if destvfs.lexists():
+        if not destvfs.isdir():
             raise util.Abort(_("destination '%s' already exists") % dest)
         elif os.listdir(dest):
             raise util.Abort(_("destination '%s' is not empty") % dest)
