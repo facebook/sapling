@@ -175,13 +175,14 @@ def share(ui, source, dest=None, update=True):
     root = os.path.realpath(dest)
     roothg = os.path.join(root, '.hg')
     destwvfs = scmutil.vfs(dest, realpath=True)
+    destvfs = scmutil.vfs(os.path.join(destwvfs.base, '.hg'), realpath=True)
 
-    if os.path.exists(roothg):
+    if destvfs.lexists():
         raise util.Abort(_('destination already exists'))
 
     if not destwvfs.isdir():
         destwvfs.mkdir()
-    util.makedir(roothg, notindexed=True)
+    destvfs.makedir()
 
     requirements = ''
     try:
