@@ -37,6 +37,7 @@ class diffopts(object):
         'showfunc': False,
         'git': False,
         'nodates': False,
+        'nobinary': False,
         'ignorews': False,
         'ignorewsamount': False,
         'ignoreblanklines': False,

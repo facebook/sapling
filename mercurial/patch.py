@@ -1561,6 +1561,7 @@ def diffopts(ui, opts=None, untrusted=False, section='diff'):
         text=opts and opts.get('text'),
         git=get('git'),
         nodates=get('nodates'),
+        nobinary=get('nobinary'),
         showfunc=get('show_function', 'showfunc'),
         ignorews=get('ignore_all_space', 'ignorews'),
         ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
@@ -1815,7 +1816,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if dodiff:
             if opts.git or revs:
                 header.insert(0, diffline(join(a), join(b), revs))
-            if dodiff == 'binary':
+            if dodiff == 'binary' and not opts.nobinary:
                 text = mdiff.b85diff(to, tn)
                 if text:
                     addindexmeta(header, [gitindex(to), gitindex(tn)])

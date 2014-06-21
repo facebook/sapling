@@ -37,4 +37,8 @@
 
   $ hg diff --git -r 0 -r 2
 
+  $ hg diff --config diff.nobinary=True --git -r 0 -r 1
+  diff --git a/binfile.bin b/binfile.bin
+  Binary file binfile.bin has changed
+
   $ cd ..
