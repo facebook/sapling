@@ -316,7 +316,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     if destvfs.lexists():
         if not destvfs.isdir():
             raise util.Abort(_("destination '%s' already exists") % dest)
-        elif os.listdir(dest):
+        elif destvfs.listdir():
             raise util.Abort(_("destination '%s' is not empty") % dest)
 
     srclock = destlock = cleandir = None
