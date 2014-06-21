@@ -172,8 +172,6 @@ def share(ui, source, dest=None, update=True):
 
     sharedpath = srcrepo.sharedpath # if our source is already sharing
 
-    root = os.path.realpath(dest)
-    roothg = os.path.join(root, '.hg')
     destwvfs = scmutil.vfs(dest, realpath=True)
     destvfs = scmutil.vfs(os.path.join(destwvfs.base, '.hg'), realpath=True)
 
@@ -192,8 +190,8 @@ def share(ui, source, dest=None, update=True):
             raise
 
     requirements += 'shared\n'
-    util.writefile(os.path.join(roothg, 'requires'), requirements)
-    util.writefile(os.path.join(roothg, 'sharedpath'), sharedpath)
+    destvfs.write('requires', requirements)
+    destvfs.write('sharedpath', sharedpath)
 
     r = repository(ui, destwvfs.base)
 
