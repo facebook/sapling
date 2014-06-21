@@ -417,6 +417,7 @@ def gc(ui, *args, **opts):
     # get the system client cache
     systemcache = ui.config("remotefilelog", "cachepath")
     if systemcache:
+        systemcache = util.expandpath(systemcache)
         cachepaths.add(systemcache)
 
     # get repo client and server cache
@@ -430,6 +431,7 @@ def gc(ui, *args, **opts):
 
             repocache = repo.ui.config("remotefilelog", "cachepath")
             if repocache:
+                repocache = util.expandpath(repocache)
                 cachepaths.add(repocache)
         except error.RepoError:
             pass
