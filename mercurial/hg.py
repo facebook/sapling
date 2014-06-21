@@ -174,12 +174,13 @@ def share(ui, source, dest=None, update=True):
 
     root = os.path.realpath(dest)
     roothg = os.path.join(root, '.hg')
+    destwvfs = scmutil.vfs(dest, realpath=True)
 
     if os.path.exists(roothg):
         raise util.Abort(_('destination already exists'))
 
-    if not os.path.isdir(root):
-        os.mkdir(root)
+    if not destwvfs.isdir():
+        destwvfs.mkdir()
     util.makedir(roothg, notindexed=True)
 
     requirements = ''
@@ -193,7 +194,7 @@ def share(ui, source, dest=None, update=True):
     util.writefile(os.path.join(roothg, 'requires'), requirements)
     util.writefile(os.path.join(roothg, 'sharedpath'), sharedpath)
 
-    r = repository(ui, root)
+    r = repository(ui, destwvfs.base)
 
     default = srcrepo.ui.config('paths', 'default')
     if default:
