@@ -14,7 +14,6 @@ from mercurial.commands import table
 from mercurial.help import helptable
 from mercurial import extensions
 from mercurial import minirst
-from mercurial import util
 
 _verbose = False
 
@@ -87,7 +86,7 @@ def checkcmdtable(cmdtable, namefmt, initlevel):
 def checkhghelps():
     errorcnt = 0
     for names, sec, doc in helptable:
-        if util.safehasattr(doc, '__call__'):
+        if callable(doc):
             doc = doc()
         errorcnt += checkseclevel(doc,
                                   '%s help topic' % names[0],
