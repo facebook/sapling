@@ -14,7 +14,6 @@ from mercurial.commands import table, globalopts
 from mercurial.i18n import gettext, _
 from mercurial.help import helptable, loaddoc
 from mercurial import extensions
-from mercurial import util
 
 def get_desc(docstr):
     if not docstr:
@@ -137,7 +136,7 @@ def helpprinter(ui, helptable, sectionfunc, include=[], exclude=[]):
         ui.write("\n")
         if sectionfunc:
             ui.write(sectionfunc(sec))
-        if util.safehasattr(doc, '__call__'):
+        if callable(doc):
             doc = doc()
         ui.write(doc)
         ui.write("\n")
