@@ -221,7 +221,8 @@ class branchcache(dict):
             repo.ui.log('branchcache',
                         'wrote %s branch cache with %d labels and %d nodes\n',
                         repo.filtername, len(self), nodecount)
-        except (IOError, OSError, util.Abort):
+        except (IOError, OSError, util.Abort), inst:
+            repo.ui.debug("couldn't write branch cache: %s\n" % inst)
             # Abort may be raise by read only opener
             pass
 
