@@ -404,7 +404,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         # description
         if not doc:
             rst.append("    %s\n" % _("(no help text available)"))
-        if util.safehasattr(doc, '__call__'):
+        if callable(doc):
             rst += ["    %s\n" % l for l in doc().splitlines()]
 
         if not ui.verbose:
