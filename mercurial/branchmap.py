@@ -58,7 +58,7 @@ def read(repo):
             if repo.filtername is not None:
                 msg += ' (%s)' % repo.filtername
             msg += ': %s\n'
-            repo.ui.warn(msg % inst)
+            repo.ui.debug(msg % inst)
         partial = None
     return partial
 

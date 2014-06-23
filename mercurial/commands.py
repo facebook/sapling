@@ -2314,6 +2314,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker
 
     With no arguments, displays the list of obsolescence markers."""
+
     def parsenodeid(s):
         try:
             # We do not use revsingle/revrange functions here to accept
