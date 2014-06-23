@@ -247,8 +247,6 @@ pypats = [
     (r'^\s*os\.path\.relpath', "relpath not available in Python 2.4"),
     (r'(?<!def)\s+(any|all|format)\(',
      "any/all/format not available in Python 2.4", 'no-py24'),
-    (r'(?<!def)\s+(callable)\(',
-     "callable not available in Python 3, use getattr(f, '__call__', None)"),
     (r'if\s.*\selse', "if ... else form not available in Python 2.4"),
     (r'^\s*(%s)\s\s' % '|'.join(keyword.kwlist),
      "gratuitous whitespace after Python keyword"),
