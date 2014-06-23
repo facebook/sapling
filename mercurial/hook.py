@@ -19,7 +19,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     unmodified commands (e.g. mercurial.commands.update) can
     be run as hooks without wrappers to convert return values.'''
 
-    if util.safehasattr(funcname, '__call__'):
+    if callable(funcname):
         obj = funcname
         funcname = obj.__module__ + "." + obj.__name__
     else:
@@ -70,7 +70,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             raise util.Abort(_('%s hook is invalid '
                                '("%s" is not defined)') %
                              (hname, funcname))
-        if not util.safehasattr(obj, '__call__'):
+        if not callable(obj):
             raise util.Abort(_('%s hook is invalid '
                                '("%s" is not callable)') %
                              (hname, funcname))
@@ -117,7 +117,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
     starttime = time.time()
     env = {}
     for k, v in args.iteritems():
-        if util.safehasattr(v, '__call__'):
+        if callable(v):
             v = v()
         if isinstance(v, dict):
             # make the dictionary element order stable across Python
@@ -184,7 +184,7 @@ def hook(ui, repo, name, throw=False, **args):
                     # files seem to be bogus, give up on redirecting (WSGI, etc)
                     pass
 
-            if util.safehasattr(cmd, '__call__'):
+            if callable(cmd):
                 r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
             elif cmd.startswith('python:'):
                 if cmd.count(':') >= 2:
