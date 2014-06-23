@@ -148,7 +148,7 @@ def runsymbol(context, mapping, key):
             v = context.process(key, mapping)
         except TemplateNotFound:
             v = ''
-    if util.safehasattr(v, '__call__'):
+    if callable(v):
         return v(**mapping)
     if isinstance(v, types.GeneratorType):
         v = list(v)
@@ -185,7 +185,7 @@ def runtemplate(context, mapping, template):
 def runmap(context, mapping, data):
     func, data, ctmpl = data
     d = func(context, mapping, data)
-    if util.safehasattr(d, '__call__'):
+    if callable(d):
         d = d()
 
     lm = mapping.copy()
@@ -335,7 +335,7 @@ def join(context, mapping, args):
         raise error.ParseError(_("join expects one or two arguments"))
 
     joinset = args[0][0](context, mapping, args[0][1])
-    if util.safehasattr(joinset, '__call__'):
+    if callable(joinset):
         jf = joinset.joinfmt
         joinset = [jf(x) for x in joinset()]
 
