@@ -2378,11 +2378,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # Find status of all file in `names`.
         m = scmutil.matchfiles(repo, names)
 
-        changes = repo.status(node1=node, match=m, clean=True)
+        changes = repo.status(node1=node, match=m,
+                              unknown=True, ignored=True, clean=True)
         modified = set(changes[0])
         added    = set(changes[1])
         removed  = set(changes[2])
-        _deleted  = set(changes[3])
+        _deleted = set(changes[3])
+        unknown  = set(changes[4])
+        unknown.update(changes[5])
         clean    = set(changes[6])
 
         # split between files known in target manifest and the others
@@ -2471,6 +2474,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                    'remove': ([], removeforget),
                    'undelete': ([], _('undeleting %s\n')),
                    'noop': (None, _('no changes needed to %s\n')),
+                   'unknown': (None, _('file not managed: %s\n')),
                   }
 
 
@@ -2489,6 +2493,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (removed,    actions['add'],      backup),
             (dsremoved,  actions['undelete'], backup),
             (clean,      actions['noop'],     discard),
+            (unknown,    actions['unknown'],  discard),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
