@@ -2470,7 +2470,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                    'add': ([], _('adding %s\n')),
                    'remove': ([], removeforget),
                    'undelete': ([], _('undeleting %s\n')),
-                   'noop': None,
+                   'noop': (None, None),
                   }
 
 
@@ -2497,14 +2497,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # search the entry in the dispatch table.
             # if the file is in any of these sets, it was touched in the working
             # directory parent and we are sure it needs to be reverted.
-            for table, xlist, dobackup in disptable:
+            for table, (xlist, msg), dobackup in disptable:
                 if abs not in table:
                     continue
                 if xlist is None:
                     if exact:
                         ui.warn(_('no changes needed to %s\n') % rel)
                     break
-                xlist[0].append(abs)
+                xlist.append(abs)
                 if (dobackup and os.path.lexists(target) and
                     abs in ctx and repo[None][abs].cmp(ctx[abs])):
                     bakname = "%s.orig" % rel
@@ -2513,7 +2513,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     if not opts.get('dry_run'):
                         util.rename(target, bakname)
                 if ui.verbose or not exact:
-                    msg = xlist[1]
                     if not isinstance(msg, basestring):
                         msg = msg(abs)
                     ui.status(msg % rel)
