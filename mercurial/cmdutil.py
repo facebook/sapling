@@ -2410,6 +2410,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsadded |= _deletedadded
             dsmodified |= _deletedmodified
 
+            # only take into account for removes between wc and target
+            clean |= dsremoved - removed
+            dsremoved &= removed
+            # distinct between dirstate remove and other
+            removed -= dsremoved
+
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
         for f in dsadded:
@@ -2429,8 +2435,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         dsmodified -= missingmodified
         missingadded = dsadded - smf
         dsadded -= missingadded
-        clean |= dsremoved - smf
-        dsremoved -= clean
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
@@ -2448,6 +2452,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (missingmodified,  (actions['remove'],   True)),
             (dsadded,          (actions['revert'],   True)),
             (missingadded,     (actions['remove'],   False)),
+            (removed,          (actions['add'],      True)),
             (dsremoved,        (actions['undelete'], True)),
             (clean,            (None,                False)),
             )
