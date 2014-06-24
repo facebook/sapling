@@ -2408,13 +2408,17 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsadded    = set(changes[1])
             dsremoved  = set(changes[2])
             dsadded |= _deletedadded
-            dsmodified |= _deletedmodified
 
             # only take into account for removes between wc and target
             clean |= dsremoved - removed
             dsremoved &= removed
             # distinct between dirstate remove and other
             removed -= dsremoved
+
+            # tell newly modified apart.
+            dsmodified &= modified
+            dsmodified |= modified & dsadded # dirstate added may needs backup
+            modified -= dsmodified
 
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
@@ -2448,6 +2452,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   file state
             #   action
             #   make backup
+            (modified,         (actions['revert'],   False)),
             (dsmodified,       (actions['revert'],   True)),
             (missingmodified,  (actions['remove'],   True)),
             (dsadded,          (actions['revert'],   True)),

@@ -1496,7 +1496,6 @@ revert some files to an older revision
   $ cat sub2/large6
   large6
   $ hg revert --no-backup -C -r '.^' sub2
-  reverting .hglf/sub2/large6 (glob)
   $ hg revert --no-backup sub2
   reverting .hglf/sub2/large6 (glob)
   $ hg status

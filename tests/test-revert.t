@@ -912,7 +912,6 @@ Misbehavior:
 
 - report "reverting" when file needs no changes
 |
-| - reverting modified_revert
 | - reverting removed_revert
 
   $ hg revert --all --rev 'desc(base)'
@@ -930,7 +929,6 @@ Misbehavior:
   reverting modified_clean
   reverting modified_deleted
   undeleting modified_removed
-  reverting modified_revert
   undeleting modified_untracked-clean
   undeleting modified_untracked-revert
   undeleting modified_untracked-wc
@@ -1104,7 +1102,6 @@ Misbehavior:
 
 - fails to report no change to revert for
 |
-| - modified_revert
 | - removed_revert
 
   $ for file in `python ../gen-revert-cases.py filelist`; do
@@ -1180,6 +1177,7 @@ Misbehavior:
   ### revert for: modified_removed
   
   ### revert for: modified_revert
+  no changes needed to modified_revert
   
   ### revert for: modified_untracked-clean
   
