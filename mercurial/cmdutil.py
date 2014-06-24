@@ -2484,7 +2484,16 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         for abs, (rel, exact) in sorted(names.items()):
             # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
-            def handle(xlist, dobackup):
+            # search the entry in the dispatch table.
+            # if the file is in any of these sets, it was touched in the working
+            # directory parent and we are sure it needs to be reverted.
+            for table, (xlist, dobackup) in disptable:
+                if abs not in table:
+                    continue
+                if xlist is None:
+                    if exact:
+                        ui.warn(_('no changes needed to %s\n') % rel)
+                    break
                 xlist[0].append(abs)
                 if (dobackup and not opts.get('no_backup') and
                     os.path.lexists(target) and
@@ -2499,18 +2508,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     if not isinstance(msg, basestring):
                         msg = msg(abs)
                     ui.status(msg % rel)
-            # search the entry in the dispatch table.
-            # if the file is in any of this sets, it was touched in the working
-            # directory parent and we are sure it needs to be reverted.
-            for table, (action, backup) in disptable:
-                if abs not in table:
-                    continue
-                if action is None:
-                    if exact:
-                        ui.warn(_('no changes needed to %s\n') % rel)
-
-                else:
-                    handle(action, backup)
                 break
             else:
                 # Not touched in current dirstate.
