@@ -2471,17 +2471,22 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                    'remove': ([], removeforget),
                    'undelete': ([], _('undeleting %s\n'))}
 
+
+        # should we do a backup?
+        backup = not opts.get('no_backup')
+        discard = False
+
         disptable = (
             # dispatch table:
             #   file state
             #   action
             #   make backup
-            (modified,   actions['revert'],   False),
-            (dsmodified, actions['revert'],   True),
-            (dsadded,    actions['remove'],   True),
-            (removed,    actions['add'],      True),
-            (dsremoved,  actions['undelete'], True),
-            (clean,      None,                False),
+            (modified,   actions['revert'],   discard),
+            (dsmodified, actions['revert'],   backup),
+            (dsadded,    actions['remove'],   backup),
+            (removed,    actions['add'],      backup),
+            (dsremoved,  actions['undelete'], backup),
+            (clean,      None,                discard),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
@@ -2498,8 +2503,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         ui.warn(_('no changes needed to %s\n') % rel)
                     break
                 xlist[0].append(abs)
-                if (dobackup and not opts.get('no_backup') and
-                    os.path.lexists(target) and
+                if (dobackup and os.path.lexists(target) and
                     abs in ctx and repo[None][abs].cmp(ctx[abs])):
                     bakname = "%s.orig" % rel
                     ui.note(_('saving current version of %s as %s\n') %
