@@ -2369,14 +2369,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # Find status of all file in `names`. (Against working directory parent)
         m = scmutil.matchfiles(repo, names)
         changes = repo.status(node1=parent, match=m)[:4]
-        modified, added, removed, deleted = map(set, changes)
+        dsmodified, dsadded, dsremoved, dsdeleted = map(set, changes)
 
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
-        for f in added:
+        for f in dsadded:
             src = repo.dirstate.copied(f)
             if src and src not in names and repo.dirstate[src] == 'r':
-                removed.add(src)
+                dsremoved.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
 
         ## computation of the action to performs on `names` content.
@@ -2389,14 +2389,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # split between files known in target manifest and the others
         smf = set(mf)
 
-        missingmodified = modified - smf
-        modified -= missingmodified
-        missingadded = added - smf
-        added -= missingadded
-        missingremoved = removed - smf
-        removed -= missingremoved
-        missingdeleted = deleted - smf
-        deleted -= missingdeleted
+        missingmodified = dsmodified - smf
+        dsmodified -= missingmodified
+        missingadded = dsadded - smf
+        dsadded -= missingadded
+        missingremoved = dsremoved - smf
+        dsremoved -= missingremoved
+        missingdeleted = dsdeleted - smf
+        dsdeleted -= missingdeleted
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
@@ -2410,13 +2410,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   file state
             #   action
             #   make backup
-            (modified,         (actions['revert'],   True)),
+            (dsmodified,       (actions['revert'],   True)),
             (missingmodified,  (actions['remove'],   True)),
-            (added,            (actions['revert'],   True)),
+            (dsadded,          (actions['revert'],   True)),
             (missingadded,     (actions['remove'],   False)),
-            (removed,          (actions['undelete'], True)),
+            (dsremoved,        (actions['undelete'], True)),
             (missingremoved,   (None,                False)),
-            (deleted,          (actions['revert'],   False)),
+            (dsdeleted,        (actions['revert'],   False)),
             (missingdeleted,   (actions['remove'],   False)),
             )
 
