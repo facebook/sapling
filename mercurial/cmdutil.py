@@ -2461,9 +2461,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 return _('forgetting %s\n')
             return _('removing %s\n')
 
-        missingmodified = dsmodified - smf
-        dsmodified -= missingmodified
-
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
         actions = {'revert': ([], _('reverting %s\n')),
@@ -2478,7 +2475,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   make backup
             (modified,         (actions['revert'],   False)),
             (dsmodified,       (actions['revert'],   True)),
-            (missingmodified,  (actions['remove'],   True)),
             (dsadded,          (actions['remove'],   True)),
             (removed,          (actions['add'],      True)),
             (dsremoved,        (actions['undelete'], True)),
