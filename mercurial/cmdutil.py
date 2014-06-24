@@ -2525,11 +2525,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         ui.warn(_('file not managed: %s\n') % rel)
                     continue
 
-                # parent is target, no changes mean no changes
-                if node == parent:
-                    if exact:
-                        ui.warn(_('no changes needed to %s\n') % rel)
-                    continue
 
         if not opts.get('dry_run'):
             _performrevert(repo, parents, ctx, actions)
