@@ -2495,9 +2495,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
                 # file is unknown in parent, restore older version or ignore.
                 if abs not in repo.dirstate:
-                    if mfentry:
-                        handle(actions['add'], True)
-                    elif exact:
+                    if exact:
                         ui.warn(_('file not managed: %s\n') % rel)
                     continue
 
