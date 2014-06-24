@@ -2521,14 +2521,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 elif exact:
                     ui.warn(msg % rel)
                 break
-            else:
-                # Not touched in current dirstate.
-
-                # file is unknown in parent, restore older version or ignore.
-                if abs not in repo.dirstate:
-                    if exact:
-                        ui.warn(_('file not managed: %s\n') % rel)
-                    continue
 
 
         if not opts.get('dry_run'):
