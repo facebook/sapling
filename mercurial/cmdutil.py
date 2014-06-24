@@ -2450,6 +2450,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         cwd = repo.getcwd()
         for f in dsadded:
             src = repo.dirstate.copied(f)
+            # XXX should we check for rename down to target node?
             if src and src not in names and repo.dirstate[src] == 'r':
                 dsremoved.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
