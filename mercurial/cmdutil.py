@@ -2476,12 +2476,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   file state
             #   action
             #   make backup
-            (modified,         (actions['revert'],   False)),
-            (dsmodified,       (actions['revert'],   True)),
-            (dsadded,          (actions['remove'],   True)),
-            (removed,          (actions['add'],      True)),
-            (dsremoved,        (actions['undelete'], True)),
-            (clean,            (None,                False)),
+            (modified,   actions['revert'],   False),
+            (dsmodified, actions['revert'],   True),
+            (dsadded,    actions['remove'],   True),
+            (removed,    actions['add'],      True),
+            (dsremoved,  actions['undelete'], True),
+            (clean,      None,                False),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
@@ -2490,7 +2490,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # search the entry in the dispatch table.
             # if the file is in any of these sets, it was touched in the working
             # directory parent and we are sure it needs to be reverted.
-            for table, (xlist, dobackup) in disptable:
+            for table, xlist, dobackup in disptable:
                 if abs not in table:
                     continue
                 if xlist is None:
