@@ -2435,6 +2435,17 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # So we just put them all in the same group.
             dsadded = added
 
+        # in case of merge, files that are actually added can be reported as
+        # modified, we need to post process the result
+        if p2 != nullid:
+            if pmf is None:
+                # only need parent manifest in the merge case,
+                # so do not read by default
+                pmf = repo[parent].manifest()
+            mergeadd = dsmodified - set(pmf)
+            dsadded |= mergeadd
+            dsmodified -= mergeadd
+
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
         for f in dsadded:
