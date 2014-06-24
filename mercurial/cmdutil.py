@@ -2366,10 +2366,30 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # get the list of subrepos that must be reverted
         targetsubs = sorted(s for s in ctx.substate if m(s))
 
-        # Find status of all file in `names`. (Against working directory parent)
+        # Find status of all file in `names`.
         m = scmutil.matchfiles(repo, names)
-        changes = repo.status(node1=parent, match=m)[:4]
-        dsmodified, dsadded, dsremoved, dsdeleted = map(set, changes)
+
+        changes = repo.status(node1=node, match=m, clean=True)
+        modified = set(changes[0])
+        added    = set(changes[1])
+        removed  = set(changes[2])
+        deleted  = set(changes[3])
+
+        # We need to account for the state of file in the dirstate
+        #
+        # Even, when we revert agains something else than parent. this will
+        # slightly alter the behavior of revert (doing back up or not, delete
+        # or just forget etc)
+        if parent == node:
+            dsmodified = modified
+            dsadded = added
+            dsremoved = removed
+            modified, added, removed = set(), set(), set()
+        else:
+            changes = repo.status(node1=parent, match=m)
+            dsmodified = set(changes[0])
+            dsadded    = set(changes[1])
+            dsremoved  = set(changes[2])
 
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
@@ -2395,8 +2415,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         dsadded -= missingadded
         missingremoved = dsremoved - smf
         dsremoved -= missingremoved
-        missingdeleted = dsdeleted - smf
-        dsdeleted -= missingdeleted
+        missingdeleted = deleted - smf
+        deleted -= missingdeleted
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
@@ -2416,7 +2436,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (missingadded,     (actions['remove'],   False)),
             (dsremoved,        (actions['undelete'], True)),
             (missingremoved,   (None,                False)),
-            (dsdeleted,        (actions['revert'],   False)),
+            (deleted,          (actions['revert'],   False)),
             (missingdeleted,   (actions['remove'],   False)),
             )
 
