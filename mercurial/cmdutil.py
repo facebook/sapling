@@ -2386,6 +2386,18 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 return _('forgetting %s\n')
             return _('removing %s\n')
 
+        # split between files known in target manifest and the others
+        smf = set(mf)
+
+        missingmodified = modified - smf
+        modified -= missingmodified
+        missingadded = added - smf
+        added -= missingadded
+        missingremoved = removed - smf
+        removed -= missingremoved
+        missingdeleted = deleted - smf
+        deleted -= missingdeleted
+
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
         actions = {'revert': ([], _('reverting %s\n')),
@@ -2396,18 +2408,16 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         disptable = (
             # dispatch table:
             #   file state
-            #   action if in target manifest
-            #   action if not in target manifest
-            #   make backup if in target manifest
-            #   make backup if not in target manifest
-            (modified, (actions['revert'],   True),
-                       (actions['remove'],   True)),
-            (added,    (actions['revert'],   True),
-                       (actions['remove'],   False)),
-            (removed,  (actions['undelete'], True),
-                       (None,                False)),
-            (deleted,  (actions['revert'], False),
-                       (actions['remove'], False)),
+            #   action
+            #   make backup
+            (modified,         (actions['revert'],   True)),
+            (missingmodified,  (actions['remove'],   True)),
+            (added,            (actions['revert'],   True)),
+            (missingadded,     (actions['remove'],   False)),
+            (removed,          (actions['undelete'], True)),
+            (missingremoved,   (None,                False)),
+            (deleted,          (actions['revert'],   False)),
+            (missingdeleted,   (actions['remove'],   False)),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
@@ -2433,14 +2443,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # search the entry in the dispatch table.
             # if the file is in any of this sets, it was touched in the working
             # directory parent and we are sure it needs to be reverted.
-            for table, hit, miss in disptable:
+            for table, (action, backup) in disptable:
                 if abs not in table:
                     continue
-                # file has changed in dirstate
-                if mfentry:
-                    handle(*hit)
-                elif miss[0] is not None:
-                    handle(*miss)
+                if action is not None:
+                    handle(action, backup)
                 break
             else:
                 # Not touched in current dirstate.
