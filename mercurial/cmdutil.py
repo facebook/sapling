@@ -2482,8 +2482,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             )
 
         for abs, (rel, exact) in sorted(names.items()):
-            # hash on file in target manifest (or None if missing from target)
-            mfentry = mf.get(abs)
             # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
             def handle(xlist, dobackup):
@@ -2528,19 +2526,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     if exact:
                         ui.warn(_('no changes needed to %s\n') % rel)
                     continue
-                # no change in dirstate but parent and target may differ
-                if pmf is None:
-                    # only need parent manifest in this unlikely case,
-                    # so do not read by default
-                    pmf = repo[parent].manifest()
-                if abs in pmf and mfentry:
-                    # if version of file is same in parent and target
-                    # manifests, do nothing
-                    if (pmf[abs] != mfentry or
-                        pmf.flags(abs) != mf.flags(abs)):
-                        handle(actions['revert'], False)
-                else:
-                    handle(actions['remove'], False)
 
         if not opts.get('dry_run'):
             _performrevert(repo, parents, ctx, actions)
