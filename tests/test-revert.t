@@ -460,7 +460,9 @@ Write the python script to disk
   > content = []
   > for filename, ctxkey, wckey in combination:
   >     cc = ctxcontent[ctxkey]
-  >     if target == 'base':
+  >     if target == 'filelist':
+  >         print filename
+  >     elif target == 'base':
   >         content.append((filename, cc[0]))
   >     elif target == 'parent':
   >         content.append((filename, cc[1]))
@@ -476,6 +478,11 @@ Write the python script to disk
   >     f.write(data + '\n')
   >     f.close()
   > EOF
+
+check list of planned files
+
+  $ python gen-revert-cases.py filelist
+  modified_clean
 
 Script to make a simple text version of the content
 ---------------------------------------------------
