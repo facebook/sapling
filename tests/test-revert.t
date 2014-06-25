@@ -595,3 +595,31 @@ additional `.orig` backup file when applicable.
   $ cd ..
   $ diff -U 0 -- content-base.txt content-base-all.txt | grep _
   [1]
+
+Test revert to parent content with explicit file name
+-----------------------------------------------------
+
+(setup from reference repo)
+
+  $ cp -r revert-ref revert-parent-explicit
+  $ cd revert-parent-explicit
+
+revert all files individually and check the output
+(output is expected to be different than in the --all case)
+
+  $ for file in `python ../gen-revert-cases.py filelist`; do
+  >   echo '### revert for:' $file;
+  >   hg revert $file;
+  >   echo
+  > done
+  ### revert for: modified_clean
+  no changes needed to modified_clean
+  
+
+check resulting directory againt the --all run
+(There should be no difference)
+
+  $ python ../dircontent.py > ../content-parent-explicit.txt
+  $ cd ..
+  $ diff -U 0 -- content-parent-all.txt content-parent-explicit.txt | grep _
+  [1]
