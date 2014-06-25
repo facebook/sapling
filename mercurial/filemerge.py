@@ -9,6 +9,7 @@ from node import short
 from i18n import _
 import util, simplemerge, match, error, templater, templatekw
 import os, tempfile, re, filecmp
+import tagmerge
 
 def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)
@@ -220,6 +221,16 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         r = simplemerge.simplemerge(ui, a, b, c, label=labels, no_minimal=True)
         return True, r
     return False, 0
+
+@internaltool('tagmerge', True,
+              _("automatic tag merging of %s failed! "
+                "(use 'hg resolve --tool internal:merge' or another merge "
+                "tool of your choice)\n"))
+def _itagmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    """
+    Uses the internal tag merge algorithm (experimental).
+    """
+    return tagmerge.merge(repo, fcd, fco, fca)
 
 @internaltool('dump', True)
 def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
