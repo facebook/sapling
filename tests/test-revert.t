@@ -430,11 +430,15 @@ Write the python script to disk
   $ cat << EOF > gen-revert-cases.py
   > # generate proper file state to test revert behavior
   > import sys
+  > import os
   > 
   > # content of the file in "base" and "parent"
+  > # None means no file at all
   > ctxcontent = {
   >     # modified: file content change from base to parent
   >     'modified': ['base', 'parent'],
+  >     # added: file is missing from base and added in parent
+  >     'added': [None, 'parent'],
   > }
   > 
   > # content of file in working copy
@@ -474,14 +478,18 @@ Write the python script to disk
   > 
   > # write actual content
   > for filename, data in content:
-  >     f = open(filename, 'w')
-  >     f.write(data + '\n')
-  >     f.close()
+  >     if data is not None:
+  >         f = open(filename, 'w')
+  >         f.write(data + '\n')
+  >         f.close()
+  >     elif os.path.exists(filename):
+  >        os.remove(filename)
   > EOF
 
 check list of planned files
 
   $ python gen-revert-cases.py filelist
+  added_clean
   modified_clean
 
 Script to make a simple text version of the content
@@ -524,14 +532,17 @@ Create parent changeset
 
   $ python ../gen-revert-cases.py parent
   $ hg addremove --similarity 0
+  adding added_clean
   $ hg status
   M modified_clean
+  A added_clean
   $ hg commit -m 'parent'
 
 (create a simple text version of the content)
 
   $ python ../dircontent.py > ../content-parent.txt
   $ cat ../content-parent.txt
+  parent added_clean
   parent modified_clean
 
 Setup working directory
@@ -542,11 +553,13 @@ Setup working directory
 
   $ hg status --rev 'desc("base")'
   M modified_clean
+  A added_clean
 
 (create a simple text version of the content)
 
   $ python ../dircontent.py > ../content-wc.txt
   $ cat ../content-wc.txt
+  parent added_clean
   parent modified_clean
 
   $ cd ..
@@ -584,6 +597,7 @@ Test revert --all to "base" content
 check revert output
 
   $ hg revert --all --rev 'desc(base)'
+  removing added_clean
   reverting modified_clean
 
 Compare resulting directory with revert target.
@@ -612,6 +626,9 @@ revert all files individually and check the output
   >   hg revert $file;
   >   echo
   > done
+  ### revert for: added_clean
+  no changes needed to added_clean
+  
   ### revert for: modified_clean
   no changes needed to modified_clean
   
@@ -640,6 +657,8 @@ revert all files individually and check the output
   >   hg revert $file --rev 'desc(base)';
   >   echo
   > done
+  ### revert for: added_clean
+  
   ### revert for: modified_clean
   
 
