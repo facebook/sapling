@@ -551,3 +551,24 @@ Setup working directory
 
   $ cd ..
 
+Test revert --all to parent content
+-----------------------------------
+
+(setup from reference repo)
+
+  $ cp -r revert-ref revert-parent-all
+  $ cd revert-parent-all
+
+check revert output
+
+  $ hg revert --all
+
+Compare resulting directory with revert target.
+
+The diff is filtered to include change only. The only difference should be
+additional `.orig` backup file when applicable.
+
+  $ python ../dircontent.py > ../content-parent-all.txt
+  $ cd ..
+  $ diff -U 0 -- content-parent.txt content-parent-all.txt | grep _
+  [1]
