@@ -19,27 +19,19 @@ Introduce some changes and revert them
 
   $ echo 123 > b
 
-should show b unknown
-
   $ hg status
   ? b
   $ echo 12 > c
-
-should show b unknown and c modified
 
   $ hg status
   M c
   ? b
   $ hg add b
 
-should show b added and c modified
-
   $ hg status
   M c
   A b
   $ hg rm a
-
-should show a removed, b added and c modified
 
   $ hg status
   M c
@@ -49,9 +41,6 @@ should show a removed, b added and c modified
 revert removal of a file
 
   $ hg revert a
-
-should show b added, copy saved, and c modified
-
   $ hg status
   M c
   A b
@@ -59,9 +48,6 @@ should show b added, copy saved, and c modified
 revert addition of a file
 
   $ hg revert b
-
-should show b unknown, and c modified
-
   $ hg status
   M c
   ? b
@@ -69,9 +55,6 @@ should show b unknown, and c modified
 revert modification of a file (--no-backup)
 
   $ hg revert --no-backup c
-
-should show unknown: b
-
   $ hg status
   ? b
 
@@ -80,25 +63,15 @@ revert deletion (! status) of a added file
 
   $ hg add b
 
-should show b added
-
   $ hg status b
   A b
   $ rm b
-
-should show b deleted
-
   $ hg status b
   ! b
   $ hg revert -v b
   forgetting b
-
-should not find b
-
   $ hg status b
   b: * (glob)
-
-should show a c e
 
   $ ls
   a
@@ -187,8 +160,6 @@ revert of exec bit
   $ hg revert --all
   reverting c
 
-should print non-executable
-
   $ test -x c || echo non-executable
   non-executable
 
@@ -198,8 +169,6 @@ should print non-executable
   $ chmod -x c
   $ hg revert --all
   reverting c
-
-should print executable
 
   $ test -x c && echo executable
   executable
