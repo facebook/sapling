@@ -201,3 +201,23 @@ No Diff
   # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+
+test for --time
+==================
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-success.t --time
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Producing time report
+  cuser   csys    real      Test
+  \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   test-success.t (re)
+
+test for --time with --job enabled
+====================================
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-success.t --time --jobs 2
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Producing time report
+  cuser   csys    real      Test
+  \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   test-success.t (re)

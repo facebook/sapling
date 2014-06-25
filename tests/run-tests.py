@@ -1077,6 +1077,7 @@ class TestResult(unittest._TextTestResult):
 
         self.times = []
         self._started = {}
+        self._stopped = {}
 
     def addFailure(self, test, reason):
         self.failures.append((test, reason))
@@ -1167,17 +1168,28 @@ class TestResult(unittest._TextTestResult):
     def startTest(self, test):
         super(TestResult, self).startTest(test)
 
-        self._started[test.name] = time.time()
+        # os.times module computes the user time and system time spent by
+        # child's processes along with real elapsed time taken by a process.
+        # This module has one limitation. It can only work for Linux user
+        # and not for Windows.
+        self._started[test.name] = os.times()
 
     def stopTest(self, test, interrupted=False):
         super(TestResult, self).stopTest(test)
 
-        self.times.append((test.name, time.time() - self._started[test.name]))
+        self._stopped[test.name] = os.times()
+
+        starttime = self._started[test.name]
+        endtime = self._stopped[test.name]
+        self.times.append((test.name, endtime[2] - starttime[2],
+                    endtime[3] - starttime[3], endtime[4] - starttime[4]))
+
         del self._started[test.name]
+        del self._stopped[test.name]
 
         if interrupted:
             self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
-                test.name, self.times[-1][1]))
+                test.name, self.times[-1][3]))
 
 class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
@@ -1348,11 +1360,12 @@ class TextTestRunner(unittest.TextTestRunner):
 
     def printtimes(self, times):
         self.stream.writeln('# Producing time report')
-        times.sort(key=lambda t: (t[1], t[0]), reverse=True)
-        cols = '%7.3f   %s'
-        self.stream.writeln('%-7s   %s' % ('Time', 'Test'))
-        for test, timetaken in times:
-            self.stream.writeln(cols % (timetaken, test))
+        times.sort(key=lambda t: (t[3]))
+        cols = '%7.3f %7.3f %7.3f   %s'
+        self.stream.writeln('%-7s %-7s %-7s   %s' % ('cuser', 'csys', 'real',
+                    'Test'))
+        for test, cuser, csys, real in times:
+            self.stream.writeln(cols % (cuser, csys, real, test))
 
 class TestRunner(object):
     """Holds context for executing tests.
