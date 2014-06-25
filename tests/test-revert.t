@@ -14,6 +14,9 @@ nothing changed
   [255]
   $ hg revert --all
 
+Introduce some changes and revert them
+--------------------------------------
+
   $ echo 123 > b
 
 should show b unknown
@@ -42,6 +45,9 @@ should show a removed, b added and c modified
   M c
   A b
   R a
+
+revert removal of a file
+
   $ hg revert a
 
 should show b added, copy saved, and c modified
@@ -49,6 +55,9 @@ should show b added, copy saved, and c modified
   $ hg status
   M c
   A b
+
+revert addition of a file
+
   $ hg revert b
 
 should show b unknown, and c modified
@@ -56,12 +65,19 @@ should show b unknown, and c modified
   $ hg status
   M c
   ? b
+
+revert modification of a file (--no-backup)
+
   $ hg revert --no-backup c
 
 should show unknown: b
 
   $ hg status
   ? b
+
+revert deletion (! status) of a added file
+------------------------------------------
+
   $ hg add b
 
 should show b added
@@ -89,26 +105,30 @@ should show a c e
   c
   e
 
-should verbosely save backup to e.orig
+Test creation of backup (.orig) files
+-------------------------------------
 
   $ echo z > e
   $ hg revert --all -v
   saving current version of e as e.orig
   reverting e
 
-should say no changes needed
+revert on clean file (no change)
+--------------------------------
 
   $ hg revert a
   no changes needed to a
 
-should say file not managed
+revert on an untracked file
+---------------------------
 
   $ echo q > q
   $ hg revert q
   file not managed: q
   $ rm q
 
-should say file not found
+revert on file that does not exists
+-----------------------------------
 
   $ hg revert notfound
   notfound: no such file in rev 334a9e57682c
@@ -122,21 +142,26 @@ should say file not found
   A z
   ? e.orig
 
-should add a, remove d, forget z
+revert to another revision (--rev)
+----------------------------------
 
   $ hg revert --all -r0
   adding a
   removing d
   forgetting z
 
-should forget a, undelete d
+revert explicitly to parent (--rev)
+-----------------------------------
 
   $ hg revert --all -rtip
   forgetting a
   undeleting d
   $ rm a *.orig
 
-should silently add a
+revert to another revision (--rev) and exact match
+--------------------------------------------------
+
+exact match are more silent
 
   $ hg revert -r0 a
   $ hg st a
@@ -153,6 +178,10 @@ should silently keep d removed
 
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+revert of exec bit
+------------------
+
 #if execbit
   $ chmod +x c
   $ hg revert --all
@@ -180,6 +209,7 @@ should print executable
 
 
 Issue241: update and revert produces inconsistent repositories
+--------------------------------------------------------------
 
   $ hg init a
   $ cd a
@@ -193,20 +223,23 @@ Issue241: update and revert produces inconsistent repositories
   $ mkdir b
   $ echo b > b/b
 
-should fail - no arguments
+call `hg revert` with no file specified
+---------------------------------------
 
   $ hg revert -rtip
   abort: no files or directories specified
   (use --all to revert all files, or 'hg update 1' to update)
   [255]
 
-should succeed
+call `hg revert` with --all
+---------------------------
 
   $ hg revert --all -rtip
   reverting a
 
 
 Issue332: confusing message when reverting directory
+----------------------------------------------------
 
   $ hg ci -A -m b
   adding b/b
@@ -224,6 +257,7 @@ Issue332: confusing message when reverting directory
 
 
 reverting a rename target should revert the source
+--------------------------------------------------
 
   $ hg mv a newa
   $ hg revert newa
@@ -258,6 +292,7 @@ reverting a rename target should revert the source
   $ hg rm removed ignoreddir/removed
 
 should revert ignored* and undelete *removed
+--------------------------------------------
 
   $ hg revert -a --no-backup
   reverting ignored
@@ -271,9 +306,13 @@ should revert ignored* and undelete *removed
   $ hg rm removed
 
 should silently revert the named files
+--------------------------------------
 
   $ hg revert --no-backup ignored removed
   $ hg st -mardi
+
+Reverting copy (issue3920)
+--------------------------
 
 someone set up us the copies
 
@@ -300,8 +339,9 @@ copies and renames, you have no chance to survive make your time (issue3920)
   R ignored
 
 Test revert of a file added by one side of the merge
+====================================================
 
-(remove any pending change)
+remove any pending change
 
   $ hg revert --all
   forgetting allyour
@@ -309,7 +349,7 @@ Test revert of a file added by one side of the merge
   undeleting ignored
   $ hg purge --all --config extensions.purge=
 
-(Adds a new commit)
+Adds a new commit
 
   $ echo foo > newadd
   $ hg add newadd
@@ -317,7 +357,7 @@ Test revert of a file added by one side of the merge
   created new head
 
 
-(merge it with the other head)
+merge it with the other head
 
   $ hg merge # merge 1 into 2
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -331,7 +371,7 @@ Test revert of a file added by one side of the merge
   commit: 2 modified, 1 removed (merge)
   update: (current)
 
-(clarifies who added what)
+clarifies who added what
 
   $ hg status
   M allyour
@@ -344,7 +384,8 @@ Test revert of a file added by one side of the merge
   A base
   R ignored
 
-(revert file added by p1() to p1() state)
+revert file added by p1() to p1() state
+-----------------------------------------
 
   $ hg revert -r 'p1()' 'glob:newad?'
   $ hg status
@@ -352,7 +393,8 @@ Test revert of a file added by one side of the merge
   M base
   R ignored
 
-(revert file added by p1() to p2() state)
+revert file added by p1() to p2() state
+------------------------------------------
 
   $ hg revert -r 'p2()' 'glob:newad?'
   removing newadd
@@ -362,7 +404,8 @@ Test revert of a file added by one side of the merge
   R ignored
   R newadd
 
-(revert file added by p2() to p2() state)
+revert file added by p2() to p2() state
+------------------------------------------
 
   $ hg revert -r 'p2()' 'glob:allyou?'
   $ hg status
@@ -371,7 +414,8 @@ Test revert of a file added by one side of the merge
   R ignored
   R newadd
 
-(revert file added by p2() to p1() state)
+revert file added by p2() to p1() state
+------------------------------------------
 
   $ hg revert -r 'p1()' 'glob:allyou?'
   removing allyour
