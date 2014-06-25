@@ -572,3 +572,26 @@ additional `.orig` backup file when applicable.
   $ cd ..
   $ diff -U 0 -- content-parent.txt content-parent-all.txt | grep _
   [1]
+
+Test revert --all to "base" content
+-----------------------------------
+
+(setup from reference repo)
+
+  $ cp -r revert-ref revert-base-all
+  $ cd revert-base-all
+
+check revert output
+
+  $ hg revert --all --rev 'desc(base)'
+  reverting modified_clean
+
+Compare resulting directory with revert target.
+
+The diff is filtered to include change only. The only difference should be
+additional `.orig` backup file when applicable.
+
+  $ python ../dircontent.py > ../content-base-all.txt
+  $ cd ..
+  $ diff -U 0 -- content-base.txt content-base-all.txt | grep _
+  [1]
