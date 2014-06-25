@@ -623,3 +623,30 @@ check resulting directory againt the --all run
   $ cd ..
   $ diff -U 0 -- content-parent-all.txt content-parent-explicit.txt | grep _
   [1]
+
+Test revert to "base" content with explicit file name
+-----------------------------------------------------
+
+(setup from reference repo)
+
+  $ cp -r revert-ref revert-base-explicit
+  $ cd revert-base-explicit
+
+revert all files individually and check the output
+(output is expected to be different than in the --all case)
+
+  $ for file in `python ../gen-revert-cases.py filelist`; do
+  >   echo '### revert for:' $file;
+  >   hg revert $file --rev 'desc(base)';
+  >   echo
+  > done
+  ### revert for: modified_clean
+  
+
+check resulting directory againt the --all run
+(There should be no difference)
+
+  $ python ../dircontent.py > ../content-base-explicit.txt
+  $ cd ..
+  $ diff -U 0 -- content-base-all.txt content-base-explicit.txt | grep _
+  [1]
