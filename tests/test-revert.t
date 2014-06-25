@@ -394,4 +394,121 @@ revert file added by p2() to p1() state
   R ignored
   R newadd
 
+Systematic behavior validation of most possible cases
+=====================================================
+
+This section tests most of the possible combinations of working directory
+changes and inter-revision changes. The number of possible cases is significant
+but they all have a slighly different handling. So this section commits to
+generating and testing all of them to allow safe refactoring of the revert code.
+
+A python script is used to generate a file history for each combination of
+changes between, on one side the working directory and its parent and on
+the other side, changes between a revert target (--rev) and working directory
+parent. The three states generated are:
+
+- a "base" revision
+- a "parent" revision
+- the working directory (based on "parent")
+
+The file generated have names of the form:
+
+ <changeset-state>_<working-copy-state>
+
+Here, "changeset-state" conveys the state in "base" and "parent" (or the change
+that happen between them), "working-copy-state" is self explanatory.
+
+All known states are not tested yet. See inline documentation for details.
+Special cases from merge and rename are not tested by this section.
+
+There are also multiple cases where the current revert implementation is known to
+slightly misbehave.
+
+Write the python script to disk
+-------------------------------
+
+  $ cat << EOF > gen-revert-cases.py
+  > # generate proper file state to test revert behavior
+  > import sys
+  > 
+  > # content of the file in "base" and "parent"
+  > ctxcontent = {
+  >     # modified: file content change from base to parent
+  >     'modified': ['base', 'parent'],
+  > }
+  > 
+  > # content of file in working copy
+  > wccontent = {
+  >     # clean: wc content is the same as parent
+  >     'clean': lambda cc: cc[1],
+  > }
+  > 
+  > # build the combination of possible states
+  > combination = []
+  > for ctxkey in ctxcontent:
+  >     for wckey in wccontent:
+  >         filename = "%s_%s" % (ctxkey, wckey)
+  >         combination.append((filename, ctxkey, wckey))
+  > 
+  > # make sure we have stable output
+  > combination.sort()
+  > 
+  > # retrieve the state we must generate
+  > target = sys.argv[1]
+  > 
+  > # compute file content
+  > content = []
+  > for filename, ctxkey, wckey in combination:
+  >     cc = ctxcontent[ctxkey]
+  >     if target == 'base':
+  >         content.append((filename, cc[0]))
+  >     elif target == 'parent':
+  >         content.append((filename, cc[1]))
+  >     elif target == 'wc':
+  >         content.append((filename, wccontent[wckey](cc)))
+  >     else:
+  >         print >> sys.stderr, "unknown target:", target
+  >         sys.exit(1)
+  > 
+  > # write actual content
+  > for filename, data in content:
+  >     f = open(filename, 'w')
+  >     f.write(data + '\n')
+  >     f.close()
+  > EOF
+
+
+Generate appropriate repo state
+-------------------------------
+
+  $ hg init revert-ref
+  $ cd revert-ref
+
+Generate base changeset
+
+  $ python ../gen-revert-cases.py base
+  $ hg addremove --similarity 0
+  adding modified_clean
+  $ hg status
+  A modified_clean
+  $ hg commit -m 'base'
+
+Create parent changeset
+
+  $ python ../gen-revert-cases.py parent
+  $ hg addremove --similarity 0
+  $ hg status
+  M modified_clean
+  $ hg commit -m 'parent'
+
+Setup working directory
+
+  $ python ../gen-revert-cases.py wc | cat
+  $ hg addremove --similarity 0
+  $ hg status
+
+  $ hg status --rev 'desc("base")'
+  M modified_clean
+
+  $ cd ..
 
