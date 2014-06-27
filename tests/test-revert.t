@@ -435,6 +435,8 @@ Write the python script to disk
   > # content of the file in "base" and "parent"
   > # None means no file at all
   > ctxcontent = {
+  >     # clean: no change from base to parent
+  >     'clean': ['base', 'base'],
   >     # modified: file content change from base to parent
   >     'modified': ['base', 'parent'],
   >     # added: file is missing from base and added in parent
@@ -490,6 +492,7 @@ check list of planned files
 
   $ python gen-revert-cases.py filelist
   added_clean
+  clean_clean
   modified_clean
 
 Script to make a simple text version of the content
@@ -517,8 +520,10 @@ Generate base changeset
 
   $ python ../gen-revert-cases.py base
   $ hg addremove --similarity 0
+  adding clean_clean
   adding modified_clean
   $ hg status
+  A clean_clean
   A modified_clean
   $ hg commit -m 'base'
 
@@ -526,6 +531,7 @@ Generate base changeset
 
   $ python ../dircontent.py > ../content-base.txt
   $ cat ../content-base.txt
+  base   clean_clean
   base   modified_clean
 
 Create parent changeset
@@ -543,6 +549,7 @@ Create parent changeset
   $ python ../dircontent.py > ../content-parent.txt
   $ cat ../content-parent.txt
   parent added_clean
+  base   clean_clean
   parent modified_clean
 
 Setup working directory
@@ -560,6 +567,7 @@ Setup working directory
   $ python ../dircontent.py > ../content-wc.txt
   $ cat ../content-wc.txt
   parent added_clean
+  base   clean_clean
   parent modified_clean
 
   $ cd ..
@@ -629,6 +637,9 @@ revert all files individually and check the output
   ### revert for: added_clean
   no changes needed to added_clean
   
+  ### revert for: clean_clean
+  no changes needed to clean_clean
+  
   ### revert for: modified_clean
   no changes needed to modified_clean
   
@@ -652,12 +663,20 @@ Test revert to "base" content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
+Misbehavior:
+
+- fails to report no change to revert for
+|
+| - clean_clean
+
   $ for file in `python ../gen-revert-cases.py filelist`; do
   >   echo '### revert for:' $file;
   >   hg revert $file --rev 'desc(base)';
   >   echo
   > done
   ### revert for: added_clean
+  
+  ### revert for: clean_clean
   
   ### revert for: modified_clean
   
