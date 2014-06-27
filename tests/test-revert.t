@@ -441,6 +441,8 @@ Write the python script to disk
   >     'modified': ['base', 'parent'],
   >     # added: file is missing from base and added in parent
   >     'added': [None, 'parent'],
+  >     # removed: file exist in base but is removed from parent
+  >     'removed': ['base', None],
   > }
   > 
   > # content of file in working copy
@@ -494,6 +496,7 @@ check list of planned files
   added_clean
   clean_clean
   modified_clean
+  removed_clean
 
 Script to make a simple text version of the content
 ---------------------------------------------------
@@ -522,9 +525,11 @@ Generate base changeset
   $ hg addremove --similarity 0
   adding clean_clean
   adding modified_clean
+  adding removed_clean
   $ hg status
   A clean_clean
   A modified_clean
+  A removed_clean
   $ hg commit -m 'base'
 
 (create a simple text version of the content)
@@ -533,15 +538,18 @@ Generate base changeset
   $ cat ../content-base.txt
   base   clean_clean
   base   modified_clean
+  base   removed_clean
 
 Create parent changeset
 
   $ python ../gen-revert-cases.py parent
   $ hg addremove --similarity 0
   adding added_clean
+  removing removed_clean
   $ hg status
   M modified_clean
   A added_clean
+  R removed_clean
   $ hg commit -m 'parent'
 
 (create a simple text version of the content)
@@ -561,6 +569,7 @@ Setup working directory
   $ hg status --rev 'desc("base")'
   M modified_clean
   A added_clean
+  R removed_clean
 
 (create a simple text version of the content)
 
@@ -607,6 +616,7 @@ check revert output
   $ hg revert --all --rev 'desc(base)'
   removing added_clean
   reverting modified_clean
+  adding removed_clean
 
 Compare resulting directory with revert target.
 
@@ -642,6 +652,9 @@ revert all files individually and check the output
   
   ### revert for: modified_clean
   no changes needed to modified_clean
+  
+  ### revert for: removed_clean
+  removed_clean: no such file in rev * (glob)
   
 
 check resulting directory againt the --all run
@@ -679,6 +692,8 @@ Misbehavior:
   ### revert for: clean_clean
   
   ### revert for: modified_clean
+  
+  ### revert for: removed_clean
   
 
 check resulting directory againt the --all run
