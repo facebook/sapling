@@ -453,6 +453,8 @@ Write the python script to disk
   >     'clean': lambda cc: cc[1],
   >     # revert: wc content is the same as base
   >     'revert': lambda cc: cc[0],
+  >     # wc: file exist with a content different from base and parent
+  >     'wc': lambda cc: 'wc',
   > }
   > 
   > # build the combination of possible states
@@ -499,14 +501,19 @@ check list of planned files
   $ python gen-revert-cases.py filelist
   added_clean
   added_revert
+  added_wc
   clean_clean
   clean_revert
+  clean_wc
   missing_clean
   missing_revert
+  missing_wc
   modified_clean
   modified_revert
+  modified_wc
   removed_clean
   removed_revert
+  removed_wc
 
 Script to make a simple text version of the content
 ---------------------------------------------------
@@ -535,17 +542,23 @@ Generate base changeset
   $ hg addremove --similarity 0
   adding clean_clean
   adding clean_revert
+  adding clean_wc
   adding modified_clean
   adding modified_revert
+  adding modified_wc
   adding removed_clean
   adding removed_revert
+  adding removed_wc
   $ hg status
   A clean_clean
   A clean_revert
+  A clean_wc
   A modified_clean
   A modified_revert
+  A modified_wc
   A removed_clean
   A removed_revert
+  A removed_wc
   $ hg commit -m 'base'
 
 (create a simple text version of the content)
@@ -554,10 +567,13 @@ Generate base changeset
   $ cat ../content-base.txt
   base   clean_clean
   base   clean_revert
+  base   clean_wc
   base   modified_clean
   base   modified_revert
+  base   modified_wc
   base   removed_clean
   base   removed_revert
+  base   removed_wc
 
 Create parent changeset
 
@@ -565,15 +581,20 @@ Create parent changeset
   $ hg addremove --similarity 0
   adding added_clean
   adding added_revert
+  adding added_wc
   removing removed_clean
   removing removed_revert
+  removing removed_wc
   $ hg status
   M modified_clean
   M modified_revert
+  M modified_wc
   A added_clean
   A added_revert
+  A added_wc
   R removed_clean
   R removed_revert
+  R removed_wc
   $ hg commit -m 'parent'
 
 (create a simple text version of the content)
@@ -582,25 +603,40 @@ Create parent changeset
   $ cat ../content-parent.txt
   parent added_clean
   parent added_revert
+  parent added_wc
   base   clean_clean
   base   clean_revert
+  base   clean_wc
   parent modified_clean
   parent modified_revert
+  parent modified_wc
 
 Setup working directory
 
   $ python ../gen-revert-cases.py wc | cat
   $ hg addremove --similarity 0
   removing added_revert
+  adding missing_wc
   adding removed_revert
+  adding removed_wc
   $ hg status
+  M added_wc
+  M clean_wc
   M modified_revert
+  M modified_wc
+  A missing_wc
   A removed_revert
+  A removed_wc
   R added_revert
 
   $ hg status --rev 'desc("base")'
+  M clean_wc
   M modified_clean
+  M modified_wc
+  M removed_wc
   A added_clean
+  A added_wc
+  A missing_wc
   R removed_clean
 
 (create a simple text version of the content)
@@ -608,11 +644,16 @@ Setup working directory
   $ python ../dircontent.py > ../content-wc.txt
   $ cat ../content-wc.txt
   parent added_clean
+  wc     added_wc
   base   clean_clean
   base   clean_revert
+  wc     clean_wc
+  wc     missing_wc
   parent modified_clean
   base   modified_revert
+  wc     modified_wc
   base   removed_revert
+  wc     removed_wc
 
   $ cd ..
 
@@ -628,8 +669,13 @@ check revert output
 
   $ hg revert --all
   undeleting added_revert
+  reverting added_wc
+  reverting clean_wc
+  forgetting missing_wc
   reverting modified_revert
+  reverting modified_wc
   forgetting removed_revert
+  forgetting removed_wc
 
 Compare resulting directory with revert target.
 
@@ -639,8 +685,13 @@ additional `.orig` backup file when applicable.
   $ python ../dircontent.py > ../content-parent-all.txt
   $ cd ..
   $ diff -U 0 -- content-parent.txt content-parent-all.txt | grep _
+  +wc     added_wc.orig
+  +wc     clean_wc.orig
+  +wc     missing_wc
   +base   modified_revert.orig
+  +wc     modified_wc.orig
   +base   removed_revert
+  +wc     removed_wc
 
 Test revert --all to "base" content
 -----------------------------------
@@ -661,20 +712,33 @@ Misbehavior:
 
   $ hg revert --all --rev 'desc(base)'
   removing added_clean
+  removing added_wc
+  reverting clean_wc
+  forgetting missing_wc
   reverting modified_clean
   reverting modified_revert
+  reverting modified_wc
   adding removed_clean
   reverting removed_revert
+  reverting removed_wc
 
 Compare resulting directory with revert target.
 
 The diff is filtered to include change only. The only difference should be
 additional `.orig` backup file when applicable.
 
+Misbehavior:
+
+- no backup for
+| - added_wc (DATA LOSS)
+
   $ python ../dircontent.py > ../content-base-all.txt
   $ cd ..
   $ diff -U 0 -- content-base.txt content-base-all.txt | grep _
-  [1]
+  +wc     clean_wc.orig
+  +wc     missing_wc
+  +wc     modified_wc.orig
+  +wc     removed_wc.orig
 
 Test revert to parent content with explicit file name
 -----------------------------------------------------
@@ -697,11 +761,15 @@ revert all files individually and check the output
   
   ### revert for: added_revert
   
+  ### revert for: added_wc
+  
   ### revert for: clean_clean
   no changes needed to clean_clean
   
   ### revert for: clean_revert
   no changes needed to clean_revert
+  
+  ### revert for: clean_wc
   
   ### revert for: missing_clean
   missing_clean: no such file in rev * (glob)
@@ -709,15 +777,21 @@ revert all files individually and check the output
   ### revert for: missing_revert
   missing_revert: no such file in rev * (glob)
   
+  ### revert for: missing_wc
+  
   ### revert for: modified_clean
   no changes needed to modified_clean
   
   ### revert for: modified_revert
   
+  ### revert for: modified_wc
+  
   ### revert for: removed_clean
   removed_clean: no such file in rev * (glob)
   
   ### revert for: removed_revert
+  
+  ### revert for: removed_wc
   
 
 check resulting directory againt the --all run
@@ -758,9 +832,13 @@ Misbehavior:
   
   ### revert for: added_revert
   
+  ### revert for: added_wc
+  
   ### revert for: clean_clean
   
   ### revert for: clean_revert
+  
+  ### revert for: clean_wc
   
   ### revert for: missing_clean
   missing_clean: no such file in rev * (glob)
@@ -768,13 +846,19 @@ Misbehavior:
   ### revert for: missing_revert
   missing_revert: no such file in rev * (glob)
   
+  ### revert for: missing_wc
+  
   ### revert for: modified_clean
   
   ### revert for: modified_revert
   
+  ### revert for: modified_wc
+  
   ### revert for: removed_clean
   
   ### revert for: removed_revert
+  
+  ### revert for: removed_wc
   
 
 check resulting directory againt the --all run
