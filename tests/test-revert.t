@@ -443,6 +443,8 @@ Write the python script to disk
   >     'added': [None, 'parent'],
   >     # removed: file exist in base but is removed from parent
   >     'removed': ['base', None],
+  >     # file exist neither in base not in parent
+  >     'missing': [None, None],
   > }
   > 
   > # content of file in working copy
@@ -495,6 +497,7 @@ check list of planned files
   $ python gen-revert-cases.py filelist
   added_clean
   clean_clean
+  missing_clean
   modified_clean
   removed_clean
 
@@ -650,6 +653,9 @@ revert all files individually and check the output
   ### revert for: clean_clean
   no changes needed to clean_clean
   
+  ### revert for: missing_clean
+  missing_clean: no such file in rev * (glob)
+  
   ### revert for: modified_clean
   no changes needed to modified_clean
   
@@ -690,6 +696,9 @@ Misbehavior:
   ### revert for: added_clean
   
   ### revert for: clean_clean
+  
+  ### revert for: missing_clean
+  missing_clean: no such file in rev * (glob)
   
   ### revert for: modified_clean
   
