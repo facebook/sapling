@@ -233,6 +233,10 @@ def _globre(pat):
     [^/]*
     >>> print _globre(r'**')
     .*
+    >>> print _globre(r'**/a')
+    (?:.*/)?a
+    >>> print _globre(r'a/**/b')
+    a\/(?:.*/)?b
     >>> print _globre(r'[a*?!^][^b][!c]')
     [a*?!^][\^b][^c]
     >>> print _globre(r'{a,b}')
@@ -254,7 +258,11 @@ def _globre(pat):
         elif c == '*':
             if peek() == '*':
                 i += 1
-                res += '.*'
+                if peek() == '/':
+                    i += 1
+                    res += '(?:.*/)?'
+                else:
+                    res += '.*'
             else:
                 res += '[^/]*'
         elif c == '?':

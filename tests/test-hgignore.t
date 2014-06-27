@@ -134,3 +134,17 @@ Check patterns that match only the directory
   ? a.c
   ? a.o
   ? syntax
+
+Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)
+
+  $ echo "syntax: glob" > .hgignore
+  $ echo "dir/**/c.o" >> .hgignore
+  $ touch dir/c.o
+  $ mkdir dir/subdir
+  $ touch dir/subdir/c.o
+  $ hg status
+  A dir/b.o
+  ? .hgignore
+  ? a.c
+  ? a.o
+  ? syntax
