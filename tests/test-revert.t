@@ -477,6 +477,20 @@ Write the python script to disk
   >     f.close()
   > EOF
 
+Script to make a simple text version of the content
+---------------------------------------------------
+
+  $ cat << EOF >> dircontent.py
+  > # generate a simple text view of the directory for easy comparison
+  > import os
+  > files = os.listdir('.')
+  > files.sort()
+  > for filename in files:
+  >     if os.path.isdir(filename):
+  >         continue
+  >     content = open(filename).read()
+  >     print '%-6s %s' % (content.strip(), filename)
+  > EOF
 
 Generate appropriate repo state
 -------------------------------
@@ -493,6 +507,12 @@ Generate base changeset
   A modified_clean
   $ hg commit -m 'base'
 
+(create a simple text version of the content)
+
+  $ python ../dircontent.py > ../content-base.txt
+  $ cat ../content-base.txt
+  base   modified_clean
+
 Create parent changeset
 
   $ python ../gen-revert-cases.py parent
@@ -500,6 +520,12 @@ Create parent changeset
   $ hg status
   M modified_clean
   $ hg commit -m 'parent'
+
+(create a simple text version of the content)
+
+  $ python ../dircontent.py > ../content-parent.txt
+  $ cat ../content-parent.txt
+  parent modified_clean
 
 Setup working directory
 
@@ -509,6 +535,12 @@ Setup working directory
 
   $ hg status --rev 'desc("base")'
   M modified_clean
+
+(create a simple text version of the content)
+
+  $ python ../dircontent.py > ../content-wc.txt
+  $ cat ../content-wc.txt
+  parent modified_clean
 
   $ cd ..
 
