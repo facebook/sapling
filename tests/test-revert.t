@@ -451,6 +451,8 @@ Write the python script to disk
   > wccontent = {
   >     # clean: wc content is the same as parent
   >     'clean': lambda cc: cc[1],
+  >     # revert: wc content is the same as base
+  >     'revert': lambda cc: cc[0],
   > }
   > 
   > # build the combination of possible states
@@ -496,10 +498,15 @@ check list of planned files
 
   $ python gen-revert-cases.py filelist
   added_clean
+  added_revert
   clean_clean
+  clean_revert
   missing_clean
+  missing_revert
   modified_clean
+  modified_revert
   removed_clean
+  removed_revert
 
 Script to make a simple text version of the content
 ---------------------------------------------------
@@ -527,12 +534,18 @@ Generate base changeset
   $ python ../gen-revert-cases.py base
   $ hg addremove --similarity 0
   adding clean_clean
+  adding clean_revert
   adding modified_clean
+  adding modified_revert
   adding removed_clean
+  adding removed_revert
   $ hg status
   A clean_clean
+  A clean_revert
   A modified_clean
+  A modified_revert
   A removed_clean
+  A removed_revert
   $ hg commit -m 'base'
 
 (create a simple text version of the content)
@@ -540,19 +553,27 @@ Generate base changeset
   $ python ../dircontent.py > ../content-base.txt
   $ cat ../content-base.txt
   base   clean_clean
+  base   clean_revert
   base   modified_clean
+  base   modified_revert
   base   removed_clean
+  base   removed_revert
 
 Create parent changeset
 
   $ python ../gen-revert-cases.py parent
   $ hg addremove --similarity 0
   adding added_clean
+  adding added_revert
   removing removed_clean
+  removing removed_revert
   $ hg status
   M modified_clean
+  M modified_revert
   A added_clean
+  A added_revert
   R removed_clean
+  R removed_revert
   $ hg commit -m 'parent'
 
 (create a simple text version of the content)
@@ -560,14 +581,22 @@ Create parent changeset
   $ python ../dircontent.py > ../content-parent.txt
   $ cat ../content-parent.txt
   parent added_clean
+  parent added_revert
   base   clean_clean
+  base   clean_revert
   parent modified_clean
+  parent modified_revert
 
 Setup working directory
 
   $ python ../gen-revert-cases.py wc | cat
   $ hg addremove --similarity 0
+  removing added_revert
+  adding removed_revert
   $ hg status
+  M modified_revert
+  A removed_revert
+  R added_revert
 
   $ hg status --rev 'desc("base")'
   M modified_clean
@@ -580,7 +609,10 @@ Setup working directory
   $ cat ../content-wc.txt
   parent added_clean
   base   clean_clean
+  base   clean_revert
   parent modified_clean
+  base   modified_revert
+  base   removed_revert
 
   $ cd ..
 
@@ -595,6 +627,9 @@ Test revert --all to parent content
 check revert output
 
   $ hg revert --all
+  undeleting added_revert
+  reverting modified_revert
+  forgetting removed_revert
 
 Compare resulting directory with revert target.
 
@@ -604,7 +639,8 @@ additional `.orig` backup file when applicable.
   $ python ../dircontent.py > ../content-parent-all.txt
   $ cd ..
   $ diff -U 0 -- content-parent.txt content-parent-all.txt | grep _
-  [1]
+  +base   modified_revert.orig
+  +base   removed_revert
 
 Test revert --all to "base" content
 -----------------------------------
@@ -616,10 +652,19 @@ Test revert --all to "base" content
 
 check revert output
 
+Misbehavior:
+
+- report "reverting" when file needs no changes
+|
+| - reverting modified_revert
+| - reverting removed_revert
+
   $ hg revert --all --rev 'desc(base)'
   removing added_clean
   reverting modified_clean
+  reverting modified_revert
   adding removed_clean
+  reverting removed_revert
 
 Compare resulting directory with revert target.
 
@@ -650,17 +695,29 @@ revert all files individually and check the output
   ### revert for: added_clean
   no changes needed to added_clean
   
+  ### revert for: added_revert
+  
   ### revert for: clean_clean
   no changes needed to clean_clean
+  
+  ### revert for: clean_revert
+  no changes needed to clean_revert
   
   ### revert for: missing_clean
   missing_clean: no such file in rev * (glob)
   
+  ### revert for: missing_revert
+  missing_revert: no such file in rev * (glob)
+  
   ### revert for: modified_clean
   no changes needed to modified_clean
   
+  ### revert for: modified_revert
+  
   ### revert for: removed_clean
   removed_clean: no such file in rev * (glob)
+  
+  ### revert for: removed_revert
   
 
 check resulting directory againt the --all run
@@ -687,6 +744,10 @@ Misbehavior:
 - fails to report no change to revert for
 |
 | - clean_clean
+| - added_revert
+| - clean_revert
+| - modified_revert
+| - removed_revert
 
   $ for file in `python ../gen-revert-cases.py filelist`; do
   >   echo '### revert for:' $file;
@@ -695,14 +756,25 @@ Misbehavior:
   > done
   ### revert for: added_clean
   
+  ### revert for: added_revert
+  
   ### revert for: clean_clean
+  
+  ### revert for: clean_revert
   
   ### revert for: missing_clean
   missing_clean: no such file in rev * (glob)
   
+  ### revert for: missing_revert
+  missing_revert: no such file in rev * (glob)
+  
   ### revert for: modified_clean
   
+  ### revert for: modified_revert
+  
   ### revert for: removed_clean
+  
+  ### revert for: removed_revert
   
 
 check resulting directory againt the --all run
