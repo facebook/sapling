@@ -460,6 +460,7 @@ Write the python script to disk
   > }
   > # untracked-X is a version of X where the file is not tracked (? unknown)
   > wccontent['untracked-clean'] = wccontent['clean']
+  > wccontent['untracked-revert'] = wccontent['revert']
   > 
   > # build the combination of possible states
   > combination = []
@@ -507,26 +508,31 @@ check list of planned files
   added_removed
   added_revert
   added_untracked-clean
+  added_untracked-revert
   added_wc
   clean_clean
   clean_removed
   clean_revert
   clean_untracked-clean
+  clean_untracked-revert
   clean_wc
   missing_clean
   missing_removed
   missing_revert
   missing_untracked-clean
+  missing_untracked-revert
   missing_wc
   modified_clean
   modified_removed
   modified_revert
   modified_untracked-clean
+  modified_untracked-revert
   modified_wc
   removed_clean
   removed_removed
   removed_revert
   removed_untracked-clean
+  removed_untracked-revert
   removed_wc
 
 Script to make a simple text version of the content
@@ -558,32 +564,38 @@ Generate base changeset
   adding clean_removed
   adding clean_revert
   adding clean_untracked-clean
+  adding clean_untracked-revert
   adding clean_wc
   adding modified_clean
   adding modified_removed
   adding modified_revert
   adding modified_untracked-clean
+  adding modified_untracked-revert
   adding modified_wc
   adding removed_clean
   adding removed_removed
   adding removed_revert
   adding removed_untracked-clean
+  adding removed_untracked-revert
   adding removed_wc
   $ hg status
   A clean_clean
   A clean_removed
   A clean_revert
   A clean_untracked-clean
+  A clean_untracked-revert
   A clean_wc
   A modified_clean
   A modified_removed
   A modified_revert
   A modified_untracked-clean
+  A modified_untracked-revert
   A modified_wc
   A removed_clean
   A removed_removed
   A removed_revert
   A removed_untracked-clean
+  A removed_untracked-revert
   A removed_wc
   $ hg commit -m 'base'
 
@@ -595,16 +607,19 @@ Generate base changeset
   base   clean_removed
   base   clean_revert
   base   clean_untracked-clean
+  base   clean_untracked-revert
   base   clean_wc
   base   modified_clean
   base   modified_removed
   base   modified_revert
   base   modified_untracked-clean
+  base   modified_untracked-revert
   base   modified_wc
   base   removed_clean
   base   removed_removed
   base   removed_revert
   base   removed_untracked-clean
+  base   removed_untracked-revert
   base   removed_wc
 
 Create parent changeset
@@ -615,27 +630,32 @@ Create parent changeset
   adding added_removed
   adding added_revert
   adding added_untracked-clean
+  adding added_untracked-revert
   adding added_wc
   removing removed_clean
   removing removed_removed
   removing removed_revert
   removing removed_untracked-clean
+  removing removed_untracked-revert
   removing removed_wc
   $ hg status
   M modified_clean
   M modified_removed
   M modified_revert
   M modified_untracked-clean
+  M modified_untracked-revert
   M modified_wc
   A added_clean
   A added_removed
   A added_revert
   A added_untracked-clean
+  A added_untracked-revert
   A added_wc
   R removed_clean
   R removed_removed
   R removed_revert
   R removed_untracked-clean
+  R removed_untracked-revert
   R removed_wc
   $ hg commit -m 'parent'
 
@@ -647,16 +667,19 @@ Create parent changeset
   parent added_removed
   parent added_revert
   parent added_untracked-clean
+  parent added_untracked-revert
   parent added_wc
   base   clean_clean
   base   clean_removed
   base   clean_revert
   base   clean_untracked-clean
+  base   clean_untracked-revert
   base   clean_wc
   parent modified_clean
   parent modified_removed
   parent modified_revert
   parent modified_untracked-clean
+  parent modified_untracked-revert
   parent modified_wc
 
 Setup working directory
@@ -665,10 +688,12 @@ Setup working directory
   $ hg addremove --similarity 0
   removing added_removed
   removing added_revert
+  removing added_untracked-revert
   removing clean_removed
   adding missing_wc
   removing modified_removed
   adding removed_revert
+  adding removed_untracked-revert
   adding removed_wc
   $ hg forget *untracked*
   $ hg status
@@ -682,10 +707,14 @@ Setup working directory
   R added_removed
   R added_revert
   R added_untracked-clean
+  R added_untracked-revert
   R clean_removed
   R clean_untracked-clean
+  R clean_untracked-revert
   R modified_removed
   R modified_untracked-clean
+  R modified_untracked-revert
+  ? removed_untracked-revert
 
   $ hg status --rev 'desc("base")'
   M clean_wc
@@ -697,11 +726,14 @@ Setup working directory
   A missing_wc
   R clean_removed
   R clean_untracked-clean
+  R clean_untracked-revert
   R modified_removed
   R modified_untracked-clean
+  R modified_untracked-revert
   R removed_clean
   R removed_removed
   R removed_untracked-clean
+  R removed_untracked-revert
 
 (create a simple text version of the content)
 
@@ -713,13 +745,16 @@ Setup working directory
   base   clean_clean
   base   clean_revert
   base   clean_untracked-clean
+  base   clean_untracked-revert
   wc     clean_wc
   wc     missing_wc
   parent modified_clean
   base   modified_revert
   parent modified_untracked-clean
+  base   modified_untracked-revert
   wc     modified_wc
   base   removed_revert
+  base   removed_untracked-revert
   wc     removed_wc
 
   $ cd ..
@@ -738,14 +773,17 @@ check revert output
   undeleting added_removed
   undeleting added_revert
   undeleting added_untracked-clean
+  undeleting added_untracked-revert
   reverting added_wc
   undeleting clean_removed
   undeleting clean_untracked-clean
+  undeleting clean_untracked-revert
   reverting clean_wc
   forgetting missing_wc
   undeleting modified_removed
   reverting modified_revert
   undeleting modified_untracked-clean
+  undeleting modified_untracked-revert
   reverting modified_wc
   forgetting removed_revert
   forgetting removed_wc
@@ -762,8 +800,10 @@ additional `.orig` backup file when applicable.
   +wc     clean_wc.orig
   +wc     missing_wc
   +base   modified_revert.orig
+  +base   modified_untracked-revert.orig
   +wc     modified_wc.orig
   +base   removed_revert
+  +base   removed_untracked-revert
   +wc     removed_wc
 
 Test revert --all to "base" content
@@ -788,17 +828,20 @@ Misbehavior:
   removing added_wc
   undeleting clean_removed
   undeleting clean_untracked-clean
+  undeleting clean_untracked-revert
   reverting clean_wc
   forgetting missing_wc
   reverting modified_clean
   undeleting modified_removed
   reverting modified_revert
   undeleting modified_untracked-clean
+  undeleting modified_untracked-revert
   reverting modified_wc
   adding removed_clean
   adding removed_removed
   reverting removed_revert
   adding removed_untracked-clean
+  adding removed_untracked-revert
   reverting removed_wc
 
 Compare resulting directory with revert target.
@@ -846,6 +889,8 @@ revert all files individually and check the output
   
   ### revert for: added_untracked-clean
   
+  ### revert for: added_untracked-revert
+  
   ### revert for: added_wc
   
   ### revert for: clean_clean
@@ -857,6 +902,8 @@ revert all files individually and check the output
   no changes needed to clean_revert
   
   ### revert for: clean_untracked-clean
+  
+  ### revert for: clean_untracked-revert
   
   ### revert for: clean_wc
   
@@ -872,6 +919,9 @@ revert all files individually and check the output
   ### revert for: missing_untracked-clean
   missing_untracked-clean: no such file in rev * (glob)
   
+  ### revert for: missing_untracked-revert
+  missing_untracked-revert: no such file in rev * (glob)
+  
   ### revert for: missing_wc
   
   ### revert for: modified_clean
@@ -882,6 +932,8 @@ revert all files individually and check the output
   ### revert for: modified_revert
   
   ### revert for: modified_untracked-clean
+  
+  ### revert for: modified_untracked-revert
   
   ### revert for: modified_wc
   
@@ -895,6 +947,9 @@ revert all files individually and check the output
   
   ### revert for: removed_untracked-clean
   removed_untracked-clean: no such file in rev * (glob)
+  
+  ### revert for: removed_untracked-revert
+  file not managed: removed_untracked-revert
   
   ### revert for: removed_wc
   
@@ -929,6 +984,7 @@ Misbehavior:
 | - removed_revert
 | - added_removed
 | - added_untracked-clean
+| - added_untracked-revert
 
   $ for file in `python ../gen-revert-cases.py filelist`; do
   >   echo '### revert for:' $file;
@@ -943,6 +999,8 @@ Misbehavior:
   
   ### revert for: added_untracked-clean
   
+  ### revert for: added_untracked-revert
+  
   ### revert for: added_wc
   
   ### revert for: clean_clean
@@ -952,6 +1010,8 @@ Misbehavior:
   ### revert for: clean_revert
   
   ### revert for: clean_untracked-clean
+  
+  ### revert for: clean_untracked-revert
   
   ### revert for: clean_wc
   
@@ -967,6 +1027,9 @@ Misbehavior:
   ### revert for: missing_untracked-clean
   missing_untracked-clean: no such file in rev * (glob)
   
+  ### revert for: missing_untracked-revert
+  missing_untracked-revert: no such file in rev * (glob)
+  
   ### revert for: missing_wc
   
   ### revert for: modified_clean
@@ -977,6 +1040,8 @@ Misbehavior:
   
   ### revert for: modified_untracked-clean
   
+  ### revert for: modified_untracked-revert
+  
   ### revert for: modified_wc
   
   ### revert for: removed_clean
@@ -986,6 +1051,8 @@ Misbehavior:
   ### revert for: removed_revert
   
   ### revert for: removed_untracked-clean
+  
+  ### revert for: removed_untracked-revert
   
   ### revert for: removed_wc
   
