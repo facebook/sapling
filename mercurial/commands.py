@@ -5322,6 +5322,7 @@ class httpservice(object):
             write = self.ui.write
         write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
               (fqaddr, port, prefix, bindaddr, self.httpd.port))
+        self.ui.flush()  # avoid buffering of status message
 
     def run(self):
         self.httpd.serve_forever()
