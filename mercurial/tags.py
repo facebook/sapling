@@ -72,6 +72,15 @@ def readlocaltags(ui, repo, alltags, tagtypes):
     filetags = _readtags(
         ui, repo, data.splitlines(), "localtags",
         recode=encoding.fromlocal)
+
+    # remove tags pointing to invalid nodes
+    cl = repo.changelog
+    for t in filetags.keys():
+        try:
+            cl.rev(filetags[t][0])
+        except (LookupError, ValueError):
+            del filetags[t]
+
     _updatetags(filetags, "local", alltags, tagtypes)
 
 def _readtags(ui, repo, lines, fn, recode=None):
