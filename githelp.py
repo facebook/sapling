@@ -141,6 +141,14 @@ def add(ui, repo, *args, **kwargs):
 def bisect(ui, repo, *args, **kwargs):
     ui.status("See 'hg help bisect' for how to use bisect.\n\n")
 
+def blame(ui, repo, *args, **kwargs):
+    cmdoptions = [
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+    cmd = Command('annotate')
+    cmd.extend([convert(v) for v in args])
+    ui.status(cmd, "\n")
+
 def branch(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('', 'set-upstream', None, ''),
@@ -778,6 +786,7 @@ def tag(ui, repo, *args, **kwargs):
 gitcommands = {
     'add': add,
     'bisect': bisect,
+    'blame': blame,
     'branch': branch,
     'checkout': checkout,
     'cherry-pick': cherrypick,
