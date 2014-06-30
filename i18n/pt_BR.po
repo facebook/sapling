@@ -8265,13 +8265,13 @@ msgstr "não se pode especificar ao mesmo tempo uma revisão e uma origem"
 msgid "empty \"rev\" revision set - nothing to rebase\n"
 msgstr "conjunto de revisões \"rev\" vazio - nada para rebasear\n"
 
-msgid "empty \"source\" revision set - nothing to rebase"
-msgstr "conjunto de revisões \"fonte\" vazio - nada para rebasear"
+msgid "empty \"source\" revision set - nothing to rebase\n"
+msgstr "conjunto de revisões \"fonte\" vazio - nada para rebasear\n"
 
-msgid "empty \"base\" revision set - can't compute rebase set"
+msgid "empty \"base\" revision set - can't compute rebase set\n"
 msgstr ""
 "conjunto de revisões \"base\" vazio - não é possível calcular o conjunto de "
-"rebaseamento"
+"rebaseamento\n"
 
 #, python-format
 msgid "nothing to rebase - %s is both \"base\" and destination\n"
@@ -15602,6 +15602,10 @@ msgstr "faltam argumentos para o apelido de comando"
 #, python-format
 msgid "no definition for alias '%s'\n"
 msgstr "nenhuma definição para o apelido '%s'\n"
+
+#, python-format
+msgid "error in definition for alias '%s': %s\n"
+msgstr "erro na definição do apelido '%s': %s\n"
 
 #, python-format
 msgid ""
@@ -24133,31 +24137,35 @@ msgstr "nota: possível conflito - %s foi renomeado múltiplas vezes para:\n"
 msgid "note: possible conflict - %s was deleted and renamed to:\n"
 msgstr "nota: possível conflito - %s foi apagado e renomeado para:\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "note: merging %s and %s using bids from ancestors %s\n"
-msgstr ""
+msgstr "nota: mesclando %s e %s usando lances dos ancestrais %s\n"
 
 #, python-format
 msgid ""
 "\n"
 "calculating bids for ancestor %s\n"
 msgstr ""
+"\n"
+"calculando lances para o ancestral %s\n"
 
 msgid ""
 "\n"
 "auction for merging merge bids\n"
 msgstr ""
+"\n"
+"leilão para mesclar lances de mesclagem\n"
 
 #, python-format
 msgid " %s: multiple bids for merge action:\n"
-msgstr ""
+msgstr " %s: múltiplos lances para ação de mesclagem:\n"
 
 #, python-format
 msgid " %s: ambiguous merge - picked %s action\n"
-msgstr ""
+msgstr " %s: mesclagem ambígua - escolhida a ação %s\n"
 
 msgid "end of auction"
-msgstr ""
+msgstr "fim do leilão"
 
 #, python-format
 msgid ""
@@ -25737,8 +25745,8 @@ msgid "default path for subrepository not found"
 msgstr "o caminho padrão para o sub-repositório não foi encontrado"
 
 #, python-format
-msgid "warning: removing potentially hostile .hg/hgrc in '%s'"
-msgstr "aviso: removendo .hg/hgrc potencialmente hostil em '%s'"
+msgid "warning: removing potentially hostile 'hgrc' in '%s'\n"
+msgstr "aviso: removendo 'hgrc' potencialmente hostil em '%s'\n"
 
 #, python-format
 msgid "unknown subrepo type %s"
