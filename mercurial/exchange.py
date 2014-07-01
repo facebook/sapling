@@ -85,6 +85,39 @@ class pushoperation(object):
         """future remote heads if the changeset push succeeds"""
         return self.outgoing.missingheads
 
+    @util.propertycache
+    def fallbackheads(self):
+        """future remote heads if the changeset push fails"""
+        if self.revs is None:
+            # not target to push, all common are relevant
+            return self.outgoing.commonheads
+        unfi = self.repo.unfiltered()
+        # I want cheads = heads(::missingheads and ::commonheads)
+        # (missingheads is revs with secret changeset filtered out)
+        #
+        # This can be expressed as:
+        #     cheads = ( (missingheads and ::commonheads)
+        #              + (commonheads and ::missingheads))"
+        #              )
+        #
+        # while trying to push we already computed the following:
+        #     common = (::commonheads)
+        #     missing = ((commonheads::missingheads) - commonheads)
+        #
+        # We can pick:
+        # * missingheads part of common (::commonheads)
+        common = set(self.outgoing.common)
+        nm = self.repo.changelog.nodemap
+        cheads = [node for node in self.revs if nm[node] in common]
+        # and
+        # * commonheads parents on missing
+        revset = unfi.set('%ln and parents(roots(%ln))',
+                         self.outgoing.commonheads,
+                         self.outgoing.missing)
+        cheads.extend(c.node() for c in revset)
+        return cheads
+
+
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
@@ -313,36 +346,10 @@ def _pushchangeset(pushop):
         pushop.ret = pushop.remote.addchangegroup(cg, 'push', pushop.repo.url())
 
 def _pushcomputecommonheads(pushop):
-    unfi = pushop.repo.unfiltered()
     if pushop.ret:
         cheads = pushop.futureheads
-    elif pushop.revs is None:
-        # All out push fails. synchronize all common
-        cheads = pushop.outgoing.commonheads
     else:
-        # I want cheads = heads(::missingheads and ::commonheads)
-        # (missingheads is revs with secret changeset filtered out)
-        #
-        # This can be expressed as:
-        #     cheads = ( (missingheads and ::commonheads)
-        #              + (commonheads and ::missingheads))"
-        #              )
-        #
-        # while trying to push we already computed the following:
-        #     common = (::commonheads)
-        #     missing = ((commonheads::missingheads) - commonheads)
-        #
-        # We can pick:
-        # * missingheads part of common (::commonheads)
-        common = set(pushop.outgoing.common)
-        nm = pushop.repo.changelog.nodemap
-        cheads = [node for node in pushop.revs if nm[node] in common]
-        # and
-        # * commonheads parents on missing
-        revset = unfi.set('%ln and parents(roots(%ln))',
-                         pushop.outgoing.commonheads,
-                         pushop.outgoing.missing)
-        cheads.extend(c.node() for c in revset)
+        cheads = pushop.fallbackheads
     pushop.commonheads = cheads
 
 def _pushsyncphase(pushop):
