@@ -80,6 +80,11 @@ class pushoperation(object):
         # set of all heads common after changeset bundle push
         self.commonheads = None
 
+    @util.propertycache
+    def futureheads(self):
+        """future remote heads if the changeset push succeeds"""
+        return self.outgoing.missingheads
+
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
@@ -310,8 +315,7 @@ def _pushchangeset(pushop):
 def _pushcomputecommonheads(pushop):
     unfi = pushop.repo.unfiltered()
     if pushop.ret:
-        # push succeed, synchronize target of the push
-        cheads = pushop.outgoing.missingheads
+        cheads = pushop.futureheads
     elif pushop.revs is None:
         # All out push fails. synchronize all common
         cheads = pushop.outgoing.commonheads
