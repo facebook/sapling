@@ -191,8 +191,41 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
     _pushbookmark(pushop)
     return pushop.ret
 
+# list of steps to perform discovery before push
+pushdiscoveryorder = []
+
+# Mapping between step name and function
+#
+# This exists to help extensions wrap steps if necessary
+pushdiscoverymapping = {}
+
+def pushdiscovery(stepname):
+    """decorator for function performing discovery before push
+
+    The function is added to the step -> function mapping and appended to the
+    list of steps.  Beware that decorated function will be added in order (this
+    may matter).
+
+    You can only use this decorator for a new step, if you want to wrap a step
+    from an extension, change the pushdiscovery dictionary directly."""
+    def dec(func):
+        assert stepname not in pushdiscoverymapping
+        pushdiscoverymapping[stepname] = func
+        pushdiscoveryorder.append(stepname)
+        return func
+    return dec
+
+
+
 def _pushdiscovery(pushop):
-    # discovery
+    """Run all discovery steps"""
+    for stepname in pushdiscoveryorder:
+        step = pushdiscoverymapping[stepname]
+        step(pushop)
+
+@pushdiscovery('changeset')
+def _pushdiscoverychangeset(pushop):
+    """discover the changeset that need to be pushed"""
     unfi = pushop.repo.unfiltered()
     fci = discovery.findcommonincoming
     commoninc = fci(unfi, pushop.remote, force=pushop.force)
