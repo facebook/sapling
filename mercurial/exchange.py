@@ -366,6 +366,37 @@ def _pushb2ctx(pushop, bundler):
         pushop.ret = cgreplies['changegroup'][0]['return']
     return handlereply
 
+@b2partsgenerator('phase')
+def _pushb2phases(pushop, bundler):
+    """handle phase push through bundle2"""
+    if 'phases' in pushop.stepsdone:
+        return
+    b2caps = bundle2.bundle2caps(pushop.remote)
+    if not 'b2x:pushkey' in b2caps:
+        return
+    pushop.stepsdone.add('phases')
+    part2node = []
+    enc = pushkey.encode
+    for newremotehead in pushop.outdatedphases:
+        part = bundler.newpart('b2x:pushkey')
+        part.addparam('namespace', enc('phases'))
+        part.addparam('key', enc(newremotehead.hex()))
+        part.addparam('old', enc(str(phases.draft)))
+        part.addparam('new', enc(str(phases.public)))
+        part2node.append((part.id, newremotehead))
+    def handlereply(op):
+        for partid, node in part2node:
+            partrep = op.records.getreplies(partid)
+            results = partrep['pushkey']
+            assert len(results) <= 1
+            msg = None
+            if not results:
+                msg = _('server ignored update of %s to public!\n') % node
+            elif not int(results[0]['return']):
+                msg = _('updating %s to public failed!\n') % node
+            if msg is not None:
+                pushop.ui.warn(msg)
+    return handlereply
 
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
@@ -480,13 +511,17 @@ def _pushsyncphase(pushop):
         ### Apply local phase on remote
 
         if pushop.ret:
+            if 'phases' in pushop.stepsdone:
+                # phases already pushed though bundle2
+                return
             outdated = pushop.outdatedphases
         else:
             outdated = pushop.fallbackoutdatedphases
 
+        pushop.stepsdone.add('phases')
+
         # filter heads already turned public by the push
         outdated = [c for c in outdated if c.node() not in pheads]
-
         b2caps = bundle2.bundle2caps(pushop.remote)
         if 'b2x:pushkey' in b2caps:
             # server supports bundle2, let's do a batched push through it
