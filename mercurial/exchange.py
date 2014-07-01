@@ -77,8 +77,6 @@ class pushoperation(object):
         self.remoteheads = None
         # testable as a boolean indicating if any nodes are missing locally.
         self.incoming = None
-        # set of all heads common after changeset bundle push
-        self.commonheads = None
 
     @util.propertycache
     def futureheads(self):
@@ -117,6 +115,13 @@ class pushoperation(object):
         cheads.extend(c.node() for c in revset)
         return cheads
 
+    @property
+    def commonheads(self):
+        """set of all common heads after changeset bundle push"""
+        if self.ret:
+            return self.futureheads
+        else:
+            return self.fallbackheads
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -174,7 +179,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 and pushop.remote.capable('bundle2-exp')):
                 _pushbundle2(pushop)
             _pushchangeset(pushop)
-            _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
         finally:
@@ -344,13 +348,6 @@ def _pushchangeset(pushop):
         # we return an integer indicating remote head count
         # change
         pushop.ret = pushop.remote.addchangegroup(cg, 'push', pushop.repo.url())
-
-def _pushcomputecommonheads(pushop):
-    if pushop.ret:
-        cheads = pushop.futureheads
-    else:
-        cheads = pushop.fallbackheads
-    pushop.commonheads = cheads
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
