@@ -239,7 +239,6 @@ def _pushbundle2(pushop):
     # create reply capability
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
-    extrainfo = _pushbundle2extraparts(pushop, bundler)
     replyhandlers = []
     for partgen in bundle2partsgenerators:
         ret = partgen(pushop, bundler)
@@ -258,21 +257,6 @@ def _pushbundle2(pushop):
         raise util.Abort('missing support for %s' % exc)
     for rephand in replyhandlers:
         rephand(op)
-    _pushbundle2extrareply(pushop, op, extrainfo)
-
-def _pushbundle2extraparts(pushop, bundler):
-    """hook function to let extensions add parts
-
-    Return a dict to let extensions pass data to the reply processing.
-    """
-    return {}
-
-def _pushbundle2extrareply(pushop, op, extrainfo):
-    """hook function to let extensions react to part replies
-
-    The dict from _pushbundle2extrareply is fed to this function.
-    """
-    pass
 
 def _pushchangeset(pushop):
     """Make the actual push of changeset bundle to remote repo"""
