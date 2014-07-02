@@ -212,10 +212,10 @@ def _pushbundle2(pushop):
     # create reply capability
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
+    extrainfo = _pushbundle2extraparts(pushop, bundler)
     # Send known heads to the server for race detection.
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
-    extrainfo = _pushbundle2extraparts(pushop, bundler)
     # add the changegroup bundle
     cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
     cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg.getchunks())
