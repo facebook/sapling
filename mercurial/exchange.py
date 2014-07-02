@@ -131,15 +131,11 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             lock = pushop.remote.lock()
         try:
             _pushdiscovery(pushop)
-            if _pushcheckoutgoing(pushop):
-                pushop.repo.prepushoutgoinghooks(pushop.repo,
-                                                 pushop.remote,
-                                                 pushop.outgoing)
-                if (pushop.repo.ui.configbool('experimental', 'bundle2-exp',
-                                              False)
-                    and pushop.remote.capable('bundle2-exp')):
-                    _pushbundle2(pushop)
-                _pushchangeset(pushop)
+            if (pushop.repo.ui.configbool('experimental', 'bundle2-exp',
+                                          False)
+                and pushop.remote.capable('bundle2-exp')):
+                _pushbundle2(pushop)
+            _pushchangeset(pushop)
             _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
@@ -214,6 +210,12 @@ def _pushb2ctx(pushop, bundler):
         return
     pushop.stepsdone.add('changesets')
     # Send known heads to the server for race detection.
+    pushop.stepsdone.add('changesets')
+    if not _pushcheckoutgoing(pushop):
+        return
+    pushop.repo.prepushoutgoinghooks(pushop.repo,
+                                     pushop.remote,
+                                     pushop.outgoing)
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
     cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
@@ -237,6 +239,9 @@ def _pushbundle2(pushop):
     extrainfo = _pushbundle2extraparts(pushop, bundler)
     # add the changegroup bundle
     cgreplyhandler = _pushb2ctx(pushop, bundler)
+    # do not push if no other parts than the capability
+    if bundler.nbparts <= 1:
+        return
     stream = util.chunkbuffer(bundler.getchunks())
     try:
         reply = pushop.remote.unbundle(stream, ['force'], 'push')
@@ -268,6 +273,11 @@ def _pushchangeset(pushop):
     if 'changesets' in pushop.stepsdone:
         return
     pushop.stepsdone.add('changesets')
+    if not _pushcheckoutgoing(pushop):
+        return
+    pushop.repo.prepushoutgoinghooks(pushop.repo,
+                                     pushop.remote,
+                                     pushop.outgoing)
     outgoing = pushop.outgoing
     unbundle = pushop.remote.capable('unbundle')
     # TODO: get bundlecaps from remote
