@@ -1571,6 +1571,7 @@ class memctx(committablectx):
         files = sorted(set(files))
         self._status = [files, [], [], [], []]
         self._filectxfn = filectxfn
+        self.substate = None
 
         self._extra = extra and extra.copy() or {}
         if self._extra.get('branch', '') == '':
