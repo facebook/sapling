@@ -1556,6 +1556,14 @@ class workingfilectx(committablefilectx):
         # invert comparison to reuse the same code path
         return fctx.cmp(self)
 
+    def remove(self, ignoremissing=False):
+        """wraps unlink for a repo's working directory"""
+        util.unlinkpath(self._repo.wjoin(self._path), ignoremissing)
+
+    def write(self, data, flags):
+        """wraps repo.wwrite"""
+        self._repo.wwrite(self._path, data, flags)
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
