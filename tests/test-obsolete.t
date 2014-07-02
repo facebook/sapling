@@ -907,3 +907,15 @@ Test that a local tag blocks a changeset from being hidden
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
   
+Test that removing a local tag does not cause some commands to fail
+
+  $ hg tag -l -r tip tiptag
+  $ hg tags
+  tiptag                             2:3816541e5485
+  tip                                2:3816541e5485
+  visible                            0:193e9254ce7e
+  $ hg --config extensions.strip= strip -r tip --no-backup
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg tags
+  visible                            0:193e9254ce7e
+  tip                                0:193e9254ce7e

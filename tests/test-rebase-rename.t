@@ -240,3 +240,84 @@ Test rebase across repeating renames:
    1 files changed, 1 insertions(+), 0 deletions(-)
 
   $ cd ..
+
+Verify that copies get preserved (issue4192).
+  $ hg init copy-gets-preserved
+  $ cd copy-gets-preserved
+
+  $ echo a > a
+  $ hg add a
+  $ hg commit --message "File a created"
+  $ hg copy a b
+  $ echo b > b
+  $ hg commit --message "File b created as copy of a and modified"
+  $ hg copy b c
+  $ echo c > c
+  $ hg commit --message "File c created as copy of b and modified"
+  $ hg copy c d
+  $ echo d > d
+  $ hg commit --message "File d created as copy of c and modified"
+
+Note that there are four entries in the log for d
+  $ hg tglog --follow d
+  @  3: 'File d created as copy of c and modified'
+  |
+  o  2: 'File c created as copy of b and modified'
+  |
+  o  1: 'File b created as copy of a and modified'
+  |
+  o  0: 'File a created'
+  
+Update back to before we performed copies, and inject an unrelated change.
+  $ hg update 0
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+
+  $ echo unrelated > unrelated
+  $ hg add unrelated
+  $ hg commit --message "Unrelated file created"
+  created new head
+  $ hg update 4
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Rebase the copies on top of the unrelated change.
+  $ hg rebase --source 1 --dest 4
+  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/*.hg (glob)
+  $ hg update 4
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+There should still be four entries in the log for d
+  $ hg tglog --follow d
+  @  4: 'File d created as copy of c and modified'
+  |
+  o  3: 'File c created as copy of b and modified'
+  |
+  o  2: 'File b created as copy of a and modified'
+  |
+  o  0: 'File a created'
+  
+Same steps as above, but with --collapse on rebase to make sure the
+copy records collapse correctly.
+  $ hg co 1
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ echo more >> unrelated
+  $ hg ci -m 'unrelated commit is unrelated'
+  created new head
+  $ hg rebase -s 2 --dest 5 --collapse
+  merging b and c to c
+  merging c and d to d
+  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/*.hg (glob)
+  $ hg co tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+This should show both revision 3 and 0 since 'd' was transitively a
+copy of 'a'.
+
+  $ hg tglog --follow d
+  @  3: 'Collapsed revision
+  |  * File b created as copy of a and modified
+  |  * File c created as copy of b and modified
+  |  * File d created as copy of c and modified'
+  o  0: 'File a created'
+  
+
+  $ cd ..

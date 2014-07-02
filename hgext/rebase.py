@@ -343,7 +343,16 @@ def rebase(ui, repo, **opts):
                                   'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '', 'rebase')
-                cmdutil.duplicatecopies(repo, rev, target)
+                if collapsef:
+                    cmdutil.duplicatecopies(repo, rev, target)
+                else:
+                    # If we're not using --collapse, we need to
+                    # duplicate copies between the revision we're
+                    # rebasing and its first parent, but *not*
+                    # duplicate any copies that have already been
+                    # performed in the destination.
+                    p1rev = repo[rev].p1().rev()
+                    cmdutil.duplicatecopies(repo, rev, p1rev, skiprev=target)
                 if not collapsef:
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn,
                                           editor=editor)

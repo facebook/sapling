@@ -149,8 +149,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2014-05-30 19:32+0900\n"
-"PO-Revision-Date: 2014-05-30 19:43+0900\n"
+"POT-Creation-Date: 2014-06-30 18:45+0900\n"
+"PO-Revision-Date: 2014-06-30 19:03+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -15297,6 +15297,10 @@ msgid "no definition for alias '%s'\n"
 msgstr "別名コマンド '%s' には実行対象の記述がありません\n"
 
 #, python-format
+msgid "error in definition for alias '%s': %s\n"
+msgstr "別名コマンド '%s' の定義が不正です: %s\n"
+
+#, python-format
 msgid ""
 "error in definition for alias '%s': %s may only be given on the command "
 "line\n"
@@ -25204,8 +25208,8 @@ msgid "default path for subrepository not found"
 msgstr "サブリポジトリの連携先が見つかりません"
 
 #, python-format
-msgid "warning: removing potentially hostile .hg/hgrc in '%s'"
-msgstr "警告: '%s' 中の .hg/hgrc は潜在的な問題となりえるため破棄します"
+msgid "warning: removing potentially hostile 'hgrc' in '%s'\n"
+msgstr "警告: 潜在的な問題となりえる '%s' 中の hgrc ファイルを破棄します\n"
 
 #, python-format
 msgid "unknown subrepo type %s"
