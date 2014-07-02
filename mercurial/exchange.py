@@ -61,6 +61,9 @@ class pushoperation(object):
         self.newbranch = newbranch
         # did a local lock get acquired?
         self.locallocked = None
+        # step already performed
+        # (used to check what steps have been already performed through bundle2)
+        self.stepsdone = set()
         # Integer version of the push result
         # - None means nothing to push
         # - 0 means HTTP error
