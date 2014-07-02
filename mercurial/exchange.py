@@ -203,6 +203,23 @@ def _pushcheckoutgoing(pushop):
                              newbm)
     return True
 
+def _pushb2ctx(pushop, bundler):
+    """handle changegroup push through bundle2
+
+    addchangegroup result is stored in the ``pushop.ret`` attribute.
+    """
+    # Send known heads to the server for race detection.
+    if not pushop.force:
+        bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
+    cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
+    cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg.getchunks())
+    def handlereply(op):
+        """extract addchangroup returns from server reply"""
+        cgreplies = op.records.getreplies(cgpart.id)
+        assert len(cgreplies['changegroup']) == 1
+        pushop.ret = cgreplies['changegroup'][0]['return']
+    return handlereply
+
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
 
@@ -213,12 +230,8 @@ def _pushbundle2(pushop):
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
     extrainfo = _pushbundle2extraparts(pushop, bundler)
-    # Send known heads to the server for race detection.
-    if not pushop.force:
-        bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
     # add the changegroup bundle
-    cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
-    cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg.getchunks())
+    cgreplyhandler = _pushb2ctx(pushop, bundler)
     stream = util.chunkbuffer(bundler.getchunks())
     try:
         reply = pushop.remote.unbundle(stream, ['force'], 'push')
@@ -228,9 +241,7 @@ def _pushbundle2(pushop):
         op = bundle2.processbundle(pushop.repo, reply)
     except error.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
-    cgreplies = op.records.getreplies(cgpart.id)
-    assert len(cgreplies['changegroup']) == 1
-    pushop.ret = cgreplies['changegroup'][0]['return']
+    cgreplyhandler(op)
     _pushbundle2extrareply(pushop, op, extrainfo)
 
 def _pushbundle2extraparts(pushop, bundler):
