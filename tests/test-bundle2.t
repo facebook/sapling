@@ -947,8 +947,7 @@ Setting up
   > from mercurial import exchange
   > from mercurial import extensions
   > 
-  > def _pushbundle2failpart(orig, pushop, bundler):
-  >     extradata = orig(pushop, bundler)
+  > def _pushbundle2failpart(pushop, bundler):
   >     reason = pushop.ui.config('failpush', 'reason', None)
   >     part = None
   >     if reason == 'abort':
@@ -958,14 +957,14 @@ Setting up
   >     if reason == 'race':
   >         # 20 Bytes of crap
   >         bundler.newpart('b2x:check:heads', data='01234567890123456789')
-  >     return extradata
+  >     return lambda op: None
   > 
   > @bundle2.parthandler("test:abort")
   > def handleabort(op, part):
   >     raise util.Abort('Abandon ship!', hint="don't panic")
   > 
   > def uisetup(ui):
-  >     extensions.wrapfunction(exchange, '_pushbundle2extraparts', _pushbundle2failpart)
+  >     exchange.bundle2partsgenerators.insert(0, _pushbundle2failpart)
   > 
   > EOF
 
