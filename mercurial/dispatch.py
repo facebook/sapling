@@ -225,7 +225,8 @@ def _runcatch(req):
                 # it might be anything, for example a string
                 reason = inst.reason
             ui.warn(_("abort: error: %s\n") % reason)
-        elif util.safehasattr(inst, "args") and inst.args[0] == errno.EPIPE:
+        elif (util.safehasattr(inst, "args")
+              and inst.args and inst.args[0] == errno.EPIPE):
             if ui.debugflag:
                 ui.warn(_("broken pipe\n"))
         elif getattr(inst, "strerror", None):
