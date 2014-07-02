@@ -227,6 +227,9 @@ def _pushb2ctx(pushop, bundler):
         pushop.ret = cgreplies['changegroup'][0]['return']
     return handlereply
 
+# list of function that may decide to add parts to an outgoing bundle2
+bundle2partsgenerators = [_pushb2ctx]
+
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
 
@@ -237,9 +240,11 @@ def _pushbundle2(pushop):
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
     extrainfo = _pushbundle2extraparts(pushop, bundler)
-    # add the changegroup bundle
-    cgreplyhandler = _pushb2ctx(pushop, bundler)
-    # do not push if no other parts than the capability
+    replyhandlers = []
+    for partgen in bundle2partsgenerators:
+        ret = partgen(pushop, bundler)
+        replyhandlers.append(ret)
+    # do not push if nothing to push
     if bundler.nbparts <= 1:
         return
     stream = util.chunkbuffer(bundler.getchunks())
@@ -251,7 +256,8 @@ def _pushbundle2(pushop):
         op = bundle2.processbundle(pushop.repo, reply)
     except error.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
-    cgreplyhandler(op)
+    for rephand in replyhandlers:
+        rephand(op)
     _pushbundle2extrareply(pushop, op, extrainfo)
 
 def _pushbundle2extraparts(pushop, bundler):
