@@ -395,6 +395,11 @@ class bundle20(object):
         self._parts = []
         self.capabilities = dict(capabilities)
 
+    @property
+    def nbparts(self):
+        """total number of parts added to the bundler"""
+        return len(self._parts)
+
     # methods used to defines the bundle2 content
     def addparam(self, name, value=None):
         """add a stream level parameter"""
