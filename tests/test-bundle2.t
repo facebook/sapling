@@ -957,7 +957,6 @@ Setting up
   >     if reason == 'race':
   >         # 20 Bytes of crap
   >         bundler.newpart('b2x:check:heads', data='01234567890123456789')
-  >     return lambda op: None
   > 
   > @bundle2.parthandler("test:abort")
   > def handleabort(op, part):

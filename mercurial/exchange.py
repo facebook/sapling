@@ -242,7 +242,8 @@ def _pushbundle2(pushop):
     replyhandlers = []
     for partgen in bundle2partsgenerators:
         ret = partgen(pushop, bundler)
-        replyhandlers.append(ret)
+        if callable(ret):
+            replyhandlers.append(ret)
     # do not push if nothing to push
     if bundler.nbparts <= 1:
         return
