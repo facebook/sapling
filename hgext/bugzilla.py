@@ -232,7 +232,7 @@ are sent to the Bugzilla email address
     bzurl=http://my-project.org/bugzilla
     user=bugmail@my-project.org
     password=plugh
-    version=xmlrpc
+    version=xmlrpc+email
     bzemail=bugzilla@my-project.org
     template=Changeset {node|short} in {root|basename}.
              {hgweb}/{webroot}/rev/{node|short}\\n
