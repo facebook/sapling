@@ -42,6 +42,7 @@ An example server configuration:
 * `fallbackrepo` - the Mercurial repo path to fetch file revisions from. By default it uses the paths.default repo. This setting is useful for cloning from shallow clones and still talking to the central server for file revisions.
 * `includepattern` - a list of regex patterns matching files that should be kept remotely. Defaults to all files.
 * `excludepattern` - a list of regex patterns matching files that should not be kept remotely and should always be downloaded.
+* `pullprefetch` - a revset of commits whose file content should be prefetched after every pull. The most common value for this will be '(bookmark() + head()) & public()'. This is useful in environments where offline work is common, since it will enable offline updating to, rebasing to, and committing on every head and bookmark.
 
 An example client configuration:
 

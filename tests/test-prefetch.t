@@ -51,3 +51,23 @@
   $ hg cat -r 1 y
   y
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+# prefetch on pull when configured
+
+  $ printf "[remotefilelog]\npullprefetch=tip\n" >> .hg/hgrc
+  $ hg strip tip^
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/b292c1e3311f-backup.hg
+
+  $ clearcache
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+  (run 'hg update' to get a working copy)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.09s
+
+  $ hg up tip
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved

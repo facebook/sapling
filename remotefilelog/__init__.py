@@ -567,29 +567,4 @@ def prefetch(ui, repo, *pats, **opts):
     m = scmutil.matchall(repo)
     revs = scmutil.revrange(repo, opts.get('rev'))
 
-    files = set()
-    visited = set()
-    visited.add(nullrev)
-    for rev in sorted(revs):
-        ctx = repo[rev]
-        if pats:
-            m = scmutil.match(ctx, pats, opts)
-
-        mf = repo.manifest
-        mfnode = ctx.manifestnode()
-
-        # Decompressing manifests is expensive.
-        # When possible, only read the deltas.
-        p1, p2 = mf.parentrevs(rev)
-        if p1 in visited and p2 in visited:
-            mfdict = mf.readfast(mfnode)
-        else:
-            mfdict = mf.read(mfnode)
-
-        for path, fnode in mfdict.iteritems():
-            if not pats or m(path):
-                files.add((path, hex(fnode)))
-
-        visited.add(rev)
-
-    repo.fileservice.prefetch(files)
+    repo.prefetch(revs, pats=pats, opts=opts)

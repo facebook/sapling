@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.node import hex, nullid, bin
+from mercurial.node import hex, nullid, nullrev, bin
 from mercurial.i18n import _
-from mercurial import localrepo, context, util, match
+from mercurial import localrepo, context, util, match, scmutil
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
 
@@ -63,7 +63,45 @@ def wraprepo(repo):
             elif hasattr(remote, 'getbundle'):
                 wrapfunction(remote, 'getbundle', localgetbundle)
 
-            return super(shallowrepository, self).pull(remote, *args, **kwargs)
+            result = super(shallowrepository, self).pull(remote, *args, **kwargs)
+
+            # prefetch if it's configured
+            prefetchrevset = self.ui.config('remotefilelog', 'pullprefetch', None)
+            if prefetchrevset:
+                revs = self.revs(prefetchrevset)
+                self.prefetch(revs)
+
+            return result
+
+        def prefetch(self, revs, pats=None, opts=None):
+            """Prefetches all the necessary file revisions for the given revs
+            """
+            files = set()
+            visited = set()
+            visited.add(nullrev)
+            for rev in sorted(revs):
+                ctx = repo[rev]
+                if pats:
+                    m = scmutil.match(ctx, pats, opts)
+
+                mf = repo.manifest
+                mfnode = ctx.manifestnode()
+
+                # Decompressing manifests is expensive.
+                # When possible, only read the deltas.
+                p1, p2 = mf.parentrevs(rev)
+                if p1 in visited and p2 in visited:
+                    mfdict = mf.readfast(mfnode)
+                else:
+                    mfdict = mf.read(mfnode)
+
+                for path, fnode in mfdict.iteritems():
+                    if not pats or m(path):
+                        files.add((path, hex(fnode)))
+
+                visited.add(rev)
+
+            repo.fileservice.prefetch(files)
 
     # Wrap dirstate.status here so we can prefetch all file nodes in
     # the lookup set before localrepo.status uses them.
