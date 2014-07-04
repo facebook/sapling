@@ -1408,7 +1408,7 @@ class GitHandler(object):
             if port:
                 client.port = port
 
-            return transport(host, thin_packs=False, port=port), path
+            return transport(host, port=port), path
 
         httpclient = getattr(client, 'HttpGitClient', None)
 
@@ -1422,14 +1422,14 @@ class GitHandler(object):
                 auth_handler = urllib2.HTTPBasicAuthHandler(url.passwordmgr(self.ui))
                 opener = urllib2.build_opener(auth_handler)
                 try:
-                    return client.HttpGitClient(uri, opener=opener, thin_packs=False), uri
+                    return client.HttpGitClient(uri, opener=opener), uri
                 except TypeError as e:
                     if e.message.find("unexpected keyword argument 'opener'") >= 0:
                         # using a version of dulwich that doesn't support
                         # http(s) authentication -- try without authentication
-                        return client.HttpGitClient(uri, thin_packs=False), uri
+                        return client.HttpGitClient(uri), uri
                     else:
                         raise
 
         # if its not git or git+ssh, try a local url..
-        return client.SubprocessGitClient(thin_packs=False), uri
+        return client.SubprocessGitClient(), uri
