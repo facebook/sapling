@@ -590,7 +590,7 @@ def _pushobsolete(pushop):
     if (obsolete._enabled and repo.obsstore and
         'obsolete' in remote.listkeys('namespaces')):
         rslts = []
-        remotedata = repo.listkeys('obsolete')
+        remotedata = obsolete._pushkeyescape(repo.obsstore)
         for key in sorted(remotedata, reverse=True):
             # reverse sort to ensure we end with dump0
             data = remotedata[key]
