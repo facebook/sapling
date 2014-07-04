@@ -976,9 +976,6 @@ class committablectx(basectx):
     def __nonzero__(self):
         return True
 
-    def __contains__(self, key):
-        return self._repo.dirstate[key] not in "?r"
-
     def _buildflagfunc(self):
         # Create a fallback function for getting file flags when the
         # filesystem doesn't support them
@@ -1178,6 +1175,9 @@ class workingctx(committablectx):
         for f in d:
             if d[f] != 'r':
                 yield f
+
+    def __contains__(self, key):
+        return self._repo.dirstate[key] not in "?r"
 
     @propertycache
     def _parents(self):
