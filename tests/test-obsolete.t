@@ -2,6 +2,8 @@
   > [phases]
   > # public changeset are not obsolete
   > publish=false
+  > [ui]
+  > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -58,11 +60,7 @@ Killing a single changeset without replacement
 
   $ hg up null --quiet # having 0 as parent prevents it to be hidden
   $ hg tip
-  changeset:   -1:000000000000
-  tag:         tip
-  user:        
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  
+  -1:000000000000 (public) [tip ] 
   $ hg up --hidden tip --quiet
   $ cd ..
 
@@ -125,59 +123,22 @@ Refuse pathological nullid successors
 Check that graphlog detect that a changeset is obsolete:
 
   $ hg log -G
-  @  changeset:   5:5601fb93a350
-  |  tag:         tip
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_3_c
+  @  5:5601fb93a350 (draft) [tip ] add new_3_c
   |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
+  o  1:7c3bad9141dc (draft) [ ] add b
   |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (draft) [ ] add a
   
 
 check that heads does not report them
 
   $ hg heads
-  changeset:   5:5601fb93a350
-  tag:         tip
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_3_c
-  
+  5:5601fb93a350 (draft) [tip ] add new_3_c
   $ hg heads --hidden
-  changeset:   5:5601fb93a350
-  tag:         tip
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_3_c
-  
-  changeset:   4:ca819180edb9
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_2_c
-  
-  changeset:   3:cdbce2fbb163
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_c
-  
-  changeset:   2:245bde4270cd
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add original_c
-  
+  5:5601fb93a350 (draft) [tip ] add new_3_c
+  4:ca819180edb9 (draft) [ ] add new_2_c
+  3:cdbce2fbb163 (draft) [ ] add new_c
+  2:245bde4270cd (draft) [ ] add original_c
 
 
 check that summary does not report them
@@ -204,13 +165,7 @@ check that summary does not report them
 check that various commands work well with filtering
 
   $ hg tip
-  changeset:   5:5601fb93a350
-  tag:         tip
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_3_c
-  
+  5:5601fb93a350 (draft) [tip ] add new_3_c
   $ hg log -r 6
   abort: unknown revision '6'!
   [255]
@@ -222,27 +177,13 @@ Check that public changeset are not accounted as obsolete:
 
   $ hg --hidden phase --public 2
   $ hg log -G
-  @  changeset:   5:5601fb93a350
-  |  tag:         tip
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_3_c
+  @  5:5601fb93a350 (draft) [tip ] add new_3_c
   |
-  | o  changeset:   2:245bde4270cd
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add original_c
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
   |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (public) [ ] add a
   
 
 And that bumped changeset are detected
@@ -253,13 +194,7 @@ note that the bumped changeset (5:5601fb93a350) is not a direct successor of
 the public changeset
 
   $ hg log --hidden -r 'bumped()'
-  changeset:   5:5601fb93a350
-  tag:         tip
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_3_c
-  
+  5:5601fb93a350 (draft) [tip ] add new_3_c
 
 And that we can't push bumped changeset
 
@@ -289,27 +224,13 @@ We need to create a clone of 5 and add a special marker with a flag
   $ hg debugobsolete -d '1338 0' --flags 1 `getid new_3_c` `getid n3w_3_c`
   $ hg log -r 'bumped()'
   $ hg log -G
-  @  changeset:   6:6f9641995072
-  |  tag:         tip
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add n3w_3_c
+  @  6:6f9641995072 (draft) [tip ] add n3w_3_c
   |
-  | o  changeset:   2:245bde4270cd
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add original_c
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
   |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (public) [ ] add a
   
 
 
@@ -328,28 +249,10 @@ Simple incoming test
   $ cd tmpc
   $ hg incoming ../tmpb
   comparing with ../tmpb
-  changeset:   0:1f0dee641bb7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add a
-  
-  changeset:   1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add b
-  
-  changeset:   2:245bde4270cd
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add original_c
-  
-  changeset:   6:6f9641995072
-  tag:         tip
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add n3w_3_c
-  
+  0:1f0dee641bb7 (public) [ ] add a
+  1:7c3bad9141dc (public) [ ] add b
+  2:245bde4270cd (public) [ ] add original_c
+  6:6f9641995072 (draft) [tip ] add n3w_3_c
 
 Try to pull markers
 (extinct changeset are excluded but marker are pushed)
@@ -426,45 +329,19 @@ clone support
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R clone-dest log -G --hidden
-  @  changeset:   6:6f9641995072
-  |  tag:         tip
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add n3w_3_c
+  @  6:6f9641995072 (draft) [tip ] add n3w_3_c
   |
-  | x  changeset:   5:5601fb93a350
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_3_c
+  | x  5:5601fb93a350 (draft) [ ] add new_3_c
+  |/
+  | x  4:ca819180edb9 (draft) [ ] add new_2_c
+  |/
+  | x  3:cdbce2fbb163 (draft) [ ] add new_c
+  |/
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
   |
-  | x  changeset:   4:ca819180edb9
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_2_c
-  |
-  | x  changeset:   3:cdbce2fbb163
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_c
-  |
-  | o  changeset:   2:245bde4270cd
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add original_c
-  |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (public) [ ] add a
   
   $ hg -R clone-dest debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C {'date': '56 12', 'user': 'test'}
@@ -519,27 +396,13 @@ detect outgoing obsolete and unstable
 
 
   $ hg log -G
-  o  changeset:   3:6f9641995072
-  |  tag:         tip
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add n3w_3_c
+  o  3:6f9641995072 (draft) [tip ] add n3w_3_c
   |
-  | o  changeset:   2:245bde4270cd
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add original_c
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
   |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (public) [ ] add a
   
   $ hg up 'desc("n3w_3_c")'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -547,38 +410,17 @@ detect outgoing obsolete and unstable
   $ mkcommit original_e
   $ hg debugobsolete `getid original_d` -d '0 0'
   $ hg log -r 'obsolete()'
-  changeset:   4:94b33453f93b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add original_d
-  
+  4:94b33453f93b (draft) [ ] add original_d
   $ hg log -G -r '::unstable()'
-  @  changeset:   5:cda648ca50f5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add original_e
+  @  5:cda648ca50f5 (draft) [tip ] add original_e
   |
-  x  changeset:   4:94b33453f93b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add original_d
+  x  4:94b33453f93b (draft) [ ] add original_d
   |
-  o  changeset:   3:6f9641995072
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add n3w_3_c
+  o  3:6f9641995072 (draft) [ ] add n3w_3_c
   |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
+  o  1:7c3bad9141dc (public) [ ] add b
   |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (public) [ ] add a
   
 
 refuse to push obsolete changeset
@@ -607,38 +449,12 @@ Don't try to push extinct changeset
   $ hg out  ../tmpf
   comparing with ../tmpf
   searching for changes
-  changeset:   0:1f0dee641bb7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add a
-  
-  changeset:   1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add b
-  
-  changeset:   2:245bde4270cd
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add original_c
-  
-  changeset:   3:6f9641995072
-  parent:      1:7c3bad9141dc
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add n3w_3_c
-  
-  changeset:   4:94b33453f93b
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add original_d
-  
-  changeset:   5:cda648ca50f5
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add original_e
-  
+  0:1f0dee641bb7 (public) [ ] add a
+  1:7c3bad9141dc (public) [ ] add b
+  2:245bde4270cd (public) [ ] add original_c
+  3:6f9641995072 (draft) [ ] add n3w_3_c
+  4:94b33453f93b (draft) [ ] add original_d
+  5:cda648ca50f5 (draft) [tip ] add original_e
   $ hg push ../tmpf -f # -f because be push unstable too
   pushing to ../tmpf
   searching for changes
@@ -658,37 +474,17 @@ no warning displayed
 Do not warn about new head when the new head is a successors of a remote one
 
   $ hg log -G
-  @  changeset:   5:cda648ca50f5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add original_e
+  @  5:cda648ca50f5 (draft) [tip ] add original_e
   |
-  x  changeset:   4:94b33453f93b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add original_d
+  x  4:94b33453f93b (draft) [ ] add original_d
   |
-  o  changeset:   3:6f9641995072
-  |  parent:      1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add n3w_3_c
+  o  3:6f9641995072 (draft) [ ] add n3w_3_c
   |
-  | o  changeset:   2:245bde4270cd
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add original_c
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
   |
-  o  changeset:   1:7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
-  o  changeset:   0:1f0dee641bb7
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add a
+  o  0:1f0dee641bb7 (public) [ ] add a
   
   $ hg up -q 'desc(n3w_3_c)'
   $ mkcommit obsolete_e
@@ -697,13 +493,7 @@ Do not warn about new head when the new head is a successors of a remote one
   $ hg outgoing ../tmpf # parasite hg outgoing testin
   comparing with ../tmpf
   searching for changes
-  changeset:   6:3de5eca88c00
-  tag:         tip
-  parent:      3:6f9641995072
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add obsolete_e
-  
+  6:3de5eca88c00 (draft) [tip ] add obsolete_e
   $ hg push ../tmpf
   pushing to ../tmpf
   searching for changes
@@ -773,13 +563,7 @@ Checking _enable=False warning if obsolete marker exists
   $ echo "obs=!" >> $HGRCPATH
   $ hg log -r tip
   obsolete feature not enabled but 68 markers found!
-  changeset:   68:c15e9edfca13
-  tag:         tip
-  parent:      7:50c51b361e60
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add celestine
-  
+  68:c15e9edfca13 (draft) [tip ] add celestine
 
 reenable for later test
 
@@ -805,40 +589,19 @@ This test issue 3805
   $ hg ci --amend
   $ cd ../other-issue3805
   $ hg log -G
-  @  changeset:   0:193e9254ce7e
-     tag:         tip
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     A
+  @  0:193e9254ce7e (draft) [tip ] A
   
   $ hg log -G -R ../repo-issue3805
-  @  changeset:   2:3816541e5485
-     tag:         tip
-     parent:      -1:000000000000
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     A
+  @  2:3816541e5485 (draft) [tip ] A
   
   $ hg incoming
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
-  changeset:   2:3816541e5485
-  tag:         tip
-  parent:      -1:000000000000
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     A
-  
+  2:3816541e5485 (draft) [tip ] A
   $ hg incoming --bundle ../issue3805.hg
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
-  changeset:   2:3816541e5485
-  tag:         tip
-  parent:      -1:000000000000
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     A
-  
+  2:3816541e5485 (draft) [tip ] A
   $ hg outgoing
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
@@ -853,13 +616,7 @@ This test issue 3805
   $ hg incoming http://localhost:$HGPORT
   comparing with http://localhost:$HGPORT/
   searching for changes
-  changeset:   1:3816541e5485
-  tag:         tip
-  parent:      -1:000000000000
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     A
-  
+  1:3816541e5485 (public) [tip ] A
   $ hg outgoing http://localhost:$HGPORT
   comparing with http://localhost:$HGPORT/
   searching for changes
@@ -894,18 +651,9 @@ Test that a local tag blocks a changeset from being hidden
 
   $ hg tag -l visible -r 0 --hidden
   $ hg log -G
-  @  changeset:   2:3816541e5485
-     tag:         tip
-     parent:      -1:000000000000
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     A
+  @  2:3816541e5485 (draft) [tip ] A
   
-  x  changeset:   0:193e9254ce7e
-     tag:         visible
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     A
+  x  0:193e9254ce7e (draft) [visible ] A
   
 Test that removing a local tag does not cause some commands to fail
 
