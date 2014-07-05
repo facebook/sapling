@@ -287,6 +287,9 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     label = ('%s:' % label).ljust(pad + 1)
     mark = '%s %s' % (label, templater.stringify(templateresult))
 
+    if mark:
+        mark = mark.splitlines()[0] # split for safety
+
     # The <<< marks add 8 to the length, and '...' adds three, so max
     # length of the actual marker is 69.
     maxlength = 80 - 8 - 3

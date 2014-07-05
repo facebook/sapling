@@ -52,6 +52,26 @@ Verify custom conflict markers
   something
   >>>>>>> other: test 1
 
+Verify line splitting of custom conflict marker which causes multiple lines
+
+  $ hg up -q --clean .
+  $ cat >> .hg/hgrc <<EOF
+  > [ui]
+  > mergemarkertemplate={author} {rev}\nfoo\nbar\nbaz
+  > EOF
+
+  $ hg -q merge 1
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+
+  $ cat a
+  <<<<<<< local: test 2
+  something else
+  =======
+  something
+  >>>>>>> other: test 1
+
 Verify basic conflict markers
 
   $ hg up -q --clean .
