@@ -165,6 +165,76 @@ def getcols(s, start, c):
         if colwidth(t) == c:
             return t
 
+def trim(s, width, ellipsis=''):
+    """Trim string 's' to at most 'width' columns (including 'ellipsis').
+
+    >>> ellipsis = '+++'
+    >>> from mercurial import encoding
+    >>> encoding.encoding = 'utf-8'
+    >>> t= '1234567890'
+    >>> print trim(t, 12, ellipsis=ellipsis)
+    1234567890
+    >>> print trim(t, 10, ellipsis=ellipsis)
+    1234567890
+    >>> print trim(t, 8, ellipsis=ellipsis)
+    12345+++
+    >>> print trim(t, 8)
+    12345678
+    >>> print trim(t, 3, ellipsis=ellipsis)
+    +++
+    >>> print trim(t, 1, ellipsis=ellipsis)
+    +
+    >>> u = u'\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
+    >>> t = u.encode(encoding.encoding)
+    >>> print trim(t, 12, ellipsis=ellipsis)
+    \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
+    >>> print trim(t, 10, ellipsis=ellipsis)
+    \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
+    >>> print trim(t, 8, ellipsis=ellipsis)
+    \xe3\x81\x82\xe3\x81\x84+++
+    >>> print trim(t, 5)
+    \xe3\x81\x82\xe3\x81\x84
+    >>> print trim(t, 4, ellipsis=ellipsis)
+    +++
+    >>> t = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa' # invalid byte sequence
+    >>> print trim(t, 12, ellipsis=ellipsis)
+    \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
+    >>> print trim(t, 10, ellipsis=ellipsis)
+    \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
+    >>> print trim(t, 8, ellipsis=ellipsis)
+    \x11\x22\x33\x44\x55+++
+    >>> print trim(t, 8)
+    \x11\x22\x33\x44\x55\x66\x77\x88
+    >>> print trim(t, 3, ellipsis=ellipsis)
+    +++
+    >>> print trim(t, 1, ellipsis=ellipsis)
+    +
+    """
+    try:
+        u = s.decode(encoding)
+    except UnicodeDecodeError:
+        if len(s) <= width: # trimming is not needed
+            return s
+        width -= len(ellipsis)
+        if width <= 0: # no enough room even for ellipsis
+            return ellipsis[:width + len(ellipsis)]
+        return s[:width] + ellipsis
+
+    if ucolwidth(u) <= width: # trimming is not needed
+        return s
+
+    width -= len(ellipsis)
+    if width <= 0: # no enough room even for ellipsis
+        return ellipsis[:width + len(ellipsis)]
+
+    uslice = lambda i: u[:-i]
+    concat = lambda s: s + ellipsis
+    for i in xrange(1, len(u)):
+        usub = uslice(i)
+        if ucolwidth(usub) <= width:
+            return concat(usub.encode(encoding))
+    return ellipsis # no enough room for multi-column characters
+
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
