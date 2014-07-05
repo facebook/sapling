@@ -41,6 +41,8 @@ import time
 from mercurial.i18n import _
 testedwith = 'internal'
 
+from mercurial import encoding
+
 def spacejoin(*args):
     return ' '.join(s for s in args if s)
 
@@ -180,7 +182,7 @@ class progbar(object):
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
-        sys.stderr.write('\r' + out[:termwidth])
+        sys.stderr.write('\r' + encoding.trim(out, termwidth))
         self.lasttopic = topic
         sys.stderr.flush()
 

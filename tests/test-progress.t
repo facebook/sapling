@@ -33,7 +33,7 @@
   >     loops = abs(loops)
   > 
   >     for i in range(loops):
-  >         ui.progress('loop', i, 'loop.%d' % i, 'loopnum', total)
+  >         ui.progress(topiclabel, i, 'loop.%d' % i, 'loopnum', total)
   >         if opts.get('parallel'):
   >             ui.progress('other', i, 'other.%d' % i, 'othernum', total)
   >         if nested:
@@ -45,7 +45,9 @@
   >                   'nested', j, 'nested.%d' % j, 'nestnum', nested_steps)
   >             ui.progress(
   >               'nested', None, 'nested.done', 'nestnum', nested_steps)
-  >     ui.progress('loop', None, 'loop.done', 'loopnum', total)
+  >     ui.progress(topiclabel, None, 'loop.done', 'loopnum', total)
+  > 
+  > topiclabel = 'loop'
   > 
   > EOF
 
@@ -238,3 +240,38 @@ Time estimates should not fail when there's no end point:
   loop [ <=>                                              ] 2\r (no-eol) (esc)
   loop [  <=>                                             ] 3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+
+test line trimming by '[progress] width', when progress topic contains
+multi-byte characters, of which length of byte sequence and columns in
+display are different from each other.
+
+  $ cp $HGRCPATH.orig $HGRCPATH
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > progress=
+  > loop=`pwd`/loop.py
+  > [progress]
+  > assume-tty = 1
+  > delay = 0
+  > refresh = 0
+  > EOF
+
+  $ rm -f loop.pyc
+  $ cat >> loop.py <<EOF
+  > # use non-ascii characters as topic label of progress
+  > # 2 x 4 = 8 columns, but 3 x 4 = 12 bytes
+  > topiclabel = u'\u3042\u3044\u3046\u3048'.encode('utf-8')
+  > EOF
+
+  $ cat >> $HGRCPATH <<EOF
+  > [progress]
+  > format = topic number
+  > width= 12
+  > EOF
+
+  $ hg --encoding utf-8 -y loop --total 3 3
+  \r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 0/3\r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 1/3\r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 2/3\r (no-eol) (esc)
+              \r (no-eol) (esc)
