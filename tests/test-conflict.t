@@ -72,9 +72,42 @@ Verify line splitting of custom conflict marker which causes multiple lines
   something
   >>>>>>> other: test 1
 
-Verify basic conflict markers
+Verify line trimming of custom conflict marker using multi-byte characters
 
   $ hg up -q --clean .
+  $ python <<EOF
+  > fp = open('logfile', 'w')
+  > fp.write('12345678901234567890123456789012345678901234567890' +
+  >          '1234567890') # there are 5 more columns for 80 columns
+  > 
+  > # 2 x 4 = 8 columns, but 3 x 4 = 12 bytes
+  > fp.write(u'\u3042\u3044\u3046\u3048'.encode('utf-8'))
+  > 
+  > fp.close()
+  > EOF
+  $ hg add logfile
+  $ hg --encoding utf-8 commit --logfile logfile
+
+  $ cat >> .hg/hgrc <<EOF
+  > [ui]
+  > mergemarkertemplate={desc|firstline}
+  > EOF
+
+  $ hg -q --encoding utf-8 merge 1
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+
+  $ cat a
+  <<<<<<< local: 123456789012345678901234567890123456789012345678901234567890\xe3\x81\x82... (esc)
+  something else
+  =======
+  something
+  >>>>>>> other: branch1
+
+Verify basic conflict markers
+
+  $ hg up -q --clean 2
   $ printf "\n[ui]\nmergemarkers=basic\n" >> .hg/hgrc
 
   $ hg merge 1

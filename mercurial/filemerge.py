@@ -290,12 +290,8 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     if mark:
         mark = mark.splitlines()[0] # split for safety
 
-    # The <<< marks add 8 to the length, and '...' adds three, so max
-    # length of the actual marker is 69.
-    maxlength = 80 - 8 - 3
-    if len(mark) > maxlength:
-        mark = mark[:maxlength] + '...'
-    return mark
+    # 8 for the prefix of conflict marker lines (e.g. '<<<<<<< ')
+    return util.ellipsis(mark, 80 - 8)
 
 _defaultconflictmarker = ('{node|short} ' +
     '{ifeq(tags, "tip", "", "{tags} ")}' +
