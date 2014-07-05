@@ -7,6 +7,7 @@ Create a repository:
   defaults.tag=-d "0 0"
   ui.slash=True
   ui.interactive=False
+  ui.mergemarkers=detailed
   $ hg init t
   $ cd t
 

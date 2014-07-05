@@ -1215,11 +1215,11 @@ User interface controls.
     For configuring merge tools see the ``[merge-tools]`` section.
 
 ``mergemarkers``
-    Sets the merge conflict marker label styling. The default ``detailed``
+    Sets the merge conflict marker label styling. The ``detailed``
     style uses the ``mergemarkertemplate`` setting to style the labels.
     The ``basic`` style just uses 'local' and 'other' as the marker label.
     One of ``basic`` or ``detailed``.
-    Default is ``detailed``.
+    Default is ``basic``.
 
 ``mergemarkertemplate``
     The template used to print the commit description next to each conflict
@@ -1227,6 +1227,13 @@ User interface controls.
     format.
     Defaults to showing the hash, tags, branches, bookmarks, author, and
     the first line of the commit description.
+    You have to pay attention to encodings of managed files, if you
+    use non-ASCII characters in tags, branches, bookmarks, author
+    and/or commit descriptions. At template expansion, non-ASCII
+    characters use the encoding specified by ``--encoding`` global
+    option, ``HGENCODING`` or other locale setting environment
+    variables. The difference of encoding between merged file and
+    conflict markers causes serious problem.
 
 ``portablefilenames``
     Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.

@@ -80,6 +80,7 @@ defaults.shelve=--date "0 0"
 defaults.tag=-d "0 0"
 ui.slash=True
 ui.interactive=False
+ui.mergemarkers=detailed
 ui.foo=bar
 ui.nontty=true
  runcommand init foo
@@ -90,6 +91,7 @@ defaults.shelve=--date "0 0"
 defaults.tag=-d "0 0"
 ui.slash=True
 ui.interactive=False
+ui.mergemarkers=detailed
 ui.nontty=true
 
 testing hookoutput:

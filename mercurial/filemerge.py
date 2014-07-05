@@ -376,7 +376,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
 
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
-    markerstyle = ui.config('ui', 'mergemarkers', 'detailed')
+    markerstyle = ui.config('ui', 'mergemarkers', 'basic')
     if markerstyle == 'basic':
         formattedlabels = _defaultconflictlabels
     else:
