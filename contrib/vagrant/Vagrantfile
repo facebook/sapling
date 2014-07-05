@@ -1,0 +1,14 @@
+# -*- mode: ruby -*-
+
+Vagrant.configure('2') do |config|
+  # Debian 7.4 32-bit i386 without configuration management software
+  config.vm.box = "puppetlabs/debian-7.4-32-nocm"
+  #config.vm.box = "pnd/debian-wheezy32-basebox"
+  config.vm.hostname = "tests"
+
+  config.vm.define "tests" do |conf|
+    conf.vm.provision :file, source: "run-tests.sh", destination:"run-tests.sh"
+    conf.vm.provision :shell, path: "provision.sh"
+    conf.vm.synced_folder "../..", "/hgshared"
+  end
+end

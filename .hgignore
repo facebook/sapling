@@ -25,6 +25,7 @@ tests/*.err
 tests/htmlcov
 build
 contrib/hgsh/hgsh
+contrib/vagrant/.vagrant
 dist
 packages
 doc/common.txt
