@@ -33,7 +33,7 @@
   >     loops = abs(loops)
   > 
   >     for i in range(loops):
-  >         ui.progress(topiclabel, i, 'loop.%d' % i, 'loopnum', total)
+  >         ui.progress(topiclabel, i, getloopitem(i), 'loopnum', total)
   >         if opts.get('parallel'):
   >             ui.progress('other', i, 'other.%d' % i, 'othernum', total)
   >         if nested:
@@ -48,6 +48,8 @@
   >     ui.progress(topiclabel, None, 'loop.done', 'loopnum', total)
   > 
   > topiclabel = 'loop'
+  > def getloopitem(i):
+  >     return 'loop.%d' % i
   > 
   > EOF
 
@@ -292,4 +294,43 @@ are different from each other.
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [         ]\r (no-eol) (esc)
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [==>      ]\r (no-eol) (esc)
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [=====>   ]\r (no-eol) (esc)
+                       \r (no-eol) (esc)
+
+test triming progress items, when they contain multi-byte characters,
+of which length of byte sequence and columns in display are different
+from each other.
+
+  $ rm -f loop.pyc
+  $ cat >> loop.py <<EOF
+  > # use non-ascii characters as loop items of progress
+  > loopitems = [
+  >     u'\u3042\u3044\u3046'.encode('utf-8'), # 2 x 3 = 6 columns
+  >     u'\u3042\u3044\u3046\u3048'.encode('utf-8'), # 2 x 4 = 8 columns
+  > ]
+  > def getloopitem(i):
+  >     return loopitems[i % len(loopitems)]
+  > EOF
+
+  $ cat >> $HGRCPATH <<EOF
+  > [progress]
+  > # trim at tail side
+  > format = item+6
+  > EOF
+
+  $ hg --encoding utf-8 -y loop --total 2 2
+  \r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\r (no-eol) (esc)
+                       \r (no-eol) (esc)
+
+  $ cat >> $HGRCPATH <<EOF
+  > [progress]
+  > # trim at left side
+  > format = item-6
+  > EOF
+
+  $ hg --encoding utf-8 -y loop --total 2 2
+  \r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\r (no-eol) (esc)
+  \xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\r (no-eol) (esc)
                        \r (no-eol) (esc)

@@ -139,9 +139,9 @@ class progbar(object):
                 else:
                     wid = 20
                 if slice == 'end':
-                    add = item[-wid:]
+                    add = encoding.trim(item, wid, leftside=True)
                 else:
-                    add = item[:wid]
+                    add = encoding.trim(item, wid)
                 add += (wid - len(add)) * ' '
             elif indicator == 'bar':
                 add = ''
