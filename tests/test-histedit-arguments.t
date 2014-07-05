@@ -227,3 +227,35 @@ short hash. This tests issue3893.
   $ hg histedit -r 'heads(all())'
   abort: The specified revisions must have exactly one common root
   [255]
+
+Test that trimming description using multi-byte characters
+--------------------------------------------------------------------
+
+  $ python <<EOF
+  > fp = open('logfile', 'w')
+  > fp.write('12345678901234567890123456789012345678901234567890' +
+  >          '12345') # there are 5 more columns for 80 columns
+  > 
+  > # 2 x 4 = 8 columns, but 3 x 4 = 12 bytes
+  > fp.write(u'\u3042\u3044\u3046\u3048'.encode('utf-8'))
+  > 
+  > fp.close()
+  > EOF
+  $ echo xx >> x
+  $ hg --encoding utf-8 commit --logfile logfile
+
+  $ HGEDITOR=cat hg --encoding utf-8 histedit tip
+  pick 3d3ea1f3a10b 5 1234567890123456789012345678901234567890123456789012345\xe3\x81\x82... (esc)
+  
+  # Edit history between 3d3ea1f3a10b and 3d3ea1f3a10b
+  #
+  # Commits are listed from least to most recent
+  #
+  # Commands:
+  #  p, pick = use commit
+  #  e, edit = use commit, but stop for amending
+  #  f, fold = use commit, but combine it with the one above
+  #  d, drop = remove commit from history
+  #  m, mess = edit message without changing commit content
+  #
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved

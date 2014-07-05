@@ -760,7 +760,8 @@ def makedesc(c):
     if c.description():
         summary = c.description().splitlines()[0]
     line = 'pick %s %d %s' % (c, c.rev(), summary)
-    return line[:80]  # trim to 80 chars so it's not stupidly wide in my editor
+    # trim to 80 columns so it's not stupidly wide in my editor
+    return util.ellipsis(line, 80)
 
 def verifyrules(rules, repo, ctxs):
     """Verify that there exists exactly one edit rule per given changeset.
