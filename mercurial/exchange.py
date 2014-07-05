@@ -81,6 +81,8 @@ class pushoperation(object):
         self.outdatedphases = None
         # phases changes that must be pushed if changeset push fails
         self.fallbackoutdatedphases = None
+        # outgoing obsmarkers
+        self.outobsmarkers = repo.obsstore
 
     @util.propertycache
     def futureheads(self):
@@ -590,7 +592,7 @@ def _pushobsolete(pushop):
     if (obsolete._enabled and repo.obsstore and
         'obsolete' in remote.listkeys('namespaces')):
         rslts = []
-        remotedata = obsolete._pushkeyescape(repo.obsstore)
+        remotedata = obsolete._pushkeyescape(pushop.outobsmarkers)
         for key in sorted(remotedata, reverse=True):
             # reverse sort to ensure we end with dump0
             data = remotedata[key]
