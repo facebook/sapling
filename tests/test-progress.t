@@ -275,3 +275,21 @@ display are different from each other.
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 1/3\r (no-eol) (esc)
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 2/3\r (no-eol) (esc)
               \r (no-eol) (esc)
+
+test calculation of bar width, when progress topic contains multi-byte
+characters, of which length of byte sequence and columns in display
+are different from each other.
+
+  $ cat >> $HGRCPATH <<EOF
+  > [progress]
+  > format = topic bar
+  > width= 21
+  > # progwidth should be 9 (= 21 - (8+1) - 3)
+  > EOF
+
+  $ hg --encoding utf-8 -y loop --total 3 3
+  \r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [         ]\r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [==>      ]\r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88 [=====>   ]\r (no-eol) (esc)
+                       \r (no-eol) (esc)

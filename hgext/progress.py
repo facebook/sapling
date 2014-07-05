@@ -159,9 +159,9 @@ class progbar(object):
         if needprogress:
             used = 0
             if head:
-                used += len(head) + 1
+                used += encoding.colwidth(head) + 1
             if tail:
-                used += len(tail) + 1
+                used += encoding.colwidth(tail) + 1
             progwidth = termwidth - used - 3
             if total and pos <= total:
                 amt = pos * progwidth // total
