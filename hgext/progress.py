@@ -142,7 +142,7 @@ class progbar(object):
                     add = encoding.trim(item, wid, leftside=True)
                 else:
                     add = encoding.trim(item, wid)
-                add += (wid - len(add)) * ' '
+                add += (wid - encoding.colwidth(add)) * ' '
             elif indicator == 'bar':
                 add = ''
                 needprogress = True

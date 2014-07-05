@@ -304,6 +304,7 @@ from each other.
   $ cat >> loop.py <<EOF
   > # use non-ascii characters as loop items of progress
   > loopitems = [
+  >     u'\u3042\u3044'.encode('utf-8'), # 2 x 2 = 4 columns
   >     u'\u3042\u3044\u3046'.encode('utf-8'), # 2 x 3 = 6 columns
   >     u'\u3042\u3044\u3046\u3048'.encode('utf-8'), # 2 x 4 = 8 columns
   > ]
@@ -317,8 +318,9 @@ from each other.
   > format = item+6
   > EOF
 
-  $ hg --encoding utf-8 -y loop --total 2 2
+  $ hg --encoding utf-8 -y loop --total 3 3
   \r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84  \r (no-eol) (esc)
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\r (no-eol) (esc)
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\r (no-eol) (esc)
                        \r (no-eol) (esc)
@@ -329,8 +331,9 @@ from each other.
   > format = item-6
   > EOF
 
-  $ hg --encoding utf-8 -y loop --total 2 2
+  $ hg --encoding utf-8 -y loop --total 3 3
   \r (no-eol) (esc)
+  \xe3\x81\x82\xe3\x81\x84  \r (no-eol) (esc)
   \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\r (no-eol) (esc)
   \xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\r (no-eol) (esc)
                        \r (no-eol) (esc)
