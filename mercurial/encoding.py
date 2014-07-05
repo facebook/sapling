@@ -165,8 +165,11 @@ def getcols(s, start, c):
         if colwidth(t) == c:
             return t
 
-def trim(s, width, ellipsis=''):
+def trim(s, width, ellipsis='', leftside=False):
     """Trim string 's' to at most 'width' columns (including 'ellipsis').
+
+    If 'leftside' is True, left side of string 's' is trimmed.
+    'ellipsis' is always placed at trimmed side.
 
     >>> ellipsis = '+++'
     >>> from mercurial import encoding
@@ -178,8 +181,12 @@ def trim(s, width, ellipsis=''):
     1234567890
     >>> print trim(t, 8, ellipsis=ellipsis)
     12345+++
+    >>> print trim(t, 8, ellipsis=ellipsis, leftside=True)
+    +++67890
     >>> print trim(t, 8)
     12345678
+    >>> print trim(t, 8, leftside=True)
+    34567890
     >>> print trim(t, 3, ellipsis=ellipsis)
     +++
     >>> print trim(t, 1, ellipsis=ellipsis)
@@ -192,9 +199,15 @@ def trim(s, width, ellipsis=''):
     \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
     >>> print trim(t, 8, ellipsis=ellipsis)
     \xe3\x81\x82\xe3\x81\x84+++
+    >>> print trim(t, 8, ellipsis=ellipsis, leftside=True)
+    +++\xe3\x81\x88\xe3\x81\x8a
     >>> print trim(t, 5)
     \xe3\x81\x82\xe3\x81\x84
+    >>> print trim(t, 5, leftside=True)
+    \xe3\x81\x88\xe3\x81\x8a
     >>> print trim(t, 4, ellipsis=ellipsis)
+    +++
+    >>> print trim(t, 4, ellipsis=ellipsis, leftside=True)
     +++
     >>> t = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa' # invalid byte sequence
     >>> print trim(t, 12, ellipsis=ellipsis)
@@ -203,8 +216,12 @@ def trim(s, width, ellipsis=''):
     \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
     >>> print trim(t, 8, ellipsis=ellipsis)
     \x11\x22\x33\x44\x55+++
+    >>> print trim(t, 8, ellipsis=ellipsis, leftside=True)
+    +++\x66\x77\x88\x99\xaa
     >>> print trim(t, 8)
     \x11\x22\x33\x44\x55\x66\x77\x88
+    >>> print trim(t, 8, leftside=True)
+    \x33\x44\x55\x66\x77\x88\x99\xaa
     >>> print trim(t, 3, ellipsis=ellipsis)
     +++
     >>> print trim(t, 1, ellipsis=ellipsis)
@@ -218,6 +235,8 @@ def trim(s, width, ellipsis=''):
         width -= len(ellipsis)
         if width <= 0: # no enough room even for ellipsis
             return ellipsis[:width + len(ellipsis)]
+        if leftside:
+            return ellipsis + s[-width:]
         return s[:width] + ellipsis
 
     if ucolwidth(u) <= width: # trimming is not needed
@@ -227,8 +246,12 @@ def trim(s, width, ellipsis=''):
     if width <= 0: # no enough room even for ellipsis
         return ellipsis[:width + len(ellipsis)]
 
-    uslice = lambda i: u[:-i]
-    concat = lambda s: s + ellipsis
+    if leftside:
+        uslice = lambda i: u[i:]
+        concat = lambda s: ellipsis + s
+    else:
+        uslice = lambda i: u[:-i]
+        concat = lambda s: s + ellipsis
     for i in xrange(1, len(u)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
