@@ -82,7 +82,7 @@ class pushoperation(object):
         # phases changes that must be pushed if changeset push fails
         self.fallbackoutdatedphases = None
         # outgoing obsmarkers
-        self.outobsmarkers = repo.obsstore
+        self.outobsmarkers = set()
 
     @util.propertycache
     def futureheads(self):
@@ -277,6 +277,10 @@ def _pushdiscoveryphase(pushop):
         future = list(unfi.set(revset, fdroots, pushop.futureheads))
     pushop.outdatedphases = future
     pushop.fallbackoutdatedphases = fallback
+
+@pushdiscovery('obsmarker')
+def _pushdiscoveryobsmarkers(pushop):
+    pushop.outobsmarkers = pushop.repo.obsstore
 
 def _pushcheckoutgoing(pushop):
     outgoing = pushop.outgoing
