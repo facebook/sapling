@@ -159,7 +159,7 @@ typedef struct {
 	int mtime;
 } dirstateTupleObject;
 
-PyTypeObject dirstateTupleType;
+extern PyTypeObject dirstateTupleType;
 #define dirstate_tuple_check(op) (Py_TYPE(op) == &dirstateTupleType)
 
 static inline uint32_t getbe32(const char *c)
