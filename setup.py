@@ -534,7 +534,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     # so Mercurial can continue to compile in the meantime.
     if xcode51:
         cflags = get_config_var('CFLAGS')
-        if re.search(r'-mno-fused-madd\b', cflags) is not None:
+        if cflags and re.search(r'-mno-fused-madd\b', cflags) is not None:
             os.environ['CFLAGS'] = (
                 os.environ.get('CFLAGS', '') + ' -Qunused-arguments')
 
