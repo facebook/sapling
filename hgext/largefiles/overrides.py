@@ -1009,15 +1009,34 @@ def _getoutgoings(repo, missing, addfunc):
 
 def outgoinghook(ui, repo, other, opts, missing):
     if opts.pop('large', None):
-        toupload = set()
-        lfutil.getlfilestoupload(repo, missing,
-                                 lambda fn, lfhash: toupload.add(fn))
+        lfhashes = set()
+        if ui.debugflag:
+            toupload = {}
+            def addfunc(fn, lfhash):
+                if fn not in toupload:
+                    toupload[fn] = []
+                toupload[fn].append(lfhash)
+                lfhashes.add(lfhash)
+            def showhashes(fn):
+                for lfhash in sorted(toupload[fn]):
+                    ui.debug('    %s\n' % (lfhash))
+        else:
+            toupload = set()
+            def addfunc(fn, lfhash):
+                toupload.add(fn)
+                lfhashes.add(lfhash)
+            def showhashes(fn):
+                pass
+        _getoutgoings(repo, missing, addfunc)
+
         if not toupload:
             ui.status(_('largefiles: no files to upload\n'))
         else:
-            ui.status(_('largefiles to upload:\n'))
+            ui.status(_('largefiles to upload (%d entities):\n')
+                      % (len(lfhashes)))
             for file in sorted(toupload):
                 ui.status(lfutil.splitstandin(file) + '\n')
+                showhashes(file)
             ui.status('\n')
 
 def summaryremotehook(ui, repo, opts, changes):

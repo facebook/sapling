@@ -680,7 +680,7 @@ Test that outgoing --large works (with revsets too)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     this used to not notice the rm
   
-  largefiles to upload:
+  largefiles to upload (2 entities):
   foo
   large
   large8
