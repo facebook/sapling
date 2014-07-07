@@ -139,8 +139,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                                               False)
                     and pushop.remote.capable('bundle2-exp')):
                     _pushbundle2(pushop)
-                else:
-                    _pushchangeset(pushop)
+                _pushchangeset(pushop)
             _pushcomputecommonheads(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
@@ -211,6 +210,9 @@ def _pushb2ctx(pushop, bundler):
 
     addchangegroup result is stored in the ``pushop.ret`` attribute.
     """
+    if 'changesets' in pushop.stepsdone:
+        return
+    pushop.stepsdone.add('changesets')
     # Send known heads to the server for race detection.
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
@@ -263,6 +265,9 @@ def _pushbundle2extrareply(pushop, op, extrainfo):
 
 def _pushchangeset(pushop):
     """Make the actual push of changeset bundle to remote repo"""
+    if 'changesets' in pushop.stepsdone:
+        return
+    pushop.stepsdone.add('changesets')
     outgoing = pushop.outgoing
     unbundle = pushop.remote.capable('unbundle')
     # TODO: get bundlecaps from remote
