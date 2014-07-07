@@ -589,6 +589,46 @@ check messages when there are files to upload:
       89e6c98d92887913cadf06b2adb97f26cde4849b
   
 
+Pusing revision #1 causes uploading entity 89e6c98d9288, which is
+shared also by largefiles b1, b2 in revision #2 and b in revision #5.
+
+Then, entity 89e6c98d9288 is not treated as "outgoing entity" at "hg
+summary" and "hg outgoing", even though files in outgoing revision #2
+and #5 refer it.
+
+  $ hg -R clone2 push -r 1 -q
+  $ hg -R clone2 summary --large
+  parent: 5:036794ea641c tip
+   #5: refer existing largefile entity again
+  branch: default
+  commit: (clean)
+  update: (current)
+  largefiles: 2 entities for 1 files to upload
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
+  comparing with $TESTTMP/issue3651/src (glob)
+  searching for changes
+  2:6095d0695d70
+  3:7983dce246cc
+  4:233f12ada4ae
+  5:036794ea641c
+  largefiles to upload (2 entities):
+  b
+  
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug
+  comparing with $TESTTMP/issue3651/src (glob)
+  query 1; heads
+  searching for changes
+  all remote heads known locally
+  2:6095d0695d70
+  3:7983dce246cc
+  4:233f12ada4ae
+  5:036794ea641c
+  largefiles to upload (2 entities):
+  b
+      13f9ed0898e315bf59dc2973fec52037b6f441a2
+      c801c9cfe94400963fcb683246217d5db77f9a9a
+  
+
   $ cd ..
 
 merge action 'd' for 'local renamed directory to d2/g' which has no filename

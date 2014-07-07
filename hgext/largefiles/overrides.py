@@ -992,20 +992,28 @@ def overrideforget(orig, ui, repo, *pats, **opts):
 
     return result
 
-def _getoutgoings(repo, missing, addfunc):
+def _getoutgoings(repo, other, missing, addfunc):
     """get pairs of filename and largefile hash in outgoing revisions
     in 'missing'.
+
+    largefiles already existing on 'other' repository are ignored.
 
     'addfunc' is invoked with each unique pairs of filename and
     largefile hash value.
     """
     knowns = set()
+    lfhashes = set()
     def dedup(fn, lfhash):
         k = (fn, lfhash)
         if k not in knowns:
             knowns.add(k)
-            addfunc(fn, lfhash)
+            lfhashes.add(lfhash)
     lfutil.getlfilestoupload(repo, missing, dedup)
+    if lfhashes:
+        lfexists = basestore._openstore(repo, other).exists(lfhashes)
+        for fn, lfhash in knowns:
+            if not lfexists[lfhash]: # lfhash doesn't exist on "other"
+                addfunc(fn, lfhash)
 
 def outgoinghook(ui, repo, other, opts, missing):
     if opts.pop('large', None):
@@ -1027,7 +1035,7 @@ def outgoinghook(ui, repo, other, opts, missing):
                 lfhashes.add(lfhash)
             def showhashes(fn):
                 pass
-        _getoutgoings(repo, missing, addfunc)
+        _getoutgoings(repo, other, missing, addfunc)
 
         if not toupload:
             ui.status(_('largefiles: no files to upload\n'))
@@ -1058,7 +1066,7 @@ def summaryremotehook(ui, repo, opts, changes):
         def addfunc(fn, lfhash):
             toupload.add(fn)
             lfhashes.add(lfhash)
-        _getoutgoings(repo, outgoing.missing, addfunc)
+        _getoutgoings(repo, peer, outgoing.missing, addfunc)
 
         if not toupload:
             # i18n: column positioning for "hg summary"
