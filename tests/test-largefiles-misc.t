@@ -490,6 +490,64 @@ check messages when there are files to upload:
   b
   
 
+  $ cp clone2/b clone2/b1
+  $ cp clone2/b clone2/b2
+  $ hg -R clone2 add --large clone2/b1 clone2/b2
+  $ hg -R clone2 commit -m '#2: add largefiles referring same entity'
+  Invoking status precommit hook
+  A b1
+  A b2
+  $ hg -R clone2 summary --large
+  parent: 2:6095d0695d70 tip
+   #2: add largefiles referring same entity
+  branch: default
+  commit: (clean)
+  update: (current)
+  largefiles: 3 to upload
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
+  comparing with $TESTTMP/issue3651/src (glob)
+  searching for changes
+  1:1acbe71ce432
+  2:6095d0695d70
+  largefiles to upload:
+  b
+  b1
+  b2
+  
+
+  $ echo bbb > clone2/b
+  $ hg -R clone2 commit -m '#3: add new largefile entity as existing file'
+  Invoking status precommit hook
+  M b
+  $ echo bbbb > clone2/b
+  $ hg -R clone2 commit -m '#4: add new largefile entity as existing file'
+  Invoking status precommit hook
+  M b
+  $ cp clone2/b1 clone2/b
+  $ hg -R clone2 commit -m '#5: refer existing largefile entity again'
+  Invoking status precommit hook
+  M b
+  $ hg -R clone2 summary --large
+  parent: 5:036794ea641c tip
+   #5: refer existing largefile entity again
+  branch: default
+  commit: (clean)
+  update: (current)
+  largefiles: 3 to upload
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
+  comparing with $TESTTMP/issue3651/src (glob)
+  searching for changes
+  1:1acbe71ce432
+  2:6095d0695d70
+  3:7983dce246cc
+  4:233f12ada4ae
+  5:036794ea641c
+  largefiles to upload:
+  b
+  b1
+  b2
+  
+
   $ cd ..
 
 merge action 'd' for 'local renamed directory to d2/g' which has no filename
