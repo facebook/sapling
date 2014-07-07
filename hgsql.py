@@ -969,7 +969,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
         return orig(repo, proto, namespace, key, old, new)
 
 # recover must be a norepo command because loading the repo fails
-commands.norepo += " sqlrecover"
+commands.norepo += " sqlrecover sqlstrip"
 
 @command('^sqlrecover', [
     ('f', 'force', '', _('strips as far back as necessary'), ''),
@@ -1023,3 +1023,77 @@ def sqlrecover(ui, *args, **opts):
         ui.status(_("local repo was not corrupt - no action taken\n"))
     else:
         ui.status(_("local repo now matches SQL\n"))
+
+@command('^sqlstrip', [
+    ('', 'i-know-what-i-am-doing', None, _('only run sqlstrip if you know ' +
+        'exactly what you\'re doing')),
+    ], _('hg sqlstrip [OPTIONS] REV'))
+def sqlstrip(ui, rev, *args, **opts):
+    """strips all revisions greater than or equal to the given revision from the sql database
+
+    Deletes all revisions with linkrev >= the given revision from the local
+    repo and from the sql database. This is permanent and cannot be undone.
+    Once the revisions are deleted from the database, you will need to run
+    this command on each master server before proceeding to write new revisions.
+    """
+
+    if not opts.get('i_know_what_i_am_doing'):
+        raise util.Abort("You must pass --i-know-what-i-am-doing to run this " +
+            "command. If you have multiple servers using the database, this " +
+            "command will break your servers until you run it on each one. " +
+            "Only the Mercurial server admins should ever run this.")
+
+    global disableinitialsync
+    disableinitialsync = True
+    repo = hg.repository(ui, ui.environ['PWD'])
+    repo.disablesync = True
+
+    lock = repo.lock()
+    try:
+        repo.sqlconnect()
+        try:
+            repo.sqllock(writelock)
+
+            if rev not in repo:
+                raise util.Abort("revision %s is not in the repo" % rev)
+
+            reponame = repo.sqlreponame
+            cursor = repo.sqlcursor
+            changelog = repo.changelog
+
+            revs = repo.revs('%s:' % rev)
+            # strip locally
+            ui.status("stripping locally\n")
+            repair.strip(ui, repo, [changelog.node(r) for r in revs], "all")
+
+            ui.status("stripping from the database\n")
+            ui.status("deleting old references\n")
+            cursor.execute("""DELETE FROM revision_references WHERE repo = %s""", (reponame,))
+
+            ui.status("adding new head references\n")
+            for head in repo.heads():
+                cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
+                               VALUES(%s, 'heads', %s)""",
+                               (reponame, hex(head)))
+
+            ui.status("adding new tip reference\n")
+            cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                           VALUES(%s, 'tip', 'tip', %s)""",
+                           (reponame, len(repo) - 1))
+
+            ui.status("adding new bookmark references\n")
+            for k, v in repo._bookmarks.iteritems():
+                cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                               VALUES(%s, 'bookmarks', %s, %s)""",
+                               (reponame, k, hex(v)))
+
+            ui.status("deleting revision data\n")
+            cursor.execute("""DELETE FROM revisions WHERE repo = %s and linkrev > %s""",
+                              (reponame, sorted(rev)[0]))
+
+            repo.sqlconn.commit()
+        finally:
+            repo.sqlunlock(writelock)
+            repo.sqlclose()
+    finally:
+        lock.release()
