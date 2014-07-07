@@ -992,6 +992,21 @@ def overrideforget(orig, ui, repo, *pats, **opts):
 
     return result
 
+def _getoutgoings(repo, missing, addfunc):
+    """get pairs of filename and largefile hash in outgoing revisions
+    in 'missing'.
+
+    'addfunc' is invoked with each unique pairs of filename and
+    largefile hash value.
+    """
+    knowns = set()
+    def dedup(fn, lfhash):
+        k = (fn, lfhash)
+        if k not in knowns:
+            knowns.add(k)
+            addfunc(fn, lfhash)
+    lfutil.getlfilestoupload(repo, missing, dedup)
+
 def outgoinghook(ui, repo, other, opts, missing):
     if opts.pop('large', None):
         toupload = set()
@@ -1020,14 +1035,19 @@ def summaryremotehook(ui, repo, opts, changes):
             return
 
         toupload = set()
-        lfutil.getlfilestoupload(repo, outgoing.missing,
-                                 lambda fn, lfhash: toupload.add(fn))
+        lfhashes = set()
+        def addfunc(fn, lfhash):
+            toupload.add(fn)
+            lfhashes.add(lfhash)
+        _getoutgoings(repo, outgoing.missing, addfunc)
+
         if not toupload:
             # i18n: column positioning for "hg summary"
             ui.status(_('largefiles: (no files to upload)\n'))
         else:
             # i18n: column positioning for "hg summary"
-            ui.status(_('largefiles: %d to upload\n') % len(toupload))
+            ui.status(_('largefiles: %d entities for %d files to upload\n')
+                      % (len(lfhashes), len(toupload)))
 
 def overridesummary(orig, ui, repo, *pats, **opts):
     try:

@@ -468,7 +468,7 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
-  largefiles: 1 to upload
+  largefiles: 1 entities for 1 files to upload
   $ hg -R clone2 outgoing --large
   comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
@@ -503,7 +503,7 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
-  largefiles: 3 to upload
+  largefiles: 1 entities for 3 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
   comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
@@ -533,7 +533,7 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
-  largefiles: 3 to upload
+  largefiles: 3 entities for 3 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
   comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
