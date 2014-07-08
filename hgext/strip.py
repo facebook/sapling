@@ -42,7 +42,7 @@ def checklocalchanges(repo, force=False, excsuffix=''):
             raise util.Abort(_("local changed subrepos found" + excsuffix))
     return m, a, r, d
 
-def strip(ui, repo, revs, update=True, backup="all", force=None):
+def strip(ui, repo, revs, update=True, backup="all", force=None, bookmark=None):
     wlock = lock = None
     try:
         wlock = repo.wlock()
@@ -59,6 +59,14 @@ def strip(ui, repo, revs, update=True, backup="all", force=None):
             repo.dirstate.write()
 
         repair.strip(ui, repo, revs, backup)
+
+        marks = repo._bookmarks
+        if bookmark:
+            if bookmark == repo._bookmarkcurrent:
+                bookmarks.unsetcurrent(repo)
+            del marks[bookmark]
+            marks.write()
+            ui.write(_("bookmark '%s' deleted\n") % bookmark)
     finally:
         release(lock, wlock)
 
@@ -205,15 +213,9 @@ def stripcmd(ui, repo, *revs, **opts):
             repo.dirstate.write()
             update = False
 
-        if opts.get('bookmark'):
-            if mark == repo._bookmarkcurrent:
-                bookmarks.unsetcurrent(repo)
-            del marks[mark]
-            marks.write()
-            ui.write(_("bookmark '%s' deleted\n") % mark)
 
         strip(ui, repo, revs, backup=backup, update=update,
-              force=opts.get('force'))
+              force=opts.get('force'), bookmark=opts.get('bookmark'))
     finally:
         wlock.release()
 
