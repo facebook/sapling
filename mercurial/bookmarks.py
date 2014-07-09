@@ -164,6 +164,9 @@ def deletedivergent(repo, deletefrom, bm):
     marks = repo._bookmarks
     divergent = [b for b in marks if b.split('@', 1)[0] == bm.split('@', 1)[0]]
     for mark in divergent:
+        if mark == '@' or '@' not in mark:
+            # can't be divergent by definition
+            continue
         if mark and marks[mark] in deletefrom:
             if mark != bm:
                 del marks[mark]
