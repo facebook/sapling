@@ -78,9 +78,6 @@ def strip(ui, repo, revs, update=True, backup="all", force=None, bookmark=None):
                                'option)'), _('REV')),
           ('f', 'force', None, _('force removal of changesets, discard '
                                  'uncommitted changes (no backup)')),
-          ('b', 'backup', None, _('bundle only changesets with local revision'
-                                  ' number greater than REV which are not'
-                                  ' descendants of REV (DEPRECATED)')),
           ('', 'no-backup', None, _('no backups')),
           ('', 'nobackup', None, _('no backups (DEPRECATED)')),
           ('n', '', None, _('ignored  (DEPRECATED)')),

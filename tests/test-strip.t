@@ -524,4 +524,28 @@ test hg strip -B bookmark
   $ hg bookmarks
    * B                         6:ff43616e5d0f
 
-  $ cd ..
+Make sure no one adds back a -b option:
+
+  $ hg strip -b tip
+  hg strip: option -b not recognized
+  hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV...
+  
+  strip changesets and all their descendants from the repository
+  
+  use "hg help -e strip" to show help for the strip extension
+  
+  options:
+  
+   -r --rev REV [+]    strip specified revision (optional, can specify revisions
+                       without this option)
+   -f --force          force removal of changesets, discard uncommitted changes
+                       (no backup)
+      --no-backup      no backups
+   -k --keep           do not modify working copy during strip
+   -B --bookmark VALUE remove revs only reachable from given bookmark
+      --mq             operate on patch repository
+  
+  [+] marked option can be specified multiple times
+  
+  use "hg help strip" to show the full help text
+  [255]
