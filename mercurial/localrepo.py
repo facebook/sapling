@@ -478,6 +478,12 @@ class localrepository(object):
         return 'file:' + self.root
 
     def hook(self, name, throw=False, **args):
+        """Call a hook, passing this repo instance.
+
+        This a convenience method to aid invoking hooks. Extensions likely
+        won't call this unless they have registered a custom hook or are
+        replacing code that is expected to call a hook.
+        """
         return hook.hook(self.ui, self, name, throw, **args)
 
     @unfilteredmethod
