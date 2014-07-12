@@ -562,7 +562,7 @@ test intersecting something with an addset
   5
   8
 
-check that conversion to _missingancestors works
+check that conversion to only works
   $ try --optimize '::3 - ::1'
   (minus
     (dagrangepre
@@ -571,7 +571,7 @@ check that conversion to _missingancestors works
       ('symbol', '1')))
   * optimized:
   (func
-    ('symbol', '_missingancestors')
+    ('symbol', 'only')
     (list
       ('symbol', '3')
       ('symbol', '1')))
@@ -586,7 +586,7 @@ check that conversion to _missingancestors works
       ('symbol', '3')))
   * optimized:
   (func
-    ('symbol', '_missingancestors')
+    ('symbol', 'only')
     (list
       ('symbol', '1')
       ('symbol', '3')))
@@ -599,7 +599,7 @@ check that conversion to _missingancestors works
       ('symbol', '6')))
   * optimized:
   (func
-    ('symbol', '_missingancestors')
+    ('symbol', 'only')
     (list
       ('symbol', '6')
       ('symbol', '2')))
@@ -618,7 +618,7 @@ check that conversion to _missingancestors works
         ('symbol', '4'))))
   * optimized:
   (func
-    ('symbol', '_missingancestors')
+    ('symbol', 'only')
     (list
       ('symbol', '6')
       ('symbol', '4')))

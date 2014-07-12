@@ -1867,7 +1867,7 @@ def optimize(x, small):
         wb, tb = optimize(x[2], True)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
-        def ismissingancestors(revs, bases):
+        def isonly(revs, bases):
             return (
                 revs[0] == 'func'
                 and getstring(revs[1], _('not a symbol')) == 'ancestors'
@@ -1876,12 +1876,10 @@ def optimize(x, small):
                 and getstring(bases[1][1], _('not a symbol')) == 'ancestors')
 
         w = min(wa, wb)
-        if ismissingancestors(ta, tb):
-            return w, ('func', ('symbol', '_missingancestors'),
-                       ('list', ta[2], tb[1][2]))
-        if ismissingancestors(tb, ta):
-            return w, ('func', ('symbol', '_missingancestors'),
-                       ('list', tb[2], ta[1][2]))
+        if isonly(ta, tb):
+            return w, ('func', ('symbol', 'only'), ('list', ta[2], tb[1][2]))
+        if isonly(tb, ta):
+            return w, ('func', ('symbol', 'only'), ('list', tb[2], ta[1][2]))
 
         if wa > wb:
             return w, (op, tb, ta)
