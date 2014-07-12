@@ -1102,16 +1102,6 @@ def minrev(repo, subset, x):
             return baseset([m])
     return baseset([])
 
-def _missingancestors(repo, subset, x):
-    # i18n: "_missingancestors" is a keyword
-    revs, bases = getargs(x, 2, 2,
-                          _("_missingancestors requires two arguments"))
-    rs = baseset(repo)
-    revs = getset(repo, rs, revs)
-    bases = getset(repo, rs, bases)
-    missing = set(repo.changelog.findmissingrevs(bases, revs))
-    return baseset([r for r in subset if r in missing])
-
 def modifies(repo, subset, x):
     """``modifies(pattern)``
     Changesets modifying files matched by pattern.
@@ -1724,7 +1714,6 @@ symbols = {
     "max": maxrev,
     "merge": merge,
     "min": minrev,
-    "_missingancestors": _missingancestors,
     "modifies": modifies,
     "obsolete": obsolete,
     "origin": origin,
@@ -1796,7 +1785,6 @@ safesymbols = set([
     "max",
     "merge",
     "min",
-    "_missingancestors",
     "modifies",
     "obsolete",
     "origin",
