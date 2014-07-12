@@ -14,6 +14,7 @@ gvimdiff.regkey=Software\Vim\GVim
 gvimdiff.regkeyalt=Software\Wow6432Node\Vim\GVim
 gvimdiff.regname=path
 gvimdiff.priority=-9
+gvimdiff.diffargs=--nofork -d -g -O $parent $child
 
 vimdiff.args=$local $other $base -c 'redraw | echomsg "hg merge conflict, type \":cq\" to abort vimdiff"'
 vimdiff.check=changed
