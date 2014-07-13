@@ -1719,7 +1719,7 @@ def getlogrevs(repo, pats, opts):
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
     elif follow:
-        revs = revset.baseset(repo.revs('reverse(:.)'))
+        revs = repo.revs('reverse(:.)')
     else:
         revs = revset.spanset(repo)
         revs.reverse()
