@@ -71,9 +71,13 @@ class basectx(object):
         object oriented way for other contexts to customize the manifest
         generation.
         """
-        mf = self.manifest().copy()
         if match.always():
-            return mf
+            return self.manifest().copy()
+
+        if match.matchfn == match.exact:
+            return self.manifest().intersectfiles(match.files())
+
+        mf = self.manifest().copy()
         for fn in mf.keys():
             if not match(fn):
                 del mf[fn]
