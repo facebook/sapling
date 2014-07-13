@@ -1499,7 +1499,6 @@ def _makelogfilematcher(repo, files, followfirst):
     fcache = {}
     fcacheready = [False]
     pctx = repo['.']
-    wctx = repo[None]
 
     def populate():
         for fn in files:
@@ -1512,7 +1511,7 @@ def _makelogfilematcher(repo, files, followfirst):
             # Lazy initialization
             fcacheready[0] = True
             populate()
-        return scmutil.match(wctx, fcache.get(rev, []), default='path')
+        return scmutil.matchfiles(repo, fcache.get(rev, []))
 
     return filematcher
 
