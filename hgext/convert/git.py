@@ -133,6 +133,8 @@ class convert_git(converter_source):
         return data
 
     def getfile(self, name, rev):
+        if rev == hex(nullid):
+            raise IOError
         if name == '.hgsub':
             data = '\n'.join([m.hgsub() for m in self.submoditer()])
             mode = ''
@@ -184,6 +186,7 @@ class convert_git(converter_source):
         seen = set()
         entry = None
         subexists = False
+        subdeleted = False
         for l in fh.read().split('\x00'):
             if not entry:
                 if not l.startswith(':'):
@@ -200,7 +203,11 @@ class convert_git(converter_source):
 
                 if f == '.gitmodules':
                     subexists = True
-                    changes.append(('.hgsub', ''))
+                    if entry[4] == 'D':
+                        subdeleted = True
+                        changes.append(('.hgsub', hex(nullid)))
+                    else:
+                        changes.append(('.hgsub', ''))
                 elif entry[1] == '160000' or entry[0] == ':160000':
                     subexists = True
                 else:
@@ -211,8 +218,11 @@ class convert_git(converter_source):
             raise util.Abort(_('cannot read changes in %s') % version)
 
         if subexists:
-            self.retrievegitmodules(version)
-            changes.append(('.hgsubstate', ''))
+            if subdeleted:
+                changes.append(('.hgsubstate', hex(nullid)))
+            else:
+                self.retrievegitmodules(version)
+                changes.append(('.hgsubstate', ''))
         return (changes, {})
 
     def getcommit(self, version):
