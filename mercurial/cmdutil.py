@@ -2170,6 +2170,23 @@ def commiteditor(repo, ctx, subs):
     return commitforceeditor(repo, ctx, subs)
 
 def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
+    committext = buildcommittext(repo, ctx, subs, extramsg)
+
+    # run editor in the repository root
+    olddir = os.getcwd()
+    os.chdir(repo.root)
+    text = repo.ui.edit(committext, ctx.user(), ctx.extra())
+    text = re.sub("(?m)^HG:.*(\n|$)", "", text)
+    os.chdir(olddir)
+
+    if finishdesc:
+        text = finishdesc(text)
+    if not text.strip():
+        raise util.Abort(_("empty commit message"))
+
+    return text
+
+def buildcommittext(repo, ctx, subs, extramsg):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
     if ctx.description():
@@ -2197,19 +2214,8 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
     if not added and not modified and not removed:
         edittext.append(_("HG: no files changed"))
     edittext.append("")
-    # run editor in the repository root
-    olddir = os.getcwd()
-    os.chdir(repo.root)
-    text = repo.ui.edit("\n".join(edittext), ctx.user(), ctx.extra())
-    text = re.sub("(?m)^HG:.*(\n|$)", "", text)
-    os.chdir(olddir)
 
-    if finishdesc:
-        text = finishdesc(text)
-    if not text.strip():
-        raise util.Abort(_("empty commit message"))
-
-    return text
+    return "\n".join(edittext)
 
 def commitstatus(repo, node, branch, bheads=None, opts={}):
     ctx = repo[node]
