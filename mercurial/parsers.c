@@ -342,30 +342,6 @@ quit:
 	return ret;
 }
 
-static inline int getintat(PyObject *tuple, int off, uint32_t *v)
-{
-	PyObject *o = PyTuple_GET_ITEM(tuple, off);
-	long val;
-
-	if (PyInt_Check(o))
-		val = PyInt_AS_LONG(o);
-	else if (PyLong_Check(o)) {
-		val = PyLong_AsLong(o);
-		if (val == -1 && PyErr_Occurred())
-			return -1;
-	} else {
-		PyErr_SetString(PyExc_TypeError, "expected an int or long");
-		return -1;
-	}
-	if (LONG_MAX > INT_MAX && (val > INT_MAX || val < INT_MIN)) {
-		PyErr_SetString(PyExc_OverflowError,
-				"Python value to large to convert to uint32_t");
-		return -1;
-	}
-	*v = (uint32_t)val;
-	return 0;
-}
-
 /*
  * Efficiently pack a dirstate object into its on-disk format.
  */
