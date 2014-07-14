@@ -1008,6 +1008,11 @@ issue2549 - correct optimizations
   $ log 'min(1 or 2) and not 1'
   $ log 'last(1 or 2, 1) and not 2'
 
+issue4289 - ordering of built-ins
+  $ hg log -M -q -r 3:2
+  3:8528aa5637f2
+  2:5ed5505e9f1c
+
 test revsets started with 40-chars hash (issue3669)
 
   $ ISSUE3669_TIP=`hg tip --template '{node}'`
