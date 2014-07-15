@@ -744,6 +744,21 @@ class _re(object):
                 pass
         return remod.compile(pat, flags)
 
+    @propertycache
+    def escape(self):
+        '''Return the version of escape corresponding to self.compile.
+
+        This is imperfect because whether re2 or re is used for a particular
+        function depends on the flags, etc, but it's the best we can do.
+        '''
+        global _re2
+        if _re2 is None:
+            self._checkre2()
+        if _re2:
+            return re2.escape
+        else:
+            return remod.escape
+
 re = _re()
 
 _fspathcache = {}
