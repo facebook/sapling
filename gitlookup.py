@@ -18,7 +18,7 @@
 # via bundle2.
 
 from mercurial import bundle2, cmdutil, exchange, extensions, encoding, hg
-from mercurial import util, wireproto
+from mercurial import util, wireproto, error
 from mercurial.node import nullid
 from mercurial.i18n import _
 import urllib
@@ -87,7 +87,7 @@ def gitgetmeta(ui, repo, source='default'):
     bundle = other.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(repo, bundle)
-    except bundle2.UnknownPartError, exc:
+    except error.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
     writebytes = op.records['fb:gitmeta:writebytes']
     ui.status(_('wrote %d files (%d bytes)\n') %
@@ -109,7 +109,7 @@ def _getbundleextrapart(orig, bundler, repo, source, **kwargs):
                                       data=f.read())
             bundler.addpart(part)
 
-@bundle2.parthandler('b2x:fb:gitmeta')
+@bundle2.parthandler('b2x:fb:gitmeta', ('filename',))
 def bundle2getgitmeta(op, part):
     '''unbundle a bundle2 containing git metadata on the client'''
     params = dict(part.mandatoryparams)
