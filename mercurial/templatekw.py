@@ -356,6 +356,22 @@ def showrev(repo, ctx, templ, **args):
     """:rev: Integer. The repository-local changeset revision number."""
     return ctx.rev()
 
+def showsubrepos(**args):
+    """:subrepos: List of strings. Updated subrepositories in the changeset."""
+    ctx = args['ctx']
+    substate = ctx.substate
+    if not substate:
+        return showlist('subrepo', [], **args)
+    psubstate = ctx.parents()[0].substate or {}
+    subrepos = []
+    for sub in substate:
+        if sub not in psubstate or substate[sub] != psubstate[sub]:
+            subrepos.append(sub) # modified or newly added in ctx
+    for sub in psubstate:
+        if sub not in substate:
+            subrepos.append(sub) # removed in ctx
+    return showlist('subrepo', sorted(subrepos), **args)
+
 def showtags(**args):
     """:tags: List of strings. Any tags associated with the changeset."""
     return showlist('tag', args['ctx'].tags(), **args)
@@ -397,6 +413,7 @@ keywords = {
     'phase': showphase,
     'phaseidx': showphaseidx,
     'rev': showrev,
+    'subrepos': showsubrepos,
     'tags': showtags,
 }
 

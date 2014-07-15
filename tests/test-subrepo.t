@@ -1360,6 +1360,92 @@ Test that commit --secret works on both repo and subrepo (issue4182)
   6: secret
   $ cd ../../
 
+Test "subrepos" template keyword
+
+  $ cd t
+  $ hg update -q 15
+  $ cat > .hgsub <<EOF
+  > s = s
+  > EOF
+  $ hg commit -m "16"
+  warning: changes are committed in secret phase from subrepository s
+
+(addition of ".hgsub" itself)
+
+  $ hg diff --nodates -c 1 .hgsubstate
+  diff -r f7b1eb17ad24 -r 7cf8cfea66e4 .hgsubstate
+  --- /dev/null
+  +++ b/.hgsubstate
+  @@ -0,0 +1,1 @@
+  +e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  $ hg log -r 1 --template "{p1node|short} {p2node|short}\n{subrepos % '{subrepo}\n'}"
+  f7b1eb17ad24 000000000000
+  s
+
+(modification of existing entry)
+
+  $ hg diff --nodates -c 2 .hgsubstate
+  diff -r 7cf8cfea66e4 -r df30734270ae .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,1 @@
+  -e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  +dc73e2e6d2675eb2e41e33c205f4bdab4ea5111d s
+  $ hg log -r 2 --template "{p1node|short} {p2node|short}\n{subrepos % '{subrepo}\n'}"
+  7cf8cfea66e4 000000000000
+  s
+
+(addition of entry)
+
+  $ hg diff --nodates -c 5 .hgsubstate
+  diff -r 7cf8cfea66e4 -r 1f14a2e2d3ec .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,2 @@
+   e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  +60ca1237c19474e7a3978b0dc1ca4e6f36d51382 t
+  $ hg log -r 5 --template "{p1node|short} {p2node|short}\n{subrepos % '{subrepo}\n'}"
+  7cf8cfea66e4 000000000000
+  t
+
+(removal of existing entry)
+
+  $ hg diff --nodates -c 16 .hgsubstate
+  diff -r 8bec38d2bd0b -r f2f70bc3d3c9 .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,2 +1,1 @@
+   0731af8ca9423976d3743119d0865097c07bdc1b s
+  -e202dc79b04c88a636ea8913d9182a1346d9b3dc t
+  $ hg log -r 16 --template "{p1node|short} {p2node|short}\n{subrepos % '{subrepo}\n'}"
+  8bec38d2bd0b 000000000000
+  t
+
+(merging)
+
+  $ hg diff --nodates -c 9 .hgsubstate
+  diff -r f6affe3fbfaa -r f0d2028bf86d .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,2 @@
+   fc627a69481fcbe5f1135069e8a3881c023e4cf5 s
+  +60ca1237c19474e7a3978b0dc1ca4e6f36d51382 t
+  $ hg log -r 9 --template "{p1node|short} {p2node|short}\n{subrepos % '{subrepo}\n'}"
+  f6affe3fbfaa 1f14a2e2d3ec
+  t
+
+(removal of ".hgsub" itself)
+
+  $ hg diff --nodates -c 8 .hgsubstate
+  diff -r f94576341bcf -r 96615c1dad2d .hgsubstate
+  --- a/.hgsubstate
+  +++ /dev/null
+  @@ -1,2 +0,0 @@
+  -e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  -7af322bc1198a32402fe903e0b7ebcfc5c9bf8f4 t
+  $ hg log -r 8 --template "{p1node|short} {p2node|short}\n{subrepos % '{subrepo}\n'}"
+  f94576341bcf 000000000000
+
 Test that '[paths]' is configured correctly at subrepo creation
 
   $ cd $TESTTMP/tc
