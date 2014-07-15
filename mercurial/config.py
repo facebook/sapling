@@ -80,13 +80,13 @@ class config(object):
             self._source.pop((section, item), None)
 
     def parse(self, src, data, sections=None, remap=None, include=None):
-        sectionre = util.compilere(r'\[([^\[]+)\]')
-        itemre = util.compilere(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
-        contre = util.compilere(r'\s+(\S|\S.*\S)\s*$')
-        emptyre = util.compilere(r'(;|#|\s*$)')
-        commentre = util.compilere(r'(;|#)')
-        unsetre = util.compilere(r'%unset\s+(\S+)')
-        includere = util.compilere(r'%include\s+(\S|\S.*\S)\s*$')
+        sectionre = util.re.compile(r'\[([^\[]+)\]')
+        itemre = util.re.compile(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
+        contre = util.re.compile(r'\s+(\S|\S.*\S)\s*$')
+        emptyre = util.re.compile(r'(;|#|\s*$)')
+        commentre = util.re.compile(r'(;|#)')
+        unsetre = util.re.compile(r'%unset\s+(\S+)')
+        includere = util.re.compile(r'%include\s+(\S|\S.*\S)\s*$')
         section = ""
         item = None
         line = 0
