@@ -15,7 +15,8 @@ hide platform-specific details from the core.
 
 from i18n import _
 import error, osutil, encoding
-import errno, re, shutil, sys, tempfile, traceback
+import errno, shutil, sys, tempfile, traceback
+import re as remod
 import os, time, datetime, calendar, textwrap, signal, collections
 import imp, socket, urllib
 
@@ -728,16 +729,16 @@ def compilere(pat, flags=0):
             _re2 = bool(re2.match(r'\[([^\[]+)\]', '[ui]'))
         except ImportError:
             _re2 = False
-    if _re2 and (flags & ~(re.IGNORECASE | re.MULTILINE)) == 0:
-        if flags & re.IGNORECASE:
+    if _re2 and (flags & ~(remod.IGNORECASE | remod.MULTILINE)) == 0:
+        if flags & remod.IGNORECASE:
             pat = '(?i)' + pat
-        if flags & re.MULTILINE:
+        if flags & remod.MULTILINE:
             pat = '(?m)' + pat
         try:
             return re2.compile(pat)
         except re2.error:
             pass
-    return re.compile(pat, flags)
+    return remod.compile(pat, flags)
 
 _fspathcache = {}
 def fspath(name, root):
@@ -761,7 +762,7 @@ def fspath(name, root):
         seps = seps + os.altsep
     # Protect backslashes. This gets silly very quickly.
     seps.replace('\\','\\\\')
-    pattern = re.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
+    pattern = remod.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
     dir = os.path.normpath(root)
     result = []
     for part, sep in pattern.findall(name):
@@ -1565,7 +1566,7 @@ def interpolate(prefix, mapping, s, fn=None, escape_prefix=False):
         else:
             prefix_char = prefix
         mapping[prefix_char] = prefix_char
-    r = re.compile(r'%s(%s)' % (prefix, patterns))
+    r = remod.compile(r'%s(%s)' % (prefix, patterns))
     return r.sub(lambda x: fn(mapping[x.group()[1:]]), s)
 
 def getport(port):
@@ -1680,7 +1681,7 @@ class url(object):
 
     _safechars = "!~*'()+"
     _safepchars = "/!~*'()+:\\"
-    _matchscheme = re.compile(r'^[a-zA-Z0-9+.\-]+:').match
+    _matchscheme = remod.compile(r'^[a-zA-Z0-9+.\-]+:').match
 
     def __init__(self, path, parsequery=True, parsefragment=True):
         # We slowly chomp away at path until we have only the path left
