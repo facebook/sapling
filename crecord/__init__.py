@@ -9,10 +9,17 @@
 
 '''text-gui based change selection during commit or qrefresh'''
 from mercurial.i18n import _
-from mercurial import commands, extensions, util
+from mercurial import commands, extensions, cmdutil, util
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 from crecord_core import dorecord
 
+@command("crecord",
+         # same options as commit + white space diff options
+         commands.table['^commit|ci'][1][:] + commands.diffwsopts,
+          _('hg crecord [OPTION]... [FILE]...'))
 def crecord(ui, repo, *pats, **opts):
     '''interactively select changes to commit
 
@@ -93,18 +100,6 @@ def qcrefresh(ui, repo, *pats, **opts):
         opts['message'] = '\n'.join(patchmsg_lines)
 
     dorecord(ui, repo, refreshmq, *pats, **opts)
-
-
-cmdtable = {
-    "crecord":
-        (crecord,
-
-         # add commit options
-         commands.table['^commit|ci'][1],
-
-         _('hg crecord [OPTION]... [FILE]...')),
-}
-
 
 def extsetup():
     try:

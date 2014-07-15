@@ -20,6 +20,11 @@ import termios
 import signal
 import textwrap
 
+# This is required for ncurses to display non-ASCII characters in default user
+# locale encoding correctly.  --immerrr
+import locale
+locale.setlocale(locale.LC_ALL, '')
+
 from crpatch import Patch, header, hunk, HunkLine
 
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
