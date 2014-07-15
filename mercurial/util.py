@@ -742,7 +742,6 @@ class _re(object):
         return remod.compile(pat, flags)
 
 re = _re()
-compilere = re.compile
 
 _fspathcache = {}
 def fspath(name, root):
