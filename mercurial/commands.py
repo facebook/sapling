@@ -3303,7 +3303,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     if opts.get('ignore_case'):
         reflags |= re.I
     try:
-        regexp = util.compilere(pattern, reflags)
+        regexp = util.re.compile(pattern, reflags)
     except re.error, inst:
         ui.warn(_("grep: invalid match pattern: %s\n") % inst)
         return 1
