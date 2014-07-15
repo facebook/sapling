@@ -12,7 +12,7 @@ from i18n import _
 def _rematcher(regex):
     '''compile the regexp with the best available regexp engine and return a
     matcher function'''
-    m = util.compilere(regex)
+    m = util.re.compile(regex)
     try:
         # slightly faster, provided by facebook's re2 bindings
         return m.test_match
