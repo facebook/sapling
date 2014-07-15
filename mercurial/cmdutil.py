@@ -2173,7 +2173,11 @@ def commiteditor(repo, ctx, subs):
 def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
     if not extramsg:
         extramsg = _("Leave message empty to abort commit.")
-    committext = buildcommittext(repo, ctx, subs, extramsg)
+    tmpl = repo.ui.config('committemplate', 'changeset', '').strip()
+    if tmpl:
+        committext = buildcommittemplate(repo, ctx, subs, extramsg, tmpl)
+    else:
+        committext = buildcommittext(repo, ctx, subs, extramsg)
 
     # run editor in the repository root
     olddir = os.getcwd()
@@ -2188,6 +2192,22 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
         raise util.Abort(_("empty commit message"))
 
     return text
+
+def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
+    ui = repo.ui
+    tmpl, mapfile = gettemplate(ui, tmpl, None)
+
+    try:
+        t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
+    except SyntaxError, inst:
+        raise util.Abort(inst.args[0])
+
+    if not extramsg:
+        extramsg = '' # ensure that extramsg is string
+
+    ui.pushbuffer()
+    t.show(ctx, extramsg=extramsg)
+    return ui.popbuffer()
 
 def buildcommittext(repo, ctx, subs, extramsg):
     edittext = []

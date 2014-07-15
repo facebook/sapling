@@ -354,6 +354,48 @@ test saving last-message.txt
   
   test saving last-message.txt
 
+test that '[committemplate] changeset' definition and commit log
+specific template keywords work well
+
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset = HG: this is customized commit template
+  >     HG: {extramsg}
+  >     {if(currentbookmark,
+  >    "HG: bookmark '{currentbookmark}' is activated\n",
+  >    "HG: no bookmark is activated\n")}{subrepos %
+  >    "HG: subrepo '{subrepo}' is changed\n"}
+  > EOF
+
+  $ hg init sub2
+  $ echo a > sub2/a
+  $ hg -R sub2 add sub2/a
+  $ echo 'sub2 = sub2' >> .hgsub
+
+  $ HGEDITOR=cat hg commit -S -q
+  HG: this is customized commit template
+  HG: Leave message empty to abort commit.
+  HG: bookmark 'currentbookmark' is activated
+  HG: subrepo 'sub' is changed
+  HG: subrepo 'sub2' is changed
+  abort: empty commit message
+  [255]
+
+  $ hg bookmark --inactive currentbookmark
+  $ hg forget .hgsub
+  $ HGEDITOR=cat hg commit -q
+  HG: this is customized commit template
+  HG: Leave message empty to abort commit.
+  HG: no bookmark is activated
+  abort: empty commit message
+  [255]
+
+  $ cat >> .hg/hgrc <<EOF
+  > # disable customizing for subsequent tests
+  > [committemplate]
+  > changeset =
+  > EOF
+
   $ cd ..
 
 

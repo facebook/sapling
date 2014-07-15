@@ -330,6 +330,64 @@ If no suitable authentication entry is found, the user is prompted
 for credentials as usual if required by the remote.
 
 
+``committemplate``
+------------------
+
+``changeset`` configuration in this section is used as the template to
+customize the text shown in the editor when committing.
+
+In addition to pre-defined template keywords, commit log specific one
+below can be used for customization:
+
+``extramsg``
+    String: Extra message (typically 'Leave message empty to abort
+    commit.'). This may be changed by some commands or extensions.
+
+For example, the template configuration below shows as same text as
+one shown by default::
+
+    [committemplate]
+    changeset = {desc}\n\n
+        HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+        HG: {extramsg}
+        HG: --
+        HG: user: {author}\n{ifeq(p2rev, "-1", "",
+       "HG: branch merge\n")
+       }HG: branch '{branch}'\n{if(currentbookmark,
+       "HG: bookmark '{currentbookmark}'\n")  }{subrepos %
+       "HG: subrepo {subrepo}\n"              }{file_adds %
+       "HG: added {file}\n"                   }{file_mods %
+       "HG: changed {file}\n"                 }{file_dels %
+       "HG: removed {file}\n"                 }{if(files, "",
+       "HG: no files changed\n")}
+
+.. note::
+
+   For some problematic encodings (see :hg:`help win32mbcs` for
+   detail), this customization should be configured carefully, to
+   avoid showing broken characters.
+
+   For example, if multibyte character ending with backslash (0x5c) is
+   followed by ASCII character 'n' in the customized template,
+   sequence of backslash and 'n' is treated as line-feed unexpectedly
+   (and multibyte character is broken, too).
+
+Customized template is used for commands below (``--edit`` may be
+required):
+
+- :hg:`backout`
+- :hg:`commit`
+- :hg:`fetch` (for merge commit only)
+- :hg:`graft`
+- :hg:`histedit`
+- :hg:`import`
+- :hg:`qfold`, :hg:`qnew` and :hg:`qrefresh`
+- :hg:`rebase`
+- :hg:`shelve`
+- :hg:`sign`
+- :hg:`tag`
+- :hg:`transplant`
+
 ``decode/encode``
 -----------------
 

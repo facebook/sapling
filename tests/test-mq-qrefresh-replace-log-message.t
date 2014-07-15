@@ -26,10 +26,28 @@ Should display 'First commit message'
   First commit message
 
 Testing changing message with -m
-(this tests also that '--edit' can be used with '--message')
+(this tests also that '--edit' can be used with '--message', and
+that '[committemplate] changeset' definition and commit log specific
+template keyword 'extramsg' work well)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset = HG: this is customized commit template
+  >     {desc}\n\n
+  >     HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  >     HG: {extramsg}
+  >     HG: --
+  >     HG: user: {author}
+  >     HG: branch '{branch}'\n{file_adds %
+  >    "HG: added {file}\n"     }{file_mods %
+  >    "HG: changed {file}\n"   }{file_dels %
+  >    "HG: removed {file}\n"   }{if(files, "",
+  >    "HG: no files changed\n")}
+  > EOF
 
   $ echo bbbb > file
   $ HGEDITOR=cat hg qrefresh -m "Second commit message" -e
+  HG: this is customized commit template
   Second commit message
   
   
@@ -39,6 +57,12 @@ Testing changing message with -m
   HG: user: test
   HG: branch 'default'
   HG: added file
+
+  $ cat >> .hg/hgrc <<EOF
+  > # disable customizing for subsequent tests
+  > [committemplate]
+  > changeset =
+  > EOF
 
 Should display 'Second commit message'
 
