@@ -208,6 +208,17 @@ def showchildren(**args):
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
     return showlist('children', childrevs, element='child', **args)
 
+def showcurrentbookmark(**args):
+    """:currentbookmark: String. The active bookmark, if it is
+    associated with the changeset"""
+    import bookmarks as bookmarks # to avoid circular import issues
+    repo = args['repo']
+    if bookmarks.iscurrent(repo):
+        current = repo._bookmarkcurrent
+        if current in args['ctx'].bookmarks():
+            return current
+    return ''
+
 def showdate(repo, ctx, templ, **args):
     """:date: Date information. The date when the changeset was committed."""
     return ctx.date()
@@ -364,6 +375,7 @@ keywords = {
     'branches': showbranches,
     'bookmarks': showbookmarks,
     'children': showchildren,
+    'currentbookmark': showcurrentbookmark,
     'date': showdate,
     'desc': showdescription,
     'diffstat': showdiffstat,
