@@ -717,19 +717,22 @@ except ImportError:
     _re2 = False
 
 class _re(object):
+    def _checkre2(self):
+        global _re2
+        try:
+            # check if match works, see issue3964
+            _re2 = bool(re2.match(r'\[([^\[]+)\]', '[ui]'))
+        except ImportError:
+            _re2 = False
+
     def compile(self, pat, flags=0):
         '''Compile a regular expression, using re2 if possible
 
         For best performance, use only re2-compatible regexp features. The
         only flags from the re module that are re2-compatible are
         IGNORECASE and MULTILINE.'''
-        global _re2
         if _re2 is None:
-            try:
-                # check if match works, see issue3964
-                _re2 = bool(re2.match(r'\[([^\[]+)\]', '[ui]'))
-            except ImportError:
-                _re2 = False
+            self._checkre2()
         if _re2 and (flags & ~(remod.IGNORECASE | remod.MULTILINE)) == 0:
             if flags & remod.IGNORECASE:
                 pat = '(?i)' + pat
