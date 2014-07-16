@@ -1488,7 +1488,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
     return iterate()
 
-def _makelogfilematcher(repo, pats, followfirst):
+def _makelogfilematcher(repo, files, followfirst):
     # When displaying a revision with --patch --follow FILE, we have
     # to know which file of the revision must be diffed. With
     # --follow, we want the names of the ancestors of FILE in the
@@ -1502,7 +1502,7 @@ def _makelogfilematcher(repo, pats, followfirst):
     wctx = repo[None]
 
     def populate():
-        for fn in pats:
+        for fn in files:
             for i in ((pctx[fn],), pctx[fn].ancestors(followfirst=followfirst)):
                 for c in i:
                     fcache.setdefault(c.linkrev(), set()).add(c.path())
@@ -1627,7 +1627,9 @@ def _makelogrevset(repo, pats, opts, revs):
     filematcher = None
     if opts.get('patch') or opts.get('stat'):
         if follow:
-            filematcher = _makelogfilematcher(repo, pats, followfirst)
+            # _makelogfilematcher expects its files argument to be relative to
+            # the repo root, so use match.files(), not pats.
+            filematcher = _makelogfilematcher(repo, match.files(), followfirst)
         else:
             filematcher = lambda rev: match
 
