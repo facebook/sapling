@@ -74,8 +74,10 @@ class basectx(object):
         if match.always():
             return self.manifest().copy()
 
-        if match.matchfn == match.exact:
-            return self.manifest().intersectfiles(match.files())
+        files = match.files()
+        if (match.matchfn == match.exact or
+            (not match.anypats() and util.all(fn in self for fn in files))):
+            return self.manifest().intersectfiles(files)
 
         mf = self.manifest().copy()
         for fn in mf.keys():
