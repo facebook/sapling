@@ -496,7 +496,7 @@ class PushTests(test_util.TestBase):
                                               copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
-                             'message',
+                             'mutate already-special file alpha',
                              ['alpha', ],
                              file_callback2,
                              'author',
@@ -521,7 +521,7 @@ class PushTests(test_util.TestBase):
                                               copied=False)
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
-                             'message',
+                             'convert alpha back to regular file',
                              ['alpha', ],
                              file_callback3,
                              'author',
