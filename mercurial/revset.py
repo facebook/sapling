@@ -399,6 +399,9 @@ def only(repo, subset, x):
     args = getargs(x, 1, 2, _('only takes one or two arguments'))
     include = getset(repo, spanset(repo), args[0]).set()
     if len(args) == 1:
+        if len(include) == 0:
+            return baseset([])
+
         descendants = set(_revdescendants(repo, include, False))
         exclude = [rev for rev in cl.headrevs()
             if not rev in descendants and not rev in include]

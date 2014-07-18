@@ -427,6 +427,16 @@ min: empty on unordered set
   7
   8
   9
+
+Test empty set input
+  $ log 'only(p2())'
+  $ log 'only(p1(), p2())'
+  0
+  1
+  2
+  4
+  8
+  9
   $ log 'outgoing()'
   8
   9
