@@ -123,9 +123,13 @@ def openlfdirstate(ui, repo, create=True):
     # it. This ensures that we create it on the first meaningful
     # largefiles operation in a new clone.
     if create and not os.path.exists(os.path.join(lfstoredir, 'dirstate')):
-        util.makedirs(lfstoredir)
         matcher = getstandinmatcher(repo)
-        for standin in repo.dirstate.walk(matcher, [], False, False):
+        standins = repo.dirstate.walk(matcher, [], False, False)
+
+        if len(standins) > 0:
+            util.makedirs(lfstoredir)
+
+        for standin in standins:
             lfile = splitstandin(standin)
             lfdirstate.normallookup(lfile)
     return lfdirstate

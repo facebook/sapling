@@ -154,7 +154,20 @@ Prepare test repo:
   $ hg init merges
   $ cd merges
   $ touch f1
-  $ hg ci -Aqm "0-root"
+  $ hg ci -Aqm "0-root" --config extensions.largefiles=!
+
+Ensure that .hg/largefiles isn't created before largefiles are added
+#if unix-permissions
+  $ chmod 555 .hg
+#endif
+  $ hg status
+#if unix-permissions
+  $ chmod 755 .hg
+#endif
+
+  $ find .hg/largefiles
+  find: `.hg/largefiles': No such file or directory
+  [1]
 
 ancestor is "normal":
   $ echo normal > f
