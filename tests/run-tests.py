@@ -1136,7 +1136,8 @@ class TestResult(unittest._TextTestResult):
         if self._options.nodiff:
             pass
         elif self._options.view:
-            os.system("%s %s %s" % (self._view, test.refpath, test.errpath))
+            os.system("%s %s %s" %
+                      (self._options.view, test.refpath, test.errpath))
         else:
             failed, lines = getdiff(expected, got,
                                     test.refpath, test.errpath)
