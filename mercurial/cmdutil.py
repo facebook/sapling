@@ -2171,6 +2171,8 @@ def commiteditor(repo, ctx, subs):
     return commitforceeditor(repo, ctx, subs)
 
 def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
+    if not extramsg:
+        extramsg = _("Leave message empty to abort commit.")
     committext = buildcommittext(repo, ctx, subs, extramsg)
 
     # run editor in the repository root
@@ -2196,10 +2198,7 @@ def buildcommittext(repo, ctx, subs, extramsg):
     edittext.append("") # Empty line between message and comments.
     edittext.append(_("HG: Enter commit message."
                       "  Lines beginning with 'HG:' are removed."))
-    if extramsg:
-        edittext.append("HG: %s" % extramsg)
-    else:
-        edittext.append(_("HG: Leave message empty to abort commit."))
+    edittext.append("HG: %s" % extramsg)
     edittext.append("HG: --")
     edittext.append(_("HG: user: %s") % ctx.user())
     if ctx.p2():
