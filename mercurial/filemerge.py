@@ -217,7 +217,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
         ui = repo.ui
 
-        r = simplemerge.simplemerge(ui, a, b, c, label=labels)
+        r = simplemerge.simplemerge(ui, a, b, c, label=labels, no_minimal=True)
         return True, r
     return False, 0
 
