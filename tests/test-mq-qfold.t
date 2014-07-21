@@ -182,8 +182,7 @@ and that combination of '--edit' and '--message' doesn't abort execution)
   refresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: emulating unexpected abort
   [255]
-  $ cat .hg/last-message.txt
-  cat: .hg/last-message.txt: No such file or directory
+  $ test -f .hg/last-message.txt
   [1]
 
 (reset applied patches and directory status)

@@ -242,8 +242,7 @@ at first, test saving last-message.txt
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
   abort: pretag.test-saving-lastmessage hook exited with status 1
   [255]
-  $ cat .hg/last-message.txt
-  cat: .hg/last-message.txt: No such file or directory
+  $ test -f .hg/last-message.txt
   [1]
 
 (test that editor is invoked and commit message is saved into

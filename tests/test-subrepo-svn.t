@@ -672,11 +672,9 @@ Test sanitizing ".hg/hgrc" in subrepo
   $ cd tc
   $ grep ' s$' .hgsubstate
   16 s
-  $ cat s/.hg/hgrc
-  cat: s/.hg/hgrc: No such file or directory
+  $ test -f s/.hg/hgrc
   [1]
-  $ cat s/sub/.hg/hgrc
-  cat: s/sub/.hg/hgrc: No such file or directory
+  $ test -f s/sub/.hg/hgrc
   [1]
 
 Test that sanitizing is omitted in meta data area:

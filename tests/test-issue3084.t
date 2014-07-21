@@ -165,8 +165,7 @@ Ensure that .hg/largefiles isn't created before largefiles are added
   $ chmod 755 .hg
 #endif
 
-  $ find .hg/largefiles
-  find: `.hg/largefiles': No such file or directory
+  $ test -f .hg/largefiles
   [1]
 
 ancestor is "normal":

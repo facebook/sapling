@@ -168,6 +168,8 @@ utestpats = [
     (r'^  .*: largefile \S+ not available from file:.*/.*[^)]$', winglobmsg),
     (r'^  .*file://\$TESTTMP',
      'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
+    (r'^  (cat|find): .*: No such file or directory',
+     'use test -f to test for file existence'),
   ],
   # warnings
   [

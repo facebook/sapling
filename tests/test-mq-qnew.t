@@ -268,8 +268,7 @@ Test saving last-message.txt
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qnew -e patch
   abort: emulating unexpected abort
   [255]
-  $ cat .hg/last-message.txt
-  cat: .hg/last-message.txt: No such file or directory
+  $ test -f .hg/last-message.txt
   [1]
 
 (test that editor is invoked and commit message is saved into

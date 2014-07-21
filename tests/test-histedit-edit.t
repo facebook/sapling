@@ -233,8 +233,7 @@ check saving last-message.txt, at first
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   abort: emulating unexpected abort
-  $ cat .hg/last-message.txt
-  cat: .hg/last-message.txt: No such file or directory
+  $ test -f .hg/last-message.txt
   [1]
 
   $ cat >> .hg/hgrc <<EOF
