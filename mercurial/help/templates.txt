@@ -1,7 +1,6 @@
 Mercurial allows you to customize output of commands through
-templates. You can either pass in a template from the command
-line, via the --template option, or select an existing
-template-style (--style).
+templates. You can either pass in a template or select an existing
+template-style from the command line, via the --template option.
 
 You can customize output for any "log-like" command: log,
 outgoing, incoming, tip, parents, heads and glog.
@@ -11,7 +10,7 @@ when no explicit preference is passed), compact, changelog, phases
 and xml.
 Usage::
 
-    $ hg log -r1 --style changelog
+    $ hg log -r1 --template changelog
 
 A template is a piece of text, with markup to invoke variable
 expansion::
