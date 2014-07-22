@@ -504,6 +504,14 @@ class dirstate(object):
     def write(self):
         if not self._dirty:
             return
+
+        # enough 'delaywrite' prevents 'pack_dirstate' from dropping
+        # timestamp of each entries in dirstate, because of 'now > mtime'
+        delaywrite = self._ui.configint('debug', 'dirstate.delaywrite', 0)
+        if delaywrite:
+            import time # to avoid useless import
+            time.sleep(delaywrite)
+
         st = self._opener("dirstate", "w", atomictemp=True)
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
