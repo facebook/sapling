@@ -502,17 +502,19 @@ def gcclient(ui, cachepath):
 
 def log(orig, ui, repo, *pats, **opts):
     if pats and not opts.get("follow"):
-        isfile = True
-        for pat in pats:
-            if not os.path.isfile(repo.wjoin(pat)):
-                isfile = False
-                break
+        # Force slowpath for non-follow patterns
+        opts['removed'] = True
+        match, pats = scmutil.matchandpats(repo['.'], pats, opts)
+        isfile = not match.anypats()
+        if isfile:
+            for file in match.files():
+                if not os.path.isfile(repo.wjoin(file)):
+                    isfile = False
+                    break
+
         if isfile:
             ui.warn(_("warning: file log can be slow on large repos - " +
                       "use -f to speed it up\n"))
-        elif len(repo) > 100000:
-            ui.warn(_("warning: directory/pattern log can be slow on " +
-                      "large repos\n"))
 
     return orig(ui, repo, *pats, **opts)
 
