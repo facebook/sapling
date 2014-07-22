@@ -87,12 +87,16 @@ def backups(ui, repo, *pats, **opts):
         try:
             if chlist:
                 if recovernode:
-                    if recovernode in other:
-                        ui.status("Unbundling %s\n" % (recovernode))
-                        f = hg.openpath(ui, source)
-                        gen = exchange.readbundle(ui, f, source)
-                        modheads = changegroup.addchangegroup(repo, gen, 'unbundle', 'bundle:' + source)
-                        break
+                    lock = repo.lock()
+                    try:
+                        if recovernode in other:
+                            ui.status("Unbundling %s\n" % (recovernode))
+                            f = hg.openpath(ui, source)
+                            gen = exchange.readbundle(ui, f, source)
+                            modheads = changegroup.addchangegroup(repo, gen, 'unbundle', 'bundle:' + source)
+                            break
+                    finally:
+                        lock.release()
                 else:
                     backupdate = os.path.getmtime(source)
                     backupdate = time.strftime('%a %H:%M, %Y-%m-%d', time.localtime(backupdate))
