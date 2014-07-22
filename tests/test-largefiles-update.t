@@ -50,4 +50,33 @@ Test that "hg merge" updates largefiles from "other" correctly
   -4669e532d5b2c093a78eca010077e708a071bb64
   +58e24f733a964da346e2407a2bee99d9001184f5
 
+(getting largefiles from "other" via conflict prompt)
+
+  $ hg update -q -C 2
+  $ echo 'large1 in #3' > large1
+  $ echo 'normal1 in #3' > normal1
+  $ hg commit -m '#3'
+  $ cat .hglf/large1
+  e5bb990443d6a92aaf7223813720f7566c9dd05b
+  $ hg merge --config debug.dirstate.delaywrite=2 --config ui.interactive=True <<EOF
+  > o
+  > EOF
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
+  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? merging normal1
+  warning: conflicts during merge.
+  merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 1 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  [1]
+  $ hg status -A large1
+  M large1
+  $ cat large1
+  large1 in #1
+  $ cat .hglf/large1
+  58e24f733a964da346e2407a2bee99d9001184f5
+
   $ cd ..

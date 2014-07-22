@@ -521,6 +521,8 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
                     lfdirstate.normallookup(lfile)
                 else:
                     lfdirstate.normal(lfile)
+            elif state == 'm':
+                lfdirstate.normallookup(lfile)
             elif state == 'r':
                 lfdirstate.remove(lfile)
             elif state == 'a':
