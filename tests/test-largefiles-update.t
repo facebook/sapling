@@ -79,4 +79,24 @@ Test that "hg merge" updates largefiles from "other" correctly
   $ cat .hglf/large1
   58e24f733a964da346e2407a2bee99d9001184f5
 
+Test that "hg revert -r REV" updates largefiles from "REV" correctly
+
+  $ hg update -q -C 3
+  $ hg status -A large1
+  C large1
+  $ cat large1
+  large1 in #3
+  $ cat .hglf/large1
+  e5bb990443d6a92aaf7223813720f7566c9dd05b
+  $ hg diff -c 1 --nodates .hglf/large1 | grep '^[+-][0-9a-z]'
+  -4669e532d5b2c093a78eca010077e708a071bb64
+  +58e24f733a964da346e2407a2bee99d9001184f5
+  $ hg revert --no-backup -r 1 --config debug.dirstate.delaywrite=2 large1
+  $ hg status -A large1
+  M large1
+  $ cat large1
+  large1 in #1
+  $ cat .hglf/large1
+  58e24f733a964da346e2407a2bee99d9001184f5
+
   $ cd ..

@@ -435,7 +435,8 @@ def downloadlfiles(ui, repo, rev=None):
         ui.status(_("%d largefiles failed to download\n") % totalmissing)
     return totalsuccess, totalmissing
 
-def updatelfiles(ui, repo, filelist=None, printmessage=True):
+def updatelfiles(ui, repo, filelist=None, printmessage=True,
+                 normallookup=False):
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
@@ -516,7 +517,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
             else:
                 state, mtime = '?', -1
             if state == 'n':
-                if mtime < 0:
+                if normallookup or mtime < 0:
                     # state 'n' doesn't ensure 'clean' in this case
                     lfdirstate.normallookup(lfile)
                 else:

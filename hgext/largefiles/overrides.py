@@ -667,7 +667,13 @@ def overriderevert(orig, ui, repo, *pats, **opts):
 
         newstandins = lfutil.getstandinsstate(repo)
         filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
-        lfcommands.updatelfiles(ui, repo, filelist, printmessage=False)
+        # lfdirstate should be 'normallookup'-ed for updated files,
+        # because reverting doesn't touch dirstate for 'normal' files
+        # when target revision is explicitly specified: in such case,
+        # 'n' and valid timestamp in dirstate doesn't ensure 'clean'
+        # of target (standin) file.
+        lfcommands.updatelfiles(ui, repo, filelist, printmessage=False,
+                                normallookup=True)
 
     finally:
         wlock.release()
