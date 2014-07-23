@@ -18,6 +18,7 @@ setup(
         'gitlookup',
         'phrevset',
         'smartlog',
+        'tweakdefaults',
     ],
     packages=['crecord']
 )
