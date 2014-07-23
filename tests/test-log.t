@@ -78,11 +78,51 @@ log on directory
   summary:     c
   
 
--f, directory
+-f, non-existent directory
 
   $ hg log -f dir
   abort: cannot follow file not in parent revision: "dir"
   [255]
+
+-f, directory
+
+  $ hg up -q 3
+  $ hg log -f dir
+  changeset:   2:f8954cd4dc1f
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     c
+  
+-f, directory with --patch
+
+  $ hg log -f dir -p
+  changeset:   2:f8954cd4dc1f
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     c
+  
+  diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
+  --- /dev/null* (glob)
+  +++ b/dir/b* (glob)
+  @@ -0,0 +1,1 @@
+  +a
+  
+
+-f, pattern
+
+  $ hg log -f -I 'dir**' -p
+  changeset:   2:f8954cd4dc1f
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     c
+  
+  diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
+  --- /dev/null* (glob)
+  +++ b/dir/b* (glob)
+  @@ -0,0 +1,1 @@
+  +a
+  
+  $ hg up -q 4
 
 -f, a wrong style
 

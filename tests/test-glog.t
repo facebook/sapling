@@ -1645,12 +1645,27 @@ Test glob expansion of pats
         ('symbol', 'filelog')
         ('string', 'aa'))))
 
-Test --follow on a directory
+Test --follow on a non-existent directory
 
   $ testlog -f dir
   abort: cannot follow file not in parent revision: "dir"
   abort: cannot follow file not in parent revision: "dir"
   abort: cannot follow file not in parent revision: "dir"
+
+Test --follow on a directory
+
+  $ hg up -q '.^'
+  $ testlog -f dir
+  []
+  (group
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
+        ('string', 'p:dir'))))
+  $ hg up -q tip
 
 Test --follow on file not in parent revision
 
@@ -1662,9 +1677,15 @@ Test --follow on file not in parent revision
 Test --follow and patterns
 
   $ testlog -f 'glob:*'
-  abort: can only follow copies/renames for explicit filenames
-  abort: can only follow copies/renames for explicit filenames
-  abort: can only follow copies/renames for explicit filenames
+  []
+  (group
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
+        ('string', 'p:glob:*'))))
 
 Test --follow on a single rename
 
@@ -1829,9 +1850,15 @@ Test --removed
           ('string', 'd:relpath'))
         ('string', 'p:a'))))
   $ testlog --removed --follow a
-  abort: can only follow copies/renames for explicit filenames
-  abort: can only follow copies/renames for explicit filenames
-  abort: can only follow copies/renames for explicit filenames
+  []
+  (group
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
+        ('string', 'p:a'))))
 
 Test --patch and --stat with --follow and --follow-first
 

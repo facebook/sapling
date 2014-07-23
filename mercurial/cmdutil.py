@@ -1570,8 +1570,14 @@ def _makelogrevset(repo, pats, opts, revs):
     if not slowpath:
         for f in match.files():
             if follow and f not in pctx:
-                raise util.Abort(_('cannot follow file not in parent '
-                                   'revision: "%s"') % f)
+                # If the file exists, it may be a directory, so let it
+                # take the slow path.
+                if os.path.exists(repo.wjoin(f)):
+                    slowpath = True
+                    continue
+                else:
+                    raise util.Abort(_('cannot follow file not in parent '
+                                       'revision: "%s"') % f)
             filelog = repo.file(f)
             if not filelog:
                 # A zero count may be a directory or deleted file, so
@@ -1595,9 +1601,6 @@ def _makelogrevset(repo, pats, opts, revs):
     if slowpath:
         # See walkchangerevs() slow path.
         #
-        if follow:
-            raise util.Abort(_('can only follow copies/renames for explicit '
-                               'filenames'))
         # pats/include/exclude cannot be represented as separate
         # revset expressions as their filtering logic applies at file
         # level. For instance "-I a -X a" matches a revision touching
@@ -1629,7 +1632,10 @@ def _makelogrevset(repo, pats, opts, revs):
 
     filematcher = None
     if opts.get('patch') or opts.get('stat'):
-        if follow and not match.always():
+        # When following files, track renames via a special matcher.
+        # If we're forced to take the slowpath it means we're following
+        # at least one pattern/directory, so don't bother with rename tracking.
+        if follow and not match.always() and not slowpath:
             # _makelogfilematcher expects its files argument to be relative to
             # the repo root, so use match.files(), not pats.
             filematcher = _makelogfilematcher(repo, match.files(), followfirst)
