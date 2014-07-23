@@ -748,6 +748,17 @@ Declare the version as supporting this hg version, show regular bts link:
 Test version number support in 'hg version':
   $ echo '__version__ = (1, 2, 3)' >> throw.py
   $ rm -f throw.pyc throw.pyo
+  $ hg version -v
+  Mercurial Distributed SCM (version *) (glob)
+  (see http://mercurial.selenic.com for more information)
+  
+  Copyright (C) 2005-* Matt Mackall and others (glob)
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  
+  Enabled extensions:
+  
+
   $ hg version -v --config extensions.throw=throw.py
   Mercurial Distributed SCM (version *) (glob)
   (see http://mercurial.selenic.com for more information)

@@ -6026,6 +6026,7 @@ def version_(ui):
         for name, module in extensions.extensions():
             names.append(name)
             vers.append(extensions.moduleversion(module))
-        maxnamelen = max(len(n) for n in names)
-        for i, name in enumerate(names):
-            ui.write("  %-*s  %s\n" % (maxnamelen, name, vers[i]))
+        if names:
+            maxnamelen = max(len(n) for n in names)
+            for i, name in enumerate(names):
+                ui.write("  %-*s  %s\n" % (maxnamelen, name, vers[i]))
