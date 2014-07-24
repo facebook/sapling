@@ -6,12 +6,12 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import extensions, util, cmdutil, commands, error, bundlerepo
-from mercurial import hg, time, changegroup, exchange
+from mercurial import hg, changegroup, exchange
 from mercurial.extensions import wrapfunction
 from hgext import pager
 from mercurial.node import hex, nullrev, nullid
 from mercurial.i18n import _
-import errno, os, re, glob
+import errno, os, re, glob, time
 
 pager.attended.append('backups')
 
