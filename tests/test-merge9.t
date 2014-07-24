@@ -76,7 +76,8 @@ after resolve
 
 resolve all warning
   $ hg resolve
-  abort: no files or directories specified; use --all to remerge all files
+  abort: no files or directories specified
+  (use --all to remerge all files)
   [255]
 
 resolve all
