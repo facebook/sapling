@@ -280,6 +280,13 @@ hg status -A --change 1 and revset:
   R removed
   C deleted
 
+status of removed but existing in working directory.  "? removed" should
+not be included:
+
+  $ touch removed
+  $ hg status --rev 0 removed
+  R removed
+
   $ cd ..
 
 hg status of binary file starting with '\1\n', a separator for metadata:
