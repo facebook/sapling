@@ -2232,6 +2232,13 @@ class baseset(list):
         """Returns a new object with the substraction of the two collections.
 
         This is part of the mandatory API for smartset."""
+        # If we are operating on 2 baseset, do the computation now since all
+        # data is available. The alternative is to involve a lazyset, which
+        # may be slow.
+        if isinstance(other, baseset):
+            other = other.set()
+            return baseset([x for x in self if x not in other])
+
         return self.filter(lambda x: x not in other)
 
     def __and__(self, other):
