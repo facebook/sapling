@@ -621,7 +621,7 @@ class queue(object):
 
         # apply failed, strip away that rev and merge.
         hg.clean(repo, head)
-        strip(self.ui, repo, [n], update=False, backup='strip')
+        strip(self.ui, repo, [n], update=False, backup=False)
 
         ctx = repo[rev]
         ret = hg.merge(repo, rev)
@@ -1463,7 +1463,7 @@ class queue(object):
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
-            strip(self.ui, repo, [rev], update=False, backup='strip')
+            strip(self.ui, repo, [rev], update=False, backup=False)
             for s, state in repo['.'].substate.items():
                 repo['.'].sub(s).get(state)
             if self.applied:
@@ -1653,7 +1653,7 @@ class queue(object):
                 repo.setparents(*cparents)
                 self.applied.pop()
                 self.applieddirty = True
-                strip(self.ui, repo, [top], update=False, backup='strip')
+                strip(self.ui, repo, [top], update=False, backup=False)
             except: # re-raises
                 repo.dirstate.invalidate()
                 raise
@@ -1851,7 +1851,7 @@ class queue(object):
                     update = True
                 else:
                     update = False
-                strip(self.ui, repo, [rev], update=update, backup='strip')
+                strip(self.ui, repo, [rev], update=update, backup=False)
         if qpp:
             self.ui.warn(_("saved queue repository parents: %s %s\n") %
                          (short(qpp[0]), short(qpp[1])))

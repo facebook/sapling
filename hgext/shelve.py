@@ -391,7 +391,7 @@ def unshelveabort(ui, repo, state, opts):
 
         mergefiles(ui, repo, state.wctx, state.pendingctx)
 
-        repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
+        repair.strip(ui, repo, state.stripnodes, backup=False, topic='shelve')
         shelvedstate.clear(repo)
         ui.warn(_("unshelve of '%s' aborted\n") % state.name)
     finally:
@@ -460,7 +460,7 @@ def unshelvecontinue(ui, repo, state, opts):
         mergefiles(ui, repo, state.wctx, shelvectx)
 
         state.stripnodes.append(shelvectx.node())
-        repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
+        repair.strip(ui, repo, state.stripnodes, backup=False, topic='shelve')
         shelvedstate.clear(repo)
         unshelvecleanup(ui, repo, state.name, opts)
         ui.status(_("unshelve of '%s' complete\n") % state.name)

@@ -47,7 +47,13 @@ def _collectbrokencsets(repo, files, striprev):
 
     return s
 
-def strip(ui, repo, nodelist, backup="all", topic='backup'):
+def strip(ui, repo, nodelist, backup=True, topic='backup'):
+
+    # Simple way to maintain backwards compatibility for this
+    # argument.
+    if backup in ['none', 'strip']:
+        backup = False
+
     repo = repo.unfiltered()
     repo.destroying()
 
@@ -57,8 +63,6 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         nodelist = [nodelist]
     striplist = [cl.rev(node) for node in nodelist]
     striprev = min(striplist)
-
-    keeppartialbundle = backup == 'strip'
 
     # Some revisions with rev > striprev may not be descendants of striprev.
     # We have to find these revisions and put them in a bundle, so that
@@ -109,7 +113,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     # create a changegroup for all the branches we need to keep
     backupfile = None
     vfs = repo.vfs
-    if backup == "all":
+    if backup:
         backupfile = _bundle(repo, stripbases, cl.heads(), node, topic)
         repo.ui.status(_("saved backup bundle to %s\n") %
                        vfs.join(backupfile))
@@ -118,7 +122,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     if saveheads or savebases:
         # do not compress partial bundle if we remove it from disk later
         chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',
-                            compress=keeppartialbundle)
+                            compress=False)
 
     mfst = repo.manifest
 
@@ -156,8 +160,6 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()
-            if not keeppartialbundle:
-                vfs.unlink(chgrpfile)
 
         # remove undo files
         for undovfs, undofile in repo.undofiles():
@@ -179,5 +181,9 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
             ui.warn(_("strip failed, partial bundle stored in '%s'\n")
                     % vfs.join(chgrpfile))
         raise
+    else:
+        if saveheads or savebases:
+            # Remove partial backup only if there were no exceptions
+            vfs.unlink(chgrpfile)
 
     repo.destroyed()

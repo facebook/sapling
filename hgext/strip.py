@@ -42,7 +42,7 @@ def checklocalchanges(repo, force=False, excsuffix=''):
             raise util.Abort(_("local changed subrepos found" + excsuffix))
     return m, a, r, d
 
-def strip(ui, repo, revs, update=True, backup="all", force=None, bookmark=None):
+def strip(ui, repo, revs, update=True, backup=True, force=None, bookmark=None):
     wlock = lock = None
     try:
         wlock = repo.wlock()
@@ -114,11 +114,9 @@ def stripcmd(ui, repo, *revs, **opts):
 
     Return 0 on success.
     """
-    backup = 'all'
-    if opts.get('backup'):
-        backup = 'strip'
-    elif opts.get('no_backup') or opts.get('nobackup'):
-        backup = 'none'
+    backup = True
+    if opts.get('no_backup') or opts.get('nobackup'):
+        backup = False
 
     cl = repo.changelog
     revs = list(revs) + opts.get('rev')
