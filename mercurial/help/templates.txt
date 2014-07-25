@@ -3,7 +3,7 @@ templates. You can either pass in a template or select an existing
 template-style from the command line, via the --template option.
 
 You can customize output for any "log-like" command: log,
-outgoing, incoming, tip, parents, heads and glog.
+outgoing, incoming, tip, parents, and heads.
 
 Five styles are packaged with Mercurial: default (the style used
 when no explicit preference is passed), compact, changelog, phases
