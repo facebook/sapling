@@ -47,7 +47,7 @@ SVN_DESCRIPTION_REGEX = re.compile(
     flags = re.LOCALE
 )
 
-def getdiff(diffid):
+def getdiff(repo, diffid):
     """Perform a Conduit API call by shelling out to `arc`
 
     Returns a subprocess.Popen instance"""
@@ -57,6 +57,8 @@ def getdiff(diffid):
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=os.setsid)
 
         input = json.dumps({'revision_id': diffid})
+        repo.ui.debug("[diffrev] echo '%s' | arc call-conduit differential.getdiff\n" %
+                      input)
         proc.stdin.write(input)
         proc.stdin.close()
 
@@ -83,7 +85,7 @@ def finddiff(repo, diffid, proc=None):
         match = DIFFERENTIAL_REGEX.search(desc)
 
         if match and match.group('id') == diffid:
-            return changectx.hex()
+            return changectx.rev()
 
     return None
 
@@ -95,7 +97,7 @@ def forksearch(repo, diffid):
 
     repo.ui.debug('[diffrev] Starting Conduit call\n')
 
-    proc = getdiff(diffid)
+    proc = getdiff(repo, diffid)
 
     try:
         repo.ui.debug('[diffrev] Starting log walk\n')
