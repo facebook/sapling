@@ -4129,6 +4129,10 @@ def log(ui, repo, *pats, **opts):
 
           hg log -k bug --template "{rev}\\n"
 
+      - list available log templates::
+
+          hg log -T list
+
       - check if a given changeset is included is a tagged release::
 
           hg log -r "a21ccf and ancestor(1.9)"

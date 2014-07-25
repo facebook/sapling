@@ -1126,6 +1126,10 @@ def gettemplate(ui, tmpl, style):
             tmpl = templater.parsestring(t, quoted=False)
         return tmpl, None
 
+    if tmpl == 'list':
+        ui.write(_("available styles: %s\n") % templater.stylelist())
+        raise util.Abort(_("specify a template"))
+
     # perhaps it's a path to a map or a template
     if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):
         # is it a mapfile for a style?

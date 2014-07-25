@@ -485,6 +485,11 @@ Error if no style:
   (available styles: bisect, changelog, compact, default, phases, xml)
   [255]
 
+  $ hg log -T list
+  available styles: bisect, changelog, compact, default, phases, xml
+  abort: specify a template
+  [255]
+
 Error if style missing key:
 
   $ echo 'q = q' > t
