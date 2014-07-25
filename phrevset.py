@@ -22,6 +22,7 @@ callsign = E
 
 """
 
+from mercurial import hg
 from mercurial import extensions
 from mercurial import revset
 from mercurial import util as hgutil
@@ -40,10 +41,10 @@ DIFFERENTIAL_REGEX = re.compile(
     flags = re.LOCALE
 )
 
-SVN_DESCRIPTION_REGEX = re.compile(
+DESCRIPTION_REGEX = re.compile(
     'Commit r'  # Prefix
-    '(?P<callsign>[^0-9]{1,})'  # Callsign
-    '(?P<id>[0-9]+)',  # SVN rev
+    '(?P<callsign>[A-Z]{1,})'  # Callsign
+    '(?P<id>[a-f0-9]+)',  # rev
     flags = re.LOCALE
 )
 
@@ -124,6 +125,23 @@ def forksearch(repo, diffid):
         resp = proc.stdout.read()
         return (None, resp)
 
+def parsedesc(repo, resp):
+    desc = resp['description']
+    match = DESCRIPTION_REGEX.match(desc)
+
+    if not match:
+        raise hgutil.Abort("Cannot parse Conduit description '%s'"
+                           % desc)
+
+    callsign = match.group('callsign')
+    repo_callsign = repo.ui.config('phrevset', 'callsign')
+
+    if callsign != repo_callsign:
+        raise hgutil.Abort("Diff callsign '%s' is different from repo"
+                           " callsign '%s'" % (callsign, repo_callsign))
+
+    return match.group('id')
+
 def revsetdiff(repo, subset, diffid):
     """Return a set of revisions corresponding to a given Differential ID """
 
@@ -150,25 +168,26 @@ def revsetdiff(repo, subset, diffid):
         # commit has landed in svn, parse the description to get the SVN
         # revision and delegate to hgsubversion for the rest
 
-        desc = resp['description']
-        match = SVN_DESCRIPTION_REGEX.match(desc)
-
-        if not match:
-            raise hgutil.Abort("Cannot parse Conduit SVN description '%s'"
-                               % desc)
-
-        callsign = match.group('callsign')
-        repo_callsign = repo.ui.config('phrevset', 'callsign')
-
-        if callsign != repo_callsign:
-            raise hgutil.Abort("Diff callsign '%s' is different from repo"
-                               " callsign '%s'" % (callsign, repo_callsign))
-
-        svnrev = match.group('id')
+        svnrev = parsedesc(repo, resp)
         repo.ui.debug("[diffrev] SVN rev is r%s\n" % svnrev)
 
         args = ('string', svnrev)
         return svnutil.revset_svnrev(repo, subset, args)
+
+    elif vcs == 'git':
+        gitrev = parsedesc(repo, resp)
+        repo.ui.debug("[diffrev] GIT rev is %s\n" % gitrev)
+
+        peerpath = repo.ui.expandpath('default')
+        remoterepo = hg.peer(repo, {}, peerpath)
+        remoterev = remoterepo.lookup('_gitlookup_git_%s' % gitrev)
+
+        repo.ui.debug("[diffrev] HG rev is %s\n" % remoterev.encode('hex'))
+        if not remoterev:
+            repo.ui.debug('[diffrev] Falling back to linear search\n')
+            return finddiff(repo, diffid)
+
+        return [repo[remoterev].rev()]
 
     elif vcs == 'hg':
         # commit is still in hg, get its hash
