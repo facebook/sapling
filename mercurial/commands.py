@@ -3089,7 +3089,8 @@ def graft(ui, repo, *revs, **opts):
 
     .. note::
 
-      The -c/--continue option does not reapply earlier options.
+      The -c/--continue option does not reapply earlier options, except
+      for --force.
 
     .. container:: verbose
 
@@ -3155,8 +3156,14 @@ def graft(ui, repo, *revs, **opts):
     if not revs:
         return -1
 
-    # check for ancestors of dest branch
-    if not opts.get('force'):
+    # Don't check in the --continue case, in effect retaining --force across
+    # --continues. That's because without --force, any revisions we decided to
+    # skip would have been filtered out here, so they wouldn't have made their
+    # way to the graftstate. With --force, any revisions we would have otherwise
+    # skipped would not have been filtered out, and if they hadn't been applied
+    # already, they'd have been in the graftstate.
+    if not (cont or opts.get('force')):
+        # check for ancestors of dest branch
         crev = repo['.'].rev()
         ancestors = repo.changelog.ancestors([crev], inclusive=True)
         # Cannot use x.remove(y) on smart set, this has to be a list.

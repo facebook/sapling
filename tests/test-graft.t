@@ -661,3 +661,20 @@ graft --force after backout
   $ cat a
   abc
 
+graft --continue after --force
+
+  $ hg backout 30
+  reverting a
+  changeset 31:3b96c18b7a1b backs out changeset 30:8f539994be33
+  $ hg graft 28 --force --tool internal:fail
+  grafting revision 28
+  abort: unresolved conflicts, can't continue
+  (use hg resolve and hg graft --continue)
+  [255]
+  $ hg resolve --all
+  merging a
+  (no more unresolved files)
+  $ hg graft -c
+  grafting revision 28
+  $ cat a
+  abc
