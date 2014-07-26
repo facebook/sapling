@@ -454,7 +454,7 @@ Test --tool parameter:
   U c2
 
   $ hg resolve -m c2
-  no more unresolved files
+  (no more unresolved files)
   $ hg rebase -c --tool internal:fail
   tool option will be ignored
   saved backup bundle to $TESTTMP/b3/.hg/strip-backup/*-backup.hg (glob)

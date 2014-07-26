@@ -95,7 +95,7 @@ edit the history
 fix up
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
-  no more unresolved files
+  (no more unresolved files)
   $ cat > cat.py <<EOF
   > import sys
   > print open(sys.argv[1]).read()
@@ -130,7 +130,7 @@ fix up
 just continue this time
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
-  no more unresolved files
+  (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

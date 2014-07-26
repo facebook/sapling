@@ -57,7 +57,7 @@ resolve conflict
   > EOF
   $ rm -f *.orig
   $ hg resolve -m test.txt
-  no more unresolved files
+  (no more unresolved files)
   $ hg commit -m "Merge 1"
 
 change test-a again

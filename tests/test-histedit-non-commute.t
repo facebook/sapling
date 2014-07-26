@@ -154,7 +154,7 @@ edit the history
 fix up
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
-  no more unresolved files
+  (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
@@ -168,7 +168,7 @@ former children.
 just continue this time
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
-  no more unresolved files
+  (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -241,7 +241,7 @@ edit the history, this time with a fold action
 
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
-  no more unresolved files
+  (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
@@ -251,7 +251,7 @@ edit the history, this time with a fold action
 second edit also fails, but just continue
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
-  no more unresolved files
+  (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

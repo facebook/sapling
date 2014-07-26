@@ -77,7 +77,7 @@ Conclude rebase:
 
   $ echo 'resolved merge' >common
   $ hg resolve -m common
-  no more unresolved files
+  (no more unresolved files)
   $ hg rebase --continue
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 

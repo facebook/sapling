@@ -1057,7 +1057,7 @@ conflict: keyword should stay outside conflict zone
 resolve to local
 
   $ HGMERGE=internal:local hg resolve -a
-  no more unresolved files
+  (no more unresolved files)
   $ hg commit -m localresolve
   $ cat m
   $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $

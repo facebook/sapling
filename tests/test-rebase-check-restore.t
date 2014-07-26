@@ -76,7 +76,7 @@ Solve the conflict and go on:
   $ echo 'conflict solved' > A
   $ rm A.orig
   $ hg resolve -m A
-  no more unresolved files
+  (no more unresolved files)
   $ hg rebase --continue
 
   $ hg tglog
@@ -130,7 +130,7 @@ Solve the conflict and go on:
   $ echo 'conflict solved' > A
   $ rm A.orig
   $ hg resolve -m A
-  no more unresolved files
+  (no more unresolved files)
   $ hg rebase --continue
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 

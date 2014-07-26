@@ -308,7 +308,7 @@ attempt to continue
 
   $ hg revert -r . a/a
   $ hg resolve -m a/a
-  no more unresolved files
+  (no more unresolved files)
 
   $ hg commit -m 'commit while unshelve in progress'
   abort: unshelve already in progress

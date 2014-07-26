@@ -39,7 +39,7 @@ resolve the failure
 
   $ echo resolved > file
   $ hg resolve -m file
-  no more unresolved files
+  (no more unresolved files)
   $ hg commit -m 'resolved'
 
 resolve -l should be empty

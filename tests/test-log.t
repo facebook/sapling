@@ -1027,7 +1027,7 @@ log -p -R repo
   [1]
   $ echo 'merge 1' > foo
   $ hg resolve -m foo
-  no more unresolved files
+  (no more unresolved files)
   $ hg ci -m "First merge, related"
 
   $ hg merge 4
@@ -1039,7 +1039,7 @@ log -p -R repo
   [1]
   $ echo 'merge 2' > foo
   $ hg resolve -m foo
-  no more unresolved files
+  (no more unresolved files)
   $ hg ci -m "Last merge, related"
 
   $ hg log --graph

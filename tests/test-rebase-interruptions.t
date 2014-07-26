@@ -104,7 +104,7 @@ Solve the conflict and go on:
   $ echo 'conflict solved' > A
   $ rm A.orig
   $ hg resolve -m A
-  no more unresolved files
+  (no more unresolved files)
 
   $ hg rebase --continue
   warning: new changesets detected on source branch, not stripping

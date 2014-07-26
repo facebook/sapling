@@ -217,7 +217,7 @@ should effectively drop the changes from +6.
   U file
   $ hg revert -r 'p1()' file
   $ hg resolve --mark file
-  no more unresolved files
+  (no more unresolved files)
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
@@ -277,7 +277,7 @@ dropped revision.
   > 5
   > EOF
   $ hg resolve --mark file
-  no more unresolved files
+  (no more unresolved files)
   $ hg commit -m '+5.2'
   created new head
   $ echo 6 >> file
