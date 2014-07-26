@@ -1684,3 +1684,12 @@ class memfilectx(committablefilectx):
         return self._flags
     def renamed(self):
         return self._copied
+
+    def remove(self, ignoremissing=False):
+        """wraps unlink for a repo's working directory"""
+        # need to figure out what to do here
+        del self._changectx[self._path]
+
+    def write(self, data, flags):
+        """wraps repo.wwrite"""
+        self._data = data
