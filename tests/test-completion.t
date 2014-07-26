@@ -257,7 +257,7 @@ Show all commands + options
   debugsuccessorssets: 
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
-  graft: rev, continue, edit, log, currentdate, currentuser, date, user, tool, dry-run
+  graft: rev, continue, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
   grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
   help: extension, command, keyword

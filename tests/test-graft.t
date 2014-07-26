@@ -631,3 +631,33 @@ graft works on complex revset
   grafting revision 13
   grafting revision 19
   merging b
+
+graft with --force (still doesn't graft merges)
+
+  $ hg graft 19 0 6
+  skipping ungraftable merge revision 6
+  skipping ancestor revision 0
+  skipping already grafted revision 19 (22 also has origin 2)
+  [255]
+  $ hg graft 19 0 6 --force
+  skipping ungraftable merge revision 6
+  grafting revision 19
+  merging b
+  grafting revision 0
+
+graft --force after backout
+
+  $ echo abc > a
+  $ hg ci -m 28
+  $ hg backout 28
+  reverting a
+  changeset 29:484c03b8dfa4 backs out changeset 28:6c56f0f7f033
+  $ hg graft 28
+  skipping ancestor revision 28
+  [255]
+  $ hg graft 28 --force
+  grafting revision 28
+  merging a
+  $ cat a
+  abc
+

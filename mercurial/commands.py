@@ -3054,6 +3054,7 @@ def forget(ui, repo, *pats, **opts):
      ('c', 'continue', False, _('resume interrupted graft')),
      ('e', 'edit', False, _('invoke editor on commit messages')),
      ('', 'log', None, _('append graft info to log message')),
+     ('f', 'force', False, _('force graft')),
      ('D', 'currentdate', False,
       _('record the current date as commit date')),
      ('U', 'currentuser', False,
@@ -3076,6 +3077,10 @@ def graft(ui, repo, *revs, **opts):
     of the form::
 
       (grafted from CHANGESETHASH)
+
+    If --force is specified, revisions will be grafted even if they
+    are already ancestors of or have been grafted to the destination.
+    This is useful when the revisions have since been backed out.
 
     If a graft merge results in conflicts, the graft process is
     interrupted so that the current merge can be manually resolved.
@@ -3151,51 +3156,52 @@ def graft(ui, repo, *revs, **opts):
         return -1
 
     # check for ancestors of dest branch
-    crev = repo['.'].rev()
-    ancestors = repo.changelog.ancestors([crev], inclusive=True)
-    # Cannot use x.remove(y) on smart set, this has to be a list.
-    # XXX make this lazy in the future
-    revs = list(revs)
-    # don't mutate while iterating, create a copy
-    for rev in list(revs):
-        if rev in ancestors:
-            ui.warn(_('skipping ancestor revision %s\n') % rev)
-            # XXX remove on list is slow
-            revs.remove(rev)
-    if not revs:
-        return -1
+    if not opts.get('force'):
+        crev = repo['.'].rev()
+        ancestors = repo.changelog.ancestors([crev], inclusive=True)
+        # Cannot use x.remove(y) on smart set, this has to be a list.
+        # XXX make this lazy in the future
+        revs = list(revs)
+        # don't mutate while iterating, create a copy
+        for rev in list(revs):
+            if rev in ancestors:
+                ui.warn(_('skipping ancestor revision %s\n') % rev)
+                # XXX remove on list is slow
+                revs.remove(rev)
+        if not revs:
+            return -1
 
-    # analyze revs for earlier grafts
-    ids = {}
-    for ctx in repo.set("%ld", revs):
-        ids[ctx.hex()] = ctx.rev()
-        n = ctx.extra().get('source')
-        if n:
-            ids[n] = ctx.rev()
+        # analyze revs for earlier grafts
+        ids = {}
+        for ctx in repo.set("%ld", revs):
+            ids[ctx.hex()] = ctx.rev()
+            n = ctx.extra().get('source')
+            if n:
+                ids[n] = ctx.rev()
 
-    # check ancestors for earlier grafts
-    ui.debug('scanning for duplicate grafts\n')
+        # check ancestors for earlier grafts
+        ui.debug('scanning for duplicate grafts\n')
 
-    for rev in repo.changelog.findmissingrevs(revs, [crev]):
-        ctx = repo[rev]
-        n = ctx.extra().get('source')
-        if n in ids:
-            r = repo[n].rev()
-            if r in revs:
-                ui.warn(_('skipping revision %s (already grafted to %s)\n')
-                        % (r, rev))
-                revs.remove(r)
-            elif ids[n] in revs:
+        for rev in repo.changelog.findmissingrevs(revs, [crev]):
+            ctx = repo[rev]
+            n = ctx.extra().get('source')
+            if n in ids:
+                r = repo[n].rev()
+                if r in revs:
+                    ui.warn(_('skipping revision %s (already grafted to %s)\n')
+                            % (r, rev))
+                    revs.remove(r)
+                elif ids[n] in revs:
+                    ui.warn(_('skipping already grafted revision %s '
+                                '(%s also has origin %d)\n') % (ids[n], rev, r))
+                    revs.remove(ids[n])
+            elif ctx.hex() in ids:
+                r = ids[ctx.hex()]
                 ui.warn(_('skipping already grafted revision %s '
-                            '(%s also has origin %d)\n') % (ids[n], rev, r))
-                revs.remove(ids[n])
-        elif ctx.hex() in ids:
-            r = ids[ctx.hex()]
-            ui.warn(_('skipping already grafted revision %s '
-                            '(was grafted from %d)\n') % (r, rev))
-            revs.remove(r)
-    if not revs:
-        return -1
+                                '(was grafted from %d)\n') % (r, rev))
+                revs.remove(r)
+        if not revs:
+            return -1
 
     wlock = repo.wlock()
     try:
