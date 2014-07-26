@@ -714,6 +714,10 @@ class basefilectx(object):
             return util.binary(self.data())
         except IOError:
             return False
+    def isexec(self):
+        return 'x' in self.flags()
+    def islink(self):
+        return 'l' in self.flags()
 
     def cmp(self, fctx):
         """compare with other file context
@@ -1656,9 +1660,5 @@ class memfilectx(committablefilectx):
         return len(self.data())
     def flags(self):
         return self._flags
-    def isexec(self):
-        return 'x' in self._flags
-    def islink(self):
-        return 'l' in self._flags
     def renamed(self):
         return self._copied
