@@ -1596,6 +1596,20 @@ class memctx(committablectx):
         self._filectxfn = filectxfn
         self.substate = {}
 
+        # if store is not callable, wrap it in a function
+        if not callable(filectxfn):
+            def getfilectx(repo, memctx, path):
+                fctx = filectxfn[path]
+                # this is weird but apparently we only keep track of one parent
+                # (why not only store that instead of a tuple?)
+                copied = fctx.renamed()
+                if copied:
+                    copied = copied[0]
+                return memfilectx(repo, path, fctx.data(),
+                                  islink=fctx.islink(), isexec=fctx.isexec(),
+                                  copied=copied, memctx=memctx)
+            self._filectxfn = getfilectx
+
         self._extra = extra and extra.copy() or {}
         if self._extra.get('branch', '') == '':
             self._extra['branch'] = 'default'
