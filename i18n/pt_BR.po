@@ -14462,7 +14462,7 @@ msgid "arguments do not match paths that need resolving\n"
 msgstr "os argumentos não correspondem a caminhos que necessitem de resolução\n"
 
 msgid "no more unresolved files\n"
-msgstr "não há mais arquivos não resolvidos\n"
+msgstr "(não há mais arquivos não resolvidos)\n"
 
 msgid "revert all changes when no arguments given"
 msgstr "se parâmetros não forem fornecidos, reverte todas as mudanças"
