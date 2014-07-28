@@ -158,6 +158,7 @@ from mercurial import context
 from mercurial import hg
 from mercurial import node
 from mercurial import repair
+from mercurial import scmutil
 from mercurial import util
 from mercurial import obsolete
 from mercurial import merge as mergemod
@@ -567,11 +568,11 @@ def _histedit(ui, repo, *freeargs, **opts):
                 remote = None
             root = findoutgoing(ui, repo, remote, force, opts)
         else:
-            rootrevs = list(repo.set('roots(%lr)', revs))
-            if len(rootrevs) != 1:
+            rr = list(repo.set('roots(%ld)', scmutil.revrange(repo, revs)))
+            if len(rr) != 1:
                 raise util.Abort(_('The specified revisions must have '
                     'exactly one common root'))
-            root = rootrevs[0].node()
+            root = rr[0].node()
 
         keep = opts.get('keep', False)
         revs = between(repo, root, topmost, keep)
