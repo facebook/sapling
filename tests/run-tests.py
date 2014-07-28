@@ -460,8 +460,15 @@ class Test(unittest.TestCase):
                 raise
             except SkipTest, e:
                 result.addSkip(self, str(e))
+                # The base class will have already counted this as a
+                # test we "ran", but we want to exclude skipped tests
+                # from those we count towards those run.
+                result.testsRun -= 1
             except IgnoreTest, e:
                 result.addIgnore(self, str(e))
+                # As with skips, ignores also should be excluded from
+                # the number of tests executed.
+                result.testsRun -= 1
             except WarnTest, e:
                 result.addWarn(self, str(e))
             except self.failureException, e:
@@ -1101,7 +1108,6 @@ class TestResult(unittest._TextTestResult):
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
-
         if self.showAll:
             self.stream.writeln('skipped %s' % reason)
         else:
@@ -1110,12 +1116,13 @@ class TestResult(unittest._TextTestResult):
 
     def addIgnore(self, test, reason):
         self.ignored.append((test, reason))
-
         if self.showAll:
             self.stream.writeln('ignored %s' % reason)
         else:
             if reason != 'not retesting':
                 self.stream.write('i')
+            else:
+                self.testsRun += 1
             self.stream.flush()
 
     def addWarn(self, test, reason):
@@ -1339,18 +1346,8 @@ class TextTestRunner(unittest.TextTestRunner):
 
         self._runner._checkhglib('Tested')
 
-        # When '--retest' is enabled, only failure tests run. At this point
-        # "result.testsRun" holds the count of failure test that has run. But
-        # as while printing output, we have subtracted the skipped and ignored
-        # count from "result.testsRun". Therefore, to make the count remain
-        # the same, we need to add skipped and ignored count in here.
-        if self._runner.options.retest:
-            result.testsRun = result.testsRun + skipped + ignored
-
-        # This differs from unittest's default output in that we don't count
-        # skipped and ignored tests as part of the total test count.
         self.stream.writeln('# Ran %d tests, %d skipped, %d warned, %d failed.'
-            % (result.testsRun - skipped - ignored,
+            % (result.testsRun,
                skipped + ignored, warned, failed))
         if failed:
             self.stream.writeln('python hash seed: %s' %

@@ -66,7 +66,7 @@ test for --retest
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -78,6 +78,11 @@ successful
   $ $TESTDIR/run-tests.py --with-hg=`which hg` test-success.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+success w/ keyword
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` -k xyzzy
+  i.
+  # Ran 1 tests, 1 skipped, 0 warned, 0 failed.
 
 failed
 
@@ -96,6 +101,25 @@ failed
   !
   Failed test-failure.t: output changed
   # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+failure w/ keyword
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` -k rataxes
+  i
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,4 +1,4 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -261,4 +285,18 @@ Skips
   # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy
+  i.s
+  Skipped test-skip.t: irrelevant
+  # Ran 1 tests, 2 skipped, 0 warned, 0 failed.
+
+Missing skips or blacklisted skips don't count as executed:
+  $ echo test-failure.t > blacklist
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --blacklist=blacklist \
+  >   test-failure.t test-bogus.t
+  ss
+  Skipped test-bogus.t: Doesn't exist
+  Skipped test-failure.t: blacklisted
+  # Ran 0 tests, 2 skipped, 0 warned, 0 failed.
 
