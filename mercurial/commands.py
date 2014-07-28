@@ -3108,6 +3108,9 @@ def graft(ui, repo, *revs, **opts):
 
           hg log --debug -r .
 
+    See :hg:`help revisions` and :hg:`help revsets` for more about
+    specifying revisions.
+
     Returns 0 on successful completion.
     '''
 
