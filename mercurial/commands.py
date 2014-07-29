@@ -5696,7 +5696,7 @@ def summary(ui, repo, **opts):
     ('', 'remove', None, _('remove a tag')),
     # -l/--local is already there, commitopts cannot be used
     ('e', 'edit', None, _('edit commit message')),
-    ('m', 'message', '', _('use <text> as commit message'), _('TEXT')),
+    ('m', 'message', '', _('use text as commit message'), _('TEXT')),
     ] + commitopts2,
     _('[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...'))
 def tag(ui, repo, name1, *names, **opts):
