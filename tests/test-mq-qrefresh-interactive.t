@@ -31,7 +31,7 @@ help qrefresh (no record)
   
   options:
   
-   -e --edit                edit commit message
+   -e --edit                invoke editor on commit messages
    -g --git                 use git extended diff format
    -s --short               refresh only files already in the patch and
                             specified files
@@ -75,7 +75,7 @@ help qrefresh (record)
   
   options:
   
-   -e --edit                edit commit message
+   -e --edit                invoke editor on commit messages
    -g --git                 use git extended diff format
    -s --short               refresh only files already in the patch and
                             specified files

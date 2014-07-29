@@ -1339,8 +1339,7 @@ def clone(ui, source, dest=None, **opts):
      _('mark a branch as closed, hiding it from the branch list')),
     ('', 'amend', None, _('amend the parent of the working dir')),
     ('s', 'secret', None, _('use the secret phase for committing')),
-    ('e', 'edit', None,
-     _('further edit commit message already specified')),
+    ('e', 'edit', None, _('invoke editor on commit messages')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
@@ -5695,7 +5694,7 @@ def summary(ui, repo, **opts):
     ('r', 'rev', '', _('revision to tag'), _('REV')),
     ('', 'remove', None, _('remove a tag')),
     # -l/--local is already there, commitopts cannot be used
-    ('e', 'edit', None, _('edit commit message')),
+    ('e', 'edit', None, _('invoke editor on commit messages')),
     ('m', 'message', '', _('use text as commit message'), _('TEXT')),
     ] + commitopts2,
     _('[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...'))

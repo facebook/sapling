@@ -19,7 +19,7 @@ testedwith = 'internal'
 @command('fetch',
     [('r', 'rev', [],
      _('a specific revision you would like to pull'), _('REV')),
-    ('e', 'edit', None, _('edit commit message')),
+    ('e', 'edit', None, _('invoke editor on commit messages')),
     ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
     ('', 'switch-parent', None, _('switch parents when merging')),
     ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,

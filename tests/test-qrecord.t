@@ -62,7 +62,7 @@ help record (record)
                             list
       --amend               amend the parent of the working dir
    -s --secret              use the secret phase for committing
-   -e --edit                further edit commit message already specified
+   -e --edit                invoke editor on commit messages
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message
@@ -135,7 +135,7 @@ help (mq present)
   
   options:
   
-   -e --edit                edit commit message
+   -e --edit                invoke editor on commit messages
    -g --git                 use git extended diff format
    -U --currentuser         add "From: <current user>" to patch
    -u --user USER           add "From: <USER>" to patch
