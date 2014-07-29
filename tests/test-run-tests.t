@@ -13,6 +13,8 @@ a succesful test
   $ cat > test-success.t << EOF
   >   $ echo babar
   >   babar
+  >   $ echo xyzzy
+  >   xyzzy
   > EOF
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg`
@@ -25,16 +27,20 @@ failing test
   $ cat > test-failure.t << EOF
   >   $ echo babar
   >   rataxes
+  > This is a noop statement so that
+  > this test is still more bytes than success.
   > EOF
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg`
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   
   ERROR: test-failure.t output changed
   !.
@@ -50,10 +56,12 @@ test for --retest
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   
   ERROR: test-failure.t output changed
   !
@@ -77,10 +85,12 @@ failed
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   
   ERROR: test-failure.t output changed
   !
@@ -97,14 +107,18 @@ Running In Debug Mode
   SALT* 0 0 (glob)
   + echo babar
   babar
-  + echo SALT* 2 0 (glob)
-  SALT* 2 0 (glob)
+  + echo SALT* 4 0 (glob)
+  SALT* 4 0 (glob)
   .+ echo SALT* 0 0 (glob)
   SALT* 0 0 (glob)
   + echo babar
   babar
   + echo SALT* 2 0 (glob)
   SALT* 2 0 (glob)
+  + echo xyzzy
+  xyzzy
+  + echo SALT* 4 0 (glob)
+  SALT* 4 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -118,19 +132,23 @@ Parallel runs
   
   --- $TESTTMP/test-failure*.t (glob)
   +++ $TESTTMP/test-failure*.t.err (glob)
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   
   ERROR: test-failure*.t output changed (glob)
   !
   --- $TESTTMP/test-failure*.t (glob)
   +++ $TESTTMP/test-failure*.t.err (glob)
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   
   ERROR: test-failure*.t output changed (glob)
   !
@@ -156,10 +174,12 @@ Refuse the fix
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   Accept this change? [n] 
   ERROR: test-failure.t output changed
   !.
@@ -171,6 +191,8 @@ Refuse the fix
   $ cat test-failure.t
     $ echo babar
     rataxes
+  This is a noop statement so that
+  this test is still more bytes than success.
 
 Accept the fix
 
@@ -178,16 +200,20 @@ Accept the fix
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,2 +1,2 @@
+  @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
   +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
   Accept this change? [n] ..
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
   $ cat test-failure.t
     $ echo babar
     babar
+  This is a noop statement so that
+  this test is still more bytes than success.
 
 (reinstall)
   $ mv backup test-failure.t
