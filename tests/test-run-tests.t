@@ -247,3 +247,18 @@ test for --time with --job enabled
   # Producing time report
   cuser   csys    real      Test
   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   test-success.t (re)
+
+Skips
+================
+  $ cat > test-skip.t <<EOF
+  >   $ echo xyzzy
+  >   $ exit 80
+  > EOF
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --nodiff
+  !.s
+  Skipped test-skip.t: irrelevant
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
