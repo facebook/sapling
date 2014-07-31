@@ -143,9 +143,10 @@ exact match are more silent
   $ hg st d
   R d
 
-should silently keep d removed
+should keep d removed
 
   $ hg revert -r0 d
+  no changes needed to d
   $ hg st d
   R d
 
@@ -1104,14 +1105,9 @@ Misbehavior:
 - fails to report no change to revert for
 |
 | - clean_clean
-| - added_revert
 | - clean_revert
 | - modified_revert
 | - removed_revert
-| - added_removed
-| - added_untracked-clean
-| - added_untracked-revert
-| - added_untracked-wc
 
   $ for file in `python ../gen-revert-cases.py filelist`; do
   >   echo '### revert for:' $file;
@@ -1123,14 +1119,19 @@ Misbehavior:
   ### revert for: added_deleted
   
   ### revert for: added_removed
+  no changes needed to added_removed
   
   ### revert for: added_revert
+  no changes needed to added_revert
   
   ### revert for: added_untracked-clean
+  no changes needed to added_untracked-clean
   
   ### revert for: added_untracked-revert
+  no changes needed to added_untracked-revert
   
   ### revert for: added_untracked-wc
+  no changes needed to added_untracked-wc
   
   ### revert for: added_wc
   

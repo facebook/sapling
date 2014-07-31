@@ -2466,7 +2466,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             for table, (action, backup) in disptable:
                 if abs not in table:
                     continue
-                if action is not None:
+                if action is None:
+                    if exact:
+                        ui.warn(_('no changes needed to %s\n') % rel)
+
+                else:
                     handle(action, backup)
                 break
             else:
