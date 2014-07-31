@@ -590,9 +590,12 @@ def _localphasemove(pushop, nodes, phase=phases.public):
 
 def _pushobsolete(pushop):
     """utility function to push obsolete markers to a remote"""
+    if 'obsmarkers' in pushop.stepsdone:
+        return
     pushop.ui.debug('try to push obsolete markers to remote\n')
     repo = pushop.repo
     remote = pushop.remote
+    pushop.stepsdone.add('obsmarkers')
     if (obsolete._enabled and repo.obsstore and
         'obsolete' in remote.listkeys('namespaces')):
         rslts = []
