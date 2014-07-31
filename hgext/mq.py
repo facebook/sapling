@@ -1995,12 +1995,12 @@ class queue(object):
                 self.added.append(patchname)
                 imported.append(patchname)
                 patchname = None
-            if rev and repo.ui.configbool('mq', 'secret', False):
-                # if we added anything with --rev, we must move the secret root
-                phases.retractboundary(repo, phases.secret, [n])
-            self.parseseries()
-            self.applieddirty = True
-            self.seriesdirty = True
+                if rev and repo.ui.configbool('mq', 'secret', False):
+                    # if we added anything with --rev, move the secret root
+                    phases.retractboundary(repo, phases.secret, [n])
+                self.parseseries()
+                self.applieddirty = True
+                self.seriesdirty = True
 
         for i, filename in enumerate(files):
             if existing:
