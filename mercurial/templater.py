@@ -468,6 +468,7 @@ def sub(context, mapping, args):
 
 def startswith(context, mapping, args):
     if len(args) != 2:
+        # i18n: "startswith" is a keyword
         raise error.ParseError(_("startswith expects two arguments"))
 
     patn = stringify(args[0][0](context, mapping, args[0][1]))
@@ -480,6 +481,7 @@ def startswith(context, mapping, args):
 def word(context, mapping, args):
     """return nth word from a string"""
     if not (2 <= len(args) <= 3):
+        # i18n: "word" is a keyword
         raise error.ParseError(_("word expects two or three arguments, got %d")
                                % len(args))
 
