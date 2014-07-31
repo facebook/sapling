@@ -317,6 +317,7 @@ Check obsolete keys are exchanged only if source has an obsolete store
   $ hg init empty
   $ hg --config extensions.debugkeys=debugkeys.py -R empty push tmpd
   pushing to tmpd
+  listkeys phases
   no changes found
   listkeys phases
   listkeys bookmarks

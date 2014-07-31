@@ -82,6 +82,7 @@ Extension disabled for lack of a hook
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -140,6 +141,7 @@ Extension disabled for lack of acl.sources
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -202,6 +204,7 @@ No [acl.allow]/[acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -274,6 +277,7 @@ Empty [acl.allow]
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -341,6 +345,7 @@ fred is allowed inside foo/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -413,6 +418,7 @@ Empty [acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -482,6 +488,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -556,6 +563,7 @@ fred is allowed inside foo/, but not foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -627,6 +635,7 @@ fred is allowed inside foo/, but not foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -700,6 +709,7 @@ barney is allowed everywhere
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -779,6 +789,7 @@ wilma can change files with a .txt extension
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -859,6 +870,7 @@ file specified by acl.config does not exist
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -934,6 +946,7 @@ betty is allowed inside foo/ by a acl.config file
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1020,6 +1033,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1100,6 +1114,7 @@ fred is always allowed
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1176,6 +1191,7 @@ no one is allowed inside foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1252,6 +1268,7 @@ OS-level groups
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1329,6 +1346,7 @@ OS-level groups
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1444,6 +1462,7 @@ No branch acls specified
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1527,6 +1546,7 @@ Branch acl deny test
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1606,6 +1626,7 @@ Branch acl empty allow test
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1681,6 +1702,7 @@ Branch acl allow other
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1750,6 +1772,7 @@ Branch acl allow other
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1838,6 +1861,7 @@ push foobar into the remote
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1925,6 +1949,7 @@ Branch acl conflicting deny
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1999,6 +2024,7 @@ User 'astro' must not be denied
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -2080,6 +2106,7 @@ Non-astro users must be denied
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "phases"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:

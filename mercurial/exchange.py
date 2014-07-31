@@ -77,6 +77,10 @@ class pushoperation(object):
         self.remoteheads = None
         # testable as a boolean indicating if any nodes are missing locally.
         self.incoming = None
+        # phases changes that must be pushed along side the changesets
+        self.outdatedphases = None
+        # phases changes that must be pushed if changeset push fails
+        self.fallbackoutdatedphases = None
 
     @util.propertycache
     def futureheads(self):
@@ -236,6 +240,41 @@ def _pushdiscoverychangeset(pushop):
     pushop.outgoing = outgoing
     pushop.remoteheads = remoteheads
     pushop.incoming = inc
+
+@pushdiscovery('phase')
+def _pushdiscoveryphase(pushop):
+    """discover the phase that needs to be pushed
+
+    (computed for both success and failure case for changesets push)"""
+    outgoing = pushop.outgoing
+    unfi = pushop.repo.unfiltered()
+    remotephases = pushop.remote.listkeys('phases')
+    publishing = remotephases.get('publishing', False)
+    ana = phases.analyzeremotephases(pushop.repo,
+                                     pushop.fallbackheads,
+                                     remotephases)
+    pheads, droots = ana
+    extracond = ''
+    if not publishing:
+        extracond = ' and public()'
+    revset = 'heads((%%ln::%%ln) %s)' % extracond
+    # Get the list of all revs draft on remote by public here.
+    # XXX Beware that revset break if droots is not strictly
+    # XXX root we may want to ensure it is but it is costly
+    fallback = list(unfi.set(revset, droots, pushop.fallbackheads))
+    if not outgoing.missing:
+        future = fallback
+    else:
+        # adds changeset we are going to push as draft
+        #
+        # should not be necessary for pushblishing server, but because of an
+        # issue fixed in xxxxx we have to do it anyway.
+        fdroots = list(unfi.set('roots(%ln  + %ln::)',
+                       outgoing.missing, droots))
+        fdroots = [f.node() for f in fdroots]
+        future = list(unfi.set(revset, fdroots, pushop.futureheads))
+    pushop.outdatedphases = future
+    pushop.fallbackoutdatedphases = fallback
 
 def _pushcheckoutgoing(pushop):
     outgoing = pushop.outgoing
@@ -408,7 +447,6 @@ def _pushchangeset(pushop):
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
-    unfi = pushop.repo.unfiltered()
     cheads = pushop.commonheads
     # even when we don't push, exchanging phase data is useful
     remotephases = pushop.remote.listkeys('phases')
@@ -441,11 +479,13 @@ def _pushsyncphase(pushop):
             _localphasemove(pushop, cheads, phases.draft)
         ### Apply local phase on remote
 
-        # Get the list of all revs draft on remote by public here.
-        # XXX Beware that revset break if droots is not strictly
-        # XXX root we may want to ensure it is but it is costly
-        outdated = unfi.set('heads((%ln::%ln) and public())',
-                            droots, cheads)
+        if pushop.ret:
+            outdated = pushop.outdatedphases
+        else:
+            outdated = pushop.fallbackoutdatedphases
+
+        # filter heads already turned public by the push
+        outdated = [c for c in outdated if c.node() not in pheads]
 
         b2caps = bundle2.bundle2caps(pushop.remote)
         if 'b2x:pushkey' in b2caps:
