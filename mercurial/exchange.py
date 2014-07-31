@@ -243,6 +243,31 @@ def _pushcheckoutgoing(pushop):
                              newbm)
     return True
 
+# List of names of steps to perform for an outgoing bundle2, order matters.
+b2partsgenorder = []
+
+# Mapping between step name and function
+#
+# This exists to help extensions wrap steps if necessary
+b2partsgenmapping = {}
+
+def b2partsgenerator(stepname):
+    """decorator for function generating bundle2 part
+
+    The function is added to the step -> function mapping and appended to the
+    list of steps.  Beware that decorated functions will be added in order
+    (this may matter).
+
+    You can only use this decorator for new steps, if you want to wrap a step
+    from an extension, attack the b2partsgenmapping dictionary directly."""
+    def dec(func):
+        assert stepname not in b2partsgenmapping
+        b2partsgenmapping[stepname] = func
+        b2partsgenorder.append(stepname)
+        return func
+    return dec
+
+@b2partsgenerator('changeset')
 def _pushb2ctx(pushop, bundler):
     """handle changegroup push through bundle2
 
@@ -269,8 +294,6 @@ def _pushb2ctx(pushop, bundler):
         pushop.ret = cgreplies['changegroup'][0]['return']
     return handlereply
 
-# list of function that may decide to add parts to an outgoing bundle2
-bundle2partsgenerators = [_pushb2ctx]
 
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
@@ -282,7 +305,8 @@ def _pushbundle2(pushop):
     capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
     bundler.newpart('b2x:replycaps', data=capsblob)
     replyhandlers = []
-    for partgen in bundle2partsgenerators:
+    for partgenname in b2partsgenorder:
+        partgen = b2partsgenmapping[partgenname]
         ret = partgen(pushop, bundler)
         if callable(ret):
             replyhandlers.append(ret)

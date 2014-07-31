@@ -964,7 +964,8 @@ Setting up
   >     raise util.Abort('Abandon ship!', hint="don't panic")
   > 
   > def uisetup(ui):
-  >     exchange.bundle2partsgenerators.insert(0, _pushbundle2failpart)
+  >     exchange.b2partsgenmapping['failpart'] = _pushbundle2failpart
+  >     exchange.b2partsgenorder.insert(0, 'failpart')
   > 
   > EOF
 
