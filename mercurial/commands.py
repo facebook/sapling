@@ -3882,8 +3882,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                         parents = [repo[node]]
                     if rej:
                         ui.write_err(_("patch applied partially\n"))
-                        ui.write_err(("(fix the .rej files and run "
-                                      "`hg commit --amend`)\n"))
+                        ui.write_err(_("(fix the .rej files and run "
+                                       "`hg commit --amend`)\n"))
                         ret = 1
                         break
 
