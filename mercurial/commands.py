@@ -8,7 +8,7 @@
 from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _
-import os, re, difflib, time, tempfile, errno
+import os, re, difflib, time, tempfile, errno, shlex
 import sys
 import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
@@ -2247,7 +2247,7 @@ def debuginstall(ui):
     # editor
     ui.status(_("checking commit editor...\n"))
     editor = ui.geteditor()
-    cmdpath = util.findexe(editor) or util.findexe(editor.split()[0])
+    cmdpath = util.findexe(shlex.split(editor)[0])
     if not cmdpath:
         if editor == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))
