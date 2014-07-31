@@ -1104,8 +1104,6 @@ Misbehavior:
 
 - fails to report no change to revert for
 |
-| - clean_clean
-| - clean_revert
 | - modified_revert
 | - removed_revert
 
@@ -1136,12 +1134,14 @@ Misbehavior:
   ### revert for: added_wc
   
   ### revert for: clean_clean
+  no changes needed to clean_clean
   
   ### revert for: clean_deleted
   
   ### revert for: clean_removed
   
   ### revert for: clean_revert
+  no changes needed to clean_revert
   
   ### revert for: clean_untracked-clean
   

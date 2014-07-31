@@ -680,9 +680,6 @@ unshelve and conflicts with tracked and untracked files
   g
   $ hg unshelve --abort
   rebase aborted
-  no changes needed to a
-  no changes needed to d
-  no changes needed to e
   unshelve of 'default' aborted
   $ hg st
   ? f.orig

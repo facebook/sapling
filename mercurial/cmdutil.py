@@ -2381,6 +2381,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         added    = set(changes[1])
         removed  = set(changes[2])
         _deleted  = set(changes[3])
+        clean    = set(changes[6])
 
         # split between files known in target manifest and the others
         smf = set(mf)
@@ -2449,6 +2450,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (missingadded,     (actions['remove'],   False)),
             (dsremoved,        (actions['undelete'], True)),
             (missingremoved,   (None,                False)),
+            (clean,            (None,                False)),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
