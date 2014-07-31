@@ -8,7 +8,7 @@ Create an extension to test bundle2 API
   > code. We still need to be able to test it while it grow up.
   > """
   > 
-  > import sys
+  > import sys, os
   > from mercurial import cmdutil
   > from mercurial import util
   > from mercurial import bundle2
