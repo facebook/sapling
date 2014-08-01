@@ -320,7 +320,8 @@ class basectx(object):
                              listunknown)
 
         if reversed:
-            r[1], r[2], r[3], r[4] = r[2], r[1], r[4], r[3]
+            # reverse added and removed
+            r[1], r[2] = r[2], r[1]
 
         if listsubrepos:
             for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
