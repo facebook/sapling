@@ -562,8 +562,12 @@ else:
         for l in label.split():
             style = _styles.get(l, '')
             for effect in style.split():
-                attr = mapcolor(w32effects[effect], attr)
-
+                try:
+                    attr = mapcolor(w32effects[effect], attr)
+                except KeyError:
+                    # w32effects could not have certain attributes so we skip
+                    # them if not found
+                    pass
         # hack to ensure regexp finds data
         if not text.startswith('\033['):
             text = '\033[m' + text
