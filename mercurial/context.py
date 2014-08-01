@@ -120,7 +120,7 @@ class basectx(object):
         mf2 = self._manifestmatches(match, s)
 
         modified, added, clean = [], [], []
-        deleted, unknown, ignored = s[3], [], []
+        deleted, unknown, ignored = s[3], s[4], s[5]
         withflags = mf1.withflags() | mf2.withflags()
         for fn, mf2node in mf2.iteritems():
             if fn in mf1:

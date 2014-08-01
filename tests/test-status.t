@@ -280,6 +280,12 @@ hg status -A --change 1 and revset:
   R removed
   C deleted
 
+status against non-parent with unknown file (issue4321)
+
+  $ touch unknown
+  $ hg status --rev 0 unknown
+  ? unknown
+
 status of removed but existing in working directory.  "? removed" should
 not be included:
 
