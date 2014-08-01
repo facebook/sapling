@@ -149,8 +149,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2014-07-31 19:59+0900\n"
-"PO-Revision-Date: 2014-07-31 23:57+0900\n"
+"POT-Creation-Date: 2014-08-01 17:00+0900\n"
+"PO-Revision-Date: 2014-08-01 17:24+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -2726,8 +2726,8 @@ msgid "cannot read %r object at %s"
 msgstr "%r オブジェクトが %s から読み込めません"
 
 #, python-format
-msgid "cannot read %r object at %s: %s"
-msgstr "%r オブジェクトが %s から読み込めません: %s"
+msgid "cannot read %r object at %s: unexpected size"
+msgstr "%r オブジェクトが %s から読み込めません: 想定外のサイズ"
 
 #, python-format
 msgid "cannot read submodules config file in %s"
@@ -13126,6 +13126,9 @@ msgstr "標準入力からのパッチを適用中\n"
 
 msgid "patch applied partially\n"
 msgstr "パッチの一部のみが適用されました\n"
+
+msgid "(fix the .rej files and run `hg commit --amend`)\n"
+msgstr "(.rej ファイル中の却下差分への対処後に hg commit --amend を推奨)\n"
 
 #, python-format
 msgid "%s: no diffs found"
@@ -26125,9 +26128,11 @@ msgstr "strip の引数は1つまたは2つです"
 msgid "sub expects three arguments"
 msgstr "sub は引数が3つ必要です"
 
+#. i18n: "startswith" is a keyword
 msgid "startswith expects two arguments"
 msgstr "startswith の引数は2つです"
 
+#. i18n: "word" is a keyword
 #, python-format
 msgid "word expects two or three arguments, got %d"
 msgstr "word は2または3の引数が必要です (実際の引数は %d 個)"
