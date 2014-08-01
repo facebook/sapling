@@ -1629,7 +1629,7 @@ def _makelogrevset(repo, pats, opts, revs):
 
     filematcher = None
     if opts.get('patch') or opts.get('stat'):
-        if follow:
+        if follow and not match.always():
             # _makelogfilematcher expects its files argument to be relative to
             # the repo root, so use match.files(), not pats.
             filematcher = _makelogfilematcher(repo, match.files(), followfirst)
