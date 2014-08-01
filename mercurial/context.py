@@ -135,6 +135,10 @@ class basectx(object):
             elif fn not in deleted:
                 added.append(fn)
         removed = mf1.keys()
+        if removed:
+            # need to filter files if they are already reported as removed
+            unknown = [fn for fn in unknown if fn not in mf1]
+            ignored = [fn for fn in ignored if fn not in mf1]
 
         return [modified, added, removed, deleted, unknown, ignored, clean]
 
