@@ -2500,22 +2500,21 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             for table, (xlist, msg), dobackup in disptable:
                 if abs not in table:
                     continue
-                if xlist is None:
-                    if exact:
-                        ui.warn(_('no changes needed to %s\n') % rel)
-                    break
-                xlist.append(abs)
-                if (dobackup and os.path.lexists(target) and
-                    abs in ctx and repo[None][abs].cmp(ctx[abs])):
-                    bakname = "%s.orig" % rel
-                    ui.note(_('saving current version of %s as %s\n') %
-                            (rel, bakname))
-                    if not opts.get('dry_run'):
-                        util.rename(target, bakname)
-                if ui.verbose or not exact:
-                    if not isinstance(msg, basestring):
-                        msg = msg(abs)
-                    ui.status(msg % rel)
+                if xlist is not None:
+                    xlist.append(abs)
+                    if (dobackup and os.path.lexists(target) and
+                        abs in ctx and repo[None][abs].cmp(ctx[abs])):
+                        bakname = "%s.orig" % rel
+                        ui.note(_('saving current version of %s as %s\n') %
+                                (rel, bakname))
+                        if not opts.get('dry_run'):
+                            util.rename(target, bakname)
+                    if ui.verbose or not exact:
+                        if not isinstance(msg, basestring):
+                            msg = msg(abs)
+                        ui.status(msg % rel)
+                elif exact:
+                    ui.warn(_('no changes needed to %s\n') % rel)
                 break
             else:
                 # Not touched in current dirstate.
