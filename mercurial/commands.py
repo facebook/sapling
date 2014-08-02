@@ -3128,7 +3128,7 @@ def graft(ui, repo, *revs, **opts):
     if not opts.get('date') and opts.get('currentdate'):
         opts['date'] = "%d %d" % util.makedate()
 
-    editor = cmdutil.getcommiteditor(**opts)
+    editor = cmdutil.getcommiteditor(editform='graft', **opts)
 
     cont = False
     if opts['continue']:
