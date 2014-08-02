@@ -2106,9 +2106,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
-            editor = getcommiteditor(**opts)
+            editform = 'commit.amend'
+            editor = getcommiteditor(editform=editform, **opts)
             if not message:
-                editor = getcommiteditor(edit=True)
+                editor = getcommiteditor(edit=True, editform=editform)
                 message = old.description()
 
             pureextra = extra.copy()

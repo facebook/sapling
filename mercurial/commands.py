@@ -1449,9 +1449,11 @@ def commit(ui, repo, *pats, **opts):
                     repo.baseui.setconfig('phases', 'new-commit', 'secret',
                                           'commit')
 
+                editform = 'commit.normal'
+                editor = cmdutil.getcommiteditor(editform=editform, **opts)
                 return repo.commit(message, opts.get('user'), opts.get('date'),
                                    match,
-                                   editor=cmdutil.getcommiteditor(**opts),
+                                   editor=editor,
                                    extra=extra)
             finally:
                 ui.setconfig('phases', 'new-commit', oldcommitphase, 'commit')
