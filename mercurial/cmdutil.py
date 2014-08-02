@@ -109,7 +109,8 @@ def logmessage(ui, opts):
                              (logfile, inst.strerror))
     return message
 
-def getcommiteditor(edit=False, finishdesc=None, extramsg=None, **opts):
+def getcommiteditor(edit=False, finishdesc=None, extramsg=None,
+                    editform='', **opts):
     """get appropriate commit message editor according to '--edit' option
 
     'finishdesc' is a function to be called with edited commit message
@@ -122,6 +123,9 @@ def getcommiteditor(edit=False, finishdesc=None, extramsg=None, **opts):
     'Leave message empty to abort commit' line. 'HG: ' prefix and EOL
     is automatically added.
 
+    'editform' is a dot-separated list of names, to distinguish
+    the purpose of commit text editing.
+
     'getcommiteditor' returns 'commitforceeditor' regardless of
     'edit', if one of 'finishdesc' or 'extramsg' is specified, because
     they are specific for usage in MQ.
@@ -129,7 +133,10 @@ def getcommiteditor(edit=False, finishdesc=None, extramsg=None, **opts):
     if edit or finishdesc or extramsg:
         return lambda r, c, s: commitforceeditor(r, c, s,
                                                  finishdesc=finishdesc,
-                                                 extramsg=extramsg)
+                                                 extramsg=extramsg,
+                                                 editform=editform)
+    elif editform:
+        return lambda r, c, s: commiteditor(r, c, s, editform=editform)
     else:
         return commiteditor
 
@@ -2175,12 +2182,13 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         lockmod.release(lock, wlock)
     return newid
 
-def commiteditor(repo, ctx, subs):
+def commiteditor(repo, ctx, subs, editform=''):
     if ctx.description():
         return ctx.description()
-    return commitforceeditor(repo, ctx, subs)
+    return commitforceeditor(repo, ctx, subs, editform=editform)
 
-def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None):
+def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
+                      editform=''):
     if not extramsg:
         extramsg = _("Leave message empty to abort commit.")
     tmpl = repo.ui.config('committemplate', 'changeset', '').strip()
