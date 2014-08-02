@@ -419,6 +419,17 @@ For example, ``changeset.tag.remove`` customizes the commit message
 only for :hg:`tag --remove`, but ``changeset.tag`` customizes the
 commit message for :hg:`tag` regardless of ``--remove`` option.
 
+In this section, items other than ``changeset`` can be referred from
+others. For example, the configuration to list committed files up
+below can be referred as ``{listupfiles}``::
+
+    [committemplate]
+    listupfiles = {file_adds %
+       "HG: added {file}\n"     }{file_mods %
+       "HG: changed {file}\n"   }{file_dels %
+       "HG: removed {file}\n"   }{if(files, "",
+       "HG: no files changed\n")}
+
 ``decode/encode``
 -----------------
 

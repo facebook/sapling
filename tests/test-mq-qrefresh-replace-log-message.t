@@ -32,17 +32,19 @@ template keyword 'extramsg' work well)
 
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
+  > listupfiles = {file_adds %
+  >    "HG: added {file}\n"     }{file_mods %
+  >    "HG: changed {file}\n"   }{file_dels %
+  >    "HG: removed {file}\n"   }{if(files, "",
+  >    "HG: no files changed\n")}
+  > 
   > changeset = HG: this is customized commit template
   >     {desc}\n\n
   >     HG: Enter commit message.  Lines beginning with 'HG:' are removed.
   >     HG: {extramsg}
   >     HG: --
   >     HG: user: {author}
-  >     HG: branch '{branch}'\n{file_adds %
-  >    "HG: added {file}\n"     }{file_mods %
-  >    "HG: changed {file}\n"   }{file_dels %
-  >    "HG: removed {file}\n"   }{if(files, "",
-  >    "HG: no files changed\n")}
+  >     HG: branch '{branch}'\n{listupfiles}
   > EOF
 
   $ echo bbbb > file

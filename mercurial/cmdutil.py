@@ -2228,6 +2228,10 @@ def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
 
+    for k, v in repo.ui.configitems('committemplate'):
+        if k != 'changeset':
+            t.t.cache[k] = v
+
     if not extramsg:
         extramsg = '' # ensure that extramsg is string
 
