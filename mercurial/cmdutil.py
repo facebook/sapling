@@ -2469,7 +2469,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         actions = {'revert': ([], _('reverting %s\n')),
                    'add': ([], _('adding %s\n')),
                    'remove': ([], removeforget),
-                   'undelete': ([], _('undeleting %s\n'))}
+                   'undelete': ([], _('undeleting %s\n')),
+                   'noop': None,
+                  }
 
 
         # should we do a backup?
@@ -2486,7 +2488,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (dsadded,    actions['remove'],   backup),
             (removed,    actions['add'],      backup),
             (dsremoved,  actions['undelete'], backup),
-            (clean,      None,                discard),
+            (clean,      actions['noop'],     discard),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
