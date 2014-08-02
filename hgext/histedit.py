@@ -293,6 +293,7 @@ def collapse(repo, first, last, commitopts):
     extra = commitopts.get('extra')
 
     parents = (first.p1().node(), first.p2().node())
+    editor = cmdutil.getcommiteditor(edit=True, editform='histedit.fold')
     new = context.memctx(repo,
                          parents=parents,
                          text=message,
@@ -301,7 +302,7 @@ def collapse(repo, first, last, commitopts):
                          user=user,
                          date=date,
                          extra=extra,
-                         editor=cmdutil.getcommiteditor(edit=True))
+                         editor=editor)
     return repo.commitctx(new)
 
 def pick(ui, repo, ctx, ha, opts):
@@ -405,9 +406,10 @@ def message(ui, repo, ctx, ha, opts):
             _('Fix up the change and run hg histedit --continue'))
     message = oldctx.description()
     commit = commitfuncfor(repo, oldctx)
+    editor = cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
     new = commit(text=message, user=oldctx.user(), date=oldctx.date(),
                  extra=oldctx.extra(),
-                 editor=cmdutil.getcommiteditor(edit=True))
+                 editor=editor)
     newctx = repo[new]
     if oldctx.node() != newctx.node():
         return newctx, [(oldctx.node(), (new,))]
@@ -684,7 +686,9 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
         else:
             message = ctx.description()
         editopt = action in ('e', 'edit', 'm', 'mess')
-        editor = cmdutil.getcommiteditor(edit=editopt)
+        canonaction = {'e': 'edit', 'm': 'mess', 'p': 'pick'}
+        editform = 'histedit.%s' % canonaction.get(action, action)
+        editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
         commit = commitfuncfor(repo, ctx)
         new = commit(text=message, user=ctx.user(),
                      date=ctx.date(), extra=ctx.extra(),
