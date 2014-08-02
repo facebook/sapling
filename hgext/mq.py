@@ -1025,6 +1025,7 @@ class queue(object):
         """
         msg = opts.get('msg')
         edit = opts.get('edit')
+        editform = opts.get('editform', 'mq.qnew')
         user = opts.get('user')
         date = opts.get('date')
         if date:
@@ -1079,7 +1080,7 @@ class queue(object):
                         p.write("# Date %s %s\n\n" % date)
 
                 defaultmsg = "[mq]: %s" % patchfn
-                editor = cmdutil.getcommiteditor()
+                editor = cmdutil.getcommiteditor(editform=editform)
                 if edit:
                     def finishdesc(desc):
                         if desc.rstrip():
@@ -1089,7 +1090,8 @@ class queue(object):
                     # i18n: this message is shown in editor with "HG: " prefix
                     extramsg = _('Leave message empty to use default message.')
                     editor = cmdutil.getcommiteditor(finishdesc=finishdesc,
-                                                     extramsg=extramsg)
+                                                     extramsg=extramsg,
+                                                     editform=editform)
                     commitmsg = msg
                 else:
                     commitmsg = msg or defaultmsg
@@ -1485,6 +1487,7 @@ class queue(object):
             return 1
         msg = opts.get('msg', '').rstrip()
         edit = opts.get('edit')
+        editform = opts.get('editform', 'mq.qrefresh')
         newuser = opts.get('user')
         newdate = opts.get('date')
         if newdate:
@@ -1654,7 +1657,7 @@ class queue(object):
                 # might be nice to attempt to roll back strip after this
 
                 defaultmsg = "[mq]: %s" % patchfn
-                editor = cmdutil.getcommiteditor()
+                editor = cmdutil.getcommiteditor(editform=editform)
                 if edit:
                     def finishdesc(desc):
                         if desc.rstrip():
@@ -1664,7 +1667,8 @@ class queue(object):
                     # i18n: this message is shown in editor with "HG: " prefix
                     extramsg = _('Leave message empty to use default message.')
                     editor = cmdutil.getcommiteditor(finishdesc=finishdesc,
-                                                     extramsg=extramsg)
+                                                     extramsg=extramsg,
+                                                     editform=editform)
                     message = msg or "\n".join(ph.message)
                 elif not msg:
                     if not ph.message:
@@ -2585,7 +2589,8 @@ def fold(ui, repo, *files, **opts):
     diffopts = q.patchopts(q.diffopts(), *patches)
     wlock = repo.wlock()
     try:
-        q.refresh(repo, msg=message, git=diffopts.git, edit=opts.get('edit'))
+        q.refresh(repo, msg=message, git=diffopts.git, edit=opts.get('edit'),
+                  editform='mq.qfold')
         q.delete(repo, patches, opts)
         q.savedirty()
     finally:
