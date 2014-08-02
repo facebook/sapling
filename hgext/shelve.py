@@ -178,8 +178,9 @@ def createcmd(ui, repo, pats, opts):
         if hasmq:
             saved, repo.mq.checkapplied = repo.mq.checkapplied, False
         try:
+            editor = cmdutil.getcommiteditor(editform='shelve.shelve', **opts)
             return repo.commit(message, user, opts.get('date'), match,
-                               editor=cmdutil.getcommiteditor(**opts))
+                               editor=editor)
         finally:
             if hasmq:
                 repo.mq.checkapplied = saved
