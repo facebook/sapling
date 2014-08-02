@@ -138,7 +138,7 @@ def rebase(ui, repo, **opts):
     skipped = set()
     targetancestors = set()
 
-    editor = cmdutil.getcommiteditor(**opts)
+    editor = cmdutil.getcommiteditor(editform='rebase.normal', **opts)
 
     lock = wlock = None
     try:
@@ -383,7 +383,8 @@ def rebase(ui, repo, **opts):
                 for rebased in state:
                     if rebased not in skipped and state[rebased] > nullmerge:
                         commitmsg += '\n* %s' % repo[rebased].description()
-                editor = cmdutil.getcommiteditor(edit=True)
+                editform = 'rebase.collapse'
+                editor = cmdutil.getcommiteditor(edit=True, editform=editform)
             newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
                                   extrafn=extrafn, editor=editor)
             for oldrev in state.iterkeys():
