@@ -86,7 +86,7 @@ class transplanter(object):
         self.opener = scmutil.opener(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
-        self.editor = cmdutil.getcommiteditor(**opts)
+        self.editor = cmdutil.getcommiteditor(editform='transplant', **opts)
 
     def applied(self, repo, node, parent):
         '''returns True if a node is already an ancestor of parent
