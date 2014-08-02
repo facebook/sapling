@@ -2380,7 +2380,16 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         modified = set(changes[0])
         added    = set(changes[1])
         removed  = set(changes[2])
-        deleted  = set(changes[3])
+        _deleted  = set(changes[3])
+
+        # split between files known in target manifest and the others
+        smf = set(mf)
+
+        # determine the exact nature of the deleted changesets
+        _deletedadded = _deleted - smf
+        _deletedmodified = _deleted - _deletedadded
+        added |= _deletedadded
+        modified |= _deletedmodified
 
         # We need to account for the state of file in the dirstate
         #
@@ -2397,6 +2406,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsmodified = set(changes[0])
             dsadded    = set(changes[1])
             dsremoved  = set(changes[2])
+            dsadded |= _deletedadded
+            dsmodified |= _deletedmodified
 
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
@@ -2413,17 +2424,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 return _('forgetting %s\n')
             return _('removing %s\n')
 
-        # split between files known in target manifest and the others
-        smf = set(mf)
-
         missingmodified = dsmodified - smf
         dsmodified -= missingmodified
         missingadded = dsadded - smf
         dsadded -= missingadded
         missingremoved = dsremoved - smf
         dsremoved -= missingremoved
-        missingdeleted = deleted - smf
-        deleted -= missingdeleted
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
@@ -2443,8 +2449,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (missingadded,     (actions['remove'],   False)),
             (dsremoved,        (actions['undelete'], True)),
             (missingremoved,   (None,                False)),
-            (deleted,          (actions['revert'],   False)),
-            (missingdeleted,   (actions['remove'],   False)),
             )
 
         for abs, (rel, exact) in sorted(names.items()):
