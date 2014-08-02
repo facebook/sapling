@@ -2193,9 +2193,15 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
                       editform=''):
     if not extramsg:
         extramsg = _("Leave message empty to abort commit.")
-    tmpl = repo.ui.config('committemplate', 'changeset', '').strip()
-    if tmpl:
-        committext = buildcommittemplate(repo, ctx, subs, extramsg, tmpl)
+
+    forms = [e for e in editform.split('.') if e]
+    forms.insert(0, 'changeset')
+    while forms:
+        tmpl = repo.ui.config('committemplate', '.'.join(forms))
+        if tmpl:
+            committext = buildcommittemplate(repo, ctx, subs, extramsg, tmpl)
+            break
+        forms.pop()
     else:
         committext = buildcommittext(repo, ctx, subs, extramsg)
 

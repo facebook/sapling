@@ -388,6 +388,37 @@ required):
 - :hg:`tag`
 - :hg:`transplant`
 
+Configuring items below instead of ``changeset`` allows showing
+customized message only for specific actions, or showing different
+messages for each actions.
+
+- ``changeset.backout`` for :hg:`backout`
+- ``changeset.commit.amend`` for :hg:`commit --amend`
+- ``changeset.commit.normal`` for :hg:`commit` without ``--amend``
+- ``changeset.fetch`` for :hg:`fetch` (impling merge commit)
+- ``changeset.gpg.sign`` for :hg:`sign`
+- ``changeset.graft`` for :hg:`graft`
+- ``changeset.histedit.edit`` for ``edit`` of :hg:`histedit`
+- ``changeset.histedit.fold`` for ``fold`` of :hg:`histedit`
+- ``changeset.histedit.mess`` for ``mess`` of :hg:`histedit`
+- ``changeset.histedit.pick`` for ``pick`` of :hg:`histedit`
+- ``changeset.import.bypass`` for :hg:`import --bypass`
+- ``changeset.import.normal`` for :hg:`import` without ``--bypass``
+- ``changeset.mq.qnew`` for :hg:`qnew`
+- ``changeset.mq.qfold`` for :hg:`qfold`
+- ``changeset.mq.qrefresh`` for :hg:`qrefresh`
+- ``changeset.rebase.collapse`` for :hg:`rebase --collapse`
+- ``changeset.rebase.normal`` for :hg:`rebase` without ``--collapse``
+- ``changeset.shelve.shelve`` for :hg:`shelve`
+- ``changeset.tag.add`` for :hg:`tag` without ``--remove``
+- ``changeset.tag.remove`` for :hg:`tag --remove`
+- ``changeset.transplant`` for :hg:`transplant`
+
+These dot-separated lists of names are treated as hierarchical ones.
+For example, ``changeset.tag.remove`` customizes the commit message
+only for :hg:`tag --remove`, but ``changeset.tag`` customizes the
+commit message for :hg:`tag` regardless of ``--remove`` option.
+
 ``decode/encode``
 -----------------
 
