@@ -5799,7 +5799,11 @@ def tag(ui, repo, name1, *names, **opts):
         if date:
             date = util.parsedate(date)
 
-        editor = cmdutil.getcommiteditor(**opts)
+        if opts.get('remove'):
+            editform = 'tag.remove'
+        else:
+            editform = 'tag.add'
+        editor = cmdutil.getcommiteditor(editform=editform, **opts)
 
         # don't allow tagging the null rev
         if (not opts.get('remove') and
