@@ -2429,8 +2429,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         dsmodified -= missingmodified
         missingadded = dsadded - smf
         dsadded -= missingadded
-        missingremoved = dsremoved - smf
-        dsremoved -= missingremoved
+        clean |= dsremoved - smf
+        dsremoved -= clean
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
@@ -2449,7 +2449,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (dsadded,          (actions['revert'],   True)),
             (missingadded,     (actions['remove'],   False)),
             (dsremoved,        (actions['undelete'], True)),
-            (missingremoved,   (None,                False)),
             (clean,            (None,                False)),
             )
 
