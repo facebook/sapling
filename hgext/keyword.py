@@ -1,6 +1,6 @@
 # keyword.py - $Keyword$ expansion for Mercurial
 #
-# Copyright 2007-2012 Christian Ebert <blacktrash@gmx.net>
+# Copyright 2007-2014 Christian Ebert <blacktrash@gmx.net>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
