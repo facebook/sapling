@@ -277,8 +277,9 @@ def sign(ui, repo, *revs, **opts):
                              % hgnode.short(n)
                              for n in nodes])
     try:
+        editor = cmdutil.getcommiteditor(editform='gpg.sign', **opts)
         repo.commit(message, opts['user'], opts['date'], match=msigs,
-                    editor=cmdutil.getcommiteditor(**opts))
+                    editor=editor)
     except ValueError, inst:
         raise util.Abort(str(inst))
 
