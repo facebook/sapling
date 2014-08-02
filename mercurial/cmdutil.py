@@ -593,7 +593,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     tmpname, message, user, date, branch, nodeid, p1, p2 = \
         patch.extract(ui, hunk)
 
-    editor = getcommiteditor(**opts)
+    editor = getcommiteditor(editform='import.normal', **opts)
     update = not opts.get('bypass')
     strip = opts["strip"]
     sim = float(opts.get('similarity') or 0)
@@ -687,12 +687,13 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                                     files, eolmode=None)
                 except patch.PatchError, e:
                     raise util.Abort(str(e))
+                editor = getcommiteditor(editform='import.bypass')
                 memctx = context.makememctx(repo, (p1.node(), p2.node()),
                                             message,
                                             opts.get('user') or user,
                                             opts.get('date') or date,
                                             branch, files, store,
-                                            editor=getcommiteditor())
+                                            editor=editor)
                 n = memctx.commit()
             finally:
                 store.close()
