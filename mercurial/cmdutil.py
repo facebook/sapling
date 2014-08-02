@@ -2470,7 +2470,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                    'add': ([], _('adding %s\n')),
                    'remove': ([], removeforget),
                    'undelete': ([], _('undeleting %s\n')),
-                   'noop': (None, None),
+                   'noop': (None, _('no changes needed to %s\n')),
                   }
 
 
@@ -2514,7 +2514,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                             msg = msg(abs)
                         ui.status(msg % rel)
                 elif exact:
-                    ui.warn(_('no changes needed to %s\n') % rel)
+                    ui.warn(msg % rel)
                 break
             else:
                 # Not touched in current dirstate.
