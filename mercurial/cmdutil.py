@@ -2407,7 +2407,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsmodified = set(changes[0])
             dsadded    = set(changes[1])
             dsremoved  = set(changes[2])
-            dsadded |= _deletedadded
 
             # only take into account for removes between wc and target
             clean |= dsremoved - removed
@@ -2419,6 +2418,22 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsmodified &= modified
             dsmodified |= modified & dsadded # dirstate added may needs backup
             modified -= dsmodified
+
+            # There are three categories of added files
+            #
+            # 1. addition that just happened in the dirstate
+            #    (should be forgotten)
+            # 2. file is added since target revision and has local changes
+            #    (should be backed up and removed)
+            # 3. file is added since target revision and is clean
+            #    (should be removed)
+            #
+            # However we do not need to split them yet. The current revert code
+            # will automatically recognize (1) when performing operation. And
+            # the backup system is currently unabled to handle (2).
+            #
+            # So we just put them all in the same group.
+            dsadded = added
 
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
@@ -2437,8 +2452,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         missingmodified = dsmodified - smf
         dsmodified -= missingmodified
-        missingadded = dsadded - smf
-        dsadded -= missingadded
 
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
@@ -2455,8 +2468,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (modified,         (actions['revert'],   False)),
             (dsmodified,       (actions['revert'],   True)),
             (missingmodified,  (actions['remove'],   True)),
-            (dsadded,          (actions['revert'],   True)),
-            (missingadded,     (actions['remove'],   False)),
+            (dsadded,          (actions['remove'],   True)),
             (removed,          (actions['add'],      True)),
             (dsremoved,        (actions['undelete'], True)),
             (clean,            (None,                False)),

@@ -908,12 +908,6 @@ Test revert --all to "base" content
 
 check revert output
 
-Misbehavior:
-
-- report "reverting" when file needs no changes
-|
-| - reverting removed_revert
-
   $ hg revert --all --rev 'desc(base)'
   removing added_clean
   removing added_deleted
@@ -936,7 +930,6 @@ Misbehavior:
   adding removed_clean
   reverting removed_deleted
   adding removed_removed
-  reverting removed_revert
   adding removed_untracked-clean
   adding removed_untracked-revert
   adding removed_untracked-wc
@@ -1098,12 +1091,6 @@ Test revert to "base" content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-Misbehavior:
-
-- fails to report no change to revert for
-|
-| - removed_revert
-
   $ for file in `python ../gen-revert-cases.py filelist`; do
   >   echo '### revert for:' $file;
   >   hg revert $file --rev 'desc(base)';
@@ -1194,6 +1181,7 @@ Misbehavior:
   ### revert for: removed_removed
   
   ### revert for: removed_revert
+  no changes needed to removed_revert
   
   ### revert for: removed_untracked-clean
   
