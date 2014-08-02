@@ -4040,11 +4040,11 @@ def locate(ui, repo, *pats, **opts):
     rev = scmutil.revsingle(repo, opts.get('rev'), None).node()
 
     ret = 1
-    m = scmutil.match(repo[rev], pats, opts, default='relglob')
+    ctx = repo[rev]
+    m = scmutil.match(ctx, pats, opts, default='relglob')
     m.bad = lambda x, y: False
-    for abs in repo[rev].walk(m):
-        if not rev and abs not in repo.dirstate:
-            continue
+
+    for abs in ctx.matches(m):
         if opts.get('fullpath'):
             ui.write(repo.wjoin(abs), end)
         else:
