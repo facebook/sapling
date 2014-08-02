@@ -598,6 +598,9 @@ class changectx(basectx):
                 continue
             match.bad(fn, _('no such file in rev %s') % self)
 
+    def matches(self, match):
+        return self.walk(match)
+
 class basefilectx(object):
     """A filecontext object represents the common logic for its children:
     filectx: read-only access to a filerevision that is already present
@@ -1143,6 +1146,9 @@ class committablectx(basectx):
     def walk(self, match):
         return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
                                                True, False))
+
+    def matches(self, match):
+        return sorted(self._repo.dirstate.matches(match))
 
     def ancestors(self):
         for a in self._repo.changelog.ancestors(
