@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import encoding
-import gettext, sys, os
+import gettext, sys, os, locale
 
 # modelled after templater.templatepath:
 if getattr(sys, 'frozen', None) is not None:
@@ -20,7 +20,25 @@ for dir in ('.', '..'):
     if os.path.isdir(localedir):
         break
 
-t = gettext.translation('hg', localedir, fallback=True)
+_languages = None
+if (os.name == 'nt'
+    and 'LANGUAGE' not in os.environ
+    and 'LC_ALL' not in os.environ
+    and 'LC_MESSAGES' not in os.environ
+    and 'LANG' not in os.environ):
+    # Try to detect UI language by "User Interface Language Management" API
+    # if no locale variables are set. Note that locale.getdefaultlocale()
+    # uses GetLocaleInfo(), which may be different from UI language.
+    # (See http://msdn.microsoft.com/en-us/library/dd374098(v=VS.85).aspx )
+    try:
+        import ctypes
+        langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+        _languages = [locale.windows_locale[langid]]
+    except (ImportError, AttributeError, KeyError):
+        # ctypes not found or unknown langid
+        pass
+
+t = gettext.translation('hg', localedir, _languages, fallback=True)
 
 def gettext(message):
     """Translate message.
