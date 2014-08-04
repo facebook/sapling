@@ -1085,10 +1085,12 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
         else:
+            iolock.acquire()
             if not self._options.nodiff:
                 self.stream.write('\nERROR: %s output changed\n' % test)
 
             self.stream.write('!')
+            iolock.release()
 
     def addError(self, *args, **kwargs):
         super(TestResult, self).addError(*args, **kwargs)
