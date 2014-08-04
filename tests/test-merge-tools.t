@@ -709,6 +709,39 @@ Default is silent simplemerge:
   # hg stat
   M f
 
+premerge=keep keeps conflict markers in:
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  $ hg merge -r 4 --config merge-tools.true.premerge=keep
+  merging f
+  <<<<<<< local: ef83787e2614  - test: revision 1
+  revision 1
+  space
+  =======
+  revision 4
+  >>>>>>> other: 81448d39c9a0 - test: revision 4
+  revision 0
+  space
+  revision 4
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ aftermerge
+  # cat f
+  <<<<<<< local: ef83787e2614  - test: revision 1
+  revision 1
+  space
+  =======
+  revision 4
+  >>>>>>> other: 81448d39c9a0 - test: revision 4
+  # hg stat
+  M f
+
+
 Tool execution
 
 set tools.args explicit to include $base $local $other $output:
