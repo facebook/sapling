@@ -260,6 +260,98 @@ log -pf b inside dir
   +a
   
 
+log -pf, but no args
+
+  $ hg log -pf
+  changeset:   3:2ca5ba701980
+  user:        test
+  date:        Thu Jan 01 00:00:04 1970 +0000
+  summary:     d
+  
+  diff -r f8954cd4dc1f -r 2ca5ba701980 a
+  --- a/a	Thu Jan 01 00:00:03 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r f8954cd4dc1f -r 2ca5ba701980 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:04 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r f8954cd4dc1f -r 2ca5ba701980 d
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/d	Thu Jan 01 00:00:04 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r f8954cd4dc1f -r 2ca5ba701980 g
+  --- a/g	Thu Jan 01 00:00:03 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:04 1970 +0000
+  @@ -1,2 +1,2 @@
+   f
+  -g
+  +f
+  
+  changeset:   2:f8954cd4dc1f
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     c
+  
+  diff -r d89b0a12d229 -r f8954cd4dc1f b
+  --- a/b	Thu Jan 01 00:00:02 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir/b	Thu Jan 01 00:00:03 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r d89b0a12d229 -r f8954cd4dc1f f
+  --- a/f	Thu Jan 01 00:00:02 1970 +0000
+  +++ b/f	Thu Jan 01 00:00:03 1970 +0000
+  @@ -1,1 +1,2 @@
+   f
+  +f
+  diff -r d89b0a12d229 -r f8954cd4dc1f g
+  --- a/g	Thu Jan 01 00:00:02 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:03 1970 +0000
+  @@ -1,1 +1,2 @@
+   f
+  +g
+  
+  changeset:   1:d89b0a12d229
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b
+  
+  diff -r 9161b9aeaf16 -r d89b0a12d229 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:02 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 9161b9aeaf16 -r d89b0a12d229 g
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:02 1970 +0000
+  @@ -0,0 +1,1 @@
+  +f
+  
+  changeset:   0:9161b9aeaf16
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
+  
+  diff -r 000000000000 -r 9161b9aeaf16 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 000000000000 -r 9161b9aeaf16 f
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/f	Thu Jan 01 00:00:01 1970 +0000
+  @@ -0,0 +1,1 @@
+  +f
+  
+
 log -vf dir/b
 
   $ hg log -vf dir/b

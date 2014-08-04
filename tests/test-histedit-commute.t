@@ -324,6 +324,30 @@ try with --rev
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
+Verify that revsetalias entries work with histedit:
+  $ cat >> $HGRCPATH <<EOF
+  > [revsetalias]
+  > grandparent(ARG) = p1(p1(ARG))
+  > EOF
+  $ echo extra commit >> c
+  $ hg ci -m 'extra commit to c'
+  $ HGEDITOR=cat hg histedit 'grandparent(.)'
+  pick ece0b8d93dda 6 c
+  pick 803ef1c6fcfd 7 e
+  pick 9c863c565126 8 extra commit to c
+  
+  # Edit history between ece0b8d93dda and 9c863c565126
+  #
+  # Commits are listed from least to most recent
+  #
+  # Commands:
+  #  p, pick = use commit
+  #  e, edit = use commit, but stop for amending
+  #  f, fold = use commit, but combine it with the one above
+  #  d, drop = remove commit from history
+  #  m, mess = edit message without changing commit content
+  #
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 should also work if a commit message is missing
   $ BUNDLE="$TESTDIR/missing-comment.hg"

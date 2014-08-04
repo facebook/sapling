@@ -1995,12 +1995,12 @@ class queue(object):
                 self.added.append(patchname)
                 imported.append(patchname)
                 patchname = None
-            if rev and repo.ui.configbool('mq', 'secret', False):
-                # if we added anything with --rev, we must move the secret root
-                phases.retractboundary(repo, phases.secret, [n])
-            self.parseseries()
-            self.applieddirty = True
-            self.seriesdirty = True
+                if rev and repo.ui.configbool('mq', 'secret', False):
+                    # if we added anything with --rev, move the secret root
+                    phases.retractboundary(repo, phases.secret, [n])
+                self.parseseries()
+                self.applieddirty = True
+                self.seriesdirty = True
 
         for i, filename in enumerate(files):
             if existing:
@@ -2407,7 +2407,7 @@ def setupheaderopts(ui, opts):
         opts['date'] = "%d %d" % util.makedate()
 
 @command("^qnew",
-         [('e', 'edit', None, _('edit commit message')),
+         [('e', 'edit', None, _('invoke editor on commit messages')),
           ('f', 'force', None, _('import uncommitted changes (DEPRECATED)')),
           ('g', 'git', None, _('use git extended diff format')),
           ('U', 'currentuser', None, _('add "From: <current user>" to patch')),
@@ -2453,7 +2453,7 @@ def new(ui, repo, patch, *args, **opts):
     return 0
 
 @command("^qrefresh",
-         [('e', 'edit', None, _('edit commit message')),
+         [('e', 'edit', None, _('invoke editor on commit messages')),
           ('g', 'git', None, _('use git extended diff format')),
           ('s', 'short', None,
            _('refresh only files already in the patch and specified files')),
@@ -2523,7 +2523,7 @@ def diff(ui, repo, *pats, **opts):
     return 0
 
 @command('qfold',
-         [('e', 'edit', None, _('edit patch header')),
+         [('e', 'edit', None, _('invoke editor on commit messages')),
           ('k', 'keep', None, _('keep folded patch files')),
          ] + commands.commitopts,
          _('hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH...'))

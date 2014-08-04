@@ -2662,8 +2662,8 @@ msgid "cannot read %r object at %s"
 msgstr "não é possível ler objeto %r em %s"
 
 #, python-format
-msgid "cannot read %r object at %s: %s"
-msgstr "não é possível ler objeto %r em %s: %s"
+msgid "cannot read %r object at %s: unexpected size"
+msgstr "não é possível ler objeto %r em %s: tamanho inesperado"
 
 #, python-format
 msgid "cannot read submodules config file in %s"
@@ -3424,8 +3424,8 @@ msgstr "pull, update e merge em um comando (OBSOLETA)"
 msgid "a specific revision you would like to pull"
 msgstr "uma revisão específica que você gostaria de trazer"
 
-msgid "edit commit message"
-msgstr "editar mensagem de consolidação"
+msgid "invoke editor on commit messages"
+msgstr "chama um editor para mensagens de consolidação"
 
 msgid "edit commit message (DEPRECATED)"
 msgstr "editar mensagem de consolidação (OBSOLETO)"
@@ -3586,11 +3586,8 @@ msgstr "o id da chave com a qual assinar"
 msgid "TEXT"
 msgstr "TEXTO"
 
-msgid "commit message"
-msgstr "mensagem de consolidação"
-
-msgid "invoke editor on commit messages"
-msgstr "chama um editor para mensagens de consolidação"
+msgid "use text as commit message"
+msgstr "usa o texto como mensagem de consolidação"
 
 msgid "hg sign [OPTION]... [REV]..."
 msgstr "hg sign [OPÇÃO]... [REV]..."
@@ -6466,9 +6463,6 @@ msgstr ""
 "    o último qrefresh, ou :hg:`export qtip` se você quiser ver\n"
 "    mudanças feitas pelo patch atual sem incluir as mudanças feitas\n"
 "    desde o último qrefresh."
-
-msgid "edit patch header"
-msgstr "edita o cabeçalho do patch"
 
 msgid "keep folded patch files"
 msgstr "mantém os arquivos dos patches incorporados"
@@ -10379,9 +10373,6 @@ msgstr "inclui nomes que casem com os padrões fornecidos"
 msgid "exclude names matching the given patterns"
 msgstr "exclui nomes que casem com os padrões fornecidos"
 
-msgid "use text as commit message"
-msgstr "usa o texto como mensagem de consolidação"
-
 msgid "read commit message from file"
 msgstr "lê de um arquivo a mensagem de consolidação"
 
@@ -11679,9 +11670,6 @@ msgstr "emenda o pai do diretório de trabalho"
 
 msgid "use the secret phase for committing"
 msgstr "consolida a revisão na fase \"secret\""
-
-msgid "further edit commit message already specified"
-msgstr "edita a mensagem de consolidação especificada"
 
 msgid "commit the specified files or all outstanding changes"
 msgstr "consolida os arquivos pedidos ou todas as mudanças por gravar"
@@ -13378,6 +13366,9 @@ msgstr "aplicando patch da entrada padrão\n"
 msgid "patch applied partially\n"
 msgstr "o patch foi aplicado parcialmente\n"
 
+msgid "(fix the .rej files and run `hg commit --amend`)\n"
+msgstr "(corrija os arquivos .rej e execute `hg commit --amend`)\n"
+
 #, python-format
 msgid "%s: no diffs found"
 msgstr "%s: nenhum diff encontrado"
@@ -15052,9 +15043,6 @@ msgstr "revisão a receber a etiqueta"
 
 msgid "remove a tag"
 msgstr "remove uma etiqueta"
-
-msgid "use <text> as commit message"
-msgstr "usa <texto> como mensagem de consolidação"
 
 msgid "[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
 msgstr "[-f] [-l] [-m TEXTO] [-d DATA] [-u USUÁRIO] [-r REV] NOME..."
@@ -26722,9 +26710,11 @@ msgstr "strip espera um ou dois argumentos"
 msgid "sub expects three arguments"
 msgstr "sub espera três argumentos"
 
+#. i18n: "startswith" is a keyword
 msgid "startswith expects two arguments"
 msgstr "startswith espera dois argumentos"
 
+#. i18n: "word" is a keyword
 #, python-format
 msgid "word expects two or three arguments, got %d"
 msgstr "word espera dois ou três argumentos, %d recebidos"

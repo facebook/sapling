@@ -203,7 +203,7 @@ def keystr(ui, key):
           ('k', 'key', '',
            _('the key id to sign with'), _('ID')),
           ('m', 'message', '',
-           _('commit message'), _('TEXT')),
+           _('use text as commit message'), _('TEXT')),
           ('e', 'edit', False, _('invoke editor on commit messages')),
          ] + commands.commitopts2,
          _('hg sign [OPTION]... [REV]...'))

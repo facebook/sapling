@@ -127,7 +127,8 @@ class convert_git(converter_source):
         size = int(info[2])
         data = self.catfilepipe[1].read(size)
         if len(data) < size:
-            raise util.Abort(_('cannot read %r object at %s: %s') % (type, rev))
+            raise util.Abort(_('cannot read %r object at %s: unexpected size')
+                             % (type, rev))
         # read the trailing newline
         self.catfilepipe[1].read(1)
         return data

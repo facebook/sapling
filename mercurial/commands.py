@@ -8,7 +8,7 @@
 from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _
-import os, re, difflib, time, tempfile, errno
+import os, re, difflib, time, tempfile, errno, shlex
 import sys
 import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
@@ -1339,8 +1339,7 @@ def clone(ui, source, dest=None, **opts):
      _('mark a branch as closed, hiding it from the branch list')),
     ('', 'amend', None, _('amend the parent of the working dir')),
     ('s', 'secret', None, _('use the secret phase for committing')),
-    ('e', 'edit', None,
-     _('further edit commit message already specified')),
+    ('e', 'edit', None, _('invoke editor on commit messages')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
@@ -2248,7 +2247,7 @@ def debuginstall(ui):
     # editor
     ui.status(_("checking commit editor...\n"))
     editor = ui.geteditor()
-    cmdpath = util.findexe(editor) or util.findexe(editor.split()[0])
+    cmdpath = util.findexe(shlex.split(editor)[0])
     if not cmdpath:
         if editor == 'vi':
             ui.write(_(" No commit editor set and can't find vi in PATH\n"))
@@ -3883,8 +3882,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                         parents = [repo[node]]
                     if rej:
                         ui.write_err(_("patch applied partially\n"))
-                        ui.write_err(("(fix the .rej files and run "
-                                      "`hg commit --amend`)\n"))
+                        ui.write_err(_("(fix the .rej files and run "
+                                       "`hg commit --amend`)\n"))
                         ret = 1
                         break
 
@@ -5695,8 +5694,8 @@ def summary(ui, repo, **opts):
     ('r', 'rev', '', _('revision to tag'), _('REV')),
     ('', 'remove', None, _('remove a tag')),
     # -l/--local is already there, commitopts cannot be used
-    ('e', 'edit', None, _('edit commit message')),
-    ('m', 'message', '', _('use <text> as commit message'), _('TEXT')),
+    ('e', 'edit', None, _('invoke editor on commit messages')),
+    ('m', 'message', '', _('use text as commit message'), _('TEXT')),
     ] + commitopts2,
     _('[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME...'))
 def tag(ui, repo, name1, *names, **opts):

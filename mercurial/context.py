@@ -120,7 +120,7 @@ class basectx(object):
         mf2 = self._manifestmatches(match, s)
 
         modified, added, clean = [], [], []
-        deleted, unknown, ignored = s[3], [], []
+        deleted, unknown, ignored = s[3], s[4], s[5]
         withflags = mf1.withflags() | mf2.withflags()
         for fn, mf2node in mf2.iteritems():
             if fn in mf1:
@@ -135,6 +135,10 @@ class basectx(object):
             elif fn not in deleted:
                 added.append(fn)
         removed = mf1.keys()
+        if removed:
+            # need to filter files if they are already reported as removed
+            unknown = [fn for fn in unknown if fn not in mf1]
+            ignored = [fn for fn in ignored if fn not in mf1]
 
         return [modified, added, removed, deleted, unknown, ignored, clean]
 
@@ -316,7 +320,8 @@ class basectx(object):
                              listunknown)
 
         if reversed:
-            r[1], r[2], r[3], r[4] = r[2], r[1], r[4], r[3]
+            # reverse added and removed
+            r[1], r[2] = r[2], r[1]
 
         if listsubrepos:
             for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):

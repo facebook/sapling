@@ -8,6 +8,15 @@ Create an extension to test bundle2 API
   > code. We still need to be able to test it while it grow up.
   > """
   > 
+  > import sys, os
+  > from mercurial import cmdutil
+  > from mercurial import util
+  > from mercurial import bundle2
+  > from mercurial import scmutil
+  > from mercurial import discovery
+  > from mercurial import changegroup
+  > from mercurial import error
+  > 
   > try:
   >     import msvcrt
   >     msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
@@ -16,14 +25,6 @@ Create an extension to test bundle2 API
   > except ImportError:
   >     pass
   > 
-  > import sys
-  > from mercurial import cmdutil
-  > from mercurial import util
-  > from mercurial import bundle2
-  > from mercurial import scmutil
-  > from mercurial import discovery
-  > from mercurial import changegroup
-  > from mercurial import error
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > 

@@ -862,6 +862,17 @@ test deprecated option is hidden with translation with untranslated description
   *"hg -v help debugoptDEP"* (glob)
 #endif
 
+Test commands that collide with topics (issue4240)
+
+  $ hg config -hq
+  hg config [-u] [NAME]...
+  
+  show combined config settings from all hgrc files
+  $ hg showconfig -hq
+  hg config [-u] [NAME]...
+  
+  show combined config settings from all hgrc files
+
 Test a help topic
 
   $ hg help revs

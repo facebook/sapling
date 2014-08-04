@@ -196,6 +196,14 @@ try to import --push
   now at: appendbar.diff
   $ hg qfin -a
   patch b.diff finalized without changeset message
+  $ touch .hg/patches/2.diff
+  $ hg qimport -r 'p1(.)::'
+  abort: patch "2.diff" already exists
+  [255]
+  $ hg qapplied
+  3.diff
+  $ hg qfin -a
+  $ rm .hg/patches/2.diff
   $ hg qimport -r 'p1(.)::' -P
   $ hg qpop -a
   popping 3.diff
