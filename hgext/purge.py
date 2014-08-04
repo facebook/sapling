@@ -26,7 +26,7 @@
 
 from mercurial import util, commands, cmdutil, scmutil
 from mercurial.i18n import _
-import os, stat
+import os
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
