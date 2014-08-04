@@ -954,8 +954,10 @@ Supported arguments:
 
 ``premerge``
   Attempt to run internal non-interactive 3-way merge tool before
-  launching external tool.  Options are ``true``, ``false``, or ``keep``
-  to leave markers in the file if the premerge fails.
+  launching external tool.  Options are ``true``, ``false``, ``keep`` or
+  ``keep-merge3``. The ``keep`` option will leave markers in the file if the
+  premerge fails. The ``keep-merge3`` will do the same but include information
+  about the base of the merge in the marker (see internal:merge3).
   Default: True
 
 ``binary``
