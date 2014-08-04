@@ -178,14 +178,15 @@ def _premerge(repo, toolconf, files, labels=None):
 
     ui = repo.ui
 
+    validkeep = ['keep']
+
     # do we attempt to simplemerge first?
     try:
         premerge = _toolbool(ui, tool, "premerge", not binary)
     except error.ConfigError:
         premerge = _toolstr(ui, tool, "premerge").lower()
-        valid = 'keep'.split()
-        if premerge not in valid:
-            _valid = ', '.join(["'" + v + "'" for v in valid])
+        if premerge not in validkeep:
+            _valid = ', '.join(["'" + v + "'" for v in validkeep])
             raise error.ConfigError(_("%s.premerge not valid "
                                       "('%s' is neither boolean nor %s)") %
                                     (tool, premerge, _valid))
@@ -195,7 +196,7 @@ def _premerge(repo, toolconf, files, labels=None):
         if not r:
             ui.debug(" premerge successful\n")
             return 0
-        if premerge != 'keep':
+        if premerge not in validkeep:
             util.copyfile(back, a) # restore from backup and try again
     return 1 # continue merging
 
