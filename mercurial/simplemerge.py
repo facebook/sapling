@@ -379,13 +379,16 @@ def simplemerge(ui, local, base, other, **opts):
 
     name_a = local
     name_b = other
+    name_base = None
     labels = opts.get('label', [])
     if len(labels) > 0:
         name_a = labels[0]
     if len(labels) > 1:
         name_b = labels[1]
     if len(labels) > 2:
-        raise util.Abort(_("can only specify two labels."))
+        name_base = labels[2]
+    if len(labels) > 3:
+        raise util.Abort(_("can only specify three labels."))
 
     try:
         localtext = readfile(local)
@@ -402,7 +405,11 @@ def simplemerge(ui, local, base, other, **opts):
         out = sys.stdout
 
     m3 = Merge3Text(basetext, localtext, othertext)
-    for line in m3.merge_lines(name_a=name_a, name_b=name_b):
+    extrakwargs = {}
+    if name_base is not None:
+        extrakwargs['base_marker'] = '|||||||'
+        extrakwargs['name_base'] = name_base
+    for line in m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs):
         out.write(line)
 
     if not opts.get('print'):

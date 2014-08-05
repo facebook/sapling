@@ -184,10 +184,25 @@ conflicts
   warning: conflicts during merge.
   [1]
 
+3 labels
+
+  $ python simplemerge -p -L foo -L bar -L base conflict-local base conflict-other
+  base
+  <<<<<<< foo
+  not other
+  end
+  ||||||| base
+  =======
+  other
+  end
+  >>>>>>> bar
+  warning: conflicts during merge.
+  [1]
+
 too many labels
 
-  $ python simplemerge -p -L foo -L bar -L baz conflict-local base conflict-other
-  abort: can only specify two labels.
+  $ python simplemerge -p -L foo -L bar -L baz -L buz conflict-local base conflict-other
+  abort: can only specify three labels.
   [255]
 
 binary file
