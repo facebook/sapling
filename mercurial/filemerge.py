@@ -223,6 +223,21 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         return True, r
     return False, 0
 
+@internaltool('merge3', True,
+              _("merging %s incomplete! "
+                "(edit conflicts, then use 'hg resolve --mark')\n"))
+def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    """
+    Uses the internal non-interactive simple merge algorithm for merging
+    files. It will fail if there are any conflicts and leave markers in
+    the partially merged file. Marker will have three sections, one from each
+    side of the merge and one for the base content."""
+    if not labels:
+        labels = _defaultconflictlabels
+    if len(labels) < 3:
+        labels.append('base')
+    return _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels)
+
 @internaltool('tagmerge', True,
               _("automatic tag merging of %s failed! "
                 "(use 'hg resolve --tool internal:merge' or another merge "

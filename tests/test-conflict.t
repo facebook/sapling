@@ -198,3 +198,37 @@ Verify basic conflict markers
   5
   >>>>>>> other
   Hop we are done.
+
+internal:merge3
+
+  $ hg up -q --clean .
+
+  $ hg merge 1 --tool internal:merge3
+  merging a
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ cat a
+  Small Mathematical Series.
+  <<<<<<< local
+  1
+  2
+  3
+  6
+  8
+  ||||||| base
+  One
+  Two
+  Three
+  Four
+  Five
+  =======
+  1
+  2
+  3
+  4
+  5
+  >>>>>>> other
+  Hop we are done.
