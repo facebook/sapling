@@ -191,8 +191,7 @@ def _premerge(repo, toolconf, files, labels=None):
                                     (tool, premerge, _valid))
 
     if premerge:
-        r = simplemerge.simplemerge(ui, a, b, c, quiet=True, label=labels,
-                                    no_minimal=True)
+        r = simplemerge.simplemerge(ui, a, b, c, quiet=True, label=labels)
         if not r:
             ui.debug(" premerge successful\n")
             return 0
@@ -219,7 +218,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
         ui = repo.ui
 
-        r = simplemerge.simplemerge(ui, a, b, c, label=labels, no_minimal=True)
+        r = simplemerge.simplemerge(ui, a, b, c, label=labels)
         return True, r
     return False, 0
 

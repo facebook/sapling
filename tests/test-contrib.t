@@ -143,20 +143,8 @@ conflicts
   $ echo not other >> conflict-local
   $ echo end >> conflict-local
   $ echo end >> conflict-other
+
   $ python simplemerge -p conflict-local base conflict-other
-  base
-  <<<<<<< conflict-local
-  not other
-  =======
-  other
-  >>>>>>> conflict-other
-  end
-  warning: conflicts during merge.
-  [1]
-
---no-minimal
-
-  $ python simplemerge -p --no-minimal conflict-local base conflict-other
   base
   <<<<<<< conflict-local
   not other
@@ -174,10 +162,11 @@ conflicts
   base
   <<<<<<< foo
   not other
+  end
   =======
   other
-  >>>>>>> conflict-other
   end
+  >>>>>>> conflict-other
   warning: conflicts during merge.
   [1]
 
@@ -187,10 +176,11 @@ conflicts
   base
   <<<<<<< foo
   not other
+  end
   =======
   other
-  >>>>>>> bar
   end
+  >>>>>>> bar
   warning: conflicts during merge.
   [1]
 
@@ -231,7 +221,7 @@ help
    -L --label       labels to use on conflict markers
    -a --text        treat all files as text
    -p --print       print results instead of overwriting LOCAL
-      --no-minimal  do not try to minimize conflict regions
+      --no-minimal  no effect (DEPRECATED)
    -h --help        display help and exit
    -q --quiet       suppress output
 
@@ -251,7 +241,7 @@ wrong number of arguments
    -L --label       labels to use on conflict markers
    -a --text        treat all files as text
    -p --print       print results instead of overwriting LOCAL
-      --no-minimal  do not try to minimize conflict regions
+      --no-minimal  no effect (DEPRECATED)
    -h --help        display help and exit
    -q --quiet       suppress output
   [1]
@@ -272,7 +262,7 @@ bad option
    -L --label       labels to use on conflict markers
    -a --text        treat all files as text
    -p --print       print results instead of overwriting LOCAL
-      --no-minimal  do not try to minimize conflict regions
+      --no-minimal  no effect (DEPRECATED)
    -h --help        display help and exit
    -q --quiet       suppress output
   [1]

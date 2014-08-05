@@ -11,8 +11,7 @@ options = [('L', 'label', [], _('labels to use on conflict markers')),
            ('a', 'text', None, _('treat all files as text')),
            ('p', 'print', None,
             _('print results instead of overwriting LOCAL')),
-           ('', 'no-minimal', None,
-            _('do not try to minimize conflict regions')),
+           ('', 'no-minimal', None, _('no effect (DEPRECATED)')),
            ('h', 'help', None, _('display help and exit')),
            ('q', 'quiet', None, _('suppress output'))]
 
