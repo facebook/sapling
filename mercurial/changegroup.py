@@ -569,7 +569,8 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
 
     return revisions, files
 
-def addchangegroup(repo, source, srctype, url, emptyok=False):
+def addchangegroup(repo, source, srctype, url, emptyok=False,
+                   targetphase=phases.draft):
     """Add the changegroup returned by source.read() to this repo.
     srctype is a string like 'push', 'pull', or 'unbundle'.  url is
     the URL of the repo where this changegroup is coming from.
@@ -701,13 +702,16 @@ def addchangegroup(repo, source, srctype, url, emptyok=False):
             if publishing:
                 phases.advanceboundary(repo, phases.public, srccontent)
             else:
+                # Those changesets have been pushed from the outside, their
+                # phases are going to be pushed alongside. Therefor
+                # `targetphase` is ignored.
                 phases.advanceboundary(repo, phases.draft, srccontent)
                 phases.retractboundary(repo, phases.draft, added)
         elif srctype != 'strip':
             # publishing only alter behavior during push
             #
             # strip should not touch boundary at all
-            phases.retractboundary(repo, phases.draft, added)
+            phases.retractboundary(repo, targetphase, added)
 
         # make changelog see real files again
         cl.finalize(trp)
