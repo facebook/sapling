@@ -312,23 +312,27 @@ _defaultconflictmarker = ('{node|short} ' +
 
 _defaultconflictlabels = ['local', 'other']
 
-def _formatlabels(repo, fcd, fco, labels):
+def _formatlabels(repo, fcd, fco, fca, labels):
     """Formats the given labels using the conflict marker template.
 
     Returns a list of formatted labels.
     """
     cd = fcd.changectx()
     co = fco.changectx()
+    ca = fca.changectx()
 
     ui = repo.ui
     template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
     template = templater.parsestring(template, quoted=False)
     tmpl = templater.templater(None, cache={'conflictmarker': template})
 
-    pad = max(len(labels[0]), len(labels[1]))
+    pad = max(len(l) for l in labels)
 
-    return [_formatconflictmarker(repo, cd, tmpl, labels[0], pad),
-            _formatconflictmarker(repo, co, tmpl, labels[1], pad)]
+    newlabels = [_formatconflictmarker(repo, cd, tmpl, labels[0], pad),
+                 _formatconflictmarker(repo, co, tmpl, labels[1], pad)]
+    if len(labels) > 2:
+        newlabels.append(_formatconflictmarker(repo, ca, tmpl, labels[2], pad))
+    return newlabels
 
 def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
@@ -391,7 +395,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     if not labels:
         labels = _defaultconflictlabels
     if markerstyle != 'basic':
-        labels = _formatlabels(repo, fcd, fco, labels)
+        labels = _formatlabels(repo, fcd, fco, fca, labels)
 
     needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
                         (a, b, c, back), labels=labels)
