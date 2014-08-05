@@ -206,7 +206,8 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
     files. It will fail if there are any conflicts and leave markers in
-    the partially merged file."""
+    the partially merged file. Markers will have two sections, one for each side
+    of merge."""
     tool, toolpath, binary, symlink = toolconf
     if symlink:
         repo.ui.warn(_('warning: internal:merge cannot merge symlinks '
