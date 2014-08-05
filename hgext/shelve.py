@@ -73,7 +73,8 @@ class shelvedfile(object):
         try:
             gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
             changegroup.addchangegroup(self.repo, gen, 'unshelve',
-                                       'bundle:' + self.vfs.join(self.fname))
+                                       'bundle:' + self.vfs.join(self.fname),
+                                       targetphase=phases.secret)
         finally:
             fp.close()
 
@@ -579,8 +580,6 @@ def unshelve(ui, repo, *shelved, **opts):
 
         ui.quiet = True
         shelvedfile(repo, basename, 'hg').applybundle()
-        nodes = [ctx.node() for ctx in repo.set('%d:', oldtiprev)]
-        phases.retractboundary(repo, phases.secret, nodes)
 
         ui.quiet = oldquiet
 
