@@ -177,11 +177,14 @@ def createcmd(ui, repo, pats, opts):
         hasmq = util.safehasattr(repo, 'mq')
         if hasmq:
             saved, repo.mq.checkapplied = repo.mq.checkapplied, False
+        backup = repo.ui.backupconfig('phases', 'new-commit')
         try:
+            repo.ui. setconfig('phases', 'new-commit', phases.secret)
             editor = cmdutil.getcommiteditor(editform='shelve.shelve', **opts)
             return repo.commit(message, user, opts.get('date'), match,
                                editor=editor)
         finally:
+            repo.ui.restoreconfig(backup)
             if hasmq:
                 repo.mq.checkapplied = saved
 
@@ -234,8 +237,6 @@ def createcmd(ui, repo, pats, opts):
             else:
                 ui.status(_("nothing changed\n"))
             return 1
-
-        phases.retractboundary(repo, phases.secret, [node])
 
         fp = shelvedfile(repo, name, 'files').opener('wb')
         fp.write('\0'.join(shelvedfiles))
@@ -559,10 +560,13 @@ def unshelve(ui, repo, *shelved, **opts):
                 if hasmq:
                     saved, repo.mq.checkapplied = repo.mq.checkapplied, False
 
+                backup = repo.ui.backupconfig('phases', 'new-commit')
                 try:
+                    repo.ui. setconfig('phases', 'new-commit', phases.secret)
                     return repo.commit(message, 'shelve@localhost',
                                        opts.get('date'), match)
                 finally:
+                    repo.ui.restoreconfig(backup)
                     if hasmq:
                         repo.mq.checkapplied = saved
 
