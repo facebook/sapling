@@ -57,6 +57,7 @@ import re
 import threading
 import killdaemons as killmod
 import Queue as queue
+from xml.dom import minidom
 import unittest
 
 processlock = threading.Lock()
@@ -190,6 +191,8 @@ def getparser():
              " (implies --keep-tmpdir)")
     parser.add_option("-v", "--verbose", action="store_true",
         help="output verbose messages")
+    parser.add_option("--xunit", type="string",
+                      help="record xunit results at specified path")
     parser.add_option("--view", type="string",
         help="external diff viewer")
     parser.add_option("--with-hg", type="string",
@@ -303,6 +306,20 @@ def vlog(*msg):
         return
 
     return log(*msg)
+
+# Bytes that break XML even in a CDATA block: control characters 0-31
+# sans \t, \n and \r
+CDATA_EVIL = re.compile(r"[\000-\010\013\014\016-\037]")
+
+def cdatasafe(data):
+    """Make a string safe to include in a CDATA block.
+
+    Certain control characters are illegal in a CDATA block, and
+    there's no way to include a ]]> in a CDATA either. This function
+    replaces illegal bytes with ? and adds a space between the ]] so
+    that it won't break the CDATA block.
+    """
+    return CDATA_EVIL.sub('?', data).replace(']]>', '] ]>')
 
 def log(*msg):
     """Log something to stdout.
@@ -1085,6 +1102,9 @@ class TestResult(unittest._TextTestResult):
         self.times = []
         self._started = {}
         self._stopped = {}
+        # Data stored for the benefit of generating xunit reports.
+        self.successes = []
+        self.faildata = {}
 
     def addFailure(self, test, reason):
         self.failures.append((test, reason))
@@ -1099,9 +1119,12 @@ class TestResult(unittest._TextTestResult):
             self.stream.write('!')
             iolock.release()
 
-    def addError(self, *args, **kwargs):
-        super(TestResult, self).addError(*args, **kwargs)
+    def addSuccess(self, test):
+        super(TestResult, self).addSuccess(test)
+        self.successes.append(test)
 
+    def addError(self, test, err):
+        super(TestResult, self).addError(test, err)
         if self._options.first:
             self.stop()
 
@@ -1141,6 +1164,8 @@ class TestResult(unittest._TextTestResult):
         """Record a mismatch in test output for a particular test."""
 
         accepted = False
+        failed = False
+        lines = []
 
         iolock.acquire()
         if self._options.nodiff:
@@ -1169,7 +1194,8 @@ class TestResult(unittest._TextTestResult):
                     else:
                         rename(test.errpath, '%s.out' % test.path)
                     accepted = True
-
+            if not accepted and not failed:
+                self.faildata[test.name] = ''.join(lines)
         iolock.release()
 
         return accepted
@@ -1343,6 +1369,35 @@ class TextTestRunner(unittest.TextTestRunner):
             self.stream.writeln('Failed %s: %s' % (test.name, msg))
         for test, msg in result.errors:
             self.stream.writeln('Errored %s: %s' % (test.name, msg))
+
+        if self._runner.options.xunit:
+            xuf = open(self._runner.options.xunit, 'wb')
+            try:
+                timesd = dict(
+                    (test, real) for test, cuser, csys, real in result.times)
+                doc = minidom.Document()
+                s = doc.createElement('testsuite')
+                s.setAttribute('name', 'run-tests')
+                s.setAttribute('tests', str(result.testsRun))
+                s.setAttribute('errors', "0") # TODO
+                s.setAttribute('failures', str(failed))
+                s.setAttribute('skipped', str(skipped + ignored))
+                doc.appendChild(s)
+                for tc in result.successes:
+                    t = doc.createElement('testcase')
+                    t.setAttribute('name', tc.name)
+                    t.setAttribute('time', '%.3f' % timesd[tc.name])
+                    s.appendChild(t)
+                for tc, err in sorted(result.faildata.iteritems()):
+                    t = doc.createElement('testcase')
+                    t.setAttribute('name', tc)
+                    t.setAttribute('time', '%.3f' % timesd[tc])
+                    cd = doc.createCDATASection(cdatasafe(err))
+                    t.appendChild(cd)
+                    s.appendChild(t)
+                xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
+            finally:
+                xuf.close()
 
         self._runner._checkhglib('Tested')
 

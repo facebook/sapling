@@ -48,6 +48,39 @@ failing test
   # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+test --xunit support
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --xunit=xunit.xml
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,4 +1,4 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+  
+  ERROR: test-failure.t output changed
+  !.
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+  $ cat xunit.xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <testsuite errors="0" failures="1" name="run-tests" skipped="0" tests="2">
+    <testcase name="test-success.t" time="*"/> (glob)
+    <testcase name="test-failure.t" time="*"> (glob)
+  <![CDATA[--- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,4 +1,4 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+  ]]>  </testcase>
+  </testsuite>
 
 test for --retest
 ====================
@@ -290,6 +323,18 @@ Skips
   i.s
   Skipped test-skip.t: irrelevant
   # Ran 1 tests, 2 skipped, 0 warned, 0 failed.
+
+Skips with xml
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy \
+  >  --xunit=xunit.xml
+  i.s
+  Skipped test-skip.t: irrelevant
+  # Ran 1 tests, 2 skipped, 0 warned, 0 failed.
+  $ cat xunit.xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <testsuite errors="0" failures="0" name="run-tests" skipped="2" tests="1">
+    <testcase name="test-success.t" time="*"/> (glob)
+  </testsuite>
 
 Missing skips or blacklisted skips don't count as executed:
   $ echo test-failure.t > blacklist
