@@ -577,7 +577,12 @@ def _pushsyncphase(pushop):
 def _localphasemove(pushop, nodes, phase=phases.public):
     """move <nodes> to <phase> in the local source repo"""
     if pushop.locallocked:
-        phases.advanceboundary(pushop.repo, phase, nodes)
+        tr = pushop.repo.transaction('push-phase-sync')
+        try:
+            phases.advanceboundary(pushop.repo, phase, nodes)
+            tr.close()
+        finally:
+            tr.release()
     else:
         # repo is not locked, do not change any phases!
         # Informs the user that phases should have been moved when
