@@ -4585,7 +4585,7 @@ def phase(ui, repo, *revs, **opts):
             olddata = repo._phasecache.getphaserevs(repo)[:]
             phases.advanceboundary(repo, tr, targetphase, nodes)
             if opts['force']:
-                phases.retractboundary(repo, targetphase, nodes)
+                phases.retractboundary(repo, tr, targetphase, nodes)
             tr.close()
         finally:
             if tr is not None:

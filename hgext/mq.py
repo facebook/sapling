@@ -2011,7 +2011,7 @@ class queue(object):
                     patchname = None
                     if rev and repo.ui.configbool('mq', 'secret', False):
                         # if we added anything with --rev, move the secret root
-                        phases.retractboundary(repo, phases.secret, [n])
+                        phases.retractboundary(repo, tr, phases.secret, [n])
                     self.parseseries()
                     self.applieddirty = True
                     self.seriesdirty = True

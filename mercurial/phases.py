@@ -229,10 +229,10 @@ class phasecache(object):
                 delroots.extend(olds - roots)
             # declare deleted root in the target phase
             if targetphase != 0:
-                self.retractboundary(repo, targetphase, delroots)
+                self.retractboundary(repo, tr, targetphase, delroots)
         repo.invalidatevolatilesets()
 
-    def retractboundary(self, repo, targetphase, nodes):
+    def retractboundary(self, repo, tr, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
 
@@ -289,7 +289,7 @@ def advanceboundary(repo, tr, targetphase, nodes):
     phcache.advanceboundary(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
 
-def retractboundary(repo, targetphase, nodes):
+def retractboundary(repo, tr, targetphase, nodes):
     """Set nodes back to a phase changing other nodes phases if
     necessary.
 
@@ -298,7 +298,7 @@ def retractboundary(repo, targetphase, nodes):
 
     Simplify boundary to contains phase roots only."""
     phcache = repo._phasecache.copy()
-    phcache.retractboundary(repo, targetphase, nodes)
+    phcache.retractboundary(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
 
 def listphases(repo):

@@ -706,12 +706,12 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                 # phases are going to be pushed alongside. Therefor
                 # `targetphase` is ignored.
                 phases.advanceboundary(repo, tr, phases.draft, srccontent)
-                phases.retractboundary(repo, phases.draft, added)
+                phases.retractboundary(repo, tr, phases.draft, added)
         elif srctype != 'strip':
             # publishing only alter behavior during push
             #
             # strip should not touch boundary at all
-            phases.retractboundary(repo, targetphase, added)
+            phases.retractboundary(repo, tr, targetphase, added)
 
         # make changelog see real files again
         cl.finalize(trp)
