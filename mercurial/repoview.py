@@ -19,13 +19,14 @@ def hideablerevs(repo):
     This is a standalone function to help extensions to wrap it."""
     return obsolete.getrevs(repo, 'obsolete')
 
-def _gethiddenblockers(repo):
-    """Get revisions that will block hidden changesets from being filtered
+def _getstaticblockers(repo):
+    """Cacheable revisions blocking hidden changesets from being filtered.
 
+    Additional non-cached hidden blockers are computed in _getdynamicblockers.
     This is a standalone function to help extensions to wrap it."""
     assert not repo.changelog.filteredrevs
     hideable = hideablerevs(repo)
-    blockers = []
+    blockers = set()
     if hideable:
         # We use cl to avoid recursive lookup from repo[xxx]
         cl = repo.changelog
@@ -33,16 +34,26 @@ def _gethiddenblockers(repo):
         revs = cl.revs(start=firsthideable)
         tofilter = repo.revs(
             '(%ld) and children(%ld)', list(revs), list(hideable))
-        blockers = set([r for r in tofilter if r not in hideable])
-        for par in repo[None].parents():
-            blockers.add(par.rev())
-        for bm in repo._bookmarks.values():
-            blockers.add(cl.rev(bm))
-        tags = {}
-        tagsmod.readlocaltags(repo.ui, repo, tags, {})
-        if tags:
-            rev, nodemap = cl.rev, cl.nodemap
-            blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
+        blockers.update([r for r in tofilter if r not in hideable])
+    return blockers
+
+def _getdynamicblockers(repo):
+    """Non-cacheable revisions blocking hidden changesets from being filtered.
+
+    Get revisions that will block hidden changesets and are likely to change,
+    but unlikely to create hidden blockers. They won't be cached, so be careful
+    with adding additional computation."""
+
+    cl = repo.changelog
+    blockers = set()
+    blockers.update([par.rev() for par in repo[None].parents()])
+    blockers.update([cl.rev(bm) for bm in repo._bookmarks.values()])
+
+    tags = {}
+    tagsmod.readlocaltags(repo.ui, repo, tags, {})
+    if tags:
+        rev, nodemap = cl.rev, cl.nodemap
+        blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return blockers
 
 def computehidden(repo):
@@ -50,12 +61,20 @@ def computehidden(repo):
 
     During most operation hidden should be filtered."""
     assert not repo.changelog.filteredrevs
+    hidden = frozenset()
     hideable = hideablerevs(repo)
     if hideable:
         cl = repo.changelog
-        blocked = cl.ancestors(_gethiddenblockers(repo), inclusive=True)
-        return frozenset(r for r in hideable if r not in blocked)
-    return frozenset()
+        blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
+        hidden = frozenset(r for r in hideable if r not in blocked)
+
+        # check if we have wd parents, bookmarks or tags pointing to hidden
+        # changesets and remove those.
+        dynamic = hidden & _getdynamicblockers(repo)
+        if dynamic:
+            blocked = cl.ancestors(dynamic, inclusive=True)
+            hidden = frozenset(r for r in hidden if r not in blocked)
+    return hidden
 
 def computeunserved(repo):
     """compute the set of revision that should be filtered when used a server
