@@ -825,14 +825,27 @@ def _pullapplyphases(pullop, remotephases):
         pheads, _dr = phases.analyzeremotephases(pullop.repo,
                                                  pullop.pulledsubset,
                                                  remotephases)
-        phases.advanceboundary(pullop.repo, phases.public, pheads)
-        phases.advanceboundary(pullop.repo, phases.draft,
-                               pullop.pulledsubset)
+        dheads = pullop.pulledsubset
     else:
         # Remote is old or publishing all common changesets
         # should be seen as public
-        phases.advanceboundary(pullop.repo, phases.public,
-                               pullop.pulledsubset)
+        pheads = pullop.pulledsubset
+        dheads = []
+    unfi = pullop.repo.unfiltered()
+    phase = unfi._phasecache.phase
+    rev = unfi.changelog.nodemap.get
+    public = phases.public
+    draft = phases.draft
+
+    # exclude changesets already public locally and update the others
+    pheads = [pn for pn in pheads if phase(unfi, rev(pn)) > public]
+    if pheads:
+        phases.advanceboundary(pullop.repo, public, pheads)
+
+    # exclude changesets already draft locally and update the others
+    dheads = [pn for pn in dheads if phase(unfi, rev(pn)) > draft]
+    if dheads:
+        phases.advanceboundary(pullop.repo, draft, dheads)
 
 def _pullobsolete(pullop):
     """utility function to pull obsolete markers from a remote
