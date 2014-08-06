@@ -18,3 +18,5 @@ run pyflakes on all tracked files ending in .py or without a file ending
   tests/hghave.py:*: 'ssl' imported but unused (glob)
   contrib/win32/hgwebdir_wsgi.py:93: 'from isapi.install import *' used; unable to detect undefined names (glob)
   tests/filterpyflakes.py:58: undefined name 'undefinedname'
+  
+
