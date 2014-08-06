@@ -1386,9 +1386,6 @@ def commit(ui, repo, *pats, **opts):
         # Let --subrepos on the command line override config setting.
         ui.setconfig('ui', 'commitsubrepos', True, 'commit')
 
-    # Save this for restoring it later
-    oldcommitphase = ui.config('phases', 'new-commit')
-
     cmdutil.checkunfinished(repo, commit=True)
 
     branch = repo[None].branch()
@@ -1442,12 +1439,14 @@ def commit(ui, repo, *pats, **opts):
             newmarks.write()
     else:
         def commitfunc(ui, repo, message, match, opts):
+            backup = ui.backupconfig('phases', 'new-commit')
+            baseui = repo.baseui
+            basebackup = baseui.backupconfig('phases', 'new-commit')
             try:
                 if opts.get('secret'):
                     ui.setconfig('phases', 'new-commit', 'secret', 'commit')
                     # Propagate to subrepos
-                    repo.baseui.setconfig('phases', 'new-commit', 'secret',
-                                          'commit')
+                    baseui.setconfig('phases', 'new-commit', 'secret', 'commit')
 
                 editform = 'commit.normal'
                 editor = cmdutil.getcommiteditor(editform=editform, **opts)
@@ -1456,9 +1455,8 @@ def commit(ui, repo, *pats, **opts):
                                    editor=editor,
                                    extra=extra)
             finally:
-                ui.setconfig('phases', 'new-commit', oldcommitphase, 'commit')
-                repo.baseui.setconfig('phases', 'new-commit', oldcommitphase,
-                                      'commit')
+                ui.restoreconfig(backup)
+                repo.baseui.restoreconfig(basebackup)
 
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
