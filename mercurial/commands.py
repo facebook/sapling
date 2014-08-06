@@ -4574,8 +4574,10 @@ def phase(ui, repo, *revs, **opts):
             ctx = repo[r]
             ui.write('%i: %s\n' % (ctx.rev(), ctx.phasestr()))
     else:
+        tr = None
         lock = repo.lock()
         try:
+            tr = repo.transaction("phase")
             # set phase
             if not revs:
                 raise util.Abort(_('empty revision set'))
@@ -4584,7 +4586,10 @@ def phase(ui, repo, *revs, **opts):
             phases.advanceboundary(repo, targetphase, nodes)
             if opts['force']:
                 phases.retractboundary(repo, targetphase, nodes)
+            tr.close()
         finally:
+            if tr is not None:
+                tr.release()
             lock.release()
         # moving revision from public to draft may hide them
         # We have to check result on an unfiltered repository
