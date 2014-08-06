@@ -73,6 +73,7 @@
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
   #  f, fold = use commit, but combine it with the one above
+  #  r, roll = like fold, but discard this commit's description
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #
@@ -133,6 +134,7 @@
   #  p, pick = use commit
   #  e, edit = use commit, but stop for amending
   #  f, fold = use commit, but combine it with the one above
+  #  r, roll = like fold, but discard this commit's description
   #  d, drop = remove commit from history
   #  m, mess = edit message without changing commit content
   #

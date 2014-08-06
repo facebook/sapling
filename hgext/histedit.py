@@ -36,6 +36,7 @@ file open in your editor::
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
+ #  r, roll = like fold, but discard this commit's description
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -57,6 +58,7 @@ would reorganize the file to look like this::
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
  #  f, fold = use commit, but combine it with the one above
+ #  r, roll = like fold, but discard this commit's description
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -179,6 +181,7 @@ editcomment = _("""# Edit history between %s and %s
 #  p, pick = use commit
 #  e, edit = use commit, but stop for amending
 #  f, fold = use commit, but combine it with the one above
+#  r, roll = like fold, but discard this commit's description
 #  d, drop = remove commit from history
 #  m, mess = edit message without changing commit content
 #
@@ -291,7 +294,9 @@ def collapse(repo, first, last, commitopts):
     extra = commitopts.get('extra')
 
     parents = (first.p1().node(), first.p2().node())
-    editor = cmdutil.getcommiteditor(edit=True, editform='histedit.fold')
+    editor = None
+    if not commitopts.get('rollup'):
+        editor = cmdutil.getcommiteditor(edit=True, editform='histedit.fold')
     new = context.memctx(repo,
                          parents=parents,
                          text=message,
@@ -333,6 +338,11 @@ def edit(ui, repo, ctx, ha, opts):
         _('Make changes as needed, you may commit or record as needed now.\n'
           'When you are finished, run hg histedit --continue to resume.'))
 
+def rollup(ui, repo, ctx, ha, opts):
+    rollupopts = opts.copy()
+    rollupopts['rollup'] = True
+    return fold(ui, repo, ctx, ha, rollupopts)
+
 def fold(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
@@ -360,10 +370,13 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
         username = ui.username()
     commitopts['user'] = username
     # commit message
-    newmessage = '\n***\n'.join(
-        [ctx.description()] +
-        [repo[r].description() for r in internalchanges] +
-        [oldctx.description()]) + '\n'
+    if opts.get('rollup'):
+        newmessage = ctx.description()
+    else:
+        newmessage = '\n***\n'.join(
+            [ctx.description()] +
+            [repo[r].description() for r in internalchanges] +
+            [oldctx.description()]) + '\n'
     commitopts['message'] = newmessage
     # date
     commitopts['date'] = max(ctx.date(), oldctx.date())
@@ -444,6 +457,8 @@ actiontable = {'p': pick,
                'edit': edit,
                'f': fold,
                'fold': fold,
+               'r': rollup,
+               'roll': rollup,
                'd': drop,
                'drop': drop,
                'm': message,
@@ -679,7 +694,7 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
     m, a, r, d = repo.status()[:4]
     if m or a or r or d:
         # prepare the message for the commit to comes
-        if action in ('f', 'fold'):
+        if action in ('f', 'fold', 'r', 'roll'):
             message = 'fold-temp-revision %s' % currentnode
         else:
             message = ctx.description()
@@ -702,15 +717,19 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
         # to parent.
         replacements.append((ctx.node(), tuple(newchildren)))
 
-    if action in ('f', 'fold'):
+    if action in ('f', 'fold', 'r', 'roll'):
         if newchildren:
             # finalize fold operation if applicable
             if new is None:
                 new = newchildren[-1]
             else:
                 newchildren.pop()  # remove new from internal changes
-            parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
-                                         newchildren)
+            foldopts = opts
+            if action in ('r', 'roll'):
+                foldopts = foldopts.copy()
+                foldopts['rollup'] = True
+            parentctx, repl = finishfold(ui, repo, parentctx, ctx, new,
+                                         foldopts, newchildren)
             replacements.extend(repl)
         else:
             # newchildren is empty if the fold did not result in any commit

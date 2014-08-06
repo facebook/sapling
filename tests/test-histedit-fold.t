@@ -105,6 +105,50 @@ check histedit_source
   
   
 
+rollup will fold without preserving the folded commit's message
+
+  $ hg histedit d2ae7f538514 --commands - 2>&1 <<EOF | fixbundle
+  > pick d2ae7f538514 b
+  > roll ee283cb5f2d5 e
+  > pick 6de59d13424a f
+  > pick 9c277da72c9b d
+  > EOF
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+log after edit
+  $ hg logt --graph
+  @  3:c4a9eb7989fc d
+  |
+  o  2:8e03a72b6f83 f
+  |
+  o  1:391ee782c689 b
+  |
+  o  0:cb9a9f314b8b a
+  
+
+description is taken from rollup target commit
+
+  $ hg log --debug --rev 1
+  changeset:   1:391ee782c68930be438ccf4c6a403daedbfbffa5
+  phase:       draft
+  parent:      0:cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    1:b5e112a3a8354e269b1524729f0918662d847c38
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files+:      b e
+  extra:       branch=default
+  extra:       histedit_source=d2ae7f538514cd87c17547b0de4cea71fe1af9fb,ee283cb5f2d5955443f23a27b697a04339e9a39a
+  description:
+  b
+  
+  
+
 check saving last-message.txt
 
   $ cat > $TESTTMP/abortfolding.py <<EOF
@@ -128,9 +172,9 @@ check saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 6de59d13424a --commands - 2>&1 <<EOF | fixbundle
-  > pick 6de59d13424a f
-  > fold 9c277da72c9b d
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 8e03a72b6f83 --commands - 2>&1 <<EOF | fixbundle
+  > pick 8e03a72b6f83 f
+  > fold c4a9eb7989fc d
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   allow non-folding commit
