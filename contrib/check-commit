@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+#
+# Copyright 2014 Matt Mackall <mpm@selenic.com>
+#
+# A tool/hook to run basic sanity checks on commits/patches for
+# submission to Mercurial. Install by adding the following to your
+# .hg/hgrc:
+#
+# [hooks]
+# pretxncommit = contrib/check-commit
+#
+# The hook can be temporarily bypassed with:
+#
+# $ BYPASS= hg commit
+#
+# See also: http://mercurial.selenic.com/wiki/ContributingChanges
+
+import re, sys, os
+
+errors = [
+    (r"[(]bc[)]", "(BC) needs to be uppercase"),
+    (r"[(]issue \d\d\d", "no space allowed between issue and number"),
+    (r"[(]bug", "use (issueDDDD) instead of bug"),
+    (r"^# User [^@\n]+$", "username is not an email address"),
+    (r"^# .*\n(?!merge with )[^#]\S+[^:] ",
+     "summary line doesn't start with 'topic: '"),
+    (r"^# .*\n[A-Z][a-z]\S+", "don't capitalize summary lines"),
+    (r"^# .*\n.*\.\s+$", "don't add trailing period on summary line"),
+    (r"^# .*\n.{78,}", "summary line too long"),
+    (r"\+\s+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
+]
+
+node = os.environ.get("HG_NODE")
+
+if node:
+    commit = os.popen("hg export %s" % node).read()
+else:
+    commit = sys.stdin.read()
+
+exitcode = 0
+for exp, msg in errors:
+    m = re.search(exp, commit, re.MULTILINE)
+    if m:
+        pos = 0
+        for n, l in enumerate(commit.splitlines(True)):
+            pos += len(l)
+            if pos >= m.end():
+                print "%d: %s" % (n, msg)
+                print " %s" % l[:-1]
+                if "BYPASS" not in os.environ:
+                    exitcode = 1
+                break
+
+sys.exit(exitcode)
