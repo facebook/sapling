@@ -700,12 +700,12 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             # We should not use added here but the list of all change in
             # the bundle
             if publishing:
-                phases.advanceboundary(repo, phases.public, srccontent)
+                phases.advanceboundary(repo, tr, phases.public, srccontent)
             else:
                 # Those changesets have been pushed from the outside, their
                 # phases are going to be pushed alongside. Therefor
                 # `targetphase` is ignored.
-                phases.advanceboundary(repo, phases.draft, srccontent)
+                phases.advanceboundary(repo, tr, phases.draft, srccontent)
                 phases.retractboundary(repo, phases.draft, added)
         elif srctype != 'strip':
             # publishing only alter behavior during push

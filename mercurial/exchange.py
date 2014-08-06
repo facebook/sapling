@@ -577,7 +577,7 @@ def _localphasemove(pushop, nodes, phase=phases.public):
     if pushop.locallocked:
         tr = pushop.repo.transaction('push-phase-sync')
         try:
-            phases.advanceboundary(pushop.repo, phase, nodes)
+            phases.advanceboundary(pushop.repo, tr, phase, nodes)
             tr.close()
         finally:
             tr.release()
@@ -840,12 +840,14 @@ def _pullapplyphases(pullop, remotephases):
     # exclude changesets already public locally and update the others
     pheads = [pn for pn in pheads if phase(unfi, rev(pn)) > public]
     if pheads:
-        phases.advanceboundary(pullop.repo, public, pheads)
+        tr = pullop.gettransaction()
+        phases.advanceboundary(pullop.repo, tr, public, pheads)
 
     # exclude changesets already draft locally and update the others
     dheads = [pn for pn in dheads if phase(unfi, rev(pn)) > draft]
     if dheads:
-        phases.advanceboundary(pullop.repo, draft, dheads)
+        tr = pullop.gettransaction()
+        phases.advanceboundary(pullop.repo, tr, draft, dheads)
 
 def _pullobsolete(pullop):
     """utility function to pull obsolete markers from a remote

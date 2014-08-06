@@ -932,7 +932,7 @@ class queue(object):
             if oldqbase.phase() > tphase and oldqbase.p1().phase() <= tphase:
                 tr = repo.transaction('qfinish')
                 try:
-                    phases.advanceboundary(repo, tphase, qfinished)
+                    phases.advanceboundary(repo, tr, tphase, qfinished)
                     tr.close()
                 finally:
                     tr.release()

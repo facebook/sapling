@@ -208,7 +208,7 @@ class phasecache(object):
         self._phaserevs = None
         self.dirty = True
 
-    def advanceboundary(self, repo, targetphase, nodes):
+    def advanceboundary(self, repo, tr, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
 
@@ -278,7 +278,7 @@ class phasecache(object):
         # (see branchmap one)
         self._phaserevs = None
 
-def advanceboundary(repo, targetphase, nodes):
+def advanceboundary(repo, tr, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
 
     This function move boundary *forward* this means that all nodes
@@ -286,7 +286,7 @@ def advanceboundary(repo, targetphase, nodes):
 
     Simplify boundary to contains phase roots only."""
     phcache = repo._phasecache.copy()
-    phcache.advanceboundary(repo, targetphase, nodes)
+    phcache.advanceboundary(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
 
 def retractboundary(repo, targetphase, nodes):
@@ -339,7 +339,7 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         oldphase = abs(int(oldphasestr)) # let's avoid negative index surprise
         if currentphase == oldphase and newphase < oldphase:
             tr = repo.transaction('pushkey-phase')
-            advanceboundary(repo, newphase, [bin(nhex)])
+            advanceboundary(repo, tr, newphase, [bin(nhex)])
             tr.close()
             return 1
         elif currentphase == newphase:
