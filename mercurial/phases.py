@@ -331,13 +331,16 @@ def listphases(repo):
 def pushphase(repo, nhex, oldphasestr, newphasestr):
     """List phases root for serialization over pushkey"""
     repo = repo.unfiltered()
+    tr = None
     lock = repo.lock()
     try:
         currentphase = repo[nhex].phase()
         newphase = abs(int(newphasestr)) # let's avoid negative index surprise
         oldphase = abs(int(oldphasestr)) # let's avoid negative index surprise
         if currentphase == oldphase and newphase < oldphase:
+            tr = repo.transaction('pushkey-phase')
             advanceboundary(repo, newphase, [bin(nhex)])
+            tr.close()
             return 1
         elif currentphase == newphase:
             # raced, but got correct result
@@ -345,6 +348,8 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         else:
             return 0
     finally:
+        if tr:
+            tr.release()
         lock.release()
 
 def analyzeremotephases(repo, subset, roots):
