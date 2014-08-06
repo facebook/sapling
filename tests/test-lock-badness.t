@@ -1,4 +1,4 @@
-#if unix-permissions no-root no-windows
+#require unix-permissions no-root no-windows
 
 Prepare
 
@@ -39,4 +39,3 @@ Pushing to a local read-only repo that can't be locked
   [255]
 
   $ chmod 700 a/.hg/store
-#endif

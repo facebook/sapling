@@ -1,4 +1,4 @@
-#if test-repo
+#require test-repo
 
   $ check_code="$TESTDIR"/../contrib/check-code.py
   $ cd "$TESTDIR"/..
@@ -13,5 +13,3 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/socketutil.py it has no-che?k-code (glob)
-
-#endif

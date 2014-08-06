@@ -1,4 +1,4 @@
-#if unix-permissions no-root
+#require unix-permissions no-root
 
   $ hg init a
   $ cd a
@@ -30,5 +30,3 @@
   1 files, 1 changesets, 1 total revisions
 
   $ cd ..
-
-#endif
