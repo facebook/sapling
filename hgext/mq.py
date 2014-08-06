@@ -1975,41 +1975,49 @@ class queue(object):
                 lastparent = None
 
             diffopts = self.diffopts({'git': git})
-            for r in rev:
-                if not repo[r].mutable():
-                    raise util.Abort(_('revision %d is not mutable') % r,
-                                     hint=_('see "hg help phases" for details'))
-                p1, p2 = repo.changelog.parentrevs(r)
-                n = repo.changelog.node(r)
-                if p2 != nullrev:
-                    raise util.Abort(_('cannot import merge revision %d') % r)
-                if lastparent and lastparent != r:
-                    raise util.Abort(_('revision %d is not the parent of %d')
-                                     % (r, lastparent))
-                lastparent = p1
+            tr = repo.transaction('qimport')
+            try:
+                for r in rev:
+                    if not repo[r].mutable():
+                        raise util.Abort(_('revision %d is not mutable') % r,
+                                         hint=_('see "hg help phases" '
+                                                'for details'))
+                    p1, p2 = repo.changelog.parentrevs(r)
+                    n = repo.changelog.node(r)
+                    if p2 != nullrev:
+                        raise util.Abort(_('cannot import merge revision %d')
+                                         % r)
+                    if lastparent and lastparent != r:
+                        raise util.Abort(_('revision %d is not the parent of '
+                                           '%d')
+                                         % (r, lastparent))
+                    lastparent = p1
 
-                if not patchname:
-                    patchname = normname('%d.diff' % r)
-                checkseries(patchname)
-                self.checkpatchname(patchname, force)
-                self.fullseries.insert(0, patchname)
+                    if not patchname:
+                        patchname = normname('%d.diff' % r)
+                    checkseries(patchname)
+                    self.checkpatchname(patchname, force)
+                    self.fullseries.insert(0, patchname)
 
-                patchf = self.opener(patchname, "w")
-                cmdutil.export(repo, [n], fp=patchf, opts=diffopts)
-                patchf.close()
+                    patchf = self.opener(patchname, "w")
+                    cmdutil.export(repo, [n], fp=patchf, opts=diffopts)
+                    patchf.close()
 
-                se = statusentry(n, patchname)
-                self.applied.insert(0, se)
+                    se = statusentry(n, patchname)
+                    self.applied.insert(0, se)
 
-                self.added.append(patchname)
-                imported.append(patchname)
-                patchname = None
-                if rev and repo.ui.configbool('mq', 'secret', False):
-                    # if we added anything with --rev, move the secret root
-                    phases.retractboundary(repo, phases.secret, [n])
-                self.parseseries()
-                self.applieddirty = True
-                self.seriesdirty = True
+                    self.added.append(patchname)
+                    imported.append(patchname)
+                    patchname = None
+                    if rev and repo.ui.configbool('mq', 'secret', False):
+                        # if we added anything with --rev, move the secret root
+                        phases.retractboundary(repo, phases.secret, [n])
+                    self.parseseries()
+                    self.applieddirty = True
+                    self.seriesdirty = True
+                tr.close()
+            finally:
+                tr.release()
 
         for i, filename in enumerate(files):
             if existing:
