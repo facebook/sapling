@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
+#require execbit
 
 Create extension that can disable exec checks:
 

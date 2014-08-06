@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" killdaemons || exit 80
+#require killdaemons
 
 Tests discovery against servers without getbundle support:
 

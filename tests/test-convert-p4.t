@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" p4 || exit 80
+#require p4
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH

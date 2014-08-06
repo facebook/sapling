@@ -1,7 +1,6 @@
+#require unix-permissions
+
 test that new files created in .hg inherit the permissions from .hg/store
-
-
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
 
   $ mkdir dir
 

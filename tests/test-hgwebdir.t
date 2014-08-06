@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+#require serve
 
 hide outer repo and work in dir without '.hg'
   $ hg init

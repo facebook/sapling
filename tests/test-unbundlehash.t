@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" killdaemons || exit 80
+#require killdaemons
 
 Test wire protocol unbundle with hashed heads (capability: unbundlehash)
 

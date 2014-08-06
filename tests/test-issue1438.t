@@ -1,6 +1,6 @@
-http://mercurial.selenic.com/bts/issue1438
+#require symlink
 
-  $ "$TESTDIR/hghave" symlink || exit 80
+http://mercurial.selenic.com/bts/issue1438
 
   $ hg init
 

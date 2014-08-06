@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
+#require execbit
 
   $ hg init
   $ echo a > a

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink execbit || exit 80
+#require symlink execbit
 
   $ tellmeabout() {
   > if [ -h $1 ]; then

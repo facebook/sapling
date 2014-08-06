@@ -1,6 +1,4 @@
-run only on case-sensitive filesystems
-
-  $ "$TESTDIR/hghave" no-icasefs || exit 80
+#require no-icasefs
 
 test file addition with colliding case
 

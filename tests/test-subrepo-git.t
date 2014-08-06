@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" git || exit 80
+#require git
 
 make git commits repeatable
 

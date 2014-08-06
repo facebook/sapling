@@ -1,6 +1,7 @@
+#require serve fifo
+
 Test hangup signal in the middle of transaction
 
-  $ "$TESTDIR/hghave" serve fifo || exit 80
   $ hg init
   $ mkfifo p
   $ hg serve --stdio < p 1>out 2>&1 &

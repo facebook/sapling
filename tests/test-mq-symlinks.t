@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
+#require symlink
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH

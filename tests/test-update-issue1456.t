@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
+#require execbit
 
   $ rm -rf a
   $ hg init a

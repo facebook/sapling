@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
+#require symlink
 
 Create extension that can disable symlink support:
 

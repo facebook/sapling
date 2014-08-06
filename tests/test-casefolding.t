@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" icasefs || exit 80
+#require icasefs
 
   $ hg debugfs | grep 'case-sensitive:'
   case-sensitive: no

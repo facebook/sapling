@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
+#require execbit
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "autodiff=$TESTDIR/autodiff.py" >> $HGRCPATH

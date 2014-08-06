@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" no-symlink || exit 80
+#require no-symlink
 
 # The following script was used to create the bundle:
 #

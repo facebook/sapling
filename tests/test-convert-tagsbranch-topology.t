@@ -1,5 +1,5 @@
+#require git
 
-  $ "$TESTDIR/hghave" git || exit 80
   $ echo "[core]" >> $HOME/.gitconfig
   $ echo "autocrlf = false" >> $HOME/.gitconfig
   $ echo "[core]" >> $HOME/.gitconfig

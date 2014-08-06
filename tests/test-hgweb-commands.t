@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+#require serve
 
 An attempt at more fully testing the hgweb web interface.
 The following things are tested elsewhere and are therefore omitted:

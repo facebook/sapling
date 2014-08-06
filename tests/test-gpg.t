@@ -1,6 +1,7 @@
+#require gpg
+
 Test the GPG extension
 
-  $ "$TESTDIR/hghave" gpg || exit 80
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > gpg=

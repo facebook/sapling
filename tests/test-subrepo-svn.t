@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" svn15 || exit 80
+#require svn15
 
   $ SVNREPOPATH=`pwd`/svn-repo
 #if windows

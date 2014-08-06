@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" killdaemons || exit 80
+#require killdaemons
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]

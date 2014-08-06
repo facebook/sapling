@@ -1,5 +1,5 @@
+#require bzr114
 
-  $ "$TESTDIR/hghave" bzr114 || exit 80
   $ . "$TESTDIR/bzr-definitions"
 
 The file/directory replacement can only be reproduced on

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" hardlink || exit 80
+#require hardlink
 
   $ cat > nlinks.py <<EOF
   > import sys

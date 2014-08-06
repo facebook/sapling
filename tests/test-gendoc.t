@@ -1,6 +1,7 @@
+#require docutils
+
 Test document extraction
 
-  $ "$TESTDIR/hghave" docutils || exit 80
   $ HGENCODING=UTF-8
   $ export HGENCODING
   $ { echo C; ls "$TESTDIR/../i18n"/*.po | sort; } | while read PO; do

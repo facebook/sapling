@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" svn13 || exit 80
+#require svn13
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH

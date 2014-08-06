@@ -1,5 +1,5 @@
+#require pygments serve
 
-  $ "$TESTDIR/hghave" pygments serve || exit 80
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > highlight =

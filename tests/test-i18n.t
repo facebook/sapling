@@ -1,6 +1,6 @@
-Translations are optional:
+#require gettext
 
-  $ "$TESTDIR/hghave" gettext || exit 80
+(Translations are optional)
 
 #if no-outer-repo
 

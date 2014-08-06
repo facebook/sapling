@@ -1,6 +1,4 @@
-run only on case-insensitive filesystems
-
-  $ "$TESTDIR/hghave" icasefs || exit 80
+#require icasefs
 
 ################################
 test for branch merging

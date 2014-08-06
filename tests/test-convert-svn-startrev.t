@@ -1,5 +1,4 @@
-
-  $ "$TESTDIR/hghave" svn svn-bindings || exit 80
+#require svn svn-bindings
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

@@ -1,5 +1,5 @@
+#require tla symlink
 
-  $ "$TESTDIR/hghave" tla symlink || exit 80
   $ tla my-id "mercurial <mercurial@selenic.com>"
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH

@@ -1,5 +1,5 @@
+#require svn svn-bindings
 
-  $ "$TESTDIR/hghave" svn svn-bindings || exit 80
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
   $ echo "mq = " >> $HGRCPATH

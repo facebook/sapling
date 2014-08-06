@@ -1,5 +1,5 @@
+#require cvs
 
-  $ "$TESTDIR/hghave" cvs || exit 80
   $ filterpath()
   > {
   >     eval "$@" | sed "s:$CVSROOT:*REPO*:g"

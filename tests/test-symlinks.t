@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
+#require symlink
 
 == tests added in 0.7 ==
 

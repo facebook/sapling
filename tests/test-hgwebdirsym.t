@@ -1,6 +1,6 @@
-Tests whether or not hgwebdir properly handles various symlink topologies.
+#require serve symlink
 
-  $ "$TESTDIR/hghave" serve symlink || exit 80
+Tests whether or not hgwebdir properly handles various symlink topologies.
 
 hide outer repo
   $ hg init

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" killdaemons || exit 80
+#require killdaemons
 
   $ hgserve() {
   >     hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid \

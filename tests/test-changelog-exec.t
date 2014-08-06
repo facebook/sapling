@@ -1,8 +1,8 @@
+#require execbit
+
 b51a8138292a introduced a regression where we would mention in the
 changelog executable files added by the second parent of a merge. Test
 that that doesn't happen anymore
-
-  $ "$TESTDIR/hghave" execbit || exit 80
 
   $ hg init repo
   $ cd repo

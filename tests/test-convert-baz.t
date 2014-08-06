@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" baz symlink || exit 80
+#require baz symlink
 
   $ baz my-id "mercurial <mercurial@selenic.com>"
 

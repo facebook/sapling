@@ -1,6 +1,6 @@
-http://mercurial.selenic.com/bts/issue352
+#require eol-in-paths
 
-  $ "$TESTDIR/hghave" eol-in-paths || exit 80
+http://mercurial.selenic.com/bts/issue352
 
 test issue352
 

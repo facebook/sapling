@@ -1,7 +1,8 @@
+#require cvs
+
 This is http://mercurial.selenic.com/bts/issue1148
 and http://mercurial.selenic.com/bts/issue1447
 
-  $ "$TESTDIR/hghave" cvs || exit 80
   $ cvscall()
   > {
   >     cvs -f "$@" > /dev/null

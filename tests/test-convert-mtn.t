@@ -1,5 +1,4 @@
-
-  $ "$TESTDIR/hghave" mtn || exit 80
+#require mtn
 
 Monotone directory is called .monotone on *nix and monotone
 on Windows.

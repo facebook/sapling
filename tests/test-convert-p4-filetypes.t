@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" p4 execbit symlink || exit 80
+#require p4 execbit symlink
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH

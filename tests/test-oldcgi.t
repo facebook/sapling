@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" no-msys || exit 80 # MSYS will translate web paths as if they were file paths
+#require no-msys # MSYS will translate web paths as if they were file paths
 
 This tests if CGI files from before d0db3462d568 still work.
 
