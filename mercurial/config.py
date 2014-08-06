@@ -76,7 +76,7 @@ class config(object):
             # no data before, remove everything
             section, item = data
             if section in self._data:
-                del self._data[section][item]
+                self._data[section].pop(item, None)
             self._source.pop((section, item), None)
 
     def parse(self, src, data, sections=None, remap=None, include=None):
