@@ -309,7 +309,7 @@ Skips
 ================
   $ cat > test-skip.t <<EOF
   >   $ echo xyzzy
-  >   $ exit 80
+  > #require false
   > EOF
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --nodiff
   !.s

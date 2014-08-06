@@ -810,7 +810,15 @@ class TTest(Test):
         for n, l in enumerate(lines):
             if not l.endswith('\n'):
                 l += '\n'
-            if l.startswith('#if'):
+            if l.startswith('#require'):
+                lsplit = l.split()
+                if len(lsplit) < 2 or lsplit[0] != '#require':
+                    after.setdefault(pos, []).append('  !!! invalid #require\n')
+                if not self._hghave(lsplit[1:]):
+                    script = ["exit 80\n"]
+                    break
+                after.setdefault(pos, []).append(l)
+            elif l.startswith('#if'):
                 lsplit = l.split()
                 if len(lsplit) < 2 or lsplit[0] != '#if':
                     after.setdefault(pos, []).append('  !!! invalid #if\n')
