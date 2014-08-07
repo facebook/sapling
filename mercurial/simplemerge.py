@@ -126,33 +126,6 @@ class Merge3Text(object):
             else:
                 raise ValueError(what)
 
-    def merge_annotated(self):
-        """Return merge with conflicts, showing origin of lines.
-
-        Most useful for debugging merge.
-        """
-        for t in self.merge_regions():
-            what = t[0]
-            if what == 'unchanged':
-                for i in range(t[1], t[2]):
-                    yield 'u | ' + self.base[i]
-            elif what == 'a' or what == 'same':
-                for i in range(t[1], t[2]):
-                    yield what[0] + ' | ' + self.a[i]
-            elif what == 'b':
-                for i in range(t[1], t[2]):
-                    yield 'b | ' + self.b[i]
-            elif what == 'conflict':
-                yield '<<<<\n'
-                for i in range(t[3], t[4]):
-                    yield 'A | ' + self.a[i]
-                yield '----\n'
-                for i in range(t[5], t[6]):
-                    yield 'B | ' + self.b[i]
-                yield '>>>>\n'
-            else:
-                raise ValueError(what)
-
     def merge_groups(self):
         """Yield sequence of line groups.  Each one is a tuple:
 
@@ -272,11 +245,6 @@ class Merge3Text(object):
                 iz = zend
                 ia = aend
                 ib = bend
-
-    def mismatch_region(next_a, region_ia,  next_b, region_ib):
-        if next_a < region_ia or next_b < region_ib:
-            return 'conflict', None, None, next_a, region_ia, next_b, region_ib
-    mismatch_region = staticmethod(mismatch_region)
 
     def find_sync_regions(self):
         """Return a list of sync regions, where both descendants match the base.
