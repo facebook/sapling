@@ -49,6 +49,28 @@ def checkforbidden(l):
                 _("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
 
+# apply the changes collected during the bisect loop to our addlist
+# return a delta suitable for addrevision
+def addlistdelta(addlist, x):
+    # for large addlist arrays, building a new array is cheaper
+    # than repeatedly modifying the existing one
+    currentposition = 0
+    newaddlist = array.array('c')
+
+    for start, end, content in x:
+        newaddlist += addlist[currentposition:start]
+        if content:
+            newaddlist += array.array('c', content)
+
+        currentposition = end
+
+    newaddlist += addlist[currentposition:]
+
+    deltatext = "".join(struct.pack(">lll", start, end, len(content))
+                   + content for start, end, content in x)
+    return deltatext, newaddlist
+
+
 class manifest(revlog.revlog):
     def __init__(self, opener):
         # we expect to deal with not more than four revs at a time,
@@ -140,27 +162,6 @@ class manifest(revlog.revlog):
 
     def add(self, map, transaction, link, p1=None, p2=None,
             changed=None):
-        # apply the changes collected during the bisect loop to our addlist
-        # return a delta suitable for addrevision
-        def addlistdelta(addlist, x):
-            # for large addlist arrays, building a new array is cheaper
-            # than repeatedly modifying the existing one
-            currentposition = 0
-            newaddlist = array.array('c')
-
-            for start, end, content in x:
-                newaddlist += addlist[currentposition:start]
-                if content:
-                    newaddlist += array.array('c', content)
-
-                currentposition = end
-
-            newaddlist += addlist[currentposition:]
-
-            deltatext = "".join(struct.pack(">lll", start, end, len(content))
-                           + content for start, end, content in x)
-            return deltatext, newaddlist
-
         # if we're using the cache, make sure it is valid and
         # parented by the same node we're diffing against
         if not (changed and p1 and (p1 in self._mancache)):
