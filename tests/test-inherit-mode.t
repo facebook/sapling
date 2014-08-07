@@ -120,7 +120,6 @@ group can still write everything
   00660 ../push/.hg/store/data/dir/bar.i
   00660 ../push/.hg/store/data/foo.i
   00660 ../push/.hg/store/fncache
-  00660 ../push/.hg/store/phaseroots
   00660 ../push/.hg/store/undo
   00660 ../push/.hg/store/undo.phaseroots
   00660 ../push/.hg/undo.bookmarks

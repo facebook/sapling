@@ -206,10 +206,12 @@ class phasecache(object):
                 fp.write('%i %s\n' % (phase, hex(h)))
         self.dirty = False
 
-    def _updateroots(self, phase, newroots):
+    def _updateroots(self, phase, newroots, tr):
         self.phaseroots[phase] = newroots
         self._phaserevs = None
         self.dirty = True
+
+        tr.addfilegenerator('phase', ('phaseroots',), self._write)
 
     def advanceboundary(self, repo, tr, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update
@@ -227,7 +229,7 @@ class phasecache(object):
             roots = set(ctx.node() for ctx in repo.set(
                     'roots((%ln::) - (%ln::%ln))', olds, olds, nodes))
             if olds != roots:
-                self._updateroots(phase, roots)
+                self._updateroots(phase, roots, tr)
                 # some roots may need to be declared for lower phases
                 delroots.extend(olds - roots)
             # declare deleted root in the target phase
@@ -250,7 +252,7 @@ class phasecache(object):
             currentroots.update(newroots)
             ctxs = repo.set('roots(%ln::)', currentroots)
             currentroots.intersection_update(ctx.node() for ctx in ctxs)
-            self._updateroots(targetphase, currentroots)
+            self._updateroots(targetphase, currentroots, tr)
         repo.invalidatevolatilesets()
 
     def filterunknown(self, repo):
