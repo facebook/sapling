@@ -40,6 +40,15 @@ class manifestdict(dict):
     def flagsdiff(self, d2):
         return dicthelpers.diff(self._flags, d2._flags, "")
 
+
+def checkforbidden(l):
+    """Check filenames for illegal characters."""
+    for f in l:
+        if '\n' in f or '\r' in f:
+            raise error.RevlogError(
+                _("'\\n' and '\\r' disallowed in filenames: %r") % f)
+
+
 class manifest(revlog.revlog):
     def __init__(self, opener):
         # we expect to deal with not more than four revs at a time,
@@ -151,12 +160,6 @@ class manifest(revlog.revlog):
             deltatext = "".join(struct.pack(">lll", start, end, len(content))
                            + content for start, end, content in x)
             return deltatext, newaddlist
-
-        def checkforbidden(l):
-            for f in l:
-                if '\n' in f or '\r' in f:
-                    raise error.RevlogError(
-                        _("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
         # if we're using the cache, make sure it is valid and
         # parented by the same node we're diffing against
