@@ -96,6 +96,9 @@ class transaction(object):
             opener.chmod(self.journal, createmode & 0666)
             opener.chmod(self.backupjournal, createmode & 0666)
 
+        # hold file generations to be performed on commit
+        self._filegenerators = {}
+
     def __del__(self):
         if self.journal:
             self._abort()
@@ -173,6 +176,28 @@ class transaction(object):
         self.backupsfile.flush()
 
     @active
+    def addfilegenerator(self, genid, filenames, genfunc, order=0):
+        """add a function to generates some files at transaction commit
+
+        The `genfunc` argument is a function capable of generating proper
+        content of each entry in the `filename` tuple.
+
+        At transaction close time, `genfunc` will be called with one file
+        object argument per entries in `filenames`.
+
+        The transaction itself is responsible for the backup, creation and
+        final write of such file.
+
+        The `genid` argument is used to ensure the same set of file is only
+        generated once. Call to `addfilegenerator` for a `genid` already
+        present will overwrite the old entry.
+
+        The `order` argument may be used to control the order in which multiple
+        generator will be executed.
+        """
+        self._filegenerators[genid] = (order, filenames, genfunc)
+
+    @active
     def find(self, file):
         if file in self.map:
             return self.entries[self.map[file]]
@@ -213,6 +238,18 @@ class transaction(object):
     @active
     def close(self):
         '''commit the transaction'''
+        # write files registered for generation
+        for order, filenames, genfunc in sorted(self._filegenerators.values()):
+            files = []
+            try:
+                for name in filenames:
+                    self.addbackup(name)
+                    files.append(self.opener(name, 'w', atomictemp=True))
+                genfunc(*files)
+            finally:
+                for f in files:
+                    f.close()
+
         if self.count == 1 and self.onclose is not None:
             self.onclose()
 
