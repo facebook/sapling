@@ -63,15 +63,7 @@ def wraprepo(repo):
             elif hasattr(remote, 'getbundle'):
                 wrapfunction(remote, 'getbundle', localgetbundle)
 
-            result = super(shallowrepository, self).pull(remote, *args, **kwargs)
-
-            # prefetch if it's configured
-            prefetchrevset = self.ui.config('remotefilelog', 'pullprefetch', None)
-            if prefetchrevset:
-                revs = self.revs(prefetchrevset)
-                self.prefetch(revs)
-
-            return result
+            return super(shallowrepository, self).pull(remote, *args, **kwargs)
 
         def prefetch(self, revs, pats=None, opts=None):
             """Prefetches all the necessary file revisions for the given revs
@@ -86,10 +78,11 @@ def wraprepo(repo):
 
                 mf = repo.manifest
                 mfnode = ctx.manifestnode()
+                mfrev = mf.rev(mfnode)
 
                 # Decompressing manifests is expensive.
                 # When possible, only read the deltas.
-                p1, p2 = mf.parentrevs(rev)
+                p1, p2 = mf.parentrevs(mfrev)
                 if p1 in visited and p2 in visited:
                     mfdict = mf.readfast(mfnode)
                 else:
@@ -99,7 +92,7 @@ def wraprepo(repo):
                     if not pats or m(path):
                         files.add((path, hex(fnode)))
 
-                visited.add(rev)
+                visited.add(mfrev)
 
             repo.fileservice.prefetch(files)
 

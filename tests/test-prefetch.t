@@ -11,6 +11,7 @@
   $ echo x2 > x
   $ echo y > y
   $ hg commit -qAm y
+  $ hg bookmark foo
 
   $ cd ..
 
@@ -54,7 +55,7 @@
 
 # prefetch on pull when configured
 
-  $ printf "[remotefilelog]\npullprefetch=tip\n" >> .hg/hgrc
+  $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
   $ hg strip tip^
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/b292c1e3311f-backup.hg
 
@@ -66,7 +67,9 @@
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
+  updating bookmark foo
   (run 'hg update' to get a working copy)
+  prefetching file contents
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.09s
 
   $ hg up tip

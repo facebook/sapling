@@ -44,6 +44,7 @@ def uisetup(ui):
     extensions.wrapcommand(commands.table, 'debugindexdot',
         debugcommands.debugindexdot)
     extensions.wrapcommand(commands.table, 'log', log)
+    extensions.wrapcommand(commands.table, 'pull', pull)
 
     # Prevent 'hg manifest --all'
     def _manifest(orig, ui, repo, *args, **opts):
@@ -517,6 +518,19 @@ def log(orig, ui, repo, *pats, **opts):
                       "use -f to speed it up\n"))
 
     return orig(ui, repo, *pats, **opts)
+
+def pull(orig, ui, repo, *pats, **opts):
+    result = orig(ui, repo, *pats, **opts)
+
+    if shallowrepo.requirement in repo.requirements:
+        # prefetch if it's configured
+        prefetchrevset = ui.config('remotefilelog', 'pullprefetch', None)
+        if prefetchrevset:
+            ui.status("prefetching file contents\n")
+            revs = repo.revs(prefetchrevset)
+            repo.prefetch(revs)
+
+    return result
 
 def revert(orig, ui, repo, ctx, parents, *pats, **opts):
     # prefetch prior to reverting
