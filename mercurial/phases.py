@@ -196,11 +196,14 @@ class phasecache(object):
             return
         f = self.opener('phaseroots', 'w', atomictemp=True)
         try:
-            for phase, roots in enumerate(self.phaseroots):
-                for h in roots:
-                    f.write('%i %s\n' % (phase, hex(h)))
+            self._write(f)
         finally:
             f.close()
+
+    def _write(self, fp):
+        for phase, roots in enumerate(self.phaseroots):
+            for h in roots:
+                fp.write('%i %s\n' % (phase, hex(h)))
         self.dirty = False
 
     def _updateroots(self, phase, newroots):
