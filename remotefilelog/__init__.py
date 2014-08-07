@@ -409,7 +409,7 @@ def filelogrevset(orig, repo, subset, x):
 
 commands.norepo += " gc"
 
-@command('^gc', [], _('hg gc [REPO...]'))
+@command('gc', [], _('hg gc [REPO...]'))
 def gc(ui, *args, **opts):
     '''garbage collect the client and server filelog caches
     '''
@@ -547,7 +547,7 @@ def revert(orig, ui, repo, ctx, parents, *pats, **opts):
 
 commands.norepo += " debugremotefilelog"
 
-@command('^debugremotefilelog', [
+@command('debugremotefilelog', [
     ('d', 'decompress', None, _('decompress the filelog first')),
     ], _('hg debugremotefilelog <path>'))
 def debugremotefilelog(ui, *args, **opts):
@@ -555,7 +555,7 @@ def debugremotefilelog(ui, *args, **opts):
 
 commands.norepo += " verifyremotefilelog"
 
-@command('^verifyremotefilelog', [
+@command('verifyremotefilelog', [
     ('d', 'decompress', None, _('decompress the filelogs first')),
     ], _('hg verifyremotefilelogs <directory>'))
 def verifyremotefilelog(ui, *args, **opts):
