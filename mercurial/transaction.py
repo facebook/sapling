@@ -154,7 +154,7 @@ class transaction(object):
 
         if file in self.map or file in self.backupmap:
             return
-        backupfile = "%s.%s" % (self.journal, file)
+        backupfile = "%s.backup.%s" % (self.journal, file)
         if self.opener.exists(file):
             filepath = self.opener.join(file)
             backuppath = self.opener.join(backupfile)
