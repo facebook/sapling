@@ -208,8 +208,6 @@ def commitfuncfor(repo, src):
             repo.ui.restoreconfig(phasebackup)
     return commitfunc
 
-
-
 def applychanges(ui, repo, ctx, opts):
     """Merge changeset from ctx (only) in the current working directory"""
     wcpar = repo.dirstate.parents()[0]

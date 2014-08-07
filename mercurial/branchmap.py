@@ -62,8 +62,6 @@ def read(repo):
         partial = None
     return partial
 
-
-
 ### Nearest subset relation
 # Nearest subset of filter X is a filter Y so that:
 # * Y is included in X,

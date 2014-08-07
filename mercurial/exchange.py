@@ -221,8 +221,6 @@ def pushdiscovery(stepname):
         return func
     return dec
 
-
-
 def _pushdiscovery(pushop):
     """Run all discovery steps"""
     for stepname in pushdiscoveryorder:
