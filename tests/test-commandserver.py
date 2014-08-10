@@ -155,7 +155,7 @@ def localhgrc(server):
 
     # the cached repo local hgrc contains ui.foo=bar, so showconfig should
     # show it
-    runcommand(server, ['showconfig'])
+    runcommand(server, ['showconfig'], outfilter=sep)
 
     # but not for this repo
     runcommand(server, ['init', 'foo'])

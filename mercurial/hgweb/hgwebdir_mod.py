@@ -214,7 +214,8 @@ class hgwebdir(object):
                     if real:
                         req.env['REPO_NAME'] = virtualrepo
                         try:
-                            repo = hg.repository(self.ui, real)
+                            # ensure caller gets private copy of ui
+                            repo = hg.repository(self.ui.copy(), real)
                             return hgweb(repo).run_wsgi(req)
                         except IOError, inst:
                             msg = inst.strerror

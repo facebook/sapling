@@ -61,6 +61,7 @@ class hgweb(object):
                 u = ui.ui()
             r = hg.repository(u, repo)
         else:
+            # we trust caller to give us a private copy
             r = repo
 
         r = self._getview(r)
