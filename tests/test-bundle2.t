@@ -125,7 +125,7 @@ Create an extension to test bundle2 API
   >     if path is None:
   >        file = sys.stdout
   >     else:
-  >         file = open(path, 'w')
+  >         file = open(path, 'wb')
   > 
   >     for chunk in bundler.getchunks():
   >         file.write(chunk)
@@ -157,7 +157,7 @@ Create an extension to test bundle2 API
   >     for rec in op.records['changegroup']:
   >         ui.write('addchangegroup return: %i\n' % rec['return'])
   >     if op.reply is not None and replypath is not None:
-  >         file = open(replypath, 'w')
+  >         file = open(replypath, 'wb')
   >         for chunk in op.reply.getchunks():
   >             file.write(chunk)
   > 
