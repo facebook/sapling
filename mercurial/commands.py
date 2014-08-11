@@ -5878,7 +5878,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                                                   'bundle:' + fname)
     finally:
         lock.release()
-    bookmarks.updatecurrentbookmark(repo, wc.node(), wc.branch())
+
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 
 @command('^update|up|checkout|co',

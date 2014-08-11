@@ -496,13 +496,12 @@ update to current bookmark if it's not the parent
   parent: 2:db815d6d32e6 
    2
   branch: default
-  bookmarks: [Z] Y x  y
+  bookmarks: *Z Y x  y
   commit: 1 added, 1 unknown (new branch head)
   update: 2 new changesets (update)
   $ hg update
-  updating to active bookmark Z
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark Z)
+  updating bookmark Z
   $ hg bookmarks
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
