@@ -363,6 +363,28 @@ def getstandinsstate(repo):
         standins.append((lfile, hash))
     return standins
 
+def synclfdirstate(repo, lfdirstate, lfile, normallookup):
+    lfstandin = standin(lfile)
+    if lfstandin in repo.dirstate:
+        stat = repo.dirstate._map[lfstandin]
+        state, mtime = stat[0], stat[3]
+    else:
+        state, mtime = '?', -1
+    if state == 'n':
+        if normallookup or mtime < 0:
+            # state 'n' doesn't ensure 'clean' in this case
+            lfdirstate.normallookup(lfile)
+        else:
+            lfdirstate.normal(lfile)
+    elif state == 'm':
+        lfdirstate.normallookup(lfile)
+    elif state == 'r':
+        lfdirstate.remove(lfile)
+    elif state == 'a':
+        lfdirstate.add(lfile)
+    elif state == '?':
+        lfdirstate.drop(lfile)
+
 def getlfilestoupdate(oldstandins, newstandins):
     changedstandins = set(oldstandins).symmetric_difference(set(newstandins))
     filelist = []

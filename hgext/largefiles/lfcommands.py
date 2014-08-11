@@ -510,26 +510,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True,
 
             updated += update1
 
-            standin = lfutil.standin(lfile)
-            if standin in repo.dirstate:
-                stat = repo.dirstate._map[standin]
-                state, mtime = stat[0], stat[3]
-            else:
-                state, mtime = '?', -1
-            if state == 'n':
-                if normallookup or mtime < 0:
-                    # state 'n' doesn't ensure 'clean' in this case
-                    lfdirstate.normallookup(lfile)
-                else:
-                    lfdirstate.normal(lfile)
-            elif state == 'm':
-                lfdirstate.normallookup(lfile)
-            elif state == 'r':
-                lfdirstate.remove(lfile)
-            elif state == 'a':
-                lfdirstate.add(lfile)
-            elif state == '?':
-                lfdirstate.drop(lfile)
+            lfutil.synclfdirstate(repo, lfdirstate, lfile, normallookup)
 
         lfdirstate.write()
         if printmessage and lfiles:
