@@ -99,4 +99,28 @@ Test that "hg revert -r REV" updates largefiles from "REV" correctly
   $ cat .hglf/large1
   58e24f733a964da346e2407a2bee99d9001184f5
 
+Test that "hg rollback" restores status of largefiles correctly
+
+  $ hg update -C -q
+  $ hg remove large1
+  $ hg forget large2
+  $ echo largeX > largeX
+  $ hg add --large largeX
+  $ hg commit -m 'will be rollback-ed soon'
+  $ hg status -A large1
+  large1: No such file or directory
+  $ hg status -A large2
+  ? large2
+  $ hg status -A largeX
+  C largeX
+  $ hg rollback
+  repository tip rolled back to revision 3 (undo commit)
+  working directory now based on revision 3
+  $ hg status -A large1
+  R large1
+  $ hg status -A large2
+  R large2
+  $ hg status -A largeX
+  A largeX
+
   $ cd ..

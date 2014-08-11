@@ -1148,12 +1148,8 @@ def overriderollback(orig, ui, repo, **opts):
 
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         lfiles = lfutil.listlfiles(repo)
-        oldlfiles = lfutil.listlfiles(repo, repo[None].parents()[0].rev())
         for file in lfiles:
-            if file in oldlfiles:
-                lfdirstate.normallookup(file)
-            else:
-                lfdirstate.add(file)
+            lfutil.synclfdirstate(repo, lfdirstate, file, True)
         lfdirstate.write()
     finally:
         wlock.release()
