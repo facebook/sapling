@@ -129,4 +129,42 @@ Test that "hg rollback" restores status of largefiles correctly
   $ hg status -A largeY
   ? largeY
 
+Test that "hg status" shows status of largefiles correctly just after
+automated commit like rebase/transplant
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > rebase =
+  > strip =
+  > transplant =
+  > EOF
+  $ hg update -q -C 1
+  $ hg remove large1
+  $ echo largeX > largeX
+  $ hg add --large largeX
+  $ hg commit -m '#4'
+
+  $ hg rebase -s 1 -d 2 --keep
+  $ hg status -A large1
+  large1: No such file or directory
+  $ hg status -A largeX
+  C largeX
+  $ hg strip -q 5
+
+  $ hg update -q -C 2
+  $ hg transplant -q 1 4
+  $ hg status -A large1
+  large1: No such file or directory
+  $ hg status -A largeX
+  C largeX
+  $ hg strip -q 5
+
+  $ hg update -q -C 2
+  $ hg transplant -q --merge 1 --merge 4
+  $ hg status -A large1
+  large1: No such file or directory
+  $ hg status -A largeX
+  C largeX
+  $ hg strip -q 5
+
   $ cd ..

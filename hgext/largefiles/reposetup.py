@@ -285,6 +285,16 @@ def reposetup(ui, repo):
                                             printmessage=False)
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
+
+                    if result:
+                        lfdirstate = lfutil.openlfdirstate(ui, self)
+                        for f in self[result].files():
+                            if lfutil.isstandin(f):
+                                lfile = lfutil.splitstandin(f)
+                                lfutil.synclfdirstate(self, lfdirstate, lfile,
+                                                      False)
+                        lfdirstate.write()
+
                     return result
                 # Case 1: user calls commit with no specific files or
                 # include/exclude patterns: refresh and commit all files that
