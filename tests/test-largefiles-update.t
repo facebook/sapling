@@ -107,12 +107,16 @@ Test that "hg rollback" restores status of largefiles correctly
   $ echo largeX > largeX
   $ hg add --large largeX
   $ hg commit -m 'will be rollback-ed soon'
+  $ echo largeY > largeY
+  $ hg add --large largeY
   $ hg status -A large1
   large1: No such file or directory
   $ hg status -A large2
   ? large2
   $ hg status -A largeX
   C largeX
+  $ hg status -A largeY
+  A largeY
   $ hg rollback
   repository tip rolled back to revision 3 (undo commit)
   working directory now based on revision 3
@@ -122,5 +126,7 @@ Test that "hg rollback" restores status of largefiles correctly
   R large2
   $ hg status -A largeX
   A largeX
+  $ hg status -A largeY
+  ? largeY
 
   $ cd ..

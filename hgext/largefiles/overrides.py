@@ -1147,9 +1147,13 @@ def overriderollback(orig, ui, repo, **opts):
                      partial=lfutil.isstandin)
 
         lfdirstate = lfutil.openlfdirstate(ui, repo)
+        orphans = set(lfdirstate)
         lfiles = lfutil.listlfiles(repo)
         for file in lfiles:
             lfutil.synclfdirstate(repo, lfdirstate, file, True)
+            orphans.discard(file)
+        for lfile in orphans:
+            lfdirstate.drop(lfile)
         lfdirstate.write()
     finally:
         wlock.release()
