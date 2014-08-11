@@ -1073,7 +1073,7 @@ def run(cmd, wd, replacements, env, debug=False, timeout=None):
         output = re.sub(s, r, output)
     return ret, output.splitlines(True)
 
-iolock = threading.Lock()
+iolock = threading.RLock()
 
 class SkipTest(Exception):
     """Raised to indicate that a test is to be skipped."""
@@ -1128,7 +1128,9 @@ class TestResult(unittest._TextTestResult):
             iolock.release()
 
     def addSuccess(self, test):
+        iolock.acquire()
         super(TestResult, self).addSuccess(test)
+        iolock.release()
         self.successes.append(test)
 
     def addError(self, test, err):
@@ -1139,14 +1141,17 @@ class TestResult(unittest._TextTestResult):
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
+        iolock.acquire()
         if self.showAll:
             self.stream.writeln('skipped %s' % reason)
         else:
             self.stream.write('s')
             self.stream.flush()
+        iolock.release()
 
     def addIgnore(self, test, reason):
         self.ignored.append((test, reason))
+        iolock.acquire()
         if self.showAll:
             self.stream.writeln('ignored %s' % reason)
         else:
@@ -1155,6 +1160,7 @@ class TestResult(unittest._TextTestResult):
             else:
                 self.testsRun += 1
             self.stream.flush()
+        iolock.release()
 
     def addWarn(self, test, reason):
         self.warned.append((test, reason))
@@ -1162,11 +1168,13 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
 
+        iolock.acquire()
         if self.showAll:
             self.stream.writeln('warned %s' % reason)
         else:
             self.stream.write('~')
             self.stream.flush()
+        iolock.release()
 
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
@@ -1231,8 +1239,10 @@ class TestResult(unittest._TextTestResult):
         del self._stopped[test.name]
 
         if interrupted:
+            iolock.acquire()
             self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
                 test.name, self.times[-1][3]))
+            iolock.release()
 
 class TestSuite(unittest.TestSuite):
     """Custom unitest TestSuite that knows how to execute Mercurial tests."""
@@ -1366,6 +1376,7 @@ class TextTestRunner(unittest.TextTestRunner):
         skipped = len(result.skipped)
         ignored = len(result.ignored)
 
+        iolock.acquire()
         self.stream.writeln('')
 
         if not self._runner.options.noskips:
@@ -1418,9 +1429,12 @@ class TextTestRunner(unittest.TextTestRunner):
         if self._runner.options.time:
             self.printtimes(result.times)
 
+        iolock.release()
+
         return result
 
     def printtimes(self, times):
+        # iolock held by run
         self.stream.writeln('# Producing time report')
         times.sort(key=lambda t: (t[3]))
         cols = '%7.3f %7.3f %7.3f   %s'
