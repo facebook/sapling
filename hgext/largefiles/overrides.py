@@ -1140,11 +1140,12 @@ def overridepurge(orig, ui, repo, *dirs, **opts):
     repo.status = oldstatus
 
 def overriderollback(orig, ui, repo, **opts):
-    result = orig(ui, repo, **opts)
-    merge.update(repo, node=None, branchmerge=False, force=True,
-        partial=lfutil.isstandin)
     wlock = repo.wlock()
     try:
+        result = orig(ui, repo, **opts)
+        merge.update(repo, node=None, branchmerge=False, force=True,
+                     partial=lfutil.isstandin)
+
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         lfiles = lfutil.listlfiles(repo)
         oldlfiles = lfutil.listlfiles(repo, repo[None].parents()[0].rev())
