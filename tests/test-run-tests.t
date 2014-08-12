@@ -251,6 +251,18 @@ Refuse the fix
   This is a noop statement so that
   this test is still more bytes than success.
 
+View the fix
+
+  $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` --view echo
+  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err
+  
+  ERROR: test-failure.t output changed
+  !.
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
 Accept the fix
 
   $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` -i
