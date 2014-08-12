@@ -29,7 +29,7 @@ help qrefresh (no record)
   
       Returns 0 on success.
   
-  options:
+  options ([+] can be repeated):
   
    -e --edit                invoke editor on commit messages
    -g --git                 use git extended diff format
@@ -43,8 +43,6 @@ help qrefresh (no record)
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message
    -l --logfile FILE        read commit message from file
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 
@@ -73,7 +71,7 @@ help qrefresh (record)
   
       Returns 0 on success.
   
-  options:
+  options ([+] can be repeated):
   
    -e --edit                invoke editor on commit messages
    -g --git                 use git extended diff format
@@ -88,8 +86,6 @@ help qrefresh (record)
    -m --message TEXT        use text as commit message
    -l --logfile FILE        read commit message from file
    -i --interactive         interactively select changes to refresh
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 

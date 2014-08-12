@@ -534,7 +534,7 @@ Make sure no one adds back a -b option:
   
   (use "hg help -e strip" to show help for the strip extension)
   
-  options:
+  options ([+] can be repeated):
   
    -r --rev REV [+]    strip specified revision (optional, can specify revisions
                        without this option)
@@ -544,8 +544,6 @@ Make sure no one adds back a -b option:
    -k --keep           do not modify working copy during strip
    -B --bookmark VALUE remove revs only reachable from given bookmark
       --mq             operate on patch repository
-  
-  [+] marked option can be specified multiple times
   
   (use "hg strip -h" to show more help)
   [255]

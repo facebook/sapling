@@ -59,11 +59,11 @@ def optrst(header, options, verbose):
 
         data.append((so, lo, desc))
 
+    if multioccur:
+        header += (_(" ([+] can be repeated)"))
+
     rst = ['\n%s:\n\n' % header]
     rst.extend(minirst.maketable(data, 1))
-
-    if multioccur:
-        rst.append(_("\n[+] marked option can be specified multiple times\n"))
 
     return ''.join(rst)
 

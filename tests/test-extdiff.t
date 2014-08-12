@@ -37,15 +37,13 @@ Should diff cloned directories:
       compared to the working directory, and, when no revisions are specified,
       the working directory files are compared to its parent.
   
-  options:
+  options ([+] can be repeated):
   
    -o --option OPT [+]      pass option to comparison program
    -r --rev REV [+]         revision
    -c --change REV          change made by revision
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 

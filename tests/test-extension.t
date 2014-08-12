@@ -301,7 +301,7 @@ hide outer repo
   
    foo           yet another foo command
   
-  global options:
+  global options ([+] can be repeated):
   
    -R --repository REPO   repository root directory or name of overlay bundle
                           file
@@ -321,8 +321,6 @@ hide outer repo
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
-  
-  [+] marked option can be specified multiple times
 
 
 
@@ -337,7 +335,7 @@ hide outer repo
    debugfoobar   yet another debug command
    foo           yet another foo command
   
-  global options:
+  global options ([+] can be repeated):
   
    -R --repository REPO   repository root directory or name of overlay bundle
                           file
@@ -357,8 +355,6 @@ hide outer repo
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
-  
-  [+] marked option can be specified multiple times
 
 
 
@@ -390,7 +386,7 @@ Extension module help vs command help:
   
   (use "hg help -e extdiff" to show help for the extdiff extension)
   
-  options:
+  options ([+] can be repeated):
   
    -p --program CMD         comparison program to run
    -o --option OPT [+]      pass option to comparison program
@@ -398,8 +394,6 @@ Extension module help vs command help:
    -c --change REV          change made by revision
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 

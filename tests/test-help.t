@@ -305,7 +305,7 @@ Test short command list with verbose option
    update, up, checkout, co
                  update working directory (or switch revisions)
   
-  global options:
+  global options ([+] can be repeated):
   
    -R --repository REPO   repository root directory or name of overlay bundle
                           file
@@ -326,8 +326,6 @@ Test short command list with verbose option
    -h --help              display help and exit
       --hidden            consider hidden changesets
   
-  [+] marked option can be specified multiple times
-  
   use "hg help" for the full list of commands
 
   $ hg add -h
@@ -344,14 +342,12 @@ Test short command list with verbose option
   
       Returns 0 if all files are successfully added.
   
-  options:
+  options ([+] can be repeated):
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 
@@ -383,16 +379,14 @@ Verbose help for add
   
       Returns 0 if all files are successfully added.
   
-  options:
+  options ([+] can be repeated):
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
   
-  [+] marked option can be specified multiple times
-  
-  global options:
+  global options ([+] can be repeated):
   
    -R --repository REPO   repository root directory or name of overlay bundle
                           file
@@ -412,8 +406,6 @@ Verbose help for add
       --version           output version information and exit
    -h --help              display help and exit
       --hidden            consider hidden changesets
-  
-  [+] marked option can be specified multiple times
 
 Test help option with version option
 
@@ -431,14 +423,12 @@ Test help option with version option
   
   add the specified files on the next commit
   
-  options:
+  options ([+] can be repeated):
   
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
    -n --dry-run             do not perform actions, just print output
-  
-  [+] marked option can be specified multiple times
   
   (use "hg add -h" to show more help)
   [255]
@@ -505,7 +495,7 @@ Test command without options
   
       Returns 0 on success.
   
-  options:
+  options ([+] can be repeated):
   
    -r --rev REV [+]         revision
    -c --change REV          change made by revision
@@ -522,8 +512,6 @@ Test command without options
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 
@@ -567,7 +555,7 @@ Test command without options
   
       Returns 0 on success.
   
-  options:
+  options ([+] can be repeated):
   
    -A --all                 show status of all files
    -m --modified            show only modified files
@@ -585,8 +573,6 @@ Test command without options
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 
@@ -1715,7 +1701,7 @@ Dish up an empty repo; serve it cold.
   Returns 0 if all files are successfully added.
   </p>
   <p>
-  options:
+  options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-I</td>
@@ -1732,10 +1718,7 @@ Dish up an empty repo; serve it cold.
   <td>do not perform actions, just print output</td></tr>
   </table>
   <p>
-  [+] marked option can be specified multiple times
-  </p>
-  <p>
-  global options:
+  global options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-R</td>
@@ -1787,9 +1770,6 @@ Dish up an empty repo; serve it cold.
   <td>--hidden</td>
   <td>consider hidden changesets</td></tr>
   </table>
-  <p>
-  [+] marked option can be specified multiple times
-  </p>
   
   </div>
   </div>
@@ -1911,7 +1891,7 @@ Dish up an empty repo; serve it cold.
   Returns 0 on success, 1 if any warnings encountered.
   </p>
   <p>
-  options:
+  options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-A</td>
@@ -1928,10 +1908,7 @@ Dish up an empty repo; serve it cold.
   <td>exclude names matching the given patterns</td></tr>
   </table>
   <p>
-  [+] marked option can be specified multiple times
-  </p>
-  <p>
-  global options:
+  global options ([+] can be repeated):
   </p>
   <table>
   <tr><td>-R</td>
@@ -1983,9 +1960,6 @@ Dish up an empty repo; serve it cold.
   <td>--hidden</td>
   <td>consider hidden changesets</td></tr>
   </table>
-  <p>
-  [+] marked option can be specified multiple times
-  </p>
   
   </div>
   </div>

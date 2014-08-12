@@ -54,7 +54,7 @@ help record (record)
   
       This command is not available when committing a merge.
   
-  options:
+  options ([+] can be repeated):
   
    -A --addremove           mark new/missing files as added/removed before
                             committing
@@ -73,8 +73,6 @@ help record (record)
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 
@@ -133,7 +131,7 @@ help (mq present)
   
       See "hg help qnew" & "hg help record" for more information and usage.
   
-  options:
+  options ([+] can be repeated):
   
    -e --edit                invoke editor on commit messages
    -g --git                 use git extended diff format
@@ -149,8 +147,6 @@ help (mq present)
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
       --mq                  operate on patch repository
-  
-  [+] marked option can be specified multiple times
   
   (some details hidden, use --verbose to show complete help)
 

@@ -19,15 +19,13 @@ Missing arg:
   
   output the current or given revision of files
   
-  options:
+  options ([+] can be repeated):
   
    -o --output FORMAT       print output to file with formatted name
    -r --rev REV             print the given revision
       --decode              apply any matching decode filter
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
-  
-  [+] marked option can be specified multiple times
   
   (use "hg cat -h" to show more help)
   [255]
