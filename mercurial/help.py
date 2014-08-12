@@ -363,30 +363,24 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             for t, desc in topics:
                 rst.append(" :%s: %s\n" % (t, desc))
 
-        optlist = []
-        if not ui.quiet:
-            if ui.verbose:
-                optlist.append((_("global options:"), commands.globalopts))
-                if name == 'shortlist':
-                    optlist.append((_('use "hg help" for the full list '
-                                           'of commands'), ()))
+        if ui.quiet:
+            pass
+        elif ui.verbose:
+            rst.append(_("\nglobal options:\n"))
+            rst.append('\n%s\n' % optrst(commands.globalopts, ui.verbose))
+            if name == 'shortlist':
+                rst.append(_('\nuse "hg help" for the full list '
+                             'of commands\n'))
+        else:
+            if name == 'shortlist':
+                rst.append(_('\nuse "hg help" for the full list of commands '
+                             'or "hg -v" for details\n'))
+            elif name and not full:
+                rst.append(_('\nuse "hg help %s" to show the full help '
+                             'text\n') % name)
             else:
-                if name == 'shortlist':
-                    msg = _('use "hg help" for the full list of commands '
-                            'or "hg -v" for details')
-                elif name and not full:
-                    msg = _('use "hg help %s" to show the full help '
-                            'text') % name
-                else:
-                    msg = _('use "hg -v help%s" to show builtin aliases and '
-                            'global options') % (name and " " + name or "")
-                optlist.append((msg, ()))
-
-        if optlist:
-            for title, options in optlist:
-                rst.append('\n%s\n' % title)
-                if options:
-                    rst.append('\n%s\n' % optrst(options, ui.verbose))
+                rst.append(_('\nuse "hg -v help%s" to show builtin aliases and '
+                             'global options\n') % (name and " " + name or ""))
         return rst
 
     def helptopic(name):
