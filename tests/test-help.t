@@ -857,7 +857,7 @@ test deprecated option is hidden with translation with untranslated description
   
   (*) (glob)
   
-  flaggor:
+  options:
   
   (some details hidden, use --verbose to show complete help)
 #endif

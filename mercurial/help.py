@@ -31,7 +31,7 @@ def extshelp():
     doc = ''.join(rst)
     return doc
 
-def optrst(options, verbose):
+def optrst(header, options, verbose):
     data = []
     multioccur = False
     for option in options:
@@ -59,7 +59,8 @@ def optrst(options, verbose):
 
         data.append((so, lo, desc))
 
-    rst = minirst.maketable(data, 1)
+    rst = ['\n%s:\n\n' % header]
+    rst.extend(minirst.maketable(data, 1))
 
     if multioccur:
         rst.append(_("\n[+] marked option can be specified multiple times\n"))
@@ -284,12 +285,11 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
 
         # options
         if not ui.quiet and entry[1]:
-            rst.append('\n%s\n\n' % _("options:"))
-            rst.append(optrst(entry[1], ui.verbose))
+            rst.append(optrst(_("options"), entry[1], ui.verbose))
 
         if ui.verbose:
-            rst.append('\n%s\n\n' % _("global options:"))
-            rst.append(optrst(commands.globalopts, ui.verbose))
+            rst.append(optrst(_("global options"),
+                              commands.globalopts, ui.verbose))
 
         if not ui.verbose:
             if not full:
@@ -366,8 +366,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         if ui.quiet:
             pass
         elif ui.verbose:
-            rst.append(_("\nglobal options:\n"))
-            rst.append('\n%s\n' % optrst(commands.globalopts, ui.verbose))
+            rst.append('\n%s\n' % optrst(_("global options"),
+                                         commands.globalopts, ui.verbose))
             if name == 'shortlist':
                 rst.append(_('\nuse "hg help" for the full list '
                              'of commands\n'))
