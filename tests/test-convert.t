@@ -272,7 +272,7 @@
       --sourcesort       preserve source changesets order
       --closesort        try to reorder closed revisions
   
-  use "hg -v help convert" to show the global options
+  (some details hidden, use --verbose to show complete help)
   $ hg init a
   $ cd a
   $ echo a > a

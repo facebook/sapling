@@ -401,7 +401,7 @@ Extension module help vs command help:
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help extdiff" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
 
 
@@ -533,7 +533,7 @@ Test help topic with same name as extension
   
   multirevs command
   
-  use "hg -v help multirevs" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
 
 

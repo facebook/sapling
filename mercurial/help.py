@@ -296,11 +296,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
                 rst.append(_('\nuse "hg help %s" to show the full help text\n')
                            % name)
             elif not ui.quiet:
-                omitted = _('use "hg -v help %s" to show more complete'
-                            ' help and the global options') % name
-                notomitted = _('use "hg -v help %s" to show'
-                               ' the global options') % name
-                indicateomitted(rst, omitted, notomitted)
+                rst.append(_('\n(some details hidden, use --verbose '
+                               'to show complete help)'))
 
         return rst
 

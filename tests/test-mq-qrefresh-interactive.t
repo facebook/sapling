@@ -46,7 +46,7 @@ help qrefresh (no record)
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help qrefresh" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
 help qrefresh (record)
 
@@ -91,7 +91,7 @@ help qrefresh (record)
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help qrefresh" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
   $ hg init a
   $ cd a

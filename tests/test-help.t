@@ -353,7 +353,7 @@ Test short command list with verbose option
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help add" to show more complete help and the global options
+  (some details hidden, use --verbose to show complete help)
 
 Verbose help for add
 
@@ -472,7 +472,7 @@ Test command without options
   
       Returns 0 on success, 1 if errors are encountered.
   
-  use "hg -v help verify" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
   $ hg help diff
   hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
@@ -525,7 +525,7 @@ Test command without options
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help diff" to show more complete help and the global options
+  (some details hidden, use --verbose to show complete help)
 
   $ hg help status
   hg status [OPTION]... [FILE]...
@@ -588,7 +588,7 @@ Test command without options
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help status" to show more complete help and the global options
+  (some details hidden, use --verbose to show complete help)
 
   $ hg -q help status
   hg status [OPTION]... [FILE]...
@@ -663,7 +663,7 @@ Test command with no help text
    -n --               normal desc
       --newline VALUE  line1 line2
   
-  use "hg -v help nohelp" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
   $ hg help -k nohelp
   Commands:
@@ -843,7 +843,7 @@ test deprecated option is hidden in command help
   
   options:
   
-  use "hg -v help debugoptDEP" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
 test deprecated option is shown with -v
   $ hg help -v debugoptDEP | grep dopt
@@ -859,7 +859,7 @@ test deprecated option is hidden with translation with untranslated description
   
   flaggor:
   
-  *"hg -v help debugoptDEP"* (glob)
+  (some details hidden, use --verbose to show complete help)
 #endif
 
 Test commands that collide with topics (issue4240)
