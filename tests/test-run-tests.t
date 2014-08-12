@@ -159,7 +159,7 @@ failure w/ keyword
 Running In Debug Mode
 ======================
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --debug
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --debug | grep -v pwd
   + echo SALT* 0 0 (glob)
   SALT* 0 0 (glob)
   + echo babar

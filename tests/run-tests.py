@@ -1790,7 +1790,7 @@ class TestRunner(object):
         else:
             f = open(installerrs, 'rb')
             for line in f:
-                print line,
+                print line
             f.close()
             sys.exit(1)
         os.chdir(self._testdir)
@@ -1909,4 +1909,13 @@ class TestRunner(object):
 
 if __name__ == '__main__':
     runner = TestRunner()
+
+    try:
+        import msvcrt
+        msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+    except ImportError:
+        pass
+
     sys.exit(runner.run(sys.argv[1:]))
