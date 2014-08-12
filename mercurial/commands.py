@@ -5892,7 +5892,6 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     fnames = (fname1,) + fnames
 
     lock = repo.lock()
-    wc = repo['.']
     try:
         for fname in fnames:
             f = hg.openpath(ui, fname)

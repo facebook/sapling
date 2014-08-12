@@ -449,7 +449,7 @@ def bookmark(repo, subset, x):
                        _('the argument to bookmark must be a string'))
         kind, pattern, matcher = _stringmatcher(bm)
         if kind == 'literal':
-            bmrev = repo._bookmarks.get(bm, None)
+            bmrev = repo._bookmarks.get(pattern, None)
             if not bmrev:
                 raise util.Abort(_("bookmark '%s' does not exist") % bm)
             bmrev = repo[bmrev].rev()
