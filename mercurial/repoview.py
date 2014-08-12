@@ -33,16 +33,16 @@ def _gethiddenblockers(repo):
         revs = cl.revs(start=firsthideable)
         tofilter = repo.revs(
             '(%ld) and children(%ld)', list(revs), list(hideable))
-        blockers = [r for r in tofilter if r not in hideable]
+        blockers = set([r for r in tofilter if r not in hideable])
         for par in repo[None].parents():
-            blockers.append(par.rev())
+            blockers.add(par.rev())
         for bm in repo._bookmarks.values():
-            blockers.append(cl.rev(bm))
+            blockers.add(cl.rev(bm))
         tags = {}
         tagsmod.readlocaltags(repo.ui, repo, tags, {})
         if tags:
             rev, nodemap = cl.rev, cl.nodemap
-            blockers.extend(rev(t[0]) for t in tags.values() if t[0] in nodemap)
+            blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return blockers
 
 def computehidden(repo):
