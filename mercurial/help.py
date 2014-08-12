@@ -276,8 +276,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             mod = extensions.find(name)
             doc = gettext(mod.__doc__) or ''
             if '\n' in doc.strip():
-                msg = _('use "hg help -e %s" to show help for '
-                        'the %s extension') % (name, name)
+                msg = _('(use "hg help -e %s" to show help for '
+                        'the %s extension)') % (name, name)
                 rst.append('\n%s\n' % msg)
         except KeyError:
             pass

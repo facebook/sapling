@@ -532,7 +532,7 @@ Make sure no one adds back a -b option:
   
   strip changesets and all their descendants from the repository
   
-  use "hg help -e strip" to show help for the strip extension
+  (use "hg help -e strip" to show help for the strip extension)
   
   options:
   
