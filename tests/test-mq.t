@@ -95,7 +95,7 @@ help
    qtop          print the name of the current patch
    qunapplied    print the patches not yet applied
   
-  use "hg -v help mq" to show builtin aliases and global options
+  (use "hg help -v mq" to show built-in aliases and global options)
 
   $ hg init a
   $ cd a

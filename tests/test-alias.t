@@ -399,7 +399,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  use "hg help" for the full list of commands or "hg -v" for details
+  (use "hg help" for the full list of commands or "hg -v" for details)
   [255]
   $ hg --invalid mylog
   hg: option --invalid not recognized
@@ -425,7 +425,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  use "hg help" for the full list of commands or "hg -v" for details
+  (use "hg help" for the full list of commands or "hg -v" for details)
   [255]
   $ hg --invalid blank
   hg: option --invalid not recognized
@@ -451,7 +451,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  use "hg help" for the full list of commands or "hg -v" for details
+  (use "hg help" for the full list of commands or "hg -v" for details)
   [255]
 
 This should show id:

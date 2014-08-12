@@ -369,18 +369,19 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             rst.append('\n%s\n' % optrst(_("global options"),
                                          commands.globalopts, ui.verbose))
             if name == 'shortlist':
-                rst.append(_('\nuse "hg help" for the full list '
-                             'of commands\n'))
+                rst.append(_('\n(use "hg help" for the full list '
+                             'of commands)\n'))
         else:
             if name == 'shortlist':
-                rst.append(_('\nuse "hg help" for the full list of commands '
-                             'or "hg -v" for details\n'))
+                rst.append(_('\n(use "hg help" for the full list of commands '
+                             'or "hg -v" for details)\n'))
             elif name and not full:
-                rst.append(_('\nuse "hg help %s" to show the full help '
-                             'text\n') % name)
+                rst.append(_('\n(use "hg help %s" to show the full help '
+                             'text)\n') % name)
             else:
-                rst.append(_('\nuse "hg -v help%s" to show builtin aliases and '
-                             'global options\n') % (name and " " + name or ""))
+                rst.append(_('\n(use "hg help -v%s" to show built-in aliases '
+                             'and global options)\n')
+                           % (name and " " + name or ""))
         return rst
 
     def helptopic(name):

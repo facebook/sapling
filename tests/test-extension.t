@@ -463,7 +463,7 @@ Extension module help vs command help:
   
    extdiff       use external program to diff repository (or selected files)
   
-  use "hg -v help extdiff" to show builtin aliases and global options
+  (use "hg help -v extdiff" to show built-in aliases and global options)
 
 
 

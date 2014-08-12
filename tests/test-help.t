@@ -23,7 +23,7 @@ Short help:
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  use "hg help" for the full list of commands or "hg -v" for details
+  (use "hg help" for the full list of commands or "hg -v" for details)
 
   $ hg -q
    add           add the specified files on the next commit
@@ -122,7 +122,7 @@ Short help:
    templating    Template Usage
    urls          URL Paths
   
-  use "hg -v help" to show builtin aliases and global options
+  (use "hg help -v" to show built-in aliases and global options)
 
   $ hg -q help
    add           add the specified files on the next commit
@@ -326,7 +326,7 @@ Test short command list with verbose option
    -h --help              display help and exit
       --hidden            consider hidden changesets
   
-  use "hg help" for the full list of commands
+  (use "hg help" for the full list of commands)
 
   $ hg add -h
   hg add [OPTION]... [FILE]...
@@ -441,7 +441,7 @@ Test ambiguous command help
    add           add the specified files on the next commit
    addremove     add all new files, delete all missing files
   
-  use "hg -v help ad" to show builtin aliases and global options
+  (use "hg help -v ad" to show built-in aliases and global options)
 
 Test command without options
 
@@ -610,7 +610,7 @@ Test command without options
    summary       summarize working directory state
    update        update working directory (or switch revisions)
   
-  use "hg help" for the full list of commands or "hg -v" for details
+  (use "hg help" for the full list of commands or "hg -v" for details)
   [255]
 
 
@@ -744,7 +744,7 @@ Test that default list of commands omits extension commands
    templating    Template Usage
    urls          URL Paths
   
-  use "hg -v help" to show builtin aliases and global options
+  (use "hg help -v" to show built-in aliases and global options)
 
 
 Test list of internal help commands
@@ -806,7 +806,7 @@ Test list of internal help commands
    debugwireargs
                  (no help text available)
   
-  use "hg -v help debug" to show builtin aliases and global options
+  (use "hg help -v debug" to show built-in aliases and global options)
 
 
 Test list of commands with command with no help text
@@ -818,7 +818,7 @@ Test list of commands with command with no help text
   
    nohelp        (no help text available)
   
-  use "hg -v help helpext" to show builtin aliases and global options
+  (use "hg help -v helpext" to show built-in aliases and global options)
 
 
 test deprecated option is hidden in command help
