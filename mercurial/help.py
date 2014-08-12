@@ -405,8 +405,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             rst += ["    %s\n" % l for l in doc().splitlines()]
 
         if not ui.verbose:
-            omitted = (_('use "hg help -v %s" to show more complete help') %
-                       name)
+            omitted = _('(some details hidden, use --verbose'
+                         ' to show complete help)')
             indicateomitted(rst, omitted)
 
         try:
@@ -437,8 +437,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             rst.append('\n')
 
         if not ui.verbose:
-            omitted = (_('use "hg help -v %s" to show more complete help') %
-                       name)
+            omitted = _('(some details hidden, use --verbose'
+                         ' to show complete help)')
             indicateomitted(rst, omitted)
 
         if mod:

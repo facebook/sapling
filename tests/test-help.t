@@ -1030,7 +1030,7 @@ Test omit indicating for help
   
   This paragraph is never omitted, too (for extension)
   
-  use "hg help -v addverboseitems" to show more complete help
+  (some details hidden, use --verbose to show complete help)
   
   no commands defined
   $ hg help -v addverboseitems
@@ -1051,7 +1051,7 @@ Test omit indicating for help
   
       This paragraph is never omitted, too (for topic)
   
-  use "hg help -v topic-containing-verbose" to show more complete help
+  (some details hidden, use --verbose to show complete help)
   $ hg help -v topic-containing-verbose
   This is the topic to test omit indicating.
   """"""""""""""""""""""""""""""""""""""""""
