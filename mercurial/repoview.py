@@ -95,9 +95,9 @@ def trywritehiddencache(repo, hideable, hidden):
         fh.write(newhash)
         fh.write(data)
     except (IOError, OSError):
-        ui.debug('error writing hidden changesets cache')
+        repo.ui.debug('error writing hidden changesets cache')
     except error.LockHeld:
-        ui.debug('cannot obtain lock to write hidden changesets cache')
+        repo.ui.debug('cannot obtain lock to write hidden changesets cache')
     finally:
         if fh:
             fh.close()
@@ -128,12 +128,24 @@ def computehidden(repo):
 
     During most operation hidden should be filtered."""
     assert not repo.changelog.filteredrevs
+
     hidden = frozenset()
     hideable = hideablerevs(repo)
     if hideable:
         cl = repo.changelog
-        blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
-        hidden = frozenset(r for r in hideable if r not in blocked)
+        hidden = tryreadcache(repo, hideable)
+        if hidden is None:
+            blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
+            hidden = frozenset(r for r in hideable if r not in blocked)
+            trywritehiddencache(repo, hideable, hidden)
+        elif repo.ui.configbool('experimental', 'verifyhiddencache', True):
+            blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
+            computed = frozenset(r for r in hideable if r not in blocked)
+            if computed != hidden:
+                trywritehiddencache(repo, hideable, computed)
+                repo.ui.warn(_('Cache inconsistency detected. Please ' +
+                    'open an issue on http://bz.selenic.com.\n'))
+                hidden = computed
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.
