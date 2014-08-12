@@ -29,7 +29,7 @@ Missing arg:
   
   [+] marked option can be specified multiple times
   
-  use "hg help cat" to show the full help text
+  (use "hg cat -h" to show more help)
   [255]
 
 [defaults]

@@ -543,7 +543,7 @@ Test help topic with same name as extension
   
   multirevs command
   
-  use "hg help multirevs" to show the full help text
+  (use "hg multirevs -h" to show more help)
   [255]
 
 

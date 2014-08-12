@@ -293,7 +293,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
 
         if not ui.verbose:
             if not full:
-                rst.append(_('\nuse "hg help %s" to show the full help text\n')
+                rst.append(_('\n(use "hg %s -h" to show more help)\n')
                            % name)
             elif not ui.quiet:
                 rst.append(_('\n(some details hidden, use --verbose '

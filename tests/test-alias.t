@@ -370,7 +370,7 @@ invalid arguments
   
   alias for: hg root
   
-  use "hg help rt" to show the full help text
+  (use "hg rt -h" to show more help)
   [255]
 
 invalid global arguments for normal commands, aliases, and shell aliases

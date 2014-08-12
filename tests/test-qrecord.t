@@ -99,7 +99,7 @@ qrecord (mq not present)
   
   interactively record a new patch
   
-  use "hg help qrecord" to show the full help text
+  (use "hg qrecord -h" to show more help)
   [255]
 
 qrecord patch (mq not present)

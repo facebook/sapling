@@ -440,7 +440,7 @@ Test help option with version option
   
   [+] marked option can be specified multiple times
   
-  use "hg help add" to show the full help text
+  (use "hg add -h" to show more help)
   [255]
 
 Test ambiguous command help

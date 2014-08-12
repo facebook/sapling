@@ -547,5 +547,5 @@ Make sure no one adds back a -b option:
   
   [+] marked option can be specified multiple times
   
-  use "hg help strip" to show the full help text
+  (use "hg strip -h" to show more help)
   [255]
