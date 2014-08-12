@@ -1155,7 +1155,7 @@ class TestResult(unittest._TextTestResult):
         if self.showAll:
             self.stream.writeln('ignored %s' % reason)
         else:
-            if reason != 'not retesting':
+            if reason != 'not retesting' and reason != "doesn't match keyword":
                 self.stream.write('i')
             else:
                 self.testsRun += 1

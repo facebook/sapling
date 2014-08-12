@@ -114,8 +114,8 @@ successful
 
 success w/ keyword
   $ $TESTDIR/run-tests.py --with-hg=`which hg` -k xyzzy
-  i.
-  # Ran 1 tests, 1 skipped, 0 warned, 0 failed.
+  .
+  # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
 
 failed
 
@@ -139,7 +139,7 @@ failed
 
 failure w/ keyword
   $ $TESTDIR/run-tests.py --with-hg=`which hg` -k rataxes
-  i
+  
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
   @@ -1,4 +1,4 @@
@@ -152,7 +152,7 @@ failure w/ keyword
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -320,19 +320,19 @@ Skips
   [1]
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy
-  i.s
+  .s
   Skipped test-skip.t: irrelevant
-  # Ran 1 tests, 2 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
 
 Skips with xml
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy \
   >  --xunit=xunit.xml
-  i.s
+  .s
   Skipped test-skip.t: irrelevant
-  # Ran 1 tests, 2 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
   $ cat xunit.xml
   <?xml version="1.0" encoding="utf-8"?>
-  <testsuite errors="0" failures="0" name="run-tests" skipped="2" tests="1">
+  <testsuite errors="0" failures="0" name="run-tests" skipped="2" tests="2">
     <testcase name="test-success.t" time="*"/> (glob)
   </testsuite>
 
