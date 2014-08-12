@@ -449,8 +449,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             modcmds = set([c.split('|', 1)[0] for c in ct])
             rst.extend(helplist(modcmds.__contains__))
         else:
-            rst.append(_('use "hg help extensions" for information on enabling '
-                       'extensions\n'))
+            rst.append(_('(use "hg help extensions" for information on enabling'
+                       ' extensions)\n'))
         return rst
 
     def helpextcmd(name):
@@ -461,8 +461,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         rst = listexts(_("'%s' is provided by the following "
                               "extension:") % cmd, {ext: doc}, indent=4)
         rst.append('\n')
-        rst.append(_('use "hg help extensions" for information on enabling '
-                   'extensions\n'))
+        rst.append(_('(use "hg help extensions" for information on enabling '
+                   'extensions)\n'))
         return rst
 
 

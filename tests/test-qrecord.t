@@ -9,7 +9,7 @@ help record (no record)
   record extension - commands to interactively select changes for
   commit/qrefresh
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
 
 help qrecord (no record)
 
@@ -18,7 +18,7 @@ help qrecord (no record)
   
       record        commands to interactively select changes for commit/qrefresh
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
 
   $ echo "[extensions]"     >> $HGRCPATH
   $ echo "record="          >> $HGRCPATH

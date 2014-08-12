@@ -588,7 +588,7 @@ Disabled extension commands:
   
       patchbomb     command to send changesets as (a series of) patch emails
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
 
 
   $ hg qdel
@@ -597,7 +597,7 @@ Disabled extension commands:
   
       mq            manage a stack of patches
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
   [255]
 
 
@@ -607,7 +607,7 @@ Disabled extension commands:
   
       churn         command to display statistics about repository history
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
   [255]
 
 
@@ -617,12 +617,12 @@ Disabled extensions:
   $ hg help churn
   churn extension - command to display statistics about repository history
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
 
   $ hg help patchbomb
   patchbomb extension - command to send changesets as (a series of) patch emails
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
 
 
 Broken disabled extension and command:
@@ -642,7 +642,7 @@ Broken disabled extension and command:
   $ hg --config extensions.path=./path.py help broken
   broken extension - (no help text available)
   
-  use "hg help extensions" for information on enabling extensions
+  (use "hg help extensions" for information on enabling extensions)
 
 
   $ cat > hgext/forest.py <<EOF
