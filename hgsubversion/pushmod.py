@@ -133,6 +133,8 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                     # this kind of renames: a -> b, b -> c
                     copies[file] = renamed[0]
                     base_data = parent[renamed[0]].data()
+                    if 'l' in parent[renamed[0]].flags():
+                        base_data = 'link ' + base_data
                 else:
                     autoprops = svn.autoprops_config.properties(file)
                     if autoprops:
@@ -145,9 +147,10 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                 if ('x' in parent.filectx(file).flags()
                     and 'x' not in rev_ctx.filectx(file).flags()):
                     props.setdefault(file, {})['svn:executable'] = None
-                if ('l' in parent.filectx(file).flags()
-                    and 'l' not in rev_ctx.filectx(file).flags()):
-                    props.setdefault(file, {})['svn:special'] = None
+                if 'l' in parent.filectx(file).flags():
+                    base_data = 'link ' + base_data
+                    if 'l' not in rev_ctx.filectx(file).flags():
+                        props.setdefault(file, {})['svn:special'] = None
                 if hgutil.binary(base_data) and not isbinary:
                     props.setdefault(file, {})['svn:mime-type'] = None
                 action = 'modify'

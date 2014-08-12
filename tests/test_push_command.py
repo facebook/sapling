@@ -445,12 +445,68 @@ class PushTests(test_util.TestBase):
         new_hash = repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
-        tip = self.repo['tip']
+        # grab a new repo instance (self.repo is an @property functions)
+        repo = self.repo
+        tip = repo['tip']
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['gamma'].flags(), 'l')
         self.assertEqual(tip['gamma'].data(), 'foo')
         self.assertEqual([x for x in tip.manifest().keys() if 'l' not in
                           tip[x].flags()], ['alpha', 'beta', 'adding_file', ])
+
+        def file_callback2(repo, memctx, path):
+            if path == 'gamma':
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='a' * 129,
+                                                  islink=True,
+                                                  isexec=False,
+                                                  copied=False)
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
+
+        ctx = context.memctx(repo,
+                             (repo['tip'].node(), node.nullid),
+                             'message',
+                             ['gamma', ],
+                             file_callback2,
+                             'author',
+                             '2014-08-08 20:11:41 -0700',
+                             {'branch': 'default', })
+        repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        self.pushrevisions()
+        # grab a new repo instance (self.repo is an @property functions)
+        repo = self.repo
+        tip = repo['tip']
+        self.assertEqual(tip['gamma'].flags(), 'l')
+        self.assertEqual(tip['gamma'].data(), 'a'*129)
+
+        def file_callback3(repo, memctx, path):
+            if path == 'gamma':
+                return compathacks.makememfilectx(repo,
+                                                  path=path,
+                                                  data='a' * 64 + 'b' * 65,
+                                                  islink=True,
+                                                  isexec=False,
+                                                  copied=False)
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
+
+        ctx = context.memctx(repo,
+                             (repo['tip'].node(), node.nullid),
+                             'message',
+                             ['gamma', ],
+                             file_callback3,
+                             'author',
+                             '2014-08-08 20:16:25 -0700',
+                             {'branch': 'default', })
+        repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        self.pushrevisions()
+        repo = self.repo
+        tip = repo['tip']
+        self.assertEqual(tip['gamma'].flags(), 'l')
+        self.assertEqual(tip['gamma'].data(), 'a' * 64 + 'b' * 65)
+
 
     def test_push_existing_file_newly_symlink(self):
         self.test_push_existing_file_newly_execute(execute=False,
