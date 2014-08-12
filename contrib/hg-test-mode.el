@@ -25,9 +25,9 @@
   (list
    '("^  \\(\\$\\|>>>\\) " 1 font-lock-builtin-face)
    '("^  \\(>\\|\\.\\.\\.\\) " 1 font-lock-constant-face)
+   '("^  \\([[][0-9]+[]]\\)$" 1 font-lock-warning-face)
    '("^  \\(.*?\\)\\(\\( [(][-a-z]+[)]\\)*\\)$" 1 font-lock-string-face)
    '("\\$?\\(HG\\|TEST\\)\\w+=?" . font-lock-variable-name-face)
-   '("^  \\([[][0-9]+[]]\\)$" 1 font-lock-warning-face)
    '("^  \\(.*?\\)\\(\\( [(][-a-z]+[)]\\)+\\)$" 2 font-lock-type-face)
    '("^#.*" . font-lock-preprocessor-face)
    '("^\\([^ ].*\\)$" 1 font-lock-comment-face)
