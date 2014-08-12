@@ -238,6 +238,8 @@ class obsstore(object):
     - successors[x] -> set(markers on successors edges of x)
     """
 
+    fields = ('prec', 'succs', 'flag', 'meta')
+
     def __init__(self, sopener):
         # caches for various obsolescence related cache
         self.caches = {}
