@@ -301,10 +301,8 @@ def overridelog(orig, ui, repo, *pats, **opts):
 
     oldmatchandpats = installmatchandpatsfn(overridematchandpats)
     try:
-        repo.lfstatus = True
         return orig(ui, repo, *pats, **opts)
     finally:
-        repo.lfstatus = False
         restorematchandpatsfn()
 
 def overrideverify(orig, ui, repo, *pats, **opts):
