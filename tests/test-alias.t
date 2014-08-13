@@ -98,6 +98,7 @@ disabled
   [255]
   $ hg help disabled
   alias 'disabled' resolves to unknown command 'email'
+  
   'email' is provided by the following extension:
   
       patchbomb     command to send changesets as (a series of) patch emails
@@ -129,7 +130,8 @@ invalid options
   error in definition for alias 'no--cwd': --cwd may only be given on the command line
   [255]
   $ hg help no--cwd
-  error in definition for alias 'no--cwd': --cwd may only be given on the command line
+  error in definition for alias 'no--cwd': --cwd may only be given on the
+  command line
   $ hg no-R
   error in definition for alias 'no-R': -R may only be given on the command line
   [255]
@@ -139,12 +141,14 @@ invalid options
   error in definition for alias 'no--repo': --repo may only be given on the command line
   [255]
   $ hg help no--repo
-  error in definition for alias 'no--repo': --repo may only be given on the command line
+  error in definition for alias 'no--repo': --repo may only be given on the
+  command line
   $ hg no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
   [255]
   $ hg help no--repository
-  error in definition for alias 'no--repository': --repository may only be given on the command line
+  error in definition for alias 'no--repository': --repository may only be given
+  on the command line
   $ hg no--config
   error in definition for alias 'no--config': --config may only be given on the command line
   [255]

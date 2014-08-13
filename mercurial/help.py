@@ -236,10 +236,12 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
 
         # check if it's an invalid alias and display its error if it is
         if getattr(entry[0], 'badalias', None):
-            if not unknowncmd:
-                ui.pushbuffer()
-                entry[0](ui)
-                rst.append(ui.popbuffer())
+            rst.append(entry[0].badalias + '\n')
+            if entry[0].unknowncmd:
+                try:
+                    rst.extend(helpextcmd(entry[0].cmdname))
+                except error.UnknownCommand:
+                    pass
             return rst
 
         # synopsis
