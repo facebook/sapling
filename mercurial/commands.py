@@ -1519,22 +1519,18 @@ def config(ui, repo, *values, **opts):
             if os.path.exists(f):
                 break
         else:
+            from config import samplehgrcs
+
+            if opts.get('global'):
+                samplehgrc = samplehgrcs['global']
+            elif opts.get('local'):
+                samplehgrc = samplehgrcs['local']
+            else:
+                samplehgrc = samplehgrcs['user']
+
             f = paths[0]
             fp = open(f, "w")
-            fp.write(
-                '# example config (see "hg help config" for more info)\n'
-                '\n'
-                '[ui]\n'
-                '# name and email, e.g.\n'
-                '# username = Jane Doe <jdoe@example.com>\n'
-                'username =\n'
-                '\n'
-                '[extensions]\n'
-                '# uncomment these lines to enable some popular extensions\n'
-                '# (see "hg help extensions" for more info)\n'
-                '# pager =\n'
-                '# progress =\n'
-                '# color =\n')
+            fp.write(samplehgrc)
             fp.close()
 
         editor = ui.geteditor()

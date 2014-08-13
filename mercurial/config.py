@@ -9,6 +9,31 @@ from i18n import _
 import error, util
 import os, errno
 
+samplehgrcs = {
+    'user':
+"""# example user config (see "hg help config" for more info)
+[ui]
+# name and email, e.g.
+# username = Jane Doe <jdoe@example.com>
+username =
+
+[extensions]
+# uncomment these lines to enable some popular extensions
+# (see "hg help extensions" for more info)
+#
+# pager =
+# progress =
+# color =""",
+
+    'local':
+"""# example repository config (see "hg help config" for more info)
+""",
+
+    'global':
+"""# example system-wide hg config (see "hg help config" for more info)
+""",
+}
+
 class config(object):
     def __init__(self, data=None):
         self._data = {}
