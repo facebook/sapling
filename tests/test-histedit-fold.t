@@ -169,6 +169,44 @@ check saving last-message.txt
   check saving last-message.txt
 
   $ cd ..
+  $ rm -r r
+
+folding preserves initial author
+--------------------------------
+
+  $ initrepo
+
+  $ hg ci --user "someone else" --amend --quiet
+
+tip before edit
+  $ hg log --rev .
+  changeset:   5:a00ad806cb55
+  tag:         tip
+  user:        someone else
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     f
+  
+
+  $ hg histedit e860deea161a --commands - 2>&1 <<EOF | fixbundle
+  > pick e860deea161a e
+  > fold a00ad806cb55 f
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+tip after edit
+  $ hg log --rev .
+  changeset:   4:698d4e8040a1
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     e
+  
+
+  $ cd ..
+  $ rm -r r
 
 folding and creating no new change doesn't break:
 -------------------------------------------------
