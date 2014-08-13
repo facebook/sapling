@@ -856,6 +856,65 @@ log with both --follow and --patch
   -normal4
   +normal44
   
+  $ hg log --follow --patch sub/large4
+  changeset:   6:4355d653f84f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files yet again
+  
+  diff -r 9d5af5072dbd -r 4355d653f84f .hglf/sub/large4
+  --- a/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -aeb2210d19f02886dde00dac279729a48471e2f9
+  +971fb41e78fea4f8e0ba5244784239371cb00591
+  
+  changeset:   5:9d5af5072dbd
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files again
+  
+  diff -r 74c02385b94c -r 9d5af5072dbd .hglf/sub/large4
+  --- a/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  +aeb2210d19f02886dde00dac279729a48471e2f9
+  
+  changeset:   4:74c02385b94c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     move files
+  
+  diff -r 9e8fbc4bce62 -r 74c02385b94c .hglf/sub/large4
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  
+  changeset:   1:ce8896473775
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files
+  
+  diff -r 30d30fe6a5be -r ce8896473775 .hglf/sub/large2
+  --- a/.hglf/sub/large2	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub/large2	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -1deebade43c8c498a3c8daddac0244dc55d1331d
+  +eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  
+  changeset:   0:30d30fe6a5be
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add files
+  
+  diff -r 000000000000 -r 30d30fe6a5be .hglf/sub/large2
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub/large2	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +1deebade43c8c498a3c8daddac0244dc55d1331d
+  
   $ cat sub/normal4
   normal44
   $ cat sub/large4
