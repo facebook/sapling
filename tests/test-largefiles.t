@@ -726,6 +726,7 @@ Test graph log
   
 
 Test log with --patch
+
   $ hg log --patch -r 6::7
   changeset:   6:4355d653f84f
   user:        test
@@ -792,6 +793,62 @@ Test log with --patch
   @@ -1,1 +1,1 @@
   -aeb2210d19f02886dde00dac279729a48471e2f9
   +971fb41e78fea4f8e0ba5244784239371cb00591
+  diff -r 9d5af5072dbd -r 4355d653f84f sub/normal4
+  --- a/sub/normal4	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/sub/normal4	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -normal4
+  +normal44
+  
+
+log with both --follow and --patch
+
+  $ hg log --follow --patch --limit 2
+  changeset:   7:daea875e9014
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add/edit more largefiles
+  
+  diff -r 4355d653f84f -r daea875e9014 .hglf/large3
+  --- a/.hglf/large3	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -7838695e10da2bb75ac1156565f40a2595fa2fa0
+  diff -r 4355d653f84f -r daea875e9014 .hglf/sub2/large6
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub2/large6	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +0d6d75887db61b2c7e6c74b5dd8fc6ad50c0cc30
+  diff -r 4355d653f84f -r daea875e9014 .hglf/sub2/large7
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub2/large7	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +bb3151689acb10f0c3125c560d5e63df914bc1af
+  
+  changeset:   6:4355d653f84f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     edit files yet again
+  
+  diff -r 9d5af5072dbd -r 4355d653f84f .hglf/large3
+  --- a/.hglf/large3	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/large3	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -baaf12afde9d8d67f25dab6dced0d2bf77dba47c
+  +7838695e10da2bb75ac1156565f40a2595fa2fa0
+  diff -r 9d5af5072dbd -r 4355d653f84f .hglf/sub/large4
+  --- a/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hglf/sub/large4	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -aeb2210d19f02886dde00dac279729a48471e2f9
+  +971fb41e78fea4f8e0ba5244784239371cb00591
+  diff -r 9d5af5072dbd -r 4355d653f84f normal3
+  --- a/normal3	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/normal3	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -normal3
+  +normal33
   diff -r 9d5af5072dbd -r 4355d653f84f sub/normal4
   --- a/sub/normal4	Thu Jan 01 00:00:00 1970 +0000
   +++ b/sub/normal4	Thu Jan 01 00:00:00 1970 +0000

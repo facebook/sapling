@@ -267,6 +267,11 @@ def overridelog(orig, ui, repo, *pats, **opts):
         matchandpats = oldmatchandpats(ctx, pats, opts, globbed, default)
         m, p = copy.copy(matchandpats)
 
+        if m.always():
+            # We want to match everything anyway, so there's no benefit trying
+            # to add standins.
+            return matchandpats
+
         pats = set(p)
         # TODO: handling of patterns in both cases below
         if m._cwd:
