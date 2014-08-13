@@ -62,7 +62,7 @@ basic
 unknown
 
   $ hg unknown
-  alias 'unknown' resolves to unknown command 'bargle'
+  abort: alias 'unknown' resolves to unknown command 'bargle'
   [255]
   $ hg help unknown
   alias 'unknown' resolves to unknown command 'bargle'
@@ -71,7 +71,7 @@ unknown
 ambiguous
 
   $ hg ambiguous
-  alias 'ambiguous' resolves to ambiguous command 's'
+  abort: alias 'ambiguous' resolves to ambiguous command 's'
   [255]
   $ hg help ambiguous
   alias 'ambiguous' resolves to ambiguous command 's'
@@ -80,7 +80,7 @@ ambiguous
 recursive
 
   $ hg recursive
-  alias 'recursive' resolves to unknown command 'recursive'
+  abort: alias 'recursive' resolves to unknown command 'recursive'
   [255]
   $ hg help recursive
   alias 'recursive' resolves to unknown command 'recursive'
@@ -89,8 +89,8 @@ recursive
 disabled
 
   $ hg disabled
-  alias 'disabled' resolves to unknown command 'email'
-  'email' is provided by 'patchbomb' extension
+  abort: alias 'disabled' resolves to unknown command 'email'
+  ('email' is provided by 'patchbomb' extension)
   [255]
   $ hg help disabled
   alias 'disabled' resolves to unknown command 'email'
@@ -105,7 +105,7 @@ disabled
 no definition
 
   $ hg nodef
-  no definition for alias 'nodefinition'
+  abort: no definition for alias 'nodefinition'
   [255]
   $ hg help nodef
   no definition for alias 'nodefinition'
@@ -114,7 +114,7 @@ no definition
 no closing quotation
 
   $ hg noclosing
-  error in definition for alias 'noclosingquotation': No closing quotation
+  abort: error in definition for alias 'noclosingquotation': No closing quotation
   [255]
   $ hg help noclosing
   error in definition for alias 'noclosingquotation': No closing quotation
@@ -123,30 +123,30 @@ no closing quotation
 invalid options
 
   $ hg no--cwd
-  error in definition for alias 'no--cwd': --cwd may only be given on the command line
+  abort: error in definition for alias 'no--cwd': --cwd may only be given on the command line
   [255]
   $ hg help no--cwd
   error in definition for alias 'no--cwd': --cwd may only be given on the
   command line
   $ hg no-R
-  error in definition for alias 'no-R': -R may only be given on the command line
+  abort: error in definition for alias 'no-R': -R may only be given on the command line
   [255]
   $ hg help no-R
   error in definition for alias 'no-R': -R may only be given on the command line
   $ hg no--repo
-  error in definition for alias 'no--repo': --repo may only be given on the command line
+  abort: error in definition for alias 'no--repo': --repo may only be given on the command line
   [255]
   $ hg help no--repo
   error in definition for alias 'no--repo': --repo may only be given on the
   command line
   $ hg no--repository
-  error in definition for alias 'no--repository': --repository may only be given on the command line
+  abort: error in definition for alias 'no--repository': --repository may only be given on the command line
   [255]
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given
   on the command line
   $ hg no--config
-  error in definition for alias 'no--config': --config may only be given on the command line
+  abort: error in definition for alias 'no--config': --config may only be given on the command line
   [255]
 
 optional repository

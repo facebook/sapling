@@ -443,16 +443,15 @@ class cmdalias(object):
 
     def __call__(self, ui, *args, **opts):
         if self.badalias:
-            ui.warn(self.badalias + '\n')
+            hint = None
             if self.unknowncmd:
                 try:
                     # check if the command is in a disabled extension
                     cmd, ext = extensions.disabledcmd(ui, self.cmdname)[:2]
-                    ui.warn(_("'%s' is provided by '%s' extension\n")
-                            % (cmd, ext))
+                    hint = _("'%s' is provided by '%s' extension") % (cmd, ext)
                 except error.UnknownCommand:
                     pass
-            return -1
+            raise util.Abort(self.badalias, hint=hint)
         if self.shadows:
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
