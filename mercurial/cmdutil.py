@@ -1519,6 +1519,10 @@ def _makefollowlogfilematcher(repo, files, followfirst):
 
     return filematcher
 
+def _makenofollowlogfilematcher(repo, pats, opts):
+    '''hook for extensions to override the filematcher for non-follow cases'''
+    return None
+
 def _makelogrevset(repo, pats, opts, revs):
     """Return (expr, filematcher) where expr is a revset string built
     from log options and file patterns or None. If --stat or --patch
@@ -1635,7 +1639,9 @@ def _makelogrevset(repo, pats, opts, revs):
             filematcher = _makefollowlogfilematcher(repo, match.files(),
                                                     followfirst)
         else:
-            filematcher = lambda rev: match
+            filematcher = _makenofollowlogfilematcher(repo, pats, opts)
+            if filematcher is None:
+                filematcher = lambda rev: match
 
     expr = []
     for op, val in opts.iteritems():
