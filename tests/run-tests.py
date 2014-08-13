@@ -1081,6 +1081,7 @@ class TestResult(unittest._TextTestResult):
     def addFailure(self, test, reason):
         self.failures.append((test, reason))
 
+        iolock.acquire()
         if self._options.first:
             self.stop()
         else:
@@ -1088,6 +1089,8 @@ class TestResult(unittest._TextTestResult):
                 self.stream.write('\nERROR: %s output changed\n' % test)
 
             self.stream.write('!')
+            self.stream.flush()
+        iolock.release()
 
     def addError(self, *args, **kwargs):
         super(TestResult, self).addError(*args, **kwargs)
