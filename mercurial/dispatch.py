@@ -364,6 +364,7 @@ class cmdalias(object):
         self.norepo = True
         self.optionalrepo = False
         self.badalias = None
+        self.unknowncmd = False
 
         try:
             aliases, entry = cmdutil.findcmd(self.name, cmdtable)
@@ -433,16 +434,9 @@ class cmdalias(object):
             self.__doc__ = self.fn.__doc__
 
         except error.UnknownCommand:
-            def fn(ui, *args):
-                try:
-                    # check if the command is in a disabled extension
-                    commands.help_(ui, cmd, unknowncmd=True)
-                except error.UnknownCommand:
-                    pass
-                return -1
-            self.fn = fn
             self.badalias = (_("alias '%s' resolves to unknown command '%s'")
                              % (self.name, cmd))
+            self.unknowncmd = True
         except error.AmbiguousCommand:
             self.badalias = (_("alias '%s' resolves to ambiguous command '%s'")
                              % (self.name, cmd))
@@ -450,8 +444,12 @@ class cmdalias(object):
     def __call__(self, ui, *args, **opts):
         if self.badalias:
             ui.warn(self.badalias + '\n')
-            if self.fn:
-                return self.fn(ui, *args, **opts)
+            if self.unknowncmd:
+                try:
+                    # check if the command is in a disabled extension
+                    commands.help_(ui, self.cmdname, unknowncmd=True)
+                except error.UnknownCommand:
+                    pass
             return -1
         if self.shadows:
             ui.debug("alias '%s' shadows command '%s'\n" %
