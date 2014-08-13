@@ -299,11 +299,25 @@ def overridelog(orig, ui, repo, *pats, **opts):
 
         return m, pats
 
+    # For hg log --patch, the match object is used in two different senses:
+    # (1) to determine what revisions should be printed out, and
+    # (2) to determine what files to print out diffs for.
+    # The magic matchandpats override should be used for case (1) but not for
+    # case (2).
+    def overridemakelogfilematcher(repo, pats, opts):
+        pctx = repo[None]
+        match, pats = oldmatchandpats(pctx, pats, opts)
+        return lambda rev: match
+
     oldmatchandpats = installmatchandpatsfn(overridematchandpats)
+    oldmakelogfilematcher = cmdutil._makenofollowlogfilematcher
+    setattr(cmdutil, '_makenofollowlogfilematcher', overridemakelogfilematcher)
+
     try:
         return orig(ui, repo, *pats, **opts)
     finally:
         restorematchandpatsfn()
+        setattr(cmdutil, '_makenofollowlogfilematcher', oldmakelogfilematcher)
 
 def overrideverify(orig, ui, repo, *pats, **opts):
     large = opts.pop('large', False)
