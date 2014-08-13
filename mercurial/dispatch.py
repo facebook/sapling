@@ -447,7 +447,9 @@ class cmdalias(object):
             if self.unknowncmd:
                 try:
                     # check if the command is in a disabled extension
-                    commands.help_(ui, self.cmdname, unknowncmd=True)
+                    cmd, ext = extensions.disabledcmd(ui, self.cmdname)[:2]
+                    ui.warn(_("'%s' is provided by '%s' extension\n")
+                            % (cmd, ext))
                 except error.UnknownCommand:
                     pass
             return -1

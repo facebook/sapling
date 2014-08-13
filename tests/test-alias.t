@@ -90,11 +90,7 @@ disabled
 
   $ hg disabled
   alias 'disabled' resolves to unknown command 'email'
-  'email' is provided by the following extension:
-  
-      patchbomb     command to send changesets as (a series of) patch emails
-  
-  (use "hg help extensions" for information on enabling extensions)
+  'email' is provided by 'patchbomb' extension
   [255]
   $ hg help disabled
   alias 'disabled' resolves to unknown command 'email'
