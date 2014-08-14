@@ -85,19 +85,20 @@ def trywritehiddencache(repo, hideable, hidden):
     """
     wlock = fh = None
     try:
-        wlock = repo.wlock(wait=False)
-        # write cache to file
-        newhash = cachehash(repo, hideable)
-        sortedset = sorted(hidden)
-        data = struct.pack('>%iI' % len(sortedset), *sortedset)
-        fh = repo.vfs.open(cachefile, 'w+b', atomictemp=True)
-        fh.write(struct.pack(">H", cacheversion))
-        fh.write(newhash)
-        fh.write(data)
-    except (IOError, OSError):
-        repo.ui.debug('error writing hidden changesets cache')
-    except error.LockHeld:
-        repo.ui.debug('cannot obtain lock to write hidden changesets cache')
+        try:
+            wlock = repo.wlock(wait=False)
+            # write cache to file
+            newhash = cachehash(repo, hideable)
+            sortedset = sorted(hidden)
+            data = struct.pack('>%iI' % len(sortedset), *sortedset)
+            fh = repo.vfs.open(cachefile, 'w+b', atomictemp=True)
+            fh.write(struct.pack(">H", cacheversion))
+            fh.write(newhash)
+            fh.write(data)
+        except (IOError, OSError):
+            repo.ui.debug('error writing hidden changesets cache')
+        except error.LockHeld:
+            repo.ui.debug('cannot obtain lock to write hidden changesets cache')
     finally:
         if fh:
             fh.close()
