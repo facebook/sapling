@@ -2341,7 +2341,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
             try:
                 try:
                     repo.obsstore.create(tr, parsenodeid(precursor), succs,
-                                         opts['flags'], metadata)
+                                         opts['flags'], metadata=metadata)
                     tr.close()
                 except ValueError, exc:
                     raise util.Abort(_('bad obsmarker input: %s') % exc)

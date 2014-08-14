@@ -868,7 +868,8 @@ def createmarkers(repo, relations, flag=0, metadata=None):
             nsucs = tuple(s.node() for s in sucs)
             if nprec in nsucs:
                 raise util.Abort("changeset %s cannot obsolete itself" % prec)
-            repo.obsstore.create(tr, nprec, nsucs, flag, localmetadata)
+            repo.obsstore.create(tr, nprec, nsucs, flag,
+                                 metadata=localmetadata)
             repo.filteredrevcache.clear()
         tr.close()
     finally:
