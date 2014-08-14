@@ -1125,6 +1125,7 @@ class TestResult(unittest._TextTestResult):
                 self.stream.write('\nERROR: %s output changed\n' % test)
 
             self.stream.write('!')
+            self.stream.flush()
             iolock.release()
 
     def addSuccess(self, test):

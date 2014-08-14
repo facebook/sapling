@@ -363,12 +363,7 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     hg.update(repo, parent)
     ### prepare new commit data
     commitopts = opts.copy()
-    # username
-    if ctx.user() == oldctx.user():
-        username = ctx.user()
-    else:
-        username = ui.username()
-    commitopts['user'] = username
+    commitopts['user'] = ctx.user()
     # commit message
     if opts.get('rollup'):
         newmessage = ctx.description()
