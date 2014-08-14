@@ -259,7 +259,8 @@ class obsstore(object):
     def __nonzero__(self):
         return bool(self._all)
 
-    def create(self, transaction, prec, succs=(), flag=0, metadata=None):
+    def create(self, transaction, prec, succs=(), flag=0, date=None,
+               metadata=None):
         """obsolete: add a new obsolete marker
 
         * ensuring it is hashable
@@ -275,7 +276,9 @@ class obsstore(object):
         if metadata is None:
             metadata = {}
         if 'date' not in metadata:
-            metadata['date'] = "%d %d" % util.makedate()
+            if date is None:
+                date = util.makedate()
+            metadata['date'] = "%d %d" % date
         if len(prec) != 20:
             raise ValueError(prec)
         for succ in succs:
