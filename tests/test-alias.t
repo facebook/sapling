@@ -229,6 +229,10 @@ simple shell aliases
   foo
   $ hg echoall 'test $2' foo
   test $2 foo
+  $ hg echoall 'test $@' foo '$@'
+  test $@ foo $@
+  $ hg echoall 'test "$@"' foo '"$@"'
+  test "$@" foo "$@"
   $ hg echo1 foo bar baz
   foo
   $ hg echo2 foo bar baz
