@@ -1500,7 +1500,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
     return iterate()
 
-def _makelogfilematcher(repo, files, followfirst):
+def _makefollowlogfilematcher(repo, files, followfirst):
     # When displaying a revision with --patch --follow FILE, we have
     # to know which file of the revision must be diffed. With
     # --follow, we want the names of the ancestors of FILE in the
@@ -1526,6 +1526,10 @@ def _makelogfilematcher(repo, files, followfirst):
         return scmutil.matchfiles(repo, fcache.get(rev, []))
 
     return filematcher
+
+def _makenofollowlogfilematcher(repo, pats, opts):
+    '''hook for extensions to override the filematcher for non-follow cases'''
+    return None
 
 def _makelogrevset(repo, pats, opts, revs):
     """Return (expr, filematcher) where expr is a revset string built
@@ -1646,9 +1650,12 @@ def _makelogrevset(repo, pats, opts, revs):
         if follow and not match.always() and not slowpath:
             # _makelogfilematcher expects its files argument to be relative to
             # the repo root, so use match.files(), not pats.
-            filematcher = _makelogfilematcher(repo, match.files(), followfirst)
+            filematcher = _makefollowlogfilematcher(repo, match.files(),
+                                                    followfirst)
         else:
-            filematcher = lambda rev: match
+            filematcher = _makenofollowlogfilematcher(repo, pats, opts)
+            if filematcher is None:
+                filematcher = lambda rev: match
 
     expr = []
     for op, val in opts.iteritems():
