@@ -277,6 +277,8 @@ class obsstore(object):
         for succ in succs:
             if len(succ) != 20:
                 raise ValueError(succ)
+        if prec in succs:
+            raise ValueError(_('in-marker cycle with %s') % node.hex(prec))
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
         return bool(self.add(transaction, [marker]))
 
