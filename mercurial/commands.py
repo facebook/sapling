@@ -2331,8 +2331,6 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
 
     if precursor is not None:
         metadata = {}
-        if 'date' in opts:
-            metadata['date'] = opts['date']
         metadata['user'] = opts['user'] or ui.username()
         succs = tuple(parsenodeid(succ) for succ in successors)
         l = repo.lock()
@@ -2340,8 +2338,14 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
             tr = repo.transaction('debugobsolete')
             try:
                 try:
+                    date = opts.get('date')
+                    if date:
+                        date = util.parsedate(date)
+                    else:
+                        date = None
                     repo.obsstore.create(tr, parsenodeid(precursor), succs,
-                                         opts['flags'], metadata=metadata)
+                                         opts['flags'], date=date,
+                                         metadata=metadata)
                     tr.close()
                 except ValueError, exc:
                     raise util.Abort(_('bad obsmarker input: %s') % exc)
