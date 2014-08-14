@@ -229,8 +229,9 @@ repository in the same manner as the purge extension.
 Positional arguments like ``$1``, ``$2``, etc. in the alias definition
 expand to the command arguments. Unmatched arguments are
 removed. ``$0`` expands to the alias name and ``$@`` expands to all
-arguments separated by a space. These expansions happen before the
-command is passed to the shell.
+arguments separated by a space. ``"$@"`` (with quotes) expands to all
+arguments quoted individually and separated by a space. These expansions
+happen before the command is passed to the shell.
 
 Shell aliases are executed in an environment where ``$HG`` expands to
 the path of the Mercurial that was used to execute the alias. This is

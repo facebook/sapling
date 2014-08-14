@@ -30,6 +30,7 @@
   > echo1 = !printf '\$1\n'
   > echo2 = !printf '\$2\n'
   > echo13 = !printf '\$1 \$3\n'
+  > echotokens = !printf "%s\n" "\$@"
   > count = !hg log -r "\$@" --template=. | wc -c | sed -e 's/ //g'
   > mcount = !hg log \$@ --template=. | wc -c | sed -e 's/ //g'
   > rt = root
@@ -241,6 +242,22 @@ simple shell aliases
   foo baz
   $ hg echo2 foo
   
+  $ hg echotokens
+  
+  $ hg echotokens foo 'bar $1 baz'
+  foo
+  bar $1 baz
+  $ hg echotokens 'test $2' foo
+  test $2
+  foo
+  $ hg echotokens 'test $@' foo '$@'
+  test $@
+  foo
+  $@
+  $ hg echotokens 'test "$@"' foo '"$@"'
+  test "$@"
+  foo
+  "$@"
   $ echo bar > bar
   $ hg commit -qA -m bar
   $ hg count .

@@ -331,6 +331,27 @@ def aliasargs(fn, givenargs):
         args = shlex.split(cmd)
     return args + givenargs
 
+def aliasinterpolate(name, args, cmd):
+    '''interpolate args into cmd for shell aliases
+
+    This also handles $0, $@ and "$@".
+    '''
+    # util.interpolate can't deal with "$@" (with quotes) because it's only
+    # built to match prefix + patterns.
+    replacemap = dict(('$%d' % (i + 1), arg) for i, arg in enumerate(args))
+    replacemap['$0'] = name
+    replacemap['$$'] = '$'
+    replacemap['$@'] = ' '.join(args)
+    # Typical Unix shells interpolate "$@" (with quotes) as all the positional
+    # parameters, separated out into words. Emulate the same behavior here by
+    # quoting the arguments individually. POSIX shells will then typically
+    # tokenize each argument into exactly one word.
+    replacemap['"$@"'] = ' '.join(util.shellquote(arg) for arg in args)
+    # escape '\$' for regex
+    regex = '|'.join(replacemap.keys()).replace('$', r'\$')
+    r = re.compile(regex)
+    return r.sub(lambda x: replacemap[x.group()], cmd)
+
 class cmdalias(object):
     def __init__(self, name, definition, cmdtable):
         self.name = self.cmd = name
@@ -376,10 +397,7 @@ class cmdalias(object):
                                  % (int(m.groups()[0]), self.name))
                         return ''
                 cmd = re.sub(r'\$(\d+|\$)', _checkvar, self.definition[1:])
-                replace = dict((str(i + 1), arg) for i, arg in enumerate(args))
-                replace['0'] = self.name
-                replace['@'] = ' '.join(args)
-                cmd = util.interpolate(r'\$', replace, cmd, escape_prefix=True)
+                cmd = aliasinterpolate(self.name, args, cmd)
                 return util.system(cmd, environ=env, out=ui.fout)
             self.fn = fn
             return
