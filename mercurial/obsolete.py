@@ -832,7 +832,7 @@ def _computedivergentset(repo):
     return divergent
 
 
-def createmarkers(repo, relations, flag=0, metadata=None):
+def createmarkers(repo, relations, flag=0, date=None, metadata=None):
     """Add obsolete markers between changesets in a repo
 
     <relations> must be an iterable of (<old>, (<new>, ...)[,{metadata}])
@@ -851,8 +851,6 @@ def createmarkers(repo, relations, flag=0, metadata=None):
     # prepare metadata
     if metadata is None:
         metadata = {}
-    if 'date' not in metadata:
-        metadata['date'] = '%i %i' % util.makedate()
     if 'user' not in metadata:
         metadata['user'] = repo.ui.username()
     tr = repo.transaction('add-obsolescence-marker')
@@ -871,7 +869,7 @@ def createmarkers(repo, relations, flag=0, metadata=None):
             nsucs = tuple(s.node() for s in sucs)
             if nprec in nsucs:
                 raise util.Abort("changeset %s cannot obsolete itself" % prec)
-            repo.obsstore.create(tr, nprec, nsucs, flag,
+            repo.obsstore.create(tr, nprec, nsucs, flag, date=date,
                                  metadata=localmetadata)
             repo.filteredrevcache.clear()
         tr.close()
