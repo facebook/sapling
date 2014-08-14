@@ -1185,8 +1185,10 @@ def showmarker(ui, marker):
         ui.write(' ')
         ui.write(hex(repl))
     ui.write(' %X ' % marker.flags())
+    ui.write('(%s) ' % util.datestr(marker.date()))
     ui.write('{%s}' % (', '.join('%r: %r' % t for t in
-                                 sorted(marker.metadata().items()))))
+                                 sorted(marker.metadata().items())
+                                 if t[0] != 'date')))
     ui.write('\n')
 
 def finddate(ui, repo, date):
