@@ -187,6 +187,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             _pushchangeset(pushop)
             _pushsyncphase(pushop)
             _pushobsolete(pushop)
+            _pushbookmark(pushop)
         finally:
             if lock is not None:
                 lock.release()
@@ -194,7 +195,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    _pushbookmark(pushop)
     return pushop.ret
 
 # list of steps to perform discovery before push
