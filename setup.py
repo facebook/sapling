@@ -33,12 +33,14 @@ try:
 except ImportError:
     try:
         import sha
+        sha.sha # silence unused import warning
     except ImportError:
         raise SystemExit(
             "Couldn't import standard hashlib (incomplete Python install).")
 
 try:
     import zlib
+    zlib.compressobj # silence unused import warning
 except ImportError:
     raise SystemExit(
         "Couldn't import standard zlib (incomplete Python install).")
@@ -56,6 +58,7 @@ if isironpython:
 else:
     try:
         import bz2
+        bz2.BZ2Compressor # silence unused import warning
     except ImportError:
         raise SystemExit(
             "Couldn't import standard bz2 (incomplete Python install).")
@@ -129,6 +132,7 @@ def hasfunction(cc, funcname):
 # py2exe needs to be installed to work
 try:
     import py2exe
+    py2exe.Distribution # silence unused import warning
     py2exeloaded = True
     # import py2exe's patched Distribution class
     from distutils.core import Distribution

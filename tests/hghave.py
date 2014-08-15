@@ -148,6 +148,7 @@ def has_cacheable_fs():
 def has_lsprof():
     try:
         import _lsprof
+        _lsprof.Profiler # silence unused import warning
         return True
     except ImportError:
         return False
@@ -164,6 +165,7 @@ def has_git():
 def has_docutils():
     try:
         from docutils.core import publish_cmdline
+        publish_cmdline # silence unused import
         return True
     except ImportError:
         return False
@@ -270,6 +272,7 @@ def has_pyflakes():
 def has_pygments():
     try:
         import pygments
+        pygments.highlight # silence unused import warning
         return True
     except ImportError:
         return False
@@ -288,6 +291,7 @@ def has_outer_repo():
 def has_ssl():
     try:
         import ssl
+        ssl.wrap_socket # silence unused import warning
         import OpenSSL
         OpenSSL.SSL.Context
         return True

@@ -52,6 +52,7 @@ import sys
 # Enable tracing. Run 'python -m win32traceutil' to debug
 if getattr(sys, 'isapidllhandle', None) is not None:
     import win32traceutil
+    win32traceutil.SetupForPrint # silence unused import warning
 
 # To serve pages in local charset instead of UTF-8, remove the two lines below
 import os
@@ -90,6 +91,6 @@ def __ExtensionFactory__():
     return isapi_wsgi.ISAPISimpleHandler(handler)
 
 if __name__=='__main__':
-    from isapi.install import *
+    from isapi.install import ISAPIParameters, HandleCommandLine
     params = ISAPIParameters()
     HandleCommandLine(params)
