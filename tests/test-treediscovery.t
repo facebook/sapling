@@ -17,11 +17,13 @@ Setup HTTP server control:
   >   echo '[web]' > $1/.hg/hgrc
   >   echo 'push_ssl = false' >> $1/.hg/hgrc
   >   echo 'allow_push = *' >> $1/.hg/hgrc
-  >   hg serve -R $1 -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  >   hg serve -R $1 -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   >   cat hg.pid >> $DAEMON_PIDS
   > }
   $ tstop() {
   >   "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  >   [ "$1" ] && cut -d' ' -f6- access.log && cat errors.log
+  >   rm access.log errors.log
   > }
 
 Both are empty:
@@ -188,10 +190,11 @@ Local is subset:
   no changes found
   [1]
   $ cd ..
+  $ tstop
 
 Remote is empty:
 
-  $ tstop ; tstart empty2
+  $ tstart empty2
   $ cd main
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -230,10 +233,10 @@ Remote is empty:
   no changes found
   [1]
   $ cd ..
+  $ tstop
 
 Local is superset:
 
-  $ tstop
   $ hg clone main subset2 --rev name2
   adding changesets
   adding manifests
@@ -280,10 +283,11 @@ Local is superset:
   no changes found
   [1]
   $ cd ..
+  $ tstop
 
 Partial pull:
 
-  $ tstop ; tstart main
+  $ tstart main
   $ hg clone $remote partial --rev name2
   adding changesets
   adding manifests
@@ -322,10 +326,10 @@ Partial pull:
   10 8b6bad1512e1: r10 both
   11 a19bfa7e7328: r11 both
   $ cd ..
+  $ tstop
 
 Both have new stuff in new named branches:
 
-  $ tstop
   $ hg clone main repo1a --rev name1 -q
   $ hg clone repo1a repo1b -q
   $ hg clone main repo2a --rev name2 -q
@@ -372,8 +376,9 @@ Both have new stuff in new named branches:
   no changes found
   [1]
   $ cd ..
+  $ tstop
 
-  $ tstop ; tstart repo1b
+  $ tstart repo1b
   $ cd repo2b
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -414,10 +419,10 @@ Both have new stuff in new named branches:
   no changes found
   [1]
   $ cd ..
+  $ tstop
 
 Both have new stuff in existing named branches:
 
-  $ tstop
   $ rm -r repo1a repo1b repo2a repo2b
   $ hg clone main repo1a --rev 3 --rev 8 -q
   $ hg clone repo1a repo1b -q
@@ -460,8 +465,9 @@ Both have new stuff in existing named branches:
   no changes found
   [1]
   $ cd ..
+  $ tstop
 
-  $ tstop ; tstart repo1b
+  $ tstart repo1b
   $ cd repo2b
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -497,6 +503,32 @@ Both have new stuff in existing named branches:
   no changes found
   [1]
   $ cd ..
-
-  $ tstop
-
+  $ tstop show
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=heads HTTP/1.1" 200 -
+  "GET /?cmd=branches HTTP/1.1" 200 - x-hgarg-1:nodes=d8f638ac69e9ae8dea4f09f11d696546a912d961
+  "GET /?cmd=between HTTP/1.1" 200 - x-hgarg-1:pairs=d8f638ac69e9ae8dea4f09f11d696546a912d961-d57206cc072a18317c1e381fb60aa31bd3401785
+  "GET /?cmd=changegroupsubset HTTP/1.1" 200 - x-hgarg-1:bases=d8f638ac69e9ae8dea4f09f11d696546a912d961&heads=d8f638ac69e9ae8dea4f09f11d696546a912d961+2c8d5d5ec612be65cdfdeac78b7662ab1696324a
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=heads HTTP/1.1" 200 -
+  "GET /?cmd=branches HTTP/1.1" 200 - x-hgarg-1:nodes=d8f638ac69e9ae8dea4f09f11d696546a912d961
+  "GET /?cmd=between HTTP/1.1" 200 - x-hgarg-1:pairs=d8f638ac69e9ae8dea4f09f11d696546a912d961-d57206cc072a18317c1e381fb60aa31bd3401785
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=heads HTTP/1.1" 200 -
+  "GET /?cmd=branches HTTP/1.1" 200 - x-hgarg-1:nodes=d8f638ac69e9ae8dea4f09f11d696546a912d961
+  "GET /?cmd=between HTTP/1.1" 200 - x-hgarg-1:pairs=d8f638ac69e9ae8dea4f09f11d696546a912d961-d57206cc072a18317c1e381fb60aa31bd3401785
+  "GET /?cmd=changegroupsubset HTTP/1.1" 200 - x-hgarg-1:bases=d8f638ac69e9ae8dea4f09f11d696546a912d961&heads=d8f638ac69e9ae8dea4f09f11d696546a912d961+2c8d5d5ec612be65cdfdeac78b7662ab1696324a
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=heads HTTP/1.1" 200 -
+  "GET /?cmd=branchmap HTTP/1.1" 200 -
+  "GET /?cmd=branchmap HTTP/1.1" 200 -
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "POST /?cmd=unbundle HTTP/1.1" 200 - x-hgarg-1:heads=686173686564+1827a5bb63e602382eb89dd58f2ac9f3b007ad91
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=heads HTTP/1.1" 200 -
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=heads HTTP/1.1" 200 -
