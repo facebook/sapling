@@ -5593,7 +5593,7 @@ def summary(ui, repo, **opts):
         ui.write(_('commit: %s\n') % t.strip())
 
     # all ancestors of branch heads - all ancestors of parent = new csets
-    new = len(repo.changelog.findmissing([ctx.node() for ctx in parents],
+    new = len(repo.changelog.findmissing([pctx.node() for pctx in parents],
                                          bheads))
 
     if new == 0:

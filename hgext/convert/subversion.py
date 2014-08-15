@@ -490,10 +490,10 @@ class svn_source(converter_source):
             self._fetch_revisions(revnum, stop)
             if rev not in self.commits:
                 raise util.Abort(_('svn: revision %s not found') % revnum)
-        commit = self.commits[rev]
+        revcommit = self.commits[rev]
         # caller caches the result, so free it here to release memory
         del self.commits[rev]
-        return commit
+        return revcommit
 
     def checkrevformat(self, revstr, mapname='splicemap'):
         """ fails if revision format does not match the correct format"""

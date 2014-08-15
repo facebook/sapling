@@ -735,9 +735,9 @@ class basefilectx(object):
         return True
 
     def parents(self):
-        p = self._path
+        _path = self._path
         fl = self._filelog
-        pl = [(p, n, fl) for n in self._filelog.parents(self._filenode)]
+        pl = [(_path, n, fl) for n in self._filelog.parents(self._filenode)]
 
         r = self._filelog.renamed(self._filenode)
         if r:

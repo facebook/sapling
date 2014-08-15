@@ -249,7 +249,7 @@ class wirepeer(peer.peerrepository):
         yield {'nodes': encodelist(nodes)}, f
         d = f.value
         try:
-            yield [bool(int(f)) for f in d]
+            yield [bool(int(b)) for b in d]
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), d))
 

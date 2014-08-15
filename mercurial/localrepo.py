@@ -676,8 +676,7 @@ class localrepository(object):
         if not self._tagscache.tagslist:
             l = []
             for t, n in self.tags().iteritems():
-                r = self.changelog.rev(n)
-                l.append((r, t, n))
+                l.append((self.changelog.rev(n), t, n))
             self._tagscache.tagslist = [(t, n) for r, t, n in sorted(l)]
 
         return self._tagscache.tagslist
