@@ -767,22 +767,16 @@ class basefilectx(object):
         this returns fixed value(False is used) as linenumber,
         if "linenumber" parameter is "False".'''
 
-        def decorate_compat(text, rev):
-            return ([rev] * len(text.splitlines()), text)
-
-        def without_linenumber(text, rev):
-            return ([(rev, False)] * len(text.splitlines()), text)
-
-        def with_linenumber(text, rev):
-            size = len(text.splitlines())
-            return ([(rev, i) for i in xrange(1, size + 1)], text)
-
         if linenumber is None:
-            decorate = decorate_compat
+            def decorate(text, rev):
+                return ([rev] * len(text.splitlines()), text)
         elif linenumber:
-            decorate = with_linenumber
+            def decorate(text, rev):
+                size = len(text.splitlines())
+                return ([(rev, i) for i in xrange(1, size + 1)], text)
         else:
-            decorate = without_linenumber
+            def decorate(text, rev):
+                return ([(rev, False)] * len(text.splitlines()), text)
 
         def pair(parent, child):
             blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts,
