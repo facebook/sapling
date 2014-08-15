@@ -294,8 +294,16 @@ rebase of merge of ancestors
   other
   rebase merging completed
   1 changesets found
+  uncompressed size of bundle content:
+       193 (changelog)
+       196 (manifests)
+       162  other
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/4c5f12f25ebe-backup.hg (glob)
   1 changesets found
+  uncompressed size of bundle content:
+       252 (changelog)
+       147 (manifests)
+       162  other
   adding branch
   adding changesets
   adding manifests

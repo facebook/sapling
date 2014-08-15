@@ -64,8 +64,18 @@ already has one local mq patch
   updating mq patch p0.patch to 5:9ecc820b1737
   $TESTTMP/a/.hg/patches/p0.patch (glob)
   2 changesets found
+  uncompressed size of bundle content:
+       344 (changelog)
+       284 (manifests)
+       109  p0
+       109  p1
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-backup.hg (glob)
   2 changesets found
+  uncompressed size of bundle content:
+       399 (changelog)
+       284 (manifests)
+       109  p0
+       109  p1
   adding branch
   adding changesets
   adding manifests

@@ -258,6 +258,11 @@ class cg1packer(object):
         self._repo = repo
         self._reorder = reorder
         self._progress = repo.ui.progress
+        if self._repo.ui.verbose and not self._repo.ui.debugflag:
+            self._verbosenote = self._repo.ui.note
+        else:
+            self._verbosenote = lambda s: None
+
     def close(self):
         return closechunk()
 
@@ -341,9 +346,13 @@ class cg1packer(object):
             mfs.setdefault(c[0], x)
             return x
 
+        self._verbosenote(_('uncompressed size of bundle content:\n'))
+        size = 0
         for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
                                 reorder=reorder):
+            size += len(chunk)
             yield chunk
+        self._verbosenote(_('%8.i (changelog)\n') % size)
         progress(msgbundling, None)
 
         # Callback for the manifest, used to collect linkrevs for filelog
@@ -364,9 +373,12 @@ class cg1packer(object):
             return clnode
 
         mfnodes = self.prune(mf, mfs, commonrevs, source)
+        size = 0
         for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
                                 reorder=reorder):
+            size += len(chunk)
             yield chunk
+        self._verbosenote(_('%8.i (manifests)\n') % size)
         progress(msgbundling, None)
 
         mfs.clear()
@@ -417,10 +429,14 @@ class cg1packer(object):
             if filenodes:
                 progress(msgbundling, i + 1, item=fname, unit=msgfiles,
                          total=total)
-                yield self.fileheader(fname)
+                h = self.fileheader(fname)
+                size = len(h)
+                yield h
                 for chunk in self.group(filenodes, filerevlog, lookupfilelog,
                                         reorder=reorder):
+                    size += len(chunk)
                     yield chunk
+                self._verbosenote(_('%8.i  %s\n') % (size, fname))
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         return prev

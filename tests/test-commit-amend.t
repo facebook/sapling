@@ -109,8 +109,16 @@ No changes, just a different message:
   a
   stripping amended changeset 74609c7f506e
   1 changesets found
+  uncompressed size of bundle content:
+       250 (changelog)
+       143 (manifests)
+       109  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/74609c7f506e-amend-backup.hg (glob)
   1 changesets found
+  uncompressed size of bundle content:
+       246 (changelog)
+       143 (manifests)
+       109  a
   adding branch
   adding changesets
   adding manifests
@@ -236,8 +244,16 @@ then, test editing custom commit message
   a
   stripping amended changeset 5f357c7560ab
   1 changesets found
+  uncompressed size of bundle content:
+       238 (changelog)
+       143 (manifests)
+       111  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/5f357c7560ab-amend-backup.hg (glob)
   1 changesets found
+  uncompressed size of bundle content:
+       246 (changelog)
+       143 (manifests)
+       111  a
   adding branch
   adding changesets
   adding manifests
@@ -265,8 +281,16 @@ Same, but with changes in working dir (different code path):
   stripping intermediate changeset a0ea9b1a4c8c
   stripping amended changeset 7ab3bf440b54
   2 changesets found
+  uncompressed size of bundle content:
+       450 (changelog)
+       282 (manifests)
+       209  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/7ab3bf440b54-amend-backup.hg (glob)
   1 changesets found
+  uncompressed size of bundle content:
+       246 (changelog)
+       143 (manifests)
+       113  a
   adding branch
   adding changesets
   adding manifests

@@ -142,6 +142,10 @@
   pushing to ../c
   searching for changes
   2 changesets found
+  uncompressed size of bundle content:
+       308 (changelog)
+       286 (manifests)
+       213  foo
   adding changesets
   adding manifests
   adding file changes

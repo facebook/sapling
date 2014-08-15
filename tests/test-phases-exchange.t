@@ -764,6 +764,10 @@ Bare push with next changeset and common changeset needing sync (issue3575)
   pushing to ../alpha
   searching for changes
   1 changesets found
+  uncompressed size of bundle content:
+       172 (changelog)
+       145 (manifests)
+       111  a-H
   adding changesets
   adding manifests
   adding file changes

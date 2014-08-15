@@ -1097,6 +1097,17 @@ redo pull with --lfrev and check it pulls largefiles for the right revs
   all local heads known remotely
   6 changesets found
   adding changesets
+  uncompressed size of bundle content:
+      1213 (changelog)
+      1479 (manifests)
+       234  .hglf/large1
+       504  .hglf/large3
+       512  .hglf/sub/large4
+       162  .hglf/sub2/large6
+       162  .hglf/sub2/large7
+       192  normal1
+       397  normal3
+       405  sub/normal4
   adding manifests
   adding file changes
   added 6 changesets with 16 changes to 8 files
