@@ -347,7 +347,7 @@ Test actual protocol when pulling one new head in addition to common heads
   $ cut -d' ' -f6- access.log | grep -v cmd=known # cmd=known uses random sampling
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D513314ca8b3ae4dac8eec56966265b00fcf866db
-  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=513314ca8b3ae4dac8eec56966265b00fcf866db&heads=e64a39e7da8b0d54bc63e81169aff001c13b3477+513314ca8b3ae4dac8eec56966265b00fcf866db
+  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=513314ca8b3ae4dac8eec56966265b00fcf866db&heads=e64a39e7da8b0d54bc63e81169aff001c13b3477
   $ cat errors.log
 
   $ cd ..
