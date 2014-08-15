@@ -217,6 +217,7 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     # This explains why the new head are very simple to compute.
     r = repo.set('heads(%ln + %ln)', oldheads, outgoing.missing)
     newheads = list(c.node() for c in r)
+    # set some unsynced head to issue the "unsynced changes" warning
     unsynced = inc and set([None]) or set()
     return {None: (oldheads, newheads, unsynced)}
 
@@ -313,12 +314,18 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             newhs = candidate_newhs
         unsynced = sorted(h for h in unsyncedheads if h not in discardedheads)
         if unsynced:
-            if len(unsynced) <= 4 or repo.ui.verbose:
+            if None in unsynced:
+                # old remote, no heads data
+                heads = None
+            elif len(unsynced) <= 4 or repo.ui.verbose:
                 heads = ' '.join(short(h) for h in unsynced)
             else:
                 heads = (' '.join(short(h) for h in unsynced[:4]) +
                          ' ' + _("and %s others") % (len(unsynced) - 4))
-            if branch is None:
+            if heads is None:
+                repo.ui.status(_("remote has heads that are "
+                                 "not known locally\n"))
+            elif branch is None:
                 repo.ui.status(_("remote has heads that are "
                                  "not known locally: %s\n") % heads)
             else:

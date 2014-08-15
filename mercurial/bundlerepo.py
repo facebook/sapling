@@ -357,6 +357,9 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             pass
         return repo, [], other.close
 
+    commonset = set(common)
+    rheads = [x for x in rheads if x not in commonset]
+
     bundle = None
     bundlerepo = None
     localrepo = other.local()

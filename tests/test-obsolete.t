@@ -62,6 +62,14 @@ Killing a single changeset without replacement
   $ hg tip
   -1:000000000000 (public) [tip ] 
   $ hg up --hidden tip --quiet
+
+Killing a single changeset with itself should fail
+(simple local safeguard)
+
+  $ hg debugobsolete `getid kill_me` `getid kill_me`
+  abort: bad obsmarker input: in-marker cycle with 97b7c2d76b1845ed3eb988cd612611e72406cef0
+  [255]
+
   $ cd ..
 
 Killing a single changeset with replacement

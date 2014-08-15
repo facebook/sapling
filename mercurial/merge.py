@@ -1052,7 +1052,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
                 pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
-                pas = [p1.ancestor(p2, warn=True)]
+                pas = [p1.ancestor(p2, warn=branchmerge)]
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 

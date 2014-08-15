@@ -324,4 +324,30 @@ One with >200 heads, which used to use up all of the sample:
   5 total queries
   common heads: 3ee37d65064a
 
+Test actual protocol when pulling one new head in addition to common heads
+
+  $ hg clone -U b c
+  $ hg -R c id -ir tip
+  513314ca8b3a
+  $ hg -R c up -qr default
+  $ touch c/f
+  $ hg -R c ci -Aqm "extra head"
+  $ hg -R c id -i
+  e64a39e7da8b
+
+  $ hg serve -R c -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg -R b incoming http://localhost:$HGPORT/ -T '{node|short}\n'
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  e64a39e7da8b
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ cut -d' ' -f6- access.log | grep -v cmd=known # cmd=known uses random sampling
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D513314ca8b3ae4dac8eec56966265b00fcf866db
+  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=513314ca8b3ae4dac8eec56966265b00fcf866db&heads=e64a39e7da8b0d54bc63e81169aff001c13b3477
+  $ cat errors.log
+
   $ cd ..
