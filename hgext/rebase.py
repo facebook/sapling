@@ -376,6 +376,8 @@ def rebase(ui, repo, **opts):
         if collapsef and not keepopen:
             p1, p2 = defineparents(repo, min(state), target,
                                                         state, targetancestors)
+            editopt = opts.get('edit')
+            editform = 'rebase.collapse'
             if collapsemsg:
                 commitmsg = collapsemsg
             else:
@@ -383,8 +385,8 @@ def rebase(ui, repo, **opts):
                 for rebased in state:
                     if rebased not in skipped and state[rebased] > nullmerge:
                         commitmsg += '\n* %s' % repo[rebased].description()
-                editform = 'rebase.collapse'
-                editor = cmdutil.getcommiteditor(edit=True, editform=editform)
+                editopt = True
+            editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
                                   extrafn=extrafn, editor=editor)
             for oldrev in state.iterkeys():

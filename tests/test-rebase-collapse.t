@@ -148,7 +148,12 @@ Rebasing G onto H with custom message:
   abort: message can only be specified with collapse
   [255]
 
-  $ hg rebase --source 4 --collapse -m 'custom message'
+  $ cat > $TESTTMP/checkeditform.sh <<EOF
+  > env | grep HGEDITFORM
+  > true
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --source 4 --collapse -m 'custom message' -e
+  HGEDITFORM=rebase.collapse
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
