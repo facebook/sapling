@@ -71,7 +71,7 @@
 #         - put blocks whose nodes come all from p2 first
 #     - write the tag blocks in the sorted order
 
-import tags
+import tags as tagsmod
 import util
 from node import nullid, hex
 from i18n import _
@@ -85,8 +85,8 @@ def readtagsformerge(ui, repo, lines, fn='', keeplinenums=False):
     with each tag. Rhis is done because only the line numbers of the first
     parent are useful for merging
     '''
-    filetags = tags._readtaghist(ui, repo, lines, fn=fn, recode=None,
-                              calcnodelines=True)[1]
+    filetags = tagsmod._readtaghist(ui, repo, lines, fn=fn, recode=None,
+                                    calcnodelines=True)[1]
     for tagname, taginfo in filetags.items():
         if not keeplinenums:
             for el in taginfo:

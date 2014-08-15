@@ -748,8 +748,8 @@ def _computeobsoleteset(repo):
     obs = set()
     getrev = repo.changelog.nodemap.get
     getphase = repo._phasecache.phase
-    for node in repo.obsstore.successors:
-        rev = getrev(node)
+    for n in repo.obsstore.successors:
+        rev = getrev(n)
         if rev is not None and getphase(repo, rev):
             obs.add(rev)
     return obs

@@ -10,7 +10,7 @@ import struct
 from node import nullid, nullrev, hex, bin
 from i18n import _
 from mercurial import obsolete
-import error, util, filemerge, copies, subrepo, worker, dicthelpers
+import error as errormod, util, filemerge, copies, subrepo, worker, dicthelpers
 import errno, os, shutil
 
 _pack = struct.pack
@@ -1011,7 +1011,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             # but currently we are only checking the branch tips.
             try:
                 node = repo.branchtip(wc.branch())
-            except error.RepoLookupError:
+            except errormod.RepoLookupError:
                 if wc.branch() == "default": # no default branch!
                     node = repo.lookup("tip") # update to tip
                 else:

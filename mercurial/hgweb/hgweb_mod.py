@@ -392,5 +392,5 @@ class hgweb(object):
         }
 
     def check_perm(self, req, op):
-        for hook in permhooks:
-            hook(self, req, op)
+        for permhook in permhooks:
+            permhook(self, req, op)
