@@ -247,6 +247,8 @@ Test a linear merge to a revision containing same-name normal file
   $ hg debugdirstate --nodates | grep large2
   a   0         -1 .hglf/large2
   r   0          0 large2
+  $ hg status -A large2
+  A large2
   $ cat large2
   modified large2 for linear merge
 
@@ -261,6 +263,8 @@ Test a linear merge to a revision containing same-name normal file
   $ hg debugdirstate --nodates | grep large3
   a   0         -1 .hglf/large3
   r   0          0 large3
+  $ hg status -A large3
+  A large3
   $ cat large3
   large3 as large file for linear merge
 
