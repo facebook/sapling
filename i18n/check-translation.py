@@ -7,7 +7,7 @@ import re
 
 checkers = []
 
-def checker(level, msgidpat):
+def levelchecker(level, msgidpat):
     def decorator(func):
         if msgidpat:
             match = re.compile(msgidpat).search
@@ -33,7 +33,7 @@ def match(checker, pe):
 ####################
 
 def fatalchecker(msgidpat=None):
-    return checker('fatal', msgidpat)
+    return levelchecker('fatal', msgidpat)
 
 @fatalchecker(r'\$\$')
 def promptchoice(pe):
@@ -64,7 +64,7 @@ def promptchoice(pe):
 ####################
 
 def warningchecker(msgidpat=None):
-    return checker('warning', msgidpat)
+    return levelchecker('warning', msgidpat)
 
 @warningchecker()
 def taildoublecolons(pe):
