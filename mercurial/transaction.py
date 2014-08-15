@@ -24,7 +24,7 @@ def active(func):
     return _active
 
 def _playback(journal, report, opener, entries, backupentries, unlink=True):
-    for f, o, ignore in entries:
+    for f, o, _ignore in entries:
         if o or not unlink:
             try:
                 fp = opener(f, 'a')
@@ -41,7 +41,7 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
                     raise
 
     backupfiles = []
-    for f, b, ignore in backupentries:
+    for f, b, _ignore in backupentries:
         filepath = opener.join(f)
         backuppath = opener.join(b)
         try:
@@ -265,7 +265,7 @@ class transaction(object):
             self.opener.unlink(self.journal)
         if self.opener.isfile(self.backupjournal):
             self.opener.unlink(self.backupjournal)
-            for f, b, _ignore in self.backupentries:
+            for _f, b, _ignore in self.backupentries:
                 self.opener.unlink(b)
         self.backupentries = []
         self.journal = None
