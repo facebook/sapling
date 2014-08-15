@@ -618,7 +618,7 @@ def _pushbookmark(pushop):
     remote = pushop.remote
     ui.debug("checking for updated bookmarks\n")
     revnums = map(repo.changelog.rev, pushop.revs or [])
-    ancestors = [a for a in repo.changelog.ancestors(revnums, inclusive=True)]
+    ancestors = repo.changelog.ancestors(revnums, inclusive=True)
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
      ) = bookmarks.compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
                            srchex=hex)
