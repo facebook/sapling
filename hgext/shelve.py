@@ -413,9 +413,11 @@ def mergefiles(ui, repo, wctx, shelvectx):
         for file in u:
             if file in files:
                 util.rename(file, file + ".orig")
+        ui.pushbuffer(True)
         cmdutil.revert(ui, repo, shelvectx, repo.dirstate.parents(),
                        *pathtofiles(repo, files),
                        **{'no_backup': True})
+        ui.popbuffer()
     finally:
         ui.quiet = oldquiet
 
