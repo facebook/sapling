@@ -1069,7 +1069,7 @@ def help(web, req, tmpl):
     topicname = req.form.get('node', [None])[0]
     if not topicname:
         def topics(**map):
-            for entries, summary, _ in helpmod.helptable:
+            for entries, summary, _doc in helpmod.helptable:
                 yield {'topic': entries[0], 'summary': summary}
 
         early, other = [], []

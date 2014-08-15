@@ -269,7 +269,7 @@ def cleanupcmd(ui, repo):
     wlock = None
     try:
         wlock = repo.wlock()
-        for (name, _) in repo.vfs.readdir('shelved'):
+        for (name, _type) in repo.vfs.readdir('shelved'):
             suffix = name.rsplit('.', 1)[-1]
             if suffix in ('hg', 'files', 'patch'):
                 shelvedfile(repo, name).unlink()
@@ -303,7 +303,7 @@ def listshelves(repo):
             raise
         return []
     info = []
-    for (name, _) in names:
+    for (name, _type) in names:
         pfx, sfx = name.rsplit('.', 1)
         if not pfx or sfx != 'patch':
             continue

@@ -115,10 +115,10 @@ class transaction(object):
 
         offsets = []
         backups = []
-        for f, o, _ in q[0]:
+        for f, o, _data in q[0]:
             offsets.append((f, o))
 
-        for f, b, _ in q[1]:
+        for f, b, _data in q[1]:
             backups.append((f, b))
 
         d = ''.join(['%s\0%d\n' % (f, o) for f, o in offsets])
@@ -265,7 +265,7 @@ class transaction(object):
             self.opener.unlink(self.journal)
         if self.opener.isfile(self.backupjournal):
             self.opener.unlink(self.backupjournal)
-            for f, b, _ in self.backupentries:
+            for f, b, _ignore in self.backupentries:
                 self.opener.unlink(b)
         self.backupentries = []
         self.journal = None
