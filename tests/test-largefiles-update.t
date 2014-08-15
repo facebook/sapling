@@ -167,4 +167,57 @@ automated commit like rebase/transplant
   C largeX
   $ hg strip -q 5
 
+Test that linear merge can detect modification (and conflict) correctly
+
+(linear merge without conflict)
+
+  $ echo 'large2 for linear merge (no conflict)' > large2
+  $ hg update 3 --config debug.dirstate.delaywrite=2
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status -A large2
+  M large2
+  $ cat large2
+  large2 for linear merge (no conflict)
+  $ cat .hglf/large2
+  9c4bf8f1b33536d6e5f89447e10620cfe52ea710
+
+(linear merge with conflict, choosing "other")
+
+  $ hg update -q -C 2
+  $ echo 'large1 for linear merge (conflict)' > large1
+  $ hg update 3 --config ui.interactive=True <<EOF
+  > o
+  > EOF
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  $ hg status -A large1
+  C large1
+  $ cat large1
+  large1 in #3
+  $ cat .hglf/large1
+  e5bb990443d6a92aaf7223813720f7566c9dd05b
+
+(linear merge with conflict, choosing "local")
+
+  $ hg update -q -C 2
+  $ echo 'large1 for linear merge (conflict)' > large1
+  $ hg update 3 --config debug.dirstate.delaywrite=2
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  $ hg status -A large1
+  M large1
+  $ cat large1
+  large1 for linear merge (conflict)
+  $ cat .hglf/large1
+  ba94c2efe5b7c5e0af8d189295ce00553b0612b7
+
   $ cd ..
