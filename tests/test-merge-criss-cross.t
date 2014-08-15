@@ -24,8 +24,6 @@ Criss cross merging
   $ hg ci -m '5 second change f1'
 
   $ hg up -r3
-  note: using 0f6b37dbe527 as ancestor of adfe50279922 and cf89f02107e5
-        alternatively, use --config merge.preferancestor=40663881a6dd
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '6 second change' > f2
   $ hg ci -m '6 second change f2'
@@ -169,8 +167,6 @@ Redo merge with merge.preferancestor="*" to enable bid merge
 The other way around:
 
   $ hg up -C -r5
-  note: using 0f6b37dbe527 as ancestor of 3b08d01b0ab5 and adfe50279922
-        alternatively, use --config merge.preferancestor=40663881a6dd
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge -v --debug --config merge.preferancestor="*"
   note: merging adfe50279922+ and 3b08d01b0ab5 using bids from ancestors 0f6b37dbe527 and 40663881a6dd
