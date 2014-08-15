@@ -717,6 +717,13 @@ def _hgupdaterepo(orig, repo, node, overwrite):
     return result
 
 def hgmerge(orig, repo, node, force=None, remind=True):
+    wlock = repo.wlock()
+    try:
+        return _hgmerge(orig, repo, node, force, remind)
+    finally:
+        wlock.release()
+
+def _hgmerge(orig, repo, node, force, remind):
     result = orig(repo, node, force, remind)
     lfcommands.updatelfiles(repo.ui, repo)
     return result
