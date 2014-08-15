@@ -99,6 +99,8 @@ def uisetup(ui):
                                     overrides.overridecheckunknownfile)
     entry = extensions.wrapfunction(merge, 'calculateupdates',
                                     overrides.overridecalculateupdates)
+    entry = extensions.wrapfunction(merge, 'recordupdates',
+                                    overrides.mergerecordupdates)
     entry = extensions.wrapfunction(filemerge, 'filemerge',
                                     overrides.overridefilemerge)
     entry = extensions.wrapfunction(cmdutil, 'copy',

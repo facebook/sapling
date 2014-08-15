@@ -430,6 +430,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
     removes = set(a[0] for a in actions['r'])
 
     newglist = []
+    lfmr = [] # LargeFiles: Mark as Removed
     for action in actions['g']:
         f, args, msg = action
         splitstandin = f and lfutil.splitstandin(f)
@@ -456,7 +457,16 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                     'keep (l)argefile or use (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(msg, 0) == 0:
-                actions['r'].append((lfile, None, msg))
+                if branchmerge:
+                    # largefile can be restored from standin safely
+                    actions['r'].append((lfile, None, msg))
+                else:
+                    # "lfile" should be marked as "removed" without
+                    # removal of itself
+                    lfmr.append((lfile, None, msg))
+
+                    # linear-merge should treat this largefile as 're-added'
+                    actions['a'].append((standin, None, msg))
             else:
                 actions['r'].append((standin, None, msg))
                 newglist.append((lfile, (p2.flags(lfile),), msg))
@@ -465,8 +475,21 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
     newglist.sort()
     actions['g'] = newglist
+    if lfmr:
+        lfmr.sort()
+        actions['lfmr'] = lfmr
 
     return actions
+
+def mergerecordupdates(orig, repo, actions, branchmerge):
+    if 'lfmr' in actions:
+        # this should be executed before 'orig', to execute 'remove'
+        # before all other actions
+        for lfile, args, msg in actions['lfmr']:
+            repo.dirstate.remove(lfile)
+
+    return orig(repo, actions, branchmerge)
+
 
 # Override filemerge to prompt the user about how they wish to merge
 # largefiles. This will handle identical edits without prompting the user.

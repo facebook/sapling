@@ -220,4 +220,48 @@ Test that linear merge can detect modification (and conflict) correctly
   $ cat .hglf/large1
   ba94c2efe5b7c5e0af8d189295ce00553b0612b7
 
+Test a linear merge to a revision containing same-name normal file
+
+  $ hg update -q -C 3
+  $ hg remove large2
+  $ echo 'large2 as normal file' > large2
+  $ hg add large2
+  $ echo 'large3 as normal file' > large3
+  $ hg add large3
+  $ hg commit -m '#5'
+  $ hg manifest
+  .hglf/large1
+  large2
+  large3
+  normal1
+
+(modified largefile is already switched to normal)
+
+  $ hg update -q -C 2
+  $ echo 'modified large2 for linear merge' > large2
+  $ hg update -q 5
+  local changed .hglf/large2 which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote turned local largefile large2 into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  $ hg debugdirstate --nodates | grep large2
+  a   0         -1 .hglf/large2
+  r   0          0 large2
+  $ cat large2
+  modified large2 for linear merge
+
+(added largefile is already committed as normal)
+
+  $ hg update -q -C 2
+  $ echo 'large3 as large file for linear merge' > large3
+  $ hg add --large large3
+  $ hg update -q 5
+  remote turned local largefile large3 into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  $ hg debugdirstate --nodates | grep large3
+  a   0         -1 .hglf/large3
+  r   0          0 large3
+  $ cat large3
+  large3 as large file for linear merge
+
   $ cd ..
