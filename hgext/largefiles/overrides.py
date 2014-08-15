@@ -696,6 +696,13 @@ def overriderevert(orig, ui, repo, *pats, **opts):
         wlock.release()
 
 def hgupdaterepo(orig, repo, node, overwrite):
+    wlock = repo.wlock()
+    try:
+        return _hgupdaterepo(orig, repo, node, overwrite)
+    finally:
+        wlock.release()
+
+def _hgupdaterepo(orig, repo, node, overwrite):
     if not overwrite:
         # Only call updatelfiles on the standins that have changed to save time
         oldstandins = lfutil.getstandinsstate(repo)
