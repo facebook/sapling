@@ -246,6 +246,14 @@ class lazyancestors(object):
         else:
             self._containsseen = set()
 
+    def __nonzero__(self):
+        """False if the set is empty, True otherwise."""
+        try:
+            iter(self).next()
+            return True
+        except StopIteration:
+            return False
+
     def __iter__(self):
         """Generate the ancestors of _initrevs in reverse topological order.
 
