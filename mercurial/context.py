@@ -777,9 +777,12 @@ class basefilectx(object):
             size = len(text.splitlines())
             return ([(rev, i) for i in xrange(1, size + 1)], text)
 
-        decorate = (((linenumber is None) and decorate_compat) or
-                    (linenumber and with_linenumber) or
-                    without_linenumber)
+        if linenumber is None:
+            decorate = decorate_compat
+        elif linenumber:
+            decorate = with_linenumber
+        else:
+            decorate = without_linenumber
 
         def pair(parent, child):
             blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts,
