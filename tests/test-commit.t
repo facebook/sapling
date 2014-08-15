@@ -4,7 +4,12 @@ commit date test
   $ cd test
   $ echo foo > foo
   $ hg add foo
-  $ HGEDITOR=true hg commit -m ""
+  $ cat > $TESTTMP/checkeditform.sh <<EOF
+  > env | grep HGEDITFORM
+  > true
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg commit -m ""
+  HGEDITFORM=commit.normal
   abort: empty commit message
   [255]
   $ hg commit -d '0 0' -m commit-1

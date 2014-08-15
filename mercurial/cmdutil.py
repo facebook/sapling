@@ -2215,7 +2215,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
     # run editor in the repository root
     olddir = os.getcwd()
     os.chdir(repo.root)
-    text = repo.ui.edit(committext, ctx.user(), ctx.extra())
+    text = repo.ui.edit(committext, ctx.user(), ctx.extra(), editform=editform)
     text = re.sub("(?m)^HG:.*(\n|$)", "", text)
     os.chdir(olddir)
 
