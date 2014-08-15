@@ -63,7 +63,7 @@ pretty fast (at least faster than having to compare the entire tree).
 
 from mercurial.i18n import _
 from mercurial.node import short, nullid
-from mercurial import cmdutil, scmutil, scmutil, util, commands, encoding
+from mercurial import cmdutil, scmutil, util, commands, encoding
 import os, shlex, shutil, tempfile, re
 
 cmdtable = {}

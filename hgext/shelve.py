@@ -25,7 +25,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases, commands
 from mercurial import error, hg, mdiff, merge, patch, repair, util
-from mercurial import templatefilters, changegroup, exchange
+from mercurial import templatefilters, exchange
 from mercurial import lock as lockmod
 from hgext import rebase
 import errno
