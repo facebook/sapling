@@ -446,7 +446,7 @@ shelve should still work even if mq is disabled
   $ hg --config extensions.mq=! unshelve
   unshelving change 'test'
 
-shelve should leave dirstate clean (issue 4055)
+shelve should leave dirstate clean (issue4055)
 
   $ cd ..
   $ hg init shelverebase
@@ -475,7 +475,7 @@ shelve should leave dirstate clean (issue 4055)
 
   $ cd ..
 
-shelve should only unshelve pending changes (issue 4068)
+shelve should only unshelve pending changes (issue4068)
 
   $ hg init onlypendingchanges
   $ cd onlypendingchanges

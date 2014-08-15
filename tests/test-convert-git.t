@@ -33,8 +33,7 @@
   $ git add a d
   $ commit -a -m t1
 
-Remove the directory, then try to replace it with a file
-(issue 754)
+Remove the directory, then try to replace it with a file (issue754)
 
   $ git rm -f d/b
   rm 'd/b'
@@ -206,7 +205,7 @@ full conversion
   9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
   88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux
 
-test binary conversion (issue 1359)
+test binary conversion (issue1359)
 
   $ mkdir git-repo3
   $ cd git-repo3

@@ -598,7 +598,7 @@ Test 3507 (both normal files and largefiles were a problem)
   C sub2/large6
   C sub2/large7
 
-Test commit -A (issue 3542)
+Test commit -A (issue3542)
   $ echo large8 > large8
   $ hg add --large large8
   $ hg ci -Am 'this used to add large8 as normal and commit both'

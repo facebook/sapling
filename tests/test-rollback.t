@@ -96,7 +96,7 @@ working dir unaffected by rollback: do not restore dirstate et. al.
   bar
   $ hg bookmark --delete foo
 
-rollback by pretxncommit saves commit message (issue 1635)
+rollback by pretxncommit saves commit message (issue1635)
 
   $ echo a >> a
   $ hg --config hooks.pretxncommit=false commit -m"precious commit message"

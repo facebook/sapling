@@ -125,7 +125,7 @@ trying clone -r
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-test with "/" URI (issue 747) and subrepo
+test with "/" URI (issue747) and subrepo
 
   $ hg init
   $ hg init sub

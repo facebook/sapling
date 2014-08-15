@@ -422,7 +422,7 @@ Direct clone from bundle (all-history)
   $ rm -r full-clone
 
 When cloning from a non-copiable repository into '', do not
-recurse infinitely (issue 2528)
+recurse infinitely (issue2528)
 
   $ hg clone full.hg ''
   abort: empty destination path is not valid
