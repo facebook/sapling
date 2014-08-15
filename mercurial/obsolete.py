@@ -226,6 +226,10 @@ class marker(object):
         parts = self.metadata()['date'].split(' ')
         return (float(parts[0]), int(parts[1]))
 
+    def flags(self):
+        """The flags field of the marker"""
+        return self._data[2]
+
 class obsstore(object):
     """Store obsolete markers
 

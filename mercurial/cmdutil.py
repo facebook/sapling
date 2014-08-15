@@ -1184,7 +1184,7 @@ def showmarker(ui, marker):
     for repl in marker.succnodes():
         ui.write(' ')
         ui.write(hex(repl))
-    ui.write(' %X ' % marker._data[2])
+    ui.write(' %X ' % marker.flags())
     ui.write('{%s}' % (', '.join('%r: %r' % t for t in
                                  sorted(marker.metadata().items()))))
     ui.write('\n')
