@@ -240,6 +240,17 @@ Check 'status -q' and some combinations
   $ rm deleted
   $ hg copy modified copied
 
+Specify working directory revision explicitly, that should be the same as
+"hg status"
+
+  $ hg status --change "wdir()"
+  M modified
+  A added
+  A copied
+  R removed
+  ! deleted
+  ? unknown
+
 Run status with 2 different flags.
 Check if result is the same or different.
 If result is not as expected, raise error

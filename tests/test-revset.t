@@ -509,6 +509,14 @@ Test null revision
   1
   0
 
+Test working-directory revision
+  $ hg debugrevspec 'wdir()'
+  None
+  $ hg debugrevspec 'tip or wdir()'
+  9
+  None
+  $ hg debugrevspec '0:tip and wdir()'
+
   $ log 'outgoing()'
   8
   9

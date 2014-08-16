@@ -1852,6 +1852,16 @@ def user(repo, subset, x):
     """
     return author(repo, subset, x)
 
+def wdir(repo, subset, x):
+    """``wdir()``
+    Working directory.
+    """
+    # i18n: "wdir" is a keyword
+    getargs(x, 0, 0, _("wdir takes no arguments"))
+    if None in subset:
+        return baseset([None])
+    return baseset()
+
 # for internal use
 def _list(repo, subset, x):
     s = getstring(x, "internal error")
@@ -1947,6 +1957,7 @@ symbols = {
     "tagged": tagged,
     "user": user,
     "unstable": unstable,
+    "wdir": wdir,
     "_list": _list,
     "_intlist": _intlist,
     "_hexlist": _hexlist,
@@ -2019,6 +2030,7 @@ safesymbols = set([
     "tagged",
     "user",
     "unstable",
+    "wdir",
     "_list",
     "_intlist",
     "_hexlist",
