@@ -260,6 +260,9 @@ def annotate(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    if not pats:
+        raise util.Abort(_('at least one filename or pattern is required'))
+
     if opts.get('follow'):
         # --follow is deprecated and now just an alias for -f/--file
         # to mimic the behavior of Mercurial before version 1.5
@@ -267,10 +270,6 @@ def annotate(ui, repo, *pats, **opts):
 
     datefunc = ui.quiet and util.shortdate or util.datestr
     getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
-
-    if not pats:
-        raise util.Abort(_('at least one filename or pattern is required'))
-
     hexfn = ui.debugflag and hex or short
 
     opmap = [('user', ' ', lambda x: ui.shortuser(x[0].user())),
