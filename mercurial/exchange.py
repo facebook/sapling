@@ -623,10 +623,9 @@ def _pushbookmark(pushop):
     if pushop.revs:
         revnums = map(repo.changelog.rev, pushop.revs)
         ancestors = repo.changelog.ancestors(revnums, inclusive=True)
-    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
-     ) = bookmarks.compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
-                           srchex=hex)
-
+    remotebookmark = remote.listkeys('bookmarks')
+    comp = bookmarks.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid) = comp
     for b, scid, dcid in advsrc:
         if ancestors and repo[scid].rev() not in ancestors:
             continue
