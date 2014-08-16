@@ -398,6 +398,76 @@ and its ancestor by overriding "repo._filecommit".
   20: 4 baz:4
   16: 5
 
+annotate clean file
+
+  $ hg annotate -ncr "wdir()" foo
+  11 472b18db256d : foo
+
+annotate modified file
+
+  $ echo foofoo >> foo
+  $ hg annotate -r "wdir()" foo
+  11 : foo
+  20+: foofoo
+
+  $ hg annotate -cr "wdir()" foo
+  472b18db256d : foo
+  b6bedd5477e7+: foofoo
+
+  $ hg annotate -ncr "wdir()" foo
+  11 472b18db256d : foo
+  20 b6bedd5477e7+: foofoo
+
+  $ hg annotate --debug -ncr "wdir()" foo
+  11 472b18db256d1e8282064eab4bfdaf48cbfe83cd : foo
+  20 b6bedd5477e797f25e568a6402d4697f3f895a72+: foofoo
+
+  $ hg annotate -udr "wdir()" foo
+  test Thu Jan 01 00:00:00 1970 +0000: foo
+  test [A-Za-z0-9:+ ]+: foofoo (re)
+
+  $ hg annotate -ncr "wdir()" -Tjson foo
+  [
+   {
+    "line": "foo\n",
+    "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd",
+    "rev": 11
+   },
+   {
+    "line": "foofoo\n",
+    "node": null,
+    "rev": null
+   }
+  ]
+
+annotate added file
+
+  $ echo bar > bar
+  $ hg add bar
+  $ hg annotate -ncr "wdir()" bar
+  20 b6bedd5477e7+: bar
+
+annotate renamed file
+
+  $ hg rename foo renamefoo2
+  $ hg annotate -ncr "wdir()" renamefoo2
+  11 472b18db256d : foo
+  20 b6bedd5477e7+: foofoo
+
+annotate missing file
+
+  $ rm baz
+  $ hg annotate -ncr "wdir()" baz
+  abort: No such file or directory: $TESTTMP/repo/baz
+  [255]
+
+annotate removed file
+
+  $ hg rm baz
+  $ hg annotate -ncr "wdir()" baz
+  abort: No such file or directory: $TESTTMP/repo/baz
+  [255]
+
 Test annotate with whitespace options
 
   $ cd ..

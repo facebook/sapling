@@ -266,6 +266,9 @@ def annotate(ui, repo, *pats, **opts):
     anyway, although the results will probably be neither useful
     nor desirable.
 
+    By default, annotate files in the parent of the working directory.
+    Use -r "wdir()" to annotate the working directory files.
+
     Returns 0 on success.
     """
     if not pats:
@@ -276,16 +279,44 @@ def annotate(ui, repo, *pats, **opts):
         # to mimic the behavior of Mercurial before version 1.5
         opts['file'] = True
 
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
+
     fm = ui.formatter('annotate', opts)
     if ui.quiet:
         datefunc = util.shortdate
     else:
         datefunc = util.datestr
-    hexfn = fm.hexfunc
+    if ctx.rev() is None:
+        def hexfn(node):
+            if node is None:
+                return None
+            else:
+                return fm.hexfunc(node)
+        if opts.get('changeset'):
+            # omit "+" suffix which is appended to node hex
+            def formatrev(rev):
+                if rev is None:
+                    return '%d' % ctx.p1().rev()
+                else:
+                    return '%d' % rev
+        else:
+            def formatrev(rev):
+                if rev is None:
+                    return '%d+' % ctx.p1().rev()
+                else:
+                    return '%d ' % rev
+        def formathex(hex):
+            if hex is None:
+                return '%s+' % fm.hexfunc(ctx.p1().node())
+            else:
+                return '%s ' % hex
+    else:
+        hexfn = fm.hexfunc
+        formatrev = formathex = str
 
     opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
-             ('number', ' ', lambda x: x[0].rev(), str),
-             ('changeset', ' ', lambda x: hexfn(x[0].node()), str),
+             ('number', ' ', lambda x: x[0].rev(), formatrev),
+             ('changeset', ' ', lambda x: hexfn(x[0].node()), formathex),
              ('date', ' ', lambda x: x[0].date(), util.cachefunc(datefunc)),
              ('file', ' ', lambda x: x[0].path(), str),
              ('line_number', ':', lambda x: x[1], str),
@@ -315,7 +346,6 @@ def annotate(ui, repo, *pats, **opts):
     def bad(x, y):
         raise util.Abort("%s: %s" % (x, y))
 
-    ctx = scmutil.revsingle(repo, opts.get('rev'))
     m = scmutil.match(ctx, pats, opts)
     m.bad = bad
     follow = not opts.get('no_follow')
