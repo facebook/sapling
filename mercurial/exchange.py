@@ -633,8 +633,9 @@ def _pushobsolete(pushop):
 
 def _pushbookmark(pushop):
     """Update bookmark position on remote"""
-    if pushop.ret == 0:
+    if pushop.ret == 0 or 'bookmarks' in pushop.stepsdone:
         return
+    pushop.stepsdone.add('bookmarks')
     ui = pushop.ui
     remote = pushop.remote
     for b, old, new in pushop.outbookmarks:
