@@ -613,6 +613,8 @@ def _pushobsolete(pushop):
 
 def _pushbookmark(pushop):
     """Update bookmark position on remote"""
+    if pushop.ret == 0:
+        return
     ui = pushop.ui
     repo = pushop.repo.unfiltered()
     remote = pushop.remote
