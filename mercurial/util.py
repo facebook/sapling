@@ -53,6 +53,7 @@ pconvert = platform.pconvert
 popen = platform.popen
 posixfile = platform.posixfile
 quotecommand = platform.quotecommand
+readpipe = platform.readpipe
 rename = platform.rename
 samedevice = platform.samedevice
 samefile = platform.samefile

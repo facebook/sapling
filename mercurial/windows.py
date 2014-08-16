@@ -336,3 +336,18 @@ def statislink(st):
 def statisexec(st):
     '''check whether a stat result is an executable file'''
     return False
+
+def readpipe(pipe):
+    """Read all available data from a pipe."""
+    chunks = []
+    while True:
+        size = os.fstat(pipe.fileno()).st_size
+        if not size:
+            break
+
+        s = pipe.read(size)
+        if not s:
+            break
+        chunks.append(s)
+
+    return ''.join(chunks)

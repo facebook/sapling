@@ -103,13 +103,8 @@ class sshpeer(wireproto.wirepeer):
         return self._caps
 
     def readerr(self):
-        while True:
-            size = util.fstat(self.pipee).st_size
-            if size == 0:
-                break
-            s = self.pipee.read(size)
-            if not s:
-                break
+        s = util.readpipe(self.pipee)
+        if s:
             for l in s.splitlines():
                 self.ui.status(_("remote: "), l, '\n')
 
