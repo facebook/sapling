@@ -373,7 +373,6 @@ def _pushb2ctx(pushop, bundler):
         return
     pushop.stepsdone.add('changesets')
     # Send known heads to the server for race detection.
-    pushop.stepsdone.add('changesets')
     if not _pushcheckoutgoing(pushop):
         return
     pushop.repo.prepushoutgoinghooks(pushop.repo,
