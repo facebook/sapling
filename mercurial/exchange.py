@@ -422,6 +422,40 @@ def _pushb2phases(pushop, bundler):
                 pushop.ui.warn(msg)
     return handlereply
 
+@b2partsgenerator('bookmarks')
+def _pushb2bookmarks(pushop, bundler):
+    """handle phase push through bundle2"""
+    if 'bookmarks' in pushop.stepsdone:
+        return
+    b2caps = bundle2.bundle2caps(pushop.remote)
+    if 'b2x:pushkey' not in b2caps:
+        return
+    pushop.stepsdone.add('bookmarks')
+    part2book = []
+    enc = pushkey.encode
+    for book, old, new in pushop.outbookmarks:
+        part = bundler.newpart('b2x:pushkey')
+        part.addparam('namespace', enc('bookmarks'))
+        part.addparam('key', enc(book))
+        part.addparam('old', enc(old))
+        part.addparam('new', enc(new))
+        part2book.append((part.id, book))
+    def handlereply(op):
+        for partid, book in part2book:
+            partrep = op.records.getreplies(partid)
+            results = partrep['pushkey']
+            assert len(results) <= 1
+            if not results:
+                pushop.ui.warn(_('server ignored bookmark %s update\n') % book)
+            else:
+                ret = int(results[0]['return'])
+                if ret:
+                    pushop.ui.status(_("updating bookmark %s\n") % book)
+                else:
+                    pushop.ui.warn(_('updating bookmark %s failed!\n') % book)
+    return handlereply
+
+
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
 
