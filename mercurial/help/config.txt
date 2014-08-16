@@ -394,7 +394,8 @@ customized message only for specific actions, or showing different
 messages for each actions.
 
 - ``changeset.backout`` for :hg:`backout`
-- ``changeset.commit.amend`` for :hg:`commit --amend`
+- ``changeset.commit.amend.merge`` for :hg:`commit --amend` on merges
+- ``changeset.commit.amend.normal`` for :hg:`commit --amend` on other
 - ``changeset.commit.normal.merge`` for :hg:`commit` on merges
 - ``changeset.commit.normal.normal`` for :hg:`commit` on other
 - ``changeset.fetch`` for :hg:`fetch` (impling merge commit)

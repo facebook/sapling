@@ -145,7 +145,12 @@ Disable default date on commit so when -d isn't given, the old date is preserved
 
 Test -u/-d:
 
-  $ hg ci --amend -u foo -d '1 0'
+  $ cat > .hg/checkeditform.sh <<EOF
+  > env | grep HGEDITFORM
+  > true
+  > EOF
+  $ HGEDITOR="sh .hg/checkeditform.sh" hg ci --amend -u foo -d '1 0'
+  HGEDITFORM=commit.amend.normal
   saved backup bundle to $TESTTMP/.hg/strip-backup/1cd866679df8-amend-backup.hg (glob)
   $ echo a >> a
   $ hg ci --amend -u foo -d '1 0'
@@ -619,7 +624,8 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   zz renamed from z:69a1b67522704ec122181c0890bd16e9d3e7516a
   $ hg debugrename cc
   cc not renamed
-  $ hg ci --amend -m 'merge bar (amend message)'
+  $ HGEDITOR="sh .hg/checkeditform.sh" hg ci --amend -m 'merge bar (amend message)' --edit
+  HGEDITFORM=commit.amend.merge
   $ hg log --config diff.git=1 -pr .
   changeset:   24:832b50f2c271
   tag:         tip

@@ -2133,7 +2133,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
-            editform = 'commit.amend'
+            editform = mergeeditform(old, 'commit.amend')
             editor = getcommiteditor(editform=editform, **opts)
             if not message:
                 editor = getcommiteditor(edit=True, editform=editform)
