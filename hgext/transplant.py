@@ -86,7 +86,10 @@ class transplanter(object):
         self.opener = scmutil.opener(self.path)
         self.transplants = transplants(self.path, 'transplants',
                                        opener=self.opener)
-        self.editor = cmdutil.getcommiteditor(editform='transplant', **opts)
+        def getcommiteditor():
+            editform = cmdutil.mergeeditform(repo[None], 'transplant')
+            return cmdutil.getcommiteditor(editform=editform, **opts)
+        self.getcommiteditor = getcommiteditor
 
     def applied(self, repo, node, parent):
         '''returns True if a node is already an ancestor of parent
@@ -286,7 +289,7 @@ class transplanter(object):
             m = match.exact(repo.root, '', files)
 
         n = repo.commit(message, user, date, extra=extra, match=m,
-                        editor=self.editor)
+                        editor=self.getcommiteditor())
         if not n:
             self.ui.warn(_('skipping emptied changeset %s\n') % short(node))
             return None
@@ -342,7 +345,7 @@ class transplanter(object):
             if merge:
                 repo.setparents(p1, parents[1])
             n = repo.commit(message, user, date, extra=extra,
-                            editor=self.editor)
+                            editor=self.getcommiteditor())
             if not n:
                 raise util.Abort(_('commit failed'))
             if not merge:

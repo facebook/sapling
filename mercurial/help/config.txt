@@ -417,7 +417,8 @@ messages for each actions.
 - ``changeset.shelve.shelve`` for :hg:`shelve`
 - ``changeset.tag.add`` for :hg:`tag` without ``--remove``
 - ``changeset.tag.remove`` for :hg:`tag --remove`
-- ``changeset.transplant`` for :hg:`transplant`
+- ``changeset.transplant.merge`` for :hg:`transplant` on merges
+- ``changeset.transplant.normal`` for :hg:`transplant` on other
 
 These dot-separated lists of names are treated as hierarchical ones.
 For example, ``changeset.tag.remove`` customizes the commit message

@@ -95,8 +95,13 @@ clone so subsequent rollback isn't affected
   $ hg ci -qm "b4"
   $ hg status --rev "7^1" --rev 7
   A b3
-  $ HGEDITOR=cat hg transplant --edit 7
+  $ cat > $TESTTMP/checkeditform.sh <<EOF
+  > env | grep HGEDITFORM
+  > true
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh; cat" hg transplant --edit 7
   applying ffd6818a3975
+  HGEDITFORM=transplant.normal
   b3
   
   
@@ -373,7 +378,8 @@ transplant -c shouldn't use an old changeset
   patch failed to apply
   abort: fix up the merge and run hg transplant --continue
   [255]
-  $ hg transplant --continue
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg transplant --continue -e
+  HGEDITFORM=transplant.normal
   46ae92138f3c transplanted as 9159dada197d
   $ hg transplant 1:3
   skipping already applied revision 1:46ae92138f3c
@@ -430,9 +436,30 @@ Issue1111: Test transplant --merge
 
 transplant
 
-  $ hg transplant -m 1
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg transplant -m 1 -e
   applying 42dc4432fd35
+  HGEDITFORM=transplant.merge
   1:42dc4432fd35 merged at a9f4acbac129
+  $ hg update -q -C 2
+  $ cat > a <<EOF
+  > x
+  > y
+  > z
+  > EOF
+  $ hg commit -m replace
+  $ hg update -q -C 4
+  $ hg transplant -m 5
+  applying 600a3cdcb41d
+  patching file a
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  patch failed to apply
+  abort: fix up the merge and run hg transplant --continue
+  [255]
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg transplant --continue -e
+  HGEDITFORM=transplant.merge
+  600a3cdcb41d transplanted as a3f88be652e0
+
   $ cd ..
 
 test transplant into empty repository
