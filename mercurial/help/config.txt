@@ -412,7 +412,8 @@ messages for each actions.
 - ``changeset.mq.qfold`` for :hg:`qfold`
 - ``changeset.mq.qrefresh`` for :hg:`qrefresh`
 - ``changeset.rebase.collapse`` for :hg:`rebase --collapse`
-- ``changeset.rebase.normal`` for :hg:`rebase` without ``--collapse``
+- ``changeset.rebase.merge`` for :hg:`rebase` on merges
+- ``changeset.rebase.normal`` for :hg:`rebase` on other
 - ``changeset.shelve.shelve`` for :hg:`shelve`
 - ``changeset.tag.add`` for :hg:`tag` without ``--remove``
 - ``changeset.tag.remove`` for :hg:`tag --remove`

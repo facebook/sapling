@@ -138,7 +138,6 @@ def rebase(ui, repo, **opts):
     skipped = set()
     targetancestors = set()
 
-    editor = cmdutil.getcommiteditor(editform='rebase.normal', **opts)
 
     lock = wlock = None
     try:
@@ -354,6 +353,9 @@ def rebase(ui, repo, **opts):
                     p1rev = repo[rev].p1().rev()
                     cmdutil.duplicatecopies(repo, rev, p1rev, skiprev=target)
                 if not collapsef:
+                    merging = repo[p2].rev() != nullrev
+                    editform = cmdutil.mergeeditform(merging, 'rebase')
+                    editor = cmdutil.getcommiteditor(editform=editform, **opts)
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn,
                                           editor=editor)
                 else:

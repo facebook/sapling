@@ -470,5 +470,11 @@ Turn most changeset public
   o  0 A public
   
 
-  $ hg rebase --dest 7 --source 5
+  $ cat > $TESTTMP/checkeditform.sh <<EOF
+  > env | grep HGEDITFORM
+  > true
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --dest 7 --source 5 -e
+  HGEDITFORM=rebase.merge
+  HGEDITFORM=rebase.normal
   saved backup bundle to $TESTTMP/a3/c4/.hg/strip-backup/*-backup.hg (glob)
