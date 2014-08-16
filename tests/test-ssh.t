@@ -360,6 +360,47 @@ Test hg-ssh in read-only mode:
 
   $ cd ..
 
+stderr from remote commands should be printed before stdout from local code (issue4336)
+
+  $ hg clone remote stderr-ordering
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd stderr-ordering
+  $ cat >> localwrite.py << EOF
+  > from mercurial import exchange, extensions
+  > 
+  > def wrappedpush(orig, repo, *args, **kwargs):
+  >     res = orig(repo, *args, **kwargs)
+  >     repo.ui.write('local stdout\n')
+  >     return res
+  > 
+  > def extsetup(ui):
+  >     extensions.wrapfunction(exchange, 'push', wrappedpush)
+  > EOF
+
+  $ cat >> .hg/hgrc << EOF
+  > [paths]
+  > default-push = ssh://user@dummy/remote
+  > [ui]
+  > ssh = python "$TESTDIR/dummyssh"
+  > [extensions]
+  > localwrite = localwrite.py
+  > EOF
+
+  $ echo localwrite > foo
+  $ hg commit -m 'testing localwrite'
+  $ hg push
+  pushing to ssh://user@dummy/remote
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: KABOOM
+  local stdout
+
+  $ cd ..
+
   $ cat dummylog
   Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
   Got arguments 1:user@dummy 2:hg -R /$TESTTMP/nonexistent serve --stdio
@@ -387,3 +428,5 @@ Test hg-ssh in read-only mode:
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  changegroup-in-remote hook: HG_NODE=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
