@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-from node import hex, nullid, short
+from node import hex, nullid, wdirrev, short
 from i18n import _
 import urllib
 import peer, changegroup, subrepo, pushkey, obsolete, repoview
@@ -479,7 +479,7 @@ class localrepository(object):
         return dirstate.dirstate(self.vfs, self.ui, self.root, validate)
 
     def __getitem__(self, changeid):
-        if changeid is None:
+        if changeid is None or changeid == wdirrev:
             return context.workingctx(self)
         if isinstance(changeid, slice):
             return [context.changectx(self, i)
