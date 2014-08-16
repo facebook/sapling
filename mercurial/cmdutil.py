@@ -109,6 +109,23 @@ def logmessage(ui, opts):
                              (logfile, inst.strerror))
     return message
 
+def mergeeditform(ctxorbool, baseform):
+    """build appropriate editform from ctxorbool and baseform
+
+    'cxtorbool' is one of a ctx to be committed, or a bool whether
+    merging is committed.
+
+    This returns editform 'baseform' with '.merge' if merging is
+    committed, or one with '.normal' suffix otherwise.
+    """
+    if isinstance(ctxorbool, bool):
+        if ctxorbool:
+            return baseform + ".merge"
+    elif 1 < len(ctxorbool.parents()):
+        return baseform + ".merge"
+
+    return baseform + ".normal"
+
 def getcommiteditor(edit=False, finishdesc=None, extramsg=None,
                     editform='', **opts):
     """get appropriate commit message editor according to '--edit' option

@@ -395,7 +395,8 @@ messages for each actions.
 
 - ``changeset.backout`` for :hg:`backout`
 - ``changeset.commit.amend`` for :hg:`commit --amend`
-- ``changeset.commit.normal`` for :hg:`commit` without ``--amend``
+- ``changeset.commit.normal.merge`` for :hg:`commit` on merges
+- ``changeset.commit.normal.normal`` for :hg:`commit` on other
 - ``changeset.fetch`` for :hg:`fetch` (impling merge commit)
 - ``changeset.gpg.sign`` for :hg:`sign`
 - ``changeset.graft`` for :hg:`graft`
@@ -422,7 +423,7 @@ commit message for :hg:`tag` regardless of ``--remove`` option.
 
 At the external editor invocation for committing, corresponding
 dot-separated list of names without ``changeset.`` prefix
-(e.g. ``commit.normal``) is in ``HGEDITFORM`` environment variable.
+(e.g. ``commit.normal.normal``) is in ``HGEDITFORM`` environment variable.
 
 In this section, items other than ``changeset`` can be referred from
 others. For example, the configuration to list committed files up

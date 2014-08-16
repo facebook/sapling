@@ -9,7 +9,7 @@ commit date test
   > true
   > EOF
   $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg commit -m ""
-  HGEDITFORM=commit.normal
+  HGEDITFORM=commit.normal.normal
   abort: empty commit message
   [255]
   $ hg commit -d '0 0' -m commit-1
@@ -282,7 +282,8 @@ should fail because we are specifying a pattern
 
 should succeed
 
-  $ hg ci -mmerge
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg ci -mmerge --edit
+  HGEDITFORM=commit.normal.merge
   $ cd ..
 
 

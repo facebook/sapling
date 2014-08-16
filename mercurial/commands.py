@@ -1448,7 +1448,7 @@ def commit(ui, repo, *pats, **opts):
                     # Propagate to subrepos
                     baseui.setconfig('phases', 'new-commit', 'secret', 'commit')
 
-                editform = 'commit.normal'
+                editform = cmdutil.mergeeditform(repo[None], 'commit.normal')
                 editor = cmdutil.getcommiteditor(editform=editform, **opts)
                 return repo.commit(message, opts.get('user'), opts.get('date'),
                                    match,
