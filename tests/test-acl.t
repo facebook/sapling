@@ -83,6 +83,8 @@ Extension disabled for lack of a hook
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -120,8 +122,6 @@ Extension disabled for lack of a hook
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -142,6 +142,8 @@ Extension disabled for lack of acl.sources
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -182,8 +184,6 @@ Extension disabled for lack of acl.sources
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -205,6 +205,8 @@ No [acl.allow]/[acl.deny]
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -255,8 +257,6 @@ No [acl.allow]/[acl.deny]
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -278,6 +278,8 @@ Empty [acl.allow]
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -346,6 +348,8 @@ fred is allowed inside foo/
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -419,6 +423,8 @@ Empty [acl.deny]
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -489,6 +495,8 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -564,6 +572,8 @@ fred is allowed inside foo/, but not foo/Bar/
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -636,6 +646,8 @@ fred is allowed inside foo/, but not foo/Bar/
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -710,6 +722,8 @@ barney is allowed everywhere
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -760,8 +774,6 @@ barney is allowed everywhere
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -790,6 +802,8 @@ wilma can change files with a .txt extension
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -871,6 +885,8 @@ file specified by acl.config does not exist
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -908,10 +924,10 @@ file specified by acl.config does not exist
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
-  error: pretxnchangegroup.acl hook raised an exception: [Errno *] *: '../acl.config' (glob)
+  error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
   transaction abort!
   rollback completed
-  abort: *: ../acl.config (glob)
+  abort: No such file or directory: ../acl.config
   no rollback information available
   0:6675d58eff77
   
@@ -947,6 +963,8 @@ betty is allowed inside foo/ by a acl.config file
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1034,6 +1052,8 @@ acl.config can set only [acl.allow]/[acl.deny]
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1084,8 +1104,6 @@ acl.config can set only [acl.allow]/[acl.deny]
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1115,6 +1133,8 @@ fred is always allowed
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1165,8 +1185,6 @@ fred is always allowed
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1192,6 +1210,8 @@ no one is allowed inside foo/Bar/
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1269,6 +1289,8 @@ OS-level groups
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1320,8 +1342,6 @@ OS-level groups
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1347,6 +1367,8 @@ OS-level groups
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
@@ -1463,6 +1485,8 @@ No branch acls specified
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1523,8 +1547,6 @@ No branch acls specified
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1547,6 +1569,8 @@ Branch acl deny test
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1627,6 +1651,8 @@ Branch acl empty allow test
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1703,6 +1729,8 @@ Branch acl allow other
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1773,6 +1801,8 @@ Branch acl allow other
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1833,8 +1863,6 @@ Branch acl allow other
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1862,6 +1890,8 @@ push foobar into the remote
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1922,8 +1952,6 @@ push foobar into the remote
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1950,6 +1978,8 @@ Branch acl conflicting deny
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -2025,6 +2055,8 @@ User 'astro' must not be denied
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -2085,8 +2117,6 @@ User 'astro' must not be denied
   updating the branch cache
   listing keys for "phases"
   try to push obsolete markers to remote
-  checking for updated bookmarks
-  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -2107,6 +2137,8 @@ Non-astro users must be denied
   searching for changes
   all remote heads known locally
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:

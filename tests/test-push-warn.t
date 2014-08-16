@@ -36,6 +36,8 @@
   query 2; still undecided: 1, sample size is: 1
   2 total queries
   listing keys for "phases"
+  checking for updated bookmarks
+  listing keys for "bookmarks"
   listing keys for "bookmarks"
   remote has heads on branch 'default' that are not known locally: 1c9246a22a0a
   new remote heads on branch 'default':

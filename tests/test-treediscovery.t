@@ -523,12 +523,12 @@ Both have new stuff in existing named branches:
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=heads HTTP/1.1" 200 -
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
   "GET /?cmd=branchmap HTTP/1.1" 200 -
   "GET /?cmd=branchmap HTTP/1.1" 200 -
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
   "POST /?cmd=unbundle HTTP/1.1" 200 - x-hgarg-1:heads=686173686564+1827a5bb63e602382eb89dd58f2ac9f3b007ad91
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
-  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=heads HTTP/1.1" 200 -
   "GET /?cmd=capabilities HTTP/1.1" 200 -

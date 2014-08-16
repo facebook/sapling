@@ -83,6 +83,8 @@ class pushoperation(object):
         self.fallbackoutdatedphases = None
         # outgoing obsmarkers
         self.outobsmarkers = set()
+        # outgoing bookmarks
+        self.outbookmarks = []
 
     @util.propertycache
     def futureheads(self):
@@ -279,6 +281,24 @@ def _pushdiscoveryphase(pushop):
 @pushdiscovery('obsmarker')
 def _pushdiscoveryobsmarkers(pushop):
     pushop.outobsmarkers = pushop.repo.obsstore
+
+@pushdiscovery('bookmarks')
+def _pushdiscoverybookmarks(pushop):
+    ui = pushop.ui
+    repo = pushop.repo.unfiltered()
+    remote = pushop.remote
+    ui.debug("checking for updated bookmarks\n")
+    ancestors = ()
+    if pushop.revs:
+        revnums = map(repo.changelog.rev, pushop.revs)
+        ancestors = repo.changelog.ancestors(revnums, inclusive=True)
+    remotebookmark = remote.listkeys('bookmarks')
+
+    comp = bookmarks.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid) = comp
+    for b, scid, dcid in advsrc:
+        if not ancestors or repo[scid].rev() in ancestors:
+            pushop.outbookmarks.append((b, dcid, scid))
 
 def _pushcheckoutgoing(pushop):
     outgoing = pushop.outgoing
@@ -616,20 +636,9 @@ def _pushbookmark(pushop):
     if pushop.ret == 0:
         return
     ui = pushop.ui
-    repo = pushop.repo.unfiltered()
     remote = pushop.remote
-    ui.debug("checking for updated bookmarks\n")
-    ancestors = ()
-    if pushop.revs:
-        revnums = map(repo.changelog.rev, pushop.revs)
-        ancestors = repo.changelog.ancestors(revnums, inclusive=True)
-    remotebookmark = remote.listkeys('bookmarks')
-    comp = bookmarks.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
-    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid) = comp
-    for b, scid, dcid in advsrc:
-        if ancestors and repo[scid].rev() not in ancestors:
-            continue
-        if remote.pushkey('bookmarks', b, dcid, scid):
+    for b, old, new in pushop.outbookmarks:
+        if remote.pushkey('bookmarks', b, old, new):
             ui.status(_("updating bookmark %s\n") % b)
         else:
             ui.warn(_('updating bookmark %s failed!\n') % b)
