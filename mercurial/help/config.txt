@@ -406,7 +406,8 @@ messages for each actions.
 - ``changeset.histedit.mess`` for ``mess`` of :hg:`histedit`
 - ``changeset.histedit.pick`` for ``pick`` of :hg:`histedit`
 - ``changeset.import.bypass`` for :hg:`import --bypass`
-- ``changeset.import.normal`` for :hg:`import` without ``--bypass``
+- ``changeset.import.normal.merge`` for :hg:`import` on merges
+- ``changeset.import.normal.normal`` for :hg:`import` on other
 - ``changeset.mq.qnew`` for :hg:`qnew`
 - ``changeset.mq.qfold`` for :hg:`qfold`
 - ``changeset.mq.qrefresh`` for :hg:`qrefresh`

@@ -610,7 +610,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     tmpname, message, user, date, branch, nodeid, p1, p2 = \
         patch.extract(ui, hunk)
 
-    editor = getcommiteditor(editform='import.normal', **opts)
     update = not opts.get('bypass')
     strip = opts["strip"]
     sim = float(opts.get('similarity') or 0)
@@ -688,6 +687,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     m = None
                 else:
                     m = scmutil.matchfiles(repo, files or [])
+                editform = mergeeditform(repo[None], 'import.normal')
+                editor = getcommiteditor(editform=editform, **opts)
                 n = repo.commit(message, opts.get('user') or user,
                                 opts.get('date') or date, match=m,
                                 editor=editor, force=partial)

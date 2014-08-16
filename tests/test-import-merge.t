@@ -30,6 +30,7 @@ Test import and merge diffs
   (branch merge, don't forget to commit)
   $ hg ci -m merge
   $ hg export . > ../merge.diff
+  $ grep -v '^merge$' ../merge.diff > ../merge.nomsg.diff
   $ cd ..
   $ hg clone -r2 repo repo2
   adding changesets
@@ -52,8 +53,13 @@ Test without --exact and diff.p1 == workingdir.p1
 
   $ hg up 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg import ../merge.diff
-  applying ../merge.diff
+  $ cat > $TESTTMP/editor.sh <<EOF
+  > env | grep HGEDITFORM
+  > echo merge > \$1
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg import --edit ../merge.nomsg.diff
+  applying ../merge.nomsg.diff
+  HGEDITFORM=import.normal.merge
   $ tipparents
   1:540395c44225 changea
   3:102a90ea7b4a addb

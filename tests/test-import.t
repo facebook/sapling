@@ -90,8 +90,13 @@ the commit message, regardless of '--edit')
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ HGEDITOR=cat hg --cwd b import ../diffed-tip.patch
+  $ cat > $TESTTMP/editor.sh <<EOF
+  > env | grep HGEDITFORM
+  > cat \$1
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg --cwd b import ../diffed-tip.patch
   applying ../diffed-tip.patch
+  HGEDITFORM=import.normal.normal
   
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
