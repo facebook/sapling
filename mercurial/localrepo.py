@@ -465,7 +465,8 @@ class localrepository(object):
 
     def __contains__(self, changeid):
         try:
-            return bool(self.lookup(changeid))
+            self[changeid]
+            return True
         except error.RepoLookupError:
             return False
 
