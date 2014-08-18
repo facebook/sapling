@@ -745,6 +745,13 @@ class revlog(object):
             ancs = ancestor.commonancestorsheads(self.parentrevs, a, b)
         return map(self.node, ancs)
 
+    def isancestor(self, a, b):
+        """return True if node a is an ancestor of node b
+
+        The implementation of this is trivial but the use of
+        commonancestorsheads is not."""
+        return a in self.commonancestorsheads(a, b)
+
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
 
