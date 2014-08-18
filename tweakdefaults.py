@@ -27,6 +27,9 @@ def update(orig, ui, repo, node=None, **kwargs):
 wrapcommand(commands.table, 'update', update)
 
 def _rebase(orig, ui, repo, **opts):
+    if opts.get('continue') or opts.get('abort'):
+        return orig(ui, repo, **opts)
+
     # 'hg rebase' w/o args should do nothing
     if not opts.get('dest'):
         raise util.Abort("you must specify a destination (-d) for the rebase")
