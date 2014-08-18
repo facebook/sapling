@@ -753,7 +753,7 @@ class revlog(object):
         return a in self.commonancestorsheads(a, b)
 
     def ancestor(self, a, b):
-        """calculate the least common ancestor of nodes a and b"""
+        """calculate the "best" common ancestor of nodes a and b"""
 
         a, b = self.rev(a), self.rev(b)
         try:

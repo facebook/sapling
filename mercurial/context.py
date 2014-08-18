@@ -542,9 +542,11 @@ class changectx(basectx):
                        changectx=self, filelog=filelog)
 
     def ancestor(self, c2, warn=False):
-        """
-        return the "best" ancestor context of self and c2
-        """
+        """return the "best" ancestor context of self and c2
+
+        If there are multiple candidates, it will show a message and check
+        merge.preferancestor configuration before falling back to the
+        revlog ancestor."""
         # deal with workingctxs
         n2 = c2._node
         if n2 is None:
@@ -1146,7 +1148,7 @@ class committablectx(basectx):
             return ''
 
     def ancestor(self, c2):
-        """return the ancestor context of self and c2"""
+        """return the "best" ancestor context of self and c2"""
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):

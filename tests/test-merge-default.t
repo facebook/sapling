@@ -97,8 +97,7 @@ Should fail because merge with other branch:
 
 
 Test for issue2043: ensure that 'merge -P' shows ancestors of 6 that
-are not ancestors of 7, regardless of where their least common
-ancestor is.
+are not ancestors of 7, regardless of where their common ancestors are.
 
 Merge preview not affected by common ancestor:
 
