@@ -173,9 +173,28 @@ def _readmarkers(data):
             date = util.parsedate(decodemeta(metadata).pop('date', '0 0'))
         except util.Abort:
             date = (0., 0)
+        parents = None
+        if 'p2' in meta:
+            parents = (meta.pop('p1', None), meta.pop('p2', None))
+        elif 'p1' in meta:
+            parents = (meta.pop('p1', None),)
+        elif 'p0' in meta:
+            parents = ()
+        if parents is not None:
+            try:
+                parents = tuple(node.bin(p) for p in parents)
+                # if parent content is not a nodeid, drop the data
+                for p in parents:
+                    if len(p) != 20:
+                        parents = None
+                        break
+            except TypeError:
+                # if content cannot be translated to nodeid drop the data.
+                parents = None
+
         metadata = encodemeta(meta)
 
-        yield (pre, sucs, flags, metadata, date, None)
+        yield (pre, sucs, flags, metadata, date, parents)
 
 def encodemeta(meta):
     """Return encoded metadata string to string mapping.
@@ -371,6 +390,12 @@ def _encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
     metadata = decodemeta(metadata)
     metadata['date'] = '%d %i' % date
+    if parents is not None:
+        if not parents:
+            # mark that we explicitly recorded no parents
+            metadata['p0'] = ''
+        for i, p in enumerate(parents, 1):
+            metadata['p%i' % i] = node.hex(p)
     metadata = encodemeta(metadata)
     nbsuc = len(sucs)
     format = _fmfixed + (_fmnode * nbsuc)
