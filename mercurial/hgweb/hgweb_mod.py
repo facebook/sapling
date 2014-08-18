@@ -110,7 +110,7 @@ class hgweb(object):
         # compare changelog size in addition to mtime to catch
         # rollbacks made less than a second ago
         if st.st_mtime != self.mtime or st.st_size != self.size:
-            r = hg.repository(self.repo.baseui, self.repo.root)
+            r = hg.repository(self.repo.baseui, self.repo.url())
             self.repo = self._getview(r)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
             self.stripecount = int(self.config("web", "stripes", 1))
