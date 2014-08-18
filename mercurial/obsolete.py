@@ -173,7 +173,7 @@ def _readmarkers(data):
         except util.Abort:
             date = (0., 0)
 
-        yield (pre, sucs, flags, metadata, date)
+        yield (pre, sucs, flags, metadata, date, None)
 
 def encodemeta(meta):
     """Return encoded metadata string to string mapping.
@@ -242,12 +242,14 @@ class obsstore(object):
     - successors[x] -> set(markers on successors edges of x)
     """
 
-    fields = ('prec', 'succs', 'flag', 'meta', 'date')
-    # prec:   nodeid, precursor changesets
-    # succs: tuple of nodeid, successor changesets (0-N length)
-    # flag:   integer, flag field carrying modifier for the markers (see doc)
-    # meta:   binary blob, encoded metadata dictionary
-    # date:   (float, int) tuple, date of marker creation
+    fields = ('prec', 'succs', 'flag', 'meta', 'date', 'parents')
+    # prec:    nodeid, precursor changesets
+    # succs:   tuple of nodeid, successor changesets (0-N length)
+    # flag:    integer, flag field carrying modifier for the markers (see doc)
+    # meta:    binary blob, encoded metadata dictionary
+    # date:    (float, int) tuple, date of marker creation
+    # parents: (tuple of nodeid) or None, parents of precursors
+    #          None is used when no data has been recorded
 
     def __init__(self, sopener):
         # caches for various obsolescence related cache
@@ -300,7 +302,7 @@ class obsstore(object):
         if prec in succs:
             raise ValueError(_('in-marker cycle with %s') % node.hex(prec))
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata),
-                  date)
+                  date, None)
         return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
@@ -364,7 +366,7 @@ def _encodemarkers(markers, addheader=False):
 
 
 def _encodeonemarker(marker):
-    pre, sucs, flags, metadata, date = marker
+    pre, sucs, flags, metadata, date, parents = marker
     metadata = decodemeta(metadata)
     metadata['date'] = '%d %i' % date
     metadata = encodemeta(metadata)
