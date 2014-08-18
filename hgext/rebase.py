@@ -52,8 +52,8 @@ def _makeextrafn(copiers):
     [('s', 'source', '',
      _('rebase from the specified changeset'), _('REV')),
     ('b', 'base', '',
-     _('rebase from the base of the specified changeset '
-       '(up to greatest common ancestor of base and dest)'),
+     _('rebase the tree around the specified changeset without '
+       'ancestors of dest'),
      _('REV')),
     ('r', 'rev', [],
      _('rebase these revisions'),
