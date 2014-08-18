@@ -272,8 +272,8 @@ class obsstore(object):
     def __nonzero__(self):
         return bool(self._all)
 
-    def create(self, transaction, prec, succs=(), flag=0, date=None,
-               metadata=None):
+    def create(self, transaction, prec, succs=(), flag=0, parents=None,
+               date=None, metadata=None):
         """obsolete: add a new obsolete marker
 
         * ensuring it is hashable
@@ -302,7 +302,7 @@ class obsstore(object):
         if prec in succs:
             raise ValueError(_('in-marker cycle with %s') % node.hex(prec))
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata),
-                  date, None)
+                  date, parents)
         return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
