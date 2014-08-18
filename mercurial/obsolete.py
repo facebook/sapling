@@ -886,10 +886,13 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
                                  % prec)
             nprec = prec.node()
             nsucs = tuple(s.node() for s in sucs)
+            npare = None
+            if not nsucs:
+                npare = tuple(p.node() for p in prec.parents())
             if nprec in nsucs:
                 raise util.Abort("changeset %s cannot obsolete itself" % prec)
-            repo.obsstore.create(tr, nprec, nsucs, flag, date=date,
-                                 metadata=localmetadata)
+            repo.obsstore.create(tr, nprec, nsucs, flag, parents=npare,
+                                 date=date, metadata=localmetadata)
             repo.filteredrevcache.clear()
         tr.close()
     finally:
