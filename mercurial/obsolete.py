@@ -265,6 +265,7 @@ class obsstore(object):
     Markers can be accessed with two mappings:
     - precursors[x] -> set(markers on precursors edges of x)
     - successors[x] -> set(markers on successors edges of x)
+    - children[x]   -> set(markers on precursors edges of children(x)
     """
 
     fields = ('prec', 'succs', 'flag', 'meta', 'date', 'parents')
@@ -282,6 +283,7 @@ class obsstore(object):
         self._all = []
         self.precursors = {}
         self.successors = {}
+        self.children = {}
         self.sopener = sopener
         data = sopener.tryread('obsstore')
         if data:
@@ -376,6 +378,10 @@ class obsstore(object):
             self.successors.setdefault(pre, set()).add(mark)
             for suc in sucs:
                 self.precursors.setdefault(suc, set()).add(mark)
+            parents = mark[5]
+            if parents is not None:
+                for p in parents:
+                    self.children.setdefault(p, set()).add(mark)
         if node.nullid in self.precursors:
             raise util.Abort(_('bad obsolescence marker detected: '
                                'invalid successors nullid'))
