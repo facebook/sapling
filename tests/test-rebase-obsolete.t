@@ -166,18 +166,18 @@ set.
   o  0:cd010b8cd998 A
   
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 0 (*) {'user': 'test'} (glob)
+  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
 
 
 More complex case were part of the rebase set were already rebased
 
   $ hg rebase --rev 'desc(D)' --dest 'desc(H)'
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 0 (*) {'user': 'test'} (glob)
+  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
   08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 (*) {'user': 'test'} (glob)
   $ hg log -G
   @  11:4596109a6a43 D
@@ -200,12 +200,12 @@ More complex case were part of the rebase set were already rebased
   
   $ hg rebase --source 'desc(B)' --dest 'tip'
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 0 (*) {'user': 'test'} (glob)
+  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
   08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 (*) {'user': 'test'} (glob)
   8877864f1edb05d0e07dc4ba77b67a80a7b86672 462a34d07e599b87ea08676a449373fe4e2e1347 0 (*) {'user': 'test'} (glob)
-  08483444fef91d6224f6655ee586a65d263ad34c 0 (*) {'user': 'test'} (glob)
+  08483444fef91d6224f6655ee586a65d263ad34c 0 {8877864f1edb05d0e07dc4ba77b67a80a7b86672} (*) {'user': 'test'} (glob)
   5ae4c968c6aca831df823664e706c9d4aa34473d 98f6af4ee9539e14da4465128f894c274900b6e5 0 (*) {'user': 'test'} (glob)
   $ hg log --rev 'divergent()'
   $ hg log -G

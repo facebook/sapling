@@ -1203,6 +1203,9 @@ def showmarker(ui, marker):
         ui.write(' ')
         ui.write(hex(repl))
     ui.write(' %X ' % marker.flags())
+    parents = marker.parentnodes()
+    if parents is not None:
+        ui.write('{%s} ' % ', '.join(hex(p) for p in parents))
     ui.write('(%s) ' % util.datestr(marker.date()))
     ui.write('{%s}' % (', '.join('%r: %r' % t for t in
                                  sorted(marker.metadata().items())
