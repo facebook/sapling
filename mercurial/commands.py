@@ -1409,7 +1409,7 @@ def commit(ui, repo, *pats, **opts):
             raise util.Abort(_('cannot amend with ui.commitsubrepos enabled'))
 
         old = repo['.']
-        if old.phase() == phases.public:
+        if not old.mutable():
             raise util.Abort(_('cannot amend public changesets'))
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot amend while merging'))
