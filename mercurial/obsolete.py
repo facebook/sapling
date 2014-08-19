@@ -168,7 +168,12 @@ def _readmarkers(data):
                                'short, %d bytes expected, got %d')
                              % (mdsize, len(metadata)))
         off += mdsize
-        yield (pre, sucs, flags, metadata)
+        try:
+            date = util.parsedate(decodemeta(metadata).pop('date', '0 0'))
+        except util.Abort:
+            date = (0., 0)
+
+        yield (pre, sucs, flags, metadata, date)
 
 def encodemeta(meta):
     """Return encoded metadata string to string mapping.
@@ -223,8 +228,7 @@ class marker(object):
 
     def date(self):
         """Creation date as (unixtime, offset)"""
-        parts = self.metadata()['date'].split(' ')
-        return (float(parts[0]), int(parts[1]))
+        return self._data[4]
 
     def flags(self):
         """The flags field of the marker"""
@@ -238,7 +242,7 @@ class obsstore(object):
     - successors[x] -> set(markers on successors edges of x)
     """
 
-    fields = ('prec', 'succs', 'flag', 'meta')
+    fields = ('prec', 'succs', 'flag', 'meta', 'date')
 
     def __init__(self, sopener):
         # caches for various obsolescence related cache
@@ -277,10 +281,12 @@ class obsstore(object):
         """
         if metadata is None:
             metadata = {}
-        if 'date' not in metadata:
-            if date is None:
+        if date is None:
+            if 'date' in metadata:
+                # as a courtesy for out-of-tree extensions
+                date = util.parsedate(metadata.pop('date'))
+            else:
                 date = util.makedate()
-            metadata['date'] = "%d %d" % date
         if len(prec) != 20:
             raise ValueError(prec)
         for succ in succs:
@@ -288,7 +294,8 @@ class obsstore(object):
                 raise ValueError(succ)
         if prec in succs:
             raise ValueError(_('in-marker cycle with %s') % node.hex(prec))
-        marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
+        marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata),
+                  date)
         return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
@@ -352,7 +359,10 @@ def _encodemarkers(markers, addheader=False):
 
 
 def _encodeonemarker(marker):
-    pre, sucs, flags, metadata = marker
+    pre, sucs, flags, metadata, date = marker
+    metadata = decodemeta(metadata)
+    metadata['date'] = '%d %i' % date
+    metadata = encodemeta(metadata)
     nbsuc = len(sucs)
     format = _fmfixed + (_fmnode * nbsuc)
     data = [nbsuc, len(metadata), flags, pre]
