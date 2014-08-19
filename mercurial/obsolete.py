@@ -241,6 +241,10 @@ class marker(object):
         """List of successor changesets node identifiers"""
         return self._data[1]
 
+    def parentnodes(self):
+        """Parents of the precursors (None if not recorded)"""
+        return self._data[5]
+
     def metadata(self):
         """Decoded metadata dictionary"""
         if self._decodedmeta is None:
