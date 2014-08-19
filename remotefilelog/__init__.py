@@ -528,7 +528,8 @@ def pull(orig, ui, repo, *pats, **opts):
         if prefetchrevset:
             ui.status("prefetching file contents\n")
             revs = repo.revs(prefetchrevset)
-            repo.prefetch(revs)
+            base = repo['.'].rev()
+            repo.prefetch(revs, base=base)
 
     return result
 

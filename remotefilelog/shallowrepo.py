@@ -65,10 +65,19 @@ def wraprepo(repo):
 
             return super(shallowrepository, self).pull(remote, *args, **kwargs)
 
-        def prefetch(self, revs, pats=None, opts=None):
+        def prefetch(self, revs, base=None, pats=None, opts=None):
             """Prefetches all the necessary file revisions for the given revs
             """
-            files = set()
+            mf = repo.manifest
+            if base is not None:
+                mfdict = mf.read(repo[base].manifestnode())
+                skip = set(mfdict.iteritems())
+            else:
+                skip = set()
+
+            # Copy the skip set to start large and avoid constant resizing,
+            # and since it's likely to be very similar to the prefetch set.
+            files = skip.copy()
             visited = set()
             visited.add(nullrev)
             for rev in sorted(revs):
@@ -76,7 +85,6 @@ def wraprepo(repo):
                 if pats:
                     m = scmutil.match(ctx, pats, opts)
 
-                mf = repo.manifest
                 mfnode = ctx.manifestnode()
                 mfrev = mf.rev(mfnode)
 
@@ -88,13 +96,14 @@ def wraprepo(repo):
                 else:
                     mfdict = mf.read(mfnode)
 
-                for path, fnode in mfdict.iteritems():
-                    if not pats or m(path):
-                        files.add((path, hex(fnode)))
+                files.update(pf for pf in mfdict.iteritems()
+                    if not pats or m(pf[0]))
 
                 visited.add(mfrev)
 
-            repo.fileservice.prefetch(files)
+            files.difference_update(skip)
+            results = [(path, hex(fnode)) for (path, fnode) in files]
+            repo.fileservice.prefetch(results)
 
     # Wrap dirstate.status here so we can prefetch all file nodes in
     # the lookup set before localrepo.status uses them.

@@ -7,6 +7,7 @@
   > server=True
   > EOF
   $ echo x > x
+  $ echo z > z
   $ hg commit -qAm x
   $ echo x2 > x
   $ echo y > y
@@ -19,12 +20,12 @@
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
-  2 files to transfer, 497 bytes of data
-  transferred 497 bytes in 0.0 seconds (*/sec) (glob)
+  2 files to transfer, 528 bytes of data
+  transferred 528 bytes in 0.0 seconds (*/sec) (glob)
   $ cd shallow
 
   $ hg prefetch -r 0
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg cat -r 0 x
   x
@@ -33,7 +34,7 @@
 
   $ clearcache
   $ hg prefetch -r 0::1
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg cat -r 0 x
   x
@@ -57,7 +58,7 @@
 
   $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
   $ hg strip tip^
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/b292c1e3311f-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/97b1645a8f26-backup.hg
 
   $ clearcache
   $ hg pull
@@ -70,7 +71,27 @@
   updating bookmark foo
   (run 'hg update' to get a working copy)
   prefetching file contents
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over 0.09s
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over 0.09s
 
   $ hg up tip
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+# prefetch only fetches changes not in working copy
+
+  $ hg strip tip
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-backup.hg
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  $ clearcache
+
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  updating bookmark foo
+  (run 'hg update' to get a working copy)
+  prefetching file contents
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
