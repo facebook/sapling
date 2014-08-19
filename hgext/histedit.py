@@ -751,7 +751,7 @@ def between(repo, old, new, keep):
         if repo.revs('(%ld) and merge()', ctxs):
             raise util.Abort(_('cannot edit history that contains merges'))
         root = ctxs[0] # list is already sorted by repo.set
-        if not root.phase():
+        if not root.mutable():
             raise util.Abort(_('cannot edit immutable changeset: %s') % root)
     return [c.node() for c in ctxs]
 
