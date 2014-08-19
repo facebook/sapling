@@ -243,6 +243,11 @@ class obsstore(object):
     """
 
     fields = ('prec', 'succs', 'flag', 'meta', 'date')
+    # prec:   nodeid, precursor changesets
+    # succs: tuple of nodeid, successor changesets (0-N length)
+    # flag:   integer, flag field carrying modifier for the markers (see doc)
+    # meta:   binary blob, encoded metadata dictionary
+    # date:   (float, int) tuple, date of marker creation
 
     def __init__(self, sopener):
         # caches for various obsolescence related cache
