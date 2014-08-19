@@ -42,3 +42,8 @@ Test "%unset"
 
   $ hg showconfig unsettest
   unsettest.set-after-unset=should be set (.hg/hgrc)
+
+Test exit code when no config matches
+
+  $ hg config Section.idontexist
+  [1]
