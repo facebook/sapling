@@ -16,9 +16,9 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-def update(orig, ui, repo, node=None, **kwargs):
+def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
-    if not node:
+    if not node and not rev:
         raise util.Abort("you must specify a destination to update to " +
             "(if you're trying to move a bookmark forward, try " +
             "'hg rebase -d <destination>')")
