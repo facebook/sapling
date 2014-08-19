@@ -295,7 +295,7 @@ def _pushdiscoverybookmarks(pushop):
     remotebookmark = remote.listkeys('bookmarks')
 
     comp = bookmarks.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
-    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid) = comp
+    addsrc, adddst, advsrc, advdst, diverge, differ, invalid = comp
     for b, scid, dcid in advsrc:
         if not ancestors or repo[scid].rev() in ancestors:
             pushop.outbookmarks.append((b, dcid, scid))
