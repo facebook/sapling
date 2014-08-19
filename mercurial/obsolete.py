@@ -168,10 +168,12 @@ def _readmarkers(data):
                                'short, %d bytes expected, got %d')
                              % (mdsize, len(metadata)))
         off += mdsize
+        meta = decodemeta(metadata)
         try:
             date = util.parsedate(decodemeta(metadata).pop('date', '0 0'))
         except util.Abort:
             date = (0., 0)
+        metadata = encodemeta(meta)
 
         yield (pre, sucs, flags, metadata, date, None)
 
