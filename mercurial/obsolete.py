@@ -280,7 +280,6 @@ class obsstore(object):
         # caches for various obsolescence related cache
         self.caches = {}
         self._all = []
-        # new markers to serialize
         self.precursors = {}
         self.successors = {}
         self.sopener = sopener
