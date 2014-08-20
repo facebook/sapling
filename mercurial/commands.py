@@ -2310,6 +2310,7 @@ def debuglabelcomplete(ui, repo, *args):
         [('', 'flags', 0, _('markers flag')),
          ('', 'record-parents', False,
           _('record parent information for the precursor')),
+         ('r', 'rev', [], _('display markers relevant to REV')),
         ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
@@ -2331,6 +2332,8 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                              'node identifiers')
 
     if precursor is not None:
+        if opts['rev']:
+            raise util.Abort('cannot select revision when creating marker')
         metadata = {}
         metadata['user'] = opts['user'] or ui.username()
         succs = tuple(parsenodeid(succ) for succ in successors)
@@ -2363,7 +2366,15 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         finally:
             l.release()
     else:
-        for m in obsolete.getmarkers(repo):
+        if opts['rev']:
+            revs = scmutil.revrange(repo, opts['rev'])
+            nodes = [repo[r].node() for r in revs]
+            markers = list(obsolete.getmarkers(repo, nodes=nodes))
+            markers.sort(key=lambda x: x._data)
+        else:
+            markers = obsolete.getmarkers(repo)
+
+        for m in markers:
             cmdutil.showmarker(ui, m)
 
 @command('debugpathcomplete',

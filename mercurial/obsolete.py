@@ -494,10 +494,24 @@ def pushmarker(repo, key, old, new):
     finally:
         lock.release()
 
-def getmarkers(repo):
-    """returns markers known in a repository"""
-    for markerdata in repo.obsstore:
+def getmarkers(repo, nodes=None):
+    """returns markers known in a repository
+
+    If <nodes> is specified, only markers "relevant" to those nodes are are
+    returned"""
+    if nodes is None:
+        rawmarkers = repo.obsstore
+    else:
+        rawmarkers = repo.obsstore.relevantmarkers(nodes)
+
+    for markerdata in rawmarkers:
         yield marker(repo, markerdata)
+
+def relevantmarkers(repo, node):
+    """all obsolete markers relevant to some revision"""
+    for markerdata in repo.obsstore.relevantmarkers(node):
+        yield marker(repo, markerdata)
+
 
 def precursormarkers(ctx):
     """obsolete marker marking this changeset as a successors"""

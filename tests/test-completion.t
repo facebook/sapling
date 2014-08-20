@@ -244,7 +244,7 @@ Show all commands + options
   debuginstall: 
   debugknown: 
   debuglabelcomplete: 
-  debugobsolete: flags, record-parents, date, user
+  debugobsolete: flags, record-parents, rev, date, user
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 

@@ -513,6 +513,72 @@ Do not warn about new head when the new head is a successors of a remote one
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
 
+test relevance computation
+---------------------------------------
+
+Checking simple case of "marker relevance".
+
+
+Reminder of the repo situation
+
+  $ hg log --hidden --graph
+  @  6:3de5eca88c00 (draft) [tip ] add obsolete_e
+  |
+  | x  5:cda648ca50f5 (draft) [ ] add original_e
+  | |
+  | x  4:94b33453f93b (draft) [ ] add original_d
+  |/
+  o  3:6f9641995072 (draft) [ ] add n3w_3_c
+  |
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
+  |
+  o  0:1f0dee641bb7 (public) [ ] add a
+  
+
+List of all markers
+
+  $ hg debugobsolete
+  2448244824482448244824482448244824482448 1339133913391339133913391339133913391339 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test'} (glob)
+
+List of changesets with no chain
+
+  $ hg debugobsolete --hidden --rev ::2
+
+List of changesets that are included on marker chain
+
+  $ hg debugobsolete --hidden --rev 6
+  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test'} (glob)
+
+List of changesets with a longer chain, (including a pruned children)
+
+  $ hg debugobsolete --hidden --rev 3
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
+
+List of both
+
+  $ hg debugobsolete --hidden --rev 3::6
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test'} (glob)
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
+
 #if serve
 
 check hgweb does not explode
