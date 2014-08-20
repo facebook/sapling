@@ -385,6 +385,34 @@ class obsstore(object):
         if node.nullid in self.precursors:
             raise util.Abort(_('bad obsolescence marker detected: '
                                'invalid successors nullid'))
+    def relevantmarkers(self, nodes):
+        """return a set of all obsolescence markers relevant to a set of nodes.
+
+        "relevant" to a set of nodes mean:
+
+        - marker that use this changeset as successor
+        - prune marker of direct children on this changeset
+        - recursive application of the two rules on precursors of these markers
+
+        It is a set so you cannot rely on order."""
+
+        pendingnodes = set(nodes)
+        seenmarkers = set()
+        seennodes = set(pendingnodes)
+        precursorsmarkers = self.precursors
+        children = self.children
+        while pendingnodes:
+            direct = set()
+            for current in pendingnodes:
+                direct.update(precursorsmarkers.get(current, ()))
+                pruned = [m for m in children.get(current, ()) if not m[1]]
+                direct.update(pruned)
+            direct -= seenmarkers
+            pendingnodes = set([m[0] for m in direct])
+            seenmarkers |= direct
+            pendingnodes -= seennodes
+            seennodes |= pendingnodes
+        return seenmarkers
 
 def _encodemarkers(markers, addheader=False):
     # Kept separate from flushmarkers(), it will be reused for
