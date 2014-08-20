@@ -412,12 +412,12 @@ def wraprepo(repo):
         def committodb(self):
             """Commits all pending revisions to the database
             """
+            if not self.pendingrevs:
+                return
+
             if self.sqlconn == None:
                 raise util.Abort("invalid repo change - only hg push and pull" +
                     " are allowed")
-
-            if not self.pendingrevs:
-                return
 
             reponame = self.sqlreponame
             cursor = self.sqlcursor
