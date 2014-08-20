@@ -18,6 +18,7 @@ from node import hex, short
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
+tabsplitter = re.compile(r'(\t+|[^\t]+)')
 
 class PatchError(Exception):
     pass
@@ -1673,15 +1674,26 @@ def difflabel(func, *args, **kw):
                 if line and line[0] not in ' +-@\\':
                     head = True
             stripline = line
+            diffline = False
             if not head and line and line[0] in '+-':
-                # highlight trailing whitespace, but only in changed lines
+                # highlight tabs and trailing whitespace, but only in
+                # changed lines
                 stripline = line.rstrip()
+                diffline = True
+
             prefixes = textprefixes
             if head:
                 prefixes = headprefixes
             for prefix, label in prefixes:
                 if stripline.startswith(prefix):
-                    yield (stripline, label)
+                    if diffline:
+                        for token in tabsplitter.findall(stripline):
+                            if '\t' == token[0]:
+                                yield (token, 'diff.tab')
+                            else:
+                                yield (token, label)
+                    else:
+                        yield (stripline, label)
                     break
             else:
                 yield (line, '')

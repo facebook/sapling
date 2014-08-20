@@ -159,4 +159,44 @@ issue3712: test colorization of subrepo diff
    b
   \x1b[0;32m+bb\x1b[0m (esc)
 
+test tabs
+
+  $ cat >> a <<EOF
+  > 	one tab
+  > 		two tabs
+  > end tab	
+  > mid	tab
+  > 	all		tabs	
+  > EOF
+  $ hg diff --nodates --color=always
+  \x1b[0;1mdiff --git a/a b/a\x1b[0m (esc)
+  \x1b[0;31;1m--- a/a\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
+  \x1b[0;35m@@ -7,3 +7,9 @@\x1b[0m (esc)
+   a
+   c
+   c
+  \x1b[0;32m+aa\x1b[0m (esc)
+  \x1b[0;32m+\x1b[0m	\x1b[0;32mone tab\x1b[0m (esc)
+  \x1b[0;32m+\x1b[0m		\x1b[0;32mtwo tabs\x1b[0m (esc)
+  \x1b[0;32m+end tab\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  \x1b[0;32m+mid\x1b[0m	\x1b[0;32mtab\x1b[0m (esc)
+  \x1b[0;32m+\x1b[0m	\x1b[0;32mall\x1b[0m		\x1b[0;32mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  $ echo "[color]" >> $HGRCPATH
+  $ echo "diff.tab = bold magenta" >> $HGRCPATH
+  $ hg diff --nodates --color=always
+  \x1b[0;1mdiff --git a/a b/a\x1b[0m (esc)
+  \x1b[0;31;1m--- a/a\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
+  \x1b[0;35m@@ -7,3 +7,9 @@\x1b[0m (esc)
+   a
+   c
+   c
+  \x1b[0;32m+aa\x1b[0m (esc)
+  \x1b[0;32m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mone tab\x1b[0m (esc)
+  \x1b[0;32m+\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;32mtwo tabs\x1b[0m (esc)
+  \x1b[0;32m+end tab\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  \x1b[0;32m+mid\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mtab\x1b[0m (esc)
+  \x1b[0;32m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mall\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;32mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+
   $ cd ..
