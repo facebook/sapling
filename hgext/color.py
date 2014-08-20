@@ -11,7 +11,7 @@ This extension modifies the status and resolve commands to add color
 to their output to reflect file status, the qseries command to add
 color to reflect patch status (applied, unapplied, missing), and to
 diff-related commands to highlight additions, removals, diff headers,
-and trailing whitespace.
+tabs, and trailing whitespace.
 
 Other effects in addition to color, like bold and underlined text, are
 also available. By default, the terminfo database is used to find the
@@ -61,6 +61,7 @@ effects may be overridden from your configuration file::
   diff.deleted = red
   diff.inserted = green
   diff.changed = white
+  diff.tab =
   diff.trailingwhitespace = bold red_background
 
   # Blank so it inherits the style of the surrounding label
@@ -279,6 +280,7 @@ _styles = {'grep.match': 'red bold',
            'diff.file_b': 'green bold',
            'diff.hunk': 'magenta',
            'diff.inserted': 'green',
+           'diff.tab': '',
            'diff.trailingwhitespace': 'bold red_background',
            'changeset.public' : '',
            'changeset.draft' : '',
