@@ -417,7 +417,9 @@ detect outgoing obsolete and unstable
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit original_d
   $ mkcommit original_e
-  $ hg debugobsolete `getid original_d` -d '0 0'
+  $ hg debugobsolete --record-parents `getid original_d` -d '0 0'
+  $ hg debugobsolete | grep `getid original_d`
+  94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   $ hg log -r 'obsolete()'
   4:94b33453f93b (draft) [ ] add original_d
   $ hg log -G -r '::unstable()'

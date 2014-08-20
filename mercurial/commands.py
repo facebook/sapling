@@ -2308,6 +2308,8 @@ def debuglabelcomplete(ui, repo, *args):
 
 @command('debugobsolete',
         [('', 'flags', 0, _('markers flag')),
+         ('', 'record-parents', False,
+          _('record parent information for the precursor')),
         ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
@@ -2342,8 +2344,16 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                         date = util.parsedate(date)
                     else:
                         date = None
-                    repo.obsstore.create(tr, parsenodeid(precursor), succs,
-                                         opts['flags'], date=date,
+                    prec = parsenodeid(precursor)
+                    parents = None
+                    if opts['record_parents']:
+                        if prec not in repo.unfiltered():
+                            raise util.Abort('cannot used --record-parents on '
+                                             'unknown changesets')
+                        parents = repo.unfiltered()[prec].parents()
+                        parents = tuple(p.node() for p in parents)
+                    repo.obsstore.create(tr, prec, succs, opts['flags'],
+                                         parents=parents, date=date,
                                          metadata=metadata)
                     tr.close()
                 except ValueError, exc:
