@@ -878,7 +878,7 @@ push
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
-  remote: 5 new obsolescence markers
+  remote: 1 new obsolescence markers
   updating bookmark book_eea1
   exporting bookmark book_eea1
   $ hg -R other log -G
@@ -894,10 +894,6 @@ push
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   2222222222222222222222222222222222222222 24b6387c8c8cae37178880f3fa95ded3cb1cf785 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   3333333333333333333333333333333333333333 eea13746799a9e0bfd88f29d3c2e9dc9389f524f 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  4444444444444444444444444444444444444444 02de42196ebee42ef284b6780a87cdc96e8eaab6 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  5555555555555555555555555555555555555555 42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  6666666666666666666666666666666666666666 5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  7777777777777777777777777777777777777777 32af7686d403cf45b5d95f2d70cebea587ac806a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
 pull over ssh
 

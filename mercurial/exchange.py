@@ -297,7 +297,11 @@ def _pushdiscoveryobsmarkers(pushop):
     if (obsolete._enabled
         and pushop.repo.obsstore
         and 'obsolete' in pushop.remote.listkeys('namespaces')):
-        pushop.outobsmarkers = pushop.repo.obsstore
+        repo = pushop.repo
+        # very naive computation, that can be quite expensive on big repo.
+        # However: evolution is currently slow on them anyway.
+        nodes = (c.node() for c in repo.set('::%ln', pushop.futureheads))
+        pushop.outobsmarkers = pushop.repo.obsstore.relevantmarkers(nodes)
 
 @pushdiscovery('bookmarks')
 def _pushdiscoverybookmarks(pushop):
@@ -680,7 +684,7 @@ def _pushobsolete(pushop):
     repo = pushop.repo
     remote = pushop.remote
     pushop.stepsdone.add('obsmarkers')
-    if (pushop.outobsmarkers):
+    if pushop.outobsmarkers:
         rslts = []
         remotedata = obsolete._pushkeyescape(pushop.outobsmarkers)
         for key in sorted(remotedata, reverse=True):
