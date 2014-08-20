@@ -8,7 +8,6 @@
 
 import copy
 import error
-import hashlib
 import phases
 import util
 import obsolete
@@ -69,8 +68,7 @@ def cachehash(repo, hideable):
     it to the cache. Upon reading we can easily validate by checking the hash
     against the stored one and discard the cache in case the hashes don't match.
     """
-    h = hashlib.sha1()
-    h.update(''.join(repo.heads()))
+    h = util.sha1(''.join(repo.heads()))
     h.update(str(hash(frozenset(hideable))))
     return h.digest()
 
