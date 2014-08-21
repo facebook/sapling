@@ -280,7 +280,10 @@ def _pushdiscoveryphase(pushop):
 
 @pushdiscovery('obsmarker')
 def _pushdiscoveryobsmarkers(pushop):
-    pushop.outobsmarkers = pushop.repo.obsstore
+    if (obsolete._enabled
+        and pushop.repo.obsstore
+        and 'obsolete' in pushop.remote.listkeys('namespaces')):
+        pushop.outobsmarkers = pushop.repo.obsstore
 
 @pushdiscovery('bookmarks')
 def _pushdiscoverybookmarks(pushop):
@@ -652,8 +655,7 @@ def _pushobsolete(pushop):
     repo = pushop.repo
     remote = pushop.remote
     pushop.stepsdone.add('obsmarkers')
-    if (obsolete._enabled and repo.obsstore and
-        'obsolete' in remote.listkeys('namespaces')):
+    if (pushop.outobsmarkers):
         rslts = []
         remotedata = obsolete._pushkeyescape(pushop.outobsmarkers)
         for key in sorted(remotedata, reverse=True):
