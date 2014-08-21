@@ -25,12 +25,25 @@ List files in store/data (should show a 'b.d'):
   .hg/store/data/b.d
   .hg/store/data/b.i
 
+Trigger branchcache creation:
+
+  $ hg branches
+  default                       10:a7949464abda
+  $ ls .hg/cache
+  branch2-served
+
 Default operation:
 
   $ hg clone . ../b
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../b
+
+Ensure branchcache got copied over:
+
+  $ ls .hg/cache
+  branch2-served
+
   $ cat a
   a
   $ hg verify
@@ -58,6 +71,12 @@ No update, with debug option:
   listing keys for "bookmarks"
 #endif
   $ cd ../c
+
+Ensure branchcache got copied over:
+
+  $ ls .hg/cache
+  branch2-served
+
   $ cat a 2>/dev/null || echo "a not present"
   a not present
   $ hg verify
