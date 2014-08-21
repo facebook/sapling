@@ -2363,7 +2363,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         finally:
             l.release()
     else:
-        for m in obsolete.allmarkers(repo):
+        for m in obsolete.getmarkers(repo):
             cmdutil.showmarker(ui, m)
 
 @command('debugpathcomplete',

@@ -494,8 +494,8 @@ def pushmarker(repo, key, old, new):
     finally:
         lock.release()
 
-def allmarkers(repo):
-    """all obsolete markers known in a repository"""
+def getmarkers(repo):
+    """returns markers known in a repository"""
     for markerdata in repo.obsstore:
         yield marker(repo, markerdata)
 
