@@ -367,7 +367,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             # Recomputing branch cache might be slow on big repos,
             # so just copy it
             dstcachedir = os.path.join(destpath, 'cache')
-            srcbranchcache = srcrepo.sjoin('cache/branch2')
+            srcbranchcache = srcrepo.join('cache/branch2')
             dstbranchcache = os.path.join(dstcachedir, 'branch2')
             if os.path.exists(srcbranchcache):
                 if not os.path.exists(dstcachedir):
