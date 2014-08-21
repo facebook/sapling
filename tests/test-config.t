@@ -1,6 +1,28 @@
 hide outer repo
   $ hg init
 
+Invalid syntax: no value
+
+  $ cat > .hg/hgrc << EOF
+  > novaluekey
+  > EOF
+  $ hg showconfig
+  hg: parse error at $TESTTMP/.hg/hgrc:1: novaluekey
+  [255]
+
+Invalid syntax: no key
+
+  $ cat > .hg/hgrc << EOF
+  > =nokeyvalue
+  > EOF
+  $ hg showconfig
+  hg: parse error at $TESTTMP/.hg/hgrc:1: =nokeyvalue
+  [255]
+
+Reset hgrc
+
+  $ echo > .hg/hgrc
+
 Test case sensitive configuration
 
   $ echo '[Section]' >> $HGRCPATH
