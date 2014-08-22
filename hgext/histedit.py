@@ -614,7 +614,6 @@ def _histedit(ui, repo, *freeargs, **opts):
         rules = verifyrules(rules, repo, ctxs)
 
         parentctx = repo[root].parents()[0]
-        keep = opts.get('keep', False)
         replacements = []
 
 
