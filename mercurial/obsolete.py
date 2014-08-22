@@ -369,8 +369,11 @@ class obsstore(object):
         return len(new)
 
     def mergemarkers(self, transaction, data):
+        """merge a binary stream of markers inside the obsstore
+
+        Returns the number of new markers added."""
         markers = _readmarkers(data)
-        self.add(transaction, markers)
+        return self.add(transaction, markers)
 
     def _load(self, markers):
         for mark in markers:
