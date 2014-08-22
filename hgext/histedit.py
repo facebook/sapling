@@ -610,7 +610,7 @@ def _histedit(ui, repo, *freeargs, **opts):
             rules = f.read()
             f.close()
         rules = [l for l in (r.strip() for r in rules.splitlines())
-                 if l and not l[0] == '#']
+                 if l and not l.startswith('#')]
         rules = verifyrules(rules, repo, ctxs)
 
         parentctx = repo[root].parents()[0]
