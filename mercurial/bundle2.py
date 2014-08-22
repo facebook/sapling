@@ -784,10 +784,13 @@ capabilities = {'HG2X': (),
 def getrepocaps(repo):
     """return the bundle2 capabilities for a given repo
 
-    Exists to allow extensions (like evolution) to mutate the
-    capabilities.
+    Exists to allow extensions (like evolution) to mutate the capabilities.
     """
-    return capabilities
+    caps = capabilities.copy()
+    if obsolete._enabled:
+        supportedformat = tuple('V%i' % v for v in obsolete.formats)
+        caps['b2x:obsmarkers'] = supportedformat
+    return caps
 
 def bundle2caps(remote):
     """return the bundlecapabilities of a peer as dict"""
