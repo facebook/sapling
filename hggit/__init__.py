@@ -48,7 +48,7 @@ import gitrepo, hgrepo
 from git_handler import GitHandler
 import verify
 
-testedwith = '2.8.2 3.0.1'
+testedwith = '2.8.2 3.0.1 3.1'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
 
 cmdtable = {}
@@ -243,4 +243,3 @@ def gitnodekw(**args):
     if gitnode is None:
         gitnode = ''
     return gitnode
-
