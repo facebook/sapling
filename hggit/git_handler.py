@@ -1406,26 +1406,13 @@ class GitHandler(object):
 
             return transport(host, port=port), path
 
-        httpclient = getattr(client, 'HttpGitClient', None)
-
         if uri.startswith('git+http://') or uri.startswith('git+https://'):
             uri = uri[4:]
 
         if uri.startswith('http://') or uri.startswith('https://'):
-            if not httpclient:
-                raise RepoError('git via HTTP requires dulwich 0.8.1 or later')
-            else:
-                auth_handler = urllib2.HTTPBasicAuthHandler(url.passwordmgr(self.ui))
-                opener = urllib2.build_opener(auth_handler)
-                try:
-                    return client.HttpGitClient(uri, opener=opener), uri
-                except TypeError as e:
-                    if e.message.find("unexpected keyword argument 'opener'") >= 0:
-                        # using a version of dulwich that doesn't support
-                        # http(s) authentication -- try without authentication
-                        return client.HttpGitClient(uri), uri
-                    else:
-                        raise
+            auth_handler = urllib2.HTTPBasicAuthHandler(url.passwordmgr(self.ui))
+            opener = urllib2.build_opener(auth_handler)
+            return client.HttpGitClient(uri, opener=opener), uri
 
         # if its not git or git+ssh, try a local url..
         return client.SubprocessGitClient(), uri
