@@ -1,0 +1,25 @@
+The short version:
+ * Patches should have a good summary line for first line of commit message
+ * Patches should be sent to the Google Group[0]
+   even look at those.
+ * Patch needs to do exactly one thing
+ * testsuite passes
+
+The longer version:
+
+We use a variant of Mercurial's own contribution
+system. http://mercurial.selenic.com/wiki/ContributingChanges contains
+their full guidelines. Key differences are (by rule number):
+
+ 1. For hg-git, I'm not rigied about the "topic: a few words" format
+    for the first line, but I do insist on a sensible summary as the
+    first line of your commit
+ 2. We don't require use of issueNNN for bug fixes (we have no robot)
+ 3. Use the hg-git google group
+ 10. We use mostly pep8 style. The current codebase is a mess, but new
+     code should be basically pep8.
+
+0: Pull requests are generally not noticed more than once every few
+months. If you do a pull request, I'm still going to expect you to
+have a clean history, and to be willing to rework history so it's
+clean before I push the "merge" button.
