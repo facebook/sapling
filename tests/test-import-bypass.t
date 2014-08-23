@@ -226,6 +226,25 @@ Test applying multiple patches with --exact
 
   $ cd ..
 
+Test avoiding editor invocation at applying the patch with --exact
+even if commit message is empty
+
+  $ cd repo-options
+
+  $ echo a >> a
+  $ hg commit -m ' '
+  $ hg tip -T "{node}\n"
+  1b77bc7d1db9f0e7f1716d515b630516ab386c89
+  $ hg export -o ../empty-log.diff .
+  $ hg update -q -C ".^1"
+  $ hg --config extensions.strip= strip -q tip
+  $ HGEDITOR=cat hg import --exact --bypass ../empty-log.diff
+  applying ../empty-log.diff
+  $ hg tip -T "{node}\n"
+  1b77bc7d1db9f0e7f1716d515b630516ab386c89
+
+  $ cd ..
+
 #if symlink execbit
 
 Test complicated patch with --exact

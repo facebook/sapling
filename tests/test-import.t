@@ -107,6 +107,22 @@ the commit message, regardless of '--edit')
   HG: changed a
   abort: empty commit message
   [255]
+
+Test avoiding editor invocation at applying the patch with --exact,
+even if commit message is empty
+
+  $ echo a >> b/a
+  $ hg --cwd b commit -m ' '
+  $ hg --cwd b tip -T "{node}\n"
+  d8804f3f5396d800812f579c8452796a5993bdb2
+  $ hg --cwd b export -o ../empty-log.diff .
+  $ hg --cwd b update -q -C ".^1"
+  $ hg --cwd b --config extensions.strip= strip -q tip
+  $ HGEDITOR=cat hg --cwd b import --exact ../empty-log.diff
+  applying ../empty-log.diff
+  $ hg --cwd b tip -T "{node}\n"
+  d8804f3f5396d800812f579c8452796a5993bdb2
+
   $ rm -r b
 
 

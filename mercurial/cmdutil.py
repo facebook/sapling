@@ -688,7 +688,10 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 else:
                     m = scmutil.matchfiles(repo, files or [])
                 editform = mergeeditform(repo[None], 'import.normal')
-                editor = getcommiteditor(editform=editform, **opts)
+                if opts.get('exact'):
+                    editor = None
+                else:
+                    editor = getcommiteditor(editform=editform, **opts)
                 n = repo.commit(message, opts.get('user') or user,
                                 opts.get('date') or date, match=m,
                                 editor=editor, force=partial)
@@ -705,7 +708,10 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                                     files, eolmode=None)
                 except patch.PatchError, e:
                     raise util.Abort(str(e))
-                editor = getcommiteditor(editform='import.bypass')
+                if opts.get('exact'):
+                    editor = None
+                else:
+                    editor = getcommiteditor(editform='import.bypass')
                 memctx = context.makememctx(repo, (p1.node(), p2.node()),
                                             message,
                                             opts.get('user') or user,
