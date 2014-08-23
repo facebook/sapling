@@ -8,6 +8,7 @@
 from i18n import _
 import sys, os, re
 import util, config, templatefilters, templatekw, parser, error
+import revset as revsetmod
 import types
 import minirst
 
@@ -370,16 +371,20 @@ def revset(context, mapping, args):
     ctx = mapping['ctx']
     repo = ctx._repo
 
+    def query(expr):
+        m = revsetmod.match(repo.ui, expr)
+        return m(repo, revsetmod.spanset(repo))
+
     if len(args) > 1:
         formatargs = list([a[0](context, mapping, a[1]) for a in args[1:]])
-        revs = repo.revs(raw, *formatargs)
+        revs = query(revsetmod.formatspec(raw, *formatargs))
         revs = list([str(r) for r in revs])
     else:
         revsetcache = mapping['cache'].setdefault("revsetcache", {})
         if raw in revsetcache:
             revs = revsetcache[raw]
         else:
-            revs = repo.revs(raw)
+            revs = query(raw)
             revs = list([str(r) for r in revs])
             revsetcache[raw] = revs
 

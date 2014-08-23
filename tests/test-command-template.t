@@ -1834,6 +1834,15 @@ Test revset function
   1 Parents: 0
   0 Parents: 
 
+  $ cat >> .hg/hgrc <<EOF
+  > [revsetalias]
+  > myparents(\$1) = parents(\$1)
+  > EOF
+  $ hg log --template '{rev} Parents: {revset("myparents(%s)", rev)}\n'
+  2 Parents: 1
+  1 Parents: 0
+  0 Parents: 
+
   $ hg log --template 'Rev: {rev}\n{revset("::%s", rev) % "Ancestor: {revision}\n"}\n'
   Rev: 2
   Ancestor: 0
