@@ -3880,6 +3880,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         raise util.Abort(_('similarity must be between 0 and 100'))
     if sim and not update:
         raise util.Abort(_('cannot use --similarity with --bypass'))
+    if opts.get('exact') and opts.get('edit'):
+        raise util.Abort(_('cannot use --exact with --edit'))
 
     if update:
         cmdutil.checkunfinished(repo)

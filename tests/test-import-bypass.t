@@ -22,10 +22,13 @@ Test --bypass with other options
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Test importing an existing revision
-(this also tests that editor is not invoked for '--bypass', if the
-patch contains the commit message, regardless of '--edit')
+(this also tests that "hg import" disallows combination of '--exact'
+and '--edit')
 
-  $ HGEDITOR=cat hg import --bypass --exact --edit ../test.diff
+  $ hg import --bypass --exact --edit ../test.diff
+  abort: cannot use --exact with --edit
+  [255]
+  $ hg import --bypass --exact ../test.diff
   applying ../test.diff
   $ shortlog
   o  1:4e322f7ce8e3 test 0 0 - foo - changea
@@ -66,8 +69,10 @@ Test --user, --date and --message
   repository tip rolled back to revision 1 (undo import)
 
 Test --import-branch
+(this also tests that editor is not invoked for '--bypass', if the
+patch contains the commit message, regardless of '--edit')
 
-  $ hg import --bypass --import-branch ../test.diff
+  $ HGEDITOR=cat hg import --bypass --import-branch --edit ../test.diff
   applying ../test.diff
   $ shortlog
   o  1:4e322f7ce8e3 test 0 0 - foo - changea
