@@ -18,7 +18,7 @@ def generate_ssh_vendor(ui):
 
             sshcmd = ui.config("ui", "ssh", "ssh")
             args = util.sshargs(sshcmd, host, username, port)
-            cmd = '%s %s %s' % (sshcmd, args, 
+            cmd = '%s %s %s' % (sshcmd, args,
                                 util.shellquote(' '.join(command)))
             ui.debug('calling ssh: %s\n' % cmd)
             print command
