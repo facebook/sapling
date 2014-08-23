@@ -1412,6 +1412,8 @@ class GitHandler(object):
         if uri.startswith('http://') or uri.startswith('https://'):
             auth_handler = urllib2.HTTPBasicAuthHandler(url.passwordmgr(self.ui))
             opener = urllib2.build_opener(auth_handler)
+            useragent = 'git/20x6 (hg-git ; uses dulwich and hg ; like git-core)'
+            opener.addheaders = [('User-Agent', useragent)]
             return client.HttpGitClient(uri, opener=opener), uri
 
         # if its not git or git+ssh, try a local url..
