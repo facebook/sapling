@@ -21,7 +21,6 @@ def generate_ssh_vendor(ui):
             cmd = '%s %s %s' % (sshcmd, args,
                                 util.shellquote(' '.join(command)))
             ui.debug('calling ssh: %s\n' % cmd)
-            print command
             proc = subprocess.Popen(util.quotecommand(cmd), shell=True,
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE)
