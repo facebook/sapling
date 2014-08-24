@@ -20,6 +20,14 @@ hg status in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mb/in_b\x1b[0m (esc)
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_root\x1b[0m (esc)
 
+  $ hg status --color=debug
+  status.unknown(? )status.unknown(a/1/in_a_1)
+  status.unknown(? )status.unknown(a/in_a)
+  status.unknown(? )status.unknown(b/1/in_b_1)
+  status.unknown(? )status.unknown(b/2/in_b_2)
+  status.unknown(? )status.unknown(b/in_b)
+  status.unknown(? )status.unknown(in_root)
+
 hg status . in repo root:
 
   $ hg status --color=always .
@@ -137,6 +145,13 @@ Make sure ui.formatted=False works
   adding deleted
   adding modified
   adding removed
+  $ hg log --color=debug
+  [log.changeset changeset.draft](changeset:   0:389aef86a55e)
+  log.tag(tag:         tip)
+  log.user(user:        test)
+  log.date(date:        Thu Jan 01 00:00:00 1970 +0000)
+  log.summary(summary:     initial checkin)
+  
   $ touch modified added unknown ignored
   $ hg add added
   $ hg remove removed
