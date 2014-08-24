@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
-        archival, merge, pathutil, revset
+        archival, pathutil, revset
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
@@ -1202,8 +1202,18 @@ def overriderollback(orig, ui, repo, **opts):
         if before == after:
             return result # no need to restore standins
 
-        merge.update(repo, node='.', branchmerge=False, force=True,
-                     partial=lfutil.isstandin)
+        pctx = repo['.']
+        for f in repo.dirstate:
+            if lfutil.isstandin(f):
+                if repo.dirstate[f] == 'r':
+                    repo.wvfs.unlinkpath(f, ignoremissing=True)
+                elif f in pctx:
+                    fctx = pctx[f]
+                    repo.wwrite(f, fctx.data(), fctx.flags())
+                else:
+                    # content of standin is not so important in 'a',
+                    # 'm' or 'n' (coming from the 2nd parent) cases
+                    lfutil.writestandin(repo, f, '', False)
 
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         orphans = set(lfdirstate)

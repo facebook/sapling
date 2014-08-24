@@ -103,9 +103,15 @@ Test that "hg rollback" restores status of largefiles correctly
 
   $ hg update -C -q
   $ hg remove large1
+  $ test -f .hglf/large1
+  [1]
   $ hg forget large2
+  $ test -f .hglf/large2
+  [1]
   $ echo largeX > largeX
   $ hg add --large largeX
+  $ cat .hglf/largeX
+  
   $ hg commit -m 'will be rollback-ed soon'
   $ echo largeY > largeY
   $ hg add --large largeY
@@ -122,10 +128,16 @@ Test that "hg rollback" restores status of largefiles correctly
   working directory now based on revision 3
   $ hg status -A large1
   R large1
+  $ test -f .hglf/large1
+  [1]
   $ hg status -A large2
   R large2
+  $ test -f .hglf/large2
+  [1]
   $ hg status -A largeX
   A largeX
+  $ cat .hglf/largeX
+  
   $ hg status -A largeY
   ? largeY
 
