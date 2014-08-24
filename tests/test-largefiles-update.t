@@ -152,6 +152,25 @@ Test that "hg rollback" restores standins correctly
   $ cat .hglf/large2
   3cfce6277e7668985707b6887ce56f9f62f6ccd9
 
+(rollback the parent of the working directory, when the parent of it
+is not branch-tip)
+
+  $ hg update -q -C 1
+  $ cat .hglf/large1
+  58e24f733a964da346e2407a2bee99d9001184f5
+  $ cat .hglf/large2
+  1deebade43c8c498a3c8daddac0244dc55d1331d
+
+  $ echo normalX > normalX
+  $ hg add normalX
+  $ hg commit -m 'will be rollback-ed soon'
+  $ hg rollback -q
+
+  $ cat .hglf/large1
+  58e24f733a964da346e2407a2bee99d9001184f5
+  $ cat .hglf/large2
+  1deebade43c8c498a3c8daddac0244dc55d1331d
+
 Test that "hg status" shows status of largefiles correctly just after
 automated commit like rebase/transplant
 

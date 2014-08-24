@@ -1202,7 +1202,7 @@ def overriderollback(orig, ui, repo, **opts):
         if before == after:
             return result # no need to restore standins
 
-        merge.update(repo, node=None, branchmerge=False, force=True,
+        merge.update(repo, node='.', branchmerge=False, force=True,
                      partial=lfutil.isstandin)
 
         lfdirstate = lfutil.openlfdirstate(ui, repo)
