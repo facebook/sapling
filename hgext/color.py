@@ -19,7 +19,16 @@ terminal codes used to change color and effect.  If terminfo is not
 available, then effects are rendered with the ECMA-48 SGR control
 function (aka ANSI escape codes).
 
-Default effects may be overridden from your configuration file::
+Text receives color effects depending on the labels that it has. Many
+default Mercurial commands emit labelled text. You can also define
+your own labels in templates using the label function, see :hg:`help
+templates`. A single portion of text may have more than one label. In
+that case, effects given to the last label will override any other
+effects. This includes the special "none" effect, which nullifies
+other effects.
+
+The following are the default effects for some default labels. Default
+effects may be overridden from your configuration file::
 
   [color]
   status.modified = blue bold underline red_background
