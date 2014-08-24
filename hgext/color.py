@@ -28,11 +28,10 @@ effects. This includes the special "none" effect, which nullifies
 other effects.
 
 Labels are normally invisible. In order to see these labels and their
-position in the text, use the global --color=debug option. In case of
-multiple labels for the same text, the labels will be enclosed by
-square brackets, e.g.
+position in the text, use the global --color=debug option. The same
+anchor text may be associated to multiple labels, e.g.
 
-  [log.changeset changeset.secret](changeset:   22611:6f0a53c8f587)
+  [log.changeset changeset.secret|changeset:   22611:6f0a53c8f587]
 
 The following are the default effects for some default labels. Default
 effects may be overridden from your configuration file::
