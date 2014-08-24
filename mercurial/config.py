@@ -31,7 +31,15 @@ username =
 
     'global':
 """# example system-wide hg config (see "hg help config" for more info)
-""",
+
+[extensions]
+# Uncomment these lines for some possible extensions
+# (see "hg help extensions" for more info)
+#
+# blackbox =
+# progress =
+# color =
+# pager =""",
 }
 
 class config(object):
