@@ -63,6 +63,11 @@ effects may be overridden from your configuration file::
   diff.changed = white
   diff.trailingwhitespace = bold red_background
 
+  # Blank so it inherits the style of the surrounding label
+  changeset.public =
+  changeset.draft =
+  changeset.secret =
+
   resolve.unresolved = red bold
   resolve.resolved = green bold
 
@@ -275,6 +280,9 @@ _styles = {'grep.match': 'red bold',
            'diff.hunk': 'magenta',
            'diff.inserted': 'green',
            'diff.trailingwhitespace': 'bold red_background',
+           'changeset.public' : '',
+           'changeset.draft' : '',
+           'changeset.secret' : '',
            'diffstat.deleted': 'red',
            'diffstat.inserted': 'green',
            'histedit.remaining': 'red bold',
