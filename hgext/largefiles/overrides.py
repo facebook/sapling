@@ -714,47 +714,6 @@ def overriderevert(orig, ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
-def hgupdaterepo(orig, repo, node, overwrite):
-    wlock = repo.wlock()
-    try:
-        return _hgupdaterepo(orig, repo, node, overwrite)
-    finally:
-        wlock.release()
-
-def _hgupdaterepo(orig, repo, node, overwrite):
-    if not overwrite:
-        # update standins for linear merge
-        lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-        s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
-                              [], False, False, False)
-        unsure, modified, added = s[:3]
-        for lfile in unsure + modified + added:
-            lfutil.updatestandin(repo, lfutil.standin(lfile))
-
-        # Only call updatelfiles on the standins that have changed to save time
-        oldstandins = lfutil.getstandinsstate(repo)
-
-    result = orig(repo, node, overwrite)
-
-    filelist = None
-    if not overwrite:
-        newstandins = lfutil.getstandinsstate(repo)
-        filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
-    lfcommands.updatelfiles(repo.ui, repo, filelist=filelist)
-    return result
-
-def hgmerge(orig, repo, node, force=None, remind=True):
-    wlock = repo.wlock()
-    try:
-        return _hgmerge(orig, repo, node, force, remind)
-    finally:
-        wlock.release()
-
-def _hgmerge(orig, repo, node, force, remind):
-    result = orig(repo, node, force, remind)
-    lfcommands.updatelfiles(repo.ui, repo)
-    return result
-
 # When we rebase a repository with remotely changed largefiles, we need to
 # take some extra care so that the largefiles are correctly updated in the
 # working copy
@@ -1305,3 +1264,57 @@ def mercurialsinkbefore(orig, sink):
 def mercurialsinkafter(orig, sink):
     sink.repo._isconverting = False
     orig(sink)
+
+def mergeupdate(orig, repo, node, branchmerge, force, partial,
+                *args, **kwargs):
+    wlock = repo.wlock()
+    try:
+        # branch |       |         |
+        #  merge | force | partial | action
+        # -------+-------+---------+--------------
+        #    x   |   x   |    x    | linear-merge
+        #    o   |   x   |    x    | branch-merge
+        #    x   |   o   |    x    | overwrite (as clean update)
+        #    o   |   o   |    x    | force-branch-merge (*1)
+        #    x   |   x   |    o    |   (*)
+        #    o   |   x   |    o    |   (*)
+        #    x   |   o   |    o    | overwrite (as revert)
+        #    o   |   o   |    o    |   (*)
+        #
+        # (*) don't care
+        # (*1) deprecated, but used internally (e.g: "rebase --collapse")
+
+        linearmerge = not branchmerge and not force and not partial
+
+        if linearmerge or (branchmerge and force and not partial):
+            # update standins for linear-merge or force-branch-merge,
+            # because largefiles in the working directory may be modified
+            lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
+            s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
+                                  [], False, False, False)
+            unsure, modified, added = s[:3]
+            for lfile in unsure + modified + added:
+                lfutil.updatestandin(repo, lfutil.standin(lfile))
+
+        if linearmerge:
+            # Only call updatelfiles on the standins that have changed
+            # to save time
+            oldstandins = lfutil.getstandinsstate(repo)
+
+        result = orig(repo, node, branchmerge, force, partial, *args, **kwargs)
+
+        filelist = None
+        if linearmerge:
+            newstandins = lfutil.getstandinsstate(repo)
+            filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
+
+        # suppress status message while automated committing
+        printmessage = not (getattr(repo, "_isrebasing", False) or
+                            getattr(repo, "_istransplanting", False))
+        lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
+                                printmessage=printmessage,
+                                normallookup=partial)
+
+        return result
+    finally:
+        wlock.release()

@@ -1603,11 +1603,11 @@ Merge with revision with missing largefile - and make sure it tries to fetch it.
   A f
   created new head
   $ hg merge -r 6
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
   getting changed largefiles
   large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:/*/$TESTTMP/d (glob)
   1 largefiles updated, 0 removed
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
 
   $ hg rollback -q
   $ hg up -Cq
@@ -1661,10 +1661,10 @@ correctly.
   ancestor was 971fb41e78fea4f8e0ba5244784239371cb00591
   keep (l)ocal d846f26643bfa8ec210be40cc93cc6b7ff1128ea or
   take (o)ther e166e74c7303192238d60af5a9c4ce9bef0b7928? l
-  3 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
   getting changed largefiles
   1 largefiles updated, 0 removed
+  3 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   $ hg commit -m "Merge repos e and f"
   Invoking status precommit hook
   M normal3
@@ -1695,10 +1695,10 @@ Test status after merging with a branch that introduces a new largefile:
   M normal3
   created new head
   $ hg merge
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
   getting changed largefiles
   1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   $ hg status
   M large
 
@@ -1742,7 +1742,7 @@ Test that transplanting a largefile change works correctly.
   adding file changes
   added 1 changesets with 2 changes to 2 files
   getting changed largefiles
-  1 largefiles updated, 0 removed
+  0 largefiles updated, 0 removed
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b

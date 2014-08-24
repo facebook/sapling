@@ -101,6 +101,8 @@ def uisetup(ui):
                                     overrides.overridecalculateupdates)
     entry = extensions.wrapfunction(merge, 'recordupdates',
                                     overrides.mergerecordupdates)
+    entry = extensions.wrapfunction(merge, 'update',
+                                    overrides.mergeupdate)
     entry = extensions.wrapfunction(filemerge, 'filemerge',
                                     overrides.overridefilemerge)
     entry = extensions.wrapfunction(cmdutil, 'copy',
@@ -116,9 +118,6 @@ def uisetup(ui):
                                    overrides.overriderevert)
     entry = extensions.wrapfunction(commands, 'revert',
                                     overrides.overriderevert)
-
-    extensions.wrapfunction(hg, 'updaterepo', overrides.hgupdaterepo)
-    extensions.wrapfunction(hg, 'merge', overrides.hgmerge)
 
     extensions.wrapfunction(archival, 'archive', overrides.overridearchive)
     extensions.wrapfunction(subrepo.hgsubrepo, 'archive',

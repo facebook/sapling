@@ -659,10 +659,10 @@ merge action 'd' for 'local renamed directory to d2/g' which has no filename
   R d1/f
   $ hg merge
   merging d2/f and d1/f to d2/f
-  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
   getting changed largefiles
   0 largefiles updated, 0 removed
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   $ cd ..
 
 
@@ -725,10 +725,10 @@ Merge conflicts:
   ancestor was 09d2af8dd22201dd8d48e5dcfcaed281ff9422c7
   keep (l)ocal e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e or
   take (o)ther 7448d8798a4380162d4b56f9b452e2f6f9e24e7a? l
-  0 files updated, 4 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
   getting changed largefiles
   1 largefiles updated, 0 removed
+  0 files updated, 4 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   $ cat f-different
   1
   $ cat f-same

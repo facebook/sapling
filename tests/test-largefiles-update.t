@@ -36,10 +36,10 @@ Test that "hg merge" updates largefiles from "other" correctly
   $ cat .hglf/large1
   4669e532d5b2c093a78eca010077e708a071bb64
   $ hg merge --config debug.dirstate.delaywrite=2
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
   getting changed largefiles
   1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
   $ hg status -A large1
   M large1
   $ cat large1
@@ -67,10 +67,10 @@ Test that "hg merge" updates largefiles from "other" correctly
   take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? merging normal1
   warning: conflicts during merge.
   merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
-  0 files updated, 1 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   getting changed largefiles
   1 largefiles updated, 0 removed
+  0 files updated, 1 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg status -A large1
   M large1
@@ -454,5 +454,35 @@ Test that the internal linear merging works correctly
   large2 for linear merge (conflict with normal file)
   $ cat sub/.hglf/large2
   d7591fe9be0f6227d90bddf3e4f52ff41fc1f544
+
+  $ cd ..
+  $ cd repo
+
+Test that rebase updates largefiles in the working directory even if
+it is aborted by conflict.
+
+  $ hg update -q -C 3
+  $ cat .hglf/large1
+  e5bb990443d6a92aaf7223813720f7566c9dd05b
+  $ cat large1
+  large1 in #3
+  $ hg rebase -s 1 -d 3 --keep --config ui.interactive=True <<EOF
+  > o
+  > EOF
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
+  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? merging normal1
+  warning: conflicts during merge.
+  merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ cat .hglf/large1
+  58e24f733a964da346e2407a2bee99d9001184f5
+  $ cat large1
+  large1 in #1
+
+  $ hg rebase -q --abort
+  rebase aborted
 
   $ cd ..
