@@ -1197,6 +1197,8 @@ def overriderollback(orig, ui, repo, **opts):
     wlock = repo.wlock()
     try:
         before = repo.dirstate.parents()
+        orphans = set(f for f in repo.dirstate
+                      if lfutil.isstandin(f) and repo.dirstate[f] != 'r')
         result = orig(ui, repo, **opts)
         after = repo.dirstate.parents()
         if before == after:
@@ -1205,6 +1207,7 @@ def overriderollback(orig, ui, repo, **opts):
         pctx = repo['.']
         for f in repo.dirstate:
             if lfutil.isstandin(f):
+                orphans.discard(f)
                 if repo.dirstate[f] == 'r':
                     repo.wvfs.unlinkpath(f, ignoremissing=True)
                 elif f in pctx:
@@ -1214,6 +1217,8 @@ def overriderollback(orig, ui, repo, **opts):
                     # content of standin is not so important in 'a',
                     # 'm' or 'n' (coming from the 2nd parent) cases
                     lfutil.writestandin(repo, f, '', False)
+        for standin in orphans:
+            repo.wvfs.unlinkpath(standin, ignoremissing=True)
 
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         orphans = set(lfdirstate)

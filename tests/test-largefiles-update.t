@@ -140,6 +140,8 @@ Test that "hg rollback" restores status of largefiles correctly
   
   $ hg status -A largeY
   ? largeY
+  $ test -f .hglf/largeY
+  [1]
 
 Test that "hg rollback" restores standins correctly
 
