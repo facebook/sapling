@@ -1196,7 +1196,12 @@ def overridepurge(orig, ui, repo, *dirs, **opts):
 def overriderollback(orig, ui, repo, **opts):
     wlock = repo.wlock()
     try:
+        before = repo.dirstate.parents()
         result = orig(ui, repo, **opts)
+        after = repo.dirstate.parents()
+        if before == after:
+            return result # no need to restore standins
+
         merge.update(repo, node=None, branchmerge=False, force=True,
                      partial=lfutil.isstandin)
 

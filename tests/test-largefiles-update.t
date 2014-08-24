@@ -129,6 +129,29 @@ Test that "hg rollback" restores status of largefiles correctly
   $ hg status -A largeY
   ? largeY
 
+Test that "hg rollback" restores standins correctly
+
+  $ hg commit -m 'will be rollback-ed soon'
+  $ hg update -q -C 2
+  $ cat large1
+  large1
+  $ cat .hglf/large1
+  4669e532d5b2c093a78eca010077e708a071bb64
+  $ cat large2
+  large2 in #2
+  $ cat .hglf/large2
+  3cfce6277e7668985707b6887ce56f9f62f6ccd9
+
+  $ hg rollback -q -f
+  $ cat large1
+  large1
+  $ cat .hglf/large1
+  4669e532d5b2c093a78eca010077e708a071bb64
+  $ cat large2
+  large2 in #2
+  $ cat .hglf/large2
+  3cfce6277e7668985707b6887ce56f9f62f6ccd9
+
 Test that "hg status" shows status of largefiles correctly just after
 automated commit like rebase/transplant
 
