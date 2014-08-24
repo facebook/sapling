@@ -626,6 +626,8 @@ class ui(object):
         oldout = sys.stdout
         sys.stdin = self.fin
         sys.stdout = self.fout
+        # prompt ' ' must exist; otherwise readline may delete entire line
+        # - http://bugs.python.org/issue12833
         line = raw_input(' ')
         sys.stdin = oldin
         sys.stdout = oldout
