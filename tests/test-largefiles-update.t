@@ -323,5 +323,136 @@ Test a linear merge to a revision containing same-name normal file
   A large3
   $ cat large3
   large3 as large file for linear merge
+  $ rm -f large3 .hglf/large3
+
+Test that the internal linear merging works correctly
+(both heads are stripped to keep pairing of revision number and commit log)
+
+  $ hg update -q -C 2
+  $ hg strip 3 4
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9530e27857f7-backup.hg (glob)
+  $ mv .hg/strip-backup/9530e27857f7-backup.hg $TESTTMP
+
+(internal linear merging at "hg pull --update")
+
+  $ echo 'large1 for linear merge (conflict)' > large1
+  $ echo 'large2 for linear merge (conflict with normal file)' > large2
+  $ hg pull --update --config debug.dirstate.delaywrite=2 $TESTTMP/9530e27857f7-backup.hg
+  pulling from $TESTTMP/9530e27857f7-backup.hg (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 5 changes to 5 files
+  local changed .hglf/large2 which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote turned local largefile large2 into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
+  2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+
+  $ hg status -A large1
+  M large1
+  $ cat large1
+  large1 for linear merge (conflict)
+  $ cat .hglf/large1
+  ba94c2efe5b7c5e0af8d189295ce00553b0612b7
+  $ hg status -A large2
+  A large2
+  $ cat large2
+  large2 for linear merge (conflict with normal file)
+  $ cat .hglf/large2
+  d7591fe9be0f6227d90bddf3e4f52ff41fc1f544
+
+(internal linear merging at "hg unbundle --update")
+
+  $ hg update -q -C 2
+  $ hg rollback -q
+
+  $ echo 'large1 for linear merge (conflict)' > large1
+  $ echo 'large2 for linear merge (conflict with normal file)' > large2
+  $ hg unbundle --update --config debug.dirstate.delaywrite=2 $TESTTMP/9530e27857f7-backup.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 5 changes to 5 files
+  local changed .hglf/large2 which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote turned local largefile large2 into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
+  2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+
+  $ hg status -A large1
+  M large1
+  $ cat large1
+  large1 for linear merge (conflict)
+  $ cat .hglf/large1
+  ba94c2efe5b7c5e0af8d189295ce00553b0612b7
+  $ hg status -A large2
+  A large2
+  $ cat large2
+  large2 for linear merge (conflict with normal file)
+  $ cat .hglf/large2
+  d7591fe9be0f6227d90bddf3e4f52ff41fc1f544
+
+(internal linear merging in subrepo at "hg update")
+
+  $ cd ..
+  $ hg init subparent
+  $ cd subparent
+
+  $ hg clone -q -u 2 ../repo sub
+  $ cat > .hgsub <<EOF
+  > sub = sub
+  > EOF
+  $ hg add .hgsub
+  $ hg commit -m '#0@parent'
+  $ cat .hgsubstate
+  f74e50bd9e5594b7cf1e6c5cbab86ddd25f3ca2f sub
+  $ hg -R sub update -q
+  $ hg commit -m '#1@parent'
+  $ cat .hgsubstate
+  d65e59e952a9638e2ce863b41a420ca723dd3e8d sub
+  $ hg update -q 0
+
+  $ echo 'large1 for linear merge (conflict)' > sub/large1
+  $ echo 'large2 for linear merge (conflict with normal file)' > sub/large2
+  $ hg update --config ui.interactive=True --config debug.dirstate.delaywrite=2 <<EOF
+  > m
+  > r
+  > c
+  > l
+  > l
+  > EOF
+   subrepository sub diverged (local revision: f74e50bd9e55, remote revision: d65e59e952a9)
+  (M)erge, keep (l)ocal or keep (r)emote?  subrepository sources for sub differ (in checked out version)
+  use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)?
+   local changed .hglf/large2 which remote deleted
+  use (c)hanged version or (d)elete? remote turned local largefile large2 into a normal file
+  keep (l)argefile or use (n)ormal file? largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? 2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg -R sub status -A sub/large1
+  M sub/large1
+  $ cat sub/large1
+  large1 for linear merge (conflict)
+  $ cat sub/.hglf/large1
+  ba94c2efe5b7c5e0af8d189295ce00553b0612b7
+  $ hg -R sub status -A sub/large2
+  A sub/large2
+  $ cat sub/large2
+  large2 for linear merge (conflict with normal file)
+  $ cat sub/.hglf/large2
+  d7591fe9be0f6227d90bddf3e4f52ff41fc1f544
 
   $ cd ..

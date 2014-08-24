@@ -369,10 +369,6 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
             lfdirstate.write()
             if mod:
                 raise util.Abort(_('uncommitted changes'))
-        # XXX handle removed differently
-        if not opts['clean']:
-            for lfile in unsure + modified + added:
-                lfutil.updatestandin(repo, lfutil.standin(lfile))
         return orig(ui, repo, *pats, **opts)
     finally:
         wlock.release()
@@ -727,6 +723,14 @@ def hgupdaterepo(orig, repo, node, overwrite):
 
 def _hgupdaterepo(orig, repo, node, overwrite):
     if not overwrite:
+        # update standins for linear merge
+        lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
+        s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
+                              [], False, False, False)
+        unsure, modified, added = s[:3]
+        for lfile in unsure + modified + added:
+            lfutil.updatestandin(repo, lfutil.standin(lfile))
+
         # Only call updatelfiles on the standins that have changed to save time
         oldstandins = lfutil.getstandinsstate(repo)
 
