@@ -272,17 +272,17 @@ def reposetup(ui, repo):
 
             wlock = self.wlock()
             try:
-                # Case 0: Rebase or Transplant
-                # We have to take the time to pull down the new largefiles now.
-                # Otherwise, any largefiles that were modified in the
-                # destination changesets get overwritten, either by the rebase
-                # or in the first commit after the rebase or transplant.
-                # updatelfiles will update the dirstate to mark any pulled
-                # largefiles as modified
+                # Case 0: Automated committing
+                #
+                # While automated committing (like rebase, transplant
+                # and so on), this code path is used to avoid:
+                # (1) updating standins, because standins should
+                #     be already updated at this point
+                # (2) aborting when stadnins are matched by "match",
+                #     because automated committing may specify them directly
+                #
                 if getattr(self, "_isrebasing", False) or \
                         getattr(self, "_istransplanting", False):
-                    lfcommands.updatelfiles(self.ui, self, filelist=None,
-                                            printmessage=False)
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
 
