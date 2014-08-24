@@ -485,4 +485,35 @@ it is aborted by conflict.
   $ hg rebase -q --abort
   rebase aborted
 
+Test that transplant updates largefiles, of which standins are safely
+changed, even if it is aborted by conflict of other.
+
+  $ hg update -q -C 5
+  $ cat .hglf/large1
+  e5bb990443d6a92aaf7223813720f7566c9dd05b
+  $ cat large1
+  large1 in #3
+  $ hg diff -c 4 .hglf/largeX | grep '^[+-][0-9a-z]'
+  +fa44618ea25181aff4f48b70428294790cec9f61
+  $ hg transplant 4
+  applying 07d6153b5c04
+  patching file .hglf/large1
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file .hglf/large1.rej
+  patch failed to apply
+  abort: fix up the merge and run hg transplant --continue
+  [255]
+  $ hg status -A large1
+  C large1
+  $ cat .hglf/large1
+  e5bb990443d6a92aaf7223813720f7566c9dd05b
+  $ cat large1
+  large1 in #3
+  $ hg status -A largeX
+  A largeX
+  $ cat .hglf/largeX
+  fa44618ea25181aff4f48b70428294790cec9f61
+  $ cat largeX
+  largeX
+
   $ cd ..

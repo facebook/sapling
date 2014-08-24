@@ -125,6 +125,9 @@ def uisetup(ui):
     extensions.wrapfunction(cmdutil, 'bailifchanged',
                             overrides.overridebailifchanged)
 
+    extensions.wrapfunction(scmutil, 'marktouched',
+                            overrides.scmutilmarktouched)
+
     # create the new wireproto commands ...
     wireproto.commands['putlfile'] = (proto.putlfile, 'sha')
     wireproto.commands['getlfile'] = (proto.getlfile, 'sha')

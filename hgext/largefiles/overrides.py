@@ -1318,3 +1318,13 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
         return result
     finally:
         wlock.release()
+
+def scmutilmarktouched(orig, repo, files, *args, **kwargs):
+    result = orig(repo, files, *args, **kwargs)
+
+    filelist = [lfutil.splitstandin(f) for f in files if lfutil.isstandin(f)]
+    if filelist:
+        lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
+                                printmessage=False, normallookup=True)
+
+    return result
