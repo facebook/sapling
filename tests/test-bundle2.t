@@ -878,6 +878,7 @@ push
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
+  remote: 5 new obsolescence markers
   updating bookmark book_eea1
   exporting bookmark book_eea1
   $ hg -R other log -G

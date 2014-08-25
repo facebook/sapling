@@ -438,6 +438,17 @@ def _pushb2phases(pushop, bundler):
                 pushop.ui.warn(msg)
     return handlereply
 
+@b2partsgenerator('obsmarkers')
+def _pushb2obsmarkers(pushop, bundler):
+    if 'obsmarkers' in pushop.stepsdone:
+        return
+    remoteversions = bundle2.obsmarkersversion(bundler.capabilities)
+    if obsolete.commonversion(remoteversions) is None:
+        return
+    pushop.stepsdone.add('obsmarkers')
+    if pushop.outobsmarkers:
+        buildobsmarkerspart(bundler, pushop.outobsmarkers)
+
 @b2partsgenerator('bookmarks')
 def _pushb2bookmarks(pushop, bundler):
     """handle phase push through bundle2"""
