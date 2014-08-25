@@ -145,7 +145,7 @@ def _readmarkers(data):
     if diskversion not in formats:
         raise util.Abort(_('parsing obsolete marker: unknown version %r')
                          % diskversion)
-    return formats[diskversion][0](data, off)
+    return diskversion, formats[diskversion][0](data, off)
 
 def _fm0readmarkers(data, off=0):
     """Read and enumerate markers from raw data in format version 0"""
@@ -312,7 +312,8 @@ class obsstore(object):
         self.sopener = sopener
         data = sopener.tryread('obsstore')
         if data:
-            self._load(_readmarkers(data))
+            version, markers = _readmarkers(data)
+            self._load(markers)
 
     def __iter__(self):
         return iter(self._all)
@@ -396,7 +397,7 @@ class obsstore(object):
         """merge a binary stream of markers inside the obsstore
 
         Returns the number of new markers added."""
-        markers = _readmarkers(data)
+        version, markers = _readmarkers(data)
         return self.add(transaction, markers)
 
     def _load(self, markers):
