@@ -775,6 +775,12 @@ class unbundlepart(unpackermixin):
             self.consumed = True
         return data
 
+capabilities = {'HG2X': (),
+                'b2x:listkeys': (),
+                'b2x:pushkey': (),
+                'b2x:changegroup': (),
+               }
+
 def bundle2caps(remote):
     """return the bundlecapabilities of a peer as dict"""
     raw = remote.capable('bundle2-exp')
