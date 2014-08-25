@@ -142,10 +142,10 @@ def _readmarkers(data):
     off = 0
     diskversion = _unpack('>B', data[off:off + 1])[0]
     off += 1
-    if diskversion != _fm0version:
+    if diskversion not in formats:
         raise util.Abort(_('parsing obsolete marker: unknown version %r')
                          % diskversion)
-    return _fm0readmarkers(data, off)
+    return formats[diskversion][0](data, off)
 
 def _fm0readmarkers(data, off=0):
     """Read and enumerate markers from raw data in format version 0"""
@@ -216,6 +216,10 @@ def _fm0encodeonemarker(marker):
     data = [nbsuc, len(metadata), flags, pre]
     data.extend(sucs)
     return _pack(format, *data) + metadata
+
+# mapping to read/write various marker formats
+# <version> -> (decoder, encoder)
+formats = {0: (_fm0readmarkers, _fm0encodeonemarker)}
 
 def encodemeta(meta):
     """Return encoded metadata string to string mapping.
@@ -438,13 +442,14 @@ class obsstore(object):
             seennodes |= pendingnodes
         return seenmarkers
 
-def _encodemarkers(markers, addheader=False):
+def _encodemarkers(markers, addheader=False, version=_fm0version):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
+    encodeone = formats[version][1]
     if addheader:
         yield _pack('>B', _fm0version)
     for marker in markers:
-        yield _fm0encodeonemarker(marker)
+        yield encodeone(marker)
 
 
 # arbitrary picked to fit into 8K limit from HTTP server
