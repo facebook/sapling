@@ -57,6 +57,8 @@ In addition to filters, there are some basic built-in functions:
 
 - label(label, expr)
 
+- pad(text, width[, fillchar, right])
+
 - revset(query[, formatargs])
 
 - rstdoc(text, style)
