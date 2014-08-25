@@ -147,8 +147,16 @@ def _readmarkers(data):
                          % diskversion)
     return diskversion, formats[diskversion][0](data, off)
 
+def _encodemarkers(markers, addheader=False, version=_fm0version):
+    # Kept separate from flushmarkers(), it will be reused for
+    # markers exchange.
+    encodeone = formats[version][1]
+    if addheader:
+        yield _pack('>B', _fm0version)
+    for marker in markers:
+        yield encodeone(marker)
+
 def _fm0readmarkers(data, off=0):
-    """Read and enumerate markers from raw data in format version 0"""
     # Loop on markers
     l = len(data)
     while off + _fm0fsize <= l:
@@ -443,15 +451,6 @@ class obsstore(object):
             pendingnodes -= seennodes
             seennodes |= pendingnodes
         return seenmarkers
-
-def _encodemarkers(markers, addheader=False, version=_fm0version):
-    # Kept separate from flushmarkers(), it will be reused for
-    # markers exchange.
-    encodeone = formats[version][1]
-    if addheader:
-        yield _pack('>B', _fm0version)
-    for marker in markers:
-        yield encodeone(marker)
 
 
 # arbitrary picked to fit into 8K limit from HTTP server
