@@ -907,3 +907,4 @@ def handleobsmarker(op, inpart):
     new = op.repo.obsstore.mergemarkers(tr, inpart.read())
     if new:
         op.repo.ui.status(_('%i new obsolescence markers\n') % new)
+    op.records.add('obsmarkers', {'new': new})
