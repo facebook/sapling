@@ -908,3 +908,15 @@ def handleobsmarker(op, inpart):
     if new:
         op.repo.ui.status(_('%i new obsolescence markers\n') % new)
     op.records.add('obsmarkers', {'new': new})
+    if op.reply is not None:
+        rpart = op.reply.newpart('b2x:reply:obsmarkers')
+        rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        rpart.addparam('new', '%i' % new, mandatory=False)
+
+
+@parthandler('b2x:reply:obsmarkers', ('new', 'in-reply-to'))
+def handlepushkeyreply(op, inpart):
+    """retrieve the result of a pushkey request"""
+    ret = int(inpart.params['new'])
+    partid = int(inpart.params['in-reply-to'])
+    op.records.add('obsmarkers', {'new': ret}, partid)
