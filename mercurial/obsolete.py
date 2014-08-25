@@ -427,10 +427,10 @@ def _encodemarkers(markers, addheader=False):
     if addheader:
         yield _pack('>B', _fm0version)
     for marker in markers:
-        yield _encodeonemarker(marker)
+        yield _fm0encodeonemarker(marker)
 
 
-def _encodeonemarker(marker):
+def _fm0encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
     metadata = decodemeta(metadata)
     metadata['date'] = '%d %i' % date
@@ -462,7 +462,7 @@ def _pushkeyescape(markers):
     parts = []
     currentlen = _maxpayload * 2  # ensure we create a new part
     for marker in markers:
-        nextdata = _encodeonemarker(marker)
+        nextdata = _fm0encodeonemarker(marker)
         if (len(nextdata) + currentlen > _maxpayload):
             currentpart = []
             currentlen = 0
