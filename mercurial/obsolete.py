@@ -145,7 +145,10 @@ def _readmarkers(data):
     if diskversion != _fm0version:
         raise util.Abort(_('parsing obsolete marker: unknown version %r')
                          % diskversion)
+    return _fm0readmarkers(data, off)
 
+def _fm0readmarkers(data, off=0):
+    """Read and enumerate markers from raw data in format version 0"""
     # Loop on markers
     l = len(data)
     while off + _fm0fsize <= l:
