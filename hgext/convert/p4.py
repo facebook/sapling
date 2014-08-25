@@ -164,6 +164,8 @@ class p4_source(converter_source):
                 raise IOError(d["generic"], data)
 
             elif code == "stat":
+                if d.get("action") == "purge":
+                    return None, None
                 p4type = self.re_type.match(d["type"])
                 if p4type:
                     mode = ""
