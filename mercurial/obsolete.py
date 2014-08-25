@@ -311,8 +311,9 @@ class obsstore(object):
         self.children = {}
         self.sopener = sopener
         data = sopener.tryread('obsstore')
+        self._version = _fm0version
         if data:
-            version, markers = _readmarkers(data)
+            self._version, markers = _readmarkers(data)
             self._load(markers)
 
     def __iter__(self):
@@ -382,7 +383,7 @@ class obsstore(object):
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 # offset == 0: new file - add the version header
-                for bytes in _encodemarkers(new, offset == 0):
+                for bytes in _encodemarkers(new, offset == 0, self._version):
                     f.write(bytes)
             finally:
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
