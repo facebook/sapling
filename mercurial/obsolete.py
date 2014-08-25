@@ -200,6 +200,23 @@ def _fm0readmarkers(data, off=0):
 
         yield (pre, sucs, flags, metadata, date, parents)
 
+def _fm0encodeonemarker(marker):
+    pre, sucs, flags, metadata, date, parents = marker
+    metadata = decodemeta(metadata)
+    metadata['date'] = '%d %i' % date
+    if parents is not None:
+        if not parents:
+            # mark that we explicitly recorded no parents
+            metadata['p0'] = ''
+        for i, p in enumerate(parents):
+            metadata['p%i' % (i + 1)] = node.hex(p)
+    metadata = encodemeta(metadata)
+    nbsuc = len(sucs)
+    format = _fm0fixed + (_fm0node * nbsuc)
+    data = [nbsuc, len(metadata), flags, pre]
+    data.extend(sucs)
+    return _pack(format, *data) + metadata
+
 def encodemeta(meta):
     """Return encoded metadata string to string mapping.
 
@@ -429,23 +446,6 @@ def _encodemarkers(markers, addheader=False):
     for marker in markers:
         yield _fm0encodeonemarker(marker)
 
-
-def _fm0encodeonemarker(marker):
-    pre, sucs, flags, metadata, date, parents = marker
-    metadata = decodemeta(metadata)
-    metadata['date'] = '%d %i' % date
-    if parents is not None:
-        if not parents:
-            # mark that we explicitly recorded no parents
-            metadata['p0'] = ''
-        for i, p in enumerate(parents):
-            metadata['p%i' % (i + 1)] = node.hex(p)
-    metadata = encodemeta(metadata)
-    nbsuc = len(sucs)
-    format = _fm0fixed + (_fm0node * nbsuc)
-    data = [nbsuc, len(metadata), flags, pre]
-    data.extend(sucs)
-    return _pack(format, *data) + metadata
 
 # arbitrary picked to fit into 8K limit from HTTP server
 # you have to take in account:
