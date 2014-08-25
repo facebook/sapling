@@ -899,3 +899,9 @@ def handlepushkeyreply(op, inpart):
     ret = int(inpart.params['return'])
     partid = int(inpart.params['in-reply-to'])
     op.records.add('pushkey', {'return': ret}, partid)
+
+@parthandler('b2x:obsmarkers')
+def handleobsmarker(op, inpart):
+    """add a stream of obsmarkers to the repo"""
+    tr = op.gettransaction()
+    op.repo.obsstore.mergemarkers(tr, inpart.read())
