@@ -37,6 +37,20 @@ def readbundle(ui, fh, fname, vfs=None):
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
+def buildobsmarkerspart(bundler, markers):
+    """add an obsmarker part to the bundler with <markers>
+
+    No part is created if markers is empty.
+    Raises ValueError if the bundler doesn't support any known obsmarker format.
+    """
+    if markers:
+        remoteversions = bundle2.obsmarkersversion(bundler.capabilities)
+        version = obsolete.commonversion(remoteversions)
+        if version is None:
+            raise ValueError('bundler do not support common obsmarker format')
+        stream = obsolete.encodemarkers(markers, True, version=version)
+        return bundler.newpart('B2X:OBSMARKERS', data=stream)
+    return None
 
 class pushoperation(object):
     """A object that represent a single push operation
