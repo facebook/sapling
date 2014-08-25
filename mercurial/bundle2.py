@@ -904,4 +904,6 @@ def handlepushkeyreply(op, inpart):
 def handleobsmarker(op, inpart):
     """add a stream of obsmarkers to the repo"""
     tr = op.gettransaction()
-    op.repo.obsstore.mergemarkers(tr, inpart.read())
+    new = op.repo.obsstore.mergemarkers(tr, inpart.read())
+    if new:
+        op.repo.ui.status(_('%i new obsolescence markers\n') % new)
