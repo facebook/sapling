@@ -8,7 +8,7 @@ create p4 depot
   $ P4AUDIT=$P4ROOT/audit; export P4AUDIT
   $ P4JOURNAL=$P4ROOT/journal; export P4JOURNAL
   $ P4LOG=$P4ROOT/log; export P4LOG
-  $ P4PORT=localhost:16661; export P4PORT
+  $ P4PORT=localhost:$HGPORT; export P4PORT
   $ P4DEBUG=1; export P4DEBUG
   $ P4CHARSET=utf8; export P4CHARSET
 
