@@ -103,7 +103,7 @@ _fmversion = 0
 _fmfixed   = '>BIB20s'
 _fmnode = '20s'
 _fmfsize = struct.calcsize(_fmfixed)
-_fnodesize = struct.calcsize(_fmnode)
+_fmfnodesize = struct.calcsize(_fmnode)
 
 ### obsolescence marker flag
 
@@ -156,7 +156,7 @@ def _readmarkers(data):
         # read replacement
         sucs = ()
         if nbsuc:
-            s = (_fnodesize * nbsuc)
+            s = _fmfnodesize * nbsuc
             cur = data[off:off + s]
             sucs = _unpack(_fmnode * nbsuc, cur)
             off += s
