@@ -781,6 +781,14 @@ capabilities = {'HG2X': (),
                 'b2x:changegroup': (),
                }
 
+def getrepocaps(repo):
+    """return the bundle2 capabilities for a given repo
+
+    Exists to allow extensions (like evolution) to mutate the
+    capabilities.
+    """
+    return capabilities
+
 def bundle2caps(remote):
     """return the bundlecapabilities of a peer as dict"""
     raw = remote.capable('bundle2-exp')

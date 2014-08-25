@@ -465,7 +465,7 @@ def _pushbundle2(pushop):
     evolve in the future."""
     bundler = bundle2.bundle20(pushop.ui, bundle2.bundle2caps(pushop.remote))
     # create reply capability
-    capsblob = bundle2.encodecaps(bundle2.capabilities)
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(pushop.repo))
     bundler.newpart('b2x:replycaps', data=capsblob)
     replyhandlers = []
     for partgenname in b2partsgenorder:
@@ -588,7 +588,7 @@ def _pushsyncphase(pushop):
             #
             # This will eventually be unified with the changesets bundle2 push
             bundler = bundle2.bundle20(pushop.ui, b2caps)
-            capsblob = bundle2.encodecaps(pushop.repo.bundle2caps)
+            capsblob = bundle2.encodecaps(bundle2.getrepocaps(pushop.repo))
             bundler.newpart('b2x:replycaps', data=capsblob)
             part2node = []
             enc = pushkey.encode
@@ -922,7 +922,7 @@ def _pullobsolete(pullop):
 def caps20to10(repo):
     """return a set with appropriate options to use bundle20 during getbundle"""
     caps = set(['HG2X'])
-    capsblob = bundle2.encodecaps(bundle2.capabilities)
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
     caps.add('bundle2=' + urllib.quote(capsblob))
     return caps
 

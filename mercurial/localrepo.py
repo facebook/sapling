@@ -305,7 +305,7 @@ class localrepository(object):
         # required by the tests (or some brave tester)
         if self.ui.configbool('experimental', 'bundle2-exp', False):
             caps = set(caps)
-            capsblob = bundle2.encodecaps(bundle2.capabilities)
+            capsblob = bundle2.encodecaps(bundle2.getrepocaps(self))
             caps.add('bundle2-exp=' + urllib.quote(capsblob))
         return caps
 
