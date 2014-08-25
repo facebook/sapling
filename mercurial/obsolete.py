@@ -99,11 +99,11 @@ _SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 _enabled = False
 
 # data used for parsing and writing
-_fmversion = 0
-_fmfixed   = '>BIB20s'
-_fmnode = '20s'
-_fmfsize = struct.calcsize(_fmfixed)
-_fmfnodesize = struct.calcsize(_fmnode)
+_fm0version = 0
+_fm0fixed   = '>BIB20s'
+_fm0node = '20s'
+_fm0fsize = struct.calcsize(_fm0fixed)
+_fm0fnodesize = struct.calcsize(_fm0node)
 
 ### obsolescence marker flag
 
@@ -142,23 +142,23 @@ def _readmarkers(data):
     off = 0
     diskversion = _unpack('>B', data[off:off + 1])[0]
     off += 1
-    if diskversion != _fmversion:
+    if diskversion != _fm0version:
         raise util.Abort(_('parsing obsolete marker: unknown version %r')
                          % diskversion)
 
     # Loop on markers
     l = len(data)
-    while off + _fmfsize <= l:
+    while off + _fm0fsize <= l:
         # read fixed part
-        cur = data[off:off + _fmfsize]
-        off += _fmfsize
-        nbsuc, mdsize, flags, pre = _unpack(_fmfixed, cur)
+        cur = data[off:off + _fm0fsize]
+        off += _fm0fsize
+        nbsuc, mdsize, flags, pre = _unpack(_fm0fixed, cur)
         # read replacement
         sucs = ()
         if nbsuc:
-            s = _fmfnodesize * nbsuc
+            s = (_fm0fnodesize * nbsuc)
             cur = data[off:off + s]
-            sucs = _unpack(_fmnode * nbsuc, cur)
+            sucs = _unpack(_fm0node * nbsuc, cur)
             off += s
         # read metadata
         # (metadata will be decoded on demand)
@@ -422,7 +422,7 @@ def _encodemarkers(markers, addheader=False):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
     if addheader:
-        yield _pack('>B', _fmversion)
+        yield _pack('>B', _fm0version)
     for marker in markers:
         yield _encodeonemarker(marker)
 
@@ -439,7 +439,7 @@ def _encodeonemarker(marker):
             metadata['p%i' % (i + 1)] = node.hex(p)
     metadata = encodemeta(metadata)
     nbsuc = len(sucs)
-    format = _fmfixed + (_fmnode * nbsuc)
+    format = _fm0fixed + (_fm0node * nbsuc)
     data = [nbsuc, len(metadata), flags, pre]
     data.extend(sucs)
     return _pack(format, *data) + metadata
@@ -467,7 +467,7 @@ def _pushkeyescape(markers):
         currentpart.append(nextdata)
         currentlen += len(nextdata)
     for idx, part in enumerate(reversed(parts)):
-        data = ''.join([_pack('>B', _fmversion)] + part)
+        data = ''.join([_pack('>B', _fm0version)] + part)
         keys['dump%i' % idx] = base85.b85encode(data)
     return keys
 
