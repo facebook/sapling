@@ -147,7 +147,7 @@ def _readmarkers(data):
                          % diskversion)
     return diskversion, formats[diskversion][0](data, off)
 
-def _encodemarkers(markers, addheader=False, version=_fm0version):
+def encodemarkers(markers, addheader=False, version=_fm0version):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
     encodeone = formats[version][1]
@@ -391,7 +391,7 @@ class obsstore(object):
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 # offset == 0: new file - add the version header
-                for bytes in _encodemarkers(new, offset == 0, self._version):
+                for bytes in encodemarkers(new, offset == 0, self._version):
                     f.write(bytes)
             finally:
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
