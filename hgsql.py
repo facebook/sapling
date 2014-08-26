@@ -37,7 +37,7 @@ from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
-from mercurial import util, changegroup
+from mercurial import util, changegroup, exchange
 import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
 import warnings
@@ -83,6 +83,7 @@ def uisetup(ui):
     wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
     wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
     wrapfunction(changegroup, 'addchangegroup', addchangegroup)
+    wrapfunction(exchange, '_localphasemove', _localphasemove)
 
 def reposetup(ui, repo):
     if repo.ui.configbool("hgsql", "enabled"):
@@ -129,6 +130,13 @@ def addchangegroup(orig, *args, **kwargs):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
+
+def _localphasemove(orig, pushop, *args, **kwargs):
+    repo = pushop.repo
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, True, pushop, *args, **kwargs)
+    else:
+        return orig(pushop, *args, **kwargs)
 
 def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
@@ -412,12 +420,12 @@ def wraprepo(repo):
         def committodb(self):
             """Commits all pending revisions to the database
             """
-            if not self.pendingrevs:
-                return
-
             if self.sqlconn == None:
                 raise util.Abort("invalid repo change - only hg push and pull" +
                     " are allowed")
+
+            if not self.pendingrevs:
+                return
 
             reponame = self.sqlreponame
             cursor = self.sqlcursor

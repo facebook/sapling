@@ -10,6 +10,7 @@
 
   $ initserver master masterrepo
   $ cd master
+  $ printf '[phases]\npublish=True\n' >> .hg/hgrc
   $ hg log
   $ hg pull -q ../client
 
@@ -20,6 +21,7 @@
   $ cd client
   $ echo y > y
   $ hg commit -qAm y
+  $ hg phase -p -r 'all()'
   $ hg push ../master --traceback
   pushing to ../master
   searching for changes
@@ -87,3 +89,16 @@
   importing bookmark foo
   $ hg log -l 1 --template '{rev} {bookmarks}\n'
   2 foo
+
+# Push from hgsql to other repo
+
+  $ hg up -q tip
+  $ echo zz > z
+  $ hg commit -m z2
+  $ hg push ../client
+  pushing to ../client
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
