@@ -88,8 +88,8 @@ class converter_source(object):
     def getfile(self, name, rev):
         """Return a pair (data, mode) where data is the file content
         as a string and mode one of '', 'x' or 'l'. rev is the
-        identifier returned by a previous call to getchanges(). Raise
-        IOError to indicate that name was deleted in rev.
+        identifier returned by a previous call to getchanges().
+        Data is None if file is missing/deleted in rev.
         """
         raise NotImplementedError
 

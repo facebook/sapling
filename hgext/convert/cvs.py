@@ -220,7 +220,7 @@ class convert_cvs(converter_source):
 
         self._parse()
         if rev.endswith("(DEAD)"):
-            raise IOError
+            return None, None
 
         args = ("-N -P -kk -r %s --" % rev).split()
         args.append(self.cvsrepo + '/' + name)

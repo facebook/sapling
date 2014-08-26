@@ -183,7 +183,7 @@ class p4_source(converter_source):
                 contents += data
 
         if mode is None:
-            raise IOError(0, "bad stat")
+            return None, None
 
         if keywords:
             contents = keywords.sub("$\\1$", contents)

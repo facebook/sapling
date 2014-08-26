@@ -134,6 +134,8 @@ class mercurial_sink(converter_sink):
         def getfilectx(repo, memctx, f):
             v = files[f]
             data, mode = source.getfile(f, v)
+            if data is None:
+                return None
             if f == '.hgtags':
                 data = self._rewritetags(source, revmap, data)
             return context.memfilectx(self.repo, f, data, 'l' in mode,
@@ -351,8 +353,8 @@ class mercurial_source(converter_source):
         try:
             fctx = self.changectx(rev)[name]
             return fctx.data(), fctx.flags()
-        except error.LookupError, err:
-            raise IOError(err)
+        except error.LookupError:
+            return None, None
 
     def getchanges(self, rev):
         ctx = self.changectx(rev)

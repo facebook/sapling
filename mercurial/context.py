@@ -347,7 +347,10 @@ class basectx(object):
 def makememctx(repo, parents, text, user, date, branch, files, store,
                editor=None):
     def getfilectx(repo, memctx, path):
-        data, (islink, isexec), copied = store.getfile(path)
+        data, mode, copied = store.getfile(path)
+        if data is None:
+            return None
+        islink, isexec = mode
         return memfilectx(repo, path, data, islink=islink, isexec=isexec,
                                   copied=copied, memctx=memctx)
     extra = {}
@@ -1626,7 +1629,9 @@ class memctx(committablectx):
             self._repo.savecommitmessage(self._text)
 
     def filectx(self, path, filelog=None):
-        """get a file context from the working directory"""
+        """get a file context from the working directory
+
+        Returns None if file doesn't exist and should be removed."""
         return self._filectxfn(self._repo, self, path)
 
     def commit(self):

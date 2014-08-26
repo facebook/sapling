@@ -283,7 +283,7 @@ def collapse(repo, first, last, commitopts):
                                       isexec='x' in flags,
                                       copied=copied.get(path))
             return mctx
-        raise IOError()
+        return None
 
     if commitopts.get('message'):
         message = commitopts['message']

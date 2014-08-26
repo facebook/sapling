@@ -933,7 +933,7 @@ class svn_source(converter_source):
     def getfile(self, file, rev):
         # TODO: ra.get_file transmits the whole file instead of diffs.
         if file in self.removed:
-            raise IOError
+            return None, None
         mode = ''
         try:
             new_module, revnum = revsplit(rev)[1:]
@@ -954,7 +954,7 @@ class svn_source(converter_source):
             notfound = (svn.core.SVN_ERR_FS_NOT_FOUND,
                 svn.core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
             if e.apr_err in notfound: # File not found
-                raise IOError
+                return None, None
             raise
         if mode == 'l':
             link_prefix = "link "
@@ -1236,9 +1236,8 @@ class svn_sink(converter_sink, commandline):
 
         # Apply changes to working copy
         for f, v in files:
-            try:
-                data, mode = source.getfile(f, v)
-            except IOError:
+            data, mode = source.getfile(f, v)
+            if data is None:
                 self.delete.append(f)
             else:
                 self.putfile(f, mode, data)

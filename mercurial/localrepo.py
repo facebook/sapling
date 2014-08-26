@@ -1394,9 +1394,12 @@ class localrepository(object):
                     self.ui.note(f + "\n")
                     try:
                         fctx = ctx[f]
-                        new[f] = self._filecommit(fctx, m1, m2, linkrev, trp,
-                                                  changed)
-                        m1.set(f, fctx.flags())
+                        if fctx is None:
+                            removed.append(f)
+                        else:
+                            new[f] = self._filecommit(fctx, m1, m2, linkrev,
+                                                      trp, changed)
+                            m1.set(f, fctx.flags())
                     except OSError, inst:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
@@ -1404,9 +1407,7 @@ class localrepository(object):
                         errcode = getattr(inst, 'errno', errno.ENOENT)
                         if error or errcode and errcode != errno.ENOENT:
                             self.ui.warn(_("trouble committing %s!\n") % f)
-                            raise
-                        else:
-                            removed.append(f)
+                        raise
 
                 # update manifest
                 m1.update(new)

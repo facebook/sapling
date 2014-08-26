@@ -135,7 +135,7 @@ class convert_git(converter_source):
 
     def getfile(self, name, rev):
         if rev == hex(nullid):
-            raise IOError
+            return None, None
         if name == '.hgsub':
             data = '\n'.join([m.hgsub() for m in self.submoditer()])
             mode = ''

@@ -122,8 +122,7 @@ class bzr_source(converter_source):
             kind = revtree.kind(fileid)
         if kind not in supportedkinds:
             # the file is not available anymore - was deleted
-            raise IOError(_('%s is not available in %s anymore') %
-                    (name, rev))
+            return None, None
         mode = self._modecache[(name, rev)]
         if kind == 'symlink':
             target = revtree.get_symlink_target(fileid)
