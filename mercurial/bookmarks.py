@@ -228,7 +228,8 @@ def pushbookmark(repo, key, old, new):
     w = repo.wlock()
     try:
         marks = repo._bookmarks
-        if hex(marks.get(key, '')) != old:
+        existing = hex(marks.get(key, ''))
+        if existing != old and existing != new:
             return False
         if new == '':
             del marks[key]
