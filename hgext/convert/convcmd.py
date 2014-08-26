@@ -386,8 +386,8 @@ class converter(object):
 
     def copy(self, rev):
         commit = self.commitcache[rev]
-
-        changes = self.source.getchanges(rev)
+        full = self.opts.get('full')
+        changes = self.source.getchanges(rev, full)
         if isinstance(changes, basestring):
             if changes == SKIPREV:
                 dest = SKIPREV
@@ -413,7 +413,7 @@ class converter(object):
             parents = [b[0] for b in pbranches]
         source = progresssource(self.ui, self.source, len(files))
         newnode = self.dest.putcommit(files, copies, parents, commit,
-                                      source, self.map)
+                                      source, self.map, full)
         source.close()
         self.source.converted(rev, newnode)
         self.map[rev] = newnode

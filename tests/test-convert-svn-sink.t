@@ -247,6 +247,31 @@ Symlinks
 
 #endif
 
+Convert with --full adds and removes files that didn't change
+
+  $ touch a/f
+  $ hg -R a ci -Aqmf
+  $ echo "rename c d" > filemap
+  $ hg convert -d svn a --filemap filemap --full
+  assuming destination a-hg
+  initializing svn working copy 'a-hg-wc'
+  scanning source...
+  sorting...
+  converting...
+  0 f
+  $ svnupanddisplay a-hg-wc 1
+   9 9 test .
+   9 9 test d
+   9 9 test f
+  revision: 9
+  author: test
+  msg: f
+   D /c
+   A /d
+   D /d1
+   A /f
+   D /newlink
+
   $ rm -rf a a-hg a-hg-wc
 
 

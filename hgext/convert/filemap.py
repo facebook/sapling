@@ -304,7 +304,7 @@ class filemap_source(converter_source):
         wrev.add(rev)
         self.wantedancestors[rev] = wrev
 
-    def getchanges(self, rev):
+    def getchanges(self, rev, full):
         parents = self.commits[rev].parents
         if len(parents) > 1:
             self.rebuild()
@@ -384,7 +384,7 @@ class filemap_source(converter_source):
         # Get the real changes and do the filtering/mapping. To be
         # able to get the files later on in getfile, we hide the
         # original filename in the rev part of the return value.
-        changes, copies = self.base.getchanges(rev)
+        changes, copies = self.base.getchanges(rev, full)
         files = {}
         for f, r in changes:
             newf = self.filemapper(f)

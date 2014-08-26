@@ -168,6 +168,27 @@ Test filemap
   |
   o  0 second letter files: letter2.txt
   
+Convert with --full adds and removes files that didn't change
+
+  $ cd B
+  $ echo >> "letter .txt"
+  $ svn ci -m 'nothing'
+  Sending        letter .txt
+  Transmitting file data .
+  Committed revision 9.
+  $ cd ..
+
+  $ echo 'rename letter2.txt letter3.txt' > filemap
+  $ hg convert --filemap filemap --full "$SVNREPOURL/proj%20B/mytrunk" fmap
+  scanning source...
+  sorting...
+  converting...
+  0 nothing
+  $ hg -R fmap st --change tip
+  A letter .txt
+  A letter3.txt
+  R letter2.txt
+
 test invalid splicemap1
 
   $ cat > splicemap <<EOF

@@ -142,7 +142,9 @@ class gnuarch_source(converter_source, commandline):
 
         return self._getfile(name, rev)
 
-    def getchanges(self, rev):
+    def getchanges(self, rev, full):
+        if full:
+            raise util.Abort(_("convert from arch do not support --full"))
         self._update(rev)
         changes = []
         copies = {}

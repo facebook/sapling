@@ -258,7 +258,9 @@ class convert_cvs(converter_source):
                 else:
                     raise util.Abort(_("unknown CVS response: %s") % line)
 
-    def getchanges(self, rev):
+    def getchanges(self, rev, full):
+        if full:
+            raise util.Abort(_("convert from cvs do not support --full"))
         self._parse()
         return sorted(self.files[rev].iteritems()), {}
 

@@ -93,12 +93,13 @@ class converter_source(object):
         """
         raise NotImplementedError
 
-    def getchanges(self, version):
+    def getchanges(self, version, full):
         """Returns a tuple of (files, copies).
 
         files is a sorted list of (filename, id) tuples for all files
         changed between version and its first parent returned by
-        getcommit(). id is the source revision id of the file.
+        getcommit(). If full, all files in that revision is returned.
+        id is the source revision id of the file.
 
         copies is a dictionary of dest: source
         """
@@ -204,7 +205,7 @@ class converter_sink(object):
         mapping equivalent authors identifiers for each system."""
         return None
 
-    def putcommit(self, files, copies, parents, commit, source, revmap):
+    def putcommit(self, files, copies, parents, commit, source, revmap, full):
         """Create a revision with all changed files listed in 'files'
         and having listed parents. 'commit' is a commit object
         containing at a minimum the author, date, and message for this
@@ -212,7 +213,8 @@ class converter_sink(object):
         'copies' is a dictionary mapping destinations to sources,
         'source' is the source repository, and 'revmap' is a mapfile
         of source revisions to converted revisions. Only getfile() and
-        lookuprev() should be called on 'source'.
+        lookuprev() should be called on 'source'. 'full' means that 'files'
+        is complete and all other files should be removed.
 
         Note that the sink repository is not told to update itself to
         a particular revision (or even what that revision would be)

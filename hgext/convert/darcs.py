@@ -156,7 +156,9 @@ class darcs_source(converter_source, commandline):
             output, status = self.run('revert', all=True, repodir=self.tmppath)
             self.checkexit(status, output)
 
-    def getchanges(self, rev):
+    def getchanges(self, rev, full):
+        if full:
+            raise util.Abort(_("convert from darcs do not support --full"))
         copies = {}
         changes = []
         man = None

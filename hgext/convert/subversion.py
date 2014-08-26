@@ -444,37 +444,37 @@ class svn_source(converter_source):
 
         return self.heads
 
-    def _getchanges(self, rev):
+    def _getchanges(self, rev, full):
         (paths, parents) = self.paths[rev]
+        copies = {}
         if parents:
             files, self.removed, copies = self.expandpaths(rev, paths, parents)
-        else:
+        if full or not parents:
             # Perform a full checkout on roots
             uuid, module, revnum = revsplit(rev)
             entries = svn.client.ls(self.baseurl + quote(module),
                                     optrev(revnum), True, self.ctx)
             files = [n for n, e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
-            copies = {}
             self.removed = set()
 
         files.sort()
         files = zip(files, [rev] * len(files))
         return (files, copies)
 
-    def getchanges(self, rev):
+    def getchanges(self, rev, full):
         # reuse cache from getchangedfiles
-        if self._changescache[0] == rev:
+        if self._changescache[0] == rev and not full:
             (files, copies) = self._changescache[1]
         else:
-            (files, copies) = self._getchanges(rev)
+            (files, copies) = self._getchanges(rev, full)
             # caller caches the result, so free it here to release memory
             del self.paths[rev]
         return (files, copies)
 
     def getchangedfiles(self, rev, i):
         # called from filemap - cache computed values for reuse in getchanges
-        (files, copies) = self._getchanges(rev)
+        (files, copies) = self._getchanges(rev, False)
         self._changescache = (rev, (files, copies))
         return [f[0] for f in files]
 
@@ -1222,7 +1222,7 @@ class svn_sink(converter_sink, commandline):
     def revid(self, rev):
         return u"svn:%s@%s" % (self.uuid, rev)
 
-    def putcommit(self, files, copies, parents, commit, source, revmap):
+    def putcommit(self, files, copies, parents, commit, source, revmap, full):
         for parent in parents:
             try:
                 return self.revid(self.childmap[parent])
@@ -1238,6 +1238,8 @@ class svn_sink(converter_sink, commandline):
                 self.putfile(f, mode, data)
                 if f in copies:
                     self.copies.append([copies[f], f])
+        if full:
+            self.delete.extend(sorted(self.manifest.difference(files)))
         files = [f[0] for f in files]
 
         entries = set(self.delete)

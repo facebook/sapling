@@ -128,11 +128,13 @@ class mercurial_sink(converter_sink):
             fp.write('%s %s\n' % (revid, s[1]))
         return fp.getvalue()
 
-    def putcommit(self, files, copies, parents, commit, source, revmap):
-
+    def putcommit(self, files, copies, parents, commit, source, revmap, full):
         files = dict(files)
         def getfilectx(repo, memctx, f):
-            v = files[f]
+            try:
+                v = files[f]
+            except KeyError:
+                return None
             data, mode = source.getfile(f, v)
             if data is None:
                 return None
@@ -193,7 +195,10 @@ class mercurial_sink(converter_sink):
         while parents:
             p1 = p2
             p2 = parents.pop(0)
-            ctx = context.memctx(self.repo, (p1, p2), text, files.keys(),
+            fileset = set(files)
+            if full:
+                fileset.update(self.repo[p1], self.repo[p2])
+            ctx = context.memctx(self.repo, (p1, p2), text, fileset,
                                  getfilectx, commit.author, commit.date, extra)
             self.repo.commitctx(ctx)
             text = "(octopus merge fixup)\n"
@@ -356,17 +361,18 @@ class mercurial_source(converter_source):
         except error.LookupError:
             return None, None
 
-    def getchanges(self, rev):
+    def getchanges(self, rev, full):
         ctx = self.changectx(rev)
         parents = self.parents(ctx)
-        if not parents:
+        if full or not parents:
             files = copyfiles = ctx.manifest()
-        else:
+        if parents:
             if self._changescache[0] == rev:
                 m, a, r = self._changescache[1]
             else:
                 m, a, r = self.repo.status(parents[0].node(), ctx.node())[:3]
-            files = m + a + r
+            if not full:
+                files = m + a + r
             copyfiles = m + a
         # getcopies() is also run for roots and before filtering so missing
         # revlogs are detected early

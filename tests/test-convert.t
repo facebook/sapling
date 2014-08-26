@@ -91,6 +91,13 @@
       directory if it is converted. To rename from a subdirectory into the root
       of the repository, use "." as the path to rename to.
   
+      "--full" will make sure the converted changesets contain exactly the right
+      files with the right content. It will make a full conversion of all files,
+      not just the ones that have changed. Files that already are correct will
+      not be changed. This can be used to apply filemap changes when converting
+      incrementally. This is currently only supported for Mercurial and
+      Subversion.
+  
       The splicemap is a file that allows insertion of synthetic history,
       letting you specify the parents of a revision. This is useful if you want
       to e.g. give a Subversion merge two parents, or graft two disconnected
@@ -265,6 +272,7 @@
    -r --rev REV          import up to source revision REV
    -A --authormap FILE   remap usernames using this file
       --filemap FILE     remap file names using contents of file
+      --full             apply filemap changes by converting all files again
       --splicemap FILE   splice synthesized history into place
       --branchmap FILE   change branch names while converting
       --branchsort       try to sort changesets by branches

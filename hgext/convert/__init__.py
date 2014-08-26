@@ -29,6 +29,8 @@ testedwith = 'internal'
     ('A', 'authormap', '', _('remap usernames using this file'), _('FILE')),
     ('', 'filemap', '', _('remap file names using contents of file'),
      _('FILE')),
+    ('', 'full', None,
+     _('apply filemap changes by converting all files again')),
     ('', 'splicemap', '', _('splice synthesized history into place'),
      _('FILE')),
     ('', 'branchmap', '', _('change branch names while converting'),
@@ -130,6 +132,14 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     be omitted. The ``rename`` directive renames a file or directory if
     it is converted. To rename from a subdirectory into the root of
     the repository, use ``.`` as the path to rename to.
+
+    ``--full`` will make sure the converted changesets contain exactly
+    the right files with the right content. It will make a full
+    conversion of all files, not just the ones that have
+    changed. Files that already are correct will not be changed. This
+    can be used to apply filemap changes when converting
+    incrementally. This is currently only supported for Mercurial and
+    Subversion.
 
     The splicemap is a file that allows insertion of synthetic
     history, letting you specify the parents of a revision. This is

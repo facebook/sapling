@@ -537,3 +537,16 @@ Conversion after rollback
   |
   o  0 0 (a-only f)
   
+Convert with --full adds and removes files that didn't change
+
+  $ echo f >> 0/f
+  $ hg -R 0 ci -m "f"
+  $ hg convert --filemap filemap-b --full 0 a --config convert.hg.revs=1::
+  scanning source...
+  sorting...
+  converting...
+  0 f
+  $ hg -R a status --change tip
+  M f
+  A b-only
+  R a-only

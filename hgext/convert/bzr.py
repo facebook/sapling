@@ -134,8 +134,9 @@ class bzr_source(converter_source):
             sio = revtree.get_file(fileid)
             return sio.read(), mode
 
-    def getchanges(self, version):
-        # set up caches: modecache and revtree
+    def getchanges(self, version, full):
+        if full:
+            raise util.Abort(_("convert from cvs do not support --full"))
         self._modecache = {}
         self._revtree = self.sourcerepo.revision_tree(version)
         # get the parentids from the cache
