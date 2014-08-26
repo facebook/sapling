@@ -68,7 +68,8 @@ def cachehash(repo, hideable):
     it to the cache. Upon reading we can easily validate by checking the hash
     against the stored one and discard the cache in case the hashes don't match.
     """
-    h = util.sha1(''.join(repo.heads()))
+    h = util.sha1()
+    h.update(''.join(repo.heads()))
     h.update(str(hash(frozenset(hideable))))
     return h.digest()
 
@@ -88,7 +89,7 @@ def trywritehiddencache(repo, hideable, hidden):
             # write cache to file
             newhash = cachehash(repo, hideable)
             sortedset = sorted(hidden)
-            data = struct.pack('>%iI' % len(sortedset), *sortedset)
+            data = struct.pack('>%ii' % len(sortedset), *sortedset)
             fh = repo.vfs.open(cachefile, 'w+b', atomictemp=True)
             fh.write(struct.pack(">H", cacheversion))
             fh.write(newhash)
@@ -116,7 +117,7 @@ def tryreadcache(repo, hideable):
                 # cache is valid, so we can start reading the hidden revs
                 data = fh.read()
                 count = len(data) / 4
-                hidden = frozenset(struct.unpack('>%iI' % count, data))
+                hidden = frozenset(struct.unpack('>%ii' % count, data))
         return hidden
     finally:
         if fh:

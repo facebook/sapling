@@ -306,6 +306,8 @@ class revlog(object):
     def rev(self, node):
         try:
             return self._nodecache[node]
+        except TypeError:
+            raise
         except RevlogError:
             # parsers.c radix tree lookup failed
             raise LookupError(node, self.indexfile, _('no node'))
