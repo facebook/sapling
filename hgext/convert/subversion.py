@@ -347,7 +347,7 @@ class svn_source(converter_source):
                              % self.module)
         self.last_changed = self.revnum(self.head)
 
-        self._changescache = None
+        self._changescache = (None, None)
 
         if os.path.exists(os.path.join(url, '.svn/entries')):
             self.wc = url
@@ -444,10 +444,7 @@ class svn_source(converter_source):
 
         return self.heads
 
-    def getchanges(self, rev):
-        if self._changescache and self._changescache[0] == rev:
-            return self._changescache[1]
-        self._changescache = None
+    def _getchanges(self, rev):
         (paths, parents) = self.paths[rev]
         if parents:
             files, self.removed, copies = self.expandpaths(rev, paths, parents)
@@ -463,15 +460,23 @@ class svn_source(converter_source):
 
         files.sort()
         files = zip(files, [rev] * len(files))
+        return (files, copies)
 
-        # caller caches the result, so free it here to release memory
-        del self.paths[rev]
+    def getchanges(self, rev):
+        # reuse cache from getchangedfiles
+        if self._changescache[0] == rev:
+            (files, copies) = self._changescache[1]
+        else:
+            (files, copies) = self._getchanges(rev)
+            # caller caches the result, so free it here to release memory
+            del self.paths[rev]
         return (files, copies)
 
     def getchangedfiles(self, rev, i):
-        changes = self.getchanges(rev)
-        self._changescache = (rev, changes)
-        return [f[0] for f in changes[0]]
+        # called from filemap - cache computed values for reuse in getchanges
+        (files, copies) = self._getchanges(rev)
+        self._changescache = (rev, (files, copies))
+        return [f[0] for f in files]
 
     def getcommit(self, rev):
         if rev not in self.commits:
