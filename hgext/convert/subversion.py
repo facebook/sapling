@@ -1211,16 +1211,6 @@ class svn_sink(converter_sink, commandline):
             self.xargs(files, 'add', quiet=True)
         return files
 
-    def tidy_dirs(self, names):
-        deleted = []
-        for d in sorted(self.dirs_of(names), reverse=True):
-            wd = self.wjoin(d)
-            if os.listdir(wd) == '.svn':
-                self.run0('delete', d)
-                self.manifest.remove(d)
-                deleted.append(d)
-        return deleted
-
     def addchild(self, parent, child):
         self.childmap[parent] = child
 
@@ -1258,7 +1248,6 @@ class svn_sink(converter_sink, commandline):
                 self.manifest.remove(f)
             self.delete = []
         entries.update(self.add_files(files.difference(entries)))
-        entries.update(self.tidy_dirs(entries))
         if self.delexec:
             self.xargs(self.delexec, 'propdel', 'svn:executable')
             self.delexec = []
