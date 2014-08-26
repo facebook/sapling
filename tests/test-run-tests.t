@@ -325,7 +325,7 @@ Skips
   > EOF
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --nodiff
   !.s
-  Skipped test-skip.t: irrelevant
+  Skipped test-skip.t: skipped
   Failed test-failure.t: output changed
   # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
@@ -333,14 +333,14 @@ Skips
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy
   .s
-  Skipped test-skip.t: irrelevant
+  Skipped test-skip.t: skipped
   # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
 
 Skips with xml
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy \
   >  --xunit=xunit.xml
   .s
-  Skipped test-skip.t: irrelevant
+  Skipped test-skip.t: skipped
   # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
   $ cat xunit.xml
   <?xml version="1.0" encoding="utf-8"?>

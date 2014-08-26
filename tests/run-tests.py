@@ -546,7 +546,7 @@ class Test(unittest.TestCase):
                 missing, failed = TTest.parsehghaveoutput(out)
 
             if not missing:
-                missing = ['irrelevant']
+                missing = ['skipped']
 
             if failed:
                 self.fail('hg have failed checking for %s' % failed[-1])
