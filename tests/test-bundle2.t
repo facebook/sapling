@@ -783,6 +783,7 @@ clone --pull
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  1 new obsolescence markers
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
@@ -792,7 +793,6 @@ clone --pull
   
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  2222222222222222222222222222222222222222 24b6387c8c8cae37178880f3fa95ded3cb1cf785 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
 pull
 
@@ -804,6 +804,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  1 new obsolescence markers
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
@@ -904,6 +905,7 @@ pull over ssh
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  1 new obsolescence markers
   updating bookmark book_02de
   (run 'hg heads' to see heads, 'hg merge' to merge)
   importing bookmark book_02de
@@ -912,9 +914,6 @@ pull over ssh
   2222222222222222222222222222222222222222 24b6387c8c8cae37178880f3fa95ded3cb1cf785 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   3333333333333333333333333333333333333333 eea13746799a9e0bfd88f29d3c2e9dc9389f524f 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   4444444444444444444444444444444444444444 02de42196ebee42ef284b6780a87cdc96e8eaab6 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  5555555555555555555555555555555555555555 42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  6666666666666666666666666666666666666666 5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  7777777777777777777777777777777777777777 32af7686d403cf45b5d95f2d70cebea587ac806a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
 pull over http
 
@@ -928,6 +927,7 @@ pull over http
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  1 new obsolescence markers
   updating bookmark book_42cc
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   importing bookmark book_42cc
@@ -938,8 +938,6 @@ pull over http
   3333333333333333333333333333333333333333 eea13746799a9e0bfd88f29d3c2e9dc9389f524f 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   4444444444444444444444444444444444444444 02de42196ebee42ef284b6780a87cdc96e8eaab6 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   5555555555555555555555555555555555555555 42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  6666666666666666666666666666666666666666 5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  7777777777777777777777777777777777777777 32af7686d403cf45b5d95f2d70cebea587ac806a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
 push over ssh
 
@@ -950,6 +948,7 @@ push over ssh
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  remote: 1 new obsolescence markers
   updating bookmark book_5fdd
   exporting bookmark book_5fdd
   $ hg -R other log -G
@@ -974,7 +973,6 @@ push over ssh
   4444444444444444444444444444444444444444 02de42196ebee42ef284b6780a87cdc96e8eaab6 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   5555555555555555555555555555555555555555 42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   6666666666666666666666666666666666666666 5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  7777777777777777777777777777777777777777 32af7686d403cf45b5d95f2d70cebea587ac806a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
 push over http
 
@@ -989,6 +987,7 @@ push over http
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  remote: 1 new obsolescence markers
   updating bookmark book_32af
   exporting bookmark book_32af
   $ cat other-error.log

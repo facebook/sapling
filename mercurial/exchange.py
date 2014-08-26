@@ -835,6 +835,11 @@ def _pullbundle2(pullop):
     else:
         if pullop.heads is None and list(pullop.common) == [nullid]:
             pullop.repo.ui.status(_("requesting all changes\n"))
+    if obsolete._enabled:
+        remoteversions = bundle2.obsmarkersversion(remotecaps)
+        if obsolete.commonversion(remoteversions) is not None:
+            kwargs['obsmarkers'] = True
+            pullop.todosteps.remove('obsmarkers')
     _pullbundle2extraprepare(pullop, kwargs)
     if kwargs.keys() == ['format']:
         return # nothing to pull
