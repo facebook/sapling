@@ -146,6 +146,7 @@ import util
 import struct
 import urllib
 import string
+import obsolete
 import pushkey
 
 import changegroup, error
@@ -799,6 +800,12 @@ def bundle2caps(remote):
         return {}
     capsblob = urllib.unquote(remote.capable('bundle2-exp'))
     return decodecaps(capsblob)
+
+def obsmarkersversion(caps):
+    """extract the list of supported obsmarkers versions from a bundle2caps dict
+    """
+    obscaps = caps.get('b2x:obsmarkers', ())
+    return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
 @parthandler('b2x:changegroup')
 def handlechangegroup(op, inpart):
