@@ -455,6 +455,17 @@ class obsstore(object):
             seennodes |= pendingnodes
         return seenmarkers
 
+def commonversion(versions):
+    """Return the newest version listed in both versions and our local formats.
+
+    Returns None if no common version exists.
+    """
+    versions.sort(reverse=True)
+    # search for highest version known on both side
+    for v in versions:
+        if v in formats:
+            return v
+    return None
 
 # arbitrary picked to fit into 8K limit from HTTP server
 # you have to take in account:
