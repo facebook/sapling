@@ -58,6 +58,12 @@ p4merge.gui=True
 p4merge.priority=-8
 p4merge.diffargs=$parent $child
 
+p4mergeosx.executable = /Applications/p4merge.app/Contents/MacOS/p4merge
+p4mergeosx.args = $base $local $other $output
+p4mergeosx.gui = True
+p4mergeosx.priority=-8
+p4mergeosx.diffargs=$parent $child
+
 tortoisemerge.args=/base:$base /mine:$local /theirs:$other /merged:$output
 tortoisemerge.regkey=Software\TortoiseSVN
 tortoisemerge.regkeyalt=Software\Wow6432Node\TortoiseSVN
