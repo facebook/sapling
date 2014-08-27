@@ -678,3 +678,14 @@ graft --continue after --force
   grafting revision 28
   $ cat a
   abc
+
+Continue testing same origin policy, using revision numbers from test above
+but do some destructive editing of the repo:
+
+  $ hg up -qC 7
+  $ hg tag -l -r 13 tmp
+  $ hg --config extensions.mq= strip 2
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/5c095ad7e90f-backup.hg (glob)
+  $ hg graft tmp
+  skipping already grafted revision 8 (2 also has unknown origin 5c095ad7e90f871700f02dd1fa5012cb4498a2d4)
+  [255]

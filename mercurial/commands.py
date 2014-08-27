@@ -3221,14 +3221,23 @@ def graft(ui, repo, *revs, **opts):
             ctx = repo[rev]
             n = ctx.extra().get('source')
             if n in ids:
-                r = repo[n].rev()
+                try:
+                    r = repo[n].rev()
+                except error.RepoLookupError:
+                    r = None
                 if r in revs:
                     ui.warn(_('skipping revision %s (already grafted to %s)\n')
                             % (r, rev))
                     revs.remove(r)
                 elif ids[n] in revs:
-                    ui.warn(_('skipping already grafted revision %s '
-                                '(%s also has origin %d)\n') % (ids[n], rev, r))
+                    if r is None:
+                        ui.warn(_('skipping already grafted revision %s '
+                                  '(%s also has unknown origin %s)\n')
+                                % (ids[n], rev, n))
+                    else:
+                        ui.warn(_('skipping already grafted revision %s '
+                                  '(%s also has origin %d)\n')
+                                % (ids[n], rev, r))
                     revs.remove(ids[n])
             elif ctx.hex() in ids:
                 r = ids[ctx.hex()]

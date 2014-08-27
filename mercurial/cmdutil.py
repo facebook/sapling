@@ -651,6 +651,9 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     p2 = repo[nullid]
             except error.RepoError:
                 p1, p2 = parents
+            if p2.node() == nullid:
+                ui.warn(_("warning: import the patch as a normal revision\n"
+                          "(use --exact to import the patch as a merge)\n"))
         else:
             p1, p2 = parents
 
@@ -911,9 +914,10 @@ class changeset_printer(object):
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
                           label='log.phase')
         for parent in parents:
+            label = 'log.parent changeset.%s' % self.repo[parent[0]].phasestr()
             # i18n: column positioning for "hg log"
             self.ui.write(_("parent:      %d:%s\n") % parent,
-                          label='log.parent changeset.%s' % ctx.phasestr())
+                          label=label)
 
         if self.ui.debugflag:
             mnode = ctx.manifestnode()
