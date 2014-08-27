@@ -628,6 +628,9 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     p2 = repo[nullid]
             except error.RepoError:
                 p1, p2 = parents
+            if p2.node() == nullid:
+                ui.warn(_("warning: import the patch as a normal revision\n"
+                          "(use --exact to import the patch as a merge)\n"))
         else:
             p1, p2 = parents
 

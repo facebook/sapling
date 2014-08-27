@@ -66,6 +66,8 @@ Test without --exact and diff.p1 != workingdir.p1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import ../merge.diff
   applying ../merge.diff
+  warning: import the patch as a normal revision
+  (use --exact to import the patch as a merge)
   $ tipparents
   2:890ecaa90481 addc
   $ hg strip --no-backup tip
@@ -99,6 +101,8 @@ Test with --bypass and diff.p1 != workingdir.p1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import --bypass ../merge.diff
   applying ../merge.diff
+  warning: import the patch as a normal revision
+  (use --exact to import the patch as a merge)
   $ tipparents
   2:890ecaa90481 addc
   $ hg strip --no-backup tip
