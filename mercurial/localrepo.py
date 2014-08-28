@@ -739,11 +739,11 @@ class localrepository(object):
         # if publishing we can't copy if there is filtered content
         return not self.filtered('visible').changelog.filteredrevs
 
-    def join(self, f):
-        return os.path.join(self.path, f)
+    def join(self, f, *insidef):
+        return os.path.join(self.path, f, *insidef)
 
-    def wjoin(self, f):
-        return os.path.join(self.root, f)
+    def wjoin(self, f, *insidef):
+        return os.path.join(self.root, f, *insidef)
 
     def file(self, f):
         if f[0] == '/':
