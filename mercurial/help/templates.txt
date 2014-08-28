@@ -43,6 +43,8 @@ In addition to filters, there are some basic built-in functions:
 
 - date(date[, fmt])
 
+- diff([includepattern [, excludepattern]])
+
 - fill(text[, width])
 
 - get(dict, key)

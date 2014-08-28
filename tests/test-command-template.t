@@ -1794,6 +1794,61 @@ Thrown an error if a template function doesn't exist
   hg: parse error: unknown function 'foo'
   [255]
 
+Test diff function:
+
+  $ hg diff -c 8
+  diff -r 29114dbae42b -r 95c24699272e fourth
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +second
+  diff -r 29114dbae42b -r 95c24699272e second
+  --- a/second	Mon Jan 12 13:46:40 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -second
+  diff -r 29114dbae42b -r 95c24699272e third
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/third	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +third
+
+  $ hg log -r 8 -T "{diff()}"
+  diff -r 29114dbae42b -r 95c24699272e fourth
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +second
+  diff -r 29114dbae42b -r 95c24699272e second
+  --- a/second	Mon Jan 12 13:46:40 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -second
+  diff -r 29114dbae42b -r 95c24699272e third
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/third	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +third
+
+  $ hg log -r 8 -T "{diff('glob:f*')}"
+  diff -r 29114dbae42b -r 95c24699272e fourth
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +second
+
+  $ hg log -r 8 -T "{diff('', 'glob:f*')}"
+  diff -r 29114dbae42b -r 95c24699272e second
+  --- a/second	Mon Jan 12 13:46:40 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -second
+  diff -r 29114dbae42b -r 95c24699272e third
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/third	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +third
+
   $ cd ..
 
 

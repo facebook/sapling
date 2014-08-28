@@ -225,6 +225,23 @@ def date(context, mapping, args):
         return util.datestr(date, fmt)
     return util.datestr(date)
 
+def diff(context, mapping, args):
+    if len(args) > 2:
+        # i18n: "diff" is a keyword
+        raise error.ParseError(_("diff expects one, two or no arguments"))
+
+    def getpatterns(i):
+        if i < len(args):
+            s = args[i][1].strip()
+            if s:
+                return [s]
+        return []
+
+    ctx = mapping['ctx']
+    chunks = ctx.diff(match=ctx.match([], getpatterns(0), getpatterns(1)))
+
+    return ''.join(chunks)
+
 def fill(context, mapping, args):
     if not (1 <= len(args) <= 4):
         raise error.ParseError(_("fill expects one to four arguments"))
@@ -516,6 +533,7 @@ methods = {
 
 funcs = {
     "date": date,
+    "diff": diff,
     "fill": fill,
     "get": get,
     "if": if_,
