@@ -323,12 +323,11 @@ def annotate(ui, repo, *pats, **opts):
                 pieces.append(["%s%s%s" % (sep, ' ' * (ml - w), x)
                                for x, w in sized])
 
-        if pieces:
-            for p, l in zip(zip(*pieces), lines):
-                ui.write("%s: %s" % ("".join(p), l[1]))
+        for p, l in zip(zip(*pieces), lines):
+            ui.write("%s: %s" % ("".join(p), l[1]))
 
-            if lines and not lines[-1][1].endswith('\n'):
-                ui.write('\n')
+        if lines and not lines[-1][1].endswith('\n'):
+            ui.write('\n')
 
 @command('archive',
     [('', 'no-decode', None, _('do not pass files through decoders')),
