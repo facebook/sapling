@@ -2551,8 +2551,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     continue
                 if xlist is not None:
                     xlist.append(abs)
-                    if (dobackup and os.path.lexists(target) and
-                        abs in ctx and repo[None][abs].cmp(ctx[abs])):
+                    if (dobackup and os.path.lexists(target)
+                        and repo[None][abs].cmp(ctx[abs])):
                         bakname = "%s.orig" % rel
                         ui.note(_('saving current version of %s as %s\n') %
                                 (rel, bakname))
