@@ -826,6 +826,7 @@ def _pullbundle2(pullop):
 
     kwargs['common'] = pullop.common
     kwargs['heads'] = pullop.heads or pullop.rheads
+    kwargs['cg'] = pullop.fetch
     if 'b2x:listkeys' in remotecaps:
         kwargs['listkeys'] = ['phase']
     if not pullop.fetch:
