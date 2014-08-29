@@ -2541,6 +2541,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         needdata = ('revert', 'add', 'undelete')
         _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
 
+        wctx = repo[None]
         for abs, (rel, exact) in sorted(names.items()):
             # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
@@ -2553,7 +2554,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 if xlist is not None:
                     xlist.append(abs)
                     if (dobackup and os.path.lexists(target)
-                        and repo[None][abs].cmp(ctx[abs])):
+                        and wctx[abs].cmp(ctx[abs])):
                         bakname = "%s.orig" % rel
                         ui.note(_('saving current version of %s as %s\n') %
                                 (rel, bakname))
