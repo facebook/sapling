@@ -351,7 +351,7 @@ class wirepeer(peer.peerrepository):
             elif keytype == 'csv':
                 value = ','.join(value)
             elif keytype == 'boolean':
-                value = bool(value)
+                value = '%i' % bool(value)
             elif keytype != 'plain':
                 raise KeyError('unknown getbundle option type %s'
                                % keytype)
@@ -656,7 +656,7 @@ def getbundle(repo, proto, others):
         elif keytype == 'csv':
             opts[k] = set(v.split(','))
         elif keytype == 'boolean':
-            opts[k] = '%i' % bool(v)
+            opts[k] = bool(v)
         elif keytype != 'plain':
             raise KeyError('unknown getbundle option type %s'
                            % keytype)
