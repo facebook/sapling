@@ -2525,7 +2525,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Modified compared to target, local change
             (dsmodified,    actions['revert'],   backup),
             # Added since target
-            (dsadded,       actions['remove'],   backup),
+            (dsadded,       actions['remove'],   discard),
             # Removed since  target, before working copy parent
             (removed,       actions['add'],      backup),
             # Removed since targe, marked as such in working copy parent
@@ -2537,7 +2537,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (unknown,       actions['unknown'],  discard),
             )
 
-        needdata = ('revert', 'add', 'remove', 'undelete')
+        needdata = ('revert', 'add', 'undelete')
         _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
 
         for abs, (rel, exact) in sorted(names.items()):
