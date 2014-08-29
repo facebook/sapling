@@ -2518,12 +2518,22 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   file state
             #   action
             #   make backup
+
+            ## Sets that results that will change file on disk
+            # Modified compared to target, no local change
             (modified,   actions['revert'],   discard),
+            # Modified compared to target, local change
             (dsmodified, actions['revert'],   backup),
+            # Added since target
             (dsadded,    actions['remove'],   backup),
+            # Removed since  target, before working copy parent
             (removed,    actions['add'],      backup),
+            # Removed since targe, marked as such in working copy parent
             (dsremoved,  actions['undelete'], backup),
+            ## the following sets does not result in any file changes
+            # File with no modification
             (clean,      actions['noop'],     discard),
+            # Existing file, not tracked anywhere
             (unknown,    actions['unknown'],  discard),
             )
 
