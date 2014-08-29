@@ -313,6 +313,7 @@ def annotate(ui, repo, *pats, **opts):
 
         lines = fctx.annotate(follow=follow, linenumber=linenumber,
                               diffopts=diffopts)
+        formats = []
         pieces = []
 
         for f, sep in funcmap:
@@ -320,11 +321,13 @@ def annotate(ui, repo, *pats, **opts):
             if l:
                 sized = [(x, encoding.colwidth(x)) for x in l]
                 ml = max([w for x, w in sized])
-                pieces.append(["%s%s%s" % (sep, ' ' * (ml - w), x)
-                               for x, w in sized])
+                formats.append([sep + ' ' * (ml - w) + '%s'
+                                for x, w in sized])
+                pieces.append(l)
 
-        for p, l in zip(zip(*pieces), lines):
-            ui.write("%s: %s" % ("".join(p), l[1]))
+        for f, p, l in zip(zip(*formats), zip(*pieces), lines):
+            ui.write("".join(f) % p)
+            ui.write(": %s" % l[1])
 
         if lines and not lines[-1][1].endswith('\n'):
             ui.write('\n')
