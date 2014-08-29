@@ -170,8 +170,9 @@ def _readmarkers(data):
         off += mdsize
         meta = decodemeta(metadata)
         try:
-            date = util.parsedate(decodemeta(metadata).pop('date', '0 0'))
-        except util.Abort:
+            when, offset = decodemeta(metadata).pop('date', '0 0').split(' ')
+            date = float(when), int(offset)
+        except ValueError:
             date = (0., 0)
         parents = None
         if 'p2' in meta:
