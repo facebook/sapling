@@ -319,10 +319,9 @@ def annotate(ui, repo, *pats, **opts):
         for f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
             if l:
-                sized = [(x, encoding.colwidth(x)) for x in l]
-                ml = max([w for x, w in sized])
-                formats.append([sep + ' ' * (ml - w) + '%s'
-                                for x, w in sized])
+                sizes = [encoding.colwidth(x) for x in l]
+                ml = max(sizes)
+                formats.append([sep + ' ' * (ml - w) + '%s' for w in sizes])
                 pieces.append(l)
 
         for f, p, l in zip(zip(*formats), zip(*pieces), lines):
