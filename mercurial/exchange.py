@@ -999,9 +999,20 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         part.addparam('namespace', namespace)
         keys = repo.listkeys(namespace).items()
         part.data = pushkey.encodekeys(keys)
+    _getbundleobsmarkerpart(bundler, repo, source, heads=heads, common=common,
+                            bundlecaps=bundlecaps, **kwargs)
     _getbundleextrapart(bundler, repo, source, heads=heads, common=common,
                         bundlecaps=bundlecaps, **kwargs)
     return util.chunkbuffer(bundler.getchunks())
+
+def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
+                            bundlecaps=None, **kwargs):
+    if kwargs.get('obsmarkers', False):
+        if heads is None:
+            heads = repo.heads()
+        subset = [c.node() for c in repo.set('::%ln', heads)]
+        markers = repo.obsstore.relevantmarkers(subset)
+        buildobsmarkerspart(bundler, markers)
 
 def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
                         bundlecaps=None, **kwargs):
