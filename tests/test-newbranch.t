@@ -51,11 +51,28 @@ There should be only one default branch head
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     clear branch name
   
+Merging and branches
 
   $ hg co foo
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch
   foo
+
+ set existing branch name fails unless force - setting existing parent branch works without force:
+
+  $ hg branch bar
+  abort: a branch of the same name already exists
+  (use 'hg update' to switch to it)
+  [255]
+
+  $ hg branch -f bar
+  marked working directory as branch bar
+  (branches are permanent and global, did you want a bookmark?)
+
+  $ hg branch foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+
   $ echo bleah > a
   $ hg ci -m "modify a branch"
 
@@ -65,46 +82,40 @@ There should be only one default branch head
 
   $ hg branch
   foo
+
+ set existing branch name where branch head is ancestor:
+
+  $ hg branch bar
+  abort: a branch of the same name already exists
+  (use 'hg update' to switch to it)
+  [255]
+
+ set (other) parent branch as branch name
+
+  $ hg branch default
+  marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
+
+ set (first) parent branch as branch name
+
+  $ hg branch foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+
   $ hg ci -m "merge"
 
-  $ hg log
-  changeset:   5:530046499edf
-  branch:      foo
-  tag:         tip
-  parent:      4:adf1a74a7f7b
-  parent:      3:1c28f494dae6
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     merge
-  
-  changeset:   4:adf1a74a7f7b
-  branch:      foo
-  parent:      1:6c0e42da283a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify a branch
-  
-  changeset:   3:1c28f494dae6
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     clear branch name
-  
-  changeset:   2:c21617b13b22
-  branch:      bar
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     change branch name
-  
-  changeset:   1:6c0e42da283a
-  branch:      foo
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add branch name
-  
-  changeset:   0:db01e8ea3388
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     initial
+  $ hg log -G -T '{rev}:{node|short} {branch} {desc}\n'
+  @    5:530046499edf foo merge
+  |\
+  | o  4:adf1a74a7f7b foo modify a branch
+  | |
+  o |  3:1c28f494dae6 default clear branch name
+  | |
+  o |  2:c21617b13b22 bar change branch name
+  |/
+  o  1:6c0e42da283a foo add branch name
+  |
+  o  0:db01e8ea3388 default initial
   
   $ hg branches
   foo                            5:530046499edf
