@@ -135,7 +135,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 # Packaging targets
 
 osx:
-	@which -s bdist_mpkg || \
+	@which bdist_mpkg >/dev/null || \
 	   (echo "Missing bdist_mpkg (easy_install bdist_mpkg)"; false)
 	bdist_mpkg setup.py
 	mkdir -p packages/osx
