@@ -2613,6 +2613,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         actions = {'revert': ([], _('reverting %s\n')),
                    'add': ([], _('adding %s\n')),
                    'remove': ([], _('removing %s\n')),
+                   'drop': ([], _('removing %s\n')),
                    'forget': ([], _('forgetting %s\n')),
                    'undelete': ([], _('undeleting %s\n')),
                    'noop': (None, _('no changes needed to %s\n')),
@@ -2642,7 +2643,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Added in working directory
             (dsadded,       actions['forget'],   discard),
             # Added since target but file is missing in working directory
-            (deladded,      actions['remove'],   discard),
+            (deladded,      actions['drop'],   discard),
             # Removed since  target, before working copy parent
             (removed,       actions['add'],      discard),
             # Same as `removed` but an unknown file exists at the same path
@@ -2721,10 +2722,10 @@ def _performrevert(repo, parents, ctx, actions):
         repo.dirstate.drop(f)
     for f in actions['remove'][0]:
         audit_path(f)
-        try:
-            util.unlinkpath(repo.wjoin(f))
-        except OSError:
-            pass
+        util.unlinkpath(repo.wjoin(f))
+        repo.dirstate.remove(f)
+    for f in actions['drop'][0]:
+        audit_path(f)
         repo.dirstate.remove(f)
 
     normal = None
