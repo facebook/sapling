@@ -2626,10 +2626,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                    'unknown': (None, _('file not managed: %s\n')),
                   }
 
-
-        # should we do a backup?
-        backup = not opts.get('no_backup')
-        discard = False
+        # "constant" that convey the backup strategy.
+        # All set to `discard` if `no-backup` is set do avoid checking
+        # no_backup lower in the code.
+        backup = 2  # unconditionally do backup
+        discard = 0 # never do backup
+        if opts.get('no_backup'):
+            backup = discard
 
         disptable = (
             # dispatch table:
