@@ -86,9 +86,10 @@ def topicmatch(kw):
                'extensioncommands': [],
                }
     for names, header, doc in helptable:
+        # Old extensions may use a str as doc.
         if (sum(map(lowercontains, names))
             or lowercontains(header)
-            or lowercontains(doc())):
+            or (callable(doc) and lowercontains(doc()))):
             results['topics'].append((names[0], header))
     import commands # avoid cycle
     for cmd, entry in commands.table.iteritems():
