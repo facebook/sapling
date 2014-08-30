@@ -794,7 +794,10 @@ class GitHandler(object):
                 # it's a file reported as modified from Git
                 delete, mode, sha = info
                 if delete:
-                    raise IOError
+                    if getattr(memctx, '_returnnoneformissingfiles', False):
+                        return None
+                    else:  # Mercurial < 3.2
+                        raise IOError
 
                 if not sha: # indicates there's no git counterpart
                     e = ''
