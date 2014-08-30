@@ -2536,24 +2536,36 @@ def debugrevlog(ui, repo, file_=None, **opts):
     if opts.get("dump"):
         numrevs = len(r)
         ui.write("# rev p1rev p2rev start   end deltastart base   p1   p2"
-                 " rawsize totalsize compression heads\n")
+                 " rawsize totalsize compression heads chainlen\n")
         ts = 0
         heads = set()
+        rindex = r.index
+
+        def chainbaseandlen(rev):
+            clen = 0
+            base = rindex[rev][3]
+            while base != rev:
+                clen += 1
+                rev = base
+                base = rindex[rev][3]
+            return base, clen
+
         for rev in xrange(numrevs):
             dbase = r.deltaparent(rev)
             if dbase == -1:
                 dbase = rev
-            cbase = r.chainbase(rev)
+            cbase, clen = chainbaseandlen(rev)
             p1, p2 = r.parentrevs(rev)
             rs = r.rawsize(rev)
             ts = ts + rs
             heads -= set(r.parentrevs(rev))
             heads.add(rev)
-            ui.write("%5d %5d %5d %5d %5d %10d %4d %4d %4d %7d %9d %11d %5d\n" %
+            ui.write("%5d %5d %5d %5d %5d %10d %4d %4d %4d %7d %9d "
+                     "%11d %5d %8d\n" %
                      (rev, p1, p2, r.start(rev), r.end(rev),
                       r.start(dbase), r.start(cbase),
                       r.start(p1), r.start(p2),
-                      rs, ts, ts / r.end(rev), len(heads)))
+                      rs, ts, ts / r.end(rev), len(heads), clen))
         return 0
 
     v = r.version
