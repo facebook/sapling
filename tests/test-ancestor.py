@@ -91,6 +91,10 @@ def test_lazyancestors():
     s = genlazyancestors([11, 13])
     printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
 
+    # Standard with ancestry in the initial set (1 is ancestor of 3)
+    s = genlazyancestors([1, 3])
+    printlazyancestors(s, [1, -1, 0])
+
     # Including revs
     s = genlazyancestors([11, 13], inclusive=True)
     printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
