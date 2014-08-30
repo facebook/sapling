@@ -43,13 +43,13 @@ class Abort(Exception):
         self.hint = kw.get('hint')
 
 class ConfigError(Abort):
-    'Exception raised when parsing config files'
+    """Exception raised when parsing config files"""
 
 class OutOfBandError(Exception):
-    'Exception raised when a remote repo reports failure'
+    """Exception raised when a remote repo reports failure"""
 
 class ParseError(Exception):
-    'Exception raised when parsing config files (msg[, pos])'
+    """Exception raised when parsing config files (msg[, pos])"""
 
 class RepoError(Exception):
     def __init__(self, *args, **kw):
