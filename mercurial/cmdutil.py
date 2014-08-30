@@ -2523,9 +2523,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         smf = set(mf)
 
         # determine the exact nature of the deleted changesets
-        _deletedadded = _deleted - smf
-        deleted = _deleted - _deletedadded
-        added |= _deletedadded
+        deladded = _deleted - smf
+        deleted = _deleted - deladded
 
         # We need to account for the state of file in the dirstate
         #
@@ -2586,6 +2585,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 added.add(abs)
         dsadded -= added
 
+        for abs in deladded:
+            if repo.dirstate[abs] == 'a':
+                dsadded.add(abs)
+        deladded -= dsadded
+
         # For files marked as removed, we check if an unknown file is present at
         # the same path. If a such file exists it may need to be backed up.
         # Making the distinction at this stage helps have simpler backup
@@ -2637,6 +2641,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (added,         actions['remove'],   discard),
             # Added in working directory
             (dsadded,       actions['forget'],   discard),
+            # Added since target but file is missing in working directory
+            (deladded,      actions['remove'],   discard),
             # Removed since  target, before working copy parent
             (removed,       actions['add'],      discard),
             # Same as `removed` but an unknown file exists at the same path
