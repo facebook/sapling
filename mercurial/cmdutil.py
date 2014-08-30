@@ -2524,6 +2524,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         unknown  = set(changes[4])
         unknown.update(changes[5])
         clean    = set(changes[6])
+        modadded = set()
 
         # split between files known in target manifest and the others
         smf = set(mf)
@@ -2553,6 +2554,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsremoved &= removed
             # distinct between dirstate remove and other
             removed -= dsremoved
+
+            modadded = added & dsmodified
+            added -= modadded
 
             # tell newly modified apart.
             dsmodified &= modified
@@ -2653,6 +2657,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (added,         actions['remove'],   discard),
             # Added in working directory
             (dsadded,       actions['forget'],   discard),
+            # Added since target, have local modification
+            (modadded,      actions['remove'],   discard),
             # Added since target but file is missing in working directory
             (deladded,      actions['drop'],   discard),
             # Removed since  target, before working copy parent
