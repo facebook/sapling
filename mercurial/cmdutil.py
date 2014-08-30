@@ -2629,10 +2629,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # "constant" that convey the backup strategy.
         # All set to `discard` if `no-backup` is set do avoid checking
         # no_backup lower in the code.
+        # These values are ordered for comparison purposes
         backup = 2  # unconditionally do backup
+        check = 1   # check if the existing file differs from target
         discard = 0 # never do backup
         if opts.get('no_backup'):
-            backup = discard
+            backup = check = discard
 
         disptable = (
             # dispatch table:
@@ -2656,11 +2658,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Removed since  target, before working copy parent
             (removed,       actions['add'],      discard),
             # Same as `removed` but an unknown file exists at the same path
-            (removunk,      actions['add'],      backup),
+            (removunk,      actions['add'],      check),
             # Removed since targe, marked as such in working copy parent
             (dsremoved,     actions['undelete'], discard),
             # Same as `dsremoved` but an unknown file exists at the same path
-            (dsremovunk,    actions['undelete'], backup),
+            (dsremovunk,    actions['undelete'], check),
             ## the following sets does not result in any file changes
             # File with no modification
             (clean,         actions['noop'],     discard),
@@ -2683,12 +2685,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     continue
                 if xlist is not None:
                     xlist.append(abs)
-                    if (dobackup and wctx[abs].cmp(ctx[abs])):
-                        bakname = "%s.orig" % rel
-                        ui.note(_('saving current version of %s as %s\n') %
-                                (rel, bakname))
-                        if not opts.get('dry_run'):
-                            util.rename(target, bakname)
+                    if dobackup and (backup <= dobackup
+                                     or wctx[abs].cmp(ctx[abs])):
+                            bakname = "%s.orig" % rel
+                            ui.note(_('saving current version of %s as %s\n') %
+                                    (rel, bakname))
+                            if not opts.get('dry_run'):
+                                util.rename(target, bakname)
                     if ui.verbose or not exact:
                         if not isinstance(msg, basestring):
                             msg = msg(abs)
