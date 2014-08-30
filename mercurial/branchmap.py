@@ -239,6 +239,10 @@ class branchcache(dict):
             newbranches.setdefault(branch, []).append(r)
             if closesbranch:
                 self._closednodes.add(cl.node(r))
+
+        # fetch current topological heads to speed up filtering
+        topoheads = set(cl.headrevs())
+
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
@@ -255,8 +259,11 @@ class branchcache(dict):
             # This prunes out two kinds of heads - heads that are superseded by
             # a head in newheadrevs, and newheadrevs that are not heads because
             # an existing head is their descendant.
-            ancestors = set(cl.ancestors(newheadrevs, min(bheadset)))
-            bheadset -= ancestors
+            uncertain = bheadset - topoheads
+            if uncertain:
+                floorrev = min(uncertain)
+                ancestors = set(cl.ancestors(newheadrevs, floorrev))
+                bheadset -= ancestors
             bheadrevs = sorted(bheadset)
             self[branch] = [cl.node(rev) for rev in bheadrevs]
             tiprev = bheadrevs[-1]
