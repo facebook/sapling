@@ -754,3 +754,20 @@ class PushTests(test_util.TestBase):
         self.assertEqual(tip['adding_file'].data(), 'fooFirstFile')
         self.assertEqual(tip['newdir/new_file'].data(), 'fooNewFile')
         self.assertEqual(tip.branch(), 'default')
+
+    def test_update_after_push(self):
+        repo = self.repo
+        ui = repo.ui
+
+        ui.setconfig('hooks',
+                     'debug-hgsubversion-between-push-and-pull-for-tests',
+                     lambda ui, repo, hooktype: self.add_svn_rev(
+                         self.repo_path,
+                         {'trunk/racey_file': 'race conditions suck'}))
+
+        self.test_push_to_branch(push=False)
+        commands.push(ui, repo)
+        newctx = self.repo['.']
+        self.assertNotEqual(newctx.node(), self.repo['tip'].node())
+        self.assertEqual(newctx['adding_file'].data(), 'foo')
+        self.assertEqual(newctx.branch(), 'the_branch')

@@ -210,6 +210,7 @@ def push(repo, dest, force, revs):
             ui.status('Cowardly refusing to push branch merge\n')
             return 0 # results in nonzero exit status, see hg's commands.py
         workingrev = repo.parents()[0]
+        workingbranch = workingrev.branch()
         ui.status('searching for changes\n')
         hashes = meta.revmap.hashes()
         outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
@@ -273,6 +274,13 @@ def push(repo, dest, force, revs):
                         "in svn.\n" % current_ctx)
                 return
 
+            # This hook is here purely for testing.  It allows us to
+            # onsistently trigger hit the race condition between
+            # pushing and pulling here.  In particular, we use it to
+            # trigger another revision landing between the time we
+            # push a revision and pull it back.
+            repo.hook('debug-hgsubversion-between-push-and-pull-for-tests')
+
             # 5. Pull the latest changesets from subversion, which will
             # include the one we just committed (and possibly others).
             r = repo.pull(dest, force=force)
@@ -325,7 +333,7 @@ def push(repo, dest, force, revs):
 
         util.swap_out_encoding(old_encoding)
         try:
-            hg.update(repo, repo['tip'].node())
+            hg.update(repo, repo.branchtip(workingbranch))
         finally:
             util.swap_out_encoding()
 
