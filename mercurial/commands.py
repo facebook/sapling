@@ -818,8 +818,8 @@ def bookmark(ui, repo, *names, **opts):
     Deleting or moving a bookmark has no effect on the associated changesets.
 
     Creating or updating to a bookmark causes it to be marked as 'active'.
-    Active bookmarks are indicated with a '*'.
-    When a commit is made, an active bookmark will advance to the new commit.
+    The active bookmark is indicated with a '*'.
+    When a commit is made, the active bookmark will advance to the new commit.
     A plain :hg:`update` will also advance an active bookmark, if possible.
     Updating away from a bookmark will cause it to be deactivated.
 
