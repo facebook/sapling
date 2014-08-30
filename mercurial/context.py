@@ -1593,6 +1593,12 @@ class memctx(committablectx):
     supported by util.parsedate() and defaults to current date, extra
     is a dictionary of metadata or is left empty.
     """
+
+    # Mercurial <= 3.1 expects the filectxfn to raise IOError for missing files.
+    # Extensions that need to retain compatibility across Mercurial 3.1 can use
+    # this field to determine what to do in filectxfn.
+    _returnnoneformissingfiles = True
+
     def __init__(self, repo, parents, text, files, filectxfn, user=None,
                  date=None, extra=None, editor=False):
         super(memctx, self).__init__(repo, text, user, date, extra)
