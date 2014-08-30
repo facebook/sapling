@@ -2425,9 +2425,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         # determine the exact nature of the deleted changesets
         _deletedadded = _deleted - smf
-        _deletedmodified = _deleted - _deletedadded
+        deleted = _deleted - _deletedadded
         added |= _deletedadded
-        modified |= _deletedmodified
 
         # We need to account for the state of file in the dirstate
         #
@@ -2541,6 +2540,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             ## Sets that results that will change file on disk
             # Modified compared to target, no local change
             (modified,      actions['revert'],   discard),
+            # Modified compared to target, but local file is deleted
+            (deleted,       actions['revert'],   discard),
             # Modified compared to target, local change
             (dsmodified,    actions['revert'],   backup),
             # Added since target
