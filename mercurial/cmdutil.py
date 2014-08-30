@@ -2492,6 +2492,24 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 dsremoved.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
 
+        # For files marked as removed, we check if an unknown file is present at
+        # the same path. If a such file exists it may need to be backed up.
+        # Making the distinction at this stage helps have simpler backup
+        # logic.
+        removunk = set()
+        for abs in removed:
+            target = repo.wjoin(abs)
+            if os.path.lexists(target):
+                removunk.add(abs)
+        removed -= removunk
+
+        dsremovunk = set()
+        for abs in dsremoved:
+            target = repo.wjoin(abs)
+            if os.path.lexists(target):
+                dsremovunk.add(abs)
+        dsremoved -= dsremovunk
+
         ## computation of the action to performs on `names` content.
 
         def removeforget(abs):
@@ -2528,9 +2546,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Added since target
             (dsadded,       actions['remove'],   discard),
             # Removed since  target, before working copy parent
-            (removed,       actions['add'],      backup),
+            (removed,       actions['add'],      discard),
+            # Same as `removed` but an unknown file exists at the same path
+            (removunk,      actions['add'],      backup),
             # Removed since targe, marked as such in working copy parent
-            (dsremoved,     actions['undelete'], backup),
+            (dsremoved,     actions['undelete'], discard),
+            # Same as `dsremoved` but an unknown file exists at the same path
+            (dsremovunk,    actions['undelete'], backup),
             ## the following sets does not result in any file changes
             # File with no modification
             (clean,         actions['noop'],     discard),
