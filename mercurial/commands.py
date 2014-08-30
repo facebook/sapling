@@ -1905,8 +1905,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
         revs = set((int(r) for r in revs))
         def events():
             for r in rlog:
-                yield 'n', (r, list(set(p for p in rlog.parentrevs(r)
-                                        if p != -1)))
+                yield 'n', (r, list(p for p in rlog.parentrevs(r)
+                                        if p != -1))
                 if r in revs:
                     yield 'l', (r, "r%i" % r)
     elif repo:
@@ -1925,8 +1925,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
                     if newb != b:
                         yield 'a', newb
                         b = newb
-                yield 'n', (r, list(set(p for p in cl.parentrevs(r)
-                                        if p != -1)))
+                yield 'n', (r, list(p for p in cl.parentrevs(r)
+                                        if p != -1))
                 if tags:
                     ls = labels.get(r)
                     if ls:
