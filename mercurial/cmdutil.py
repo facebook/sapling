@@ -2527,6 +2527,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (unknown,    actions['unknown'],  discard),
             )
 
+        needdata = ('revert', 'add', 'remove', 'undelete')
+        _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
+
         for abs, (rel, exact) in sorted(names.items()):
             # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
@@ -2563,6 +2566,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     ctx.sub(sub).revert(ui, ctx.substate[sub], *pats, **opts)
     finally:
         wlock.release()
+
+def _revertprefetch(repo, ctx, *files):
+    """Let extension changing the storage layer prefetch content"""
+    pass
 
 def _performrevert(repo, parents, ctx, actions):
     """function that actually perform all the actions computed for revert
