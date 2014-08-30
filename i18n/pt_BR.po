@@ -10052,6 +10052,13 @@ msgstr "aplicado no diretório de trabalho"
 msgid "not a Mercurial patch"
 msgstr "não é um patch do Mercurial"
 
+msgid ""
+"warning: import the patch as a normal revision\n"
+"(use --exact to import the patch as a merge)\n"
+msgstr ""
+"aviso: importando o patch como revisão normal\n"
+"(use --exact para importar o patch como uma mesclagem)\n"
+
 msgid "patch is damaged or loses information"
 msgstr "o patch está danificado ou perde informação"
 
@@ -12261,6 +12268,10 @@ msgstr "cria uma marcação de obsolescência arbitrária"
 msgid "    With no arguments, displays the list of obsolescence markers."
 msgstr "    Sem parâmetros, mostra a lista de marcações de obsolescência."
 
+#, python-format
+msgid "bad obsmarker input: %s"
+msgstr "entrada obsmarker ruim: %s"
+
 msgid "complete an entire path"
 msgstr "completa um caminho completo"
 
@@ -12896,6 +12907,11 @@ msgstr "omitindo revisão ancestral %s\n"
 #, python-format
 msgid "skipping revision %s (already grafted to %s)\n"
 msgstr "omitindo revisão %s (já enxertada em %s)\n"
+
+#, python-format
+msgid "skipping already grafted revision %s (%s also has unknown origin %s)\n"
+msgstr ""
+"omitindo revisão %s já enxertada (%s também tem origem desconhecida %s)\n"
 
 #, python-format
 msgid "skipping already grafted revision %s (%s also has origin %d)\n"
@@ -15514,6 +15530,9 @@ msgstr "use 'hg push --new-branch' para criar novos ramos remotos"
 #, python-format
 msgid "and %s others"
 msgstr "e %s outras"
+
+msgid "remote has heads that are not known locally\n"
+msgstr "o repositório remoto possui cabeças que não são conhecidas localmente\n"
 
 #, python-format
 msgid "remote has heads that are not known locally: %s\n"
@@ -23693,6 +23712,9 @@ msgstr "- join(lista, separador)"
 msgid "- label(label, expr)"
 msgstr "- label(label, expr)"
 
+msgid "- pad(text, width[, fillchar, right])"
+msgstr "- pad(texto, largura[, preenchimento, direita])"
+
 msgid "- revset(query[, formatargs])"
 msgstr "- revset(consulta[, formato])"
 
@@ -24602,6 +24624,10 @@ msgid ""
 msgstr ""
 "decodificando marcações de obsolescência: metadados são curtos demais, %d "
 "bytes esperados, %d obtidos"
+
+#, python-format
+msgid "in-marker cycle with %s"
+msgstr "ciclo nos marcadores com %s"
 
 msgid "bad obsolescence marker detected: invalid successors nullid"
 msgstr ""
