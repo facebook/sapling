@@ -2554,20 +2554,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsmodified |= modified & dsadded # dirstate added may needs backup
             modified -= dsmodified
 
-            # There are three categories of added files
-            #
-            # 1. addition that just happened in the dirstate
-            #    (should be forgotten)
-            # 2. file is added since target revision and has local changes
-            #    (should be backed up and removed)
-            # 3. file is added since target revision and is clean
-            #    (should be removed)
-            #
-            # However we do not need to split them yet. The current revert code
-            # will automatically recognize (1) when performing operation. And
-            # the backup system is currently unabled to handle (2).
-            #
-            # So we just put them all in the same group.
+            # We need to wait for some post-processing to update this set
+            # before making the distinction. The dirstate will be used for
+            # that purpose.
             dsadded = added
 
         # in case of merge, files that are actually added can be reported as
@@ -2589,6 +2578,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             if src and src not in names and repo.dirstate[src] == 'r':
                 dsremoved.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
+
+        # distinguish between file to forget and the other
+        added = set()
+        for abs in dsadded:
+            if repo.dirstate[abs] != 'a':
+                added.add(abs)
+        dsadded -= added
 
         # For files marked as removed, we check if an unknown file is present at
         # the same path. If a such file exists it may need to be backed up.
@@ -2644,6 +2640,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Modified compared to target, local change
             (dsmodified,    actions['revert'],   backup),
             # Added since target
+            (added,         actions['remove'],   discard),
+            # Added in working directory
             (dsadded,       actions['remove'],   discard),
             # Removed since  target, before working copy parent
             (removed,       actions['add'],      discard),
