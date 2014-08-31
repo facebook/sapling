@@ -66,11 +66,55 @@ Add a commit with multiple extra fields
   extra : aaaaaaa : dataaaa
   extra : zzzzzzz : datazzz
 
+  $ cd ../gitrepo
+  $ git checkout b1
+  Switched to branch 'b1'
+  $ commit_sha=$(git rev-parse HEAD)
+  $ tree_sha=$(git rev-parse HEAD^{tree})
+
+There's no way to create a Git repo with extra metadata via the CLI. Dulwich
+lets you do that, though.
+
+  >>> from dulwich.objects import Commit
+  >>> from dulwich.porcelain import open_repo
+  >>> repo = open_repo('.')
+  >>> c = Commit()
+  >>> c.author = 'test <test@example.org>'
+  >>> c.author_time = 0
+  >>> c.author_timezone = 0
+  >>> c.committer = c.author
+  >>> c.commit_time = 0
+  >>> c.commit_timezone = 0
+  >>> c.parents = ['$commit_sha']
+  >>> c.tree = '$tree_sha'
+  >>> c.message = 'extra commit\n'
+  >>> c.extra.extend([('zzz:zzz', 'data:zzz'), ('aaa:aaa', 'data:aaa'),
+  ...                 ('HG:extra', 'hgaaa:dataaaa'),
+  ...                 ('HG:extra', 'hgzzz:datazzz')])
+  >>> repo.object_store.add_object(c)
+  >>> repo.refs.set_if_equals('refs/heads/master', None, c.id)
+  True
+
+  $ git cat-file commit master
+  tree 1b773a2eb70f29397356f8069c285394835ff85a
+  parent ca11864bb2a84c3996929d42cf38bae3d0f7aae0
+  author test <test@example.org> 0 +0000
+  committer test <test@example.org> 0 +0000
+  zzz:zzz data:zzz
+  aaa:aaa data:aaa
+  HG:extra hgaaa:dataaaa
+  HG:extra hgzzz:datazzz
+  
+  extra commit
+
   $ cd ..
   $ hg clone -q gitrepo hgrepo2
   $ cd hgrepo2
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
+  @  4 f5fddc070b0648a5cddb98b43bbd527e98f4b4d2 extra commit
+  |  GIT0-zzz%3Azzz=data%3Azzz GIT1-aaa%3Aaaa=data%3Aaaa branch=default hgaaa=dataaaa hgzzz=datazzz
+  |
+  o  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
   |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
   |
   o  2 dcec77c6ae3cff594c4435e5820bec4ec9e57440 b

@@ -680,7 +680,8 @@ class GitHandler(object):
         self.ui.debug(_("importing: %s\n") % commit.id)
 
         (strip_message, hg_renames,
-         hg_branch, extra) = self.extract_hg_metadata(commit.message)
+         hg_branch, extra) = self.extract_hg_metadata(
+             commit.message, commit.extra)
 
         gparents = map(self.map_hg_get, commit.parents)
 
@@ -1244,7 +1245,7 @@ class GitHandler(object):
             return convert[mode]
         return ''
 
-    def extract_hg_metadata(self, message):
+    def extract_hg_metadata(self, message, git_extra):
         split = message.split("\n--HG--\n", 1)
         renames = {}
         extra = {}
@@ -1266,8 +1267,27 @@ class GitHandler(object):
                 if command == 'branch':
                     branch = data
                 if command == 'extra':
-                    before, after = data.split(" : ", 1)
-                    extra[before] = urllib.unquote(after)
+                    k, v = data.split(" : ", 1)
+                    extra[k] = urllib.unquote(v)
+
+        git_fn = 0
+        for field, data in git_extra:
+            if field.startswith('HG:'):
+                command = field[3:]
+                if command == 'rename':
+                    before, after = data.split(':', 1)
+                    renames[urllib.unquote(after)] = urllib.unquote(before)
+                elif command == 'extra':
+                    k, v = data.split(':', 1)
+                    extra[urllib.unquote(k)] = urllib.unquote(v)
+            else:
+                # preserve ordering in Git by using an incrementing integer for
+                # each field. Note that extra metadata in Git is an ordered list
+                # of pairs.
+                hg_field = 'GIT%d-%s' % (git_fn, field)
+                git_fn += 1
+                extra[urllib.quote(hg_field)] = urllib.quote(data)
+
         return (message, renames, branch, extra)
 
     def get_file(self, commit, f):
