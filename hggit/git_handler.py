@@ -570,10 +570,8 @@ class GitHandler(object):
             message = "".join(apply_delta(message, extra['message']))
 
         # HG EXTRA INFORMATION
-        add_extras = False
         extra_message = ''
         if not ctx.branch() == 'default':
-            add_extras = True
             extra_message += "branch : " + ctx.branch() + "\n"
 
         renames = []
@@ -585,7 +583,6 @@ class GitHandler(object):
                 renames.append((rename[0], f))
 
         if renames:
-            add_extras = True
             for oldfile, newfile in renames:
                 extra_message += "rename : " + oldfile + " => " + newfile + "\n"
 
@@ -593,10 +590,9 @@ class GitHandler(object):
             if key in ('author', 'committer', 'encoding', 'message', 'branch', 'hg-git'):
                 continue
             else:
-                add_extras = True
                 extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
 
-        if add_extras:
+        if extra_message:
             message += "\n--HG--\n" + extra_message
 
         return message
