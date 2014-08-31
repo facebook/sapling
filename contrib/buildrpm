@@ -8,6 +8,7 @@
 # - centOS 6
 
 BUILD=1
+RPMBUILDDIR="$PWD/rpmbuild"
 while [ "$1" ]; do
     case "$1" in
     --prepare )
@@ -17,6 +18,11 @@ while [ "$1" ]; do
     --withpython | --with-python)
         shift
         PYTHONVER=2.7.8
+        ;;
+    --rpmbuilddir )
+        shift
+        RPMBUILDDIR="$1"
+        shift
         ;;
     * )
         echo "Invalid parameter $1!" 1>&2
@@ -44,10 +50,7 @@ HG="$PWD/hg"
 PYTHONPATH="$PWD/mercurial/pure"
 export PYTHONPATH
 
-rpmdir="$PWD/rpmbuild"
-
-rm -rf $rpmdir
-mkdir -p $rpmdir/SOURCES $rpmdir/SPECS $rpmdir/RPMS $rpmdir/SRPMS $rpmdir/BUILD
+mkdir -p $RPMBUILDDIR/SOURCES $RPMBUILDDIR/SPECS $RPMBUILDDIR/RPMS $RPMBUILDDIR/SRPMS $RPMBUILDDIR/BUILD
 
 hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
 
@@ -67,22 +70,22 @@ else
     RPMPYTHONVER=%{nil}
 fi
 
-$HG archive -t tgz $rpmdir/SOURCES/mercurial-$version-$release.tar.gz
+$HG archive -t tgz $RPMBUILDDIR/SOURCES/mercurial-$version-$release.tar.gz
 if [ "$PYTHONVER" ]; then
 (
     cd build
     PYTHON_SRCFILE=Python-$PYTHONVER.tgz
     [ -f $PYTHON_SRCFILE ] || curl -Lo $PYTHON_SRCFILE http://www.python.org/ftp/python/$PYTHONVER/$PYTHON_SRCFILE
-    ln -f $PYTHON_SRCFILE $rpmdir/SOURCES/$PYTHON_SRCFILE
+    ln -f $PYTHON_SRCFILE $RPMBUILDDIR/SOURCES/$PYTHON_SRCFILE
 
     DOCUTILSVER=`sed -ne "s/^%global docutilsname docutils-//p" $specfile`
     DOCUTILS_SRCFILE=docutils-$DOCUTILSVER.tar.gz
     [ -f $DOCUTILS_SRCFILE ] || curl -Lo $DOCUTILS_SRCFILE http://downloads.sourceforge.net/project/docutils/docutils/$DOCUTILSVER/$DOCUTILS_SRCFILE
-    ln -f $DOCUTILS_SRCFILE $rpmdir/SOURCES/$DOCUTILS_SRCFILE
+    ln -f $DOCUTILS_SRCFILE $RPMBUILDDIR/SOURCES/$DOCUTILS_SRCFILE
 )
 fi
 
-rpmspec=$rpmdir/SPECS/mercurial.spec
+rpmspec=$RPMBUILDDIR/SPECS/mercurial.spec
 
 sed -e "s,^Version:.*,Version: $version," \
     -e "s,^Release:.*,Release: $release," \
@@ -138,13 +141,13 @@ sed -i \
     $rpmspec
 
 if [ "$BUILD" ]; then
-    rpmbuild --define "_topdir $rpmdir" -ba $rpmspec --clean
+    rpmbuild --define "_topdir $RPMBUILDDIR" -ba $rpmspec --clean
     if [ $? = 0 ]; then
         echo
         echo "Built packages for $version-$release:"
-        find $rpmdir/*RPMS/ -type f -newer $rpmspec
+        find $RPMBUILDDIR/*RPMS/ -type f -newer $rpmspec
     fi
 else
-    echo "Prepared sources for $version-$release $rpmspec are in $rpmdir/SOURCES/ - use like:"
-    echo "rpmbuild --define '_topdir $rpmdir' -ba $rpmspec --clean"
+    echo "Prepared sources for $version-$release $rpmspec are in $RPMBUILDDIR/SOURCES/ - use like:"
+    echo "rpmbuild --define '_topdir $RPMBUILDDIR' -ba $rpmspec --clean"
 fi
