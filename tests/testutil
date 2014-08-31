@@ -43,6 +43,13 @@ fn_hg_commit() {
     count=`expr $count + 1`
 }
 
+fn_hg_commitextra() {
+    HGDATE="2007-01-01 00:00:$count +0000"
+    hg --config extensions.commitextra=$TESTDIR/commitextra.py commitextra \
+        -d "$HGDATE" "$@" >/dev/null || echo "hg commit error"
+    count=`expr $count + 1`
+}
+
 fn_git_tag() {
     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"

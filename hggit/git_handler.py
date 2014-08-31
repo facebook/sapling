@@ -586,7 +586,9 @@ class GitHandler(object):
             for oldfile, newfile in renames:
                 extra_message += "rename : " + oldfile + " => " + newfile + "\n"
 
-        for key, value in extra.iteritems():
+        extraitems = extra.items()
+        extraitems.sort()
+        for key, value in extraitems:
             if key in ('author', 'committer', 'encoding', 'message', 'branch', 'hg-git'):
                 continue
             else:
