@@ -7,6 +7,20 @@
 # - CentOS 5
 # - centOS 6
 
+BUILD=1
+while [ "$1" ]; do
+    case "$1" in
+    --prepare )
+        shift
+        BUILD=
+        ;;
+    * )
+        echo "Invalid parameter $1!" 1>&2
+        exit 1
+        ;;
+    esac
+done
+
 cd "`dirname $0`/.."
 
 specfile=contrib/mercurial.spec
@@ -95,9 +109,14 @@ for l in sys.stdin.readlines():
 
 fi
 
-rpmbuild --define "_topdir $rpmdir" -ba $rpmspec --clean
-if [ $? = 0 ]; then
-    echo
-    echo "Packages are in $rpmdir:"
-    ls -l $rpmdir/*RPMS/*
+if [ "$BUILD" ]; then
+    rpmbuild --define "_topdir $rpmdir" -ba $rpmspec --clean
+    if [ $? = 0 ]; then
+        echo
+        echo "Built packages for $version-$release:"
+        find $rpmdir/*RPMS/ -type f -newer $rpmspec
+    fi
+else
+    echo "Prepared sources for $version-$release $rpmspec are in $rpmdir/SOURCES/ - use like:"
+    echo "rpmbuild --define '_topdir $rpmdir' -ba $rpmspec --clean"
 fi
