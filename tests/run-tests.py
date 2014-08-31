@@ -1201,18 +1201,18 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write(line)
                 self.stream.flush()
 
-            # handle interactive prompt without releasing iolock
-            if self._options.interactive:
-                self.stream.write('Accept this change? [n] ')
-                answer = sys.stdin.readline().strip()
-                if answer.lower() in ('y', 'yes'):
-                    if test.name.endswith('.t'):
-                        rename(test.errpath, test.path)
-                    else:
-                        rename(test.errpath, '%s.out' % test.path)
-                    accepted = True
-            if not accepted and not failed:
-                self.faildata[test.name] = ''.join(lines)
+        # handle interactive prompt without releasing iolock
+        if self._options.interactive:
+            self.stream.write('Accept this change? [n] ')
+            answer = sys.stdin.readline().strip()
+            if answer.lower() in ('y', 'yes'):
+                if test.name.endswith('.t'):
+                    rename(test.errpath, test.path)
+                else:
+                    rename(test.errpath, '%s.out' % test.path)
+                accepted = True
+        if not accepted and not failed:
+            self.faildata[test.name] = ''.join(lines)
         iolock.release()
 
         return accepted
