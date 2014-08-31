@@ -31,15 +31,12 @@ Add a commit with multiple extra fields
   $ touch d
   $ hg add d
   $ fn_hg_commitextra --field zzzzzzz=datazzz --field aaaaaaa=dataaaa
-  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, '\n')}\n\n"
+  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
-  |  aaaaaaa=dataaaa
-  |  branch=default
-  |  zzzzzzz=datazzz
+  |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
   |
   o  2 dcec77c6ae3cff594c4435e5820bec4ec9e57440 b
-  |  branch=default
-  |  rebase_source=bb8ddb1031b5d9afd7caa5aa9d24c735222e3636
+  |  branch=default rebase_source=bb8ddb1031b5d9afd7caa5aa9d24c735222e3636
   |
   o  1 003b36e9c3993ac4319eeebd5f77a1d5306ba706 c
   |  branch=default
@@ -72,15 +69,12 @@ Add a commit with multiple extra fields
   $ cd ..
   $ hg clone -q gitrepo hgrepo2
   $ cd hgrepo2
-  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, '\n')}\n\n"
+  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
-  |  aaaaaaa=dataaaa
-  |  branch=default
-  |  zzzzzzz=datazzz
+  |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
   |
   o  2 dcec77c6ae3cff594c4435e5820bec4ec9e57440 b
-  |  branch=default
-  |  rebase_source=bb8ddb1031b5d9afd7caa5aa9d24c735222e3636
+  |  branch=default rebase_source=bb8ddb1031b5d9afd7caa5aa9d24c735222e3636
   |
   o  1 003b36e9c3993ac4319eeebd5f77a1d5306ba706 c
   |  branch=default
