@@ -1,4 +1,4 @@
-FROM centos
+FROM centos:centos6
 RUN yum install -y gcc
 RUN yum install -y python-devel python-docutils
 RUN yum install -y make

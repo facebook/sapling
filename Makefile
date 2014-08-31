@@ -144,16 +144,16 @@ osx:
 	N=`cd dist && echo mercurial-*.mpkg | sed 's,\.mpkg$$,,'` && hdiutil create -srcfolder dist/$$N.mpkg/ -scrub -volname "$$N" -ov packages/osx/$$N.dmg
 	rm -rf dist/mercurial-*.mpkg
 
-fedora:
-	mkdir -p packages/fedora
+fedora20:
+	mkdir -p packages/fedora20
 	contrib/buildrpm
-	cp rpmbuild/RPMS/*/* packages/fedora
-	cp rpmbuild/SRPMS/* packages/fedora
+	cp rpmbuild/RPMS/*/* packages/fedora20
+	cp rpmbuild/SRPMS/* packages/fedora20
 	rm -rf rpmbuild
 
-docker-fedora:
-	mkdir -p packages/fedora
-	contrib/dockerrpm fedora
+docker-fedora20:
+	mkdir -p packages/fedora20
+	contrib/dockerrpm fedora20
 
 centos6:
 	mkdir -p packages/centos6
@@ -167,4 +167,4 @@ docker-centos6:
 
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc dist dist-notests tests \
-	update-pot fedora docker-fedora
+	update-pot fedora20 docker-fedora20
