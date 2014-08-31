@@ -197,7 +197,8 @@ class mercurial_sink(converter_sink):
             p2 = parents.pop(0)
             fileset = set(files)
             if full:
-                fileset.update(self.repo[p1], self.repo[p2])
+                fileset.update(self.repo[p1])
+                fileset.update(self.repo[p2])
             ctx = context.memctx(self.repo, (p1, p2), text, fileset,
                                  getfilectx, commit.author, commit.date, extra)
             self.repo.commitctx(ctx)
