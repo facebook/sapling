@@ -38,3 +38,20 @@ contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare $*
 DSHARED=/mnt/shared
 $DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
     rpmbuild --define "_topdir $DSHARED" -ba $DSHARED/SPECS/mercurial.spec --clean
+
+$DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
+    createrepo $DSHARED
+
+cat << EOF > $RPMBUILDDIR/mercurial.repo
+# Place this file in /etc/yum.repos.d/mercurial.repo
+[mercurial]
+name=Mercurial packages for $NAME
+# baseurl=file://$RPMBUILDDIR/
+baseurl=http://hg.example.com/build/$NAME/
+skip_if_unavailable=True
+gpgcheck=0
+enabled=1
+EOF
+
+echo
+echo "Build complete - results can be found in $RPMBUILDDIR"
