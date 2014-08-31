@@ -837,11 +837,11 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
 class changeset_printer(object):
     '''show changeset information when templating not requested.'''
 
-    def __init__(self, ui, repo, patch, diffopts, buffered):
+    def __init__(self, ui, repo, matchfn, diffopts, buffered):
         self.ui = ui
         self.repo = repo
         self.buffered = buffered
-        self.patch = patch
+        self.matchfn = matchfn
         self.diffopts = diffopts
         self.header = {}
         self.hunk = {}
@@ -980,7 +980,7 @@ class changeset_printer(object):
 
     def showpatch(self, node, matchfn):
         if not matchfn:
-            matchfn = self.patch
+            matchfn = self.matchfn
         if matchfn:
             stat = self.diffopts.get('stat')
             diff = self.diffopts.get('patch')
@@ -1015,8 +1015,8 @@ class changeset_printer(object):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, patch, diffopts, tmpl, mapfile, buffered):
-        changeset_printer.__init__(self, ui, repo, patch, diffopts, buffered)
+    def __init__(self, ui, repo, matchfn, diffopts, tmpl, mapfile, buffered):
+        changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
         formatnode = ui.debugflag and (lambda x: x) or (lambda x: x[:12])
         defaulttempl = {
             'parent': '{rev}:{node|formatnode} ',
@@ -1189,17 +1189,18 @@ def show_changeset(ui, repo, opts, buffered=False):
     regular display via changeset_printer() is done.
     """
     # options
-    patch = None
+    matchfn = None
     if opts.get('patch') or opts.get('stat'):
-        patch = scmutil.matchall(repo)
+        matchfn = scmutil.matchall(repo)
 
     tmpl, mapfile = gettemplate(ui, opts.get('template'), opts.get('style'))
 
     if not tmpl and not mapfile:
-        return changeset_printer(ui, repo, patch, opts, buffered)
+        return changeset_printer(ui, repo, matchfn, opts, buffered)
 
     try:
-        t = changeset_templater(ui, repo, patch, opts, tmpl, mapfile, buffered)
+        t = changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile,
+                                buffered)
     except SyntaxError, inst:
         raise util.Abort(inst.args[0])
     return t
