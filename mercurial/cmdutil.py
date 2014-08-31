@@ -2640,6 +2640,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         if opts.get('no_backup'):
             backup = check = discard
 
+        backupanddel = actions['remove']
+        if not opts.get('no_backup'):
+            backupanddel = actions['drop']
+
         disptable = (
             # dispatch table:
             #   file state
@@ -2658,7 +2662,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Added in working directory
             (dsadded,       actions['forget'],   discard),
             # Added since target, have local modification
-            (modadded,      actions['remove'],   discard),
+            (modadded,      backupanddel,        backup),
             # Added since target but file is missing in working directory
             (deladded,      actions['drop'],   discard),
             # Removed since  target, before working copy parent

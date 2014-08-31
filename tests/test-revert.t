@@ -940,16 +940,12 @@ Compare resulting directory with revert target.
 The diff is filtered to include change only. The only difference should be
 additional `.orig` backup file when applicable.
 
-Misbehavior:
-
-- no backup for
-| - added_wc (DATA LOSS)
-
   $ python ../dircontent.py > ../content-base-all.txt
   $ cd ..
   $ diff -U 0 -- content-base.txt content-base-all.txt | grep _
   +parent added_untracked-clean
   +wc     added_untracked-wc
+  +wc     added_wc.orig
   +wc     clean_untracked-wc.orig
   +wc     clean_wc.orig
   +wc     missing_untracked-wc
