@@ -101,7 +101,7 @@ Git 1.8.0, so we accept the output of either version.
 Latin1 commit messages started being automatically converted to UTF-8 in
 Git 1.8.0, so we accept the output of either version.
   $ git --git-dir=gitrepo2 log --pretty=medium
-  commit (da0edb01d4f3d1abf08b1be298379b0b2960e680|51c509c1c7eeb8f0a5b20aa3e894e8823f39171f) (re)
+  commit (e85fef6b515d555e45124a5dc39a019cf8db9ff0|2032391dc85cf3bb253678589abfc2dd1774b177) (re)
   Author: t\xe9st \xe8nc\xf6d\xeeng <test@example.org> (esc)
   Date:   Mon Jan 1 00:00:13 2007 +0000
   

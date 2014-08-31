@@ -37,6 +37,8 @@ RE_GIT_SANITIZE_AUTHOR = re.compile('[<>\n]')
 
 RE_GIT_AUTHOR_EXTRA = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
 
+RE_GIT_EXTRA_KEY = re.compile('GIT([0-9]*)-(.*)')
+
 # Test for git:// and git+ssh:// URI.
 # Support several URL forms, including separating the
 # host and path with either a / or : (sepr)
@@ -447,7 +449,8 @@ class GitHandler(object):
 
                 commit.parents.append(git_sha)
 
-        commit.message = self.get_git_message(ctx)
+        commit.message, extra = self.get_git_message_and_extra(ctx)
+        commit.extra.extend(extra)
 
         if 'encoding' in extra:
             commit.encoding = extra['encoding']
@@ -562,7 +565,7 @@ class GitHandler(object):
 
         return parents
 
-    def get_git_message(self, ctx):
+    def get_git_message_and_extra(self, ctx):
         extra = ctx.extra()
 
         message = ctx.description() + "\n"
@@ -570,9 +573,28 @@ class GitHandler(object):
             message = "".join(apply_delta(message, extra['message']))
 
         # HG EXTRA INFORMATION
+
+        # test only -- do not document this!
+        extra_in_message = self.ui.configbool('git', 'debugextrainmessage',
+                                              False)
         extra_message = ''
+        git_extra = []
         if not ctx.branch() == 'default':
+            # we always store the branch in the extra message
             extra_message += "branch : " + ctx.branch() + "\n"
+
+        # Git native extra items always come first, followed by hg renames,
+        # followed by hg extra keys
+        git_extraitems = []
+        for key, value in extra.items():
+            m = RE_GIT_EXTRA_KEY.match(key)
+            if m is not None:
+                git_extraitems.append((int(m.group(1)), m.group(2), value))
+                del extra[key]
+
+        git_extraitems.sort()
+        for i, field, value in git_extraitems:
+            git_extra.append((urllib.unquote(field), urllib.unquote(value)))
 
         renames = []
         for f in ctx.files():
@@ -584,20 +606,33 @@ class GitHandler(object):
 
         if renames:
             for oldfile, newfile in renames:
-                extra_message += "rename : " + oldfile + " => " + newfile + "\n"
+                if extra_in_message:
+                    extra_message += ("rename : " + oldfile + " => " +
+                                      newfile + "\n")
+                else:
+                    spec = '%s:%s' % (urllib.quote(oldfile),
+                                      urllib.quote(newfile))
+                    git_extra.append(('HG:rename', spec))
 
+        # hg extra items always go at the end
         extraitems = extra.items()
         extraitems.sort()
         for key, value in extraitems:
             if key in ('author', 'committer', 'encoding', 'message', 'branch', 'hg-git'):
                 continue
             else:
-                extra_message += "extra : " + key + " : " +  urllib.quote(value) + "\n"
+                if extra_in_message:
+                    extra_message += ("extra : " + key + " : " +
+                                      urllib.quote(value) + "\n")
+                else:
+                    spec = '%s:%s' % (urllib.quote(key),
+                                      urllib.quote(value))
+                    git_extra.append(('HG:extra', spec))
 
         if extra_message:
             message += "\n--HG--\n" + extra_message
 
-        return message
+        return message, git_extra
 
     def getnewgitcommits(self, refs=None):
         # import heads and fetched tags as remote references

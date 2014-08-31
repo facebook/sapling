@@ -28,6 +28,7 @@ Rebase will add a rebase_source
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Add a commit with multiple extra fields
+  $ hg bookmark b1
   $ touch d
   $ hg add d
   $ fn_hg_commitextra --field zzzzzzz=datazzz --field aaaaaaa=dataaaa
@@ -44,14 +45,28 @@ Add a commit with multiple extra fields
   o  0 ab83abcbf5717f738191aa2d42f52a7100ce06a8 a
      branch=default
   
-
-  $ hg bookmark b1
-  $ hg push -r b1
+Make sure legacy extra (in commit message, after '--HG--') doesn't break
+  $ hg push -r b1 --config git.debugextrainmessage=1
   pushing to $TESTTMP/gitrepo
   searching for changes
   adding objects
   added 3 commits with 3 trees and 0 blobs
   adding reference refs/heads/b1
+
+  $ hg bookmark b2
+  $ hg mv c c2
+  $ hg mv d d2
+  $ fn_hg_commitextra --field yyyyyyy=datayyy --field bbbbbbb=databbb
+  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n" -l 1
+  @  4 71a7f7cc00a30dde4a0d5da37f119e51ded1820a
+  |  bbbbbbb=databbb branch=default yyyyyyy=datayyy
+  |
+  $ hg push -r b2
+  pushing to $TESTTMP/gitrepo
+  searching for changes
+  adding objects
+  added 1 commits with 1 trees and 0 blobs
+  adding reference refs/heads/b2
 
   $ cd ../gitrepo
   $ git cat-file commit b1
@@ -65,6 +80,18 @@ Add a commit with multiple extra fields
   --HG--
   extra : aaaaaaa : dataaaa
   extra : zzzzzzz : datazzz
+
+  $ git cat-file commit b2
+  tree 34ad62c6d6ad9464bfe62db5b3d2fa16aaa9fa9e
+  parent ca11864bb2a84c3996929d42cf38bae3d0f7aae0
+  author test <none@none> 1167609614 +0000
+  committer test <none@none> 1167609614 +0000
+  HG:rename c:c2
+  HG:rename d:d2
+  HG:extra bbbbbbb:databbb
+  HG:extra yyyyyyy:datayyy
+  
+  
 
   $ cd ../gitrepo
   $ git checkout b1
@@ -111,8 +138,11 @@ lets you do that, though.
   $ hg clone -q gitrepo hgrepo2
   $ cd hgrepo2
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  4 f5fddc070b0648a5cddb98b43bbd527e98f4b4d2 extra commit
-  |  GIT0-zzz%3Azzz=data%3Azzz GIT1-aaa%3Aaaa=data%3Aaaa branch=default hgaaa=dataaaa hgzzz=datazzz
+  @  5 71a7f7cc00a30dde4a0d5da37f119e51ded1820a
+  |  bbbbbbb=databbb branch=default yyyyyyy=datayyy
+  |
+  | o  4 f5fddc070b0648a5cddb98b43bbd527e98f4b4d2 extra commit
+  |/   GIT0-zzz%3Azzz=data%3Azzz GIT1-aaa%3Aaaa=data%3Aaaa branch=default hgaaa=dataaaa hgzzz=datazzz
   |
   o  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
   |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
