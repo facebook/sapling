@@ -149,8 +149,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2014-08-01 17:00+0900\n"
-"PO-Revision-Date: 2014-08-01 17:24+0900\n"
+"POT-Creation-Date: 2014-08-30 21:28+0900\n"
+"PO-Revision-Date: 2014-08-31 20:40+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -9923,6 +9923,13 @@ msgstr "作業領域への適用"
 msgid "not a Mercurial patch"
 msgstr "Mercurial 向けのパッチではありません"
 
+msgid ""
+"warning: import the patch as a normal revision\n"
+"(use --exact to import the patch as a merge)\n"
+msgstr ""
+"警告: パッチを通常リビジョンとして取り込みます\n"
+"(マージ実施パッチを取り込む場合は --exact を指定してください)\n"
+
 msgid "patch is damaged or loses information"
 msgstr "パッチには破損または情報の欠落があります"
 
@@ -12068,6 +12075,10 @@ msgstr "任意の廃止状態の設定"
 msgid "    With no arguments, displays the list of obsolescence markers."
 msgstr "    引数指定が無い場合、 廃止マーカを一覧表示します。"
 
+#, python-format
+msgid "bad obsmarker input: %s"
+msgstr "不正な obsmarker 指定: %s"
+
 msgid "complete an entire path"
 msgstr "パス全体を補完"
 
@@ -12678,6 +12689,10 @@ msgstr "祖先リビジョン %s を無視\n"
 #, python-format
 msgid "skipping revision %s (already grafted to %s)\n"
 msgstr "リビジョン %s を無視 (%s に移植済み)\n"
+
+#, python-format
+msgid "skipping already grafted revision %s (%s also has unknown origin %s)\n"
+msgstr "移植済みリビジョン %s を無視 (%s も未知のリビジョン %s 由来)\n"
 
 #, python-format
 msgid "skipping already grafted revision %s (%s also has origin %d)\n"
@@ -15207,6 +15222,9 @@ msgstr "連携先への新規ブランチ作成は 'hg push --new-branch'"
 msgid "and %s others"
 msgstr "その他 %s 個"
 
+msgid "remote has heads that are not known locally\n"
+msgstr "連携先には新規ヘッドが存在します\n"
+
 #, python-format
 msgid "remote has heads that are not known locally: %s\n"
 msgstr "連携先には新規ヘッドが存在します: %s\n"
@@ -15697,7 +15715,7 @@ msgid ""
 "    File that is modified according to status."
 msgstr ""
 "``modified()``\n"
-"    変更ステータスを持つファイル (※ 訳注: 未コミット時点でのみ判定可能)"
+"    変更ステータスを持つファイル (※ 訳注: 第1親との比較)"
 
 #. i18n: "modified" is a keyword
 msgid "modified takes no arguments"
@@ -15708,7 +15726,7 @@ msgid ""
 "    File that is added according to status."
 msgstr ""
 "``added()``\n"
-"    追加ステータスを持つファイル (※ 訳注: 未コミット時点でのみ判定可能)"
+"    追加ステータスを持つファイル (※ 訳注: 第1親との比較)"
 
 #. i18n: "added" is a keyword
 msgid "added takes no arguments"
@@ -15719,7 +15737,7 @@ msgid ""
 "    File that is removed according to status."
 msgstr ""
 "``removed()``\n"
-"    登録除外ステータスを持つファイル (※ 訳注: 未コミット時点でのみ判定可能)"
+"    登録除外ステータスを持つファイル (※ 訳注: 第1親との比較)"
 
 #. i18n: "removed" is a keyword
 msgid "removed takes no arguments"
@@ -15730,7 +15748,7 @@ msgid ""
 "    File that is deleted according to status."
 msgstr ""
 "``deleted()``\n"
-"    不在ステータスを持つファイル (※ 訳注: 未コミット時点でのみ判定可能)"
+"    不在ステータスを持つファイル (※ 訳注: 作業領域でのみ有効)"
 
 #. i18n: "deleted" is a keyword
 msgid "deleted takes no arguments"
@@ -15744,7 +15762,7 @@ msgstr ""
 "``unknown()``\n"
 "    未知ステータスを持つファイル。\n"
 "    本述語が指定された時のみ、\n"
-"    未知ファイルが Mercurial の取り扱い対象になります。"
+"    作業領域中の未知ファイルが Mercurial の取り扱い対象になります。"
 
 #. i18n: "unknown" is a keyword
 msgid "unknown takes no arguments"
@@ -15758,7 +15776,7 @@ msgstr ""
 "``ignored()``\n"
 "    無視ステータスを持つファイル。\n"
 "    本述語が指定された時のみ、\n"
-"    無視対象ファイルが Mercurial の取り扱い対象になります。"
+"    作業領域中の無視対象ファイルが Mercurial の取り扱い対象になります。"
 
 #. i18n: "ignored" is a keyword
 msgid "ignored takes no arguments"
@@ -15769,7 +15787,7 @@ msgid ""
 "    File that is clean according to status."
 msgstr ""
 "``clean()``\n"
-"    変更無しステータスを持つファイル (※ 訳注: 未コミット時点でのみ判定可能)"
+"    変更無しステータスを持つファイル (※ 訳注: 第1親との比較)"
 
 #. i18n: "clean" is a keyword
 msgid "clean takes no arguments"
@@ -23181,6 +23199,9 @@ msgstr "- join(list, sep)"
 msgid "- label(label, expr)"
 msgstr "- label(label, expr)"
 
+msgid "- pad(text, width[, fillchar, right])"
+msgstr "- pad(text, width[, fillchar, right])"
+
 msgid "- revset(query[, formatargs])"
 msgstr "- revset(query[, formatargs])"
 
@@ -24070,6 +24091,10 @@ msgstr "廃止情報解析: 未知のリビジョン %r"
 msgid ""
 "parsing obsolete marker: metadata is too short, %d bytes expected, got %d"
 msgstr "廃止情報解析: メタデータの想定サイズ %d に対して %d しかありません"
+
+#, python-format
+msgid "in-marker cycle with %s"
+msgstr ""
 
 msgid "bad obsolescence marker detected: invalid successors nullid"
 msgstr "不正な廃止情報を検出: 後継としての null 指定は不正です"
