@@ -2604,18 +2604,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 dsremovunk.add(abs)
         dsremoved -= dsremovunk
 
-        ## computation of the action to performs on `names` content.
-
-        def removeforget(abs):
-            if repo.dirstate[abs] == 'a':
-                return _('forgetting %s\n')
-            return _('removing %s\n')
-
         # action to be actually performed by revert
         # (<list of file>, message>) tuple
         actions = {'revert': ([], _('reverting %s\n')),
                    'add': ([], _('adding %s\n')),
-                   'remove': ([], removeforget),
+                   'remove': ([], _('removing %s\n')),
+                   'forget': ([], _('forgetting %s\n')),
                    'undelete': ([], _('undeleting %s\n')),
                    'noop': (None, _('no changes needed to %s\n')),
                    'unknown': (None, _('file not managed: %s\n')),
@@ -2642,7 +2636,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Added since target
             (added,         actions['remove'],   discard),
             # Added in working directory
-            (dsadded,       actions['remove'],   discard),
+            (dsadded,       actions['forget'],   discard),
             # Removed since  target, before working copy parent
             (removed,       actions['add'],      discard),
             # Same as `removed` but an unknown file exists at the same path
@@ -2717,10 +2711,9 @@ def _performrevert(repo, parents, ctx, actions):
         repo.wwrite(f, fc.data(), fc.flags())
 
     audit_path = pathutil.pathauditor(repo.root)
+    for f in actions['forget'][0]:
+        repo.dirstate.drop(f)
     for f in actions['remove'][0]:
-        if repo.dirstate[f] == 'a':
-            repo.dirstate.drop(f)
-            continue
         audit_path(f)
         try:
             util.unlinkpath(repo.wjoin(f))
