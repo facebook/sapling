@@ -459,4 +459,12 @@ Test --tool parameter:
   tool option will be ignored
   saved backup bundle to $TESTTMP/b3/.hg/strip-backup/*-backup.hg (glob)
 
+  $ hg rebase -i
+  abort: interactive history editing is supported by the 'histedit' extension (see 'hg help histedit')
+  [255]
+
+  $ hg rebase --interactive
+  abort: interactive history editing is supported by the 'histedit' extension (see 'hg help histedit')
+  [255]
+
   $ cd ..

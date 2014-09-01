@@ -69,6 +69,7 @@ def _makeextrafn(copiers):
     ('', 'keep', False, _('keep original changesets')),
     ('', 'keepbranches', False, _('keep original branch names')),
     ('D', 'detach', False, _('(DEPRECATED)')),
+    ('i', 'interactive', False, _('(DEPRECATED)')),
     ('t', 'tool', '', _('specify merge tool')),
     ('c', 'continue', False, _('continue an interrupted rebase')),
     ('a', 'abort', False, _('abort an interrupted rebase'))] +
@@ -162,6 +163,11 @@ def rebase(ui, repo, **opts):
         # keepopen is not meant for use on the command line, but by
         # other extensions
         keepopen = opts.get('keepopen', False)
+
+        if opts.get('interactive'):
+            msg = _("interactive history editing is supported by the "
+                    "'histedit' extension (see 'hg help histedit')")
+            raise util.Abort(msg)
 
         if collapsemsg and not collapsef:
             raise util.Abort(
