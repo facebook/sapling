@@ -56,7 +56,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc CONTRIBUTORS COPYING doc/README doc/hg*.txt doc/hg*.html *.cgi contrib/*.fcgi
 %doc %attr(644,root,root) %{_mandir}/man?/hg*
-%doc %attr(644,root,root) contrib/*.svg contrib/sample.hgrc
+%doc %attr(644,root,root) contrib/*.svg
 %dir %{_datadir}/zsh/
 %dir %{_datadir}/zsh/site-functions/
 %{_datadir}/zsh/site-functions/_mercurial
