@@ -13,16 +13,14 @@ def parsemeta(text):
     """return (metadatadict, keylist, metadatasize)"""
     # text can be buffer, so we can't use .startswith or .index
     if text[:2] != '\1\n':
-        return None, None, None
+        return None, None
     s = _mdre.search(text, 2).start()
     mtext = text[2:s]
     meta = {}
-    keys = []
     for l in mtext.splitlines():
         k, v = l.split(": ", 1)
         meta[k] = v
-        keys.append(k)
-    return meta, keys, (s + 2)
+    return meta, (s + 2)
 
 def packmeta(meta, text):
     keys = sorted(meta.iterkeys())
