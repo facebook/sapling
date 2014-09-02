@@ -328,7 +328,7 @@ class wirepeer(peer.peerrepository):
     def changegroup(self, nodes, kind):
         n = encodelist(nodes)
         f = self._callcompressable("changegroup", roots=n)
-        return changegroupmod.unbundle10(f, 'UN')
+        return changegroupmod.cg1unpacker(f, 'UN')
 
     def changegroupsubset(self, bases, heads, kind):
         self.requirecap('changegroupsubset', _('look up remote changes'))
@@ -336,7 +336,7 @@ class wirepeer(peer.peerrepository):
         heads = encodelist(heads)
         f = self._callcompressable("changegroupsubset",
                                    bases=bases, heads=heads)
-        return changegroupmod.unbundle10(f, 'UN')
+        return changegroupmod.cg1unpacker(f, 'UN')
 
     def getbundle(self, source, **kwargs):
         self.requirecap('getbundle', _('look up remote changes'))
@@ -362,7 +362,7 @@ class wirepeer(peer.peerrepository):
         if bundlecaps is not None and 'HG2X' in bundlecaps:
             return bundle2.unbundle20(self.ui, f)
         else:
-            return changegroupmod.unbundle10(f, 'UN')
+            return changegroupmod.cg1unpacker(f, 'UN')
 
     def unbundle(self, cg, heads, source):
         '''Send cg (a readable file-like object representing the

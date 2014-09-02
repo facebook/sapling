@@ -142,7 +142,7 @@ class sshserver(wireproto.abstractserverproto):
             return
 
         self.sendresponse("")
-        cg = changegroup.unbundle10(self.fin, "UN")
+        cg = changegroup.cg1unpacker(self.fin, "UN")
         r = changegroup.addchangegroup(self.repo, cg, 'serve', self._client())
         self.lock.release()
         return str(r)

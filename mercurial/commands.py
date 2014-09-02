@@ -1159,8 +1159,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
-        cg = changegroup.getbundle(repo, 'bundle', heads=heads, common=common,
-                                   bundlecaps=bundlecaps)
+        cg = changegroup.getchangegroup(repo, 'bundle', heads=heads,
+                                         common=common, bundlecaps=bundlecaps)
         outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -1172,7 +1172,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 onlyheads=heads,
                                                 force=opts.get('force'),
                                                 portable=True)
-        cg = changegroup.getlocalbundle(repo, 'bundle', outgoing, bundlecaps)
+        cg = changegroup.getlocalchangegroup(repo, 'bundle', outgoing,
+                                             bundlecaps)
     if not cg:
         scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1

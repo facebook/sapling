@@ -12,7 +12,7 @@ import mdiff, util, dagutil
 import struct, os, bz2, zlib, tempfile
 import discovery, error, phases, branchmap
 
-_BUNDLE10_DELTA_HEADER = "20s20s20s20s"
+_CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
 
 def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
@@ -123,8 +123,8 @@ def decompressor(fh, alg):
         raise util.Abort("unknown bundle compression '%s'" % alg)
     return util.chunkbuffer(generator(fh))
 
-class unbundle10(object):
-    deltaheader = _BUNDLE10_DELTA_HEADER
+class cg1unpacker(object):
+    deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     def __init__(self, fh, alg):
         self._stream = decompressor(fh, alg)
@@ -227,8 +227,8 @@ class headerlessfixup(object):
             return d
         return readexactly(self._fh, n)
 
-class bundle10(object):
-    deltaheader = _BUNDLE10_DELTA_HEADER
+class cg1packer(object):
+    deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     def __init__(self, repo, bundlecaps=None):
         """Given a source repo, construct a bundler.
 
@@ -456,7 +456,7 @@ def getsubset(repo, outgoing, bundler, source, fastpath=False):
     repo.hook('preoutgoing', throw=True, source=source)
     _changegroupinfo(repo, csets, source)
     gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
-    return unbundle10(util.chunkbuffer(gengroup), 'UN')
+    return cg1unpacker(util.chunkbuffer(gengroup), 'UN')
 
 def changegroupsubset(repo, roots, heads, source):
     """Compute a changegroup consisting of all the nodes that are
@@ -480,17 +480,17 @@ def changegroupsubset(repo, roots, heads, source):
     for n in roots:
         discbases.extend([p for p in cl.parents(n) if p != nullid])
     outgoing = discovery.outgoing(cl, discbases, heads)
-    bundler = bundle10(repo)
+    bundler = cg1packer(repo)
     return getsubset(repo, outgoing, bundler, source)
 
-def getlocalbundle(repo, source, outgoing, bundlecaps=None):
+def getlocalchangegroup(repo, source, outgoing, bundlecaps=None):
     """Like getbundle, but taking a discovery.outgoing as an argument.
 
     This is only implemented for local repos and reuses potentially
     precomputed sets in outgoing."""
     if not outgoing.missing:
         return None
-    bundler = bundle10(repo, bundlecaps)
+    bundler = cg1packer(repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
 def _computeoutgoing(repo, heads, common):
@@ -512,7 +512,7 @@ def _computeoutgoing(repo, heads, common):
         heads = cl.heads()
     return discovery.outgoing(cl, common, heads)
 
-def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
+def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None):
     """Like changegroupsubset, but returns the set difference between the
     ancestors of heads and the ancestors common.
 
@@ -522,7 +522,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None):
     current discovery protocol works.
     """
     outgoing = _computeoutgoing(repo, heads, common)
-    return getlocalbundle(repo, source, outgoing, bundlecaps=bundlecaps)
+    return getlocalchangegroup(repo, source, outgoing, bundlecaps=bundlecaps)
 
 def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)

@@ -106,7 +106,7 @@ Create an extension to test bundle2 API
   >             headmissing = [c.node() for c in repo.set('heads(%ld)', revs)]
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
   >             outgoing = discovery.outgoing(repo.changelog, headcommon, headmissing)
-  >             cg = changegroup.getlocalbundle(repo, 'test:bundle2', outgoing, None)
+  >             cg = changegroup.getlocalchangegroup(repo, 'test:bundle2', outgoing, None)
   >             bundler.newpart('b2x:changegroup', data=cg.getchunks())
   > 
   >     if opts['parts']:

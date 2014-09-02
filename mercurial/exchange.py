@@ -31,7 +31,7 @@ def readbundle(ui, fh, fname, vfs=None):
     if version == '10':
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
-        return changegroup.unbundle10(fh, alg)
+        return changegroup.cg1unpacker(fh, alg)
     elif version == '2X':
         return bundle2.unbundle20(ui, fh, header=magic + version)
     else:
@@ -401,7 +401,7 @@ def _pushb2ctx(pushop, bundler):
                                      pushop.outgoing)
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
-    cg = changegroup.getlocalbundle(pushop.repo, 'push', pushop.outgoing)
+    cg = changegroup.getlocalchangegroup(pushop.repo, 'push', pushop.outgoing)
     cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg.getchunks())
     def handlereply(op):
         """extract addchangroup returns from server reply"""
@@ -536,14 +536,14 @@ def _pushchangeset(pushop):
                             or pushop.repo.changelog.filteredrevs):
         # push everything,
         # use the fast path, no race possible on push
-        bundler = changegroup.bundle10(pushop.repo, bundlecaps)
+        bundler = changegroup.cg1packer(pushop.repo, bundlecaps)
         cg = changegroup.getsubset(pushop.repo,
                                    outgoing,
                                    bundler,
                                    'push',
                                    fastpath=True)
     else:
-        cg = changegroup.getlocalbundle(pushop.repo, 'push', outgoing,
+        cg = changegroup.getlocalchangegroup(pushop.repo, 'push', outgoing,
                                         bundlecaps)
 
     # apply changegroup to remote
@@ -969,7 +969,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     passed. For now, the bundle can contain only changegroup, but this will
     changes when more part type will be available for bundle2.
 
-    This is different from changegroup.getbundle that only returns an HG10
+    This is different from changegroup.getchangegroup that only returns an HG10
     changegroup bundle. They may eventually get reunited in the future when we
     have a clearer idea of the API we what to query different data.
 
@@ -979,8 +979,8 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     cg = None
     if kwargs.get('cg', True):
         # build changegroup bundle here.
-        cg = changegroup.getbundle(repo, source, heads=heads,
-                                   common=common, bundlecaps=bundlecaps)
+        cg = changegroup.getchangegroup(repo, source, heads=heads,
+                                         common=common, bundlecaps=bundlecaps)
     elif 'HG2X' not in bundlecaps:
         raise ValueError(_('request for bundle10 must include changegroup'))
     if bundlecaps is None or 'HG2X' not in bundlecaps:
