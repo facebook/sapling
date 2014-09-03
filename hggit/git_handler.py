@@ -92,7 +92,7 @@ class GitProgress(object):
             self.ui.note(msg + '\n')
 
 class GitHandler(object):
-    mapfile = 'git-mapfile'
+    map_file = 'git-mapfile'
     tagsfile = 'git-tags'
 
     def __init__(self, dest_repo, ui):
@@ -168,7 +168,7 @@ class GitHandler(object):
                 self._map_hg_real[hgsha] = gitsha
 
     def save_map(self):
-        file = self.repo.opener(self.mapfile, 'w+', atomictemp=True)
+        file = self.repo.opener(self.map_file, 'w+', atomictemp=True)
         for hgsha, gitsha in sorted(self._map_hg.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
         # If this complains, atomictempfile no longer has close
@@ -318,7 +318,7 @@ class GitHandler(object):
         return ret
 
     def clear(self):
-        mapfile = self.repo.join(self.mapfile)
+        mapfile = self.repo.join(self.map_file)
         if os.path.exists(self.gitdir):
             for root, dirs, files in os.walk(self.gitdir, topdown=False):
                 for name in files:
