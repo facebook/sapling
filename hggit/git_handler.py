@@ -114,6 +114,7 @@ class GitHandler(object):
         self._map_git_real = None
         self._map_hg_real = None
         self.load_tags()
+        self._remote_refs = None
 
     @property
     def _map_git(self):
@@ -126,6 +127,12 @@ class GitHandler(object):
       if self._map_hg_real is None:
         self.load_map()
       return self._map_hg_real
+
+    @property
+    def remote_refs(self):
+        if self._remote_refs is None:
+            self.load_remote_refs()
+        return self._remote_refs
 
     @hgutil.propertycache
     def git(self):
@@ -189,6 +196,15 @@ class GitHandler(object):
                 file.write("%s %s\n" % (sha, name))
         # If this complains, atomictempfile no longer has close
         file.close()
+
+    def load_remote_refs(self):
+        self._remote_refs = {}
+        tagfile = self.repo.join(self.remote_refs_file)
+        if os.path.exists(tagfile):
+            tf = open(tagfile, 'rb')
+            tagdata = tf.read().split('\n')
+            td = [line.split(' ', 1) for line in tagdata if line]
+            self._remote_refs.update([(name, bin(sha)) for sha, name in td])
 
     ## END FILE LOAD AND SAVE METHODS
 
@@ -1242,7 +1258,7 @@ class GitHandler(object):
 
     def update_remote_branches(self, remote_name, refs):
         tagfile = self.repo.join(self.remote_refs_file)
-        tags = self.repo.gitrefs()
+        tags = self.remote_refs
         # since we re-write all refs for this remote each time, prune
         # all entries matching this remote from our tags list now so
         # that we avoid any stale refs hanging around forever

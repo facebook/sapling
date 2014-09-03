@@ -50,7 +50,7 @@ def generate_repo_subclass(baseclass):
                 tags[tag] = bin(rev)
                 tagtypes[tag] = 'git'
 
-            tags.update(self.gitrefs())
+            tags.update(self.githandler.remote_refs)
             return (tags, tagtypes)
 
         @util.propertycache
@@ -61,19 +61,10 @@ def generate_repo_subclass(baseclass):
             '''
             return GitHandler(self, self.ui)
 
-        def gitrefs(self):
-            tagfile = self.join(GitHandler.remote_refs_file)
-            if os.path.exists(tagfile):
-                tf = open(tagfile, 'rb')
-                tagdata = tf.read().split('\n')
-                td = [line.split(' ', 1) for line in tagdata if line]
-                return dict([(name, bin(sha)) for sha, name in td])
-            return {}
-
         def tags(self):
             # TODO consider using self._tagscache
             tagscache = super(hgrepo, self).tags()
-            tagscache.update(self.gitrefs())
+            tagscache.update(self.githandler.remote_refs)
             for tag, rev in self.githandler.tags.iteritems():
                 if tag in tagscache:
                     continue
