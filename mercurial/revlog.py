@@ -42,6 +42,7 @@ _chunksize = 1048576
 
 RevlogError = error.RevlogError
 LookupError = error.LookupError
+CensoredNodeError = error.CensoredNodeError
 
 def getoffset(q):
     return int(q >> 16)
@@ -1176,7 +1177,10 @@ class revlog(object):
             ifh.flush()
             basetext = self.revision(self.node(cachedelta[0]))
             btext[0] = mdiff.patch(basetext, cachedelta[1])
-            self.checkhash(btext[0], p1, p2, node)
+            try:
+                self.checkhash(btext[0], p1, p2, node)
+            except CensoredNodeError:
+                pass # always import a censor tombstone.
             return btext[0]
 
         def builddelta(rev):
