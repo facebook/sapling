@@ -207,10 +207,11 @@ class GitHandler(object):
             self._remote_refs.update([(name, bin(sha)) for sha, name in td])
 
     def save_remote_refs(self):
-        tf = open(self.repo.join(self.remote_refs_file), 'wb')
+        file = self.repo.opener(self.remote_refs_file, 'w+', atomictemp=True)
         for tag, node in self.remote_refs.iteritems():
-            tf.write('%s %s\n' % (hex(node), tag))
-        tf.close()
+            file.write('%s %s\n' % (hex(node), tag))
+        # If this complains, atomictempfile no longer has close
+        file.close()
 
     ## END FILE LOAD AND SAVE METHODS
 
