@@ -1240,7 +1240,7 @@ class GitHandler(object):
                          ' bookmarks enabled?\n'))
 
     def update_remote_branches(self, remote_name, refs):
-        tagfile = self.repo.join(os.path.join('git-remote-refs'))
+        tagfile = self.repo.join('git-remote-refs')
         tags = self.repo.gitrefs()
         # since we re-write all refs for this remote each time, prune
         # all entries matching this remote from our tags list now so
