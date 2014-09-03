@@ -93,7 +93,7 @@ class GitProgress(object):
 
 class GitHandler(object):
     map_file = 'git-mapfile'
-    tagsfile = 'git-tags'
+    tags_file = 'git-tags'
 
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
@@ -176,13 +176,13 @@ class GitHandler(object):
 
     def load_tags(self):
         self.tags = {}
-        if os.path.exists(self.repo.join(self.tagsfile)):
-            for line in self.repo.opener(self.tagsfile):
+        if os.path.exists(self.repo.join(self.tags_file)):
+            for line in self.repo.opener(self.tags_file):
                 sha, name = line.strip().split(' ', 1)
                 self.tags[name] = sha
 
     def save_tags(self):
-        file = self.repo.opener(self.tagsfile, 'w+', atomictemp=True)
+        file = self.repo.opener(self.tags_file, 'w+', atomictemp=True)
         for name, sha in sorted(self.tags.iteritems()):
             if not self.repo.tagtype(name) == 'global':
                 file.write("%s %s\n" % (sha, name))
