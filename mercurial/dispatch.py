@@ -193,6 +193,8 @@ def _runcatch(req):
             ui.warn(_(" empty string\n"))
         else:
             ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
+    except error.CensoredNodeError, inst:
+        ui.warn(_("abort: file censored %s!\n") % inst)
     except error.RevlogError, inst:
         ui.warn(_("abort: %s!\n") % inst)
     except error.SignalInterrupt:

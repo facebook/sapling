@@ -117,3 +117,9 @@ class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
     pass
 
+class CensoredNodeError(RevlogError):
+    """error raised when content verification fails on a censored node"""
+
+    def __init__(self, filename, node):
+        from node import short
+        RevlogError.__init__(self, '%s:%s' % (filename, short(node)))
