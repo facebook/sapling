@@ -110,19 +110,19 @@ class GitHandler(object):
 
         self.branch_bookmark_suffix = ui.config('git', 'branch_bookmark_suffix')
 
-        self._map_git_real = {}
-        self._map_hg_real = {}
+        self._map_git_real = None
+        self._map_hg_real = None
         self.load_tags()
 
     @property
     def _map_git(self):
-      if not self._map_git_real:
+      if self._map_git_real is None:
         self.load_map()
       return self._map_git_real
 
     @property
     def _map_hg(self):
-      if not self._map_hg_real:
+      if self._map_hg_real is None:
         self.load_map()
       return self._map_hg_real
 
@@ -159,8 +159,10 @@ class GitHandler(object):
         return self._map_hg.get(hgsha)
 
     def load_map(self):
-        if os.path.exists(self.repo.join(self.mapfile)):
-            for line in self.repo.opener(self.mapfile):
+        self._map_git_real = {}
+        self._map_hg_real = {}
+        if os.path.exists(self.repo.join(self.map_file)):
+            for line in self.repo.opener(self.map_file):
                 gitsha, hgsha = line.strip().split(' ', 1)
                 self._map_git_real[gitsha] = hgsha
                 self._map_hg_real[hgsha] = gitsha
