@@ -62,7 +62,7 @@ def generate_repo_subclass(baseclass):
             return GitHandler(self, self.ui)
 
         def gitrefs(self):
-            tagfile = self.join(os.path.join('git-remote-refs'))
+            tagfile = self.join(GitHandler.remote_refs_file)
             if os.path.exists(tagfile):
                 tf = open(tagfile, 'rb')
                 tagdata = tf.read().split('\n')
