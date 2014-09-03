@@ -1258,13 +1258,13 @@ class GitHandler(object):
 
     def update_remote_branches(self, remote_name, refs):
         tagfile = self.repo.join(self.remote_refs_file)
-        tags = self.remote_refs
+        remote_refs = self.remote_refs
         # since we re-write all refs for this remote each time, prune
-        # all entries matching this remote from our tags list now so
+        # all entries matching this remote from our refs list now so
         # that we avoid any stale refs hanging around forever
-        for t in list(tags):
+        for t in list(remote_refs):
             if t.startswith(remote_name + '/'):
-                del tags[t]
+                del remote_refs[t]
         store = self.git.object_store
         for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
@@ -1272,7 +1272,7 @@ class GitHandler(object):
                 if hgsha is None or hgsha not in self.repo:
                     continue
                 head = ref_name[11:]
-                tags['/'.join((remote_name, head))] = bin(hgsha)
+                remote_refs['/'.join((remote_name, head))] = bin(hgsha)
                 # TODO(durin42): what is this doing?
                 new_ref = 'refs/remotes/%s/%s' % (remote_name, head)
                 self.git.refs[new_ref] = sha
