@@ -23,7 +23,7 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
             "(if you're trying to move a bookmark forward, try " +
             "'hg rebase -d <destination>')")
 
-    return orig(ui, repo, node=node, **kwargs)
+    return orig(ui, repo, node=node, rev=rev, **kwargs)
 wrapcommand(commands.table, 'update', update)
 
 def _rebase(orig, ui, repo, **opts):

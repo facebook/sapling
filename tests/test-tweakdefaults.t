@@ -27,8 +27,11 @@ Empty update fails
   [255]
 
   $ hg up -q -r 1
-
+  $ hg log -r . -T '{rev}\n'
+  1
   $ hg up -q 1
+  $ hg log -r . -T '{rev}\n'
+  1
 
 Log is -f by default
 
