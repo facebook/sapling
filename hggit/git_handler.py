@@ -1249,7 +1249,6 @@ class GitHandler(object):
         for t in list(tags):
             if t.startswith(remote_name + '/'):
                 del tags[t]
-        tags = dict((k, hex(v)) for k, v in tags.iteritems())
         store = self.git.object_store
         for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
@@ -1257,7 +1256,7 @@ class GitHandler(object):
                 if hgsha is None or hgsha not in self.repo:
                     continue
                 head = ref_name[11:]
-                tags['/'.join((remote_name, head))] = hgsha
+                tags['/'.join((remote_name, head))] = bin(hgsha)
                 # TODO(durin42): what is this doing?
                 new_ref = 'refs/remotes/%s/%s' % (remote_name, head)
                 self.git.refs[new_ref] = sha
@@ -1267,7 +1266,7 @@ class GitHandler(object):
 
         tf = open(tagfile, 'wb')
         for tag, node in tags.iteritems():
-            tf.write('%s %s\n' % (node, tag))
+            tf.write('%s %s\n' % (hex(node), tag))
         tf.close()
 
 
