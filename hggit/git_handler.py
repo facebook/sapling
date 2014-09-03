@@ -206,6 +206,12 @@ class GitHandler(object):
             td = [line.split(' ', 1) for line in tagdata if line]
             self._remote_refs.update([(name, bin(sha)) for sha, name in td])
 
+    def save_remote_refs(self):
+        tf = open(self.repo.join(self.remote_refs_file), 'wb')
+        for tag, node in self.remote_refs.iteritems():
+            tf.write('%s %s\n' % (hex(node), tag))
+        tf.close()
+
     ## END FILE LOAD AND SAVE METHODS
 
     ## COMMANDS METHODS
@@ -1257,7 +1263,6 @@ class GitHandler(object):
                          ' bookmarks enabled?\n'))
 
     def update_remote_branches(self, remote_name, refs):
-        tagfile = self.repo.join(self.remote_refs_file)
         remote_refs = self.remote_refs
         # since we re-write all refs for this remote each time, prune
         # all entries matching this remote from our refs list now so
@@ -1280,11 +1285,7 @@ class GitHandler(object):
                   and not ref_name.endswith('^{}')):
                 self.git.refs[ref_name] = sha
 
-        tf = open(tagfile, 'wb')
-        for tag, node in tags.iteritems():
-            tf.write('%s %s\n' % (hex(node), tag))
-        tf.close()
-
+        self.save_remote_refs()
 
     ## UTILITY FUNCTIONS
 
