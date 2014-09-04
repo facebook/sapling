@@ -326,6 +326,7 @@ process.
   verified existence of 6 revisions of 4 largefiles
   [1]
   $ hg -R largefiles-repo-hg showconfig paths
+  [1]
 
 
 Avoid a traceback if a largefile isn't available (issue3519)

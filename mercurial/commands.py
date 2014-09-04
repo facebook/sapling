@@ -1498,7 +1498,7 @@ def config(ui, repo, *values, **opts):
 
     See :hg:`help config` for more information about config files.
 
-    Returns 0 on success.
+    Returns 0 on success, 1 if NAME does not exist.
 
     """
 
@@ -1551,6 +1551,7 @@ def config(ui, repo, *values, **opts):
         items = [v for v in values if '.' in v]
         if len(items) > 1 or items and sections:
             raise util.Abort(_('only one config item permitted'))
+    matched = False
     for section, name, value in ui.walkconfig(untrusted=untrusted):
         value = str(value).replace('\n', '\\n')
         sectname = section + '.' + name
@@ -1560,14 +1561,20 @@ def config(ui, repo, *values, **opts):
                     ui.debug('%s: ' %
                              ui.configsource(section, name, untrusted))
                     ui.write('%s=%s\n' % (sectname, value))
+                    matched = True
                 elif v == sectname:
                     ui.debug('%s: ' %
                              ui.configsource(section, name, untrusted))
                     ui.write(value, '\n')
+                    matched = True
         else:
             ui.debug('%s: ' %
                      ui.configsource(section, name, untrusted))
             ui.write('%s=%s\n' % (sectname, value))
+            matched = True
+    if matched:
+        return 0
+    return 1
 
 @command('copy|cp',
     [('A', 'after', None, _('record a copy that has already occurred')),

@@ -287,7 +287,7 @@ class repoview(object):
             # without change in the cachekey.
             oldfilter = cl.filteredrevs
             try:
-                cl.filterrevs = ()  # disable filtering for tip
+                cl.filteredrevs = ()  # disable filtering for tip
                 curkey = (len(cl), cl.tip(), hash(oldfilter))
             finally:
                 cl.filteredrevs = oldfilter
