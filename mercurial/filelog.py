@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import revlog
+import error, revlog
 import re
 
 _mdre = re.compile('\1\n')
@@ -26,6 +26,10 @@ def packmeta(meta, text):
     keys = sorted(meta.iterkeys())
     metatext = "".join("%s: %s\n" % (k, meta[k]) for k in keys)
     return "\1\n%s\1\n%s" % (metatext, text)
+
+def _censoredtext(text):
+    m, offs = parsemeta(text)
+    return m and "censored" in m and not text[offs:]
 
 class filelog(revlog.revlog):
     def __init__(self, opener, path):
@@ -85,6 +89,14 @@ class filelog(revlog.revlog):
             return t2 != text
 
         return True
+
+    def checkhash(self, text, p1, p2, node, rev=None):
+        try:
+            super(filelog, self).checkhash(text, p1, p2, node, rev=rev)
+        except error.RevlogError:
+            if _censoredtext(text):
+                raise error.CensoredNodeError(self.indexfile, node)
+            raise
 
     def _file(self, f):
         return filelog(self.opener, f)
