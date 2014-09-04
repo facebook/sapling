@@ -37,6 +37,9 @@ later.
   |/
   o  0
   
+
+(display all nodes)
+
   $ hg --config experimental.graph-topological=1 log -G
   o  8
   |
@@ -56,3 +59,22 @@ later.
   |/
   o  0
   
+
+(revset skipping nodes)
+
+  $ hg --config experimental.graph-topological=1 log -G --rev 'not (2+6)'
+  o  8
+  |
+  o  3
+  |
+  o  1
+  |
+  | o  7
+  | |
+  | o  5
+  | |
+  | o  4
+  |/
+  o  0
+  
+

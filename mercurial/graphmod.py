@@ -20,6 +20,8 @@ Data depends on type.
 from mercurial.node import nullrev
 import util
 
+import heapq
+
 CHANGESET = 'C'
 
 def groupbranchiter(revs, parentsfunc):
@@ -39,8 +41,6 @@ def groupbranchiter(revs, parentsfunc):
       | o  2
       |/
       o  0
-
-    Currently does not handle non-contiguous <revs> input.
 
     Currently consider every changeset under a merge to be on the same branch
     using revision number to sort them.
@@ -103,16 +103,27 @@ def groupbranchiter(revs, parentsfunc):
     #
     # You could pre-seed the <parents> set of groups[0] to a specific
     # changesets to select what the first emitted branch should be.
-    #
-    # We do not support revisions will hole yet, but adding such support would
-    # be easy. The iteration will have to be done using both input revision and
-    # parents (see cl.ancestors function + a few tweaks) but only revisions
-    # parts of the initial set should be emitted.
     groups = [([], unblocked)]
-    for current in revs:
-        if True:
+    pendingheap = []
+    pendingset = set()
+
+    heapq.heapify(pendingheap)
+    heappop = heapq.heappop
+    heappush = heapq.heappush
+    for currentrev in revs:
+        # Heap works with smallest element, we want highest so we invert
+        if currentrev not in pendingset:
+            heappush(pendingheap, -currentrev)
+            pendingset.add(currentrev)
+        # iterates on pending rev until after the current rev have been
+        # processeed.
+        rev = None
+        while rev != currentrev:
+            rev = -heappop(pendingheap)
+            pendingset.remove(rev)
+
             # Seek for a subgroup blocked, waiting for the current revision.
-            matching = [i for i, g in enumerate(groups) if current in g[1]]
+            matching = [i for i, g in enumerate(groups) if rev in g[1]]
 
             if matching:
                 # The main idea is to gather together all sets that await on
@@ -140,7 +151,7 @@ def groupbranchiter(revs, parentsfunc):
             else:
                 # This is a new head. We create a new subgroup for it.
                 targetidx = len(groups)
-                groups.append(([], set([current])))
+                groups.append(([], set([rev])))
 
             gr = groups[targetidx]
 
@@ -150,9 +161,15 @@ def groupbranchiter(revs, parentsfunc):
             #
             # we also update the <parents> set to includes the parents on the
             # new nodes.
-            gr[0].append(current)
-            gr[1].remove(current)
-            gr[1].update([p for p in parentsfunc(current) if p > nullrev])
+            if rev == currentrev: # only display stuff in rev
+                gr[0].append(rev)
+            gr[1].remove(rev)
+            parents = [p for p in parentsfunc(rev) if p > nullrev]
+            gr[1].update(parents)
+            for p in parents:
+                if p not in pendingset:
+                    pendingset.add(p)
+                    heappush(pendingheap, -p)
 
             # Look for a subgroup to display
             #
@@ -185,6 +202,11 @@ def groupbranchiter(revs, parentsfunc):
                     del groups[targetidx]
                 else:
                     gr[0][:] = []
+    # Check if we have some subgroup waiting for revision we are not going to
+    # iterate over
+    for g in groups:
+        for r in g[0]:
+            yield r
 
 def dagwalker(repo, revs):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
