@@ -495,7 +495,13 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
 
 def osrcpath():
     '''return default os-specific hgrc search path'''
-    path = systemrcpath()
+    path = []
+    defaultpath = os.path.join(util.datapath, 'default.d')
+    if os.path.isdir(defaultpath):
+        for f, kind in osutil.listdir(defaultpath):
+            if f.endswith('.rc'):
+                path.append(os.path.join(defaultpath, f))
+    path.extend(systemrcpath())
     path.extend(userrcpath())
     path = [os.path.normpath(f) for f in path]
     return path

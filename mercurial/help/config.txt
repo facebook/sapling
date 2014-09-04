@@ -38,6 +38,7 @@ ones.
   - ``<install-root>/etc/mercurial/hgrc.d/*.rc`` (per-installation)
   - ``/etc/mercurial/hgrc`` (per-system)
   - ``/etc/mercurial/hgrc.d/*.rc`` (per-system)
+  - ``<internal>/default.d/*.rc`` (defaults)
 
 .. container:: verbose.windows
 
@@ -51,6 +52,7 @@ ones.
   - ``<install-dir>\Mercurial.ini`` (per-installation)
   - ``<install-dir>\hgrc.d\*.rc`` (per-installation)
   - ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial`` (per-installation)
+  - ``<internal>/default.d/*.rc`` (defaults)
 
   .. note::
 
@@ -67,6 +69,7 @@ ones.
   - ``<install-root>/lib/mercurial/hgrc.d/*.rc`` (per-installation)
   - ``/lib/mercurial/hgrc`` (per-system)
   - ``/lib/mercurial/hgrc.d/*.rc`` (per-system)
+  - ``<internal>/default.d/*.rc`` (defaults)
 
 Per-repository configuration options only apply in a
 particular repository. This file is not version-controlled, and
@@ -101,6 +104,13 @@ Per-system configuration files are for the system on which Mercurial
 is running. Options in these files apply to all Mercurial commands
 executed by any user in any directory. Options in these files
 override per-installation options.
+
+Mercurial comes with some default configuration. The default configuration
+files are installed with Mercurial and will be overwritten on upgrades. Default
+configuration files should never be edited by users or administrators but can
+be overridden in other configuration files. So far the directory only contains
+merge tool configuration but packagers can also put other default configuration
+there.
 
 Syntax
 ======
