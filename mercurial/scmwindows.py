@@ -40,7 +40,7 @@ def userrcpath():
     path = [os.path.join(home, 'mercurial.ini'),
             os.path.join(home, '.hgrc')]
     userprofile = os.environ.get('USERPROFILE')
-    if userprofile:
+    if userprofile and userprofile != home:
         path.append(os.path.join(userprofile, 'mercurial.ini'))
         path.append(os.path.join(userprofile, '.hgrc'))
     return path
