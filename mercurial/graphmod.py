@@ -24,7 +24,7 @@ import heapq
 
 CHANGESET = 'C'
 
-def groupbranchiter(revs, parentsfunc):
+def groupbranchiter(revs, parentsfunc, firstbranch=()):
     """yield revision from heads to roots one (topo) branch after the other.
 
     This function aims to be used by a graph generator that wishes to minimize
@@ -44,8 +44,8 @@ def groupbranchiter(revs, parentsfunc):
 
     Currently consider every changeset under a merge to be on the same branch
     using revision number to sort them.
+    """
 
-    Could be easily extend to give priority to an initial branch."""
     ### Quick summary of the algorithm
     #
     # This function is based around a "retention" principle. We keep revisions
@@ -78,7 +78,11 @@ def groupbranchiter(revs, parentsfunc):
     # Set of parents of revision that have been yield. They can be considered
     # unblocked as the graph generator is already aware of them so there is no
     # need to delay the one that reference them.
-    unblocked = set()
+    #
+    # If someone wants to prioritize a branch over the others, pre-filling this
+    # set will force all other branches to wait until this branch is ready to be
+    # outputed.
+    unblocked = set(firstbranch)
 
     # list of group waiting to be displayed, each group is defined by:
     #
@@ -224,7 +228,13 @@ def dagwalker(repo, revs):
     gpcache = {}
 
     if repo.ui.configbool('experimental', 'graph-topological', False):
-        revs = list(groupbranchiter(revs, repo.changelog.parentrevs))
+        firstbranch = ()
+        firstbranchrevset = repo.ui.config('experimental',
+                                           'graph-topological.firstbranch', '')
+        if firstbranchrevset:
+            firstbranch = repo.revs(firstbranchrevset)
+        parentrevs = repo.changelog.parentrevs
+        revs = list(groupbranchiter(revs, parentrevs, firstbranch))
 
     for rev in revs:
         ctx = repo[rev]

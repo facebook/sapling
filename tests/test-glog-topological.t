@@ -78,3 +78,24 @@ later.
   o  0
   
 
+(begin) from the other branch
+
+  $ hg --config experimental.graph-topological=1 --config experimental.graph-topological.firstbranch=5 log -G
+  o  7
+  |
+  o  6
+  |
+  o  5
+  |
+  o  4
+  |
+  | o  8
+  | |
+  | o  3
+  | |
+  | o  2
+  | |
+  | o  1
+  |/
+  o  0
+  
