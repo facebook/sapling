@@ -12,7 +12,7 @@ Enable obsolete
   > logtemplate= {rev}:{node|short} {desc|firstline}
   > [phases]
   > publish=False
-  > [extensions]'
+  > [extensions]
   > histedit=
   > rebase=
   > 
