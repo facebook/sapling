@@ -483,9 +483,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                              'backout')
+                repo.dirstate.beginparentchange()
                 stats = mergemod.update(repo, parent, True, True, False,
                                         node, False)
                 repo.setparents(op1, op2)
+                repo.dirstate.endparentchange()
                 hg._showstats(repo, stats)
                 if stats[3]:
                     repo.ui.status(_("use 'hg resolve' to retry unresolved "
@@ -2750,7 +2752,9 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
     wlock = repo.wlock()
     try:
+        repo.dirstate.beginparentchange()
         repo.setparents(r1, r2)
+        repo.dirstate.endparentchange()
     finally:
         wlock.release()
 
@@ -3310,10 +3314,12 @@ def graft(ui, repo, *revs, **opts):
                 cont = False
 
             # drop the second merge parent
+            repo.dirstate.beginparentchange()
             repo.setparents(current.node(), nullid)
             repo.dirstate.write()
             # fix up dirstate for copies and renames
             cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
+            repo.dirstate.endparentchange()
 
             # commit
             node = repo.commit(text=message, user=user,
@@ -3922,6 +3928,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     try:
         try:
             wlock = repo.wlock()
+            repo.dirstate.beginparentchange()
             if not opts.get('no_commit'):
                 lock = repo.lock()
                 tr = repo.transaction('import')
@@ -3962,6 +3969,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 tr.close()
             if msgs:
                 repo.savecommitmessage('\n* * *\n'.join(msgs))
+            repo.dirstate.endparentchange()
             return ret
         except: # re-raises
             # wlock.release() indirectly calls dirstate.write(): since

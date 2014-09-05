@@ -758,6 +758,7 @@ class localrepository(object):
         return self[changeid].parents()
 
     def setparents(self, p1, p2=nullid):
+        self.dirstate.beginparentchange()
         copies = self.dirstate.setparents(p1, p2)
         pctx = self[p1]
         if copies:
@@ -771,6 +772,7 @@ class localrepository(object):
             for f, s in sorted(self.dirstate.copies().items()):
                 if f not in pctx and s not in pctx:
                     self.dirstate.copy(None, f)
+        self.dirstate.endparentchange()
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.

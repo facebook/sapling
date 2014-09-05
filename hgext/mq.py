@@ -816,12 +816,14 @@ class queue(object):
                         merged.append(f)
                     else:
                         removed.append(f)
+                repo.dirstate.beginparentchange()
                 for f in removed:
                     repo.dirstate.remove(f)
                 for f in merged:
                     repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
                 repo.setparents(p1, merge)
+                repo.dirstate.endparentchange()
 
             if all_files and '.hgsubstate' in all_files:
                 wctx = repo[None]
@@ -1451,7 +1453,7 @@ class queue(object):
                 if keepchanges and tobackup:
                     raise util.Abort(_("local changes found, refresh first"))
                 self.backup(repo, tobackup)
-
+                repo.dirstate.beginparentchange()
                 for f in a:
                     util.unlinkpath(repo.wjoin(f), ignoremissing=True)
                     repo.dirstate.drop(f)
@@ -1460,6 +1462,7 @@ class queue(object):
                     repo.wwrite(f, fctx.data(), fctx.flags())
                     repo.dirstate.normal(f)
                 repo.setparents(qp, nullid)
+                repo.dirstate.endparentchange()
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
@@ -1599,6 +1602,7 @@ class queue(object):
             bmlist = repo[top].bookmarks()
 
             try:
+                repo.dirstate.beginparentchange()
                 if diffopts.git or diffopts.upgrade:
                     copies = {}
                     for dst in a:
@@ -1651,6 +1655,7 @@ class queue(object):
 
                 # assumes strip can roll itself back if interrupted
                 repo.setparents(*cparents)
+                repo.dirstate.endparentchange()
                 self.applied.pop()
                 self.applieddirty = True
                 strip(self.ui, repo, [top], update=False, backup=False)

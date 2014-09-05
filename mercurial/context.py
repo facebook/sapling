@@ -1173,11 +1173,13 @@ class committablectx(basectx):
 
         """
 
+        self._repo.dirstate.beginparentchange()
         for f in self.modified() + self.added():
             self._repo.dirstate.normal(f)
         for f in self.removed():
             self._repo.dirstate.drop(f)
         self._repo.dirstate.setparents(node)
+        self._repo.dirstate.endparentchange()
 
     def dirs(self):
         return self._repo.dirstate.dirs()

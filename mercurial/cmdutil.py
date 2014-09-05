@@ -659,6 +659,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
 
         n = None
         if update:
+            repo.dirstate.beginparentchange()
             if p1 != parents[0]:
                 updatefunc(repo, p1.node())
             if p2 != parents[1]:
@@ -698,6 +699,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 n = repo.commit(message, opts.get('user') or user,
                                 opts.get('date') or date, match=m,
                                 editor=editor, force=partial)
+            repo.dirstate.endparentchange()
         else:
             if opts.get('exact') or opts.get('import_branch'):
                 branch = branch or 'default'

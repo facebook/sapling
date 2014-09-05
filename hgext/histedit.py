@@ -221,6 +221,7 @@ def applychanges(ui, repo, ctx, opts):
         cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
         stats = None
     else:
+        repo.dirstate.beginparentchange()
         try:
             # ui.forcemerge is an internal variable, do not document
             repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
@@ -230,6 +231,7 @@ def applychanges(ui, repo, ctx, opts):
         finally:
             repo.ui.setconfig('ui', 'forcemerge', '', 'histedit')
         repo.setparents(wcpar, node.nullid)
+        repo.dirstate.endparentchange()
         repo.dirstate.write()
         # fix up dirstate for copies and renames
     cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())

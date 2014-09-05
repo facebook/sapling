@@ -1134,6 +1134,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
 
         if not partial:
+            repo.dirstate.beginparentchange()
             repo.setparents(fp1, fp2)
             recordupdates(repo, actions, branchmerge)
             # update completed, clear state
@@ -1141,6 +1142,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())
+            repo.dirstate.endparentchange()
     finally:
         wlock.release()
 
