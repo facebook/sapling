@@ -1102,7 +1102,11 @@ class localrepository(object):
             return l
 
         def unlock():
-            self.dirstate.write()
+            if self.dirstate.pendingparentchange():
+                self.dirstate.invalidate()
+            else:
+                self.dirstate.write()
+
             self._filecache['dirstate'].refresh()
 
         l = self._lock(self.vfs, "wlock", wait, unlock,

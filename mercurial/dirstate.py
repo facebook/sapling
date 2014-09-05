@@ -44,6 +44,30 @@ class dirstate(object):
         self._lastnormaltime = 0
         self._ui = ui
         self._filecache = {}
+        self._parentwriters = 0
+
+    def beginparentchange(self):
+        '''Marks the beginning of a set of changes that involve changing
+        the dirstate parents. If there is an exception during this time,
+        the dirstate will not be written when the wlock is released. This
+        prevents writing an incoherent dirstate where the parent doesn't
+        match the contents.
+        '''
+        self._parentwriters += 1
+
+    def endparentchange(self):
+        '''Marks the end of a set of changes that involve changing the
+        dirstate parents. Once all parent changes have been marked done,
+        the wlock will be free to write the dirstate on release.
+        '''
+        if self._parentwriters > 0:
+            self._parentwriters -= 1
+
+    def pendingparentchange(self):
+        '''Returns true if the dirstate is in the middle of a set of changes
+        that modify the dirstate parent.
+        '''
+        return self._parentwriters > 0
 
     @propertycache
     def _map(self):
@@ -300,6 +324,7 @@ class dirstate(object):
                 delattr(self, a)
         self._lastnormaltime = 0
         self._dirty = False
+        self._parentwriters = 0
 
     def copy(self, source, dest):
         """Mark dest as a copy of source. Unmark dest if source is None."""
