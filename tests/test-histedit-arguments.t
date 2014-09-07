@@ -41,6 +41,16 @@ Repo setup.
        one
   
 
+histedit --continue/--abort with no existing state
+--------------------------------------------------
+
+  $ hg histedit --continue
+  abort: no histedit in progress
+  [255]
+  $ hg histedit --abort
+  abort: no histedit in progress
+  [255]
+
 Run a dummy edit to make sure we get tip^^ correctly via revsingle.
 --------------------------------------------------------------------
 

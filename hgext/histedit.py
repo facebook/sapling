@@ -149,6 +149,7 @@ try:
     pickle.dump # import now
 except ImportError:
     import pickle
+import errno
 import os
 import sys
 
@@ -761,7 +762,12 @@ def writestate(repo, parentnode, rules, keep, topmost, replacements):
 def readstate(repo):
     """Returns a tuple of (parentnode, rules, keep, topmost, replacements).
     """
-    fp = open(os.path.join(repo.path, 'histedit-state'))
+    try:
+        fp = open(os.path.join(repo.path, 'histedit-state'))
+    except IOError, err:
+        if err.errno != errno.ENOENT:
+            raise
+        raise util.Abort(_('no histedit in progress'))
     return pickle.load(fp)
 
 
