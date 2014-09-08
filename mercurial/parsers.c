@@ -524,7 +524,7 @@ static Py_ssize_t index_length(const indexObject *self)
 static PyObject *nullentry;
 static const char nullid[20];
 
-static long inline_scan(indexObject *self, const char **offsets);
+static Py_ssize_t inline_scan(indexObject *self, const char **offsets);
 
 #if LONG_MAX == 0x7fffffffL
 static char *tuple_format = "Kiiiiiis#";
@@ -1853,7 +1853,7 @@ static int index_assign_subscript(indexObject *self, PyObject *item,
  * Find all RevlogNG entries in an index that has inline data. Update
  * the optional "offsets" table with those entries.
  */
-static long inline_scan(indexObject *self, const char **offsets)
+static Py_ssize_t inline_scan(indexObject *self, const char **offsets)
 {
 	const char *data = PyString_AS_STRING(self->data);
 	Py_ssize_t pos = 0;
@@ -1913,7 +1913,7 @@ static int index_init(indexObject *self, PyObject *args)
 	Py_INCREF(self->data);
 
 	if (self->inlined) {
-		long len = inline_scan(self, NULL);
+		Py_ssize_t len = inline_scan(self, NULL);
 		if (len == -1)
 			goto bail;
 		self->raw_length = len;
