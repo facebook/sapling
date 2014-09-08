@@ -275,14 +275,19 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	PyObject *fname = NULL, *cname = NULL, *entry = NULL;
 	char state, *cur, *str, *cpos;
 	int mode, size, mtime;
-	unsigned int flen;
-	int len, pos = 40;
+	unsigned int flen, len, pos = 40;
+	int readlen;
 
 	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate",
 			      &PyDict_Type, &dmap,
 			      &PyDict_Type, &cmap,
-			      &str, &len))
+			      &str, &readlen))
 		goto quit;
+
+	if (readlen < 0)
+		goto quit;
+
+	len = readlen;
 
 	/* read parents */
 	if (len < 40)
