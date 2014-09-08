@@ -1304,7 +1304,7 @@ static PyObject *find_gca_candidates(indexObject *self, const int *revs,
 	PyObject *gca = PyList_New(0);
 	int i, v, interesting;
 	int maxrev = -1;
-	long sp;
+	bitmask sp;
 	bitmask *seen;
 
 	if (gca == NULL)
@@ -1327,7 +1327,7 @@ static PyObject *find_gca_candidates(indexObject *self, const int *revs,
 	interesting = revcount;
 
 	for (v = maxrev; v >= 0 && interesting; v--) {
-		long sv = seen[v];
+		bitmask sv = seen[v];
 		int parents[2];
 
 		if (!sv)
