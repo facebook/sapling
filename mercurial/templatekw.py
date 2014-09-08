@@ -26,6 +26,8 @@ class _hybrid(object):
     def __call__(self):
         for x in self.values:
             yield x
+    def __len__(self):
+        return len(self.values)
 
 def showlist(name, values, plural=None, element=None, **args):
     if not element:
