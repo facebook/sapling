@@ -16,6 +16,7 @@ setup(
         'fbamend',
         'githelp',
         'gitlookup',
+        'gitrevset',
         'phrevset',
         'smartlog',
         'tweakdefaults',

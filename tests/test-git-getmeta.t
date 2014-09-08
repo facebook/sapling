@@ -1,13 +1,23 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "gitlookup = $TESTDIR/../gitlookup.py" >> $HGRCPATH
+  $ echo "gitrevset = $TESTDIR/../gitrevset.py" >> $HGRCPATH
+  $ echo '[ui]' >> $HGRCPATH
+  $ echo 'ssh = python "$TESTDIR/dummyssh"' >> $HGRCPATH
 
 Set up the hg-git files
   $ hg init repo1
-  $ cd repo1/.hg
-  $ echo '0000000000000000000000000000000000000000 ffffffffffffffffffffffffffffffffffffffff' > git-mapfile
-  $ echo '0000000000000000000000000000000000000000 default/master' > git-remote-refs
-  $ echo '0000000000000000000000000000000000000000 0.1' > git-tags
-
+  $ cd repo1
+  $ touch a
+  $ hg add a
+  $ hg ci -ma
+  $ hg log -r . --template '{node}\n'
+  3903775176ed42b1458a6281db4a0ccf4d9f287a
+  $ cd .hg
+  $ echo "ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a" > git-mapfile
+  $ echo 'ffffffffffffffffffffffffffffffffffffffff default/master' > git-remote-refs
+  $ echo 'ffffffffffffffffffffffffffffffffffffffff 0.1' > git-tags
+  $ echo '[gitlookup]' >> hgrc
+  $ echo "mapfile = $TESTTMP/repo1/.hg/git-mapfile" >> hgrc
 
   $ cd ../..
   $ hg clone repo1 repo2 -q
@@ -20,11 +30,11 @@ Set up the hg-git files
   wrote 3 files (183 bytes)
 
   $ cat .hg/git-mapfile
-  0000000000000000000000000000000000000000 ffffffffffffffffffffffffffffffffffffffff
+  ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a
   $ cat .hg/git-remote-refs
-  0000000000000000000000000000000000000000 default/master
+  ffffffffffffffffffffffffffffffffffffffff default/master
   $ cat .hg/git-tags
-  0000000000000000000000000000000000000000 0.1
+  ffffffffffffffffffffffffffffffffffffffff 0.1
 
 Change a file upstream and see that it gets reflected her
   $ echo '1111111111111111111111111111111111111111 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' >> ../repo1/.hg/git-mapfile
@@ -36,5 +46,16 @@ Change a file upstream and see that it gets reflected her
   wrote 3 files (265 bytes)
 
   $ cat .hg/git-mapfile
-  0000000000000000000000000000000000000000 ffffffffffffffffffffffffffffffffffffffff
+  ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a
   1111111111111111111111111111111111111111 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo1 repo-ssh -q
+  $ cd repo-ssh
+
+Check that our revset and template mappings work
+  $ hg log -r "gitnode(ffffffffffffffffffffffffffffffffffffffff)" --template "{node}\n"
+  3903775176ed42b1458a6281db4a0ccf4d9f287a
+
+  $ hg log -r . --template "{gitnode}\n"
+  ffffffffffffffffffffffffffffffffffffffff

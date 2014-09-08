@@ -1,4 +1,5 @@
 syntax: regexp
 \.pyc$
 \.so$
+\.err$
 ^build/
