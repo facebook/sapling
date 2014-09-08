@@ -23,7 +23,8 @@ Empty update fails
 
   $ hg up -q 0
   $ hg up
-  abort: you must specify a destination to update to (if you're trying to move a bookmark forward, try 'hg rebase -d <destination>')
+  abort: you must specify a destination to update to
+  (if you're trying to move a bookmark forward, try 'hg rebase -d <destination>')
   [255]
 
   $ hg up -q -r 1

@@ -19,9 +19,10 @@ testedwith = 'internal'
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
     if not node and not rev:
-        raise util.Abort("you must specify a destination to update to " +
-            "(if you're trying to move a bookmark forward, try " +
-            "'hg rebase -d <destination>')")
+        raise util.Abort(
+            'you must specify a destination to update to',
+            hint="if you're trying to move a bookmark forward, try " +
+                 "'hg rebase -d <destination>'")
 
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 wrapcommand(commands.table, 'update', update)
