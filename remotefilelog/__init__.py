@@ -309,7 +309,10 @@ def onetimeclientsetup(ui):
             pass
     wrapfunction(verify, '_verify', _verify)
 
-    wrapfunction(cmdutil, 'revert', revert)
+    if util.safehasattr(cmdutil, '_revertprefetch'):
+        wrapfunction(cmdutil, '_revertprefetch', _revertprefetch)
+    else:
+        wrapfunction(cmdutil, 'revert', revert)
 
 def getrenamedfn(repo, endrev=None):
     rcache = {}
@@ -535,6 +538,7 @@ def pull(orig, ui, repo, *pats, **opts):
 
 def revert(orig, ui, repo, ctx, parents, *pats, **opts):
     # prefetch prior to reverting
+    # used for old mercurial version
     if shallowrepo.requirement in repo.requirements:
         files = []
         m = scmutil.match(ctx, pats, opts)
@@ -545,6 +549,18 @@ def revert(orig, ui, repo, ctx, parents, *pats, **opts):
         repo.fileservice.prefetch(files)
 
     return orig(ui, repo, ctx, parents, *pats, **opts)
+
+def _revertprefetch(orig, repo, ctx, *files):
+    # prefetch data that needs to be reverted
+    # used for new mercurial version
+    if shallowrepo.requirement in repo.requirements:
+        allfiles = []
+        mf = ctx.manifest()
+        for f in files:
+            for path in f:
+                allfiles.append((path, hex(mf[path])))
+        repo.fileservice.prefetch(allfiles)
+    return orig(repo, ctx, *files)
 
 commands.norepo += " debugremotefilelog"
 
