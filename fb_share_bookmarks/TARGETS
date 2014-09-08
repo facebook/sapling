@@ -1,0 +1,10 @@
+python_binary(
+  name = 'hg_bookmark_manager',
+  main_module = 'tools.fb_scm.fb_share_bookmarks.bookmark_manager',
+  srcs = [
+    'bookmark_manager.py'
+  ],
+  deps = [
+    '@/libfb/py:db_locator'
+  ]
+)
