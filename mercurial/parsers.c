@@ -681,10 +681,9 @@ static PyObject *index_insert(indexObject *self, PyObject *args)
 {
 	PyObject *obj;
 	char *node;
-	long offset;
-	Py_ssize_t len, nodelen;
+	Py_ssize_t offset, len, nodelen;
 
-	if (!PyArg_ParseTuple(args, "lO", &offset, &obj))
+	if (!PyArg_ParseTuple(args, "nO", &offset, &obj))
 		return NULL;
 
 	if (!PyTuple_Check(obj) || PyTuple_GET_SIZE(obj) != 8) {
