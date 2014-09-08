@@ -60,6 +60,14 @@ import Queue as queue
 from xml.dom import minidom
 import unittest
 
+try:
+    if sys.version_info < (2, 7):
+        import simplejson as json
+    else:
+        import json
+except ImportError:
+    json = None
+
 processlock = threading.Lock()
 
 # subprocess._cleanup can race with any Popen.wait or Popen.poll on py24
@@ -186,6 +194,8 @@ def getparser():
              " (default: $%s or %d)" % defaults['timeout'])
     parser.add_option("--time", action="store_true",
         help="time how long each test takes")
+    parser.add_option("--json", action="store_true",
+                      help="store test result data in 'report.json' file")
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
@@ -1418,6 +1428,37 @@ class TextTestRunner(unittest.TextTestRunner):
                 xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
             finally:
                 xuf.close()
+
+        if self._runner.options.json:
+            if json is None:
+                raise ImportError("json module not installed")
+            jsonpath = os.path.join(self._runner._testdir, 'report.json')
+            fp = open(jsonpath, 'w')
+            try:
+                timesd = {}
+                for test, cuser, csys, real in result.times:
+                    timesd[test] = real
+
+                outcome = {}
+                for tc in result.successes:
+                    testresult = {'result': 'success',
+                                  'time': ('%0.3f' % timesd[tc.name])}
+                    outcome[tc.name] = testresult
+
+                for tc, err in sorted(result.faildata.iteritems()):
+                    testresult = {'result': 'failure',
+                                  'time': ('%0.3f' % timesd[tc])}
+                    outcome[tc] = testresult
+
+                for tc, reason in result.skipped:
+                    testresult = {'result': 'skip',
+                                  'time': ('%0.3f' % timesd[tc.name])}
+                    outcome[tc.name] = testresult
+
+                jsonout = json.dumps(outcome, sort_keys=True, indent=4)
+                fp.writelines(("testreport =", jsonout))
+            finally:
+                fp.close()
 
         self._runner._checkhglib('Tested')
 

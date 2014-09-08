@@ -369,3 +369,40 @@ Missing skips or blacklisted skips don't count as executed:
   Skipped test-failure.t: blacklisted
   # Ran 0 tests, 2 skipped, 0 warned, 0 failed.
 
+test for --json
+==================
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --json
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,4 +1,4 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+  
+  ERROR: test-failure.t output changed
+  !.s
+  Skipped test-skip.t: skipped
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+  $ cat report.json
+  testreport ={
+      "test-failure.t": [\{] (re)
+          "result": "failure", 
+          "time": "\s*[\d\.]{5}" (re)
+      }, 
+      "test-skip.t": {
+          "result": "skip", 
+          "time": "\s*[\d\.]{5}" (re)
+      }, 
+      "test-success.t": [\{] (re)
+          "result": "success", 
+          "time": "\s*[\d\.]{5}" (re)
+      }
+  } (no-eol)
