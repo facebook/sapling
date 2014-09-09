@@ -644,6 +644,7 @@ def _checkshellalias(lui, ui, args, precheck=True):
         return
 
     if precheck:
+        strict = True
         norepo = commands.norepo
         optionalrepo = commands.optionalrepo
         def restorecommands():
@@ -652,13 +653,14 @@ def _checkshellalias(lui, ui, args, precheck=True):
         cmdtable = commands.table.copy()
         addaliases(lui, cmdtable)
     else:
+        strict = False
         def restorecommands():
             pass
         cmdtable = commands.table
 
     cmd = args[0]
     try:
-        aliases, entry = cmdutil.findcmd(cmd, cmdtable)
+        aliases, entry = cmdutil.findcmd(cmd, cmdtable, strict)
     except (error.AmbiguousCommand, error.UnknownCommand):
         restorecommands()
         return
@@ -714,6 +716,14 @@ def _dispatch(req):
     # (reposetup is handled in hg.repository)
 
     addaliases(lui, commands.table)
+
+    if not lui.configbool("ui", "strict"):
+        # All aliases and commands are completely defined, now.
+        # Check abbreviation/ambiguity of shell alias again, because shell
+        # alias may cause failure of "_parse" (see issue4355)
+        shellaliasfn = _checkshellalias(lui, ui, args, precheck=False)
+        if shellaliasfn:
+            return shellaliasfn()
 
     # check for fallback encoding
     fallback = lui.config('ui', 'fallbackencoding')

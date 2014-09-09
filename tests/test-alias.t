@@ -353,7 +353,7 @@ command provided extension, should be aborted.
   > [extensions]
   > hgext.rebase =
   > [alias]
-  > rebate = !echo this is rebate
+  > rebate = !echo this is \$HG_ARGS
   > EOF
   $ hg reba
   hg: command 'reba' is ambiguous:
@@ -361,6 +361,8 @@ command provided extension, should be aborted.
   [255]
   $ hg rebat
   this is rebate
+  $ hg rebat --foo-bar
+  this is rebate --foo-bar
 
 invalid arguments
 
