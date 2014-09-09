@@ -4,7 +4,7 @@
   >     shift
   >     echo "Pushing as user $user"
   >     echo 'hgrc = """'
-  >     sed -e 1,2d b/.hg/hgrc | grep -v fakegroups.py
+  >     sed -n '/\[[ha]/,$p' b/.hg/hgrc | grep -v fakegroups.py
   >     echo '"""'
   >     if test -f acl.config; then
   >         echo 'acl.config = """'
@@ -1122,6 +1122,8 @@ fred is always allowed
   $ do_push fred
   Pushing as user fred
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1197,6 +1199,8 @@ no one is allowed inside foo/Bar/
   $ do_push fred
   Pushing as user fred
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1278,6 +1282,8 @@ OS-level groups
   $ do_push fred
   Pushing as user fred
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1354,6 +1360,8 @@ OS-level groups
   $ do_push fred
   Pushing as user fred
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1476,6 +1484,8 @@ No branch acls specified
   $ do_push astro
   Pushing as user astro
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1558,6 +1568,8 @@ Branch acl deny test
   $ do_push astro
   Pushing as user astro
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1641,6 +1653,8 @@ Branch acl empty allow test
   $ do_push astro
   Pushing as user astro
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1718,6 +1732,8 @@ Branch acl allow other
   $ do_push astro
   Pushing as user astro
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1790,6 +1806,8 @@ Branch acl allow other
   $ do_push george
   Pushing as user george
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1878,6 +1896,8 @@ push foobar into the remote
   $ do_push george
   Pushing as user george
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -1965,6 +1985,8 @@ Branch acl conflicting deny
   $ do_push george
   Pushing as user george
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -2044,6 +2066,8 @@ User 'astro' must not be denied
   $ do_push astro
   Pushing as user astro
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
@@ -2126,6 +2150,8 @@ Non-astro users must be denied
   $ do_push george
   Pushing as user george
   hgrc = """
+  [hooks]
+  pretxnchangegroup.acl = python:hgext.acl.hook
   [acl]
   sources = push
   [extensions]
