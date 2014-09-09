@@ -627,7 +627,12 @@ def _getlocal(ui, rpath):
 
     return path, lui
 
-def _checkshellalias(lui, ui, args):
+def _checkshellalias(lui, ui, args, precheck=True):
+    """Return the function to run the shell alias, if it is required
+
+    'precheck' is whether this function is invoked before adding
+    aliases or not.
+    """
     options = {}
 
     try:
@@ -638,14 +643,18 @@ def _checkshellalias(lui, ui, args):
     if not args:
         return
 
-    norepo = commands.norepo
-    optionalrepo = commands.optionalrepo
-    def restorecommands():
-        commands.norepo = norepo
-        commands.optionalrepo = optionalrepo
-
-    cmdtable = commands.table.copy()
-    addaliases(lui, cmdtable)
+    if precheck:
+        norepo = commands.norepo
+        optionalrepo = commands.optionalrepo
+        def restorecommands():
+            commands.norepo = norepo
+            commands.optionalrepo = optionalrepo
+        cmdtable = commands.table.copy()
+        addaliases(lui, cmdtable)
+    else:
+        def restorecommands():
+            pass
+        cmdtable = commands.table
 
     cmd = args[0]
     try:
