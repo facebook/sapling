@@ -66,6 +66,10 @@ def basename(path):
     """
     return os.path.basename(path)
 
+def count(i):
+    """:count: List or text. Returns the length as an integer."""
+    return len(i)
+
 def datefilter(text):
     """:date: Date. Returns a date in a Unix date format, including the
     timezone: "Mon Sep 04 15:13:13 2006 0700".
@@ -366,6 +370,7 @@ filters = {
     "addbreaks": addbreaks,
     "age": age,
     "basename": basename,
+    "count": count,
     "date": datefilter,
     "domain": domain,
     "email": email,

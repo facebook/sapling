@@ -1762,6 +1762,38 @@ Age filter:
   $ hg log -l1 --template '{date|age}\n'
   7 years from now
 
+Count filter:
+
+  $ hg log -l1 --template '{node|count} {node|short|count}\n'
+  40 12
+
+  $ hg log -l1 --template '{revset("null^")|count} {revset(".")|count} {revset("0::3")|count}\n'
+  0 1 4
+
+  $ hg log -G --template '{rev}: children: {children|count}, \
+  > tags: {tags|count}, file_adds: {file_adds|count}, \
+  > ancestors: {revset("ancestors(%s)", rev)|count}'
+  @  9: children: 0, tags: 1, file_adds: 1, ancestors: 3
+  |
+  o  8: children: 1, tags: 0, file_adds: 2, ancestors: 2
+  |
+  o  7: children: 1, tags: 0, file_adds: 1, ancestors: 1
+  
+  o    6: children: 0, tags: 0, file_adds: 0, ancestors: 7
+  |\
+  | o  5: children: 1, tags: 0, file_adds: 1, ancestors: 5
+  | |
+  o |  4: children: 1, tags: 0, file_adds: 0, ancestors: 5
+  |/
+  o  3: children: 2, tags: 0, file_adds: 0, ancestors: 4
+  |
+  o  2: children: 1, tags: 0, file_adds: 1, ancestors: 3
+  |
+  o  1: children: 1, tags: 0, file_adds: 1, ancestors: 2
+  |
+  o  0: children: 1, tags: 0, file_adds: 1, ancestors: 1
+  
+
 Error on syntax:
 
   $ echo 'x = "f' >> t
