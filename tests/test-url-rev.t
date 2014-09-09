@@ -41,6 +41,14 @@ Test basic functionality of url#rev syntax
   summary:     change a
   
   $ cat clone/.hg/hgrc
+  # You may want to set your username here if it is not set
+  # globally, or this repository requires a different
+  # username from your usual configuration. If you want to
+  # set something for all of your repositories on this
+  # computer, try running the command
+  # 'hg config --edit --global'
+  # [ui]
+  # username = Jane Doe <jdoe@example.com>
   [paths]
   default = $TESTTMP/repo#foo (glob)
 

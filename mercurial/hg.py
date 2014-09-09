@@ -432,12 +432,23 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 destpeer.pushkey('bookmarks', k, '', hex(n))
 
         if destrepo:
+            template = (
+                '# You may want to set your username here if it is not set\n'
+                "# globally, or this repository requires a different\n"
+                '# username from your usual configuration. If you want to\n'
+                '# set something for all of your repositories on this\n'
+                '# computer, try running the command\n'
+                "# 'hg config --edit --global'\n"
+                '# [ui]\n'
+                '# username = Jane Doe <jdoe@example.com>\n'
+                '[paths]\n'
+                'default = %s\n'
+                )
             fp = destrepo.opener("hgrc", "w", text=True)
-            fp.write("[paths]\n")
             u = util.url(abspath)
             u.passwd = None
             defaulturl = str(u)
-            fp.write("default = %s\n" % defaulturl)
+            fp.write(template % defaulturl)
             fp.close()
 
             destrepo.ui.setconfig('paths', 'default', defaulturl, 'clone')

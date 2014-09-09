@@ -26,6 +26,14 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat test3/.hg/hgrc
+  # You may want to set your username here if it is not set
+  # globally, or this repository requires a different
+  # username from your usual configuration. If you want to
+  # set something for all of your repositories on this
+  # computer, try running the command
+  # 'hg config --edit --global'
+  # [ui]
+  # username = Jane Doe <jdoe@example.com>
   [paths]
   default = http://foo@localhost:$HGPORT/
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
