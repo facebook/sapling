@@ -263,6 +263,9 @@ class convert_git(converter_source):
                    rev=version)
         return c
 
+    def numcommits(self):
+        return len([None for _ in self.gitopen('git rev-list --all')])
+
     def gettags(self):
         tags = {}
         alltags = {}
@@ -342,4 +345,3 @@ class convert_git(converter_source):
     def checkrevformat(self, revstr, mapname='splicemap'):
         """ git revision string is a 40 byte hex """
         self.checkhexformat(revstr, mapname)
-
