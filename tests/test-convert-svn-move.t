@@ -149,7 +149,7 @@ Try updating
   $ hg up -qC default
   $ cd ..
 
-Test convert progress bar'
+Test convert progress bar
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
