@@ -24,10 +24,10 @@ def _parsemeta(text):
         keys.append(k)
     return meta, keys, (s + 2)
 
-def _packmeta(meta, keys=None):
-    if not keys:
-        keys = sorted(meta.iterkeys())
-    return "".join("%s: %s\n" % (k, meta[k]) for k in keys)
+def packmeta(meta, text):
+    keys = sorted(meta.iterkeys())
+    metatext = "".join("%s: %s\n" % (k, meta[k]) for k in keys)
+    return "\1\n%s\1\n%s" % (metatext, text)
 
 class filelog(revlog.revlog):
     def __init__(self, opener, path):
@@ -43,7 +43,7 @@ class filelog(revlog.revlog):
 
     def add(self, text, meta, transaction, link, p1=None, p2=None):
         if meta or text.startswith('\1\n'):
-            text = "\1\n%s\1\n%s" % (_packmeta(meta), text)
+            text = packmeta(meta, text)
         return self.addrevision(text, transaction, link, p1, p2)
 
     def renamed(self, node):
