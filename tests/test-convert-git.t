@@ -51,7 +51,43 @@ Remove the directory, then try to replace it with a file (issue754)
   $ git pull --no-commit . other > /dev/null 2>/dev/null
   $ commit -m 'Merge branch other'
   $ cd ..
-  $ hg convert --datesort git-repo
+  $ hg convert --config extensions.progress= --config progress.assume-tty=1 \
+  >   --config progress.delay=0 --config progress.changedelay=0 \
+  >   --config progress.refresh=0 --config progress.width=60 \
+  > --datesort git-repo
+  \r (no-eol) (esc)
+  scanning [ <=>                                          ] 1\r (no-eol) (esc)
+  scanning [  <=>                                         ] 2\r (no-eol) (esc)
+  scanning [   <=>                                        ] 3\r (no-eol) (esc)
+  scanning [    <=>                                       ] 4\r (no-eol) (esc)
+  scanning [     <=>                                      ] 5\r (no-eol) (esc)
+  scanning [      <=>                                     ] 6\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [                                          ] 0/6\r (no-eol) (esc)
+  getting files [==================>                    ] 1/2\r (no-eol) (esc)
+  getting files [======================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [======>                                   ] 1/6\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=============>                            ] 2/6\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [====================>                     ] 3/6\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [===========================>              ] 4/6\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [==================================>       ] 5/6\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   assuming destination git-repo-hg
   initializing destination git-repo-hg repository
   scanning source...
