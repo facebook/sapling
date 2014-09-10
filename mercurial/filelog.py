@@ -9,7 +9,7 @@ import revlog
 import re
 
 _mdre = re.compile('\1\n')
-def _parsemeta(text):
+def parsemeta(text):
     """return (metadatadict, keylist, metadatasize)"""
     # text can be buffer, so we can't use .startswith or .index
     if text[:2] != '\1\n':
@@ -50,7 +50,7 @@ class filelog(revlog.revlog):
         if self.parents(node)[0] != revlog.nullid:
             return False
         t = self.revision(node)
-        m = _parsemeta(t)[0]
+        m = parsemeta(t)[0]
         if m and "copy" in m:
             return (m["copy"], revlog.bin(m["copyrev"]))
         return False
