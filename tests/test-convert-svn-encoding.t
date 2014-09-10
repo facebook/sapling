@@ -20,7 +20,7 @@ Convert while testing all possible outputs
   found branches at 'branches'
   found branch branch\xc3\xa9 at 5 (esc)
   found branch branch\xc3\xa9e at 6 (esc)
-  scanning: 1 revisions
+  scanning: 1/4 revisions (25.00%)
   reparent to file://*/svn-repo/trunk (glob)
   fetching revision log for "/trunk" from 4 to 0
   parsing revision 4 (2 changes)
@@ -30,23 +30,23 @@ Convert while testing all possible outputs
   no copyfrom path, don't know what to do.
   '/branches' is not under '/trunk', ignoring
   '/tags' is not under '/trunk', ignoring
-  scanning: 2 revisions
+  scanning: 2/4 revisions (50.00%)
   reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
   fetching revision log for "/branches/branch\xc3\xa9" from 5 to 0 (esc)
   parsing revision 5 (1 changes)
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
   found parent of branch /branches/branch\xc3\xa9 at 4: /trunk (esc)
-  scanning: 3 revisions
+  scanning: 3/4 revisions (75.00%)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   fetching revision log for "/branches/branch\xc3\xa9e" from 6 to 0 (esc)
   parsing revision 6 (1 changes)
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   found parent of branch /branches/branch\xc3\xa9e at 5: /branches/branch\xc3\xa9 (esc)
-  scanning: 4 revisions
-  scanning: 5 revisions
-  scanning: 6 revisions
+  scanning: 4/4 revisions (100.00%)
+  scanning: 5/4 revisions (125.00%)
+  scanning: 6/4 revisions (150.00%)
   sorting...
   converting...
   5 init projA

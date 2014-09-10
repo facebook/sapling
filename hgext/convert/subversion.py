@@ -508,6 +508,9 @@ class svn_source(converter_source):
             raise util.Abort(_('%s entry %s is not a valid revision'
                                ' identifier') % (mapname, revstr))
 
+    def numcommits(self):
+        return int(self.head.rsplit('@', 1)[1]) - self.startrev
+
     def gettags(self):
         tags = {}
         if self.tags is None:
