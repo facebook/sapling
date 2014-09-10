@@ -181,7 +181,7 @@ def _fm0readmarkers(data, off=0):
         off += mdsize
         meta = decodemeta(metadata)
         try:
-            when, offset = decodemeta(metadata).pop('date', '0 0').split(' ')
+            when, offset = meta.pop('date', '0 0').split(' ')
             date = float(when), int(offset)
         except ValueError:
             date = (0., 0)
