@@ -3019,8 +3019,7 @@ def select(ui, repo, *args, **opts):
     popped = False
     if opts.get('pop') or opts.get('reapply'):
         for i in xrange(len(q.applied)):
-            pushable, reason = q.pushable(i)
-            if not pushable:
+            if not pushable(i):
                 ui.status(_('popping guarded patches\n'))
                 popped = True
                 if i == 0:

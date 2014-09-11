@@ -566,3 +566,25 @@ guarded (= not yet applied) one.
   1 G c.patch
   2 A d.patch
   3 G b.patch
+
+test that "qselect --reapply" checks applied patches correctly when no
+applied patche becomes guarded but some of unapplied ones become
+unguarded.
+
+  $ hg qpop -q -a
+  patch queue now empty
+  $ hg qselect not-new not-c not-d
+  number of unguarded, unapplied patches has changed from 2 to 1
+  $ hg qpush -q -a
+  now at: b.patch
+  $ hg qapplied -v
+  0 G new.patch
+  1 G c.patch
+  2 G d.patch
+  3 A b.patch
+  $ hg qselect -q --reapply not-new not-c
+  $ hg qseries -v
+  0 G new.patch
+  1 G c.patch
+  2 U d.patch
+  3 A b.patch
