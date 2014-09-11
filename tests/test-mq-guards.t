@@ -541,3 +541,28 @@ test that qselect shows "number of guarded, applied patches" correctly
   guards deactivated
   $ hg qselect not-new not-c not-d
   number of guarded, applied patches has changed from 0 to 1
+
+test that "qselect --reapply" reapplies patches successfully when the
+already applied patch becomes unguarded and it follows the already
+guarded (= not yet applied) one.
+
+  $ hg qpop -q -a
+  patch queue now empty
+  $ hg qselect not-new not-c
+  number of unguarded, unapplied patches has changed from 1 to 2
+  $ hg qpush -q -a
+  patch d.patch is empty
+  now at: b.patch
+  $ hg qapplied -v
+  0 G new.patch
+  1 G c.patch
+  2 A d.patch
+  3 A b.patch
+  $ hg qselect -q --reapply not-c not-b
+  now at: d.patch
+  cannot push 'b.patch' - guarded by '-not-b'
+  $ hg qseries -v
+  0 U new.patch
+  1 G c.patch
+  2 A d.patch
+  3 G b.patch

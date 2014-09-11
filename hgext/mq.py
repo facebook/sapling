@@ -3026,7 +3026,7 @@ def select(ui, repo, *args, **opts):
                 if i == 0:
                     q.pop(repo, all=True)
                 else:
-                    q.pop(repo, str(i - 1))
+                    q.pop(repo, q.applied[i - 1].name)
                 break
     if popped:
         try:
