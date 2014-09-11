@@ -41,7 +41,7 @@ class manifestdict(dict):
         return dicthelpers.diff(self._flags, d2._flags, "")
 
 
-def checkforbidden(l):
+def _checkforbidden(l):
     """Check filenames for illegal characters."""
     for f in l:
         if '\n' in f or '\r' in f:
@@ -51,7 +51,7 @@ def checkforbidden(l):
 
 # apply the changes collected during the bisect loop to our addlist
 # return a delta suitable for addrevision
-def addlistdelta(addlist, x):
+def _addlistdelta(addlist, x):
     # for large addlist arrays, building a new array is cheaper
     # than repeatedly modifying the existing one
     currentposition = 0
@@ -166,7 +166,7 @@ class manifest(revlog.revlog):
         # parented by the same node we're diffing against
         if not (changed and p1 and (p1 in self._mancache)):
             files = sorted(map)
-            checkforbidden(files)
+            _checkforbidden(files)
 
             # if this is changed to support newlines in filenames,
             # be sure to check the templates/ dir again (especially *-raw.tmpl)
@@ -179,7 +179,7 @@ class manifest(revlog.revlog):
             added, removed = changed
             addlist = self._mancache[p1][1]
 
-            checkforbidden(added)
+            _checkforbidden(added)
             # combine the changed lists into one list for sorting
             work = [(x, False) for x in added]
             work.extend((x, True) for x in removed)
@@ -223,7 +223,7 @@ class manifest(revlog.revlog):
             if dstart is not None:
                 delta.append([dstart, dend, "".join(dline)])
             # apply the delta to the addlist, and get a delta for addrevision
-            deltatext, addlist = addlistdelta(addlist, delta)
+            deltatext, addlist = _addlistdelta(addlist, delta)
             cachedelta = (self.rev(p1), deltatext)
             arraytext = addlist
             text = util.buffer(arraytext)
