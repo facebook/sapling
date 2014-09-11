@@ -1522,7 +1522,7 @@ def config(ui, repo, *values, **opts):
             if os.path.exists(f):
                 break
         else:
-            from config import samplehgrcs
+            from ui import samplehgrcs
 
             if opts.get('global'):
                 samplehgrc = samplehgrcs['global']

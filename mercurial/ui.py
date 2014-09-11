@@ -10,6 +10,39 @@ import errno, getpass, os, socket, sys, tempfile, traceback
 import config, scmutil, util, error, formatter
 from node import hex
 
+samplehgrcs = {
+    'user':
+"""# example user config (see "hg help config" for more info)
+[ui]
+# name and email, e.g.
+# username = Jane Doe <jdoe@example.com>
+username =
+
+[extensions]
+# uncomment these lines to enable some popular extensions
+# (see "hg help extensions" for more info)
+#
+# pager =
+# progress =
+# color =""",
+
+    'local':
+"""# example repository config (see "hg help config" for more info)
+""",
+
+    'global':
+"""# example system-wide hg config (see "hg help config" for more info)
+
+[extensions]
+# uncomment these lines to enable some popular extensions
+# (see "hg help extensions" for more info)
+#
+# blackbox =
+# progress =
+# color =
+# pager =""",
+}
+
 class ui(object):
     def __init__(self, src=None):
         # _buffers: used for temporary capture of output
