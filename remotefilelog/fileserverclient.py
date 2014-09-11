@@ -216,7 +216,7 @@ class fileserverclient(object):
         line = pipe.readline()[:-1]
         if not line:
             raise error.ResponseError(_("error downloading file " +
-                "contents: connection closed early\n"))
+                "contents: connection closed early\n"), '')
         size = int(line)
         data = pipe.read(size)
 
