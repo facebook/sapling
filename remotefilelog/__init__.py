@@ -97,7 +97,8 @@ def cloneshallow(orig, ui, repo, *args, **opts):
     finally:
         if opts.get('shallow'):
             for r in repos:
-                r.fileservice.close()
+                if util.safehasattr(r, 'fileservice'):
+                    r.fileservice.close()
 
 def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
