@@ -3015,7 +3015,7 @@ def select(ui, repo, *args, **opts):
                 ui.write(g, '\n')
         else:
             ui.write(_('no active guards\n'))
-    reapply = opts.get('reapply') and q.applied and q.appliedname(-1)
+    reapply = opts.get('reapply') and q.applied and q.applied[-1].name
     popped = False
     if opts.get('pop') or opts.get('reapply'):
         for i in xrange(len(q.applied)):

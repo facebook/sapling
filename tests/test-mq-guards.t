@@ -256,14 +256,21 @@ should push b.patch
   $ hg qpush -a
   applying c.patch
   now at: c.patch
-  $ hg qselect -n --reapply
+  $ hg qselect -n --reapply -v
   guards deactivated
   popping guarded patches
   popping c.patch
   popping b.patch
   patch queue now empty
   reapplying unguarded patches
+  skipping a.patch - guarded by '+1' '+2'
+  skipping b.patch - guarded by '+2'
+  skipping a.patch - guarded by '+1' '+2'
+  skipping b.patch - guarded by '+2'
   applying c.patch
+  patching file c
+  adding c
+  c
   now at: c.patch
 
 guards in series file: +1 +2 -3
