@@ -52,7 +52,7 @@ def sortnodes(nodes, parentfunc):
 
     return results
 
-class shallowbundle(changegroup.bundle10):
+class shallowbundle(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         if "remotefilelog" in self._repo.requirements:
             fastpathlinkrev = False
@@ -177,7 +177,7 @@ class shallowbundle(changegroup.bundle10):
         yield meta
         yield delta
 
-def getbundle(orig, repo, source, heads=None, common=None, bundlecaps=None):
+def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None):
     if not requirement in repo.requirements:
         return orig(repo, source, heads=heads, common=common,
                     bundlecaps=bundlecaps)

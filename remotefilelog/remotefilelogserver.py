@@ -38,7 +38,7 @@ def setupserver(ui, repo):
             changedfiles = list([f for f in changedfiles if not m(f)])
         return orig(self, changedfiles, linknodes, commonrevs, source)
 
-    wrapfunction(changegroup.bundle10, 'generatefiles', generatefiles)
+    wrapfunction(changegroup.cg1packer, 'generatefiles', generatefiles)
 
     # add incoming hook to continuously generate file blobs
     ui.setconfig("hooks", "changegroup.remotefilelog", incominghook)

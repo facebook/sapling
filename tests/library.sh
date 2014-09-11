@@ -15,7 +15,7 @@ preferuncompressed=True
 EOF
 export HGRCPATH=$PWD/.hgrc
 
-function hgcloneshallow() {
+hgcloneshallow() {
   local name
   local dest
   orig=$1
@@ -29,13 +29,13 @@ reponame=master
 EOF
 }
 
-function hginit() {
+hginit() {
   local name
   name=$1
   shift
   hg init $name $@
 }
 
-function clearcache() {
+clearcache() {
   rm -rf $CACHEDIR/*
 }

@@ -135,9 +135,9 @@ def onetimeclientsetup(ui):
         return
     clientonetime = True
 
-    changegroup.bundle10 = shallowbundle.shallowbundle
+    changegroup.cg1packer = shallowbundle.shallowbundle
     wrapfunction(changegroup, 'addchangegroupfiles', shallowbundle.addchangegroupfiles)
-    wrapfunction(changegroup, 'getbundle', shallowbundle.getbundle)
+    wrapfunction(changegroup, 'getchangegroup', shallowbundle.getchangegroup)
 
     def storewrapper(orig, requirements, path, vfstype):
         s = orig(requirements, path, vfstype)
