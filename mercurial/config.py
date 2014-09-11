@@ -33,7 +33,7 @@ username =
 """# example system-wide hg config (see "hg help config" for more info)
 
 [extensions]
-# Uncomment these lines for some possible extensions
+# uncomment these lines to enable some popular extensions
 # (see "hg help extensions" for more info)
 #
 # blackbox =
