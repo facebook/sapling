@@ -2969,18 +2969,17 @@ def select(ui, repo, *args, **opts):
 
     q = repo.mq
     guards = q.active()
+    pushable = lambda i: q.pushable(q.applied[i].name)[0]
     if args or opts.get('none'):
         old_unapplied = q.unapplied(repo)
-        old_guarded = [i for i in xrange(len(q.applied)) if
-                       not q.pushable(i)[0]]
+        old_guarded = [i for i in xrange(len(q.applied)) if not pushable(i)]
         q.setactive(args)
         q.savedirty()
         if not args:
             ui.status(_('guards deactivated\n'))
         if not opts.get('pop') and not opts.get('reapply'):
             unapplied = q.unapplied(repo)
-            guarded = [i for i in xrange(len(q.applied))
-                       if not q.pushable(i)[0]]
+            guarded = [i for i in xrange(len(q.applied)) if not pushable(i)]
             if len(unapplied) != len(old_unapplied):
                 ui.status(_('number of unguarded, unapplied patches has '
                             'changed from %d to %d\n') %

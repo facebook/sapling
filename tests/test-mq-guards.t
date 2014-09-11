@@ -388,7 +388,6 @@ new.patch, b.patch: Guarded. c.patch: Applied. d.patch: Guarded.
   3 G d.patch
   $ hg qselect 2
   number of unguarded, unapplied patches has changed from 0 to 1
-  number of guarded, applied patches has changed from 1 to 0
   $ qappunappv
   % hg qapplied
   new.patch
@@ -507,3 +506,31 @@ excercise corner cases in "qselect --reapply"
   0 G new.patch
   1 A c.patch
   2 A d.patch
+
+test that qselect shows "number of guarded, applied patches" correctly
+
+  $ hg qimport -q -e b.patch
+  adding b.patch to series file
+  $ hg qguard -- b.patch -not-b
+  $ hg qpop -a -q
+  patch queue now empty
+  $ hg qunapplied -v
+  0 G new.patch
+  1 U c.patch
+  2 U d.patch
+  3 U b.patch
+  $ hg qselect not-new not-c
+  number of unguarded, unapplied patches has changed from 3 to 2
+  $ hg qpush -q -a
+  patch d.patch is empty
+  now at: b.patch
+
+  $ hg qapplied -v
+  0 G new.patch
+  1 G c.patch
+  2 A d.patch
+  3 A b.patch
+  $ hg qselect --none
+  guards deactivated
+  $ hg qselect not-new not-c not-d
+  number of guarded, applied patches has changed from 0 to 1
