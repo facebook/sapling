@@ -881,7 +881,7 @@ static PyObject *index_headrevs(indexObject *self)
 
 		if (nothead[i])
 			continue;
-		head = PyInt_FromLong(i);
+		head = PyInt_FromSsize_t(i);
 		if (head == NULL || PyList_Append(heads, head) == -1) {
 			Py_XDECREF(head);
 			goto bail;
