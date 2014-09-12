@@ -190,7 +190,12 @@ class convert_git(converter_source):
         entry = None
         subexists = False
         subdeleted = False
-        for l in fh.read().split('\x00'):
+        difftree = fh.read().split('\x00')
+        lcount = len(difftree)
+        i = 0
+        while i < lcount:
+            l = difftree[i]
+            i += 1
             if not entry:
                 if not l.startswith(':'):
                     continue
