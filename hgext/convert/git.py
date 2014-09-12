@@ -188,11 +188,31 @@ class convert_git(converter_source):
         changes = []
         seen = set()
         entry = None
-        subexists = False
-        subdeleted = False
+        subexists = [False]
+        subdeleted = [False]
         difftree = fh.read().split('\x00')
         lcount = len(difftree)
         i = 0
+
+        def add(entry, f):
+            seen.add(f)
+            h = entry[3]
+            p = (entry[1] == "100755")
+            s = (entry[1] == "120000")
+
+            if f == '.gitmodules':
+                subexists[0] = True
+                if entry[4] == 'D':
+                    subdeleted[0] = True
+                    changes.append(('.hgsub', hex(nullid)))
+                else:
+                    changes.append(('.hgsub', ''))
+            elif entry[1] == '160000' or entry[0] == ':160000':
+                subexists[0] = True
+            else:
+                self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
+                changes.append((f, h))
+
         while i < lcount:
             l = difftree[i]
             i += 1
@@ -203,29 +223,13 @@ class convert_git(converter_source):
                 continue
             f = l
             if f not in seen:
-                seen.add(f)
-                h = entry[3]
-                p = (entry[1] == "100755")
-                s = (entry[1] == "120000")
-
-                if f == '.gitmodules':
-                    subexists = True
-                    if entry[4] == 'D':
-                        subdeleted = True
-                        changes.append(('.hgsub', hex(nullid)))
-                    else:
-                        changes.append(('.hgsub', ''))
-                elif entry[1] == '160000' or entry[0] == ':160000':
-                    subexists = True
-                else:
-                    self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
-                    changes.append((f, h))
+                add(entry, f)
             entry = None
         if fh.close():
             raise util.Abort(_('cannot read changes in %s') % version)
 
-        if subexists:
-            if subdeleted:
+        if subexists[0]:
+            if subdeleted[0]:
                 changes.append(('.hgsubstate', hex(nullid)))
             else:
                 self.retrievegitmodules(version)
