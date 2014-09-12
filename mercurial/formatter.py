@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import cPickle
 from i18n import _
 import encoding, util
 
@@ -77,6 +78,16 @@ class debugformatter(baseformatter):
         baseformatter.end(self)
         self._ui.write("]\n")
 
+class pickleformatter(baseformatter):
+    def __init__(self, ui, topic, opts):
+        baseformatter.__init__(self, ui, topic, opts)
+        self._data = []
+    def _showitem(self):
+        self._data.append(self._item)
+    def end(self):
+        baseformatter.end(self)
+        self._ui.write(cPickle.dumps(self._data))
+
 class jsonformatter(baseformatter):
     def __init__(self, ui, topic, opts):
         baseformatter.__init__(self, ui, topic, opts)
@@ -108,6 +119,8 @@ def formatter(ui, topic, opts):
     template = opts.get("template", "")
     if template == "json":
         return jsonformatter(ui, topic, opts)
+    elif template == "pickle":
+        return pickleformatter(ui, topic, opts)
     elif template == "debug":
         return debugformatter(ui, topic, opts)
     elif template != "":

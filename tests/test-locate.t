@@ -128,4 +128,14 @@ Issue294: hg remove --after dir fails when dir.* also exists
   ../t.h (glob)
   ../t/e.h (glob)
 
+  $ hg files
+  ../b
+  ../dir.h/foo
+  ../t.h
+  ../t/b
+  ../t/e.h
+  ../t/x
+  $ hg files .
+  [1]
+
   $ cd ../..

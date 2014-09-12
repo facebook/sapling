@@ -202,6 +202,12 @@ hg status -A:
    }
   ]
 
+  $ hg status -A -Tpickle > pickle
+  >>> import pickle
+  >>> print sorted((x['status'], x['path']) for x in pickle.load(open("pickle")))
+  [('!', 'deleted'), ('?', 'pickle'), ('?', 'unknown'), ('A', 'added'), ('A', 'copied'), ('C', '.hgignore'), ('C', 'modified'), ('I', 'ignored'), ('R', 'removed')]
+  $ rm pickle
+
   $ echo "^ignoreddir$" > .hgignore
   $ mkdir ignoreddir
   $ touch ignoreddir/file
