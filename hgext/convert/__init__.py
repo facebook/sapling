@@ -300,6 +300,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         be imported as a rename if more than 90% of the file hasn't
         changed. The default is ``0``.
 
+    :convert.git.findcopiesharder: while detecting copies, look at all
+        files in the working copy instead of just changed ones. This
+        is very expensive for large projects, and is only effective when
+        ``convert.git.similarity`` is greater than 0. The default is False.
+
     Perforce Source
     ###############
 

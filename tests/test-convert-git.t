@@ -277,6 +277,18 @@ input validation
     foo
   R foo
 
+  $ cd git-repo2
+  $ cp bar bar-copied2
+  $ git add bar-copied2
+  $ commit -a -m 'copy with no changes'
+  $ cd ..
+
+  $ hg -q convert --config convert.git.similarity=100 \
+  > --config convert.git.findcopiesharder=1 --datesort git-repo2 fullrepo
+  $ hg -R fullrepo status -C --change master
+  A bar-copied2
+    bar
+
 test binary conversion (issue1359)
 
   $ count=19
