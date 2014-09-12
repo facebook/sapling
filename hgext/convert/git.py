@@ -199,12 +199,11 @@ class convert_git(converter_source):
             if not entry:
                 if not l.startswith(':'):
                     continue
-                entry = l
+                entry = l.split()
                 continue
             f = l
             if f not in seen:
                 seen.add(f)
-                entry = entry.split()
                 h = entry[3]
                 p = (entry[1] == "100755")
                 s = (entry[1] == "120000")
