@@ -5,6 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from i18n import _
+import encoding, util
+
 class baseformatter(object):
     def __init__(self, ui, topic, opts):
         self._ui = ui
@@ -74,7 +77,43 @@ class debugformatter(baseformatter):
         baseformatter.end(self)
         self._ui.write("]\n")
 
+class jsonformatter(baseformatter):
+    def __init__(self, ui, topic, opts):
+        baseformatter.__init__(self, ui, topic, opts)
+        self._ui.write("[")
+        self._ui._first = True
+    def _showitem(self):
+        if self._ui._first:
+            self._ui._first = False
+        else:
+            self._ui.write(",")
+
+        self._ui.write("\n {\n")
+        first = True
+        for k, v in sorted(self._item.items()):
+            if first:
+                first = False
+            else:
+                self._ui.write(",\n")
+            if isinstance(v, int):
+                self._ui.write('  "%s": %d' % (k, v))
+            else:
+                self._ui.write('  "%s": "%s"' % (k, encoding.jsonescape(v)))
+        self._ui.write("\n }")
+    def end(self):
+        baseformatter.end(self)
+        self._ui.write("\n]\n")
+
 def formatter(ui, topic, opts):
-    if ui.configbool('ui', 'formatdebug'):
+    template = opts.get("template", "")
+    if template == "json":
+        return jsonformatter(ui, topic, opts)
+    elif template == "debug":
         return debugformatter(ui, topic, opts)
+    elif template != "":
+        raise util.Abort(_("custom templates not yet supported"))
+    elif ui.configbool('ui', 'formatdebug'):
+        return debugformatter(ui, topic, opts)
+    elif ui.configbool('ui', 'formatjson'):
+        return jsonformatter(ui, topic, opts)
     return plainformatter(ui, topic, opts)
