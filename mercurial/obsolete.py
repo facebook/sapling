@@ -63,25 +63,8 @@ The file starts with a version header:
 
 - 1 unsigned byte: version number, starting at zero.
 
-
-The header is followed by the markers. Each marker is made of:
-
-- 1 unsigned byte: number of new changesets "N", can be zero.
-
-- 1 unsigned 32-bits integer: metadata size "M" in bytes.
-
-- 1 byte: a bit field. It is reserved for flags used in common
-  obsolete marker operations, to avoid repeated decoding of metadata
-  entries.
-
-- 20 bytes: obsoleted changeset identifier.
-
-- N*20 bytes: new changesets identifiers.
-
-- M bytes: metadata as a sequence of nul-terminated strings. Each
-  string contains a key and a value, separated by a colon ':', without
-  additional encoding. Keys cannot contain '\0' or ':' and values
-  cannot contain '\0'.
+The header is followed by the markers. Marker format depend of the version. See
+comment associated with each format for details.
 
 """
 import struct
@@ -97,13 +80,6 @@ _SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 # the obsolete feature is not mature enough to be enabled by default.
 # you have to rely on third party extension extension to enable this.
 _enabled = False
-
-# data used for parsing and writing
-_fm0version = 0
-_fm0fixed   = '>BIB20s'
-_fm0node = '20s'
-_fm0fsize = struct.calcsize(_fm0fixed)
-_fm0fnodesize = struct.calcsize(_fm0node)
 
 ### obsolescence marker flag
 
@@ -137,24 +113,31 @@ _fm0fnodesize = struct.calcsize(_fm0node)
 # "bumped" here.
 bumpedfix = 1
 
-def _readmarkers(data):
-    """Read and enumerate markers from raw data"""
-    off = 0
-    diskversion = _unpack('>B', data[off:off + 1])[0]
-    off += 1
-    if diskversion not in formats:
-        raise util.Abort(_('parsing obsolete marker: unknown version %r')
-                         % diskversion)
-    return diskversion, formats[diskversion][0](data, off)
-
-def encodemarkers(markers, addheader=False, version=_fm0version):
-    # Kept separate from flushmarkers(), it will be reused for
-    # markers exchange.
-    encodeone = formats[version][1]
-    if addheader:
-        yield _pack('>B', _fm0version)
-    for marker in markers:
-        yield encodeone(marker)
+## Parsing and writing of version "0"
+#
+# The header is followed by the markers. Each marker is made of:
+#
+# - 1 unsigned byte: number of new changesets "N", can be zero.
+#
+# - 1 unsigned 32-bits integer: metadata size "M" in bytes.
+#
+# - 1 byte: a bit field. It is reserved for flags used in common
+#   obsolete marker operations, to avoid repeated decoding of metadata
+#   entries.
+#
+# - 20 bytes: obsoleted changeset identifier.
+#
+# - N*20 bytes: new changesets identifiers.
+#
+# - M bytes: metadata as a sequence of nul-terminated strings. Each
+#   string contains a key and a value, separated by a colon ':', without
+#   additional encoding. Keys cannot contain '\0' or ':' and values
+#   cannot contain '\0'.
+_fm0version = 0
+_fm0fixed   = '>BIB20s'
+_fm0node = '20s'
+_fm0fsize = struct.calcsize(_fm0fixed)
+_fm0fnodesize = struct.calcsize(_fm0node)
 
 def _fm0readmarkers(data, off=0):
     # Loop on markers
@@ -228,6 +211,26 @@ def _fm0encodeonemarker(marker):
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {0: (_fm0readmarkers, _fm0encodeonemarker)}
+
+def _readmarkers(data):
+    """Read and enumerate markers from raw data"""
+    off = 0
+    diskversion = _unpack('>B', data[off:off + 1])[0]
+    off += 1
+    if diskversion not in formats:
+        raise util.Abort(_('parsing obsolete marker: unknown version %r')
+                         % diskversion)
+    return diskversion, formats[diskversion][0](data, off)
+
+def encodemarkers(markers, addheader=False, version=_fm0version):
+    # Kept separate from flushmarkers(), it will be reused for
+    # markers exchange.
+    encodeone = formats[version][1]
+    if addheader:
+        yield _pack('>B', _fm0version)
+    for marker in markers:
+        yield encodeone(marker)
+
 
 def encodemeta(meta):
     """Return encoded metadata string to string mapping.
