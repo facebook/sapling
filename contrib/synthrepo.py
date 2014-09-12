@@ -307,7 +307,8 @@ def synthesize(ui, repo, descpath, **opts):
 
         # the number of heads will grow without bound if we use a pure
         # model, so artificially constrain their proliferation
-        if pick(parents) == 2 or len(heads) > random.randint(1, 20):
+        toomanyheads = len(heads) > random.randint(1, 20)
+        if p2distance[0] and (pick(parents) == 2 or toomanyheads):
             r2, p2 = pickhead(heads.difference([r1]), p2distance)
         else:
             r2, p2 = nullrev, nullid
