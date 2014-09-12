@@ -282,6 +282,15 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     :convert.svn.startrev: specify start Subversion revision number.
         The default is 0.
 
+    Git Source
+    ##########
+
+    The Git importer converts commits from all reachable branches (refs
+    in refs/heads) and remotes (refs in refs/remotes) to Mercurial.
+    Branches are converted to bookmarks with the same name, with the
+    leading 'refs/heads' stripped. Git submodules are converted to Git
+    subrepos in Mercurial.
+
     Perforce Source
     ###############
 
