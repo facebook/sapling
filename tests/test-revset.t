@@ -567,10 +567,10 @@ test subtracting something from an addset
 test intersecting something with an addset
 
   $ log 'parents(outgoing() or removes(a))'
+  8
   1
   4
   5
-  8
 
 check that conversion to only works
   $ try --optimize '::3 - ::1'
