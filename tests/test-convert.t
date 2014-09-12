@@ -244,6 +244,16 @@
       converted to bookmarks with the same name, with the leading 'refs/heads'
       stripped. Git submodules are converted to Git subrepos in Mercurial.
   
+      The following options can be set with "--config":
+  
+      convert.git.similarity
+                    specify how similar files modified in a commit must be to be
+                    imported as renames or copies, as a percentage between "0"
+                    (disabled) and "100" (files must be identical). For example,
+                    "90" means that a delete/add pair will be imported as a
+                    rename if more than 90% of the file hasn't changed. The
+                    default is "0".
+  
       Perforce Source
       ###############
   

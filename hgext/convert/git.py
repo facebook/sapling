@@ -94,6 +94,17 @@ class convert_git(converter_source):
         if not os.path.exists(path + "/objects"):
             raise NoRepo(_("%s does not look like a Git repository") % path)
 
+        try:
+            similarity = int(ui.config('convert', 'git.similarity') or 0)
+        except ValueError:
+            raise util.Abort('convert.git.similarity must be a number')
+        if similarity < 0 or similarity > 100:
+            raise util.Abort(_('similarity must be between 0 and 100'))
+        if similarity > 0:
+            self.simopt = '--find-copies=%d%%' % similarity
+        else:
+            self.simopt = ''
+
         checktool('git', 'git')
 
         self.path = path
@@ -184,8 +195,10 @@ class convert_git(converter_source):
         if full:
             raise util.Abort(_("convert from git do not support --full"))
         self.modecache = {}
-        fh = self.gitopen("git diff-tree -z --root -m -r %s" % version)
+        fh = self.gitopen("git diff-tree -z --root -m -r %s %s" % (
+            self.simopt, version))
         changes = []
+        copies = {}
         seen = set()
         entry = None
         subexists = [False]
@@ -194,15 +207,16 @@ class convert_git(converter_source):
         lcount = len(difftree)
         i = 0
 
-        def add(entry, f):
+        def add(entry, f, isdest):
             seen.add(f)
             h = entry[3]
             p = (entry[1] == "100755")
             s = (entry[1] == "120000")
+            renamesource = (not isdest and entry[4][0] == 'R')
 
             if f == '.gitmodules':
                 subexists[0] = True
-                if entry[4] == 'D':
+                if entry[4] == 'D' or renamesource:
                     subdeleted[0] = True
                     changes.append(('.hgsub', hex(nullid)))
                 else:
@@ -210,6 +224,8 @@ class convert_git(converter_source):
             elif entry[1] == '160000' or entry[0] == ':160000':
                 subexists[0] = True
             else:
+                if renamesource:
+                    h = hex(nullid)
                 self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
                 changes.append((f, h))
 
@@ -223,7 +239,19 @@ class convert_git(converter_source):
                 continue
             f = l
             if f not in seen:
-                add(entry, f)
+                add(entry, f, False)
+            # A file can be copied multiple times, or modified and copied
+            # simultaneously. So f can be repeated even if fdest isn't.
+            if entry[4][0] in 'RC':
+                # rename or copy: next line is the destination
+                fdest = difftree[i]
+                i += 1
+                if fdest not in seen:
+                    add(entry, fdest, True)
+                    # .gitmodules isn't imported at all, so it being copied to
+                    # and fro doesn't really make sense
+                    if f != '.gitmodules' and fdest != '.gitmodules':
+                        copies[fdest] = f
             entry = None
         if fh.close():
             raise util.Abort(_('cannot read changes in %s') % version)
@@ -234,7 +262,7 @@ class convert_git(converter_source):
             else:
                 self.retrievegitmodules(version)
                 changes.append(('.hgsubstate', ''))
-        return (changes, {})
+        return (changes, copies)
 
     def getcommit(self, version):
         c = self.catfile(version, "commit") # read the commit hash
