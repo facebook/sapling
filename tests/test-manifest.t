@@ -24,6 +24,14 @@ The next call is expected to return nothing:
   b/a
   l
 
+  $ hg files -vr .
+           2   a
+           2 x b/a
+           1 l l
+  $ hg files -r . -X b
+  a
+  l
+
   $ hg manifest -v
   644   a
   755 * b/a

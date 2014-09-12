@@ -66,6 +66,7 @@ Short help:
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
+   files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions
@@ -142,6 +143,7 @@ Short help:
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
+   files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions
@@ -684,6 +686,7 @@ Test that default list of commands omits extension commands
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
+   files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions
@@ -1442,6 +1445,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   mark files as copied for the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/files">
+  files
+  </a>
+  </td><td>
+  list tracked files
   </td></tr>
   <tr><td>
   <a href="/help/graft">

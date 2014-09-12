@@ -301,6 +301,7 @@ Testing -h/--help:
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
+   files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions
@@ -383,6 +384,7 @@ Testing -h/--help:
    copy          mark files as copied for the next commit
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
+   files         list tracked files
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions

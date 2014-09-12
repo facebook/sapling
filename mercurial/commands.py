@@ -3061,6 +3061,81 @@ def export(ui, repo, *changesets, **opts):
                  switch_parent=opts.get('switch_parent'),
                  opts=patch.diffopts(ui, opts))
 
+@command('files',
+    [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
+     ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
+    ] + walkopts,
+    _('[OPTION]... [PATTERN]...'))
+def files(ui, repo, *pats, **opts):
+    """list tracked files
+
+    Print files under Mercurial control in the working directory or
+    specified revision whose names match the given patterns (excluding
+    removed files).
+
+    If no patterns are given to match, this command prints the names
+    of all files under Mercurial control in the working copy.
+
+    .. container:: verbose
+
+      Examples:
+
+      - list all files under the current directory::
+
+          hg files .
+
+      - shows sizes and flags for current revision::
+
+          hg files -vr .
+
+      - list all files named README::
+
+          hg files -I "**/README"
+
+      - list all binary files::
+
+          hg files "set:binary()"
+
+      - find files containing a regular expression:
+
+          hg files "set:grep('bob')"
+
+      - search tracked file contents with xargs and grep::
+
+          hg files -0 | xargs -0 grep foo
+
+    See :hg:'help pattern' and :hg:'help revsets' for more information
+    on specifying file patterns.
+
+    Returns 0 if a match is found, 1 otherwise.
+
+    """
+    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
+    rev = ctx.rev()
+    ret = 1
+
+    end = '\n'
+    if opts.get('print0'):
+        end = '\0'
+    fm = ui.formatter('status', opts)
+    fmt = '%s' + end
+
+    m = scmutil.match(ctx, pats, opts)
+    for f in ctx.walk(m):
+        if rev is None and repo.dirstate[f] in 'R?!':
+            continue
+        fm.startitem()
+        if ui.verbose:
+            fc = ctx[f]
+            fm.write('size flags', '% 10d % 1s ', fc.size(), fc.flags())
+        fm.data(abspath=f)
+        fm.write('path', fmt, m.rel(f))
+        ret = 0
+
+    fm.end()
+
+    return ret
+
 @command('^forget', walkopts, _('[OPTION]... FILE...'), inferrepo=True)
 def forget(ui, repo, *pats, **opts):
     """forget the specified files on the next commit
