@@ -67,12 +67,12 @@ class plainformatter(baseformatter):
 class debugformatter(baseformatter):
     def __init__(self, ui, topic, opts):
         baseformatter.__init__(self, ui, topic, opts)
-        self._ui.write("%s = {\n" % self._topic)
+        self._ui.write("%s = [\n" % self._topic)
     def _showitem(self):
         self._ui.write("    " + repr(self._item) + ",\n")
     def end(self):
         baseformatter.end(self)
-        self._ui.write("}\n")
+        self._ui.write("]\n")
 
 def formatter(ui, topic, opts):
     if ui.configbool('ui', 'formatdebug'):
