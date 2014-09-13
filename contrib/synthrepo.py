@@ -23,6 +23,7 @@ Properties that are analyzed and synthesized include the following:
 - Probability of a commit being a merge
 - Probability of a newly added file being added to a new directory
 - Interarrival time, and time zone, of commits
+- Number of files in each directory
 
 A few obvious properties that are not currently handled realistically:
 
@@ -81,21 +82,25 @@ def parsegitdiff(lines):
         yield filename, mar, lineadd, lineremove, binary
 
 @command('analyze',
-         [('o', 'output', [], _('write output to given file'), _('FILE')),
+         [('o', 'output', '', _('write output to given file'), _('FILE')),
           ('r', 'rev', [], _('analyze specified revisions'), _('REV'))],
-         _('hg analyze'))
+         _('hg analyze'), optionalrepo=True)
 def analyze(ui, repo, *revs, **opts):
     '''create a simple model of a repository to use for later synthesis
 
     This command examines every changeset in the given range (or all
     of history if none are specified) and creates a simple statistical
-    model of the history of the repository.
+    model of the history of the repository. It also measures the directory
+    structure of the repository as checked out.
 
     The model is written out to a JSON file, and can be used by
     :hg:`synthesize` to create or augment a repository with synthetic
     commits that have a structure that is statistically similar to the
     analyzed repository.
     '''
+    root = repo.root
+    if not root.endswith(os.path.sep):
+        root += os.path.sep
 
     revs = list(revs)
     revs.extend(opts['rev'])
@@ -104,15 +109,24 @@ def analyze(ui, repo, *revs, **opts):
 
     output = opts['output']
     if not output:
-        output = os.path.basename(repo.root) + '.json'
+        output = os.path.basename(root) + '.json'
 
     if output == '-':
         fp = sys.stdout
     else:
         fp = open(output, 'w')
 
-    revs = scmutil.revrange(repo, revs)
-    revs.sort()
+    # Always obtain file counts of each directory in the given root directory.
+    def onerror(e):
+        ui.warn(_('error walking directory structure: %s\n') % e)
+
+    dirs = {}
+    rootprefixlen = len(root)
+    for dirpath, dirnames, filenames in os.walk(root, onerror=onerror):
+        dirpathfromroot = dirpath[rootprefixlen:]
+        dirs[dirpathfromroot] = len(filenames)
+        if '.hg' in dirnames:
+            dirnames.remove('.hg')
 
     lineschanged = zerodict()
     children = zerodict()
@@ -128,54 +142,61 @@ def analyze(ui, repo, *revs, **opts):
     dirsadded = zerodict()
     tzoffset = zerodict()
 
-    progress = ui.progress
-    _analyzing = _('analyzing')
-    _changesets = _('changesets')
-    _total = len(revs)
+    # If a mercurial repo is available, also model the commit history.
+    if repo:
+        revs = scmutil.revrange(repo, revs)
+        revs.sort()
 
-    for i, rev in enumerate(revs):
-        progress(_analyzing, i, unit=_changesets, total=_total)
-        ctx = repo[rev]
-        pl = ctx.parents()
-        pctx = pl[0]
-        prev = pctx.rev()
-        children[prev] += 1
-        p1distance[rev - prev] += 1
-        parents[len(pl)] += 1
-        tzoffset[ctx.date()[1]] += 1
-        if len(pl) > 1:
-            p2distance[rev - pl[1].rev()] += 1
-        if prev == rev - 1:
-            lastctx = pctx
-        else:
-            lastctx = repo[rev - 1]
-        if lastctx.rev() != nullrev:
-            interarrival[roundto(ctx.date()[0] - lastctx.date()[0], 300)] += 1
-        diff = sum((d.splitlines() for d in ctx.diff(pctx, git=True)), [])
-        fileadds, diradds, fileremoves, filechanges = 0, 0, 0, 0
-        for filename, mar, lineadd, lineremove, binary in parsegitdiff(diff):
-            if binary:
-                continue
-            added = sum(lineadd.itervalues(), 0)
-            if mar == 'm':
-                if added and lineremove:
-                    lineschanged[roundto(added, 5), roundto(lineremove, 5)] += 1
-                    filechanges += 1
-            elif mar == 'a':
-                fileadds += 1
-                if '/' in filename:
-                    filedir = filename.rsplit('/', 1)[0]
-                    if filedir not in pctx.dirs():
-                        diradds += 1
-                linesinfilesadded[roundto(added, 5)] += 1
-            elif mar == 'r':
-                fileremoves += 1
-            for length, count in lineadd.iteritems():
-                linelengths[length] += count
-        fileschanged[filechanges] += 1
-        filesadded[fileadds] += 1
-        dirsadded[diradds] += 1
-        filesremoved[fileremoves] += 1
+        progress = ui.progress
+        _analyzing = _('analyzing')
+        _changesets = _('changesets')
+        _total = len(revs)
+
+        for i, rev in enumerate(revs):
+            progress(_analyzing, i, unit=_changesets, total=_total)
+            ctx = repo[rev]
+            pl = ctx.parents()
+            pctx = pl[0]
+            prev = pctx.rev()
+            children[prev] += 1
+            p1distance[rev - prev] += 1
+            parents[len(pl)] += 1
+            tzoffset[ctx.date()[1]] += 1
+            if len(pl) > 1:
+                p2distance[rev - pl[1].rev()] += 1
+            if prev == rev - 1:
+                lastctx = pctx
+            else:
+                lastctx = repo[rev - 1]
+            if lastctx.rev() != nullrev:
+                timedelta = ctx.date()[0] - lastctx.date()[0]
+                interarrival[roundto(timedelta, 300)] += 1
+            diff = sum((d.splitlines() for d in ctx.diff(pctx, git=True)), [])
+            fileadds, diradds, fileremoves, filechanges = 0, 0, 0, 0
+            for filename, mar, lineadd, lineremove, isbin in parsegitdiff(diff):
+                if isbin:
+                    continue
+                added = sum(lineadd.itervalues(), 0)
+                if mar == 'm':
+                    if added and lineremove:
+                        lineschanged[roundto(added, 5),
+                                     roundto(lineremove, 5)] += 1
+                        filechanges += 1
+                elif mar == 'a':
+                    fileadds += 1
+                    if '/' in filename:
+                        filedir = filename.rsplit('/', 1)[0]
+                        if filedir not in pctx.dirs():
+                            diradds += 1
+                    linesinfilesadded[roundto(added, 5)] += 1
+                elif mar == 'r':
+                    fileremoves += 1
+                for length, count in lineadd.iteritems():
+                    linelengths[length] += count
+            fileschanged[filechanges] += 1
+            filesadded[fileadds] += 1
+            dirsadded[diradds] += 1
+            filesremoved[fileremoves] += 1
 
     invchildren = zerodict()
 
@@ -189,6 +210,7 @@ def analyze(ui, repo, *revs, **opts):
         return sorted(d.iteritems(), key=lambda x: x[1], reverse=True)
 
     json.dump({'revs': len(revs),
+               'initdirs': pronk(dirs),
                'lineschanged': pronk(lineschanged),
                'children': pronk(invchildren),
                'fileschanged': pronk(fileschanged),
