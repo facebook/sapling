@@ -356,10 +356,7 @@ def synthesize(ui, repo, descpath, **opts):
                              for __ in xrange(pick(linesinfilesadded))) + '\n'
             changes[path] = context.memfilectx(repo, path, data)
         def filectxfn(repo, memctx, path):
-            data = changes[path]
-            if data is None:
-                raise IOError
-            return data
+            return changes[path]
         if not changes:
             continue
         if revs:
