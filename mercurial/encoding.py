@@ -302,6 +302,49 @@ def upper(s):
     except LookupError, k:
         raise error.Abort(k, hint="please check your locale settings")
 
+_jsonmap = {}
+
+def jsonescape(s):
+    '''returns a string suitable for JSON
+
+    JSON is problematic for us because it doesn't support non-Unicode
+    bytes. To deal with this, we take the following approach:
+
+    - localstr objects are converted back to UTF-8
+    - valid UTF-8/ASCII strings are passed as-is
+    - other strings are converted to UTF-8b surrogate encoding
+    - apply JSON-specified string escaping
+
+    (escapes are doubled in these tests)
+
+    >>> jsonescape('this is a test')
+    'this is a test'
+    >>> jsonescape('escape characters: \\0 \\x0b \\t \\n \\r \\" \\\\')
+    'escape characters: \\\\u0000 \\\\u000b \\\\t \\\\n \\\\r \\\\" \\\\\\\\'
+    >>> jsonescape('a weird byte: \\xdd')
+    'a weird byte: \\xed\\xb3\\x9d'
+    >>> jsonescape('utf-8: caf\\xc3\\xa9')
+    'utf-8: caf\\xc3\\xa9'
+    >>> jsonescape('')
+    ''
+    '''
+
+    if not _jsonmap:
+        for x in xrange(32):
+            _jsonmap[chr(x)] = "\u%04x" %x
+        for x in xrange(32, 256):
+            c = chr(x)
+            _jsonmap[c] = c
+        _jsonmap['\t'] = '\\t'
+        _jsonmap['\n'] = '\\n'
+        _jsonmap['\"'] = '\\"'
+        _jsonmap['\\'] = '\\\\'
+        _jsonmap['\b'] = '\\b'
+        _jsonmap['\f'] = '\\f'
+        _jsonmap['\r'] = '\\r'
+
+    return ''.join(_jsonmap[c] for c in toutf8b(s))
+
 def toutf8b(s):
     '''convert a local, possibly-binary string into UTF-8b
 
