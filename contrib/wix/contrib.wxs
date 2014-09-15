@@ -21,7 +21,6 @@
           <File Name="hgweb.wsgi" />
           <File Name="logo-droplets.svg" />
           <File Name="mercurial.el" />
-          <File Name="sample.hgrc" />
           <File Name="tcsh_completion" />
           <File Name="tcsh_completion_build.sh" />
           <File Name="xml.rnc" />

@@ -5,7 +5,7 @@
        your project. Component GUIDs have global namespace!      -->
 
   <!-- contrib.wxs -->
-  <?define contrib.guid = {F17D27B7-4A6B-4cd2-AE72-FED3CFAA585E} ?>
+  <?define contrib.guid = {4E11FFC2-E2F7-482A-8460-9394B5489F02} ?>
   <?define contrib.vim.guid = {BB04903A-652D-4C4F-9590-2BD07A2304F2} ?>
 
   <!-- dist.wxs -->
