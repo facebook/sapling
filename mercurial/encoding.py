@@ -336,8 +336,8 @@ def toutf8b(s):
         return s._utf8
 
     try:
-        if s.decode('utf-8'):
-            return s
+        s.decode('utf-8')
+        return s
     except UnicodeDecodeError:
         # surrogate-encode any characters that don't round-trip
         s2 = s.decode('utf-8', 'ignore').encode('utf-8')
