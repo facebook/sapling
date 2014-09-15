@@ -468,6 +468,350 @@ Test xml styles:
   </log>
 
 
+Test JSON style:
+
+  $ hg log -k nosuch -Tjson
+  []
+
+  $ hg log -qr . -Tjson
+  [
+   {
+    "rev": 8,
+    "node": "95c24699272ef57d062b8bccc32c878bf841784a"
+   }
+  ]
+
+  $ hg log -vpr . -Tjson --stat
+  [
+   {
+    "rev": 8,
+    "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [1577872860, 0],
+    "desc": "third",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+    "files": ["fourth", "second", "third"],
+    "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n",
+    "diff": "diff -r 29114dbae42b -r 95c24699272e fourth\n--- /dev/null\tThu Jan 01 00:00:00 1970 +0000\n+++ b/fourth\tWed Jan 01 10:01:00 2020 +0000\n@@ -0,0 +1,1 @@\n+second\ndiff -r 29114dbae42b -r 95c24699272e second\n--- a/second\tMon Jan 12 13:46:40 1970 +0000\n+++ /dev/null\tThu Jan 01 00:00:00 1970 +0000\n@@ -1,1 +0,0 @@\n-second\ndiff -r 29114dbae42b -r 95c24699272e third\n--- /dev/null\tThu Jan 01 00:00:00 1970 +0000\n+++ b/third\tWed Jan 01 10:01:00 2020 +0000\n@@ -0,0 +1,1 @@\n+third\n"
+   }
+  ]
+
+  $ hg log -T json
+  [
+   {
+    "rev": 8,
+    "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [1577872860, 0],
+    "desc": "third",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"]
+   },
+   {
+    "rev": 7,
+    "node": "29114dbae42b9f078cf2714dbe3a86bba8ec7453",
+    "branch": "default",
+    "phase": "draft",
+    "user": "User Name <user@hostname>",
+    "date": [1000000, 0],
+    "desc": "second",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["0000000000000000000000000000000000000000"]
+   },
+   {
+    "rev": 6,
+    "node": "d41e714fe50d9e4a5f11b4d595d543481b5f980b",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1500001, 0],
+    "desc": "merge",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "bbe44766e73d5f11ed2177f1838de10c53ef3e74"]
+   },
+   {
+    "rev": 5,
+    "node": "13207e5a10d9fd28ec424934298e176197f2c67f",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1500000, 0],
+    "desc": "new head",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"]
+   },
+   {
+    "rev": 4,
+    "node": "bbe44766e73d5f11ed2177f1838de10c53ef3e74",
+    "branch": "foo",
+    "phase": "draft",
+    "user": "person",
+    "date": [1400000, 0],
+    "desc": "new branch",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"]
+   },
+   {
+    "rev": 3,
+    "node": "10e46f2dcbf4823578cf180f33ecf0b957964c47",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1300000, 0],
+    "desc": "no user, no domain",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["97054abb4ab824450e9164180baf491ae0078465"]
+   },
+   {
+    "rev": 2,
+    "node": "97054abb4ab824450e9164180baf491ae0078465",
+    "branch": "default",
+    "phase": "draft",
+    "user": "other@place",
+    "date": [1200000, 0],
+    "desc": "no person",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["b608e9d1a3f0273ccf70fb85fd6866b3482bf965"]
+   },
+   {
+    "rev": 1,
+    "node": "b608e9d1a3f0273ccf70fb85fd6866b3482bf965",
+    "branch": "default",
+    "phase": "draft",
+    "user": "A. N. Other <other@place>",
+    "date": [1100000, 0],
+    "desc": "other 1\nother 2\n\nother 3",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["1e4e1b8f71e05681d422154f5421e385fec3454f"]
+   },
+   {
+    "rev": 0,
+    "node": "1e4e1b8f71e05681d422154f5421e385fec3454f",
+    "branch": "default",
+    "phase": "draft",
+    "user": "User Name <user@hostname>",
+    "date": [1000000, 0],
+    "desc": "line 1\nline 2",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["0000000000000000000000000000000000000000"]
+   }
+  ]
+
+  $ hg heads -v -Tjson
+  [
+   {
+    "rev": 8,
+    "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [1577872860, 0],
+    "desc": "third",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+    "files": ["fourth", "second", "third"]
+   },
+   {
+    "rev": 6,
+    "node": "d41e714fe50d9e4a5f11b4d595d543481b5f980b",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1500001, 0],
+    "desc": "merge",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "bbe44766e73d5f11ed2177f1838de10c53ef3e74"],
+    "files": []
+   },
+   {
+    "rev": 4,
+    "node": "bbe44766e73d5f11ed2177f1838de10c53ef3e74",
+    "branch": "foo",
+    "phase": "draft",
+    "user": "person",
+    "date": [1400000, 0],
+    "desc": "new branch",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
+    "files": []
+   }
+  ]
+
+  $ hg log --debug -Tjson
+  [
+   {
+    "rev": 8,
+    "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [1577872860, 0],
+    "desc": "third",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+    "manifest": "94961b75a2da554b4df6fb599e5bfc7d48de0c64",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": ["second"],
+    "removed": ["fourth", "third"]
+   },
+   {
+    "rev": 7,
+    "node": "29114dbae42b9f078cf2714dbe3a86bba8ec7453",
+    "branch": "default",
+    "phase": "draft",
+    "user": "User Name <user@hostname>",
+    "date": [1000000, 0],
+    "desc": "second",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["0000000000000000000000000000000000000000"],
+    "manifest": "f2dbc354b94e5ec0b4f10680ee0cee816101d0bf",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": [],
+    "removed": ["second"]
+   },
+   {
+    "rev": 6,
+    "node": "d41e714fe50d9e4a5f11b4d595d543481b5f980b",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1500001, 0],
+    "desc": "merge",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["13207e5a10d9fd28ec424934298e176197f2c67f", "bbe44766e73d5f11ed2177f1838de10c53ef3e74"],
+    "manifest": "4dc3def4f9b4c6e8de820f6ee74737f91e96a216",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": [],
+    "removed": []
+   },
+   {
+    "rev": 5,
+    "node": "13207e5a10d9fd28ec424934298e176197f2c67f",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1500000, 0],
+    "desc": "new head",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
+    "manifest": "4dc3def4f9b4c6e8de820f6ee74737f91e96a216",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": [],
+    "removed": ["d"]
+   },
+   {
+    "rev": 4,
+    "node": "bbe44766e73d5f11ed2177f1838de10c53ef3e74",
+    "branch": "foo",
+    "phase": "draft",
+    "user": "person",
+    "date": [1400000, 0],
+    "desc": "new branch",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["10e46f2dcbf4823578cf180f33ecf0b957964c47"],
+    "manifest": "cb5a1327723bada42f117e4c55a303246eaf9ccc",
+    "extra": {"branch": "foo"},
+    "modified": [],
+    "added": [],
+    "removed": []
+   },
+   {
+    "rev": 3,
+    "node": "10e46f2dcbf4823578cf180f33ecf0b957964c47",
+    "branch": "default",
+    "phase": "draft",
+    "user": "person",
+    "date": [1300000, 0],
+    "desc": "no user, no domain",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["97054abb4ab824450e9164180baf491ae0078465"],
+    "manifest": "cb5a1327723bada42f117e4c55a303246eaf9ccc",
+    "extra": {"branch": "default"},
+    "modified": ["c"],
+    "added": [],
+    "removed": []
+   },
+   {
+    "rev": 2,
+    "node": "97054abb4ab824450e9164180baf491ae0078465",
+    "branch": "default",
+    "phase": "draft",
+    "user": "other@place",
+    "date": [1200000, 0],
+    "desc": "no person",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["b608e9d1a3f0273ccf70fb85fd6866b3482bf965"],
+    "manifest": "6e0e82995c35d0d57a52aca8da4e56139e06b4b1",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": [],
+    "removed": ["c"]
+   },
+   {
+    "rev": 1,
+    "node": "b608e9d1a3f0273ccf70fb85fd6866b3482bf965",
+    "branch": "default",
+    "phase": "draft",
+    "user": "A. N. Other <other@place>",
+    "date": [1100000, 0],
+    "desc": "other 1\nother 2\n\nother 3",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["1e4e1b8f71e05681d422154f5421e385fec3454f"],
+    "manifest": "4e8d705b1e53e3f9375e0e60dc7b525d8211fe55",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": [],
+    "removed": ["b"]
+   },
+   {
+    "rev": 0,
+    "node": "1e4e1b8f71e05681d422154f5421e385fec3454f",
+    "branch": "default",
+    "phase": "draft",
+    "user": "User Name <user@hostname>",
+    "date": [1000000, 0],
+    "desc": "line 1\nline 2",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["0000000000000000000000000000000000000000"],
+    "manifest": "a0c8bcbbb45c63b90b70ad007bf38961f64f2af0",
+    "extra": {"branch": "default"},
+    "modified": [],
+    "added": [],
+    "removed": ["a"]
+   }
+  ]
+
 Error if style not readable:
 
 #if unix-permissions no-root

@@ -13,6 +13,7 @@ import match as matchmod
 import context, repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
+import encoding
 import lock as lockmod
 
 def parsealiases(cmd):
@@ -1013,6 +1014,95 @@ class changeset_printer(object):
                 parents = [parents[0]]
         return parents
 
+class jsonchangeset(changeset_printer):
+    '''format changeset information.'''
+
+    def __init__(self, ui, repo, matchfn, diffopts, buffered):
+        changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
+        self.cache = {}
+        self._first = True
+
+    def close(self):
+        if not self._first:
+            self.ui.write("\n]\n")
+        else:
+            self.ui.write("[]\n")
+
+    def _show(self, ctx, copies, matchfn, props):
+        '''show a single changeset or file revision'''
+        hexnode = hex(ctx.node())
+        rev = ctx.rev()
+        j = encoding.jsonescape
+
+        if self._first:
+            self.ui.write("[\n {")
+            self._first = False
+        else:
+            self.ui.write(",\n {")
+
+        if self.ui.quiet:
+            self.ui.write('\n  "rev": %d' % rev)
+            self.ui.write(',\n  "node": "%s"' % hexnode)
+            self.ui.write('\n }')
+            return
+
+        self.ui.write('\n  "rev": %d' % rev)
+        self.ui.write(',\n  "node": "%s"' % hexnode)
+        self.ui.write(',\n  "branch": "%s"' % j(ctx.branch()))
+        self.ui.write(',\n  "phase": "%s"' % ctx.phasestr())
+        self.ui.write(',\n  "user": "%s"' % j(ctx.user()))
+        self.ui.write(',\n  "date": [%d, %d]' % ctx.date())
+        self.ui.write(',\n  "desc": "%s"' % j(ctx.description()))
+
+        self.ui.write(',\n  "bookmarks": [%s]' %
+                      ", ".join('"%s"' % j(b) for b in ctx.bookmarks()))
+        self.ui.write(',\n  "tags": [%s]' %
+                      ", ".join('"%s"' % j(t) for t in ctx.tags()))
+        self.ui.write(',\n  "parents": [%s]' %
+                      ", ".join('"%s"' % c.hex() for c in ctx.parents()))
+
+        if self.ui.debugflag:
+            self.ui.write(',\n  "manifest": "%s"' % hex(ctx.manifestnode()))
+
+            self.ui.write(',\n  "extra": {%s}' %
+                          ", ".join('"%s": "%s"' % (j(k), j(v))
+                                    for k, v in ctx.extra().items()))
+
+            files = ctx.status(ctx.p1())
+            self.ui.write(',\n  "modified": [%s]' %
+                          ", ".join('"%s"' % j(f) for f in files[0]))
+            self.ui.write(',\n  "added": [%s]' %
+                          ", ".join('"%s"' % j(f) for f in files[1]))
+            self.ui.write(',\n  "removed": [%s]' %
+                          ", ".join('"%s"' % j(f) for f in files[2]))
+
+        elif self.ui.verbose:
+            self.ui.write(',\n  "files": [%s]' %
+                          ", ".join('"%s"' % j(f) for f in ctx.files()))
+
+            if copies:
+                self.ui.write(',\n  "copies": {%s}' %
+                              ", ".join('"%s": %s' % (j(k), j(copies[k]))
+                                                      for k in copies))
+
+        matchfn = self.matchfn
+        if matchfn:
+            stat = self.diffopts.get('stat')
+            diff = self.diffopts.get('patch')
+            diffopts = patch.diffopts(self.ui, self.diffopts)
+            node, prev = ctx.node(), ctx.p1().node()
+            if stat:
+                self.ui.pushbuffer()
+                diffordiffstat(self.ui, self.repo, diffopts, prev, node,
+                               match=matchfn, stat=True)
+                self.ui.write(',\n  "diffstat": "%s"' % j(self.ui.popbuffer()))
+            if diff:
+                self.ui.pushbuffer()
+                diffordiffstat(self.ui, self.repo, diffopts, prev, node,
+                               match=matchfn, stat=False)
+                self.ui.write(',\n  "diff": "%s"' % j(self.ui.popbuffer()))
+
+        self.ui.write("\n }")
 
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
@@ -1194,6 +1284,9 @@ def show_changeset(ui, repo, opts, buffered=False):
     matchfn = None
     if opts.get('patch') or opts.get('stat'):
         matchfn = scmutil.matchall(repo)
+
+    if opts.get('template') == 'json':
+        return jsonchangeset(ui, repo, matchfn, opts, buffered)
 
     tmpl, mapfile = gettemplate(ui, opts.get('template'), opts.get('style'))
 
