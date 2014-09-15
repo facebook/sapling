@@ -179,6 +179,24 @@ hg tags (utf-8)
   tip                                5:a52c0692f24a
   \xc3\xa9                                  3:ca661e7520de (esc)
 
+hg tags (JSON)
+
+  $ hg tags -Tjson
+  [
+   {
+    "id": "a52c0692f24a",
+    "rev": 5,
+    "tag": "tip",
+    "type": ""
+   },
+   {
+    "id": "ca661e7520de",
+    "rev": 3,
+    "tag": "\xc3\xa9", (esc)
+    "type": ""
+   }
+  ]
+
 hg branches (ascii)
 
   $ HGENCODING=ascii hg branches

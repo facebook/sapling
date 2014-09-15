@@ -101,6 +101,12 @@ commitopts2 = [
      _('record the specified user as committer'), _('USER')),
 ]
 
+# hidden for now
+formatteropts = [
+    ('T', 'template', '',
+     _('display with template (DEPRECATED)'), _('TEMPLATE')),
+]
+
 templateopts = [
     ('', 'style', '',
      _('display using template map file (DEPRECATED)'), _('STYLE')),
@@ -3064,7 +3070,7 @@ def export(ui, repo, *changesets, **opts):
 @command('files',
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
      ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
-    ] + walkopts,
+    ] + walkopts + formatteropts,
     _('[OPTION]... [PATTERN]...'))
 def files(ui, repo, *pats, **opts):
     """list tracked files
@@ -4343,7 +4349,8 @@ def log(ui, repo, *pats, **opts):
 
 @command('manifest',
     [('r', 'rev', '', _('revision to display'), _('REV')),
-     ('', 'all', False, _("list files from all revisions"))],
+     ('', 'all', False, _("list files from all revisions"))]
+         + formatteropts,
     _('[-r REV]'))
 def manifest(ui, repo, node=None, rev=None, **opts):
     """output the current or given revision of the project manifest
@@ -5502,7 +5509,7 @@ class httpservice(object):
     ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
     ('', 'rev', [], _('show difference from revision'), _('REV')),
     ('', 'change', '', _('list the changed files of a revision'), _('REV')),
-    ] + walkopts + subrepoopts,
+    ] + walkopts + subrepoopts + formatteropts,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
 def status(ui, repo, *pats, **opts):
@@ -5957,7 +5964,7 @@ def tag(ui, repo, name1, *names, **opts):
     finally:
         release(lock, wlock)
 
-@command('tags', [], '')
+@command('tags', formatteropts, '')
 def tags(ui, repo, **opts):
     """list repository tags
 

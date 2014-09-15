@@ -165,6 +165,42 @@ hg status -A:
   C .hgignore
   C modified
 
+  $ hg status -A -Tjson
+  [
+   {
+    "path": "added",
+    "status": "A"
+   },
+   {
+    "copy": "modified",
+    "path": "copied",
+    "status": "A"
+   },
+   {
+    "path": "removed",
+    "status": "R"
+   },
+   {
+    "path": "deleted",
+    "status": "!"
+   },
+   {
+    "path": "unknown",
+    "status": "?"
+   },
+   {
+    "path": "ignored",
+    "status": "I"
+   },
+   {
+    "path": ".hgignore",
+    "status": "C"
+   },
+   {
+    "path": "modified",
+    "status": "C"
+   }
+  ]
 
   $ echo "^ignoreddir$" > .hgignore
   $ mkdir ignoreddir
