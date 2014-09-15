@@ -64,6 +64,8 @@ class filelog(revlog.revlog):
         node = self.node(rev)
         if self.renamed(node):
             return len(self.read(node))
+        if self._iscensored(rev):
+            return 0
 
         # XXX if self.read(node).startswith("\1\n"), this returns (size+4)
         return super(filelog, self).size(rev)
@@ -81,6 +83,10 @@ class filelog(revlog.revlog):
         samehashes = not super(filelog, self).cmp(node, t)
         if samehashes:
             return False
+
+        # censored files compare against the empty file
+        if self._iscensored(node):
+            return text != ''
 
         # renaming a file produces a different hash, even if the data
         # remains unchanged. Check if it's the case (slow):
@@ -100,3 +106,11 @@ class filelog(revlog.revlog):
 
     def _file(self, f):
         return filelog(self.opener, f)
+
+    def _iscensored(self, revornode):
+        """Check if a file revision is censored."""
+        try:
+            self.revision(revornode)
+            return False
+        except error.CensoredNodeError:
+            return True
