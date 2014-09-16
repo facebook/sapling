@@ -391,10 +391,6 @@ def reposetup(ui, repo):
                     if f in lfiles or fstandin in standins:
                         continue
 
-                    # append directory separator to avoid collisions
-                    if not fstandin.endswith(os.sep):
-                        fstandin += os.sep
-
                     actualfiles.append(f)
                 match._files = actualfiles
 
