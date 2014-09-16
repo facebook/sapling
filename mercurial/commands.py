@@ -4178,6 +4178,8 @@ def locate(ui, repo, *pats, **opts):
     will avoid the problem of "xargs" treating single filenames that
     contain whitespace as multiple filenames.
 
+    See :hg:`help files` for a more versatile command.
+
     Returns 0 if a match is found, 1 otherwise.
     """
     end = opts.get('print0') and '\0' or '\n'
