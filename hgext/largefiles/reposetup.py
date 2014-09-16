@@ -37,11 +37,8 @@ def reposetup(ui, repo):
             if self.lfstatus:
                 class lfilesmanifestdict(manifest.manifestdict):
                     def __contains__(self, filename):
-                        if super(lfilesmanifestdict,
-                                self).__contains__(filename):
-                            return True
-                        return super(lfilesmanifestdict,
-                            self).__contains__(lfutil.standin(filename))
+                        orig = super(lfilesmanifestdict, self).__contains__
+                        return orig(filename) or orig(lfutil.standin(filename))
                 class lfilesctx(ctx.__class__):
                     def files(self):
                         filenames = super(lfilesctx, self).files()
