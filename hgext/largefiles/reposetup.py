@@ -78,9 +78,10 @@ def reposetup(ui, repo):
         def status(self, node1='.', node2=None, match=None, ignored=False,
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
+            orig = super(lfilesrepo, self).status
             if not self.lfstatus:
-                return super(lfilesrepo, self).status(node1, node2, match,
-                    listignored, listclean, listunknown, listsubrepos)
+                return orig(node1, node2, match, listignored, listclean,
+                            listunknown, listsubrepos)
 
             # some calls in this function rely on the old version of status
             self.lfstatus = False
@@ -120,9 +121,8 @@ def reposetup(ui, repo):
                         if match(f):
                             break
                     else:
-                        return super(lfilesrepo, self).status(node1, node2,
-                                match, listignored, listclean,
-                                listunknown, listsubrepos)
+                        return orig(node1, node2, match, listignored, listclean,
+                                    listunknown, listsubrepos)
 
                 # Create a copy of match that matches standins instead
                 # of largefiles.
@@ -146,8 +146,8 @@ def reposetup(ui, repo):
                 m = copy.copy(match)
                 m._files = tostandins(m._files)
 
-                result = super(lfilesrepo, self).status(node1, node2, m,
-                    ignored, clean, unknown, listsubrepos)
+                result = orig(node1, node2, m, ignored, clean, unknown,
+                              listsubrepos)
                 if working:
 
                     def sfindirstate(f):
