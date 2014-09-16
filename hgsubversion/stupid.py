@@ -207,7 +207,13 @@ def patchrepoold(ui, meta, parentctx, patchfp):
 try:
     class svnbackend(patch.repobackend):
         def getfile(self, fname):
-            data, (islink, isexec) = super(svnbackend, self).getfile(fname)
+            # In Mercurial >= 3.2, if fname is missing, data will be None and we
+            # should return None, None in that case. Earlier versions will raise
+            # an IOError which we let propagate up the stack.
+            data, flags = super(svnbackend, self).getfile(fname)
+            if data is None:
+                return None, None
+            islink, isexec = flags
             if islink:
                 data = 'link ' + data
             return data, (islink, isexec)
