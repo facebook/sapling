@@ -50,7 +50,7 @@ def _createrevlogtext(text, copyfrom=None, copyrev=None):
     return text
 
 def _parsemeta(text):
-    meta, keys, size = filelog._parsemeta(text)
+    meta, size = filelog.parsemeta(text)
     if text.startswith('\1\n'):
         s = text.index('\1\n', 2)
         text = text[s + 2:]
@@ -192,7 +192,7 @@ class remotefilelog(object):
             # The length of .hgtags is used to fast path tag checking.
             # remotefilelog doesn't support .hgtags since the entire .hgtags
             # history is needed.  Use the excludepattern setting to make
-            # .hgtags a normal filelog. 
+            # .hgtags a normal filelog.
             return 0
 
         raise Exception("len not supported")
