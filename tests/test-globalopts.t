@@ -311,7 +311,6 @@ Testing -h/--help:
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
-   locate        locate files matching specific patterns
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
@@ -394,7 +393,6 @@ Testing -h/--help:
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
-   locate        locate files matching specific patterns
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision

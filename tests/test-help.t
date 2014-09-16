@@ -76,7 +76,6 @@ Short help:
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
-   locate        locate files matching specific patterns
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
@@ -153,7 +152,6 @@ Short help:
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
-   locate        locate files matching specific patterns
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
@@ -696,7 +694,6 @@ Test that default list of commands omits extension commands
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
-   locate        locate files matching specific patterns
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
@@ -1501,13 +1498,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   show new changesets found in source
-  </td></tr>
-  <tr><td>
-  <a href="/help/locate">
-  locate
-  </a>
-  </td><td>
-  locate files matching specific patterns
   </td></tr>
   <tr><td>
   <a href="/help/manifest">
