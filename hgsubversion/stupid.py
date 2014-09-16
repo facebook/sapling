@@ -571,7 +571,10 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
         svnpath = path
         if branchpath:
             svnpath = branchpath + '/' + path
-        data, mode = svn.get_file(svnpath, r.revnum)
+        try:
+            data, mode = svn.get_file(svnpath, r.revnum)
+        except IOError:
+            return compathacks.filectxfn_deleted_reraise(memctx)
         isexec = 'x' in mode
         islink = 'l' in mode
         copied = copies.get(path)
