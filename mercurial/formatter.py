@@ -16,7 +16,7 @@ class baseformatter(object):
         self._style = opts.get("style")
         self._template = opts.get("template")
         self._item = None
-    def __bool__(self):
+    def __nonzero__(self):
         '''return False if we're not doing real templating so we can
         skip extra work'''
         return True
@@ -51,7 +51,7 @@ class plainformatter(baseformatter):
     '''the default text output scheme'''
     def __init__(self, ui, topic, opts):
         baseformatter.__init__(self, ui, topic, opts)
-    def __bool__(self):
+    def __nonzero__(self):
         return False
     def startitem(self):
         pass
