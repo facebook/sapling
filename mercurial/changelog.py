@@ -171,8 +171,13 @@ class changelog(revlog.revlog):
 
     def headrevs(self):
         if self.filteredrevs:
-            # XXX we should fix and use the C version
-            return self._headrevs()
+            try:
+                return self.index.headrevs(self.filteredrevs)
+            # AttributeError covers non-c-extension environments.
+            # TypeError allows us work with old c extensions.
+            except (AttributeError, TypeError):
+                return self._headrevs()
+
         return super(changelog, self).headrevs()
 
     def strip(self, *args, **kwargs):
