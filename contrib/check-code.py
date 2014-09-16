@@ -299,6 +299,7 @@ pypats = [
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "missing _() in ui message (use () to hide false-positives)"),
     (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
+    (r'\b__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
   ],
   # warnings
   [
