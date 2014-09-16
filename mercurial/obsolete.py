@@ -210,7 +210,7 @@ def _fm0encodeonemarker(marker):
 
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
-formats = {0: (_fm0readmarkers, _fm0encodeonemarker)}
+formats = {_fm0version: (_fm0readmarkers, _fm0encodeonemarker)}
 
 def _readmarkers(data):
     """Read and enumerate markers from raw data"""
