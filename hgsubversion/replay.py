@@ -147,7 +147,10 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         def filectxfn(repo, memctx, path):
             current_file = files[path]
-            data, isexec, islink, copied = current.pop(current_file)
+            try:
+                data, isexec, islink, copied = current.pop(current_file)
+            except IOError:
+                return compathacks.filectxfn_deleted_reraise(memctx)
             if isexec is None or islink is None:
                 flags = parentctx.flags(path)
                 if isexec is None:
