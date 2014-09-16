@@ -373,7 +373,7 @@ class PushTests(test_util.TestBase):
     def test_delete_file(self):
         repo = self.repo
         def file_callback(repo, memctx, path):
-            raise IOError(errno.ENOENT, '%s is deleted' % path)
+            return compathacks.filectxfn_deleted(memctx, path)
         old_files = set(repo['default'].manifest().keys())
         ctx = context.memctx(repo,
                              (repo['default'].node(), node.nullid),
