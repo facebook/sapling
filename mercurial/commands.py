@@ -275,15 +275,14 @@ def annotate(ui, repo, *pats, **opts):
         opts['file'] = True
 
     datefunc = ui.quiet and util.shortdate or util.datestr
-    getdate = util.cachefunc(lambda x: datefunc(x[0].date()))
     hexfn = ui.debugflag and hex or short
 
-    opmap = [('user', ' ', lambda x: ui.shortuser(x[0].user())),
-             ('number', ' ', lambda x: str(x[0].rev())),
-             ('changeset', ' ', lambda x: hexfn(x[0].node())),
-             ('date', ' ', getdate),
-             ('file', ' ', lambda x: x[0].path()),
-             ('line_number', ':', lambda x: str(x[1])),
+    opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
+             ('number', ' ', lambda x: x[0].rev(), str),
+             ('changeset', ' ', lambda x: hexfn(x[0].node()), str),
+             ('date', ' ', lambda x: x[0].date(), util.cachefunc(datefunc)),
+             ('file', ' ', lambda x: x[0].path(), str),
+             ('line_number', ':', lambda x: x[1], str),
             ]
 
     if (not opts.get('user') and not opts.get('changeset')
@@ -294,7 +293,10 @@ def annotate(ui, repo, *pats, **opts):
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
         raise util.Abort(_('at least one of -n/-c is required for -l'))
 
-    funcmap = [(func, sep) for op, sep, func in opmap if opts.get(op)]
+    def makefunc(get, fmt):
+        return lambda x: fmt(get(x))
+    funcmap = [(makefunc(get, fmt), sep) for op, sep, get, fmt in opmap
+               if opts.get(op)]
     funcmap[0] = (funcmap[0][0], '') # no separator in front of first column
 
     def bad(x, y):
