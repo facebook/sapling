@@ -227,7 +227,7 @@ def encodemarkers(markers, addheader=False, version=_fm0version):
     # markers exchange.
     encodeone = formats[version][1]
     if addheader:
-        yield _pack('>B', _fm0version)
+        yield _pack('>B', version)
     for marker in markers:
         yield encodeone(marker)
 
