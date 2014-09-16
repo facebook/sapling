@@ -2992,18 +2992,17 @@ def select(ui, repo, *args, **opts):
 
     q = repo.mq
     guards = q.active()
+    pushable = lambda i: q.pushable(q.applied[i].name)[0]
     if args or opts.get('none'):
         old_unapplied = q.unapplied(repo)
-        old_guarded = [i for i in xrange(len(q.applied)) if
-                       not q.pushable(i)[0]]
+        old_guarded = [i for i in xrange(len(q.applied)) if not pushable(i)]
         q.setactive(args)
         q.savedirty()
         if not args:
             ui.status(_('guards deactivated\n'))
         if not opts.get('pop') and not opts.get('reapply'):
             unapplied = q.unapplied(repo)
-            guarded = [i for i in xrange(len(q.applied))
-                       if not q.pushable(i)[0]]
+            guarded = [i for i in xrange(len(q.applied)) if not pushable(i)]
             if len(unapplied) != len(old_unapplied):
                 ui.status(_('number of unguarded, unapplied patches has '
                             'changed from %d to %d\n') %
@@ -3039,18 +3038,17 @@ def select(ui, repo, *args, **opts):
                 ui.write(g, '\n')
         else:
             ui.write(_('no active guards\n'))
-    reapply = opts.get('reapply') and q.applied and q.appliedname(-1)
+    reapply = opts.get('reapply') and q.applied and q.applied[-1].name
     popped = False
     if opts.get('pop') or opts.get('reapply'):
         for i in xrange(len(q.applied)):
-            pushable, reason = q.pushable(i)
-            if not pushable:
+            if not pushable(i):
                 ui.status(_('popping guarded patches\n'))
                 popped = True
                 if i == 0:
                     q.pop(repo, all=True)
                 else:
-                    q.pop(repo, str(i - 1))
+                    q.pop(repo, q.applied[i - 1].name)
                 break
     if popped:
         try:

@@ -131,8 +131,12 @@ try to push and pop while a is guarded
   now at: c
 
 now try it when a is unguarded, and we're at the top of the queue
+
+  $ hg qapplied -v
+  0 G a
+  1 A b
+  2 A c
   $ hg qsel block
-  number of guarded, applied patches has changed from 1 to 0
   $ hg qpush b
   abort: cannot push to a previous patch: b
   [255]
