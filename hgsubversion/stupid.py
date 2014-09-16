@@ -342,13 +342,16 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
                       if f.symlink is not None)
     def filectxfn(repo, memctx, path):
         if path in files_data and files_data[path] is None:
-            raise IOError(errno.ENOENT, '%s is deleted' % path)
+            return compathacks.filectxfn_deleted(memctx, path)
 
         if path in binary_files or path in unknown_files:
             pa = path
             if branchpath:
                 pa = branchpath + '/' + path
-            data, mode = svn.get_file(pa, r.revnum)
+            try:
+                data, mode = svn.get_file(pa, r.revnum)
+            except IOError:
+                return compathacks.filectxfn_deleted_reraise(memctx)
             isexe = 'x' in mode
             islink = 'l' in mode
         else:
