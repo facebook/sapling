@@ -667,8 +667,7 @@ class TestBase(unittest.TestCase):
 
         def filectxfn(repo, memctx, path):
             if path in removed:
-                raise IOError(errno.ENOENT,
-                              "File \"%s\" no longer exists" % path)
+                return compathacks.filectxfn_deleted(memctx, path)
             entry = [e for e in changes if path == e[1]][0]
             source, dest, newdata = entry
             if newdata is None:
