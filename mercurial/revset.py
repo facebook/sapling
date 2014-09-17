@@ -834,7 +834,7 @@ def _follow(repo, subset, x, name, followfirst=False):
     else:
         s = _revancestors(repo, baseset([c.rev()]), followfirst)
 
-    return subset.filter(s.__contains__)
+    return subset & s
 
 def follow(repo, subset, x):
     """``follow([file])``
