@@ -2648,6 +2648,12 @@ class _generatorset(object):
                 yield x
             return
 
+        # We have to use this complex iteration strategy to allow multiple
+        # iterations at the same time. We need to be able to catch revision
+        # removed from `consumegen` and added to genlist in another instance.
+        #
+        # Getting rid of it would provide an about 15% speed up on this
+        # iteration.
         i = 0
         genlist = self._genlist
         consume = self._consumegen()
