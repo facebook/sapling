@@ -811,7 +811,7 @@ def filelog(repo, subset, x):
                 for fr in fl:
                     s.add(fl.linkrev(fr))
 
-    return subset.filter(s.__contains__)
+    return subset & s
 
 def first(repo, subset, x):
     """``first(set, [n])``
