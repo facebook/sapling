@@ -78,12 +78,13 @@ def gitgetmeta(ui, repo, source='default'):
     ui.status(_('getting git metadata from %s\n') %
               util.hidepassword(source))
     kwargs = {'bundlecaps': set(['HG2X'])}
-    capsblob = bundle2.encodecaps(repo.bundle2caps)
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
     kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
     # this would ideally not be in the bundlecaps at all, but adding new kwargs
     # for wire transmissions is not possible as of Mercurial d19164a018a1
     kwargs['bundlecaps'].add('fb_gitmeta')
     kwargs['heads'] = [nullid]
+    kwargs['cg'] = False
     bundle = other.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(repo, bundle)

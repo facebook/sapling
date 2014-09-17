@@ -36,7 +36,6 @@ Set up the hg-git files
   $ cat .hg/git-tags
   ffffffffffffffffffffffffffffffffffffffff 0.1
 
-Change a file upstream and see that it gets reflected her
   $ echo '1111111111111111111111111111111111111111 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' >> ../repo1/.hg/git-mapfile
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
@@ -48,6 +47,38 @@ Change a file upstream and see that it gets reflected her
   $ cat .hg/git-mapfile
   ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a
   1111111111111111111111111111111111111111 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo1 repo3 -q
+  $ cd repo3
+  $ hg gitgetmeta -v
+  getting git metadata from ssh://user@dummy/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 3 files (265 bytes)
+
+  $ cat .hg/git-mapfile
+  ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  1111111111111111111111111111111111111111 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+  $ cat .hg/git-remote-refs
+  ffffffffffffffffffffffffffffffffffffffff default/master
+  $ cat .hg/git-tags
+  ffffffffffffffffffffffffffffffffffffffff 0.1
+
+Change a file upstream and see that it gets reflected here
+  $ echo '2222222222222222222222222222222222222222 dddddddddddddddddddddddddddddddddddddddd' >> ../repo1/.hg/git-mapfile
+  $ hg gitgetmeta -v
+  getting git metadata from ssh://user@dummy/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 3 files (347 bytes)
+
+  $ cat .hg/git-mapfile
+  ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  1111111111111111111111111111111111111111 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+  2222222222222222222222222222222222222222 dddddddddddddddddddddddddddddddddddddddd
 
   $ cd ..
   $ hg clone ssh://user@dummy/repo1 repo-ssh -q
