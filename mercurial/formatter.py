@@ -98,6 +98,8 @@ class pickleformatter(baseformatter):
 def _jsonifyobj(v):
     if isinstance(v, tuple):
         return '[' + ', '.join(_jsonifyobj(e) for e in v) + ']'
+    elif v is None:
+        return 'null'
     elif v is True:
         return 'true'
     elif v is False:
