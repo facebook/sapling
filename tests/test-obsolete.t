@@ -84,7 +84,7 @@ Killing a single changeset with replacement
   $ mkcommit new_c
   created new head
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
-  $ hg debugobsolete --flag 12 `getid original_c`  `getid new_c` -d '56 12'
+  $ hg debugobsolete --flag 12 `getid original_c`  `getid new_c` -d '56 120'
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
   2:245bde4270cd add original_c
   $ hg debugrevlog -cd
@@ -94,7 +94,7 @@ Killing a single changeset with replacement
       2     1    -1   118   204         59   59   59    0      76       192           0     1        1
       3     1    -1   204   271        204  204   59    0      66       258           0     2        0
   $ hg debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
 
 do it again (it read the obsstore before adding new changeset)
 
@@ -104,7 +104,7 @@ do it again (it read the obsstore before adding new changeset)
   created new head
   $ hg debugobsolete -d '1337 0' `getid new_c` `getid new_2_c`
   $ hg debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
 
 Register two markers with a missing node
@@ -116,7 +116,7 @@ Register two markers with a missing node
   $ hg debugobsolete -d '1338 0' `getid new_2_c` 1337133713371337133713371337133713371337
   $ hg debugobsolete -d '1339 0' 1337133713371337133713371337133713371337 `getid new_3_c`
   $ hg debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -274,7 +274,7 @@ Try to pull markers
   added 4 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -284,7 +284,7 @@ Rollback//Transaction support
 
   $ hg debugobsolete -d '1340 0' aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ hg debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -295,7 +295,7 @@ Rollback//Transaction support
   $ hg rollback
   repository tip rolled back to revision 3 (undo debugobsolete)
   $ hg debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -315,7 +315,7 @@ Try to push markers
   added 4 changesets with 4 changes to 4 files (+1 heads)
   $ hg -R tmpd debugobsolete | sort
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
@@ -353,7 +353,7 @@ clone support
   o  0:1f0dee641bb7 (public) [ ] add a
   
   $ hg -R clone-dest debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -378,7 +378,7 @@ On pull
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -393,7 +393,7 @@ On push
   no changes found
   [1]
   $ hg -R ../tmpc debugobsolete
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -541,7 +541,7 @@ List of all markers
 
   $ hg debugobsolete
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -563,7 +563,7 @@ List of changesets with a longer chain, (including a pruned children)
   $ hg debugobsolete --hidden --rev 3
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
@@ -574,7 +574,7 @@ List of both
   $ hg debugobsolete --hidden --rev 3::6
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
-  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:44 1970 -0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
   5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
