@@ -210,7 +210,10 @@ try:
             # In Mercurial >= 3.2, if fname is missing, data will be None and we
             # should return None, None in that case. Earlier versions will raise
             # an IOError which we let propagate up the stack.
-            data, flags = super(svnbackend, self).getfile(fname)
+            f = super(svnbackend, self).getfile(fname)
+            if f is None:
+              return None, None
+            data, flags = f
             if data is None:
                 return None, None
             islink, isexec = flags
