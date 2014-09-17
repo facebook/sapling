@@ -15,7 +15,7 @@
   
   amend the current commit with more changes
   
-  options:
+  options ([+] can be repeated):
   
    -e --edit                prompt to edit the commit message
       --rebase              rebases children commits after the amend
@@ -25,9 +25,7 @@
    -m --message TEXT        use text as commit message
    -l --logfile FILE        read commit message from file
   
-  [+] marked option can be specified multiple times
-  
-  use "hg -v help amend" to show the global options
+  (some details hidden, use --verbose to show complete help)
 
 Test that the extension disable itself when evolution is enabled
 
