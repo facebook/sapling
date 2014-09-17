@@ -1190,7 +1190,7 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in outgoing.missing])
-    return subset.filter(o.__contains__)
+    return subset & o
 
 def p1(repo, subset, x):
     """``p1([set])``
