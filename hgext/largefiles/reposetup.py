@@ -193,9 +193,7 @@ def reposetup(ui, repo):
 
                     # Standins no longer found in lfdirstate has been
                     # removed
-                    for standin in ctx1.manifest():
-                        if not lfutil.isstandin(standin):
-                            continue
+                    for standin in ctx1.walk(lfutil.getstandinmatcher(self)):
                         lfile = lfutil.splitstandin(standin)
                         if not match(lfile):
                             continue
