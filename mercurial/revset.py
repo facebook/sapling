@@ -448,12 +448,12 @@ def bookmark(repo, subset, x):
                        # i18n: "bookmark" is a keyword
                        _('the argument to bookmark must be a string'))
         kind, pattern, matcher = _stringmatcher(bm)
+        bms = set()
         if kind == 'literal':
             bmrev = repo._bookmarks.get(pattern, None)
             if not bmrev:
                 raise util.Abort(_("bookmark '%s' does not exist") % bm)
-            bmrev = repo[bmrev].rev()
-            return subset.filter(lambda r: r == bmrev)
+            bms.add(repo[bmrev].rev())
         else:
             matchrevs = set()
             for name, bmrev in repo._bookmarks.iteritems():
@@ -462,13 +462,11 @@ def bookmark(repo, subset, x):
             if not matchrevs:
                 raise util.Abort(_("no bookmarks exist that match '%s'")
                                  % pattern)
-            bmrevs = set()
             for bmrev in matchrevs:
-                bmrevs.add(repo[bmrev].rev())
-            return subset & bmrevs
-
-    bms = set([repo[r].rev()
-               for r in repo._bookmarks.values()])
+                bms.add(repo[bmrev].rev())
+    else:
+        bms = set([repo[r].rev()
+                   for r in repo._bookmarks.values()])
     return subset.filter(bms.__contains__)
 
 def branch(repo, subset, x):
