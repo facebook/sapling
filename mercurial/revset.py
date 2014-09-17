@@ -1198,7 +1198,9 @@ def p1(repo, subset, x):
     """
     if x is None:
         p = repo[x].p1().rev()
-        return subset.filter(lambda r: r == p)
+        if p >= 0:
+            return subset & baseset([p])
+        return baseset([])
 
     ps = set()
     cl = repo.changelog
