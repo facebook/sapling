@@ -426,7 +426,7 @@ def bisect(repo, subset, x):
     # i18n: "bisect" is a keyword
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))
-    return subset.filter(state.__contains__)
+    return subset & state
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
