@@ -88,6 +88,12 @@ class pickleformatter(baseformatter):
         baseformatter.end(self)
         self._ui.write(cPickle.dumps(self._data))
 
+def _jsonifyobj(v):
+    if isinstance(v, int):
+        return '%d' % v
+    else:
+        return '"%s"' % encoding.jsonescape(v)
+
 class jsonformatter(baseformatter):
     def __init__(self, ui, topic, opts):
         baseformatter.__init__(self, ui, topic, opts)
@@ -106,10 +112,7 @@ class jsonformatter(baseformatter):
                 first = False
             else:
                 self._ui.write(",\n")
-            if isinstance(v, int):
-                self._ui.write('  "%s": %d' % (k, v))
-            else:
-                self._ui.write('  "%s": "%s"' % (k, encoding.jsonescape(v)))
+            self._ui.write('  "%s": %s' % (k, _jsonifyobj(v)))
         self._ui.write("\n }")
     def end(self):
         baseformatter.end(self)
