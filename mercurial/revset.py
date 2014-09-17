@@ -2228,6 +2228,10 @@ class baseset(list):
             self._set = set(self)
         return self._set
 
+    @util.propertycache
+    def __contains__(self):
+        return self.set().__contains__
+
     def __sub__(self, other):
         """Returns a new object with the substraction of the two collections.
 
