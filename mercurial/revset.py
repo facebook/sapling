@@ -2835,10 +2835,10 @@ class spanset(_orderedsetmixin):
         return self
 
     def isascending(self):
-        return self._start < self._end
+        return self._start <= self._end
 
     def isdescending(self):
-        return self._start > self._end
+        return self._start >= self._end
 
     def filter(self, l):
         if self._start <= self._end:
