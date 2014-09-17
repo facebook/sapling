@@ -450,7 +450,7 @@ class obsstore(object):
     # parents: (tuple of nodeid) or None, parents of precursors
     #          None is used when no data has been recorded
 
-    def __init__(self, sopener, defaultformat=_fm0version):
+    def __init__(self, sopener, defaultformat=_fm1version):
         # caches for various obsolescence related cache
         self.caches = {}
         self._all = []
