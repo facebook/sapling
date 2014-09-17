@@ -1217,7 +1217,9 @@ def p2(repo, subset, x):
         ps = repo[x].parents()
         try:
             p = ps[1].rev()
-            return subset.filter(lambda r: r == p)
+            if p >= 0:
+                return subset & baseset([p])
+            return baseset([])
         except IndexError:
             return baseset([])
 
