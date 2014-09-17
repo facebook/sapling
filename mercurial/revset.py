@@ -376,7 +376,7 @@ def ancestorspec(repo, subset, x, n):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
-    return subset.filter(ps.__contains__)
+    return subset & ps
 
 def author(repo, subset, x):
     """``author(string)``
