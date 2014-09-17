@@ -1346,7 +1346,7 @@ def rev(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
-    return subset.filter(lambda r: r == l)
+    return subset & baseset([l])
 
 def matching(repo, subset, x):
     """``matching(revision [, field])``
