@@ -2747,15 +2747,15 @@ class spanset(_orderedsetmixin):
         self._hiddenrevs = repo.changelog.filteredrevs
 
     def ascending(self):
-        if self._start > self._end:
+        if not self.isascending():
             self.reverse()
 
     def descending(self):
-        if self._start < self._end:
+        if not self.isdescending():
             self.reverse()
 
     def __iter__(self):
-        if self._start <= self._end:
+        if self.isascending():
             iterrange = xrange(self._start, self._end)
         else:
             iterrange = xrange(self._start, self._end, -1)
@@ -2826,7 +2826,7 @@ class spanset(_orderedsetmixin):
 
     def reverse(self):
         # Just switch the _start and _end parameters
-        if self._start <= self._end:
+        if self.isascending():
             self._start, self._end = self._end - 1, self._start - 1
         else:
             self._start, self._end = self._end + 1, self._start + 1
