@@ -91,8 +91,8 @@ class pickleformatter(baseformatter):
 def _jsonifyobj(v):
     if isinstance(v, tuple):
         return '[' + ', '.join(_jsonifyobj(e) for e in v) + ']'
-    elif isinstance(v, int):
-        return '%d' % v
+    elif isinstance(v, (int, float)):
+        return str(v)
     else:
         return '"%s"' % encoding.jsonescape(v)
 
