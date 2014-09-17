@@ -734,7 +734,7 @@ def divergent(repo, subset, x):
     # i18n: "divergent" is a keyword
     getargs(x, 0, 0, _("divergent takes no arguments"))
     divergent = obsmod.getrevs(repo, 'divergent')
-    return subset.filter(divergent.__contains__)
+    return subset & divergent
 
 def draft(repo, subset, x):
     """``draft()``
