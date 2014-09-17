@@ -78,7 +78,7 @@ def _revsbetween(repo, roots, heads):
     if not roots:
         return baseset([])
     parentrevs = repo.changelog.parentrevs
-    visit = baseset(heads)
+    visit = list(heads)
     reachable = set()
     seen = {}
     minroot = min(roots)
