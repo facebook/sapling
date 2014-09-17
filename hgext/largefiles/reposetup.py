@@ -224,9 +224,10 @@ def reposetup(ui, repo):
                     normals = [[fn for fn in filelist
                                 if not lfutil.isstandin(fn)]
                                for filelist in result]
-                    lfiles = (modified, added, removed, missing, [], [], clean)
+                    lfstatus = (modified, added, removed, missing, [], [],
+                                clean)
                     result = [sorted(list1 + list2)
-                              for (list1, list2) in zip(normals, lfiles)]
+                              for (list1, list2) in zip(normals, lfstatus)]
                 else:
                     def toname(f):
                         if lfutil.isstandin(f):
