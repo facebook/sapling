@@ -51,6 +51,29 @@ annotate -cdnul
   $ hg annotate -cdnul a
   nobody 0 8435f90966e4 Thu Jan 01 00:00:01 1970 +0000:1: a
 
+annotate (JSON)
+
+  $ hg annotate -Tjson a
+  [
+   {
+    "line": "a\n",
+    "rev": 0
+   }
+  ]
+
+  $ hg annotate -Tjson -cdfnul a
+  [
+   {
+    "date": [1.0, 0],
+    "file": "a",
+    "line": "a\n",
+    "line_number": 1,
+    "node": "8435f90966e442695d2ded29fdade2bac5ad8065",
+    "rev": 0,
+    "user": "nobody"
+   }
+  ]
+
   $ cat <<EOF >>a
   > a
   > a

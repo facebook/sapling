@@ -247,7 +247,7 @@ def addremove(ui, repo, *pats, **opts):
     ('n', 'number', None, _('list the revision number (default)')),
     ('c', 'changeset', None, _('list the changeset')),
     ('l', 'line-number', None, _('show line number at the first appearance'))
-    ] + diffwsopts + walkopts,
+    ] + diffwsopts + walkopts + formatteropts,
     _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'),
     inferrepo=True)
 def annotate(ui, repo, *pats, **opts):
@@ -274,8 +274,12 @@ def annotate(ui, repo, *pats, **opts):
         # to mimic the behavior of Mercurial before version 1.5
         opts['file'] = True
 
+    fm = ui.formatter('annotate', opts)
     datefunc = ui.quiet and util.shortdate or util.datestr
-    hexfn = ui.debugflag and hex or short
+    if fm or ui.debugflag:
+        hexfn = hex
+    else:
+        hexfn = short
 
     opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
              ('number', ' ', lambda x: x[0].rev(), str),
@@ -284,6 +288,7 @@ def annotate(ui, repo, *pats, **opts):
              ('file', ' ', lambda x: x[0].path(), str),
              ('line_number', ':', lambda x: x[1], str),
             ]
+    fieldnamemap = {'number': 'rev', 'changeset': 'node'}
 
     if (not opts.get('user') and not opts.get('changeset')
         and not opts.get('date') and not opts.get('file')):
@@ -293,11 +298,17 @@ def annotate(ui, repo, *pats, **opts):
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
         raise util.Abort(_('at least one of -n/-c is required for -l'))
 
-    def makefunc(get, fmt):
-        return lambda x: fmt(get(x))
+    if fm:
+        def makefunc(get, fmt):
+            return get
+    else:
+        def makefunc(get, fmt):
+            return lambda x: fmt(get(x))
     funcmap = [(makefunc(get, fmt), sep) for op, sep, get, fmt in opmap
                if opts.get(op)]
     funcmap[0] = (funcmap[0][0], '') # no separator in front of first column
+    fields = ' '.join(fieldnamemap.get(op, op) for op, sep, get, fmt in opmap
+                      if opts.get(op))
 
     def bad(x, y):
         raise util.Abort("%s: %s" % (x, y))
@@ -310,7 +321,7 @@ def annotate(ui, repo, *pats, **opts):
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         if not opts.get('text') and util.binary(fctx.data()):
-            ui.write(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
+            fm.plain(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
 
         lines = fctx.annotate(follow=follow, linenumber=linenumber,
@@ -321,17 +332,23 @@ def annotate(ui, repo, *pats, **opts):
         for f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
             if l:
-                sizes = [encoding.colwidth(x) for x in l]
-                ml = max(sizes)
-                formats.append([sep + ' ' * (ml - w) + '%s' for w in sizes])
+                if fm:
+                    formats.append(['%s' for x in l])
+                else:
+                    sizes = [encoding.colwidth(x) for x in l]
+                    ml = max(sizes)
+                    formats.append([sep + ' ' * (ml - w) + '%s' for w in sizes])
                 pieces.append(l)
 
         for f, p, l in zip(zip(*formats), zip(*pieces), lines):
-            ui.write("".join(f) % p)
-            ui.write(": %s" % l[1])
+            fm.startitem()
+            fm.write(fields, "".join(f), *p)
+            fm.write('line', ": %s", l[1])
 
         if lines and not lines[-1][1].endswith('\n'):
-            ui.write('\n')
+            fm.plain('\n')
+
+    fm.end()
 
 @command('archive',
     [('', 'no-decode', None, _('do not pass files through decoders')),
