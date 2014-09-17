@@ -2782,18 +2782,14 @@ class spanset(_orderedsetmixin):
     def __and__(self, x):
         if isinstance(x, baseset):
             x = x.set()
-        if self._start <= self._end:
-            return orderedlazyset(self, x.__contains__)
-        else:
-            return orderedlazyset(self, x.__contains__, ascending=False)
+        return orderedlazyset(self, x.__contains__,
+                              ascending=self.isascending())
 
     def __sub__(self, x):
         if isinstance(x, baseset):
             x = x.set()
-        if self._start <= self._end:
-            return orderedlazyset(self, lambda r: r not in x)
-        else:
-            return orderedlazyset(self, lambda r: r not in x, ascending=False)
+        return orderedlazyset(self, lambda r: r not in x,
+                              ascending=self.isascending())
 
     def __add__(self, x):
         kwargs = {}
@@ -2841,10 +2837,7 @@ class spanset(_orderedsetmixin):
         return self._start >= self._end
 
     def filter(self, l):
-        if self._start <= self._end:
-            return orderedlazyset(self, l)
-        else:
-            return orderedlazyset(self, l, ascending=False)
+        return orderedlazyset(self, l, ascending=self.isascending())
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
