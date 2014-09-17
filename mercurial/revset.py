@@ -1204,6 +1204,7 @@ def p1(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, spanset(repo), x):
         ps.add(cl.parentrevs(r)[0])
+    ps -= set([node.nullrev])
     return subset & ps
 
 def p2(repo, subset, x):
@@ -1222,6 +1223,7 @@ def p2(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, spanset(repo), x):
         ps.add(cl.parentrevs(r)[1])
+    ps -= set([node.nullrev])
     return subset & ps
 
 def parents(repo, subset, x):
