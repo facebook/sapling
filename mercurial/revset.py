@@ -2667,12 +2667,13 @@ class _generatorset(object):
         # iteration.
         i = 0
         genlist = self._genlist
-        consume = self._consumegen()
+        nextrev = self._consumegen().next
+        _len = len # cache global lookup
         while True:
-            if i < len(genlist):
+            if i < _len(genlist):
                 yield genlist[i]
             else:
-                yield consume.next()
+                yield nextrev()
             i += 1
 
     def _consumegen(self):
