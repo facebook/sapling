@@ -1237,6 +1237,7 @@ def parents(repo, subset, x):
         cl = repo.changelog
         for r in getset(repo, spanset(repo), x):
             ps.update(cl.parentrevs(r))
+    ps -= set([node.nullrev])
     return baseset(ps) & subset
 
 def parentspec(repo, subset, x, n):
