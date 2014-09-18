@@ -369,6 +369,8 @@ Missing skips or blacklisted skips don't count as executed:
   Skipped test-failure.t: blacklisted
   # Ran 0 tests, 2 skipped, 0 warned, 0 failed.
 
+#if json
+
 test for --json
 ==================
 
@@ -412,3 +414,5 @@ test for --json
           "time": "\s*[\d\.]{5}" (re)
       }
   } (no-eol)
+
+#endif

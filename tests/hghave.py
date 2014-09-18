@@ -281,6 +281,18 @@ def has_pygments():
 def has_python243():
     return sys.version_info >= (2, 4, 3)
 
+@check("json", "some json module available")
+def has_json():
+    try:
+        if sys.version_info < (2, 7):
+            import simplejson as json
+        else:
+            import json
+        json.dumps
+        return True
+    except ImportError:
+        return False
+
 @check("outer-repo", "outer repo")
 def has_outer_repo():
     # failing for other reasons than 'no repo' imply that there is a repo
