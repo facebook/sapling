@@ -94,7 +94,8 @@ a new repo should use lz4 by default
 vanilla hg should bail in an lz4 repo
 
   $ hg --config 'extensions.lz4revlog=!' tip
-  abort: unknown repository format: requires features 'lz4revlog' (upgrade Mercurial)!
+  abort: repository requires features unknown to this Mercurial: lz4revlog!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
   [255]
 
 start a server
@@ -110,7 +111,7 @@ uncompressed clone from lz4 to lz4 should be fine
   $ hg clone --uncompressed http://localhost:$HGPORT/ happy
   streaming all changes
   4 files to transfer, 785 bytes of data
-  transferred 785 bytes in 0.0 seconds (1.36 MB/sec)
+  transferred 785 bytes in * seconds * (glob)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
