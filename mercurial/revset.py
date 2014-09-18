@@ -1231,13 +1231,12 @@ def parents(repo, subset, x):
     The set of all parents for all changesets in set, or the working directory.
     """
     if x is None:
-        ps = tuple(p.rev() for p in repo[x].parents())
-        return subset & ps
-
-    ps = set()
-    cl = repo.changelog
-    for r in getset(repo, spanset(repo), x):
-        ps.update(cl.parentrevs(r))
+        ps = set(p.rev() for p in repo[x].parents())
+    else:
+        ps = set()
+        cl = repo.changelog
+        for r in getset(repo, spanset(repo), x):
+            ps.update(cl.parentrevs(r))
     return baseset(ps) & subset
 
 def parentspec(repo, subset, x, n):
