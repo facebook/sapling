@@ -468,7 +468,7 @@ def bookmark(repo, subset, x):
         bms = set([repo[r].rev()
                    for r in repo._bookmarks.values()])
     bms -= set([node.nullrev])
-    return subset.filter(bms.__contains__)
+    return subset & bms
 
 def branch(repo, subset, x):
     """``branch(string or set)``
