@@ -1167,7 +1167,7 @@ def origin(repo, subset, x):
 
     o = set([_firstsrc(r) for r in args])
     o -= set([None])
-    return subset.filter(o.__contains__)
+    return subset & o
 
 def outgoing(repo, subset, x):
     """``outgoing([path])``
