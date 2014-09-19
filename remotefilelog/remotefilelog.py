@@ -411,22 +411,75 @@ class remotefilelog(object):
         if a == nullid or b == nullid:
             return nullid
 
+        revmap, parentfunc = self._buildrevgraph(a, b)
+        nodemap = dict(((v,k) for (k,v) in revmap.iteritems()))
+
+        ancs = ancestor.ancestors(parentfunc, revmap[a], revmap[b])
+        if ancs:
+            # choose a consistent winner when there's a tie
+            return min(map(nodemap.__getitem__, ancs))
+        return nullid
+
+    def commonancestorsheads(self, a, b):
+        """calculate all the heads of the common ancestors of nodes a and b"""
+
+        if a == nullid or b == nullid:
+            return nullid
+
+        revmap, parentfunc = self._buildrevgraph(a, b)
+        nodemap = dict(((v,k) for (k,v) in revmap.iteritems()))
+
+        ancs = ancestor.commonancestorsheads(parentfunc, revmap[a], revmap[b])
+        return map(nodemap.__getitem__, ancs)
+
+    def _buildrevgraph(self, a, b):
+        """Builds a numeric revision graph for the given two nodes.
+        Returns a node->rev map and a rev->[revs] parent function.
+        """
         amap = self.ancestormap(a)
         bmap = self.ancestormap(b)
 
-        def parents(x):
-            p = amap.get(x) or bmap.get(x)
-            if not p:
-                return []
+        # Union the two maps
+        parentsmap = collections.defaultdict(list)
+        allparents = set()
+        for mapping in (amap, bmap):
+            for node, pdata in mapping.iteritems():
+                parents = parentsmap[node]
+                p1, p2, linknode, copyfrom = pdata
+                # Don't follow renames (copyfrom).
+                # remotefilectx.ancestor does that.
+                if p1 != nullid and not copyfrom:
+                    parents.append(p1)
+                    allparents.add(p1)
+                if p2 != nullid:
+                    parents.append(p2)
+                    allparents.add(p1)
 
-            # remotefilelog.ancestor shouldn't follow renames.
-            # Use remotefilectx.ancestor for that
-            if p[3]:
-                return [nullid, p[1]]
-            return [p[0], p[1]]
 
-        result = ancestor.genericancestor(a, b, parents)
-        return result or nullid
+        # Breadth first traversal to build linkrev graph
+        parentrevs = collections.defaultdict(list)
+        revmap = {}
+        queue = collections.deque(((None, n) for n in parentsmap.iterkeys()
+                 if n not in allparents))
+        while queue:
+            prevrev, current = queue.pop()
+            if current in revmap:
+                if prevrev:
+                    parentrevs[prevrev].append(revmap[current])
+                continue
+
+            # Assign linkrevs in reverse order, so start at
+            # len(parentsmap) and work backwards.
+            currentrev = len(parentsmap) - len(revmap) - 1
+            revmap[current] = currentrev
+
+            if prevrev:
+                parentrevs[prevrev].append(currentrev)
+
+            for parent in parentsmap.get(current):
+                queue.appendleft((currentrev, parent))
+
+        return revmap, parentrevs.__getitem__
 
     def strip(self, minlink, transaction):
         pass

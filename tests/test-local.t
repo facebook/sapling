@@ -153,3 +153,13 @@
    y |  2 +-
    3 files changed, 3 insertions(+), 2 deletions(-)
   
+# Merge
+
+  $ echo merge >> w
+  $ hg commit -m w
+  created new head
+  $ hg merge 2
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m merge
+  $ hg strip -q -r .^
