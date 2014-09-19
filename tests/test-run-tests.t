@@ -394,14 +394,20 @@ test for --json
   $ cat report.json
   testreport ={
       "test-failure.t": [\{] (re)
+          "csys": "\s*[\d\.]{5}",  (re)
+          "cuser": "\s*[\d\.]{5}",  (re)
           "result": "failure", 
           "time": "\s*[\d\.]{5}" (re)
       }, 
       "test-skip.t": {
+          "csys": "\s*[\d\.]{5}",  (re)
+          "cuser": "\s*[\d\.]{5}",  (re)
           "result": "skip", 
           "time": "\s*[\d\.]{5}" (re)
       }, 
       "test-success.t": [\{] (re)
+          "csys": "\s*[\d\.]{5}",  (re)
+          "cuser": "\s*[\d\.]{5}",  (re)
           "result": "success", 
           "time": "\s*[\d\.]{5}" (re)
       }

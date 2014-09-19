@@ -1437,22 +1437,28 @@ class TextTestRunner(unittest.TextTestRunner):
             try:
                 timesd = {}
                 for test, cuser, csys, real in result.times:
-                    timesd[test] = real
+                    timesd[test] = (real, cuser, csys)
 
                 outcome = {}
                 for tc in result.successes:
                     testresult = {'result': 'success',
-                                  'time': ('%0.3f' % timesd[tc.name])}
+                                  'time': ('%0.3f' % timesd[tc.name][0]),
+                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
+                                  'csys': ('%0.3f' % timesd[tc.name][2])}
                     outcome[tc.name] = testresult
 
                 for tc, err in sorted(result.faildata.iteritems()):
                     testresult = {'result': 'failure',
-                                  'time': ('%0.3f' % timesd[tc])}
+                                  'time': ('%0.3f' % timesd[tc][0]),
+                                  'cuser': ('%0.3f' % timesd[tc][1]),
+                                  'csys': ('%0.3f' % timesd[tc][2])}
                     outcome[tc] = testresult
 
                 for tc, reason in result.skipped:
                     testresult = {'result': 'skip',
-                                  'time': ('%0.3f' % timesd[tc.name])}
+                                  'time': ('%0.3f' % timesd[tc.name][0]),
+                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
+                                  'csys': ('%0.3f' % timesd[tc.name][2])}
                     outcome[tc.name] = testresult
 
                 jsonout = json.dumps(outcome, sort_keys=True, indent=4)
