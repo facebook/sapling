@@ -398,13 +398,11 @@ class colorui(uimod.ui):
                 *[self.label(str(a), label) for a in args], **opts)
 
     def showlabel(self, msg, label):
-        if ' ' in label:
-            label = '[' + label + ']'
         if label:
             if msg and msg[-1] == '\n':
-                return "%s(%s)\n" % (label, msg[:-1])
+                return "[%s|%s]\n" % (label, msg[:-1])
             else:
-                return "%s(%s)" % (label, msg)
+                return "[%s|%s]" % (label, msg)
         else:
             return msg
 
