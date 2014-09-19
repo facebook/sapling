@@ -66,47 +66,39 @@ class match(object):
         self._ctx = ctx
         self._always = False
 
+        matchfns = []
         if include:
             kindpats = _normalize(include, 'glob', root, cwd, auditor)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)')
+            matchfns.append(im)
         if exclude:
             kindpats = _normalize(exclude, 'glob', root, cwd, auditor)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)')
+            matchfns.append(lambda f: not em(f))
         if exact:
             if isinstance(patterns, list):
                 self._files = patterns
             else:
                 self._files = list(patterns)
-            pm = self.exact
+            matchfns.append(self.exact)
         elif patterns:
             kindpats = _normalize(patterns, default, root, cwd, auditor)
             self._files = _roots(kindpats)
             self._anypats = self._anypats or _anypats(kindpats)
             self.patternspat, pm = _buildmatch(ctx, kindpats, '$')
+            matchfns.append(pm)
 
-        if patterns or exact:
-            if include:
-                if exclude:
-                    m = lambda f: im(f) and not em(f) and pm(f)
-                else:
-                    m = lambda f: im(f) and pm(f)
-            else:
-                if exclude:
-                    m = lambda f: not em(f) and pm(f)
-                else:
-                    m = pm
+        if not matchfns:
+            m = util.always
+            self._always = True
+        elif len(matchfns) == 1:
+            m = matchfns[0]
         else:
-            if include:
-                if exclude:
-                    m = lambda f: im(f) and not em(f)
-                else:
-                    m = im
-            else:
-                if exclude:
-                    m = lambda f: not em(f)
-                else:
-                    m = lambda f: True
-                    self._always = True
+            def m(f):
+                for matchfn in matchfns:
+                    if not matchfn(f):
+                        return False
+                return True
 
         self.matchfn = m
         self._fmap = set(self._files)
