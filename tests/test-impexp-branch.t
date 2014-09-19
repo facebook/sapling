@@ -54,6 +54,14 @@ Make sure import still works with branch information in patches.
 
   $ hg init c
   $ cd c
+  $ hg import --exact --no-commit ../r0.patch
+  applying ../r0.patch
+  warning: can't check exact import with --no-commit
+  $ hg st
+  A rev
+  $ hg revert -a
+  forgetting rev
+  $ rm rev
   $ hg import --exact ../r0.patch
   applying ../r0.patch
   $ hg import --exact ../r1.patch

@@ -727,7 +727,11 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 n = memctx.commit()
             finally:
                 store.close()
-        if opts.get('exact') and hex(n) != nodeid:
+        if opts.get('exact') and opts.get('no_commit'):
+            # --exact with --no-commit is still useful in that it does merge
+            # and branch bits
+            ui.warn(_("warning: can't check exact import with --no-commit\n"))
+        elif opts.get('exact') and hex(n) != nodeid:
             raise util.Abort(_('patch is damaged or loses information'))
         if n:
             # i18n: refers to a short changeset id
