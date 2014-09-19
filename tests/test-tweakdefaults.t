@@ -83,3 +83,26 @@ Rebase fast forwards bookmark
   |
   o  0 a
   
+Rebase works with hyphens
+
+  $ hg book -r 1 hyphen-book
+  $ hg book -r 2 hyphen-dest
+  $ hg up -q hyphen-book
+  $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
+  o  2 b hyphen-dest mybook
+  |
+  @  1 a2 hyphen-book
+  |
+  o  0 a
+  
+
+  $ hg rebase -d hyphen-dest
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
+  @  2 b hyphen-book hyphen-dest mybook
+  |
+  o  1 a2
+  |
+  o  0 a
+  
