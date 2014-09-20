@@ -2480,34 +2480,43 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # walk dirstate to fill `names`
 
         m = scmutil.match(repo[None], pats, opts)
-        m.bad = lambda x, y: False
-        for abs in repo.walk(m):
-            names[abs] = m.rel(abs), m.exact(abs)
-
-        # walk target manifest to fill `names`
-
-        def badfn(path, msg):
-            if path in names:
-                return
-            if path in ctx.substate:
-                return
-            path_ = path + '/'
-            for f in names:
-                if f.startswith(path_):
-                    return
-            ui.warn("%s: %s\n" % (m.rel(path), msg))
-
-        m = scmutil.match(ctx, pats, opts)
-        m.bad = badfn
-        for abs in ctx.walk(m):
-            if abs not in names:
+        if not m.always() or node != parent:
+            m.bad = lambda x, y: False
+            for abs in repo.walk(m):
                 names[abs] = m.rel(abs), m.exact(abs)
 
-        # Find status of all file in `names`.
-        m = scmutil.matchfiles(repo, names)
+            # walk target manifest to fill `names`
 
-        changes = repo.status(node1=node, match=m,
-                              unknown=True, ignored=True, clean=True)
+            def badfn(path, msg):
+                if path in names:
+                    return
+                if path in ctx.substate:
+                    return
+                path_ = path + '/'
+                for f in names:
+                    if f.startswith(path_):
+                        return
+                ui.warn("%s: %s\n" % (m.rel(path), msg))
+
+            m = scmutil.match(ctx, pats, opts)
+            m.bad = badfn
+            for abs in ctx.walk(m):
+                if abs not in names:
+                    names[abs] = m.rel(abs), m.exact(abs)
+
+            # Find status of all file in `names`.
+            m = scmutil.matchfiles(repo, names)
+
+            changes = repo.status(node1=node, match=m,
+                                  unknown=True, ignored=True, clean=True)
+        else:
+            changes = repo.status(match=m)
+            for kind in changes:
+                for abs in kind:
+                    names[abs] = m.rel(abs), m.exact(abs)
+
+            m = scmutil.matchfiles(repo, names)
+
         modified = set(changes[0])
         added    = set(changes[1])
         removed  = set(changes[2])
