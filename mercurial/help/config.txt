@@ -1640,10 +1640,13 @@ The full set of options is:
     Default is 1; set to 0 to disable.
 
 ``style``
-    Which template map style to use.
+    Which template map style to use. The available options are the names of
+    subdirectories in the HTML templates path.
+    Example: ``monoblue``
 
 ``templates``
-    Where to find the HTML templates. Default is install path.
+    Where to find the HTML templates. The default path to the HTML templates
+    can be obtained from ``hg debuginstall``.
 
 ``websub``
 ----------
