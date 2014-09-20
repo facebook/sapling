@@ -2503,9 +2503,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
 
-        # get the list of subrepos that must be reverted
-        targetsubs = sorted(s for s in ctx.substate if m(s))
-
         # Find status of all file in `names`.
         m = scmutil.matchfiles(repo, names)
 
@@ -2691,6 +2688,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         if not opts.get('dry_run'):
             _performrevert(repo, parents, ctx, actions)
+
+            # get the list of subrepos that must be reverted
+            subrepomatch = scmutil.match(ctx, pats, opts)
+            targetsubs = sorted(s for s in ctx.substate if subrepomatch(s))
 
             if targetsubs:
                 # Revert the subrepos on the revert list
