@@ -202,7 +202,11 @@ class patchheader(object):
         self.nodeid = nodeid
         self.branch = branch
         self.haspatch = diffstart > 1
-        self.plainmode = plainmode
+        self.plainmode = (plainmode or
+                          '# HG changeset patch' not in self.comments and
+                          util.any(c.startswith('Date: ') or
+                                   c.startswith('From: ')
+                                   for c in self.comments))
 
     def setuser(self, user):
         if not self.updateheader(['From: ', '# User '], user):
@@ -210,7 +214,7 @@ class patchheader(object):
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1, '# User ' + user)
             except ValueError:
-                if self.plainmode or self._hasheader(['Date: ']):
+                if self.plainmode:
                     self.comments = ['From: ' + user] + self.comments
                 else:
                     tmp = ['# HG changeset patch', '# User ' + user]
@@ -223,7 +227,7 @@ class patchheader(object):
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1, '# Date ' + date)
             except ValueError:
-                if self.plainmode or self._hasheader(['From: ']):
+                if self.plainmode:
                     self.comments = ['Date: ' + date] + self.comments
                 else:
                     tmp = ['# HG changeset patch', '# Date ' + date]
@@ -257,14 +261,6 @@ class patchheader(object):
                     res = True
                     break
         return res
-
-    def _hasheader(self, prefixes):
-        '''Check if a header starts with any of the given prefixes.'''
-        for prefix in prefixes:
-            for comment in self.comments:
-                if comment.startswith(prefix):
-                    return True
-        return False
 
     def __str__(self):
         s = '\n'.join(self.comments).rstrip()
