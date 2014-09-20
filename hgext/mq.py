@@ -1077,12 +1077,12 @@ class queue(object):
                         p.write("Date: %d %d\n" % date)
                 else:
                     p.write("# HG changeset patch\n")
-                    p.write("# Parent "
-                            + hex(repo[None].p1().node()) + "\n")
                     if user:
                         p.write("# User " + user + "\n")
                     if date:
                         p.write("# Date %s %s\n" % date)
+                    p.write("# Parent "
+                            + hex(repo[None].p1().node()) + "\n")
 
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)

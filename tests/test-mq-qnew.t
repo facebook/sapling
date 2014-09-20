@@ -218,13 +218,13 @@ hg headers
   +b
   % qnew -u with no username configured
   # HG changeset patch
-  # Parent 
   # User blue
+  # Parent 
   
   % qnew -e -u with no username configured
   # HG changeset patch
-  # Parent 
   # User chartreuse
+  # Parent 
   
   % fail when trying to import a merge
   adding a

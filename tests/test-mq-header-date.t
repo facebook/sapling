@@ -528,15 +528,15 @@
   ==== init
   ==== qnew -d
   # HG changeset patch
-  # Parent 
   # Date 3 0
+  # Parent 
   
   0: [mq]: 1.patch - test - 3.00
   ==== qref
   adding 1
   # HG changeset patch
-  # Parent 
   # Date 3 0
+  # Parent 
   
   diff -r ... 1
   --- /dev/null
@@ -546,8 +546,8 @@
   0: [mq]: 1.patch - test - 3.00
   ==== qref -d
   # HG changeset patch
-  # Parent 
   # Date 4 0
+  # Parent 
   
   diff -r ... 1
   --- /dev/null
@@ -583,8 +583,8 @@
   now at: 1.patch
   ==== qnew -d -m
   # HG changeset patch
-  # Parent 
   # Date 6 0
+  # Parent 
   Three
   
   1: Three - test - 6.00
@@ -592,8 +592,8 @@
   ==== qref
   adding 3
   # HG changeset patch
-  # Parent 
   # Date 6 0
+  # Parent 
   Three
   
   diff -r ... 3
@@ -605,8 +605,8 @@
   0: [mq]: 1.patch - test - 4.00
   ==== qref -m
   # HG changeset patch
-  # Parent 
   # Date 6 0
+  # Parent 
   Drei
   
   diff -r ... 3
@@ -618,8 +618,8 @@
   0: [mq]: 1.patch - test - 4.00
   ==== qref -d
   # HG changeset patch
-  # Parent 
   # Date 7 0
+  # Parent 
   Drei
   
   diff -r ... 3
@@ -631,8 +631,8 @@
   0: [mq]: 1.patch - test - 4.00
   ==== qref -d -m
   # HG changeset patch
-  # Parent 
   # Date 8 0
+  # Parent 
   Three (again)
   
   diff -r ... 3
@@ -747,8 +747,8 @@
   ==== qnew -u
   adding 6
   # HG changeset patch
-  # Parent 
   # User jane
+  # Parent 
   
   diff -r ... 6
   --- /dev/null
@@ -762,8 +762,8 @@
   ==== qref -d
   # HG changeset patch
   # Date 12 0
-  # Parent 
   # User jane
+  # Parent 
   
   diff -r ... 6
   --- /dev/null
@@ -779,8 +779,8 @@
   ==== qnew -d
   adding 7
   # HG changeset patch
-  # Parent 
   # Date 13 0
+  # Parent 
   
   diff -r ... 7
   --- /dev/null
@@ -794,8 +794,8 @@
   ==== qref -u
   # HG changeset patch
   # User john
-  # Parent 
   # Date 13 0
+  # Parent 
   
   diff -r ... 7
   --- /dev/null
