@@ -1112,20 +1112,6 @@ class queue(object):
                 raise util.Abort(_('cannot write patch "%s": %s')
                                  % (patchfn, e.strerror))
             try:
-                if self.plainmode:
-                    if user:
-                        p.write("From: " + user + "\n")
-                    if date:
-                        p.write("Date: %d %d\n" % date)
-                else:
-                    p.write("# HG changeset patch\n")
-                    if user:
-                        p.write("# User " + user + "\n")
-                    if date:
-                        p.write("# Date %s %s\n" % date)
-                    p.write("# Parent  "
-                            + hex(repo[None].p1().node()) + "\n")
-
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)
                 if edit:
@@ -1154,11 +1140,17 @@ class queue(object):
                     self.seriesdirty = True
                     self.applieddirty = True
                     nctx = repo[n]
-                    if nctx.description() != defaultmsg.rstrip():
-                        msg = nctx.description() + "\n\n"
-                        p.write(msg)
-                    elif not self.plainmode or date or user:
-                        p.write('\n')
+                    ph = patchheader(self.join(patchfn), self.plainmode)
+                    if user:
+                        ph.setuser(user)
+                    if date:
+                        ph.setdate('%s %s' % date)
+                    ph.setparent(hex(nctx.p1().node()))
+                    msg = nctx.description().strip()
+                    if msg == defaultmsg.strip():
+                        msg = ''
+                    ph.setmessage(msg)
+                    p.write(str(ph))
                     if commitfiles:
                         parent = self.qparents(repo, n)
                         if inclsubs:
