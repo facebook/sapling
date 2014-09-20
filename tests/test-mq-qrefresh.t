@@ -508,6 +508,7 @@ but only after writing the bad name into the patch.
   $ cat .hg/patches/a
   # HG changeset patch
   # Parent 0000000000000000000000000000000000000000
+  
   diff --git a/a b/a
   new file mode 100644
   $ hg qpush
@@ -522,6 +523,7 @@ but only after writing the bad name into the patch.
   $ cat .hg/patches/a
   # HG changeset patch
   # Parent 0000000000000000000000000000000000000000
+  
   diff --git a/a b/a
   new file mode 100644
   $ cd ..

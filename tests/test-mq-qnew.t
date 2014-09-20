@@ -209,6 +209,7 @@ hg headers
   M d/b
   # HG changeset patch
   # Parent 
+  
   diff --git a/d/b b/d/b
   --- a/d/b
   +++ b/d/b
@@ -219,10 +220,12 @@ hg headers
   # HG changeset patch
   # Parent 
   # User blue
+  
   % qnew -e -u with no username configured
   # HG changeset patch
   # Parent 
   # User chartreuse
+  
   % fail when trying to import a merge
   adding a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -337,6 +340,7 @@ Test handling default message with the patch filename with tail whitespaces
   $ cat ".hg/patches/patch "
   # HG changeset patch
   # Parent 0000000000000000000000000000000000000000
+  
 
   $ cd ..
 

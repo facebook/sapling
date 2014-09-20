@@ -243,7 +243,6 @@
   now at: 1.patch
   ==== qnew -d -m
   Date: 6 0
-  
   Three
   
   1: Three - test - 6.00
@@ -251,7 +250,6 @@
   ==== qref
   adding 3
   Date: 6 0
-  
   Three
   
   diff -r ... 3
@@ -263,7 +261,6 @@
   0: [mq]: 1.patch - test - 4.00
   ==== qref -m
   Date: 6 0
-  
   Drei
   
   diff -r ... 3
@@ -275,7 +272,6 @@
   0: [mq]: 1.patch - test - 4.00
   ==== qref -d
   Date: 7 0
-  
   Drei
   
   diff -r ... 3
@@ -287,7 +283,6 @@
   0: [mq]: 1.patch - test - 4.00
   ==== qref -d -m
   Date: 8 0
-  
   Three (again)
   
   diff -r ... 3
@@ -590,7 +585,6 @@
   # HG changeset patch
   # Parent 
   # Date 6 0
-  
   Three
   
   1: Three - test - 6.00
@@ -600,7 +594,6 @@
   # HG changeset patch
   # Parent 
   # Date 6 0
-  
   Three
   
   diff -r ... 3
@@ -614,7 +607,6 @@
   # HG changeset patch
   # Parent 
   # Date 6 0
-  
   Drei
   
   diff -r ... 3
@@ -628,7 +620,6 @@
   # HG changeset patch
   # Parent 
   # Date 7 0
-  
   Drei
   
   diff -r ... 3
@@ -642,7 +633,6 @@
   # HG changeset patch
   # Parent 
   # Date 8 0
-  
   Three (again)
   
   diff -r ... 3

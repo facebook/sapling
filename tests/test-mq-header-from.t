@@ -176,7 +176,6 @@
   0: [mq]: 1.patch - mary
   ==== qnew -U -m
   From: test
-  
   Three
   
   2: Three - test
@@ -185,7 +184,6 @@
   ==== qref
   adding 3
   From: test
-  
   Three
   
   diff -r ... 3
@@ -198,7 +196,6 @@
   0: [mq]: 1.patch - mary
   ==== qref -m
   From: test
-  
   Drei
   
   diff -r ... 3
@@ -211,7 +208,6 @@
   0: [mq]: 1.patch - mary
   ==== qref -u
   From: mary
-  
   Drei
   
   diff -r ... 3
@@ -224,7 +220,6 @@
   0: [mq]: 1.patch - mary
   ==== qref -u -m
   From: maria
-  
   Three (again)
   
   diff -r ... 3
@@ -406,6 +401,7 @@
   # HG changeset patch
   # Parent 
   # User test
+  
   0: [mq]: 1.patch - test
   ==== qref
   adding 1
@@ -690,6 +686,7 @@
   # HG changeset patch
   # Parent 
   # User test
+  
   0: [mq]: 1.patch - test
   ==== qref
   adding 1

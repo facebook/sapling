@@ -1073,10 +1073,8 @@ class queue(object):
                 if self.plainmode:
                     if user:
                         p.write("From: " + user + "\n")
-                        if not date:
-                            p.write("\n")
                     if date:
-                        p.write("Date: %d %d\n\n" % date)
+                        p.write("Date: %d %d\n" % date)
                 else:
                     p.write("# HG changeset patch\n")
                     p.write("# Parent "
@@ -1084,7 +1082,7 @@ class queue(object):
                     if user:
                         p.write("# User " + user + "\n")
                     if date:
-                        p.write("# Date %s %s\n\n" % date)
+                        p.write("# Date %s %s\n" % date)
 
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)
@@ -1117,6 +1115,8 @@ class queue(object):
                     if nctx.description() != defaultmsg.rstrip():
                         msg = nctx.description() + "\n\n"
                         p.write(msg)
+                    elif not self.plainmode or date or user:
+                        p.write('\n')
                     if commitfiles:
                         parent = self.qparents(repo, n)
                         if inclsubs:
