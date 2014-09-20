@@ -241,7 +241,9 @@ class patchheader(object):
                 patchheaderat = self.comments.index('# HG changeset patch')
                 self.comments.insert(patchheaderat + 1, '# Parent  ' + parent)
             except ValueError:
-                pass
+                if not self.plainmode:
+                    tmp = ['# HG changeset patch', '# Parent  ' + parent]
+                    self.comments = tmp + self.comments
         self.parent = parent
 
     def setmessage(self, message):

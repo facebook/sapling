@@ -23,7 +23,7 @@ test qpush on empty series
   $ echo bar > bar
   $ hg add bar
   $ hg qrefresh -m 'patch 2'
-  $ hg qnew --config 'mq.plain=true' bad-patch
+  $ hg qnew --config 'mq.plain=true' -U bad-patch
   $ echo >> foo
   $ hg qrefresh
   $ hg qpop -a

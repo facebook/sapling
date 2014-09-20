@@ -84,6 +84,8 @@ force LF
   now at: eol.diff
   $ hg qrefresh
   $ python ../cateol.py .hg/patches/eol.diff
+  # HG changeset patch<LF>
+  # Parent  0d0bf99a8b7a3842c6f8ef09e34f69156c4bd9d0<LF>
   test message<LF>
   <LF>
   diff -r 0d0bf99a8b7a a<LF>
