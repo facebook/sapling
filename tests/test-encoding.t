@@ -184,13 +184,13 @@ hg tags (JSON)
   $ hg tags -Tjson
   [
    {
-    "node": "a52c0692f24a",
+    "node": "a52c0692f24ad921c0a31e1736e7635a8b23b670",
     "rev": 5,
     "tag": "tip",
     "type": ""
    },
    {
-    "node": "ca661e7520de",
+    "node": "ca661e7520dec3f5438a63590c350bebadb04989",
     "rev": 3,
     "tag": "\xc3\xa9", (esc)
     "type": ""

@@ -5999,7 +5999,10 @@ def tags(ui, repo, **opts):
     """
 
     fm = ui.formatter('tags', opts)
-    hexfunc = ui.debugflag and hex or short
+    if fm or ui.debugflag:
+        hexfunc = hex
+    else:
+        hexfunc = short
     tagtype = ""
 
     for t, n in reversed(repo.tagslist()):
