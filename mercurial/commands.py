@@ -6013,7 +6013,7 @@ def tags(ui, repo, **opts):
         fm.startitem()
         fm.write('tag', '%s', t, label=label)
         fmt = " " * (30 - encoding.colwidth(t)) + ' %5d:%s'
-        fm.condwrite(not ui.quiet, 'rev id', fmt,
+        fm.condwrite(not ui.quiet, 'rev node', fmt,
                      repo.changelog.rev(n), hn, label=label)
         fm.condwrite(ui.verbose and tagtype, 'type', ' %s',
                      tagtype, label=label)
