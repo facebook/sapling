@@ -3143,7 +3143,7 @@ def files(ui, repo, *pats, **opts):
     end = '\n'
     if opts.get('print0'):
         end = '\0'
-    fm = ui.formatter('status', opts)
+    fm = ui.formatter('files', opts)
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
