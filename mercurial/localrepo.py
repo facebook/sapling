@@ -1127,7 +1127,7 @@ class localrepository(object):
         text = fctx.data()
         flog = self.file(fname)
         fparent1 = manifest1.get(fname, nullid)
-        fparent2 = fparent2o = manifest2.get(fname, nullid)
+        fparent2 = manifest2.get(fname, nullid)
 
         meta = {}
         copy = fctx.renamed()
@@ -1193,9 +1193,8 @@ class localrepository(object):
         if fparent2 != nullid or flog.cmp(fparent1, text) or meta:
             changelist.append(fname)
             return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
-
         # are just the flags changed during merge?
-        if fparent1 != fparent2o and manifest1.flags(fname) != fctx.flags():
+        elif fname in manifest1 and manifest1.flags(fname) != fctx.flags():
             changelist.append(fname)
 
         return fparent1
