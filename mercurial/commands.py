@@ -4607,13 +4607,15 @@ def outgoing(ui, repo, dest=None, **opts):
     _('[-r REV] [FILE]'),
     inferrepo=True)
 def parents(ui, repo, file_=None, **opts):
-    """show the parents of the working directory or revision
+    """show the parents of the working directory or revision (DEPRECATED)
 
     Print the working directory's parent revisions. If a revision is
     given via -r/--rev, the parent of that revision will be printed.
     If a file argument is given, the revision in which the file was
     last changed (before the working directory revision or the
     argument to --rev if given) is printed.
+
+    See :hg:`summary` and :hg:`help revsets` for related information.
 
     Returns 0 on success.
     """

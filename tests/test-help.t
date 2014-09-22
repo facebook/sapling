@@ -80,7 +80,6 @@ Short help:
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
    outgoing      show changesets not found in the destination
-   parents       show the parents of the working directory or revision
    paths         show aliases for remote repositories
    phase         set or show the current phase name
    pull          pull changes from the specified source
@@ -156,7 +155,6 @@ Short help:
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
    outgoing      show changesets not found in the destination
-   parents       show the parents of the working directory or revision
    paths         show aliases for remote repositories
    phase         set or show the current phase name
    pull          pull changes from the specified source
@@ -698,7 +696,6 @@ Test that default list of commands omits extension commands
    manifest      output the current or given revision of the project manifest
    merge         merge working directory with another revision
    outgoing      show changesets not found in the destination
-   parents       show the parents of the working directory or revision
    paths         show aliases for remote repositories
    phase         set or show the current phase name
    pull          pull changes from the specified source
@@ -1519,13 +1516,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   show changesets not found in the destination
-  </td></tr>
-  <tr><td>
-  <a href="/help/parents">
-  parents
-  </a>
-  </td><td>
-  show the parents of the working directory or revision
   </td></tr>
   <tr><td>
   <a href="/help/paths">
