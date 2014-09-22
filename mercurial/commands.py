@@ -4278,9 +4278,8 @@ def log(ui, repo, *pats, **opts):
     .. note::
 
        for performance reasons, log FILE may omit duplicate changes
-       made on branches and will not show deletions. To see all
-       changes including duplicates and deletions, use the --removed
-       switch.
+       made on branches and will not show removals or mode changes. To
+       see all such changes, use the --removed switch.
 
     .. container:: verbose
 
@@ -4335,6 +4334,7 @@ def log(ui, repo, *pats, **opts):
     specifying custom templates.
 
     Returns 0 on success.
+
     """
     if opts.get('graph'):
         return cmdutil.graphlog(ui, repo, *pats, **opts)
