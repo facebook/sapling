@@ -45,7 +45,7 @@ def _createrevlogtext(text, copyfrom=None, copyrev=None):
         if copyfrom:
             meta['copy'] = copyfrom
             meta['copyrev'] = copyrev
-        text = "\1\n%s\1\n%s" % (filelog._packmeta(meta), text)
+        text = filelog.packmeta(meta, text)
 
     return text
 
