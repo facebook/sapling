@@ -200,8 +200,6 @@ class hgweb(object):
             # avoid accepting e.g. style parameter as command
             if util.safehasattr(webcommands, cmd):
                 req.form['cmd'] = [cmd]
-            else:
-                cmd = ''
 
             if cmd == 'static':
                 req.form['file'] = ['/'.join(args)]
