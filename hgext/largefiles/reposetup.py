@@ -173,7 +173,8 @@ def reposetup(ui, repo):
                                     != lfutil.hashfile(self.wjoin(lfile)):
                                 modified.append(lfile)
                             else:
-                                clean.append(lfile)
+                                if listclean:
+                                    clean.append(lfile)
                                 lfdirstate.normal(lfile)
                     else:
                         tocheck = unsure + modified + added + clean
@@ -185,7 +186,7 @@ def reposetup(ui, repo):
                                 if ctx1[standin].data().strip() != \
                                         lfutil.hashfile(self.wjoin(lfile)):
                                     modified.append(lfile)
-                                else:
+                                elif listclean:
                                     clean.append(lfile)
                             else:
                                 added.append(lfile)
@@ -241,12 +242,6 @@ def reposetup(ui, repo):
                 if wlock:
                     wlock.release()
 
-            if not listunknown:
-                result[4] = []
-            if not listignored:
-                result[5] = []
-            if not listclean:
-                result[6] = []
             self.lfstatus = True
             return result
 
