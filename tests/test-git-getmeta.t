@@ -88,5 +88,8 @@ Check that our revset and template mappings work
   $ hg log -r "gitnode(ffffffffffffffffffffffffffffffffffffffff)" --template "{node}\n"
   3903775176ed42b1458a6281db4a0ccf4d9f287a
 
+  $ hg log -r 'gffffffffffffffffffffffffffffffffffffffff' --template "{node}\n"
+  3903775176ed42b1458a6281db4a0ccf4d9f287a
+
   $ hg log -r . --template "{gitnode}\n"
   ffffffffffffffffffffffffffffffffffffffff
