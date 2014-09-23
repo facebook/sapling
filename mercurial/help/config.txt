@@ -1641,7 +1641,7 @@ The full set of options is:
 
 ``style``
     Which template map style to use. The available options are the names of
-    subdirectories in the HTML templates path.
+    subdirectories in the HTML templates path. Default is ``paper``.
     Example: ``monoblue``
 
 ``templates``
