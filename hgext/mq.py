@@ -191,7 +191,6 @@ class patchheader(object):
 
         # make sure message isn't empty
         if format and format.startswith("tag") and subject:
-            message.insert(0, "")
             message.insert(0, subject)
 
         self.message = message
@@ -214,7 +213,7 @@ class patchheader(object):
                 if self.plainmode or self._hasheader(['Date: ']):
                     self.comments = ['From: ' + user] + self.comments
                 else:
-                    tmp = ['# HG changeset patch', '# User ' + user, '']
+                    tmp = ['# HG changeset patch', '# User ' + user]
                     self.comments = tmp + self.comments
         self.user = user
 
@@ -227,7 +226,7 @@ class patchheader(object):
                 if self.plainmode or self._hasheader(['From: ']):
                     self.comments = ['Date: ' + date] + self.comments
                 else:
-                    tmp = ['# HG changeset patch', '# Date ' + date, '']
+                    tmp = ['# HG changeset patch', '# Date ' + date]
                     self.comments = tmp + self.comments
         self.date = date
 
@@ -268,9 +267,10 @@ class patchheader(object):
         return False
 
     def __str__(self):
-        if not self.comments:
+        s = '\n'.join(self.comments).rstrip()
+        if not s:
             return ''
-        return '\n'.join(self.comments) + '\n\n'
+        return s + '\n\n'
 
     def _delmsg(self):
         '''Remove existing message, keeping the rest of the comments fields.
