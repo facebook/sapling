@@ -252,7 +252,7 @@
                     (disabled) and "100" (files must be identical). For example,
                     "90" means that a delete/add pair will be imported as a
                     rename if more than 90% of the file hasn't changed. The
-                    default is "0".
+                    default is "50".
       convert.git.findcopiesharder
                     while detecting copies, look at all files in the working
                     copy instead of just changed ones. This is very expensive
