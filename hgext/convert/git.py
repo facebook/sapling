@@ -94,10 +94,7 @@ class convert_git(converter_source):
         if not os.path.exists(path + "/objects"):
             raise NoRepo(_("%s does not look like a Git repository") % path)
 
-        try:
-            similarity = int(ui.config('convert', 'git.similarity') or 0)
-        except ValueError:
-            raise util.Abort('convert.git.similarity must be a number')
+        similarity = ui.configint('convert', 'git.similarity', default=0)
         if similarity < 0 or similarity > 100:
             raise util.Abort(_('similarity must be between 0 and 100'))
         if similarity > 0:
