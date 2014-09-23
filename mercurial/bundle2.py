@@ -832,13 +832,13 @@ def handlechangegroup(op, inpart):
     assert not inpart.read()
 
 @parthandler('b2x:reply:changegroup', ('return', 'in-reply-to'))
-def handlechangegroup(op, inpart):
+def handlereplychangegroup(op, inpart):
     ret = int(inpart.params['return'])
     replyto = int(inpart.params['in-reply-to'])
     op.records.add('changegroup', {'return': ret}, replyto)
 
 @parthandler('b2x:check:heads')
-def handlechangegroup(op, inpart):
+def handlecheckheads(op, inpart):
     """check that head of the repo did not change
 
     This is used to detect a push race when using unbundle.
