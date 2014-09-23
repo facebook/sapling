@@ -852,7 +852,7 @@ def getrevs(repo, name):
     Such access may compute the set and cache it for future use"""
     repo = repo.unfiltered()
     if not repo.obsstore:
-        return ()
+        return frozenset()
     if name not in repo.obsstore.caches:
         repo.obsstore.caches[name] = cachefuncs[name](repo)
     return repo.obsstore.caches[name]
