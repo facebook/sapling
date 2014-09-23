@@ -339,7 +339,7 @@ Test handling default message with the patch filename with tail whitespaces
   ====
   $ cat ".hg/patches/patch "
   # HG changeset patch
-  # Parent 0000000000000000000000000000000000000000
+  # Parent  0000000000000000000000000000000000000000
   
 
   $ cd ..

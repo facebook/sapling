@@ -150,7 +150,7 @@ class patchheader(object):
                 elif line.startswith("# Date "):
                     date = line[7:]
                 elif line.startswith("# Parent "):
-                    parent = line[9:].lstrip()
+                    parent = line[9:].lstrip() # handle double trailing space
                 elif line.startswith("# Branch "):
                     branch = line[9:]
                 elif line.startswith("# Node ID "):
@@ -232,10 +232,11 @@ class patchheader(object):
         self.date = date
 
     def setparent(self, parent):
-        if not self.updateheader(['# Parent '], parent):
+        if not (self.updateheader(['# Parent  '], parent) or
+                self.updateheader(['# Parent '], parent)):
             try:
                 patchheaderat = self.comments.index('# HG changeset patch')
-                self.comments.insert(patchheaderat + 1, '# Parent ' + parent)
+                self.comments.insert(patchheaderat + 1, '# Parent  ' + parent)
             except ValueError:
                 pass
         self.parent = parent
@@ -1081,7 +1082,7 @@ class queue(object):
                         p.write("# User " + user + "\n")
                     if date:
                         p.write("# Date %s %s\n" % date)
-                    p.write("# Parent "
+                    p.write("# Parent  "
                             + hex(repo[None].p1().node()) + "\n")
 
                 defaultmsg = "[mq]: %s" % patchfn

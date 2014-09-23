@@ -49,7 +49,7 @@
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -98,7 +98,7 @@
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -142,7 +142,7 @@ qrefresh . in subdir:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -186,7 +186,7 @@ qrefresh in hg-root again:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -234,7 +234,7 @@ qrefresh --short tests:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -267,7 +267,7 @@ Before starting exclusive tests:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -289,7 +289,7 @@ Exclude 2/base:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -312,7 +312,7 @@ Remove 1/base and add 2/base again but not orphanchild:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 2/base
@@ -328,7 +328,7 @@ Add 1/base with include filter - and thus remove 2/base from patch:
 
   $ cat .hg/patches/mqbase
   # HG changeset patch
-  # Parent e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
+  # Parent  e7af5904b465cd1f4f3cf6b26fe14e8db6f63eaa
   mqbase
   
   diff -r e7af5904b465 1/base
@@ -453,7 +453,7 @@ refresh with tip != qtip:
 
   $ cat .hg/patches/patch
   # HG changeset patch
-  # Parent 1a60229be7ac3e4a7f647508e99b87bef1f03593
+  # Parent  1a60229be7ac3e4a7f647508e99b87bef1f03593
   
   diff -r 1a60229be7ac b
   --- a/b
@@ -507,7 +507,7 @@ but only after writing the bad name into the patch.
   $ rm a
   $ cat .hg/patches/a
   # HG changeset patch
-  # Parent 0000000000000000000000000000000000000000
+  # Parent  0000000000000000000000000000000000000000
   
   diff --git a/a b/a
   new file mode 100644
@@ -522,7 +522,7 @@ but only after writing the bad name into the patch.
   [255]
   $ cat .hg/patches/a
   # HG changeset patch
-  # Parent 0000000000000000000000000000000000000000
+  # Parent  0000000000000000000000000000000000000000
   
   diff --git a/a b/a
   new file mode 100644

@@ -113,7 +113,7 @@ Test renaming to a folded patch (issue3058)
   $ hg qmv addb
   $ cat .hg/patches/addb
   # HG changeset patch
-  # Parent 0000000000000000000000000000000000000000
+  # Parent  0000000000000000000000000000000000000000
   
   diff -r 000000000000 a
   --- /dev/null	* (glob)
