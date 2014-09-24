@@ -108,6 +108,15 @@ def _fastsha1(s=''):
     _fastsha1 = sha1 = _sha1
     return _sha1(s)
 
+def md5(s=''):
+    try:
+        from hashlib import md5 as _md5
+    except ImportError:
+        from md5 import md5 as _md5
+    global md5
+    md5 = _md5
+    return _md5(s)
+
 try:
     buffer = buffer
 except NameError:

@@ -19,8 +19,6 @@
 #  - fix for digest auth (inspired from urllib2.py @ Python v2.4)
 # Modified by Dirkjan Ochtman:
 #  - import md5 function from a local util module
-# Modified by Martin Geisler:
-#  - moved md5 function from local util module to this module
 # Modified by Augie Fackler:
 #  - add safesend method and use it to prevent broken pipe errors
 #    on large POST requests
@@ -617,16 +615,8 @@ def error_handler(url):
     print "open connections:", hosts
     keepalive_handler.close_all()
 
-def md5(s):
-    try:
-        from hashlib import md5 as _md5
-    except ImportError:
-        from md5 import md5 as _md5
-    global md5
-    md5 = _md5
-    return _md5(s)
-
 def continuity(url):
+    from util import md5
     format = '%25s: %s'
 
     # first fetch the file with the normal http handler
