@@ -373,10 +373,7 @@ def grep(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    ui.status("note: hg grep greps all of history (and is slow). " +
-        "Use wgrep to grep the working copy.\n\n")
-
-    cmd = Command('wgrep')
+    cmd = Command('grep')
 
     if len(args) > 0:
         cmd.append(args[0])
