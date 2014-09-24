@@ -635,7 +635,7 @@ def continuity(url):
     fo = urllib2.urlopen(url)
     foo = fo.read()
     fo.close()
-    m = md5.new(foo)
+    m = md5(foo)
     print format % ('normal urllib', m.hexdigest())
 
     # now install the keepalive handler and try again
@@ -645,7 +645,7 @@ def continuity(url):
     fo = urllib2.urlopen(url)
     foo = fo.read()
     fo.close()
-    m = md5.new(foo)
+    m = md5(foo)
     print format % ('keepalive read', m.hexdigest())
 
     fo = urllib2.urlopen(url)
@@ -656,7 +656,7 @@ def continuity(url):
             foo = foo + f
         else: break
     fo.close()
-    m = md5.new(foo)
+    m = md5(foo)
     print format % ('keepalive readline', m.hexdigest())
 
 def comp(N, url):
