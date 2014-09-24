@@ -854,7 +854,7 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 {
 	Py_ssize_t i, len, addlen;
 	char *nothead = NULL;
-	PyObject *heads;
+	PyObject *heads = NULL;
 	PyObject *filter = NULL;
 	PyObject *filteredrevs = Py_None;
 
