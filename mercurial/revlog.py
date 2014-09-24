@@ -52,7 +52,7 @@ def gettype(q):
 def offset_type(offset, type):
     return long(long(offset) << 16 | type)
 
-nullhash = _sha(nullid)
+_nullhash = _sha(nullid)
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -64,7 +64,7 @@ def hash(text, p1, p2):
     # As of now, if one of the parent node is null, p2 is null
     if p2 == nullid:
         # deep copy of a hash is faster than creating one
-        s = nullhash.copy()
+        s = _nullhash.copy()
         s.update(p1)
     else:
         # none of the parent nodes are nullid
