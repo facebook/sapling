@@ -28,3 +28,5 @@ roots((0:tip)::)
 (_intlist('20000\x0020001')) and merge()
 parents(20000)
 (20000::) - (20000)
+# The one below is used by rebase
+(children(ancestor(tip~5, tip)) and ::(tip~5))::
