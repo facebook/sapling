@@ -94,7 +94,7 @@ revsetsfile = sys.stdin
 if options.file:
     revsetsfile = open(options.file)
 
-revsets = [l.strip() for l in revsetsfile]
+revsets = [l.strip() for l in revsetsfile if not l.startswith('#')]
 
 print "Revsets to benchmark"
 print "----------------------------"

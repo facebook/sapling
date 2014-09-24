@@ -14,7 +14,9 @@ max(tip:0)
 min(0:tip)
 0::
 min(0::)
+# those two `roots(...)` inputs are close to what phase movement use.
 roots((tip~100::) - (tip~100::tip))
+roots((0::) - (0::tip))
 ::p1(p1(tip))::
 public()
 :10000 and public()
@@ -23,7 +25,6 @@ draft()
 max(::(tip~20) - obsolete())
 roots((0:tip)::)
 (not public() - obsolete())
-roots((0::) - (0::tip))
 (_intlist('20000\x0020001')) and merge()
 parents(20000)
 (20000::) - (20000)
