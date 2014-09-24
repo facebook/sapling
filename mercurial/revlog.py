@@ -1036,13 +1036,21 @@ class revlog(object):
         self._cache = (node, rev, text)
         return text
 
+    def hash(self, text, p1, p2):
+        """Compute a node hash.
+
+        Available as a function so that subclasses can replace the hash
+        as needed.
+        """
+        return hash(text, p1, p2)
+
     def _checkhash(self, text, node, rev):
         p1, p2 = self.parents(node)
         self.checkhash(text, p1, p2, node, rev)
         return text
 
     def checkhash(self, text, p1, p2, node, rev=None):
-        if node != hash(text, p1, p2):
+        if node != self.hash(text, p1, p2):
             revornode = rev
             if revornode is None:
                 revornode = templatefilters.short(hex(node))
@@ -1104,7 +1112,7 @@ class revlog(object):
         if link == nullrev:
             raise RevlogError(_("attempted to add linkrev -1 to %s")
                               % self.indexfile)
-        node = node or hash(text, p1, p2)
+        node = node or self.hash(text, p1, p2)
         if node in self.nodemap:
             return node
 
