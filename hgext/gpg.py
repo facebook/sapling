@@ -254,7 +254,7 @@ def sign(ui, repo, *revs, **opts):
         return
 
     msigs = match.exact(repo.root, '', ['.hgsigs'])
-    s = repo.status(match=msigs, unknown=True, ignored=True)[:6]
+    s = repo.status(match=msigs, unknown=True, ignored=True)
     if util.any(s) and not opts["force"]:
         raise util.Abort(_("working copy of .hgsigs is changed "
                            "(please commit .hgsigs manually "
