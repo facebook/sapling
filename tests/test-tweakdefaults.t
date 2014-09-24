@@ -95,7 +95,6 @@ Rebase works with hyphens
   |
   o  0 a
   
-
   $ hg rebase -d hyphen-dest
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -106,3 +105,14 @@ Rebase works with hyphens
   |
   o  0 a
   
+Grep options work
+
+  $ hg grep x
+  a:x
+  $ hg grep -i X
+  a:x
+  $ hg grep -l x
+  a
+  $ hg grep -n x
+  a:1:x
+  $ hg grep -V ''
