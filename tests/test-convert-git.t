@@ -278,6 +278,8 @@ input validation
   R foo
 
   $ cd git-repo2
+  $ echo bar2 >> bar
+  $ commit -a -m 'change bar'
   $ cp bar bar-copied2
   $ git add bar-copied2
   $ commit -a -m 'copy with no changes'
