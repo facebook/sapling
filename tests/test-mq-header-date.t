@@ -329,8 +329,8 @@
   ==== hg qref
   adding 5
   # HG changeset patch
-  # Parent 
   # Date 10 0
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -342,8 +342,8 @@
   0: [mq]: 1.patch - test - 4.00
   ==== hg qref -d
   # HG changeset patch
-  # Parent 
   # Date 11 0
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -683,8 +683,8 @@
   ==== hg qref
   adding 5
   # HG changeset patch
-  # Parent 
   # Date 10 0
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -696,8 +696,8 @@
   0: [mq]: 1.patch - test - 4.00
   ==== hg qref -d
   # HG changeset patch
-  # Parent 
   # Date 11 0
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -761,8 +761,8 @@
   0: [mq]: 1.patch - test
   ==== qref -d
   # HG changeset patch
-  # Date 12 0
   # User jane
+  # Date 12 0
   # Parent 
   
   diff -r ... 6
@@ -823,8 +823,8 @@
   0: [mq]: 1.patch - test
   ==== qref -u -d
   # HG changeset patch
-  # Date 14 0
   # User john
+  # Date 14 0
   # Parent 
   
   diff -r ... 8
@@ -857,8 +857,8 @@
   0: [mq]: 1.patch - test
   ==== qref -u -d
   # HG changeset patch
-  # Date 15 0
   # User john
+  # Date 15 0
   # Parent 
   Nine
   

@@ -104,6 +104,52 @@ class statusentry(object):
     def __repr__(self):
         return hex(self.node) + ':' + self.name
 
+# The order of the headers in 'hg export' HG patches:
+HGHEADERS = [
+#   '# HG changeset patch',
+    '# User ',
+    '# Date ',
+    '#      ',
+    '# Branch ',
+    '# Node ID ',
+    '# Parent  ', # can occur twice for merges - but that is not relevant for mq
+    '', # all lines after headers 'has' this prefix - simplifies the algorithm
+    ]
+
+def inserthgheader(lines, header, value):
+    """Assuming lines contains a HG patch header, add a header line with value.
+    >>> try: inserthgheader([], '# Date ', 'z')
+    ... except ValueError, inst: print "oops"
+    oops
+    >>> inserthgheader(['# HG changeset patch'], '# Date ', 'z')
+    ['# HG changeset patch', '# Date z']
+    >>> inserthgheader(['# HG changeset patch', ''], '# Date ', 'z')
+    ['# HG changeset patch', '# Date z', '']
+    >>> inserthgheader(['# HG changeset patch', '# User y'], '# Date ', 'z')
+    ['# HG changeset patch', '# User y', '# Date z']
+    >>> inserthgheader(['# HG changeset patch', '# Date y'], '# Date ', 'z')
+    ['# HG changeset patch', '# Date z']
+    >>> inserthgheader(['# HG changeset patch', '', '# Date y'], '# Date ', 'z')
+    ['# HG changeset patch', '# Date z', '', '# Date y']
+    >>> inserthgheader(['# HG changeset patch', '# Parent  y'], '# Date ', 'z')
+    ['# HG changeset patch', '# Date z', '# Parent  y']
+    """
+    start = lines.index('# HG changeset patch') + 1
+    newindex = HGHEADERS.index(header)
+    for i in range(start, len(lines)):
+        line = lines[i]
+        for lineindex, h in enumerate(HGHEADERS):
+            if line.startswith(h):
+                if lineindex < newindex:
+                    break # next line
+                if lineindex == newindex:
+                    lines[i] = header + value
+                else:
+                    lines.insert(i, header + value)
+                return lines
+    lines.append(header + value)
+    return lines
+
 class patchheader(object):
     def __init__(self, pf, plainmode=False):
         def eatdiff(lines):
@@ -211,8 +257,7 @@ class patchheader(object):
     def setuser(self, user):
         if not self.updateheader(['From: ', '# User '], user):
             try:
-                patchheaderat = self.comments.index('# HG changeset patch')
-                self.comments.insert(patchheaderat + 1, '# User ' + user)
+                inserthgheader(self.comments, '# User ', user)
             except ValueError:
                 if self.plainmode:
                     self.comments = ['From: ' + user] + self.comments
@@ -224,8 +269,7 @@ class patchheader(object):
     def setdate(self, date):
         if not self.updateheader(['Date: ', '# Date '], date):
             try:
-                patchheaderat = self.comments.index('# HG changeset patch')
-                self.comments.insert(patchheaderat + 1, '# Date ' + date)
+                inserthgheader(self.comments, '# Date ', date)
             except ValueError:
                 if self.plainmode:
                     self.comments = ['Date: ' + date] + self.comments
@@ -238,8 +282,7 @@ class patchheader(object):
         if not (self.updateheader(['# Parent  '], parent) or
                 self.updateheader(['# Parent '], parent)):
             try:
-                patchheaderat = self.comments.index('# HG changeset patch')
-                self.comments.insert(patchheaderat + 1, '# Parent  ' + parent)
+                inserthgheader(self.comments, '# Parent  ', parent)
             except ValueError:
                 if not self.plainmode:
                     tmp = ['# HG changeset patch', '# Parent  ' + parent]

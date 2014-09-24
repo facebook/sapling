@@ -270,8 +270,8 @@
   ==== hg qref
   adding 5
   # HG changeset patch
-  # Parent 
   # User johndoe
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -285,8 +285,8 @@
   0: [mq]: 1.patch - mary
   ==== hg qref -U
   # HG changeset patch
-  # Parent 
   # User test
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -300,8 +300,8 @@
   0: [mq]: 1.patch - mary
   ==== hg qref -u
   # HG changeset patch
-  # Parent 
   # User johndeere
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -560,8 +560,8 @@
   ==== hg qref
   adding 5
   # HG changeset patch
-  # Parent 
   # User johndoe
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -575,8 +575,8 @@
   0: [mq]: 1.patch - mary
   ==== hg qref -U
   # HG changeset patch
-  # Parent 
   # User test
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -590,8 +590,8 @@
   0: [mq]: 1.patch - mary
   ==== hg qref -u
   # HG changeset patch
-  # Parent 
   # User johndeere
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -845,8 +845,8 @@
   ==== hg qref
   adding 5
   # HG changeset patch
-  # Parent 
   # User johndoe
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -860,8 +860,8 @@
   0: [mq]: 1.patch - mary
   ==== hg qref -U
   # HG changeset patch
-  # Parent 
   # User test
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
@@ -875,8 +875,8 @@
   0: [mq]: 1.patch - mary
   ==== hg qref -u
   # HG changeset patch
-  # Parent 
   # User johndeere
+  # Parent 
   
   diff -r ... 5
   --- /dev/null
