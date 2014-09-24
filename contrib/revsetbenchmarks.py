@@ -74,7 +74,8 @@ def getrevs(spec):
 
 parser = OptionParser(usage="usage: %prog [options] <revs>")
 parser.add_option("-f", "--file",
-                  help="read revset from FILE", metavar="FILE")
+                  help="read revset from FILE (stdin if omited)",
+                  metavar="FILE")
 parser.add_option("-R", "--repo",
                   help="run benchmark on REPO", metavar="REPO")
 
