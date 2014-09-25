@@ -401,8 +401,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
         files.extend(shelvectx.parents()[0].files())
 
         # revert will overwrite unknown files, so move them out of the way
-        m, a, r, d, u = repo.status(unknown=True)[:5]
-        for file in u:
+        for file in repo.status(unknown=True)[4]:
             if file in files:
                 util.rename(file, file + ".orig")
         ui.pushbuffer(True)
