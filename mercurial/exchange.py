@@ -78,13 +78,13 @@ class pushoperation(object):
         # step already performed
         # (used to check what steps have been already performed through bundle2)
         self.stepsdone = set()
-        # Integer version of the push result
+        # Integer version of the changegroup push result
         # - None means nothing to push
         # - 0 means HTTP error
         # - 1 means we pushed and remote head count is unchanged *or*
         #   we have outgoing changesets but refused to push
         # - other values as described by addchangegroup()
-        self.ret = None
+        self.cgresult = None
         # discover.outgoing object (contains common and outgoing data)
         self.outgoing = None
         # all remote heads before the push
@@ -140,7 +140,7 @@ class pushoperation(object):
     @property
     def commonheads(self):
         """set of all common heads after changeset bundle push"""
-        if self.ret:
+        if self.cgresult:
             return self.futureheads
         else:
             return self.fallbackheads
@@ -211,7 +211,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    return pushop.ret
+    return pushop.cgresult
 
 # list of steps to perform discovery before push
 pushdiscoveryorder = []
@@ -388,7 +388,7 @@ def b2partsgenerator(stepname):
 def _pushb2ctx(pushop, bundler):
     """handle changegroup push through bundle2
 
-    addchangegroup result is stored in the ``pushop.ret`` attribute.
+    addchangegroup result is stored in the ``pushop.cgresult`` attribute.
     """
     if 'changesets' in pushop.stepsdone:
         return
@@ -407,7 +407,7 @@ def _pushb2ctx(pushop, bundler):
         """extract addchangroup returns from server reply"""
         cgreplies = op.records.getreplies(cgpart.id)
         assert len(cgreplies['changegroup']) == 1
-        pushop.ret = cgreplies['changegroup'][0]['return']
+        pushop.cgresult = cgreplies['changegroup'][0]['return']
     return handlereply
 
 @b2partsgenerator('phase')
@@ -558,12 +558,13 @@ def _pushchangeset(pushop):
             remoteheads = pushop.remoteheads
         # ssh: return remote's addchangegroup()
         # http: return remote's addchangegroup() or 0 for error
-        pushop.ret = pushop.remote.unbundle(cg, remoteheads,
+        pushop.cgresult = pushop.remote.unbundle(cg, remoteheads,
                                             pushop.repo.url())
     else:
         # we return an integer indicating remote head count
         # change
-        pushop.ret = pushop.remote.addchangegroup(cg, 'push', pushop.repo.url())
+        pushop.cgresult = pushop.remote.addchangegroup(cg, 'push',
+                                                       pushop.repo.url())
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
@@ -572,7 +573,7 @@ def _pushsyncphase(pushop):
     remotephases = pushop.remote.listkeys('phases')
     if (pushop.ui.configbool('ui', '_usedassubrepo', False)
         and remotephases    # server supports phases
-        and pushop.ret is None # nothing was pushed
+        and pushop.cgresult is None # nothing was pushed
         and remotephases.get('publishing', False)):
         # When:
         # - this is a subrepo push
@@ -599,7 +600,7 @@ def _pushsyncphase(pushop):
             _localphasemove(pushop, cheads, phases.draft)
         ### Apply local phase on remote
 
-        if pushop.ret:
+        if pushop.cgresult:
             if 'phases' in pushop.stepsdone:
                 # phases already pushed though bundle2
                 return
@@ -697,7 +698,7 @@ def _pushobsolete(pushop):
 
 def _pushbookmark(pushop):
     """Update bookmark position on remote"""
-    if pushop.ret == 0 or 'bookmarks' in pushop.stepsdone:
+    if pushop.cgresult == 0 or 'bookmarks' in pushop.stepsdone:
         return
     pushop.stepsdone.add('bookmarks')
     ui = pushop.ui
