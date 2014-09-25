@@ -1021,14 +1021,16 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
 
     for name in getbundle2partsorder:
         func = getbundle2partsmapping[name]
-        func(bundler, repo, source, heads=heads, common=common,
-             bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
+        kwargs['heads'] = heads
+        kwargs['common'] = common
+        func(bundler, repo, source, bundlecaps=bundlecaps, b2caps=b2caps,
+             **kwargs)
 
     return util.chunkbuffer(bundler.getchunks())
 
 @getbundle2partsgenerator('changegroup')
-def _getbundlechangegrouppart(bundler, repo, source, heads=None, common=None,
-                              bundlecaps=None, b2caps=None, **kwargs):
+def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
+                              b2caps=None, heads=None, common=None, **kwargs):
     """add a changegroup part to the requested bundle"""
     cg = None
     if kwargs.get('cg', True):
@@ -1040,8 +1042,8 @@ def _getbundlechangegrouppart(bundler, repo, source, heads=None, common=None,
         bundler.newpart('b2x:changegroup', data=cg.getchunks())
 
 @getbundle2partsgenerator('listkeys')
-def _getbundlelistkeysparts(bundler, repo, source, heads=None, common=None,
-                           bundlecaps=None, b2caps=None, **kwargs):
+def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,
+                            b2caps=None, **kwargs):
     """add parts containing listkeys namespaces to the requested bundle"""
     listkeys = kwargs.get('listkeys', ())
     for namespace in listkeys:
@@ -1051,8 +1053,8 @@ def _getbundlelistkeysparts(bundler, repo, source, heads=None, common=None,
         part.data = pushkey.encodekeys(keys)
 
 @getbundle2partsgenerator('obsmarkers')
-def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
-                            bundlecaps=None, b2caps=None, **kwargs):
+def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
+                            b2caps=None, heads=None, **kwargs):
     """add an obsolescence markers part to the requested bundle"""
     if kwargs.get('obsmarkers', False):
         if heads is None:
@@ -1062,8 +1064,8 @@ def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
         buildobsmarkerspart(bundler, markers)
 
 @getbundle2partsgenerator('extra')
-def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
-                        bundlecaps=None, b2caps=None, **kwargs):
+def _getbundleextrapart(bundler, repo, source, bundlecaps=None,
+                        b2caps=None, **kwargs):
     """hook function to let extensions add parts to the requested bundle"""
     pass
 
