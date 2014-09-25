@@ -5076,8 +5076,8 @@ def push(ui, repo, dest=None, **opts):
     if opts.get('bookmark'):
         bresult = bookmarks.pushtoremote(ui, repo, other, opts['bookmark'])
         if bresult == 2:
-            return 2
-        if not result and bresult:
+            result = 2
+        elif not result and bresult:
             result = 2
 
     return result
