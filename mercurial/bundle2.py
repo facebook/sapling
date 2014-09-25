@@ -902,7 +902,7 @@ def obsmarkersversion(caps):
     obscaps = caps.get('b2x:obsmarkers', ())
     return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
-@parthandler('b2x:changegroup')
+@parthandler('b2x:changegroup', ('version',))
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
@@ -915,7 +915,10 @@ def handlechangegroup(op, inpart):
     # we need to make sure we trigger the creation of a transaction object used
     # for the whole processing scope.
     op.gettransaction()
-    cg = changegroup.cg1unpacker(inpart, 'UN')
+    unpackerversion = inpart.params.get('version', '01')
+    # We should raise an appropriate exception here
+    unpacker = changegroup.packermap[unpackerversion][1]
+    cg = unpacker(inpart, 'UN')
     # the source and url passed here are overwritten by the one contained in
     # the transaction.hookargs argument. So 'bundle2' is a placeholder
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
