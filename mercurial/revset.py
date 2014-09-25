@@ -2871,5 +2871,36 @@ class fullreposet(_spanset):
     def __init__(self, repo):
         super(fullreposet, self).__init__(repo)
 
+    def __and__(self, other):
+        """fullrepo & other -> other
+
+        As self contains the whole repo, all of the other set should also be in
+        self. Therefor `self & other = other`.
+
+        This boldly assumes the other contains valid revs only.
+        """
+        # other not a smartset, make is so
+        if not util.safehasattr(other, 'set'):
+            # filter out hidden revision
+            # (this boldly assumes all smartset are pure)
+            #
+            # `other` was used with "&", let's assume this is a set like
+            # object.
+            other = baseset(other - self._hiddenrevs)
+        elif not util.safehasattr(other, 'ascending'):
+            # "other" is _generatorset not a real smart set
+            # we fallback to the old way (sad kitten)
+            return super(fullreposet, self).__and__(other)
+
+        # preserve order:
+        #
+        # this is probably useless and harmful in multiple cases but matches
+        # the current behavior.
+        if self.isascending():
+            other.ascending()
+        else:
+            other.descending()
+        return other
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
