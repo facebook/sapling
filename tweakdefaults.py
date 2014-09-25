@@ -48,17 +48,27 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     return commands.grep(ui, repo, pattern, **opts)
 
 del commands.table['grep']
-@command('grep', [('A', 'after-context', '', 'Print NUM lines of trailing context after matching lines. Places a line containing -- between contiguous groups of matches', 'NUM'),
-                  ('B', 'before-context', '', 'Print  NUM  lines   of  leading  context  before  matching lines. Places  a   line  containing  --  between  contiguous  groups  of matches.', 'NUM'),
-                  ('C', 'context', '', 'Print  NUM lines of output context.  Places a line containing -- between contiguous groups of matches.', 'NUM'),
-                  ('i', 'ignore-case', None, 'Ignore  case  distinctions  in  both  the   PATTERN and the input files.'),
-                  ('l', 'files-with-matches', None, 'Suppress normal output; instead print the   name  of  each   input file  from  which   output would normally have been printed.  The scanning will stop on the first match.'),
-                  ('n', 'line-number', None,'Prefix each line of output with the line number within its input file.'),
-                  ('V', 'invert-match', None, 'Invert the sense of matching, to select non-matching lines.'),
-                  ('w', 'word-regexp', None, 'Select only those   lines  containing  matches  that  form   whole words.   The  test is that the matching substring must either be at the beginning of the line, or preceded   by  a  non-word  constituent  character.  Similarly, it must be either at the end of the line or followed by a non-word constituent character.   Wordconstituent  characters are letters, digits, and the underscore.')
-                  ], '[OPTION]... PATTERN')
-def grep(orig, ui, pattern, **opts):
-    """search for a pattern in tracked files in the working directory"""
+@command('grep',
+    [('A', 'after-context', '', 'print NUM lines of trailing context', 'NUM'),
+     ('B', 'before-context', '', 'print NUM lines of leading context', 'NUM'),
+     ('C', 'context', '', 'print NUM lines of output context', 'NUM'),
+     ('i', 'ignore-case', None, 'ignore case when matching'),
+     ('l', 'files-with-matches', None, 'print only filenames that match'),
+     ('n', 'line-number', None, 'print matching line numbers'),
+     ('V', 'invert-match', None, 'select non-matching lines'),
+     ('w', 'word-regexp', None, 'match whole words only'),
+     ('E', 'extended-regexp', None, 'use POSIX extended regexps'),
+     ('F', 'fixed-strings', None, 'interpret pattern as fixed string'),
+     ('P', 'perl-regexp', None, 'use Perl-compatible regexps'),
+     ], '[OPTION]... PATTERN [FILE]...',
+     inferrepo=True)
+def grep(ui, repo, pattern, *pats, **opts):
+    """search for a pattern in tracked files in the working directory
+
+    The default regexp style is POSIX basic regexps. If no FILE parameters are
+    passed in, the current directory and its subdirectories will be searched.
+
+    For the old 'hg grep', see 'histgrep'."""
 
     optstr = ''
     if opts.get('after_context'):
@@ -77,11 +87,29 @@ def grep(orig, ui, pattern, **opts):
         optstr += '-v '
     if opts.get('word_regexp'):
         optstr += '-w '
-    return os.system("hg status --no-status --clean --modified --added --print0 ."
-                     " | xargs -0 grep --binary-files=without-match --regexp='%s' "
-                     "%s 2>/dev/null" % (pattern, optstr))
+    if opts.get('extended_regexp'):
+        optstr += '-E '
+    if opts.get('fixed_strings'):
+        optstr += '-F '
+    if opts.get('perl_regexp'):
+        optstr += '-P '
 
+    # color support, using the color extension
+    colormode = getattr(ui, '_colormode', '')
+    if colormode == 'ansi':
+        optstr += '--color=always '
 
+    includes = ''
+    if pats:
+        for pat in pats:
+            includes += '-I %s ' % util.shellquote(pat)
+
+    return util.system("hg status --no-status --clean --modified --added "
+                       "--print0 . %s | xargs -0 grep --no-messages "
+                       "--binary-files=without-match --with-filename "
+                       "--regexp=%s %s --" %
+                       (includes, util.shellquote(pattern), optstr),
+                       out=ui.fout)
 
 def _rebase(orig, ui, repo, **opts):
     if opts.get('continue') or opts.get('abort'):

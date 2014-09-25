@@ -107,6 +107,13 @@ Rebase works with hyphens
   
 Grep options work
 
+  $ mkdir -p dir1/subdir1
+  $ echo str1f1 >> dir1/f1
+  $ echo str1-v >> dir1/-v
+  $ echo str1space >> 'dir1/file with space'
+  $ echo str1sub >> dir1/subdir1/subf1
+  $ hg add -q dir1
+
   $ hg grep x
   a:x
   $ hg grep -i X
@@ -116,3 +123,55 @@ Grep options work
   $ hg grep -n x
   a:1:x
   $ hg grep -V ''
+  [123]
+
+Make sure grep works in subdirectories and with strange filenames
+  $ cd dir1
+  $ hg grep str1
+  -v:str1-v
+  f1:str1f1
+  file with space:str1space
+  subdir1/subf1:str1sub
+  $ hg grep str1 'relre:f[0-9]+'
+  f1:str1f1
+  subdir1/subf1:str1sub
+
+Basic vs extended regular expressions
+  $ hg grep 'str([0-9])'
+  [123]
+  $ hg grep 'str\([0-9]\)'
+  -v:str1-v
+  f1:str1f1
+  file with space:str1space
+  subdir1/subf1:str1sub
+  $ hg grep -F 'str[0-9]'
+  [123]
+  $ hg grep -E 'str([0-9])'
+  -v:str1-v
+  f1:str1f1
+  file with space:str1space
+  subdir1/subf1:str1sub
+
+Filesets
+  $ hg grep str1 'set:added()'
+  -v:str1-v
+  f1:str1f1
+  file with space:str1space
+  subdir1/subf1:str1sub
+
+Crazy filenames
+  $ hg grep str1 -- -v
+  -v:str1-v
+  $ hg grep str1 '*v'
+  -v:str1-v
+  $ hg grep str1 'file with space'
+  file with space:str1space
+  $ hg grep str1 '*with*'
+  file with space:str1space
+  $ hg grep str1 '*f1'
+  f1:str1f1
+  $ hg grep str1 subdir1
+  subdir1/subf1:str1sub
+  $ hg grep str1 '**/*f1'
+  f1:str1f1
+  subdir1/subf1:str1sub
