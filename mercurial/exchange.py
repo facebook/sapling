@@ -1206,12 +1206,6 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
         markers = repo.obsstore.relevantmarkers(subset)
         buildobsmarkerspart(bundler, markers)
 
-@getbundle2partsgenerator('extra')
-def _getbundleextrapart(bundler, repo, source, bundlecaps=None,
-                        b2caps=None, **kwargs):
-    """hook function to let extensions add parts to the requested bundle"""
-    pass
-
 def check_heads(repo, their_heads, context):
     """check if the heads of a repo have been modified
 
