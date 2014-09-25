@@ -61,7 +61,8 @@ class pushoperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote, force=False, revs=None, newbranch=False):
+    def __init__(self, repo, remote, force=False, revs=None, newbranch=False,
+                 bookmarks=()):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
@@ -71,6 +72,8 @@ class pushoperation(object):
         self.force = force
         # revs to be pushed (None is "all")
         self.revs = revs
+        # bookmark explicitly pushed
+        self.bookmarks = bookmarks
         # allow push of new branch
         self.newbranch = newbranch
         # did a local lock get acquired?
@@ -145,7 +148,7 @@ class pushoperation(object):
         else:
             return self.fallbackheads
 
-def push(repo, remote, force=False, revs=None, newbranch=False):
+def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
     '''Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
       - None means nothing to push
@@ -154,7 +157,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
-    pushop = pushoperation(repo, remote, force, revs, newbranch)
+    pushop = pushoperation(repo, remote, force, revs, newbranch, bookmarks)
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
