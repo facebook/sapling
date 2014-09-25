@@ -5068,10 +5068,10 @@ def push(ui, repo, dest=None, **opts):
                 return not result
     finally:
         del repo._subtoppath
-    result = repo.push(other, opts.get('force'), revs=revs,
-                       newbranch=opts.get('new_branch'))
+    pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
+                           newbranch=opts.get('new_branch'))
 
-    result = not result
+    result = not pushop.cgresult
 
     if opts.get('bookmark'):
         bresult = bookmarks.pushtoremote(ui, repo, other, opts['bookmark'])
