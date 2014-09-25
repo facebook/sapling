@@ -961,6 +961,30 @@ def caps20to10(repo):
     caps.add('bundle2=' + urllib.quote(capsblob))
     return caps
 
+# List of names of steps to perform for a bundle2 for getbundle, order matters.
+getbundle2partsorder = []
+
+# Mapping between step name and function
+#
+# This exists to help extensions wrap steps if necessary
+getbundle2partsmapping = {}
+
+def getbundle2partsgenerator(stepname):
+    """decorator for function generating bundle2 part for getbundle
+
+    The function is added to the step -> function mapping and appended to the
+    list of steps.  Beware that decorated functions will be added in order
+    (this may matter).
+
+    You can only use this decorator for new steps, if you want to wrap a step
+    from an extension, attack the getbundle2partsmapping dictionary directly."""
+    def dec(func):
+        assert stepname not in getbundle2partsmapping
+        getbundle2partsmapping[stepname] = func
+        getbundle2partsorder.append(stepname)
+        return func
+    return dec
+
 def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
               **kwargs):
     """return a full bundle (with potentially multiple kind of parts)
@@ -976,40 +1000,57 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     The implementation is at a very early stage and will get massive rework
     when the API of bundle is refined.
     """
-    cg = None
-    if kwargs.get('cg', True):
-        # build changegroup bundle here.
-        cg = changegroup.getchangegroup(repo, source, heads=heads,
-                                         common=common, bundlecaps=bundlecaps)
-    elif 'HG2X' not in bundlecaps:
-        raise ValueError(_('request for bundle10 must include changegroup'))
+    # bundle10 case
     if bundlecaps is None or 'HG2X' not in bundlecaps:
+        if bundlecaps and not kwargs.get('cg', True):
+            raise ValueError(_('request for bundle10 must include changegroup'))
+
         if kwargs:
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
-        return cg
-    # very crude first implementation,
-    # the bundle API will change and the generation will be done lazily.
+        return changegroup.getchangegroup(repo, source, heads=heads,
+                                          common=common, bundlecaps=bundlecaps)
+
+    # bundle20 case
     b2caps = {}
     for bcaps in bundlecaps:
         if bcaps.startswith('bundle2='):
             blob = urllib.unquote(bcaps[len('bundle2='):])
             b2caps.update(bundle2.decodecaps(blob))
     bundler = bundle2.bundle20(repo.ui, b2caps)
+
+    for name in getbundle2partsorder:
+        func = getbundle2partsmapping[name]
+        func(bundler, repo, source, heads=heads, common=common,
+             bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
+
+    return util.chunkbuffer(bundler.getchunks())
+
+@getbundle2partsgenerator('changegroup')
+def _getbundlechangegrouppart(bundler, repo, source, heads=None, common=None,
+                              bundlecaps=None, b2caps=None, **kwargs):
+    """add a changegroup part to the requested bundle"""
+    cg = None
+    if kwargs.get('cg', True):
+        # build changegroup bundle here.
+        cg = changegroup.getchangegroup(repo, source, heads=heads,
+                                        common=common, bundlecaps=bundlecaps)
+
     if cg:
         bundler.newpart('b2x:changegroup', data=cg.getchunks())
+
+@getbundle2partsgenerator('listkeys')
+def _getbundlelistkeysparts(bundler, repo, source, heads=None, common=None,
+                           bundlecaps=None, b2caps=None, **kwargs):
+    """add parts containing listkeys namespaces to the requested bundle"""
     listkeys = kwargs.get('listkeys', ())
     for namespace in listkeys:
         part = bundler.newpart('b2x:listkeys')
         part.addparam('namespace', namespace)
         keys = repo.listkeys(namespace).items()
         part.data = pushkey.encodekeys(keys)
-    _getbundleobsmarkerpart(bundler, repo, source, heads=heads, common=common,
-                            bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
-    _getbundleextrapart(bundler, repo, source, heads=heads, common=common,
-                        bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
-    return util.chunkbuffer(bundler.getchunks())
 
+@getbundle2partsgenerator('obsmarkers')
 def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
                             bundlecaps=None, b2caps=None, **kwargs):
     """add an obsolescence markers part to the requested bundle"""
@@ -1020,6 +1061,7 @@ def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
         markers = repo.obsstore.relevantmarkers(subset)
         buildobsmarkerspart(bundler, markers)
 
+@getbundle2partsgenerator('extra')
 def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
                         bundlecaps=None, b2caps=None, **kwargs):
     """hook function to let extensions add parts to the requested bundle"""
