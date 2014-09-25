@@ -16,6 +16,15 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+def extsetup(ui):
+    wrapcommand(commands.table, 'update', update)
+    wrapcommand(rebase.cmdtable, 'rebase', _rebase)
+
+    entry = wrapcommand(commands.table, 'log', log)
+    for opt in logopts:
+        opt = (opt[0], opt[1], opt[2], opt[3])
+        entry[1].append(opt)
+
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
     if not node and not rev:
@@ -25,7 +34,6 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
                  "'hg rebase -d <destination>'")
 
     return orig(ui, repo, node=node, rev=rev, **kwargs)
-wrapcommand(commands.table, 'update', update)
 
 @command('histgrep', commands.table['grep'][1], commands.table['grep'][2])
 def histgrep(ui, repo, pattern, *pats, **opts):
@@ -134,7 +142,6 @@ def _rebase(orig, ui, repo, **opts):
             return result
 
     return orig(ui, repo, **opts)
-wrapcommand(rebase.cmdtable, 'rebase', _rebase)
 
 logopts = [
     ('', 'all', None, _('shows all commits in the repo')),
@@ -148,7 +155,3 @@ def log(orig, ui, repo, *pats, **opts):
 
     return orig(ui, repo, *pats, **opts)
 
-entry = wrapcommand(commands.table, 'log', log)
-for opt in logopts:
-    opt = (opt[0], opt[1], opt[2], opt[3])
-    entry[1].append(opt)
