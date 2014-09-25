@@ -70,6 +70,10 @@ def _addlistdelta(addlist, x):
                    + content for start, end, content in x)
     return deltatext, newaddlist
 
+def _parse(lines):
+    mfdict = manifestdict()
+    parsers.parse_manifest(mfdict, mfdict._flags, lines)
+    return mfdict
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
@@ -78,14 +82,9 @@ class manifest(revlog.revlog):
         self._mancache = util.lrucachedict(4)
         revlog.revlog.__init__(self, opener, "00manifest.i")
 
-    def parse(self, lines):
-        mfdict = manifestdict()
-        parsers.parse_manifest(mfdict, mfdict._flags, lines)
-        return mfdict
-
     def readdelta(self, node):
         r = self.rev(node)
-        return self.parse(mdiff.patchtext(self.revdiff(self.deltaparent(r), r)))
+        return _parse(mdiff.patchtext(self.revdiff(self.deltaparent(r), r)))
 
     def readfast(self, node):
         '''use the faster of readdelta or read'''
@@ -102,7 +101,7 @@ class manifest(revlog.revlog):
             return self._mancache[node][0]
         text = self.revision(node)
         arraytext = array.array('c', text)
-        mapping = self.parse(text)
+        mapping = _parse(text)
         self._mancache[node] = (mapping, arraytext)
         return mapping
 
