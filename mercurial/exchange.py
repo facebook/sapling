@@ -211,7 +211,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    return pushop.cgresult
+    return pushop
 
 # list of steps to perform discovery before push
 pushdiscoveryorder = []

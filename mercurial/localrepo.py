@@ -1592,7 +1592,7 @@ class localrepository(object):
         return util.hooks()
 
     def push(self, remote, force=False, revs=None, newbranch=False):
-        return exchange.push(self, remote, force, revs, newbranch)
+        return exchange.push(self, remote, force, revs, newbranch).cgresult
 
     def stream_in(self, remote, requirements):
         lock = self.lock()
