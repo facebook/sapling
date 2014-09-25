@@ -9,7 +9,7 @@ from i18n import _
 from node import hex, nullid
 import errno, urllib
 import util, scmutil, changegroup, base85, error
-import discovery, phases, obsolete, bookmarks, bundle2, pushkey
+import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
@@ -315,7 +315,7 @@ def _pushdiscoverybookmarks(pushop):
         ancestors = repo.changelog.ancestors(revnums, inclusive=True)
     remotebookmark = remote.listkeys('bookmarks')
 
-    comp = bookmarks.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
+    comp = bookmod.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid = comp
     for b, scid, dcid in advsrc:
         if not ancestors or repo[scid].rev() in ancestors:
