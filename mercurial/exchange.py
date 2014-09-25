@@ -1005,13 +1005,14 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
         keys = repo.listkeys(namespace).items()
         part.data = pushkey.encodekeys(keys)
     _getbundleobsmarkerpart(bundler, repo, source, heads=heads, common=common,
-                            bundlecaps=bundlecaps, **kwargs)
+                            bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
     _getbundleextrapart(bundler, repo, source, heads=heads, common=common,
-                        bundlecaps=bundlecaps, **kwargs)
+                        bundlecaps=bundlecaps, b2caps=b2caps, **kwargs)
     return util.chunkbuffer(bundler.getchunks())
 
 def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
-                            bundlecaps=None, **kwargs):
+                            bundlecaps=None, b2caps=None, **kwargs):
+    """add an obsolescence markers part to the requested bundle"""
     if kwargs.get('obsmarkers', False):
         if heads is None:
             heads = repo.heads()
@@ -1020,7 +1021,7 @@ def _getbundleobsmarkerpart(bundler, repo, source, heads=None, common=None,
         buildobsmarkerspart(bundler, markers)
 
 def _getbundleextrapart(bundler, repo, source, heads=None, common=None,
-                        bundlecaps=None, **kwargs):
+                        bundlecaps=None, b2caps=None, **kwargs):
     """hook function to let extensions add parts to the requested bundle"""
     pass
 
