@@ -11,7 +11,7 @@ from lock import release
 from node import hex, nullid
 import localrepo, bundlerepo, unionrepo, httppeer, sshpeer, statichttprepo
 import bookmarks, lock, util, extensions, error, node, scmutil, phases, url
-import cmdutil, discovery, repoview
+import cmdutil, discovery, repoview, exchange
 import merge as mergemod
 import verify as verifymod
 import errno, os, shutil
@@ -408,7 +408,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             if destpeer.local():
                 destpeer.local().clone(srcpeer, heads=revs, stream=stream)
             elif srcrepo:
-                srcrepo.push(destpeer, revs=revs)
+                exchange.push(srcrepo, destpeer, revs=revs)
             else:
                 raise util.Abort(_("clone from remote to remote not supported"))
 
