@@ -433,6 +433,8 @@ class cg1packer(object):
         # do nothing with basenode, it is implicitly the previous one in HG10
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
 
+packermap = {'01': (cg1packer, cg1unpacker)}
+
 def _changegroupinfo(repo, nodes, source):
     if repo.ui.verbose or source == 'bundle':
         repo.ui.status(_("%d changesets found\n") % len(nodes))
