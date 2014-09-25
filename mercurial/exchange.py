@@ -88,6 +88,8 @@ class pushoperation(object):
         #   we have outgoing changesets but refused to push
         # - other values as described by addchangegroup()
         self.cgresult = None
+        # Boolean value for the bookmark push
+        self.bkresult = None
         # discover.outgoing object (contains common and outgoing data)
         self.outgoing = None
         # all remote heads before the push
