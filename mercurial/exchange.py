@@ -216,6 +216,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
         if locallock is not None:
             locallock.release()
 
+    if pushop.bookmarks:
+        pushop.bkresult = bookmod.pushtoremote(repo.ui, repo, remote,
+                                               pushop.bookmarks)
+
     return pushop
 
 # list of steps to perform discovery before push

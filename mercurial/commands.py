@@ -5074,11 +5074,10 @@ def push(ui, repo, dest=None, **opts):
 
     result = not pushop.cgresult
 
-    if opts.get('bookmark'):
-        bresult = bookmarks.pushtoremote(ui, repo, other, opts['bookmark'])
-        if bresult == 2:
+    if pushop.bkresult is not None:
+        if pushop.bkresult == 2:
             result = 2
-        elif not result and bresult:
+        elif not result and pushop.bkresult:
             result = 2
 
     return result
