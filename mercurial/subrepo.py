@@ -12,6 +12,7 @@ from i18n import _
 import config, util, node, error, cmdutil, bookmarks, match as matchmod
 import phases
 import pathutil
+import exchange
 hg = None
 propertycache = util.propertycache
 
@@ -817,11 +818,11 @@ class hgsubrepo(abstractsubrepo):
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
             (subrelpath(self), dsturl))
         other = hg.peer(self._repo, {'ssh': ssh}, dsturl)
-        res = self._repo.push(other, force, newbranch=newbranch)
+        res = exchange.push(self._repo, other, force, newbranch=newbranch)
 
         # the repo is now clean
         self._cachestorehash(dsturl)
-        return res
+        return res.cgresult
 
     @annotatesubrepoerror
     def outgoing(self, ui, dest, opts):
