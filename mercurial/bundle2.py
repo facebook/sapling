@@ -882,6 +882,7 @@ def getrepocaps(repo):
     Exists to allow extensions (like evolution) to mutate the capabilities.
     """
     caps = capabilities.copy()
+    caps['b2x:changegroup'] = tuple(sorted(changegroup.packermap.keys()))
     if obsolete.isenabled(repo, obsolete.exchangeopt):
         supportedformat = tuple('V%i' % v for v in obsolete.formats)
         caps['b2x:obsmarkers'] = supportedformat
