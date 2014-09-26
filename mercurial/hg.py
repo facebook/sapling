@@ -363,6 +363,11 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 raise
 
             destlock = copystore(ui, srcrepo, destpath)
+            # copy bookmarks over
+            srcbookmarks = srcrepo.join('bookmarks')
+            dstbookmarks = os.path.join(destpath, 'bookmarks')
+            if os.path.exists(srcbookmarks):
+                util.copyfile(srcbookmarks, dstbookmarks)
 
             # Recomputing branch cache might be slow on big repos,
             # so just copy it
