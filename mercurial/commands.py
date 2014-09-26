@@ -4961,6 +4961,14 @@ def pull(ui, repo, source="default", **opts):
 
         modheads = repo.pull(other, heads=revs, force=opts.get('force'))
         bookmarks.updatefromremote(ui, repo, remotebookmarks, source)
+        # update specified bookmarks
+        if opts.get('bookmark'):
+            marks = repo._bookmarks
+            for b in opts['bookmark']:
+                # explicit pull overrides local bookmark if any
+                ui.status(_("importing bookmark %s\n") % b)
+                marks[b] = repo[remotebookmarks[b]].node()
+            marks.write()
         if checkout:
             checkout = str(repo.changelog.rev(other.lookup(checkout)))
         repo._subtoppath = source
@@ -4970,14 +4978,6 @@ def pull(ui, repo, source="default", **opts):
         finally:
             del repo._subtoppath
 
-        # update specified bookmarks
-        if opts.get('bookmark'):
-            marks = repo._bookmarks
-            for b in opts['bookmark']:
-                # explicit pull overrides local bookmark if any
-                ui.status(_("importing bookmark %s\n") % b)
-                marks[b] = repo[remotebookmarks[b]].node()
-            marks.write()
     finally:
         other.close()
     return ret
