@@ -89,6 +89,7 @@ Show debug commands if there are no other candidates
   debuginstall
   debugknown
   debuglabelcomplete
+  debuglocks
   debugobsolete
   debugpathcomplete
   debugpushkey
@@ -245,6 +246,7 @@ Show all commands + options
   debuginstall: 
   debugknown: 
   debuglabelcomplete: 
+  debuglocks: force-lock, force-wlock
   debugobsolete: flags, record-parents, rev, date, user
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 

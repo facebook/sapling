@@ -781,6 +781,7 @@ Test list of internal help commands
    debugknown    test whether node ids are known to a repo
    debuglabelcomplete
                  complete "labels" - tags, open branch names, bookmark names
+   debuglocks    show or modify state of locks
    debugobsolete
                  create arbitrary obsolete marker
    debugoptDEP   (no help text available)

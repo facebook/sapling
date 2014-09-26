@@ -9,7 +9,7 @@ from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _
 import os, re, difflib, time, tempfile, errno, shlex
-import sys
+import sys, socket
 import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
@@ -2337,6 +2337,78 @@ def debuglabelcomplete(ui, repo, *args):
         completions.update(l for l in labels if l.startswith(a))
     ui.write('\n'.join(sorted(completions)))
     ui.write('\n')
+
+@command('debuglocks',
+         [('L', 'force-lock', None, _('free the store lock (DANGEROUS)')),
+          ('W', 'force-wlock', None,
+           _('free the working state lock (DANGEROUS)'))],
+         _(''))
+def debuglocks(ui, repo, **opts):
+    """show or modify state of locks
+
+    By default, this command will show which locks are held. This
+    includes the user and process holding the lock, the amount of time
+    the lock has been held, and the machine name where the process is
+    running if it's not local.
+
+    Locks protect the integrity of Mercurial's data, so should be
+    treated with care. System crashes or other interruptions may cause
+    locks to not be properly released, though Mercurial will usually
+    detect and remove such stale locks automatically.
+
+    However, detecting stale locks may not always be possible (for
+    instance, on a shared filesystem). Removing locks may also be
+    blocked by filesystem permissions.
+
+    Returns 0 if no locks are held.
+
+    """
+
+    if opts.get('force_lock'):
+        repo.svfs.unlink('lock')
+    if opts.get('force_wlock'):
+        repo.vfs.unlink('wlock')
+    if opts.get('force_lock') or opts.get('force_lock'):
+        return 0
+
+    now = time.time()
+    held = 0
+
+    def report(vfs, name, method):
+        # this causes stale locks to get reaped for more accurate reporting
+        try:
+            l = method(False)
+        except error.LockHeld:
+            l = None
+
+        if l:
+            l.release()
+        else:
+            try:
+                stat = repo.svfs.lstat(name)
+                age = now - stat.st_mtime
+                user = util.username(stat.st_uid)
+                locker = vfs.readlock(name)
+                if ":" in locker:
+                    host, pid = locker.split(':')
+                    if host == socket.gethostname():
+                        locker = 'user %s, process %s' % (user, pid)
+                    else:
+                        locker = 'user %s, process %s, host %s' \
+                                 % (user, pid, host)
+                ui.write("%-6s %s (%ds)\n" % (name + ":", locker, age))
+                return 1
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    raise
+
+        ui.write("%-6s free\n" % (name + ":"))
+        return 0
+
+    held += report(repo.svfs, "lock", repo.lock)
+    held += report(repo.vfs, "wlock", repo.wlock)
+
+    return held
 
 @command('debugobsolete',
         [('', 'flags', 0, _('markers flag')),
