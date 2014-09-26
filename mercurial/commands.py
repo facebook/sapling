@@ -4961,7 +4961,7 @@ def pull(ui, repo, source="default", **opts):
                 raise util.Abort(err)
 
         modheads = repo.pull(other, heads=revs, force=opts.get('force'))
-        bookmarks.updatefromremote(ui, repo, remotebookmarks, source)
+        bookmarks.updatefromremote(ui, repo, remotebookmarks, other.url())
         # update specified bookmarks
         if opts.get('bookmark'):
             marks = repo._bookmarks
