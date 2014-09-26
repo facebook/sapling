@@ -1057,6 +1057,11 @@ def sqlstrip(ui, rev, *args, **opts):
     repo = hg.repository(ui, ui.environ['PWD'])
     repo.disablesync = True
 
+    try:
+        rev = int(rev)
+    except ValueError:
+        raise util.Abort("specified rev must be an integer: '%s'" % rev)
+
     lock = repo.lock()
     try:
         repo.sqlconnect()
@@ -1098,7 +1103,7 @@ def sqlstrip(ui, rev, *args, **opts):
 
             ui.status("deleting revision data\n")
             cursor.execute("""DELETE FROM revisions WHERE repo = %s and linkrev > %s""",
-                              (reponame, sorted(rev)[0]))
+                              (reponame, rev))
 
             repo.sqlconn.commit()
         finally:

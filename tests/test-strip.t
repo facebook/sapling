@@ -120,3 +120,9 @@ Attempt to strip a non-existant rev
   $ hg sqlstrip --i-know-what-i-am-doing 5
   abort: revision 5 is not in the repo
   [255]
+
+Attempt to strip a non-integer
+
+  $ hg sqlstrip --i-know-what-i-am-doing master
+  abort: specified rev must be an integer: 'master'
+  [255]
