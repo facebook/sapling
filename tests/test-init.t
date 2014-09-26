@@ -220,5 +220,6 @@ clone bookmarks
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  exporting bookmark test
   $ hg -R remote-bookmarks bookmarks
      test                      0:08b9e9f63b32

@@ -413,7 +413,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             if destpeer.local():
                 destpeer.local().clone(srcpeer, heads=revs, stream=stream)
             elif srcrepo:
-                exchange.push(srcrepo, destpeer, revs=revs)
+                exchange.push(srcrepo, destpeer, revs=revs,
+                              bookmarks=srcrepo._bookmarks.keys())
             else:
                 raise util.Abort(_("clone from remote to remote not supported"))
 
