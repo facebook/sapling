@@ -1574,8 +1574,8 @@ class localrepository(object):
 
         return r
 
-    def pull(self, remote, heads=None, force=False):
-        return exchange.pull (self, remote, heads, force)
+    def pull(self, remote, heads=None, force=False, **kwargs):
+        return exchange.pull(self, remote, heads, force, **kwargs)
 
     def checkpush(self, pushop):
         """Extensions can override this function if additional checks have
