@@ -481,7 +481,8 @@ class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
 cygwinccompiler.Mingw32CCompiler = HackedMingw32CCompiler
 
 packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
-                             'help/*.txt']}
+                             'help/*.txt',
+                             'dummycert.pem']}
 
 def ordinarypath(p):
     return p and p[0] != '.' and p[-1] != '~'

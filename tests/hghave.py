@@ -332,6 +332,10 @@ def has_msys():
 def has_aix():
     return sys.platform.startswith("aix")
 
+@check("osx", "OS X")
+def has_osx():
+    return sys.platform == 'darwin'
+
 @check("absimport", "absolute_import in __future__")
 def has_absimport():
     import __future__

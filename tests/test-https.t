@@ -115,9 +115,20 @@ Test server address cannot be reused
 #endif
   $ cd ..
 
+OS X has a dummy CA cert that enables use of the system CA store
+
+  $ DISABLEOSXDUMMYCERT=
+#if osx
+  $ hg clone https://localhost:$HGPORT/ copy-pull
+  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  [255]
+
+  $ DISABLEOSXDUMMYCERT="--config=web.cacerts="
+#endif
+
 clone via pull
 
-  $ hg clone https://localhost:$HGPORT/ copy-pull
+  $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLEOSXDUMMYCERT
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   requesting all changes
   adding changesets
@@ -143,7 +154,7 @@ pull without cacert
   $ cd copy-pull
   $ echo '[hooks]' >> .hg/hgrc
   $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
-  $ hg pull
+  $ hg pull $DISABLEOSXDUMMYCERT
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/
   searching for changes
