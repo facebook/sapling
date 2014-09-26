@@ -8,7 +8,7 @@
 
 from i18n import _
 from lock import release
-from node import hex, nullid
+from node import nullid
 import localrepo, bundlerepo, unionrepo, httppeer, sshpeer, statichttprepo
 import bookmarks, lock, util, extensions, error, node, scmutil, phases, url
 import cmdutil, discovery, repoview, exchange
@@ -420,23 +420,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
         cleandir = None
 
-        # clone all bookmarks except divergent ones
         destrepo = destpeer.local()
-        if destrepo and srcpeer.capable("pushkey"):
-            rb = srcpeer.listkeys('bookmarks')
-            marks = destrepo._bookmarks
-            for k, n in rb.iteritems():
-                try:
-                    m = destrepo.lookup(n)
-                    marks[k] = m
-                except error.RepoLookupError:
-                    pass
-            if rb:
-                marks.write()
-        elif srcrepo and destpeer.capable("pushkey"):
-            for k, n in srcrepo._bookmarks.iteritems():
-                destpeer.pushkey('bookmarks', k, '', hex(n))
-
         if destrepo:
             template = (
                 '# You may want to set your username here if it is not set\n'

@@ -251,7 +251,6 @@ test http authentication
   "GET /?cmd=branchmap HTTP/1.1" 200 -
   "GET /?cmd=stream_out HTTP/1.1" 401 -
   "GET /?cmd=stream_out HTTP/1.1" 200 -
-  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
   "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces
