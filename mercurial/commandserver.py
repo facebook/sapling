@@ -153,7 +153,7 @@ class server(object):
             self.repo = self.repoui = None
 
         if mode == 'pipe':
-            self.cerr = channeledoutput(sys.stderr, sys.stdout, 'e')
+            self.cerr = channeledoutput(sys.stdout, sys.stdout, 'e')
             self.cout = channeledoutput(sys.stdout, sys.stdout, 'o')
             self.cin = channeledinput(sys.stdin, sys.stdout, 'I')
             self.cresult = channeledoutput(sys.stdout, sys.stdout, 'r')
