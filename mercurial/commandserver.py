@@ -23,7 +23,7 @@ def log(*args):
 
 class channeledoutput(object):
     """
-    Write data from in_ to out in the following format:
+    Write data to out in the following format:
 
     data length (unsigned int),
     data
