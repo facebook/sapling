@@ -150,6 +150,16 @@ class pushoperation(object):
         else:
             return self.fallbackheads
 
+# mapping of message used when pushing bookmark
+bookmsgmap = {'update': (_("updating bookmark %s\n"),
+                         _('updating bookmark %s failed!\n')),
+              'export': (_("exporting bookmark %s\n"),
+                         _('exporting bookmark %s failed!\n')),
+              'delete': (_("deleting remote bookmark %s\n"),
+                         _('deleting remote bookmark %s failed!\n')),
+              }
+
+
 def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
     '''Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
@@ -475,9 +485,17 @@ def _pushb2bookmarks(pushop, bundler):
         part.addparam('key', enc(book))
         part.addparam('old', enc(old))
         part.addparam('new', enc(new))
-        part2book.append((part.id, book))
+        action = 'update'
+        if not old:
+            action = 'export'
+        elif not new:
+            action = 'delete'
+        part2book.append((part.id, book, action))
+
+
     def handlereply(op):
-        for partid, book in part2book:
+        ui = pushop.ui
+        for partid, book, action in part2book:
             partrep = op.records.getreplies(partid)
             results = partrep['pushkey']
             assert len(results) <= 1
@@ -486,9 +504,9 @@ def _pushb2bookmarks(pushop, bundler):
             else:
                 ret = int(results[0]['return'])
                 if ret:
-                    pushop.ui.status(_("updating bookmark %s\n") % book)
+                    ui.status(bookmsgmap[action][0] % book)
                 else:
-                    pushop.ui.warn(_('updating bookmark %s failed!\n') % book)
+                    ui.warn(bookmsgmap[action][1] % book)
                     if pushop.bkresult is not None:
                         pushop.bkresult = 1
     return handlereply
@@ -710,11 +728,20 @@ def _pushbookmark(pushop):
     pushop.stepsdone.add('bookmarks')
     ui = pushop.ui
     remote = pushop.remote
+
     for b, old, new in pushop.outbookmarks:
+        action = 'update'
+        if not old:
+            action = 'export'
+        elif not new:
+            action = 'delete'
         if remote.pushkey('bookmarks', b, old, new):
-            ui.status(_("updating bookmark %s\n") % b)
+            ui.status(bookmsgmap[action][0] % b)
         else:
-            ui.warn(_('updating bookmark %s failed!\n') % b)
+            ui.warn(bookmsgmap[action][1] % b)
+            # discovery can have set the value form invalid entry
+            if pushop.bkresult is not None:
+                pushop.bkresult = 1
 
 class pulloperation(object):
     """A object that represent a single pull operation
