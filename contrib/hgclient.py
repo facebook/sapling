@@ -1,6 +1,6 @@
 # A minimal client for Mercurial's command server
 
-import sys, struct, subprocess, cStringIO
+import os, sys, signal, struct, socket, subprocess, time, cStringIO
 
 def connectpipe(path=None):
     cmdline = ['hg', 'serve', '--cmdserver', 'pipe']
@@ -11,6 +11,43 @@ def connectpipe(path=None):
                               stdout=subprocess.PIPE)
 
     return server
+
+class unixconnection(object):
+    def __init__(self, sockpath):
+        self.sock = sock = socket.socket(socket.AF_UNIX)
+        sock.connect(sockpath)
+        self.stdin = sock.makefile('wb')
+        self.stdout = sock.makefile('rb')
+
+    def wait(self):
+        self.stdin.close()
+        self.stdout.close()
+        self.sock.close()
+
+class unixserver(object):
+    def __init__(self, sockpath, logpath=None, repopath=None):
+        self.sockpath = sockpath
+        cmdline = ['hg', 'serve', '--cmdserver', 'unix', '-a', sockpath]
+        if repopath:
+            cmdline += ['-R', repopath]
+        if logpath:
+            stdout = open(logpath, 'a')
+            stderr = subprocess.STDOUT
+        else:
+            stdout = stderr = None
+        self.server = subprocess.Popen(cmdline, stdout=stdout, stderr=stderr)
+        # wait for listen()
+        while self.server.poll() is None:
+            if os.path.exists(sockpath):
+                break
+            time.sleep(0.1)
+
+    def connect(self):
+        return unixconnection(self.sockpath)
+
+    def shutdown(self):
+        os.kill(self.server.pid, signal.SIGTERM)
+        self.server.wait()
 
 def writeblock(server, data):
     server.stdin.write(struct.pack('>I', len(data)))
