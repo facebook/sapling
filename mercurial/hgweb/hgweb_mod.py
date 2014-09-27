@@ -71,8 +71,8 @@ class hgweb(object):
         r.baseui.setconfig('ui', 'nontty', 'true', 'hgweb')
         self.repo = r
         hook.redirect(True)
+        self.repostate = ((-1, -1), (-1, -1))
         self.mtime = -1
-        self.size = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
         self.stripecount = 1
@@ -107,9 +107,12 @@ class hgweb(object):
 
     def refresh(self, request=None):
         st = get_stat(self.repo.spath)
-        # compare changelog size in addition to mtime to catch
-        # rollbacks made less than a second ago
-        if st.st_mtime != self.mtime or st.st_size != self.size:
+        pst = get_stat(self.repo.spath, 'phaseroots')
+        # changelog mtime and size, phaseroots mtime and size
+        repostate = ((st.st_mtime, st.st_size), (pst.st_mtime, pst.st_size))
+        # we need to compare file size in addition to mtime to catch
+        # changes made less than a second ago
+        if repostate != self.repostate:
             r = hg.repository(self.repo.baseui, self.repo.root)
             self.repo = self._getview(r)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
@@ -121,8 +124,9 @@ class hgweb(object):
             encoding.encoding = self.config("web", "encoding",
                                             encoding.encoding)
             # update these last to avoid threads seeing empty settings
+            self.repostate = repostate
+            # mtime is needed for ETag
             self.mtime = st.st_mtime
-            self.size = st.st_size
         if request:
             self.repo.ui.environ = request.env
 
