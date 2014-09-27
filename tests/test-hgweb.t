@@ -122,6 +122,24 @@ should give a 400 - bad command
   error: no such method: spam
   [1]
 
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT '?cmd=spam'
+  400 no such method: spam
+  [1]
+
+should give a 400 - bad command as a part of url path (issue4071)
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'spam'
+  400 no such method: spam
+  [1]
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'raw-spam'
+  400 no such method: spam
+  [1]
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'spam/tip/foo'
+  400 no such method: spam
+  [1]
+
 should give a 404 - file does not exist
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'file/tip/bork?style=raw'
@@ -308,7 +326,7 @@ stop and restart
 Test the access/error files are opened in append mode
 
   $ python -c "print len(file('access.log').readlines()), 'log lines written'"
-  10 log lines written
+  14 log lines written
 
 static file
 
