@@ -2,7 +2,7 @@
 
 import sys, struct, subprocess, cStringIO
 
-def connect(path=None):
+def connectpipe(path=None):
     cmdline = ['hg', 'serve', '--cmdserver', 'pipe']
     if path:
         cmdline += ['-R', path]
@@ -62,7 +62,7 @@ def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
             if ch.isupper():
                 return
 
-def check(func):
+def check(func, connect=connectpipe):
     sys.stdout.flush()
     server = connect()
     try:
