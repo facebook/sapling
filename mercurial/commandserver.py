@@ -248,3 +248,13 @@ class server(object):
             return 1
 
         return 0
+
+class pipeservice(object):
+    def __init__(self, ui, repo, opts):
+        self.server = server(ui, repo, opts['cmdserver'])
+
+    def init(self):
+        pass
+
+    def run(self):
+        return self.server.serve()

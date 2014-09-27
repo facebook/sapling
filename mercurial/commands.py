@@ -5536,8 +5536,8 @@ def serve(ui, repo, **opts):
         s.serve_forever()
 
     if opts["cmdserver"]:
-        s = commandserver.server(ui, repo, opts["cmdserver"])
-        return s.serve()
+        service = commandserver.pipeservice(ui, repo, opts)
+        return cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
     # this way we can check if something was given in the command-line
     if opts.get('port'):
