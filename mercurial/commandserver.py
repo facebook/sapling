@@ -28,8 +28,7 @@ class channeledoutput(object):
     data length (unsigned int),
     data
     """
-    def __init__(self, in_, out, channel):
-        self.in_ = in_
+    def __init__(self, out, channel):
         self.out = out
         self.channel = channel
 
@@ -43,7 +42,7 @@ class channeledoutput(object):
     def __getattr__(self, attr):
         if attr in ('isatty', 'fileno'):
             raise AttributeError(attr)
-        return getattr(self.in_, attr)
+        return getattr(self.out, attr)
 
 class channeledinput(object):
     """
@@ -138,7 +137,7 @@ class server(object):
             global logfile
             if logpath == '-':
                 # write log on a special 'd' (debug) channel
-                logfile = channeledoutput(sys.stdout, sys.stdout, 'd')
+                logfile = channeledoutput(sys.stdout, 'd')
             else:
                 logfile = open(logpath, 'a')
 
@@ -153,10 +152,10 @@ class server(object):
             self.repo = self.repoui = None
 
         if mode == 'pipe':
-            self.cerr = channeledoutput(sys.stdout, sys.stdout, 'e')
-            self.cout = channeledoutput(sys.stdout, sys.stdout, 'o')
+            self.cerr = channeledoutput(sys.stdout, 'e')
+            self.cout = channeledoutput(sys.stdout, 'o')
             self.cin = channeledinput(sys.stdin, sys.stdout, 'I')
-            self.cresult = channeledoutput(sys.stdout, sys.stdout, 'r')
+            self.cresult = channeledoutput(sys.stdout, 'r')
 
             self.client = sys.stdin
         else:
