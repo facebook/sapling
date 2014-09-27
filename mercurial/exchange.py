@@ -868,7 +868,38 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
 
     return pullop
 
+# list of steps to perform discovery before pull
+pulldiscoveryorder = []
+
+# Mapping between step name and function
+#
+# This exists to help extensions wrap steps if necessary
+pulldiscoverymapping = {}
+
+def pulldiscovery(stepname):
+    """decorator for function performing discovery before pull
+
+    The function is added to the step -> function mapping and appended to the
+    list of steps.  Beware that decorated function will be added in order (this
+    may matter).
+
+    You can only use this decorator for a new step, if you want to wrap a step
+    from an extension, change the pulldiscovery dictionary directly."""
+    def dec(func):
+        assert stepname not in pulldiscoverymapping
+        pulldiscoverymapping[stepname] = func
+        pulldiscoveryorder.append(stepname)
+        return func
+    return dec
+
 def _pulldiscovery(pullop):
+    """Run all discovery steps"""
+    for stepname in pulldiscoveryorder:
+        step = pulldiscoverymapping[stepname]
+        step(pullop)
+
+@pulldiscovery('changegroup')
+def _pulldiscoverychangegroup(pullop):
     """discovery phase for the pull
 
     Current handle changeset discovery only, will change handle all discovery
