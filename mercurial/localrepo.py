@@ -1724,7 +1724,14 @@ class localrepository(object):
                 # if we support it, stream in and adjust our requirements
                 if not streamreqs - self.supportedformats:
                     return self.stream_in(remote, streamreqs)
-        return self.pull(remote, heads)
+
+        quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
+        try:
+            self.ui.setconfig('ui', 'quietbookmarkmove', True, 'clone')
+            ret = self.pull(remote, heads)
+        finally:
+            self.ui.restoreconfig(quiet)
+        return ret
 
     def pushkey(self, namespace, key, old, new):
         self.hook('prepushkey', throw=True, namespace=namespace, key=key,

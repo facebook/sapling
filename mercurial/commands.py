@@ -4960,16 +4960,8 @@ def pull(ui, repo, source="default", **opts):
                         "so a rev cannot be specified.")
                 raise util.Abort(err)
 
-        modheads = repo.pull(other, heads=revs, force=opts.get('force'))
-        bookmarks.updatefromremote(ui, repo, remotebookmarks, other.url())
-        # update specified bookmarks
-        if opts.get('bookmark'):
-            marks = repo._bookmarks
-            for b in opts['bookmark']:
-                # explicit pull overrides local bookmark if any
-                ui.status(_("importing bookmark %s\n") % b)
-                marks[b] = repo[remotebookmarks[b]].node()
-            marks.write()
+        modheads = repo.pull(other, heads=revs, force=opts.get('force'),
+                             bookmarks=opts.get('bookmark', ()))
         if checkout:
             checkout = str(repo.changelog.rev(other.lookup(checkout)))
         repo._subtoppath = source

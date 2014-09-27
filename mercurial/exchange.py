@@ -781,7 +781,7 @@ class pulloperation(object):
         if self._tr is not None:
             self._tr.release()
 
-def pull(repo, remote, heads=None, force=False):
+def pull(repo, remote, heads=None, force=False, bookmarks=()):
     pullop = pulloperation(repo, remote, heads, force)
     if pullop.remote.local():
         missing = set(pullop.remote.requirements) - pullop.repo.supported
@@ -791,6 +791,7 @@ def pull(repo, remote, heads=None, force=False):
                     " %s") % (', '.join(sorted(missing)))
             raise util.Abort(msg)
 
+    remotebookmarks = remote.listkeys('bookmarks')
     lock = pullop.repo.lock()
     try:
         _pulldiscovery(pullop)
@@ -807,6 +808,18 @@ def pull(repo, remote, heads=None, force=False):
     finally:
         pullop.releasetransaction()
         lock.release()
+    bookmod.updatefromremote(repo.ui, repo, remotebookmarks, remote.url())
+    # update specified bookmarks
+    if bookmarks:
+        marks = repo._bookmarks
+        writer = repo.ui.status
+        if repo.ui.configbool('ui', 'quietbookmarkmove', False):
+            writer = repo.ui.debug
+        for b in bookmarks:
+            # explicit pull overrides local bookmark if any
+            writer(_("importing bookmark %s\n") % b)
+            marks[b] = repo[remotebookmarks[b]].node()
+        marks.write()
 
     return pullop.cgresult
 

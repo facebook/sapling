@@ -45,7 +45,6 @@ expect error, cloning not allowed
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ test4
-  requesting all changes
   abort: authorization failed
   [255]
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
