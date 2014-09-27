@@ -777,13 +777,15 @@ class pulloperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote, heads=None, force=False):
+    def __init__(self, repo, remote, heads=None, force=False, bookmarks=()):
         # repo we pull into
         self.repo = repo
         # repo we pull from
         self.remote = remote
         # revision we try to pull (None is "all")
         self.heads = heads
+        # bookmark pulled explicitly
+        self.explicitbookmarks = bookmarks
         # do we force pull?
         self.force = force
         # the name the pull transaction
@@ -796,10 +798,13 @@ class pulloperation(object):
         self.rheads = None
         # list of missing changeset to fetch remotely
         self.fetch = None
+        # remote bookmarks data
+        self.remotebookmarks = None
         # result of changegroup pulling (used as return code by pull)
         self.cgresult = None
         # list of step remaining todo (related to future bundle2 usage)
-        self.todosteps = set(['changegroup', 'phases', 'obsmarkers'])
+        self.todosteps = set(['changegroup', 'phases', 'obsmarkers',
+                              'bookmarks'])
 
     @util.propertycache
     def pulledsubset(self):
@@ -836,7 +841,7 @@ class pulloperation(object):
             self._tr.release()
 
 def pull(repo, remote, heads=None, force=False, bookmarks=()):
-    pullop = pulloperation(repo, remote, heads, force)
+    pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks)
     if pullop.remote.local():
         missing = set(pullop.remote.requirements) - pullop.repo.supported
         if missing:
@@ -845,7 +850,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
                     " %s") % (', '.join(sorted(missing)))
             raise util.Abort(msg)
 
-    remotebookmarks = remote.listkeys('bookmarks')
+    pullop.remotebookmarks = remote.listkeys('bookmarks')
     lock = pullop.repo.lock()
     try:
         _pulldiscovery(pullop)
@@ -855,22 +860,11 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
         _pullchangeset(pullop)
         _pullphase(pullop)
         _pullobsolete(pullop)
+        _pullbookmarks(pullop)
         pullop.closetransaction()
     finally:
         pullop.releasetransaction()
         lock.release()
-    bookmod.updatefromremote(repo.ui, repo, remotebookmarks, remote.url())
-    # update specified bookmarks
-    if bookmarks:
-        marks = repo._bookmarks
-        writer = repo.ui.status
-        if repo.ui.configbool('ui', 'quietbookmarkmove', False):
-            writer = repo.ui.debug
-        for b in bookmarks:
-            # explicit pull overrides local bookmark if any
-            writer(_("importing bookmark %s\n") % b)
-            marks[b] = repo[remotebookmarks[b]].node()
-        marks.write()
 
     return pullop.cgresult
 
@@ -1005,6 +999,27 @@ def _pullapplyphases(pullop, remotephases):
     if dheads:
         tr = pullop.gettransaction()
         phases.advanceboundary(pullop.repo, tr, draft, dheads)
+
+def _pullbookmarks(pullop):
+    """process the remote bookmark information to update the local one"""
+    if 'bookmarks' not in pullop.todosteps:
+        return
+    pullop.todosteps.remove('bookmarks')
+    repo = pullop.repo
+    remotebookmarks = pullop.remotebookmarks
+    bookmod.updatefromremote(repo.ui, repo, remotebookmarks,
+                             pullop.remote.url())
+    # update specified bookmarks
+    if pullop.explicitbookmarks:
+        marks = repo._bookmarks
+        writer = repo.ui.status
+        if repo.ui.configbool('ui', 'quietbookmarkmove', False):
+            writer = repo.ui.debug
+        for b in pullop.explicitbookmarks:
+            # explicit pull overrides local bookmark if any
+            writer(_("importing bookmark %s\n") % b)
+            marks[b] = repo[remotebookmarks[b]].node()
+        marks.write()
 
 def _pullobsolete(pullop):
     """utility function to pull obsolete markers from a remote
