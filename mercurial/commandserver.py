@@ -129,7 +129,7 @@ class server(object):
     Listens for commands on stdin, runs them and writes the output on a channel
     based stream to stdout.
     """
-    def __init__(self, ui, repo, mode):
+    def __init__(self, ui, repo):
         self.cwd = os.getcwd()
 
         logpath = ui.config("cmdserver", "log", None)
@@ -151,15 +151,12 @@ class server(object):
             self.ui = ui
             self.repo = self.repoui = None
 
-        if mode == 'pipe':
-            self.cerr = channeledoutput(sys.stdout, 'e')
-            self.cout = channeledoutput(sys.stdout, 'o')
-            self.cin = channeledinput(sys.stdin, sys.stdout, 'I')
-            self.cresult = channeledoutput(sys.stdout, 'r')
+        self.cerr = channeledoutput(sys.stdout, 'e')
+        self.cout = channeledoutput(sys.stdout, 'o')
+        self.cin = channeledinput(sys.stdin, sys.stdout, 'I')
+        self.cresult = channeledoutput(sys.stdout, 'r')
 
-            self.client = sys.stdin
-        else:
-            raise util.Abort(_('unknown mode %s') % mode)
+        self.client = sys.stdin
 
     def _read(self, size):
         if not size:
@@ -251,10 +248,21 @@ class server(object):
 
 class pipeservice(object):
     def __init__(self, ui, repo, opts):
-        self.server = server(ui, repo, opts['cmdserver'])
+        self.server = server(ui, repo)
 
     def init(self):
         pass
 
     def run(self):
         return self.server.serve()
+
+_servicemap = {
+    'pipe': pipeservice,
+    }
+
+def createservice(ui, repo, opts):
+    mode = opts['cmdserver']
+    try:
+        return _servicemap[mode](ui, repo, opts)
+    except KeyError:
+        raise util.Abort(_('unknown mode %s') % mode)
