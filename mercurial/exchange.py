@@ -859,8 +859,8 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
             _pullbundle2(pullop)
         _pullchangeset(pullop)
         _pullphase(pullop)
-        _pullobsolete(pullop)
         _pullbookmarks(pullop)
+        _pullobsolete(pullop)
         pullop.closetransaction()
     finally:
         pullop.releasetransaction()
