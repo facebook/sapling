@@ -852,12 +852,9 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
         if (pullop.repo.ui.configbool('experimental', 'bundle2-exp', False)
             and pullop.remote.capable('bundle2-exp')):
             _pullbundle2(pullop)
-        if 'changegroup' in pullop.todosteps:
-            _pullchangeset(pullop)
-        if 'phases' in pullop.todosteps:
-            _pullphase(pullop)
-        if 'obsmarkers' in pullop.todosteps:
-            _pullobsolete(pullop)
+        _pullchangeset(pullop)
+        _pullphase(pullop)
+        _pullobsolete(pullop)
         pullop.closetransaction()
     finally:
         pullop.releasetransaction()
@@ -940,6 +937,8 @@ def _pullchangeset(pullop):
     # We delay the open of the transaction as late as possible so we
     # don't open transaction for nothing or you break future useful
     # rollback call
+    if 'changegroup' not in pullop.todosteps:
+        return
     pullop.todosteps.remove('changegroup')
     if not pullop.fetch:
             pullop.repo.ui.status(_("no changes found\n"))
@@ -969,6 +968,8 @@ def _pullchangeset(pullop):
 
 def _pullphase(pullop):
     # Get remote phases data from remote
+    if 'phases' not in pullop.todosteps:
+        return
     remotephases = pullop.remote.listkeys('phases')
     _pullapplyphases(pullop, remotephases)
 
@@ -1013,6 +1014,8 @@ def _pullobsolete(pullop):
     a new transaction have been created (when applicable).
 
     Exists mostly to allow overriding for experimentation purpose"""
+    if 'obsmarkers' not in pullop.todosteps:
+        return
     pullop.todosteps.remove('obsmarkers')
     tr = None
     if obsolete._enabled:
