@@ -126,10 +126,10 @@ class channeledinput(object):
 
 class server(object):
     """
-    Listens for commands on stdin, runs them and writes the output on a channel
-    based stream to stdout.
+    Listens for commands on fin, runs them and writes the output on a channel
+    based stream to fout.
     """
-    def __init__(self, ui, repo):
+    def __init__(self, ui, repo, fin, fout):
         self.cwd = os.getcwd()
 
         logpath = ui.config("cmdserver", "log", None)
@@ -137,7 +137,7 @@ class server(object):
             global logfile
             if logpath == '-':
                 # write log on a special 'd' (debug) channel
-                logfile = channeledoutput(sys.stdout, 'd')
+                logfile = channeledoutput(fout, 'd')
             else:
                 logfile = open(logpath, 'a')
 
@@ -151,12 +151,12 @@ class server(object):
             self.ui = ui
             self.repo = self.repoui = None
 
-        self.cerr = channeledoutput(sys.stdout, 'e')
-        self.cout = channeledoutput(sys.stdout, 'o')
-        self.cin = channeledinput(sys.stdin, sys.stdout, 'I')
-        self.cresult = channeledoutput(sys.stdout, 'r')
+        self.cerr = channeledoutput(fout, 'e')
+        self.cout = channeledoutput(fout, 'o')
+        self.cin = channeledinput(fin, fout, 'I')
+        self.cresult = channeledoutput(fout, 'r')
 
-        self.client = sys.stdin
+        self.client = fin
 
     def _read(self, size):
         if not size:
@@ -248,7 +248,7 @@ class server(object):
 
 class pipeservice(object):
     def __init__(self, ui, repo, opts):
-        self.server = server(ui, repo)
+        self.server = server(ui, repo, sys.stdin, sys.stdout)
 
     def init(self):
         pass
