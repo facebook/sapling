@@ -892,7 +892,7 @@ def _pullbundle2(pullop):
     kwargs['heads'] = pullop.heads or pullop.rheads
     kwargs['cg'] = pullop.fetch
     if 'b2x:listkeys' in remotecaps:
-        kwargs['listkeys'] = ['phase']
+        kwargs['listkeys'] = ['phase', 'bookmarks']
     if not pullop.fetch:
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
@@ -921,6 +921,12 @@ def _pullbundle2(pullop):
     for namespace, value in op.records['listkeys']:
         if namespace == 'phases':
             _pullapplyphases(pullop, value)
+
+    # processing bookmark update
+    for namespace, value in op.records['listkeys']:
+        if namespace == 'bookmarks':
+            pullop.remotebookmarks = value
+            _pullbookmarks(pullop)
 
 def _pullbundle2extraprepare(pullop, kwargs):
     """hook function so that extensions can extend the getbundle call"""
