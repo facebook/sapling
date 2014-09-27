@@ -62,9 +62,9 @@ def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
             if ch.isupper():
                 return
 
-def check(func, repopath=None):
+def check(func):
     sys.stdout.flush()
-    server = connect(repopath)
+    server = connect()
     try:
         return func(server)
     finally:
