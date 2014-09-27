@@ -64,8 +64,7 @@ class bmstore(dict):
         try:
 
             file = repo.vfs('bookmarks', 'w', atomictemp=True)
-            for name, node in self.iteritems():
-                file.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
+            self._write(file)
             file.close()
 
             # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
@@ -76,6 +75,10 @@ class bmstore(dict):
 
         finally:
             wlock.release()
+
+    def _write(self, fp):
+        for name, node in self.iteritems():
+            fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
 
 def readcurrent(repo):
     '''Get the current bookmark
