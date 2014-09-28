@@ -2256,7 +2256,7 @@ def debuginstall(ui):
 
     # templates
     import templater
-    p = templater.templatepath()
+    p = templater.templatepaths()
     ui.status(_("checking templates (%s)...\n") % ' '.join(p))
     if p:
         m = templater.templatepath("map-cmdline.default")

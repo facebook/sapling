@@ -625,7 +625,7 @@ class engine(object):
 engines = {'default': engine}
 
 def stylelist():
-    paths = templatepath()
+    paths = templatepaths()
     if not paths:
         return _('no templates found, try `hg debuginstall` for more info')
     dirlist =  os.listdir(paths[0])
@@ -710,25 +710,26 @@ class templater(object):
                                            max=self.maxchunk)
         return stream
 
-def templatepath(name=None):
-    '''return location of template file or directory (if no name).
-    returns None if not found.'''
+def templatepaths():
+    '''return locations used for template files.'''
     normpaths = []
-
     for f in path:
         if f.startswith('/'):
             p = f
         else:
             fl = f.split('/')
             p = os.path.join(util.datapath, *fl)
-        if name:
-            p = os.path.join(p, name)
-        if name and os.path.exists(p):
-            return os.path.normpath(p)
-        elif os.path.isdir(p):
+        if os.path.isdir(p):
             normpaths.append(os.path.normpath(p))
-
     return normpaths
+
+def templatepath(name):
+    '''return location of template file. returns None if not found.'''
+    for p in templatepaths():
+        f = os.path.join(p, name)
+        if os.path.exists(f):
+            return f
+    return None
 
 def stylemap(styles, paths=None):
     """Return path to mapfile for a given style.
@@ -740,7 +741,7 @@ def stylemap(styles, paths=None):
     """
 
     if paths is None:
-        paths = templatepath()
+        paths = templatepaths()
     elif isinstance(paths, str):
         paths = [paths]
 
