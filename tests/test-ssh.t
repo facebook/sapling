@@ -197,7 +197,6 @@ test pushkeys and bookmarks
   pulling from ssh://user@dummy/remote
   no changes found
   updating bookmark foo
-  importing bookmark foo
   $ hg book -d foo
   $ hg push -B foo
   pushing to ssh://user@dummy/remote

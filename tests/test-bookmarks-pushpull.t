@@ -61,7 +61,6 @@ import bookmark by name
   $ hg pull -B X ../a
   pulling from ../a
   no changes found
-  importing bookmark X
   $ hg bookmark
      X                         0:4e3505fd9583
    * Y                         0:4e3505fd9583
@@ -373,7 +372,6 @@ hgweb
   adding remote bookmark Z
   adding remote bookmark foo
   adding remote bookmark foobar
-  importing bookmark Z
   $ hg clone http://localhost:$HGPORT/ cloned-bookmarks
   requesting all changes
   adding changesets

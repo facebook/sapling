@@ -358,6 +358,7 @@ def updatefromremote(ui, repo, remotemarks, path, explicit=()):
     if ui.configbool('ui', 'quietbookmarkmove', False):
         status = warn = ui.debug
 
+    explicit = set(explicit)
     changed = []
     for b, scid, dcid in addsrc:
         if scid in repo: # add remote bookmarks for changes we already have
@@ -366,23 +367,30 @@ def updatefromremote(ui, repo, remotemarks, path, explicit=()):
     for b, scid, dcid in advsrc:
         changed.append((b, bin(scid), status,
                         _("updating bookmark %s\n") % (b)))
+    # remove normal movement from explicit set
+    explicit.difference_update(d[0] for d in changed)
+
     for b, scid, dcid in diverge:
-        db = _diverge(ui, b, path, localmarks)
-        changed.append((db, bin(scid), warn,
-                        _("divergent bookmark %s stored as %s\n") % (b, db)))
+        if b in explicit:
+            explicit.discard(b)
+            changed.append((b, bin(scid), status,
+                            _("importing bookmark %s\n") % (b, b)))
+        else:
+            db = _diverge(ui, b, path, localmarks)
+            changed.append((db, bin(scid), warn,
+                            _("divergent bookmark %s stored as %s\n")
+                            % (b, db)))
+    for b, scid, dcid in adddst + advdst:
+        if b in explicit:
+            explicit.discard(b)
+            changed.append((b, bin(scid), status,
+                            _("importing bookmark %s\n") % (b, b)))
+
     if changed:
         for b, node, writer, msg in sorted(changed):
             localmarks[b] = node
             writer(msg)
         localmarks.write()
-    # update specified bookmarks
-    if explicit:
-        marks = repo._bookmarks
-        for b in explicit:
-            # explicit pull overrides local bookmark if any
-            repo.ui.status(_("importing bookmark %s\n") % b)
-            marks[b] = repo[remotemarks[b]].node()
-        marks.write()
 
 def diff(ui, dst, src):
     ui.status(_("searching for changed bookmarks\n"))

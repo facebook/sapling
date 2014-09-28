@@ -906,7 +906,6 @@ pull over ssh
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_02de
-  importing bookmark book_02de
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -928,7 +927,6 @@ pull over http
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_42cc
-  importing bookmark book_42cc
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete
