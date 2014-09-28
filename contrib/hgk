@@ -1271,9 +1271,9 @@ proc drawtags {id x xt y1} {
 	    set rowtextx($idline($id)) [expr {$xr + $linespc}]
 	} elseif {[incr nbookmarks -1] >= 0} {
             # draw a tag
-            set col gray50
+            set col "#7f7f7f"
             if {[string compare $bookmarkcurrent $tag] == 0} {
-                set col gray
+                set col "#bebebe"
             }
             set xl [expr $xl - $delta/2]
             $canv create polygon $x $yt $xr $yt $xr $yb $x $yb \
