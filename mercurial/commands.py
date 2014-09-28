@@ -21,7 +21,7 @@ import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod, copies
 import random
 import setdiscovery, treediscovery, dagutil, pvec, localrepo
-import phases, obsolete, exchange, bundle2, repair
+import phases, obsolete, exchange, bundle2, repair, lock as lockmod
 import ui as uimod
 
 table = {}
@@ -976,11 +976,14 @@ def bookmark(ui, repo, *names, **opts):
         raise util.Abort(_("bookmark name required"))
 
     if delete or rename or names or inactive:
-        wlock = repo.wlock()
+        wlock = lock = tr = None
         try:
+            wlock = repo.wlock()
+            lock = repo.lock()
             cur = repo.changectx('.').node()
             marks = repo._bookmarks
             if delete:
+                tr = repo.transaction('bookmark')
                 for mark in names:
                     if mark not in marks:
                         raise util.Abort(_("bookmark '%s' does not exist") %
@@ -988,9 +991,9 @@ def bookmark(ui, repo, *names, **opts):
                     if mark == repo._activebookmark:
                         bookmarks.deactivate(repo)
                     del marks[mark]
-                marks.write()
 
             elif rename:
+                tr = repo.transaction('bookmark')
                 if not names:
                     raise util.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
@@ -1003,9 +1006,8 @@ def bookmark(ui, repo, *names, **opts):
                 if repo._activebookmark == rename and not inactive:
                     bookmarks.activate(repo, mark)
                 del marks[rename]
-                marks.write()
-
             elif names:
+                tr = repo.transaction('bookmark')
                 newact = None
                 for mark in names:
                     mark = checkformat(mark)
@@ -1023,8 +1025,6 @@ def bookmark(ui, repo, *names, **opts):
                     bookmarks.activate(repo, newact)
                 elif cur != tgt and newact == repo._activebookmark:
                     bookmarks.deactivate(repo)
-                marks.write()
-
             elif inactive:
                 if len(marks) == 0:
                     ui.status(_("no bookmarks set\n"))
@@ -1032,8 +1032,11 @@ def bookmark(ui, repo, *names, **opts):
                     ui.status(_("no active bookmark\n"))
                 else:
                     bookmarks.deactivate(repo)
+            if tr is not None:
+                marks.recordchange(tr)
+                tr.close()
         finally:
-            wlock.release()
+            lockmod.release(tr, lock, wlock)
     else: # show bookmarks
         fm = ui.formatter('bookmarks', opts)
         hexfn = fm.hexfunc

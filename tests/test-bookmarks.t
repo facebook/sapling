@@ -403,10 +403,15 @@ test id
 test rollback
 
   $ echo foo > f1
+  $ hg bookmark tmp-rollback
   $ hg ci -Amr
   adding f1
-  $ hg bookmark -f Y -r 1
-  $ hg bookmark -f Z -r 1
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
+   * tmp-rollback              3:2bf5cfec5864
+     x  y                      2:db815d6d32e6
   $ hg rollback
   repository tip rolled back to revision 2 (undo commit)
   working directory now based on revision 2
@@ -414,7 +419,18 @@ test rollback
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6
+   * tmp-rollback              2:db815d6d32e6
      x  y                      2:db815d6d32e6
+  $ hg bookmark -f Z -r 1
+  $ hg rollback
+  repository tip rolled back to revision 2 (undo bookmark)
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
+   * tmp-rollback              2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+  $ hg bookmark -d tmp-rollback
 
 activate bookmark on working dir parent without --force
 

@@ -74,16 +74,16 @@ working dir unaffected by rollback: do not restore dirstate et. al.
   $ hg bookmark foo
   $ hg commit -m'modify a again'
   $ echo b > b
+  $ hg bookmark bar -r default #making bar active, before the transaction
   $ hg commit -Am'add b'
   adding b
   $ hg log --template '{rev}  {branch}  {desc|firstline}\n'
   2  test  add b
   1  test  modify a again
   0  default  add a again
-  $ hg update default
+  $ hg update bar
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (leaving bookmark foo)
-  $ hg bookmark bar
+  (activating bookmark bar)
   $ cat .hg/undo.branch ; echo
   test
   $ hg rollback -f
@@ -94,7 +94,7 @@ working dir unaffected by rollback: do not restore dirstate et. al.
   default
   $ cat .hg/bookmarks.current ; echo
   bar
-  $ hg bookmark --delete foo
+  $ hg bookmark --delete foo bar
 
 rollback by pretxncommit saves commit message (issue1635)
 

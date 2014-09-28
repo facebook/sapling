@@ -247,6 +247,9 @@ listkeys hook
 
   $ echo "listkeys = printenv.py listkeys" >> .hg/hgrc
   $ hg bookmark -r null bar
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ cd ../b
   $ hg pull -B bar ../a
   pulling from ../a
@@ -279,6 +282,9 @@ test that prelistkeys can prevent listing keys
 
   $ echo "prelistkeys = printenv.py prelistkeys.forbid 1" >> .hg/hgrc
   $ hg bookmark -r null quux
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ cd ../b
   $ hg pull -B quux ../a
   pulling from ../a

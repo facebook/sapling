@@ -173,36 +173,66 @@ pull empty
 add extra data to test their exchange during push
 
   $ hg -R main bookmark --rev eea13746799a book_eea1
+  pre-close-tip:02de42196ebe draft 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R main debugobsolete -d '0 0' 3333333333333333333333333333333333333333 `getmainid eea13746799a`
   pre-close-tip:02de42196ebe draft 
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNID=TXN:* HG_TXNNAME=debugobsolete (glob)
   $ hg -R main bookmark --rev 02de42196ebe book_02de
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R main debugobsolete -d '0 0' 4444444444444444444444444444444444444444 `getmainid 02de42196ebe`
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNID=TXN:* HG_TXNNAME=debugobsolete (glob)
   $ hg -R main bookmark --rev 42ccdea3bb16 book_42cc
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R main debugobsolete -d '0 0' 5555555555555555555555555555555555555555 `getmainid 42ccdea3bb16`
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNID=TXN:* HG_TXNNAME=debugobsolete (glob)
   $ hg -R main bookmark --rev 5fddd98957c8 book_5fdd
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R main debugobsolete -d '0 0' 6666666666666666666666666666666666666666 `getmainid 5fddd98957c8`
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNID=TXN:* HG_TXNNAME=debugobsolete (glob)
   $ hg -R main bookmark --rev 32af7686d403 book_32af
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R main debugobsolete -d '0 0' 7777777777777777777777777777777777777777 `getmainid 32af7686d403`
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNID=TXN:* HG_TXNNAME=debugobsolete (glob)
 
   $ hg -R other bookmark --rev cd010b8cd998 book_eea1
+  pre-close-tip:24b6387c8c8c public 
+  postclose-tip:24b6387c8c8c public 
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R other bookmark --rev cd010b8cd998 book_02de
+  pre-close-tip:24b6387c8c8c public 
+  postclose-tip:24b6387c8c8c public 
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R other bookmark --rev cd010b8cd998 book_42cc
+  pre-close-tip:24b6387c8c8c public 
+  postclose-tip:24b6387c8c8c public 
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R other bookmark --rev cd010b8cd998 book_5fdd
+  pre-close-tip:24b6387c8c8c public 
+  postclose-tip:24b6387c8c8c public 
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ hg -R other bookmark --rev cd010b8cd998 book_32af
+  pre-close-tip:24b6387c8c8c public 
+  postclose-tip:24b6387c8c8c public 
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
 
   $ hg -R main phase --public eea13746799a
   pre-close-tip:02de42196ebe draft book_02de
