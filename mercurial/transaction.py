@@ -144,7 +144,7 @@ class transaction(object):
         self.file.flush()
 
     @active
-    def addbackup(self, file, hardlink=True):
+    def addbackup(self, file, hardlink=True, vfs=None):
         """Adds a backup of the file to the transaction
 
         Calling addbackup() creates a hardlink backup of the specified file
@@ -158,8 +158,10 @@ class transaction(object):
         if file in self.map or file in self.backupmap:
             return
         backupfile = "%s.backup.%s" % (self.journal, file)
-        if self.opener.exists(file):
-            filepath = self.opener.join(file)
+        if vfs is None:
+            vfs = self.opener
+        if vfs.exists(file):
+            filepath = vfs.join(file)
             backuppath = self.opener.join(backupfile)
             util.copyfiles(filepath, backuppath, hardlink=hardlink)
         else:
@@ -176,7 +178,7 @@ class transaction(object):
         self.backupsfile.flush()
 
     @active
-    def addfilegenerator(self, genid, filenames, genfunc, order=0):
+    def addfilegenerator(self, genid, filenames, genfunc, order=0, vfs=None):
         """add a function to generates some files at transaction commit
 
         The `genfunc` argument is a function capable of generating proper
@@ -195,7 +197,10 @@ class transaction(object):
         The `order` argument may be used to control the order in which multiple
         generator will be executed.
         """
-        self._filegenerators[genid] = (order, filenames, genfunc)
+        # For now, we are unable to do proper backup and restore of custom vfs
+        # but for bookmarks that are handled outside this mechanism.
+        assert vfs is None or filenames == ('bookmarks',)
+        self._filegenerators[genid] = (order, filenames, genfunc, vfs)
 
     @active
     def find(self, file):
@@ -239,16 +244,19 @@ class transaction(object):
     def close(self):
         '''commit the transaction'''
         # write files registered for generation
-        for order, filenames, genfunc in sorted(self._filegenerators.values()):
+        for entry in sorted(self._filegenerators.values()):
+            order, filenames, genfunc, vfs = entry
+            if vfs is None:
+                vfs = self.opener
             files = []
             try:
                 for name in filenames:
                     # Some files are already backed up when creating the
                     # localrepo. Until this is properly fixed we disable the
                     # backup for them.
-                    if name not in ('phaseroots',):
+                    if name not in ('phaseroots', 'bookmarks'):
                         self.addbackup(name)
-                    files.append(self.opener(name, 'w', atomictemp=True))
+                    files.append(vfs(name, 'w', atomictemp=True))
                 genfunc(*files)
             finally:
                 for f in files:
