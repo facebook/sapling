@@ -881,7 +881,6 @@ push
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
   remote: 1 new obsolescence markers
   updating bookmark book_eea1
-  exporting bookmark book_eea1
   $ hg -R other log -G
   o    3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> book_eea1 G
   |\
@@ -950,7 +949,6 @@ push over ssh
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
-  exporting bookmark book_5fdd
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
@@ -989,7 +987,6 @@ push over http
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_32af
-  exporting bookmark book_32af
   $ cat other-error.log
 
 Check final content.

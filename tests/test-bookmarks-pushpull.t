@@ -99,8 +99,8 @@ push/pull name that doesn't exist
   $ hg push -B badname ../a
   pushing to ../a
   searching for changes
-  no changes found
   bookmark badname does not exist on the local or remote repository!
+  no changes found
   [2]
   $ hg pull -B anotherbadname ../a
   pulling from ../a
@@ -356,7 +356,7 @@ hgweb
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found
-  exporting bookmark Z
+  updating bookmark Z
   [1]
   $ hg book -d Z
   $ hg in -B http://localhost:$HGPORT/

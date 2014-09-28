@@ -226,10 +226,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
         if locallock is not None:
             locallock.release()
 
-    if pushop.bookmarks:
-        pushop.bkresult = bookmod.pushtoremote(repo.ui, repo, remote,
-                                               pushop.bookmarks)
-
     return pushop
 
 # list of steps to perform discovery before push
@@ -334,11 +330,40 @@ def _pushdiscoverybookmarks(pushop):
         ancestors = repo.changelog.ancestors(revnums, inclusive=True)
     remotebookmark = remote.listkeys('bookmarks')
 
+    explicit = set(pushop.bookmarks)
+
     comp = bookmod.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid = comp
     for b, scid, dcid in advsrc:
+        if b in explicit:
+            explicit.remove(b)
         if not ancestors or repo[scid].rev() in ancestors:
             pushop.outbookmarks.append((b, dcid, scid))
+    # search added bookmark
+    for b, scid, dcid in addsrc:
+        if b in explicit:
+            explicit.remove(b)
+            pushop.outbookmarks.append((b, '', scid))
+    # search for overwritten bookmark
+    for b, scid, dcid in advdst + diverge + differ:
+        if b in explicit:
+            explicit.remove(b)
+            pushop.outbookmarks.append((b, dcid, scid))
+    # search for bookmark to delete
+    for b, scid, dcid in adddst:
+        if b in explicit:
+            explicit.remove(b)
+            # treat as "deleted locally"
+            pushop.outbookmarks.append((b, dcid, ''))
+
+    if explicit:
+        explicit = sorted(explicit)
+        # we should probably list all of them
+        ui.warn(_('bookmark %s does not exist on the local '
+                  'or remote repository!\n') % explicit[0])
+        pushop.bkresult = 2
+
+    pushop.outbookmarks.sort()
 
 def _pushcheckoutgoing(pushop):
     outgoing = pushop.outgoing

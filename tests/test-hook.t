@@ -183,8 +183,8 @@ pushkey hook
   pushing to ../a
   searching for changes
   no changes found
-  exporting bookmark foo
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1
+  exporting bookmark foo
   [1]
   $ cd ../a
 
@@ -215,8 +215,6 @@ test that prepushkey can prevent incoming keys
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
   listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
-  listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
-  exporting bookmark baz
   prepushkey.forbid hook: HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000
   abort: prepushkey hook exited with status 1
   [255]
