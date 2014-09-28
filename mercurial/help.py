@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import gettext, _
-import itertools, sys, os
+import itertools, os
 import error
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
 import encoding, util, minirst
@@ -129,14 +129,8 @@ def loaddoc(topic):
     """Return a delayed loader for help/topic.txt."""
 
     def loader():
-        if util.mainfrozen():
-            module = sys.executable
-        else:
-            module = __file__
-        base = os.path.dirname(module)
-
         for dir in ('.', '..'):
-            docdir = os.path.join(base, dir, 'help')
+            docdir = os.path.join(util.datapath, dir, 'help')
             if os.path.isdir(docdir):
                 break
 

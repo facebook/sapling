@@ -460,6 +460,13 @@ def mainfrozen():
             safehasattr(sys, "importers") or # old py2exe
             imp.is_frozen("__main__")) # tools/freeze
 
+# the location of data files matching the source code
+if mainfrozen():
+    # executable version (py2exe) doesn't support __file__
+    datapath = os.path.dirname(sys.executable)
+else:
+    datapath = os.path.dirname(__file__)
+
 _hgexecutable = None
 
 def hgexecutable():

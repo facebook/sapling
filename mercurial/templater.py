@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import sys, os, re
+import os, re
 import util, config, templatefilters, templatekw, parser, error
 import revset as revsetmod
 import types
@@ -715,17 +715,12 @@ def templatepath(name=None):
     returns None if not found.'''
     normpaths = []
 
-    # executable version (py2exe) doesn't support __file__
-    if util.mainfrozen():
-        module = sys.executable
-    else:
-        module = __file__
     for f in path:
         if f.startswith('/'):
             p = f
         else:
             fl = f.split('/')
-            p = os.path.join(os.path.dirname(module), *fl)
+            p = os.path.join(util.datapath, *fl)
         if name:
             p = os.path.join(p, name)
         if name and os.path.exists(p):
