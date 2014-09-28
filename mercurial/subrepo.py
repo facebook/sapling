@@ -9,7 +9,7 @@ import errno, os, re, shutil, posixpath, sys
 import xml.dom.minidom
 import stat, subprocess, tarfile
 from i18n import _
-import config, util, node, error, cmdutil, bookmarks, match as matchmod
+import config, util, node, error, cmdutil, match as matchmod
 import phases
 import pathutil
 import exchange
@@ -743,10 +743,7 @@ class hgsubrepo(abstractsubrepo):
             self._repo.ui.status(_('pulling subrepo %s from %s\n')
                                  % (subrelpath(self), srcurl))
             cleansub = self.storeclean(srcurl)
-            remotebookmarks = other.listkeys('bookmarks')
             self._repo.pull(other)
-            bookmarks.updatefromremote(self._repo.ui, self._repo,
-                                       remotebookmarks, srcurl)
             if cleansub:
                 # keep the repo clean after pull
                 self._cachestorehash(srcurl)
