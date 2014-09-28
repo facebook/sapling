@@ -450,8 +450,6 @@ def pathto(root, n1, n2):
     b.reverse()
     return os.sep.join((['..'] * len(a)) + b) or '.'
 
-_hgexecutable = None
-
 def mainfrozen():
     """return True if we are a frozen executable.
 
@@ -461,6 +459,8 @@ def mainfrozen():
     return (safehasattr(sys, "frozen") or # new py2exe
             safehasattr(sys, "importers") or # old py2exe
             imp.is_frozen("__main__")) # tools/freeze
+
+_hgexecutable = None
 
 def hgexecutable():
     """return location of the 'hg' executable.
