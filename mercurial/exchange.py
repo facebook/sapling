@@ -1014,18 +1014,8 @@ def _pullbookmarks(pullop):
     repo = pullop.repo
     remotebookmarks = pullop.remotebookmarks
     bookmod.updatefromremote(repo.ui, repo, remotebookmarks,
-                             pullop.remote.url())
-    # update specified bookmarks
-    if pullop.explicitbookmarks:
-        marks = repo._bookmarks
-        writer = repo.ui.status
-        if repo.ui.configbool('ui', 'quietbookmarkmove', False):
-            writer = repo.ui.debug
-        for b in pullop.explicitbookmarks:
-            # explicit pull overrides local bookmark if any
-            writer(_("importing bookmark %s\n") % b)
-            marks[b] = repo[remotebookmarks[b]].node()
-        marks.write()
+                             pullop.remote.url(),
+                             explicit=pullop.explicitbookmarks)
 
 def _pullobsolete(pullop):
     """utility function to pull obsolete markers from a remote
