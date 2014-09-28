@@ -553,7 +553,6 @@ funcs = {
 
 # template engine
 
-path = ['templates', '../templates']
 stringify = templatefilters.stringify
 
 def _flatten(thing):
@@ -712,16 +711,10 @@ class templater(object):
 
 def templatepaths():
     '''return locations used for template files.'''
-    normpaths = []
-    for f in path:
-        if f.startswith('/'):
-            p = f
-        else:
-            fl = f.split('/')
-            p = os.path.join(util.datapath, *fl)
-        if os.path.isdir(p):
-            normpaths.append(os.path.normpath(p))
-    return normpaths
+    pathsrel = ['templates', '../templates']
+    paths = [os.path.normpath(os.path.join(util.datapath, f))
+             for f in pathsrel]
+    return [p for p in paths if os.path.isdir(p)]
 
 def templatepath(name):
     '''return location of template file. returns None if not found.'''
