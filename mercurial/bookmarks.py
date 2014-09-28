@@ -47,6 +47,13 @@ class bmstore(dict):
             if inst.errno != errno.ENOENT:
                 raise
 
+    def recordchange(self, tr):
+        """record that bookmarks have been changed in a transaction
+
+        The transaction is then responsible for updating the file content."""
+        tr.addfilegenerator('bookmarks', ('bookmarks',), self._write,
+                            vfs=self._repo.vfs)
+
     def write(self):
         '''Write bookmarks
 
