@@ -13,7 +13,8 @@ This contains helper routines that are independent of the SCM core and
 hide platform-specific details from the core.
 """
 
-from i18n import _
+import i18n
+_ = i18n._
 import error, osutil, encoding
 import errno, shutil, sys, tempfile, traceback
 import re as remod
@@ -466,6 +467,8 @@ if mainfrozen():
     datapath = os.path.dirname(sys.executable)
 else:
     datapath = os.path.dirname(__file__)
+
+i18n.setdatapath(datapath)
 
 _hgexecutable = None
 
