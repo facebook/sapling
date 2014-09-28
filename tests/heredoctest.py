@@ -10,7 +10,7 @@ while lines:
         snippet = l[4:]
         while lines and lines[0].startswith('... '):
             l = lines.pop(0)
-            snippet += "\n" + l[4:]
+            snippet += l[4:]
         c = compile(snippet, '<heredoc>', 'single')
         try:
             exec c in globalvars

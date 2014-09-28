@@ -42,6 +42,10 @@ Doctest commands:
   ...     print foo, 'should be visible in func()'
   >>> func()
   global name should be visible in func()
+  >>> print '''multiline
+  ... string'''
+  multiline
+  string
 
 Regular expressions:
 
