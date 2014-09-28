@@ -1,0 +1,263 @@
+#require false
+  
+  testing hellomessage:
+  
+  o, 'capabilities: getencoding runcommand\nencoding: ***'
+   runcommand id
+  000000000000 tip
+  
+  testing unknowncommand:
+  
+  abort: unknown command unknowncommand
+  
+  testing checkruncommand:
+  
+   runcommand 
+  Mercurial Distributed SCM
+  
+  basic commands:
+  
+   add           add the specified files on the next commit
+   annotate      show changeset information by line for each file
+   clone         make a copy of an existing repository
+   commit        commit the specified files or all outstanding changes
+   diff          diff repository (or selected files)
+   export        dump the header and diffs for one or more changesets
+   forget        forget the specified files on the next commit
+   init          create a new repository in the given directory
+   log           show revision history of entire repository or files
+   merge         merge working directory with another revision
+   pull          pull changes from the specified source
+   push          push changes to the specified destination
+   remove        remove the specified files on the next commit
+   serve         start stand-alone webserver
+   status        show changed files in the working directory
+   summary       summarize working directory state
+   update        update working directory (or switch revisions)
+  
+  (use "hg help" for the full list of commands or "hg -v" for details)
+   runcommand id --quiet
+  000000000000
+   runcommand id
+  000000000000 tip
+   runcommand id --config ui.quiet=True
+  000000000000
+   runcommand id
+  000000000000 tip
+   runcommand id -runknown
+  abort: unknown revision 'unknown'!
+   [255]
+  
+  testing inputeof:
+  
+  server exit code = 1
+  
+  testing serverinput:
+  
+   runcommand import -
+  applying patch from stdin
+   runcommand log
+  changeset:   0:eff892de26ec
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  
+  testing cwd:
+  
+   runcommand --cwd foo st bar
+  ? bar
+   runcommand st foo/bar
+  ? foo/bar
+  
+  testing localhgrc:
+  
+   runcommand showconfig
+  bundle.mainreporoot=$TESTTMP/repo
+  defaults.backout=-d "0 0"
+  defaults.commit=-d "0 0"
+  defaults.shelve=--date "0 0"
+  defaults.tag=-d "0 0"
+  ui.slash=True
+  ui.interactive=False
+  ui.mergemarkers=detailed
+  ui.foo=bar
+  ui.nontty=true
+   runcommand init foo
+   runcommand -R foo showconfig ui defaults
+  defaults.backout=-d "0 0"
+  defaults.commit=-d "0 0"
+  defaults.shelve=--date "0 0"
+  defaults.tag=-d "0 0"
+  ui.slash=True
+  ui.interactive=False
+  ui.mergemarkers=detailed
+  ui.nontty=true
+  
+  testing hookoutput:
+  
+   runcommand --config hooks.pre-identify=python:test-commandserver.hook id
+  hook talking
+  now try to read something: 'some input'
+  eff892de26ec tip
+  
+  testing outsidechanges:
+  
+   runcommand status
+  M a
+   runcommand tip
+  changeset:   1:d3a0a68be6de
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+   runcommand status
+  
+  testing bookmarks:
+  
+   runcommand bookmarks
+  no bookmarks set
+   runcommand bookmarks
+     bm1                       1:d3a0a68be6de
+     bm2                       1:d3a0a68be6de
+   runcommand bookmarks
+   * bm1                       1:d3a0a68be6de
+     bm2                       1:d3a0a68be6de
+   runcommand bookmarks bm3
+   runcommand commit -Amm
+   runcommand bookmarks
+     bm1                       1:d3a0a68be6de
+     bm2                       1:d3a0a68be6de
+   * bm3                       2:aef17e88f5f0
+  
+  testing tagscache:
+  
+   runcommand id -t -r 0
+  
+   runcommand id -t -r 0
+  foo
+  
+  testing setphase:
+  
+   runcommand phase -r .
+  3: draft
+   runcommand phase -r .
+  3: public
+  
+  testing rollback:
+  
+   runcommand phase -r . -p
+  no phases changed
+   [1]
+   runcommand commit -Am.
+   runcommand rollback
+  repository tip rolled back to revision 3 (undo commit)
+  working directory now based on revision 3
+   runcommand phase -r .
+  3: public
+  
+  testing branch:
+  
+   runcommand branch
+  default
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+   runcommand branch
+  foo
+  marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
+  
+  testing hgignore:
+  
+   runcommand commit -Am.
+  adding .hgignore
+   runcommand status -i -u
+  I ignored-file
+  
+  testing phasecacheafterstrip:
+  
+   runcommand update -C 0
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (leaving bookmark bm3)
+   runcommand commit -Am. a
+  created new head
+   runcommand log -Gq
+  @  5:731265503d86
+  |
+  | o  4:7966c8e3734d
+  | |
+  | o  3:b9b85890c400
+  | |
+  | o  2:aef17e88f5f0
+  | |
+  | o  1:d3a0a68be6de
+  |/
+  o  0:eff892de26ec
+  
+   runcommand phase -p .
+   runcommand phase .
+  5: public
+   runcommand branches
+  default                        1:731265503d86
+  
+  testing obsolete:
+  
+   runcommand up null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+   runcommand phase -df tip
+   runcommand log --hidden
+  changeset:   1:731265503d86
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     .
+  
+  changeset:   0:eff892de26ec
+  bookmark:    bm1
+  bookmark:    bm2
+  bookmark:    bm3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+   runcommand log
+  changeset:   0:eff892de26ec
+  bookmark:    bm1
+  bookmark:    bm2
+  bookmark:    bm3
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  
+  testing mqoutsidechanges:
+  
+   runcommand qapplied
+   runcommand qapplied
+  0.diff
+   runcommand qpop --all
+  popping 0.diff
+  patch queue now empty
+   runcommand qqueue --active
+  foo
+  
+  testing getpass:
+  
+   runcommand debuggetpass --config ui.interactive=True
+  password: 1234
+  
+  testing hellomessage:
+  
+  o, 'capabilities: getencoding runcommand\nencoding: ***'
+   runcommand id
+  abort: there is no Mercurial repository here (.hg not found)
+   [255]
+  
+  testing startwithoutrepo:
+  
+   runcommand init repo2
+   runcommand id -R repo2
+  000000000000 tip
