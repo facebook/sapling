@@ -68,7 +68,7 @@ Mercurial uses these rules when deciding which merge tool to use:
    it will by default not be used for symlinks and binary files.
 
 7. If the file to be merged is not binary and is not a symlink, then
-   ``internal:merge`` is used.
+   internal ``:merge`` is used.
 
 8. The merge of the file fails and must be resolved before commit.
 

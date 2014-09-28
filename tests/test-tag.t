@@ -517,7 +517,7 @@ detect merge tag conflicts
   merging .hgtags
   automatic .hgtags merge failed
   the following 1 tags are in conflict: t7
-  automatic tag merging of .hgtags failed! (use 'hg resolve --tool internal:merge' or another merge tool of your choice)
+  automatic tag merging of .hgtags failed! (use 'hg resolve --tool :merge' or another merge tool of your choice)
   2 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

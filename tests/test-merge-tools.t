@@ -970,7 +970,7 @@ internal merge cannot handle symlinks and shouldn't try:
   $ hg commit -qm 'f is symlink'
   $ hg merge -r 2 --tool internal:merge
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon

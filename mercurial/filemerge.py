@@ -25,10 +25,10 @@ internals = {}
 def internaltool(name, trymerge, onfailure=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
-        fullname = 'internal:' + name
+        fullname = ':' + name
         func.__doc__ = "``%s``\n" % fullname + func.__doc__.strip()
         internals[fullname] = func
-        internals[':' + name] = func
+        internals['internal:' + name] = func
         func.trymerge = trymerge
         func.onfailure = onfailure
         return func
@@ -112,8 +112,8 @@ def _picktool(repo, ui, path, binary, symlink):
 
     # internal merge or prompt as last resort
     if symlink or binary:
-        return "internal:prompt", None
-    return "internal:merge", None
+        return ":prompt", None
+    return ":merge", None
 
 def _eoltype(data):
     "Guess the EOL type of a file"
@@ -217,7 +217,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     of merge."""
     tool, toolpath, binary, symlink = toolconf
     if symlink:
-        repo.ui.warn(_('warning: internal:merge cannot merge symlinks '
+        repo.ui.warn(_('warning: internal :merge cannot merge symlinks '
                        'for %s\n') % fcd.path())
         return False, 1
     r = _premerge(repo, toolconf, files, labels=labels)
@@ -247,7 +247,7 @@ def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
 @internaltool('tagmerge', True,
               _("automatic tag merging of %s failed! "
-                "(use 'hg resolve --tool internal:merge' or another merge "
+                "(use 'hg resolve --tool :merge' or another merge "
                 "tool of your choice)\n"))
 def _itagmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """

@@ -40,7 +40,7 @@ Symlink is local parent, executable is other:
   picked tool 'internal:merge' for a (binary False symlink True)
   merging a
   my a@521a1e40188f+ other a@3574f3e69b1c ancestor a@c334dc3be0da
-  warning: internal:merge cannot merge symlinks for a
+  warning: internal :merge cannot merge symlinks for a
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -74,7 +74,7 @@ Symlink is other parent, executable is local:
   picked tool 'internal:merge' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
-  warning: internal:merge cannot merge symlinks for a
+  warning: internal :merge cannot merge symlinks for a
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -106,7 +106,7 @@ Update to link with local change should cause a merge prompt (issue3200):
    a: versions differ -> m
   updating: a 1/1 files (100.00%)
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
-  picked tool 'internal:prompt' for a (binary False symlink True)
+  picked tool ':prompt' for a (binary False symlink True)
    no tool found to merge a
   keep (l)ocal or take (o)ther? l
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -138,7 +138,7 @@ where that was what happened.
   $ hg ci -qm2
   $ hg merge
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -150,7 +150,7 @@ where that was what happened.
   $ hg up -Cqr1
   $ hg merge
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -177,7 +177,7 @@ Test removed 'x' flag merged with change to symlink
   $ hg ci -qm2
   $ hg merge
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -189,7 +189,7 @@ Test removed 'x' flag merged with change to symlink
   $ hg up -Cqr1
   $ hg merge
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -271,13 +271,13 @@ h: l vs l, different
   merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
   warning: cannot merge flags for c
   merging d
-  warning: internal:merge cannot merge symlinks for d
+  warning: internal :merge cannot merge symlinks for d
   merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   merging h
-  warning: internal:merge cannot merge symlinks for h
+  warning: internal :merge cannot merge symlinks for h
   merging h incomplete! (edit conflicts, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 5 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -332,13 +332,13 @@ h: l vs l, different
   merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
   warning: cannot merge flags for c
   merging d
-  warning: internal:merge cannot merge symlinks for d
+  warning: internal :merge cannot merge symlinks for d
   merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
   merging f
-  warning: internal:merge cannot merge symlinks for f
+  warning: internal :merge cannot merge symlinks for f
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   merging h
-  warning: internal:merge cannot merge symlinks for h
+  warning: internal :merge cannot merge symlinks for h
   merging h incomplete! (edit conflicts, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 5 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
