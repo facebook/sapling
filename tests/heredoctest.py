@@ -1,7 +1,6 @@
 import sys
 
 globalvars = {}
-localvars = {}
 lines = sys.stdin.readlines()
 while lines:
     l = lines.pop(0)
@@ -14,6 +13,6 @@ while lines:
             snippet += "\n" + l[4:]
         c = compile(snippet, '<heredoc>', 'single')
         try:
-            exec c in globalvars, localvars
+            exec c in globalvars
         except Exception, inst:
             print repr(inst)

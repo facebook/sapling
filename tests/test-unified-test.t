@@ -37,6 +37,11 @@ Doctest commands:
   z
   >>> print
   
+  >>> foo = 'global name'
+  >>> def func():
+  ...     print foo, 'should be visible in func()'
+  >>> func()
+  global name should be visible in func()
 
 Regular expressions:
 
