@@ -32,7 +32,7 @@ def sep(text):
 
 def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
                outfilter=lambda x: x):
-    print ' runcommand', ' '.join(args)
+    print '*** runcommand', ' '.join(args)
     sys.stdout.flush()
     server.stdin.write('runcommand\n')
     writeblock(server, '\0'.join(args))
