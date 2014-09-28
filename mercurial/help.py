@@ -129,11 +129,7 @@ def loaddoc(topic):
     """Return a delayed loader for help/topic.txt."""
 
     def loader():
-        for dir in ('.', '..'):
-            docdir = os.path.join(util.datapath, dir, 'help')
-            if os.path.isdir(docdir):
-                break
-
+        docdir = os.path.join(util.datapath, 'help')
         path = os.path.join(docdir, topic + ".txt")
         doc = gettext(util.readfile(path))
         for rewriter in helphooks.get(topic, []):
