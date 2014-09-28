@@ -28,6 +28,7 @@ def internaltool(name, trymerge, onfailure=None):
         fullname = 'internal:' + name
         func.__doc__ = "``%s``\n" % fullname + func.__doc__.strip()
         internals[fullname] = func
+        internals[':' + name] = func
         func.trymerge = trymerge
         func.onfailure = onfailure
         return func

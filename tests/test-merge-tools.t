@@ -425,7 +425,7 @@ ui.merge specifies internal:fail:
   # hg stat
   M f
 
-ui.merge specifies internal:local:
+ui.merge specifies :local (without internal prefix):
 
   $ beforemerge
   [merge-tools]
@@ -433,7 +433,7 @@ ui.merge specifies internal:local:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:local
+  $ hg merge -r 2 --config ui.merge=:local
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ aftermerge
