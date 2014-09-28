@@ -8,19 +8,15 @@
   $ hg init repo
   $ cd repo
 
-  >>> import re
   >>> from hgclient import readchannel, runcommand, check
   >>> @check
   ... def hellomessage(server):
   ...     ch, data = readchannel(server)
-  ...     # escaping python tests output not supported
-  ...     print '%c, %r' % (ch, re.sub('encoding: [a-zA-Z0-9-]+',
-  ...                                  'encoding: ***', data))
-  ... 
+  ...     print '%c, %r' % (ch, data)
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
-  o, 'capabilities: getencoding runcommand\nencoding: ***'
+  o, 'capabilities: getencoding runcommand\nencoding: *' (glob)
    runcommand id
   000000000000 tip
 
@@ -523,19 +519,15 @@ start without repository:
 
   $ cd ..
 
-  >>> import re
   >>> from hgclient import readchannel, runcommand, check
   >>> @check
   ... def hellomessage(server):
   ...     ch, data = readchannel(server)
-  ...     # escaping python tests output not supported
-  ...     print '%c, %r' % (ch, re.sub('encoding: [a-zA-Z0-9-]+',
-  ...                                  'encoding: ***', data))
-  ... 
+  ...     print '%c, %r' % (ch, data)
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
-  o, 'capabilities: getencoding runcommand\nencoding: ***'
+  o, 'capabilities: getencoding runcommand\nencoding: *' (glob)
    runcommand id
   abort: there is no Mercurial repository here (.hg not found)
    [255]
