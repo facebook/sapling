@@ -357,7 +357,7 @@ def _diverge(ui, b, path, localmarks):
             n = '%s@%s' % (b, p)
     return n
 
-def updatefromremote(ui, repo, remotemarks, path, explicit=()):
+def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
     ui.debug("checking for updated bookmarks\n")
     localmarks = repo._bookmarks
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
@@ -397,10 +397,11 @@ def updatefromremote(ui, repo, remotemarks, path, explicit=()):
                             _("importing bookmark %s\n") % (b, b)))
 
     if changed:
+        tr = trfunc()
         for b, node, writer, msg in sorted(changed):
             localmarks[b] = node
             writer(msg)
-        localmarks.write()
+        localmarks.recordchange(tr)
 
 def diff(ui, dst, src):
     ui.status(_("searching for changed bookmarks\n"))

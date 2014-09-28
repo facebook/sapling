@@ -1015,6 +1015,7 @@ def _pullbookmarks(pullop):
     remotebookmarks = pullop.remotebookmarks
     bookmod.updatefromremote(repo.ui, repo, remotebookmarks,
                              pullop.remote.url(),
+                             pullop.gettransaction,
                              explicit=pullop.explicitbookmarks)
 
 def _pullobsolete(pullop):
