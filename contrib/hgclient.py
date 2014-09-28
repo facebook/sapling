@@ -63,9 +63,6 @@ def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
                 return
 
 def check(func, repopath=None):
-    print
-    print 'testing %s:' % func.__name__
-    print
     sys.stdout.flush()
     server = connect(repopath)
     try:

@@ -20,9 +20,6 @@
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
-  
-  testing hellomessage:
-  
   o, 'capabilities: getencoding runcommand\nencoding: ***'
    runcommand id
   000000000000 tip
@@ -31,9 +28,6 @@
   >>> @check
   ... def unknowncommand(server):
   ...     server.stdin.write('unknowncommand\n')
-  
-  testing unknowncommand:
-  
   abort: unknown command unknowncommand
 
   >>> from hgclient import readchannel, runcommand, check
@@ -59,9 +53,6 @@
   ... 
   ...     # negative return code should be masked
   ...     runcommand(server, ['id', '-runknown'])
-  
-  testing checkruncommand:
-  
    runcommand 
   Mercurial Distributed SCM
   
@@ -108,9 +99,6 @@
   ... 
   ...     # server exits with 1 if the pipe closed while reading the command
   ...     print 'server exit code =', server.wait()
-  
-  testing inputeof:
-  
   server exit code = 1
 
   >>> import cStringIO
@@ -136,9 +124,6 @@
   ... 
   ...     runcommand(server, ['import', '-'], input=cStringIO.StringIO(patch))
   ...     runcommand(server, ['log'])
-  
-  testing serverinput:
-  
    runcommand import -
   applying patch from stdin
    runcommand log
@@ -159,9 +144,6 @@ check that --cwd doesn't persist between requests:
   ...     readchannel(server)
   ...     runcommand(server, ['--cwd', 'foo', 'st', 'bar'])
   ...     runcommand(server, ['st', 'foo/bar'])
-  
-  testing cwd:
-  
    runcommand --cwd foo st bar
   ? bar
    runcommand st foo/bar
@@ -189,9 +171,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     # but not for this repo
   ...     runcommand(server, ['init', 'foo'])
   ...     runcommand(server, ['-R', 'foo', 'showconfig', 'ui', 'defaults'])
-  
-  testing localhgrc:
-  
    runcommand showconfig
   bundle.mainreporoot=$TESTTMP/repo
   defaults.backout=-d "0 0"
@@ -238,9 +217,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...                         'hooks.pre-identify=python:hook.hook',
   ...                         'id'],
   ...                input=cStringIO.StringIO('some input'))
-  
-  testing hookoutput:
-  
    runcommand --config hooks.pre-identify=python:hook.hook id
   hook talking
   now try to read something: 'some input'
@@ -258,9 +234,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     os.system('hg ci -Am2')
   ...     runcommand(server, ['tip'])
   ...     runcommand(server, ['status'])
-  
-  testing outsidechanges:
-  
    runcommand status
   M a
    runcommand tip
@@ -294,9 +267,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     f.close()
   ...     runcommand(server, ['commit', '-Amm'])
   ...     runcommand(server, ['bookmarks'])
-  
-  testing bookmarks:
-  
    runcommand bookmarks
   no bookmarks set
    runcommand bookmarks
@@ -320,9 +290,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['id', '-t', '-r', '0'])
   ...     os.system('hg tag -r 0 foo')
   ...     runcommand(server, ['id', '-t', '-r', '0'])
-  
-  testing tagscache:
-  
    runcommand id -t -r 0
   
    runcommand id -t -r 0
@@ -336,9 +303,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['phase', '-r', '.'])
   ...     os.system('hg phase -r . -p')
   ...     runcommand(server, ['phase', '-r', '.'])
-  
-  testing setphase:
-  
    runcommand phase -r .
   3: draft
    runcommand phase -r .
@@ -353,9 +317,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['commit', '-Am.'])
   ...     runcommand(server, ['rollback'])
   ...     runcommand(server, ['phase', '-r', '.'])
-  
-  testing rollback:
-  
    runcommand phase -r . -p
   no phases changed
    [1]
@@ -375,9 +336,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     os.system('hg branch foo')
   ...     runcommand(server, ['branch'])
   ...     os.system('hg branch default')
-  
-  testing branch:
-  
    runcommand branch
   default
   marked working directory as branch foo
@@ -401,9 +359,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     f.write('ignored-file')
   ...     f.close()
   ...     runcommand(server, ['status', '-i', '-u'])
-  
-  testing hgignore:
-  
    runcommand commit -Am.
   adding .hgignore
    runcommand status -i -u
@@ -433,9 +388,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ... 
   ...     # shouldn't raise "7966c8e3734d: no node!"
   ...     runcommand(server, ['branches'])
-  
-  testing phasecacheafterstrip:
-  
    runcommand update -C 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (leaving bookmark bm3)
@@ -483,9 +435,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     os.system(cmd)
   ...     runcommand(server, ['log', '--hidden'])
   ...     runcommand(server, ['log'])
-  
-  testing obsolete:
-  
    runcommand up null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
    runcommand phase -df tip
@@ -536,9 +485,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     os.system('hg qqueue --create foo')
   ...     # repo.mq should be recreated to point to new queue
   ...     runcommand(server, ['qqueue', '--active'])
-  
-  testing mqoutsidechanges:
-  
    runcommand qapplied
    runcommand qapplied
   0.diff
@@ -569,9 +515,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['debuggetpass', '--config',
   ...                         'ui.interactive=True'],
   ...                input=cStringIO.StringIO('1234\n'))
-  
-  testing getpass:
-  
    runcommand debuggetpass --config ui.interactive=True
   password: 1234
 
@@ -592,9 +535,6 @@ start without repository:
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
-  
-  testing hellomessage:
-  
   o, 'capabilities: getencoding runcommand\nencoding: ***'
    runcommand id
   abort: there is no Mercurial repository here (.hg not found)
@@ -606,9 +546,6 @@ start without repository:
   ...     readchannel(server)
   ...     runcommand(server, ['init', 'repo2'])
   ...     runcommand(server, ['id', '-R', 'repo2'])
-  
-  testing startwithoutrepo:
-  
    runcommand init repo2
    runcommand id -R repo2
   000000000000 tip
