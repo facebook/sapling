@@ -2619,15 +2619,15 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  (marks, old.hex(), hex(newid)))
                         marks[bm] = newid
                     marks.recordchange(tr)
-            #commit the whole amend process
-            if createmarkers and newid != old.node():
-                # mark the new changeset as successor of the rewritten one
-                new = repo[newid]
-                obs = [(old, (new,))]
-                if node:
-                    obs.append((ctx, ()))
+                #commit the whole amend process
+                if createmarkers:
+                    # mark the new changeset as successor of the rewritten one
+                    new = repo[newid]
+                    obs = [(old, (new,))]
+                    if node:
+                        obs.append((ctx, ()))
 
-                obsolete.createmarkers(repo, obs)
+                    obsolete.createmarkers(repo, obs)
             tr.close()
         finally:
             tr.release()
