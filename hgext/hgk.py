@@ -204,10 +204,12 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                     l[chunk - x:] = [0] * (chunk - x)
                     break
                 if full is not None:
-                    l[x] = repo[i + x]
-                    l[x].changeset() # force reading
+                    if (i + x) in repo:
+                        l[x] = repo[i + x]
+                        l[x].changeset() # force reading
                 else:
-                    l[x] = 1
+                    if (i + x) in repo:
+                        l[x] = 1
             for x in xrange(chunk - 1, -1, -1):
                 if l[x] != 0:
                     yield (i + x, full is not None and l[x] or None)
@@ -259,6 +261,8 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
     # walk the repository looking for commits that are in our
     # reachability graph
     for i, ctx in chlogwalk():
+        if i not in repo:
+            continue
         n = repo.changelog.node(i)
         mask = is_reachable(want_sha1, reachable, n)
         if mask:
