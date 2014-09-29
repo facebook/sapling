@@ -166,7 +166,7 @@ push
   $ hg -R main push other --rev eea13746799a --bookmark book_eea1
   pushing to other
   searching for changes
-  pre-close-tip:eea13746799a draft 
+  pre-close-tip:eea13746799a draft book_eea1
   postclose-tip:eea13746799a public book_eea1
   b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
   changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_SOURCE=push HG_URL=push
@@ -201,7 +201,7 @@ pull over ssh
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_02de
-  pre-close-tip:02de42196ebe public 
+  pre-close-tip:02de42196ebe public book_02de
   postclose-tip:02de42196ebe draft book_02de
   b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=ssh://user@dummy/main
   changegroup hook: HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_SOURCE=pull HG_URL=ssh://user@dummy/main
@@ -226,7 +226,7 @@ pull over http
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_42cc
-  pre-close-tip:42ccdea3bb16 public 
+  pre-close-tip:42ccdea3bb16 public book_42cc
   postclose-tip:42ccdea3bb16 draft book_42cc
   b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/
   changegroup hook: HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/
@@ -250,7 +250,7 @@ push over ssh
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
-  remote: pre-close-tip:5fddd98957c8 draft 
+  remote: pre-close-tip:5fddd98957c8 draft book_5fdd
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
   remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1

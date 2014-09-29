@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import os
 from mercurial.i18n import _
 from mercurial.node import hex, bin
 from mercurial import encoding, error, util, obsolete, lock as lockmod
@@ -29,7 +30,16 @@ class bmstore(dict):
         dict.__init__(self)
         self._repo = repo
         try:
-            for line in repo.vfs('bookmarks'):
+            bkfile = None
+            if 'HG_PENDING' in os.environ:
+                try:
+                    bkfile = repo.vfs('bookmarks.pending')
+                except IOError, inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+            if bkfile is None:
+                bkfile = repo.vfs('bookmarks')
+            for line in bkfile:
                 line = line.strip()
                 if not line:
                     continue
