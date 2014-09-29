@@ -259,6 +259,18 @@ class changelog(revlog.revlog):
         self.checkinlinesize(tr)
 
     def readpending(self, file):
+        """read index data from a "pending" file
+
+        During a transaction, the actual changeset data is already stored in the
+        main file, but not yet finalized in the on-disk index. Instead, a
+        "pending" index is written by the transaction logic. If this function
+        is running, we are likely in a subprocess invoked in a hook. The
+        subprocess is informed that it is within a transaction and needs to
+        access its content.
+
+        This function will read all the index data out of the pending file and
+        extend the main index."""
+
         if not self.opener.exists(file):
             return # no pending data for changelog
         r = revlog.revlog(self.opener, file)
