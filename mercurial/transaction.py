@@ -205,6 +205,26 @@ class transaction(object):
         assert vfs is None or filenames == ('bookmarks',)
         self._filegenerators[genid] = (order, filenames, genfunc, vfs)
 
+    def _generatefiles(self):
+        # write files registered for generation
+        for entry in sorted(self._filegenerators.values()):
+            order, filenames, genfunc, vfs = entry
+            if vfs is None:
+                vfs = self.opener
+            files = []
+            try:
+                for name in filenames:
+                    # Some files are already backed up when creating the
+                    # localrepo. Until this is properly fixed we disable the
+                    # backup for them.
+                    if name not in ('phaseroots', 'bookmarks'):
+                        self.addbackup(name)
+                    files.append(vfs(name, 'w', atomictemp=True))
+                genfunc(*files)
+            finally:
+                for f in files:
+                    f.close()
+
     @active
     def find(self, file):
         if file in self.map:
@@ -246,25 +266,7 @@ class transaction(object):
     @active
     def close(self):
         '''commit the transaction'''
-        # write files registered for generation
-        for entry in sorted(self._filegenerators.values()):
-            order, filenames, genfunc, vfs = entry
-            if vfs is None:
-                vfs = self.opener
-            files = []
-            try:
-                for name in filenames:
-                    # Some files are already backed up when creating the
-                    # localrepo. Until this is properly fixed we disable the
-                    # backup for them.
-                    if name not in ('phaseroots', 'bookmarks'):
-                        self.addbackup(name)
-                    files.append(vfs(name, 'w', atomictemp=True))
-                genfunc(*files)
-            finally:
-                for f in files:
-                    f.close()
-
+        self._generatefiles()
         if self.count == 1 and self.onclose is not None:
             self.onclose()
 
