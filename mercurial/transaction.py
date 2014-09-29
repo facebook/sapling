@@ -262,7 +262,7 @@ class transaction(object):
         # but for bookmarks that are handled outside this mechanism.
         self._filegenerators[genid] = (order, filenames, genfunc, location)
 
-    def _generatefiles(self):
+    def _generatefiles(self, suffix=''):
         # write files registered for generation
         for entry in sorted(self._filegenerators.values()):
             order, filenames, genfunc, location = entry
@@ -270,7 +270,11 @@ class transaction(object):
             files = []
             try:
                 for name in filenames:
-                    self.addbackup(name, location=location)
+                    name += suffix
+                    if suffix:
+                        self.registertmp(name, location=location)
+                    else:
+                        self.addbackup(name, location=location)
                     files.append(vfs(name, 'w', atomictemp=True))
                 genfunc(*files)
             finally:
