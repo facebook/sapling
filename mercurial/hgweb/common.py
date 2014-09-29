@@ -112,9 +112,9 @@ def _statusmessage(code):
 def statusmessage(code, message=None):
     return '%d %s' % (code, message or _statusmessage(code))
 
-def get_stat(spath):
-    """stat changelog if it exists, spath otherwise"""
-    cl_path = os.path.join(spath, "00changelog.i")
+def get_stat(spath, fn="00changelog.i"):
+    """stat fn (00changelog.i by default) if it exists, spath otherwise"""
+    cl_path = os.path.join(spath, fn)
     if os.path.exists(cl_path):
         return os.stat(cl_path)
     else:
