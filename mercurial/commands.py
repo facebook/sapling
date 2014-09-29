@@ -4153,7 +4153,7 @@ def log(ui, repo, *pats, **opts):
 
           hg log -T list
 
-      - check if a given changeset is included is a tagged release::
+      - check if a given changeset is included in a tagged release::
 
           hg log -r "a21ccf and ancestor(1.9)"
 
