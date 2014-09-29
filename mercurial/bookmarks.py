@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex, bin
-from mercurial import encoding, error, util, obsolete
+from mercurial import encoding, error, util, obsolete, lock as lockmod
 import errno
 
 class bmstore(dict):
@@ -235,8 +235,11 @@ def listbookmarks(repo):
     return d
 
 def pushbookmark(repo, key, old, new):
-    w = repo.wlock()
+    w = l = tr = None
     try:
+        w = repo.wlock()
+        l = repo.lock()
+        tr = repo.transaction('bookmarks')
         marks = repo._bookmarks
         existing = hex(marks.get(key, ''))
         if existing != old and existing != new:
@@ -247,10 +250,11 @@ def pushbookmark(repo, key, old, new):
             if new not in repo:
                 return False
             marks[key] = repo[new].node()
-        marks.write()
+        marks.recordchange(tr)
+        tr.close()
         return True
     finally:
-        w.release()
+        lockmod.release(tr, l, w)
 
 def compare(repo, srcmarks, dstmarks,
             srchex=None, dsthex=None, targets=None):
