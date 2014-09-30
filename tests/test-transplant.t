@@ -508,15 +508,20 @@ test interactive transplant
   > c
   > EOF
   0:17ab29e464c6
-  apply changeset? [ynmpcq?]: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  apply changeset? [ynmpcq?]: p
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/r1	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +r1
-  apply changeset? [ynmpcq?]: 1:d11e3596cc1a
-  apply changeset? [ynmpcq?]: 2:37a1297eb21b
-  apply changeset? [ynmpcq?]: 3:722f4667af76
-  apply changeset? [ynmpcq?]: 4:a53251cdf717
-  apply changeset? [ynmpcq?]:  (no-eol)
+  apply changeset? [ynmpcq?]: y
+  1:d11e3596cc1a
+  apply changeset? [ynmpcq?]: n
+  2:37a1297eb21b
+  apply changeset? [ynmpcq?]: n
+  3:722f4667af76
+  apply changeset? [ynmpcq?]: m
+  4:a53251cdf717
+  apply changeset? [ynmpcq?]: c
   $ hg log -G --template "{node|short}"
   @    88be5dde5260
   |\
@@ -533,16 +538,19 @@ test interactive transplant
   > q
   > EOF
   1:d11e3596cc1a
-  apply changeset? [ynmpcq?]: unrecognized response
-  apply changeset? [ynmpcq?]: y: yes, transplant this changeset
+  apply changeset? [ynmpcq?]: x
+  unrecognized response
+  apply changeset? [ynmpcq?]: ?
+  y: yes, transplant this changeset
   n: no, skip this changeset
   m: merge at this changeset
   p: show patch
   c: commit selected changesets
   q: quit and cancel transplant
   ?: ? (show this help)
-  apply changeset? [ynmpcq?]: 4:a53251cdf717
-  apply changeset? [ynmpcq?]:  (no-eol)
+  apply changeset? [ynmpcq?]: y
+  4:a53251cdf717
+  apply changeset? [ynmpcq?]: q
   $ hg heads --template "{node|short}\n"
   88be5dde5260
 

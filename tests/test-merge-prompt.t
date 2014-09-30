@@ -71,8 +71,10 @@ Interactive merge:
   > d
   > EOF
   local changed file1 which remote deleted
-  use (c)hanged version or (d)elete? remote changed file2 which local deleted
-  use (c)hanged version or leave (d)eleted? 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  use (c)hanged version or (d)elete? c
+  remote changed file2 which local deleted
+  use (c)hanged version or leave (d)eleted? d
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ status
@@ -98,14 +100,19 @@ Interactive merge with bad input:
   > c
   > EOF
   local changed file1 which remote deleted
-  use (c)hanged version or (d)elete? unrecognized response
+  use (c)hanged version or (d)elete? foo
+  unrecognized response
   local changed file1 which remote deleted
-  use (c)hanged version or (d)elete? unrecognized response
+  use (c)hanged version or (d)elete? bar
+  unrecognized response
   local changed file1 which remote deleted
-  use (c)hanged version or (d)elete? remote changed file2 which local deleted
-  use (c)hanged version or leave (d)eleted? unrecognized response
+  use (c)hanged version or (d)elete? d
   remote changed file2 which local deleted
-  use (c)hanged version or leave (d)eleted? 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  use (c)hanged version or leave (d)eleted? baz
+  unrecognized response
+  remote changed file2 which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ status
@@ -127,7 +134,8 @@ Interactive merge with not enough input:
   > d
   > EOF
   local changed file1 which remote deleted
-  use (c)hanged version or (d)elete? remote changed file2 which local deleted
+  use (c)hanged version or (d)elete? d
+  remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? abort: response expected
   [255]
 

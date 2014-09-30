@@ -291,7 +291,8 @@ handle subrepos safely on qrecord
   % qrecord --config ui.interactive=1 -m0 0.diff
   diff --git a/.hgsub b/.hgsub
   new file mode 100644
-  examine changes to '.hgsub'? [Ynesfdaq?] 
+  examine changes to '.hgsub'? [Ynesfdaq?] y
+  
   abort: uncommitted changes in subrepository sub
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
@@ -299,7 +300,8 @@ handle subrepos safely on qrecord
   % qrecord --config ui.interactive=1 -m0 0.diff
   diff --git a/.hgsub b/.hgsub
   new file mode 100644
-  examine changes to '.hgsub'? [Ynesfdaq?] 
+  examine changes to '.hgsub'? [Ynesfdaq?] y
+  
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -315,11 +317,13 @@ handle subrepos safely on qrecord
   % qrecord --config ui.interactive=1 -m1 1.diff
   diff --git a/.hgsub b/.hgsub
   1 hunks, 1 lines changed
-  examine changes to '.hgsub'? [Ynesfdaq?] 
+  examine changes to '.hgsub'? [Ynesfdaq?] y
+  
   @@ -1,1 +1,2 @@
    sub = sub
   +sub2 = sub2
-  record this change to '.hgsub'? [Ynesfdaq?] 
+  record this change to '.hgsub'? [Ynesfdaq?] y
+  
   abort: uncommitted changes in subrepository sub2
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
@@ -327,11 +331,13 @@ handle subrepos safely on qrecord
   % qrecord --config ui.interactive=1 -m1 1.diff
   diff --git a/.hgsub b/.hgsub
   1 hunks, 1 lines changed
-  examine changes to '.hgsub'? [Ynesfdaq?] 
+  examine changes to '.hgsub'? [Ynesfdaq?] y
+  
   @@ -1,1 +1,2 @@
    sub = sub
   +sub2 = sub2
-  record this change to '.hgsub'? [Ynesfdaq?] 
+  record this change to '.hgsub'? [Ynesfdaq?] y
+  
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -352,7 +358,8 @@ handle subrepos safely on qrecord
   % qrecord --config ui.interactive=1 -m2 2.diff
   diff --git a/.hgsub b/.hgsub
   deleted file mode 100644
-  examine changes to '.hgsub'? [Ynesfdaq?] 
+  examine changes to '.hgsub'? [Ynesfdaq?] y
+  
   % debugsub should be empty
 
   $ hg qpop -qa
@@ -367,7 +374,8 @@ handle subrepos safely on qrecord
   % qrecord --config ui.interactive=1 -m3 3.diff
   diff --git a/.hgsub b/.hgsub
   deleted file mode 100644
-  examine changes to '.hgsub'? [Ynesfdaq?] 
+  examine changes to '.hgsub'? [Ynesfdaq?] y
+  
   % debugsub should be empty
 
   $ cd ..

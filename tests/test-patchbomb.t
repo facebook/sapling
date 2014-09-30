@@ -82,7 +82,8 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
    a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  are you sure you want to send (yn)? abort: patchbomb canceled
+  are you sure you want to send (yn)? n
+  abort: patchbomb canceled
   [255]
 
   $ echo b > b

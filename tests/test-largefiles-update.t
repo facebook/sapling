@@ -64,7 +64,8 @@ Test that "hg merge" updates largefiles from "other" correctly
   largefile large1 has a merge conflict
   ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
   keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
-  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? merging normal1
+  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? o
+  merging normal1
   warning: conflicts during merge.
   merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
   getting changed largefiles
@@ -249,7 +250,8 @@ Test that linear merge can detect modification (and conflict) correctly
   largefile large1 has a merge conflict
   ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
   keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
-  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? getting changed largefiles
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? o
+  getting changed largefiles
   1 largefiles updated, 0 removed
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg status -A large1
@@ -432,14 +434,19 @@ Test that the internal linear merging works correctly
   > l
   > EOF
    subrepository sub diverged (local revision: f74e50bd9e55, remote revision: d65e59e952a9)
-  (M)erge, keep (l)ocal or keep (r)emote?  subrepository sources for sub differ (in checked out version)
+  (M)erge, keep (l)ocal or keep (r)emote? m
+   subrepository sources for sub differ (in checked out version)
   use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)?
-   local changed .hglf/large2 which remote deleted
-  use (c)hanged version or (d)elete? remote turned local largefile large2 into a normal file
-  keep (l)argefile or use (n)ormal file? largefile large1 has a merge conflict
+   r
+  local changed .hglf/large2 which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote turned local largefile large2 into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  largefile large1 has a merge conflict
   ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
   keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
-  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? 2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
+  2 files updated, 1 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R sub status -A sub/large1
@@ -472,7 +479,8 @@ it is aborted by conflict.
   largefile large1 has a merge conflict
   ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
   keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
-  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? merging normal1
+  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? o
+  merging normal1
   warning: conflicts during merge.
   merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

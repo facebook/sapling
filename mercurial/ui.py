@@ -681,7 +681,11 @@ class ui(object):
         try:
             r = self._readline(self.label(msg, 'ui.prompt'))
             if not r:
-                return default
+                r = default
+            # sometimes self.interactive disagrees with isatty,
+            # show default response
+            if not util.isatty(self.fin):
+                self.write(r, "\n")
             return r
         except EOFError:
             raise util.Abort(_('response expected'))
