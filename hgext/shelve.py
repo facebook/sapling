@@ -37,7 +37,7 @@ testedwith = 'internal'
 class shelvedfile(object):
     """Helper for the file storing a single shelve
 
-    Handles common functions on shelve files (.hg/.files/.patch) using
+    Handles common functions on shelve files (.hg/.patch) using
     the vfs layer"""
     def __init__(self, repo, name, filetype=None):
         self.repo = repo
@@ -169,12 +169,7 @@ def createcmd(ui, repo, pats, opts):
         for i in xrange(1, 100):
             yield '%s-%02d' % (label, i)
 
-    shelvedfiles = []
-
     def commitfunc(ui, repo, message, match, opts):
-        # check modified, added, removed, deleted only
-        for flist in repo.status(match=match)[:4]:
-            shelvedfiles.extend(flist)
         hasmq = util.safehasattr(repo, 'mq')
         if hasmq:
             saved, repo.mq.checkapplied = repo.mq.checkapplied, False
@@ -239,9 +234,6 @@ def createcmd(ui, repo, pats, opts):
                 ui.status(_("nothing changed\n"))
             return 1
 
-        fp = shelvedfile(repo, name, 'files').opener('wb')
-        fp.write('\0'.join(shelvedfiles))
-
         bases = list(publicancestors(repo[node]))
         cg = changegroup.changegroupsubset(repo, bases, [node], 'shelve')
         shelvedfile(repo, name, 'hg').writebundle(cg)
@@ -271,7 +263,7 @@ def cleanupcmd(ui, repo):
         wlock = repo.wlock()
         for (name, _type) in repo.vfs.readdir('shelved'):
             suffix = name.rsplit('.', 1)[-1]
-            if suffix in ('hg', 'files', 'patch'):
+            if suffix in ('hg', 'patch'):
                 shelvedfile(repo, name).unlink()
     finally:
         lockmod.release(wlock)
@@ -285,7 +277,7 @@ def deletecmd(ui, repo, pats):
         wlock = repo.wlock()
         try:
             for name in pats:
-                for suffix in 'hg files patch'.split():
+                for suffix in 'hg patch'.split():
                     shelvedfile(repo, name, suffix).unlink()
         except OSError, err:
             if err.errno != errno.ENOENT:
@@ -424,7 +416,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
 def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
     if not opts['keep']:
-        for filetype in 'hg files patch'.split():
+        for filetype in 'hg patch'.split():
             shelvedfile(repo, name, filetype).unlink()
 
 def unshelvecontinue(ui, repo, state, opts):
@@ -533,7 +525,7 @@ def unshelve(ui, repo, *shelved, **opts):
     else:
         basename = shelved[0]
 
-    if not shelvedfile(repo, basename, 'files').exists():
+    if not shelvedfile(repo, basename, 'patch').exists():
         raise util.Abort(_("shelved change '%s' not found") % basename)
 
     oldquiet = ui.quiet
