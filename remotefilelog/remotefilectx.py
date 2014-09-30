@@ -77,7 +77,16 @@ class remotefilectx(context.filectx):
 
     def ancestormap(self):
         if not self._ancestormap:
-            self._ancestormap = self.filelog().ancestormap(self._filenode)
+            # Get the history relative to the current commit when possible.
+            # Don't just use self.changectx() because it calls ancestormap,
+            # which results in infinite recursion.
+            relativeto = None
+            if '_changeid' in self.__dict__:
+                relativeto = self._changeid
+            elif '_changectx' in self.__dict__:
+                changectx = self._changectx.node()
+            self._ancestormap = self.filelog().ancestormap(self._filenode,
+                relativeto=relativeto)
 
         return self._ancestormap
 
