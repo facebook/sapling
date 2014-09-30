@@ -3219,8 +3219,9 @@ def files(ui, repo, *pats, **opts):
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
+    ds = repo.dirstate
     for f in ctx.matches(m):
-        if rev is None and repo.dirstate[f] == 'r':
+        if rev is None and ds[f] == 'r':
             continue
         fm.startitem()
         if ui.verbose:
