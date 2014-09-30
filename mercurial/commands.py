@@ -3219,7 +3219,7 @@ def files(ui, repo, *pats, **opts):
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
-    for f in ctx.walk(m):
+    for f in ctx.matches(m):
         if rev is None and repo.dirstate[f] in 'r?!':
             continue
         fm.startitem()
