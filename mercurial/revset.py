@@ -2063,8 +2063,10 @@ def match(ui, spec, repo=None):
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
         if util.safehasattr(subset, 'set'):
-            return getset(repo, subset, tree)
-        return getset(repo, baseset(subset), tree)
+            result = getset(repo, subset, tree)
+        else:
+            result = getset(repo, baseset(subset), tree)
+        return result
     return mfunc
 
 def formatspec(expr, *args):
