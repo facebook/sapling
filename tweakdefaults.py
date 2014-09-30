@@ -10,7 +10,7 @@ from mercurial import bookmarks
 from mercurial.extensions import wrapcommand
 from mercurial.i18n import _
 from hgext import rebase
-import errno, os
+import errno, os, stat, subprocess
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -107,17 +107,28 @@ def grep(ui, repo, pattern, *pats, **opts):
     if colormode == 'ansi':
         optstr += '--color=always '
 
-    includes = ''
-    if pats:
-        for pat in pats:
-            includes += '-I %s ' % util.shellquote(pat)
+    wctx = repo[None]
+    m = scmutil.match(wctx, ['.'], {'include': pats})
+    p = subprocess.Popen(
+        'xargs -0 grep --no-messages --binary-files=without-match '
+        '--with-filename --regexp=%s %s --' %
+        (util.shellquote(pattern), optstr),
+        shell=True, bufsize=-1, close_fds=util.closefds,
+        stdin=subprocess.PIPE)
 
-    return util.system("hg status --no-status --clean --modified --added "
-                       "--print0 . %s | xargs -0 grep --no-messages "
-                       "--binary-files=without-match --with-filename "
-                       "--regexp=%s %s --" %
-                       (includes, util.shellquote(pattern), optstr),
-                       out=ui.fout)
+    write = p.stdin.write
+    ds = repo.dirstate
+    getkind = stat.S_IFMT
+    lnkkind = stat.S_IFLNK
+    for f in wctx.matches(m):
+        # skip symlinks and removed files
+        t = ds._map[f]
+        if t[0] == 'r' or getkind(t[1]) == lnkkind:
+            continue
+        write(m.rel(f) + '\0')
+
+    p.stdin.close()
+    return p.wait()
 
 def _rebase(orig, ui, repo, **opts):
     if opts.get('continue') or opts.get('abort'):
