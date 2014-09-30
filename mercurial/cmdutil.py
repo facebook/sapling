@@ -1215,7 +1215,7 @@ def gettemplate(ui, tmpl, style):
     """
 
     # ui settings
-    if not tmpl and not style:
+    if not tmpl and not style: # template are stronger than style
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl:
             try:
@@ -1226,7 +1226,7 @@ def gettemplate(ui, tmpl, style):
         else:
             style = util.expandpath(ui.config('ui', 'style', ''))
 
-    if style:
+    if not tmpl and style:
         mapfile = style
         if not os.path.split(mapfile)[0]:
             mapname = (templater.templatepath('map-cmdline.' + mapfile)
