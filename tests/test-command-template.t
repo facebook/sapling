@@ -86,6 +86,11 @@ Test templates and style maps in files:
   $ hg log -l1 -T./map-simple
   8
 
+Template should precede style option
+
+  $ hg log -l1 --style default -T '{rev}\n'
+  8
+
 Default style is like normal output:
 
   $ hg log > log.out
