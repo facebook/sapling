@@ -156,7 +156,6 @@ class exact(match):
 class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
-        self._always = True
 
 class narrowmatcher(match):
     """Adapt a matcher to work on a subdirectory only.
