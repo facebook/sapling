@@ -3821,7 +3821,19 @@ def help_(ui, name=None, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    keep = ui.verbose and ['verbose'] or []
+    keep = []
+    if ui.verbose:
+        keep.append('verbose')
+    if sys.platform.startswith('win'):
+        keep.append('windows')
+    elif sys.platform == 'OpenVMS':
+        keep.append('vms')
+    elif sys.platform == 'plan9':
+        keep.append('plan9')
+    else:
+        keep.append('unix')
+        keep.append(sys.platform.lower())
+
     text = help.help_(ui, name, **opts)
 
     formatted, pruned = minirst.format(text, textwidth, keep=keep)
