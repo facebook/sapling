@@ -163,17 +163,17 @@ def removelargefiles(ui, repo, *pats, **opts):
     result = 0
 
     if after:
-        remove, forget = deleted, []
+        remove = deleted
         result = warn(modified + added + clean,
                       _('not removing %s: file still exists\n'))
     else:
-        remove, forget = deleted + clean, []
+        remove = deleted + clean
         result = warn(modified, _('not removing %s: file is modified (use -f'
                                   ' to force removal)\n'))
         result = warn(added, _('not removing %s: file has been marked for add'
                                ' (use forget to undo)\n')) or result
 
-    for f in sorted(remove + forget):
+    for f in sorted(remove):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
@@ -191,9 +191,7 @@ def removelargefiles(ui, repo, *pats, **opts):
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
             lfdirstate.remove(f)
         lfdirstate.write()
-        forget = [lfutil.standin(f) for f in forget]
         remove = [lfutil.standin(f) for f in remove]
-        repo[None].forget(forget)
         # If this is being called by addremove, let the original addremove
         # function handle this.
         if not getattr(repo, "_isaddremove", False):
