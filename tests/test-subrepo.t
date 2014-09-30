@@ -976,13 +976,11 @@ Sticky subrepositories, file changes
    subrepository s diverged (local revision: fc627a69481f, remote revision: 12a213df6fa9)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
-  use (l)ocal source (fc627a69481f) or (r)emote source (12a213df6fa9)?
-   l
+  use (l)ocal source (fc627a69481f) or (r)emote source (12a213df6fa9)? l
    subrepository t diverged (local revision: e95bcfa18a35, remote revision: 52c0adc0515a)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for t differ
-  use (l)ocal source (e95bcfa18a35) or (r)emote source (52c0adc0515a)?
-   l
+  use (l)ocal source (e95bcfa18a35) or (r)emote source (52c0adc0515a)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   925c17564ef8+ tip
@@ -1013,8 +1011,7 @@ Sticky subrepository, revision updates
    subrepository t diverged (local revision: 52c0adc0515a, remote revision: 20a0db6fbf6c)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for t differ (in checked out version)
-  use (l)ocal source (7af322bc1198) or (r)emote source (20a0db6fbf6c)?
-   l
+  use (l)ocal source (7af322bc1198) or (r)emote source (20a0db6fbf6c)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   e45c8b14af55+
@@ -1038,13 +1035,11 @@ Sticky subrepository, file changes and revision updates
    subrepository s diverged (local revision: 12a213df6fa9, remote revision: 12a213df6fa9)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
-  use (l)ocal source (02dcf1d70411) or (r)emote source (12a213df6fa9)?
-   l
+  use (l)ocal source (02dcf1d70411) or (r)emote source (12a213df6fa9)? l
    subrepository t diverged (local revision: 52c0adc0515a, remote revision: 52c0adc0515a)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for t differ
-  use (l)ocal source (7af322bc1198) or (r)emote source (52c0adc0515a)?
-   l
+  use (l)ocal source (7af322bc1198) or (r)emote source (52c0adc0515a)? l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   925c17564ef8+ tip

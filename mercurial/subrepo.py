@@ -263,13 +263,13 @@ def submerge(repo, wctx, mctx, actx, overwrite):
 def _updateprompt(ui, sub, dirty, local, remote):
     if dirty:
         msg = (_(' subrepository sources for %s differ\n'
-                 'use (l)ocal source (%s) or (r)emote source (%s)?\n'
+                 'use (l)ocal source (%s) or (r)emote source (%s)?'
                  '$$ &Local $$ &Remote')
                % (subrelpath(sub), local, remote))
     else:
         msg = (_(' subrepository sources for %s differ (in checked out '
                  'version)\n'
-                 'use (l)ocal source (%s) or (r)emote source (%s)?\n'
+                 'use (l)ocal source (%s) or (r)emote source (%s)?'
                  '$$ &Local $$ &Remote')
                % (subrelpath(sub), local, remote))
     return ui.promptchoice(msg, 0)

@@ -322,8 +322,7 @@ Sticky subrepositories, file changes
    subrepository s diverged (local revision: 2, remote revision: 3)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
-  use (l)ocal source (2) or (r)emote source (3)?
-   l
+  use (l)ocal source (2) or (r)emote source (3)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
   2+
@@ -354,8 +353,7 @@ Sticky subrepository, revision updates
    subrepository s diverged (local revision: 3, remote revision: 2)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ (in checked out version)
-  use (l)ocal source (1) or (r)emote source (2)?
-   l
+  use (l)ocal source (1) or (r)emote source (2)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
   1+
@@ -378,8 +376,7 @@ Sticky subrepository, file changes and revision updates
    subrepository s diverged (local revision: 3, remote revision: 3)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
-  use (l)ocal source (1) or (r)emote source (3)?
-   l
+  use (l)ocal source (1) or (r)emote source (3)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
   2+

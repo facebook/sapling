@@ -436,8 +436,7 @@ Test that the internal linear merging works correctly
    subrepository sub diverged (local revision: f74e50bd9e55, remote revision: d65e59e952a9)
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for sub differ (in checked out version)
-  use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)?
-   r
+  use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)? r
   local changed .hglf/large2 which remote deleted
   use (c)hanged version or (d)elete? c
   remote turned local largefile large2 into a normal file
