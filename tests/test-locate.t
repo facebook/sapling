@@ -87,6 +87,8 @@ Issue294: hg remove --after dir fails when dir.* also exists
   $ cd ..
   $ rm -r t
 
+  $ hg rm t/b
+
   $ hg locate 't/**'
   t/b (glob)
   t/e.h (glob)
@@ -96,7 +98,6 @@ Issue294: hg remove --after dir fails when dir.* also exists
   b
   dir.h/foo
   t.h
-  t/b
   t/e.h
   t/x
   $ hg files b
@@ -132,7 +133,6 @@ Issue294: hg remove --after dir fails when dir.* also exists
   ../b
   ../dir.h/foo
   ../t.h
-  ../t/b
   ../t/e.h
   ../t/x
   $ hg files .

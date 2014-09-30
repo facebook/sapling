@@ -3220,7 +3220,7 @@ def files(ui, repo, *pats, **opts):
 
     m = scmutil.match(ctx, pats, opts)
     for f in ctx.walk(m):
-        if rev is None and repo.dirstate[f] in 'R?!':
+        if rev is None and repo.dirstate[f] in 'r?!':
             continue
         fm.startitem()
         if ui.verbose:
