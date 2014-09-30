@@ -347,7 +347,7 @@ def _ancestors(repo, subset, x, followfirst=False):
     if not heads:
         return baseset()
     s = _revancestors(repo, heads, followfirst)
-    return subset.filter(s.__contains__)
+    return subset & s
 
 def ancestors(repo, subset, x):
     """``ancestors(set)``
