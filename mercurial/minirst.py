@@ -261,7 +261,10 @@ def prunecontainers(blocks, keep):
             indent = blocks[i]['indent']
             adjustment = blocks[i + 1]['indent'] - indent
             containertype = blocks[i]['lines'][0][15:]
-            prune = containertype not in keep
+            prune = True
+            for c in keep:
+                if c in containertype.split('.'):
+                    prune = False
             if prune:
                 pruned.append(containertype)
 
