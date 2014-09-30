@@ -3834,14 +3834,23 @@ def help_(ui, name=None, **opts):
         keep.append('unix')
         keep.append(sys.platform.lower())
 
+    section = None
+    if name and '.' in name:
+        name, section = name.split('.')
+
     text = help.help_(ui, name, **opts)
 
-    formatted, pruned = minirst.format(text, textwidth, keep=keep)
+    formatted, pruned = minirst.format(text, textwidth, keep=keep,
+                                       section=section)
+    if section and not formatted:
+        raise util.Abort(_("help section not found"))
+
     if 'verbose' in pruned:
         keep.append('omitted')
     else:
         keep.append('notomitted')
-    formatted, pruned = minirst.format(text, textwidth, keep=keep)
+    formatted, pruned = minirst.format(text, textwidth, keep=keep,
+                                       section=section)
     ui.write(formatted)
 
 

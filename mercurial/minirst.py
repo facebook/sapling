@@ -648,9 +648,15 @@ def formatblocks(blocks, width):
     text = ''.join(formatblock(b, width) for b in blocks)
     return text
 
-def format(text, width=80, indent=0, keep=None, style='plain'):
+def format(text, width=80, indent=0, keep=None, style='plain', section=None):
     """Parse and format the text according to width."""
     blocks, pruned = parse(text, indent, keep or [])
+    if section:
+        sections = getsections(blocks)
+        blocks = []
+        for name, nest, b in sections:
+            if name == section:
+                blocks = b
     if style == 'html':
         text = formathtml(blocks)
     else:
@@ -665,6 +671,14 @@ def getsections(blocks):
     nest = ""
     level = 0
     secs = []
+
+    def getname(b):
+        x = b['lines'][0]
+        x = x.lower().strip('"')
+        if '(' in x:
+            x = x.split('(')[0]
+        return x
+
     for b in blocks:
         if b['type'] == 'section':
             i = b['underline']
@@ -672,7 +686,14 @@ def getsections(blocks):
                 nest += i
             level = nest.index(i) + 1
             nest = nest[:level]
-            secs.append((b['lines'][0], level, [b]))
+            secs.append((getname(b), level, [b]))
+        if b['type'] == 'definition':
+            i = ' '
+            if i not in nest:
+                nest += i
+            level = nest.index(i) + 1
+            nest = nest[:level]
+            secs.append((getname(b), level, [b]))
         else:
             if not secs:
                 # add an initial empty section

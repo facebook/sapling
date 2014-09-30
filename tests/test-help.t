@@ -1046,6 +1046,25 @@ Test omit indicating for help
   
       This paragraph is never omitted, too (for topic)
 
+Test section lookup
+
+  $ hg help revset.merge
+      "merge()"
+        Changeset is a merge changeset.
+  
+  $ hg help glossary.dag
+      DAG
+          The repository of changesets of a distributed version control system
+          (DVCS) can be described as a directed acyclic graph (DAG), consisting
+          of nodes and edges, where nodes correspond to changesets and edges
+          imply a parent -> child relation. This graph can be visualized by
+          graphical tools such as "hg log --graph". In Mercurial, the DAG is
+          limited by the requirement for children to have at most two parents.
+  
+  $ hg help glossary.mcguffin
+  abort: help section not found
+  [255]
+
 Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
