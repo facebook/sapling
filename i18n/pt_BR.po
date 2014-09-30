@@ -4425,6 +4425,9 @@ msgstr "não é possível editar histórico que contenha mesclagens"
 msgid "cannot edit immutable changeset: %s"
 msgstr "não é possível editar uma revisão imutável: %s"
 
+msgid "no histedit in progress"
+msgstr "nenhuma edição de histórico em andamento"
+
 #, python-format
 msgid "malformed line \"%s\""
 msgstr "linha malformada \"%s\""
@@ -11830,6 +11833,9 @@ msgid "    See :hg:`help config` for more information about config files."
 msgstr ""
 "    Veja :hg:`help config` para mais informações sobre arquivos de "
 "configuração."
+
+msgid "    Returns 0 on success, 1 if NAME does not exist."
+msgstr "    Devolve 0 para indicar sucesso, 1 se o NOME não existir."
 
 msgid "    "
 msgstr "    "
