@@ -2218,6 +2218,14 @@ class abstractsmartset(object):
         """iterate the set in the order it is supposed to be iterated"""
         raise NotImplementedError()
 
+    # Attributes containing a function to perform a fast iteration in a given
+    # direction. A smartset can have none, one, or both defined.
+    #
+    # Default value is None instead of a function returning None to avoid
+    # initializing an iterator just for testing if a fast method exists.
+    fastasc = None
+    fastdesc = None
+
     def isascending(self):
         """True if the set will iterate in ascending order"""
         raise NotImplementedError()
