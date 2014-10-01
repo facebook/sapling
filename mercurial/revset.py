@@ -2823,7 +2823,8 @@ class _spanset(_orderedsetmixin):
     def __sub__(self, x):
         if isinstance(x, baseset):
             x = x.set()
-        return orderedlazyset(self, lambda r: r not in x,
+        filterfunc = x.__contains__
+        return orderedlazyset(self, lambda r: not filterfunc(r),
                               ascending=self.isascending())
 
     def __add__(self, x):
