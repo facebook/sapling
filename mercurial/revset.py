@@ -2195,7 +2195,93 @@ def funcsused(tree):
             funcs.add(tree[1][1])
         return funcs
 
-class baseset(list):
+class abstractsmartset(object):
+
+    def __nonzero__(self):
+        """True if the smartset is not empty"""
+        raise NotImplementedError()
+
+    def __contains__(self, rev):
+        """provide fast membership testing"""
+        raise NotImplementedError()
+
+    def __set__(self):
+        """Returns a set or a smartset containing all the elements.
+
+        The returned structure should be the fastest option for membership
+        testing.
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+    def __iter__(self):
+        """iterate the set in the order it is supposed to be iterated"""
+        raise NotImplementedError()
+
+    def isascending(self):
+        """True if the set will iterate in ascending order"""
+        raise NotImplementedError()
+
+    def ascending(self):
+        """Sorts the set in ascending order (in place).
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+    def isdescending(self):
+        """True if the set will iterate in descending order"""
+        raise NotImplementedError()
+
+    def descending(self):
+        """Sorts the set in descending order (in place).
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+    def min(self):
+        """return the minimum element in the set"""
+        raise NotImplementedError()
+
+    def max(self):
+        """return the maximum element in the set"""
+        raise NotImplementedError()
+
+    def reverse(self):
+        """reverse the expected iteration order"""
+        raise NotImplementedError()
+
+    def sort(self, reverse=True):
+        """get the set to iterate in an ascending or descending order"""
+        raise NotImplementedError()
+
+    def __and__(self, other):
+        """Returns a new object with the intersection of the two collections.
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+    def __add__(self, other):
+        """Returns a new object with the union of the two collections.
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+    def __sub__(self, other):
+        """Returns a new object with the substraction of the two collections.
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+    def filter(self, condition):
+        """Returns this smartset filtered by condition as a new smartset.
+
+        `condition` is a callable which takes a revision number and returns a
+        boolean.
+
+        This is part of the mandatory API for smartset."""
+        raise NotImplementedError()
+
+class baseset(list, abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
     operation that it should be able to perform.
 
@@ -2320,7 +2406,7 @@ class _orderedsetmixin(object):
             return self._last()
         return self._first()
 
-class lazyset(object):
+class lazyset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
     revset
@@ -2754,7 +2840,7 @@ def spanset(repo, start=None, end=None):
     return _spanset(repo, start, end)
 
 
-class _spanset(_orderedsetmixin):
+class _spanset(_orderedsetmixin, abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
 
