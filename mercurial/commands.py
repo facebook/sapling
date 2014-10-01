@@ -5786,7 +5786,7 @@ def summary(ui, repo, **opts):
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
 
-    st = list(repo.status(unknown=True))[:6]
+    st = list(repo.status(unknown=True))[:5]
 
     c = repo.dirstate.copies()
     copied, renamed = [], []
@@ -5814,7 +5814,6 @@ def summary(ui, repo, **opts):
               ui.label(_('%d copied'), 'status.copied'),
               ui.label(_('%d deleted'), 'status.deleted'),
               ui.label(_('%d unknown'), 'status.unknown'),
-              ui.label(_('%d ignored'), 'status.ignored'),
               ui.label(_('%d unresolved'), 'resolve.unresolved'),
               ui.label(_('%d subrepos'), 'status.modified')]
     t = []
@@ -5834,7 +5833,7 @@ def summary(ui, repo, **opts):
     elif (parents[0].closesbranch() and
           pnode in repo.branchheads(branch, closed=True)):
         t += _(' (head closed)')
-    elif not (st[0] or st[1] or st[2] or st[3] or st[4] or st[9]):
+    elif not (st[0] or st[1] or st[2] or st[3] or st[4] or st[8]):
         t += _(' (clean)')
         cleanworkdir = True
     elif pnode not in bheads:
