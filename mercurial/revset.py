@@ -2255,8 +2255,6 @@ class baseset(list):
         """Returns a new object with the intersection of the two collections.
 
         This is part of the mandatory API for smartset."""
-        if isinstance(other, baseset):
-            other = other.set()
         return baseset([y for y in self if y in other])
 
     def __add__(self, other):
