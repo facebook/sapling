@@ -2295,7 +2295,12 @@ class abstractsmartset(object):
         boolean.
 
         This is part of the mandatory API for smartset."""
-        raise NotImplementedError()
+        kwargs = {}
+        if self.isascending():
+            kwargs['ascending'] = True
+        elif self.isdescending():
+            kwargs['ascending'] = False
+        return filteredset(self, condition, **kwargs)
 
 class baseset(list, abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
