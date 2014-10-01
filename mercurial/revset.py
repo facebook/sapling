@@ -2813,8 +2813,6 @@ class _spanset(_orderedsetmixin):
         return False
 
     def __and__(self, x):
-        if isinstance(x, baseset):
-            x = x.set()
         return orderedlazyset(self, x.__contains__,
                               ascending=self.isascending())
 
