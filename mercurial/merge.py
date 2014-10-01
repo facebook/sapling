@@ -780,7 +780,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                                 partial, acceptremote, followcopies)
 
     else: # only when merge.preferancestor=* - the default
-        repo.ui.status(
+        repo.ui.note(
             _("note: merging %s and %s using bids from ancestors %s\n") %
             (wctx, mctx, _(' and ').join(str(anc) for anc in ancestors)))
 
