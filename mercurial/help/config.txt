@@ -531,6 +531,9 @@ related options for the annotate command.
 ``git``
     Use git extended diff format.
 
+``nobinary``
+    Omit git binary patches.
+
 ``nodates``
     Don't include dates in diff headers.
 
