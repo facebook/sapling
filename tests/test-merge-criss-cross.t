@@ -349,7 +349,7 @@ Verify that the old context ancestor works with / despite preferancestor:
   2
   $ hg log -r 'ancestor(head())' --config merge.preferancestor=3 -T '{rev}\n'
   1
-  $ hg log -r 'ancestor(head())' --config merge.preferancestor='*' -T '{rev}\n'
-  1
+  $ hg log -r 'ancestor(head())' --config merge.preferancestor='1337 * - 2' -T '{rev}\n'
+  2
 
   $ cd ..

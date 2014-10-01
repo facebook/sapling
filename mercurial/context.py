@@ -558,9 +558,10 @@ class changectx(basectx):
             anc = cahs[0]
         else:
             for r in self._repo.ui.configlist('merge', 'preferancestor'):
-                if r == '*':
+                try:
+                    ctx = changectx(self._repo, r)
+                except error.RepoLookupError:
                     continue
-                ctx = changectx(self._repo, r)
                 anc = ctx.node()
                 if anc in cahs:
                     break
