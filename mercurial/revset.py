@@ -2238,6 +2238,9 @@ class baseset(list):
     def __contains__(self):
         return self.set().__contains__
 
+    def __nonzero__(self):
+        return bool(len(self))
+
     def __sub__(self, other):
         """Returns a new object with the substraction of the two collections.
 
