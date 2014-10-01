@@ -63,7 +63,7 @@ else:
         raise SystemExit(
             "Couldn't import standard bz2 (incomplete Python install).")
 
-import os, subprocess, time
+import os, stat, subprocess, time
 import re
 import shutil
 import tempfile
@@ -73,9 +73,10 @@ from distutils.dist import Distribution
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
+from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
-from distutils import cygwinccompiler
+from distutils import cygwinccompiler, file_util
 from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion
@@ -375,6 +376,39 @@ class buildhgexe(build_ext):
                                       libraries=[],
                                       output_dir=self.build_temp)
 
+class hginstalllib(install_lib):
+    '''
+    This is a specialization of install_lib that replaces the copy_file used
+    there so that it supports setting the mode of files after copying them,
+    instead of just preserving the mode that the files originally had.  If your
+    system has a umask of something like 027, preserving the permissions when
+    copying will lead to a broken install.
+
+    Note that just passing keep_permissions=False to copy_file would be
+    insufficient, as it might still be applying a umask.
+    '''
+
+    def run(self):
+        realcopyfile = file_util.copy_file
+        def copyfileandsetmode(*args, **kwargs):
+            src, dst = args[0], args[1]
+            dst, copied = realcopyfile(*args, **kwargs)
+            if copied:
+                st = os.stat(src)
+                # Persist executable bit (apply it to group and other if user
+                # has it)
+                if st[stat.ST_MODE] & stat.S_IXUSR:
+                    setmode = 0755
+                else:
+                    setmode = 0644
+                os.chmod(dst, (stat.S_IMODE(st[stat.ST_MODE]) & ~0777) |
+                         setmode)
+        file_util.copy_file = copyfileandsetmode
+        try:
+            install_lib.run(self)
+        finally:
+            file_util.copy_file = realcopyfile
+
 class hginstallscripts(install_scripts):
     '''
     This is a specialization of install_scripts that replaces the @LIBDIR@ with
@@ -426,6 +460,7 @@ cmdclass = {'build': hgbuild,
             'build_ext': hgbuildext,
             'build_py': hgbuildpy,
             'build_hgextindex': buildhgextindex,
+            'install_lib': hginstalllib,
             'install_scripts': hginstallscripts,
             'build_hgexe': buildhgexe,
             }
