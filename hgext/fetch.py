@@ -8,7 +8,7 @@
 '''pull, update and merge in one command (DEPRECATED)'''
 
 from mercurial.i18n import _
-from mercurial.node import nullid, short
+from mercurial.node import short
 from mercurial import commands, cmdutil, hg, util, error
 from mercurial.lock import release
 
@@ -48,7 +48,7 @@ def fetch(ui, repo, source='default', **opts):
     if date:
         opts['date'] = util.parsedate(date)
 
-    parent, p2 = repo.dirstate.parents()
+    parent, _p2 = repo.dirstate.parents()
     branch = repo.dirstate.branch()
     try:
         branchnode = repo.branchtip(branch)
@@ -58,19 +58,13 @@ def fetch(ui, repo, source='default', **opts):
         raise util.Abort(_('working dir not at branch tip '
                            '(use "hg update" to check out branch tip)'))
 
-    if p2 != nullid:
-        raise util.Abort(_('outstanding uncommitted merge'))
-
     wlock = lock = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        mod, add, rem, del_ = repo.status()[:4]
 
-        if mod or add or rem:
-            raise util.Abort(_('outstanding uncommitted changes'))
-        if del_:
-            raise util.Abort(_('working directory is missing some files'))
+        cmdutil.bailifchanged(repo)
+
         bheads = repo.branchheads(branch)
         bheads = [head for head in bheads if len(repo[head].children()) == 0]
         if len(bheads) > 1:
