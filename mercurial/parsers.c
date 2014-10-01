@@ -687,9 +687,10 @@ static PyObject *index_insert(indexObject *self, PyObject *args)
 {
 	PyObject *obj;
 	char *node;
-	Py_ssize_t offset, len, nodelen;
+	int index;
+	Py_ssize_t len, nodelen;
 
-	if (!PyArg_ParseTuple(args, "nO", &offset, &obj))
+	if (!PyArg_ParseTuple(args, "iO", &index, &obj))
 		return NULL;
 
 	if (!PyTuple_Check(obj) || PyTuple_GET_SIZE(obj) != 8) {
@@ -702,18 +703,12 @@ static PyObject *index_insert(indexObject *self, PyObject *args)
 
 	len = index_length(self);
 
-	if (offset < 0)
-		offset += len;
+	if (index < 0)
+		index += len;
 
-	if (offset != len - 1) {
+	if (index != len - 1) {
 		PyErr_SetString(PyExc_IndexError,
 				"insert only supported at index -1");
-		return NULL;
-	}
-
-	if (offset > INT_MAX) {
-		PyErr_SetString(PyExc_ValueError,
-				"currently only 2**31 revs supported");
 		return NULL;
 	}
 
@@ -727,7 +722,7 @@ static PyObject *index_insert(indexObject *self, PyObject *args)
 		return NULL;
 
 	if (self->nt)
-		nt_insert(self, node, (int)offset);
+		nt_insert(self, node, index);
 
 	Py_CLEAR(self->headrevs);
 	Py_RETURN_NONE;
