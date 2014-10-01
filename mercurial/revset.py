@@ -2817,8 +2817,6 @@ class _spanset(_orderedsetmixin):
                               ascending=self.isascending())
 
     def __sub__(self, x):
-        if isinstance(x, baseset):
-            x = x.set()
         filterfunc = x.__contains__
         return orderedlazyset(self, lambda r: not filterfunc(r),
                               ascending=self.isascending())
