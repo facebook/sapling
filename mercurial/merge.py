@@ -779,7 +779,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                                 branchmerge, force,
                                 partial, acceptremote, followcopies)
 
-    else: # only when merge.preferancestor=* - experimentalish code
+    else: # only when merge.preferancestor=* - the default
         repo.ui.status(
             _("note: merging %s and %s using bids from ancestors %s\n") %
             (wctx, mctx, _(' and ').join(str(anc) for anc in ancestors)))
@@ -1048,7 +1048,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
         p2 = repo[node]
         if pas[0] is None:
-            if repo.ui.config("merge", "preferancestor") == '*':
+            if repo.ui.config("merge", "preferancestor", '*') == '*':
                 cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
                 pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
