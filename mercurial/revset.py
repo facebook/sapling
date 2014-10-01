@@ -2444,6 +2444,20 @@ class lazyset(abstractsmartset):
             if cond(x):
                 yield x
 
+    @property
+    def fastasc(self):
+        it = self._subset.fastasc
+        if it is None:
+            return None
+        return lambda: self._iterfilter(it())
+
+    @property
+    def fastdesc(self):
+        it = self._subset.fastdesc
+        if it is None:
+            return None
+        return lambda: self._iterfilter(it())
+
     def __and__(self, x):
         return lazyset(self, x.__contains__)
 
