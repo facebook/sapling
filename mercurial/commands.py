@@ -1104,28 +1104,29 @@ def branches(ui, repo, active=False, closed=False):
                   reverse=True)
 
     for tag, ctx, isactive, isopen in branches:
-        if (not active) or isactive:
-            if isactive:
-                label = 'branches.active'
-                notice = ''
-            elif not isopen:
-                if not closed:
-                    continue
-                label = 'branches.closed'
-                notice = _(' (closed)')
-            else:
-                label = 'branches.inactive'
-                notice = _(' (inactive)')
-            if tag == repo.dirstate.branch():
-                label = 'branches.current'
-            rev = str(ctx.rev()).rjust(31 - encoding.colwidth(tag))
-            rev = ui.label('%s:%s' % (rev, hexfunc(ctx.node())),
-                           'log.changeset changeset.%s' % ctx.phasestr())
-            labeledtag = ui.label(tag, label)
-            if ui.quiet:
-                ui.write("%s\n" % labeledtag)
-            else:
-                ui.write("%s %s%s\n" % (labeledtag, rev, notice))
+        if active and not isactive:
+            continue
+        if isactive:
+            label = 'branches.active'
+            notice = ''
+        elif not isopen:
+            if not closed:
+                continue
+            label = 'branches.closed'
+            notice = _(' (closed)')
+        else:
+            label = 'branches.inactive'
+            notice = _(' (inactive)')
+        if tag == repo.dirstate.branch():
+            label = 'branches.current'
+        rev = str(ctx.rev()).rjust(31 - encoding.colwidth(tag))
+        rev = ui.label('%s:%s' % (rev, hexfunc(ctx.node())),
+                       'log.changeset changeset.%s' % ctx.phasestr())
+        labeledtag = ui.label(tag, label)
+        if ui.quiet:
+            ui.write("%s\n" % labeledtag)
+        else:
+            ui.write("%s %s%s\n" % (labeledtag, rev, notice))
 
 @command('bundle',
     [('f', 'force', None, _('run even when the destination is unrelated')),
