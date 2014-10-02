@@ -253,12 +253,12 @@ def sign(ui, repo, *revs, **opts):
         repo.opener.append("localsigs", sigmessage)
         return
 
-    msigs = match.exact(repo.root, '', ['.hgsigs'])
-    s = repo.status(match=msigs, unknown=True, ignored=True)
-    if util.any(s) and not opts["force"]:
-        raise util.Abort(_("working copy of .hgsigs is changed "
-                           "(please commit .hgsigs manually "
-                           "or use --force)"))
+    if not opts["force"]:
+        msigs = match.exact(repo.root, '', ['.hgsigs'])
+        if util.any(repo.status(match=msigs, unknown=True, ignored=True)):
+            raise util.Abort(_("working copy of .hgsigs is changed "
+                               "(please commit .hgsigs manually "
+                               "or use --force)"))
 
     sigsfile = repo.wfile(".hgsigs", "ab")
     sigsfile.write(sigmessage)
