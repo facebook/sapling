@@ -146,13 +146,13 @@ def _fm0readmarkers(data, off=0):
         # read fixed part
         cur = data[off:off + _fm0fsize]
         off += _fm0fsize
-        nbsuc, mdsize, flags, pre = _unpack(_fm0fixed, cur)
+        numsuc, mdsize, flags, pre = _unpack(_fm0fixed, cur)
         # read replacement
         sucs = ()
-        if nbsuc:
-            s = (_fm0fnodesize * nbsuc)
+        if numsuc:
+            s = (_fm0fnodesize * numsuc)
             cur = data[off:off + s]
-            sucs = _unpack(_fm0node * nbsuc, cur)
+            sucs = _unpack(_fm0node * numsuc, cur)
             off += s
         # read metadata
         # (metadata will be decoded on demand)
@@ -202,9 +202,9 @@ def _fm0encodeonemarker(marker):
         for i, p in enumerate(parents):
             metadata['p%i' % (i + 1)] = node.hex(p)
     metadata = encodemeta(metadata)
-    nbsuc = len(sucs)
-    format = _fm0fixed + (_fm0node * nbsuc)
-    data = [nbsuc, len(metadata), flags, pre]
+    numsuc = len(sucs)
+    format = _fm0fixed + (_fm0node * numsuc)
+    data = [numsuc, len(metadata), flags, pre]
     data.extend(sucs)
     return _pack(format, *data) + metadata
 
