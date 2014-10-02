@@ -1116,8 +1116,10 @@ def branches(ui, repo, active=False, closed=False):
             notice = _(' (inactive)')
         if tag == repo.dirstate.branch():
             label = 'branches.current'
-        rev = str(ctx.rev()).rjust(31 - encoding.colwidth(tag))
-        rev = ui.label('%s:%s' % (rev, hexfunc(ctx.node())),
+        rev = ctx.rev()
+        padsize = max(31 - len(str(rev)) - encoding.colwidth(tag), 0)
+        fmt = ' ' * padsize + '%d:%s'
+        rev = ui.label(fmt % (rev, hexfunc(ctx.node())),
                        'log.changeset changeset.%s' % ctx.phasestr())
         labeledtag = ui.label(tag, label)
         if ui.quiet:
