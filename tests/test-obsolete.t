@@ -753,3 +753,45 @@ Test that removing a local tag does not cause some commands to fail
   $ hg tags
   visible                            0:193e9254ce7e
   tip                                0:193e9254ce7e
+
+  $ hg init a
+  $ cd a
+  $ touch foo
+  $ hg add foo
+  $ hg ci -mfoo
+  $ touch bar
+  $ hg add bar
+  $ hg ci -mbar
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ touch quux
+  $ hg add quux
+  $ hg ci -m quux
+  created new head
+  $ hg up 1
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg tag 1.0
+
+  $ hg up 2
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -G
+  o  3:bc47fc7e1c1d (draft) [tip ] Added tag 1.0 for changeset 50c889141114
+  |
+  | @  2:3d7f255a0081 (draft) [ ] quux
+  | |
+  o |  1:50c889141114 (draft) [1.0 ] bar
+  |/
+  o  0:1f7b0de80e11 (draft) [ ] foo
+  
+  $ hg debugobsolete `getid bar`
+  $ hg debugobsolete `getid 1.0`
+  $ hg tag 1.0
+  $ hg log -G
+  @  4:f9f2ab71ffd5 (draft) [tip ] Added tag 1.0 for changeset 3d7f255a0081
+  |
+  o  2:3d7f255a0081 (draft) [1.0 ] quux
+  |
+  o  0:1f7b0de80e11 (draft) [ ] foo
+  
+  $ cat .hgtags
+  3d7f255a008103380aeb2a7d581fe257f40969e7 1.0
