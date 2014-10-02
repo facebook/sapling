@@ -353,17 +353,22 @@ def updatefromremote(ui, repo, remotemarks, path):
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
      ) = compare(repo, remotemarks, localmarks, dsthex=hex)
 
+    status = ui.status
+    warn = ui.warn
+    if ui.configbool('ui', 'quietbookmarkmove', False):
+        status = warn = ui.debug
+
     changed = []
     for b, scid, dcid in addsrc:
         if scid in repo: # add remote bookmarks for changes we already have
-            changed.append((b, bin(scid), ui.status,
+            changed.append((b, bin(scid), status,
                             _("adding remote bookmark %s\n") % (b)))
     for b, scid, dcid in advsrc:
-        changed.append((b, bin(scid), ui.status,
+        changed.append((b, bin(scid), status,
                         _("updating bookmark %s\n") % (b)))
     for b, scid, dcid in diverge:
         db = _diverge(ui, b, path, localmarks)
-        changed.append((db, bin(scid), ui.warn,
+        changed.append((db, bin(scid), warn,
                         _("divergent bookmark %s stored as %s\n") % (b, db)))
     if changed:
         for b, node, writer, msg in sorted(changed):
