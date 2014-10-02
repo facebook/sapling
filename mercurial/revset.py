@@ -2436,8 +2436,11 @@ class lazyset(abstractsmartset):
         return c[x]
 
     def __iter__(self):
+        return self._iterfilter(self._subset)
+
+    def _iterfilter(self, it):
         cond = self._condition
-        for x in self._subset:
+        for x in it:
             if cond(x):
                 yield x
 
