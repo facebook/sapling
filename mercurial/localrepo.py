@@ -574,7 +574,7 @@ class localrepository(object):
         date: date tuple to use if committing'''
 
         if not local:
-            for x in self.status()[:5]:
+            for x in self.status(unknown=True, ignored=True):
                 if '.hgtags' in x:
                     raise util.Abort(_('working copy of .hgtags is changed '
                                        '(please commit .hgtags manually)'))
