@@ -2416,12 +2416,6 @@ class lazyset(abstractsmartset):
         self._condition = condition
         self._cache = {}
 
-    def ascending(self):
-        self._subset.sort()
-
-    def descending(self):
-        self._subset.sort(reverse=True)
-
     def min(self):
         return min(self)
 
