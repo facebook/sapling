@@ -31,7 +31,7 @@ stream level parameters
 
 Binary format is as follow
 
-:params size: (16 bits integer)
+:params size: int32
 
   The total number of Bytes used by the parameters
 
@@ -64,7 +64,7 @@ Payload part
 
 Binary format is as follow
 
-:header size: (16 bits inter)
+:header size: int32
 
   The total number of Bytes used by the part headers. When the header is empty
   (size = 0) this is interpreted as the end of stream marker.
@@ -119,11 +119,14 @@ Binary format is as follow
 
     payload is a series of `<chunksize><chunkdata>`.
 
-    `chunksize` is a 32 bits integer, `chunkdata` are plain bytes (as much as
+    `chunksize` is an int32, `chunkdata` are plain bytes (as much as
     `chunksize` says)` The payload part is concluded by a zero size chunk.
 
     The current implementation always produces either zero or one chunk.
     This is an implementation limitation that will ultimately be lifted.
+
+    `chunksize` can be negative to trigger special case processing. No such
+    processing is in place yet.
 
 Bundle processing
 ============================
@@ -155,13 +158,13 @@ from i18n import _
 _pack = struct.pack
 _unpack = struct.unpack
 
-_magicstring = 'HG2X'
+_magicstring = 'HG2Y'
 
-_fstreamparamsize = '>H'
-_fpartheadersize = '>H'
+_fstreamparamsize = '>i'
+_fpartheadersize = '>i'
 _fparttypesize = '>B'
 _fpartid = '>I'
-_fpayloadsize = '>I'
+_fpayloadsize = '>i'
 _fpartparamcount = '>BB'
 
 preferedchunksize = 4096
@@ -496,7 +499,7 @@ class unbundle20(unpackermixin):
             magic, version = header[0:2], header[2:4]
             if magic != 'HG':
                 raise util.Abort(_('not a Mercurial bundle'))
-            if version != '2X':
+            if version != '2Y':
                 raise util.Abort(_('unknown bundle version %s') % version)
         self.ui.debug('start processing of %s stream\n' % header)
 
@@ -781,7 +784,7 @@ class unbundlepart(unpackermixin):
             self.consumed = True
         return data
 
-capabilities = {'HG2X': (),
+capabilities = {'HG2Y': (),
                 'b2x:listkeys': (),
                 'b2x:pushkey': (),
                 'b2x:changegroup': (),

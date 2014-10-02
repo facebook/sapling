@@ -32,7 +32,7 @@ def readbundle(ui, fh, fname, vfs=None):
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
         return changegroup.cg1unpacker(fh, alg)
-    elif version == '2X':
+    elif version == '2Y':
         return bundle2.unbundle20(ui, fh, header=magic + version)
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
@@ -1099,7 +1099,7 @@ def _pullobsolete(pullop):
 
 def caps20to10(repo):
     """return a set with appropriate options to use bundle20 during getbundle"""
-    caps = set(['HG2X'])
+    caps = set(['HG2Y'])
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
     caps.add('bundle2=' + urllib.quote(capsblob))
     return caps
@@ -1132,7 +1132,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
               **kwargs):
     """return a full bundle (with potentially multiple kind of parts)
 
-    Could be a bundle HG10 or a bundle HG2X depending on bundlecaps
+    Could be a bundle HG10 or a bundle HG2Y depending on bundlecaps
     passed. For now, the bundle can contain only changegroup, but this will
     changes when more part type will be available for bundle2.
 
@@ -1144,7 +1144,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     when the API of bundle is refined.
     """
     # bundle10 case
-    if bundlecaps is None or 'HG2X' not in bundlecaps:
+    if bundlecaps is None or 'HG2Y' not in bundlecaps:
         if bundlecaps and not kwargs.get('cg', True):
             raise ValueError(_('request for bundle10 must include changegroup'))
 

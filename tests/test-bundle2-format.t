@@ -234,7 +234,7 @@ Empty bundle
 Test bundling
 
   $ hg bundle2
-  HG2X\x00\x00\x00\x00 (no-eol) (esc)
+  HG2Y\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -264,7 +264,7 @@ Simplest possible parameters form
 Test generation simple option
 
   $ hg bundle2 --param 'caution'
-  HG2X\x00\x07caution\x00\x00 (no-eol) (esc)
+  HG2Y\x00\x00\x00\x07caution\x00\x00\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -276,7 +276,7 @@ Test unbundling
 Test generation multiple option
 
   $ hg bundle2 --param 'caution' --param 'meal'
-  HG2X\x00\x0ccaution meal\x00\x00 (no-eol) (esc)
+  HG2Y\x00\x00\x00\x0ccaution meal\x00\x00\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -292,7 +292,7 @@ advisory parameters, with value
 Test generation
 
   $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants'
-  HG2X\x00\x1ccaution meal=vegan elephants\x00\x00 (no-eol) (esc)
+  HG2Y\x00\x00\x00\x1ccaution meal=vegan elephants\x00\x00\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -310,7 +310,7 @@ parameter with special char in value
 Test generation
 
   $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple
-  HG2X\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
+  HG2Y\x00\x00\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00\x00\x00 (no-eol) (esc)
 
 Test unbundling
 
@@ -334,7 +334,7 @@ Test debug output
 bundling debug
 
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
-  start emission of HG2X stream
+  start emission of HG2Y stream
   bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
   start of parts
   end of bundle
@@ -342,12 +342,12 @@ bundling debug
 file content is ok
 
   $ cat ../out.hg2
-  HG2X\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00 (no-eol) (esc)
+  HG2Y\x00\x00\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00\x00\x00 (no-eol) (esc)
 
 unbundling debug
 
   $ hg statbundle2 --debug < ../out.hg2
-  start processing of HG2X stream
+  start processing of HG2Y stream
   reading bundle2 stream parameters
   ignoring unknown parameter 'e|! 7/'
   ignoring unknown parameter 'simple'
@@ -381,7 +381,7 @@ Test part
 =================
 
   $ hg bundle2 --parts ../parts.hg2 --debug
-  start emission of HG2X stream
+  start emission of HG2Y stream
   bundle parameter: 
   start of parts
   bundle part: "test:empty"
@@ -394,11 +394,11 @@ Test part
   end of bundle
 
   $ cat ../parts.hg2
-  HG2X\x00\x00\x00\x11 (esc)
-  test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
-  test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
+  HG2Y\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
+  test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
+  test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
   Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x16\x0ftest:debugreply\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x04\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x1d	test:song\x00\x00\x00\x05\x01\x00\x0b\x00randomparam\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x00\x00\x16\x0ftest:debugreply\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x04\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00\x00\x1d	test:song\x00\x00\x00\x05\x01\x00\x0b\x00randomparam\x00\x00\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 
   $ hg statbundle2 < ../parts.hg2
@@ -434,7 +434,7 @@ Test part
   parts count:   7
 
   $ hg statbundle2 --debug < ../parts.hg2
-  start processing of HG2X stream
+  start processing of HG2Y stream
   reading bundle2 stream parameters
   options count: 0
   start extraction of bundle2 parts
@@ -513,7 +513,7 @@ Test actual unbundling of test part
 Process the bundle
 
   $ hg unbundle2 --debug < ../parts.hg2
-  start processing of HG2X stream
+  start processing of HG2Y stream
   reading bundle2 stream parameters
   start extraction of bundle2 parts
   part header size: 17
@@ -607,12 +607,12 @@ unbundle with a reply
 The reply is a bundle
 
   $ cat ../reply.hg2
-  HG2X\x00\x00\x00\x1f (esc)
+  HG2Y\x00\x00\x00\x00\x00\x00\x00\x1f (esc)
   b2x:output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  \x00\x00\x00\x00\x00\x1f (esc)
+  \x00\x00\x00\x00\x00\x00\x00\x1f (esc)
   b2x:output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00\xc9debugreply: capabilities: (esc)
   debugreply:     'city=!'
   debugreply:         'celeste,ville'
@@ -620,10 +620,10 @@ The reply is a bundle
   debugreply:         'babar'
   debugreply:         'celeste'
   debugreply:     'ping-pong'
-  \x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to7\x00\x00\x00\x00\x00\x1f (esc)
+  \x00\x00\x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to7\x00\x00\x00\x00\x00\x00\x00\x1f (esc)
   b2x:output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to7\x00\x00\x00=received ping request (id 7) (esc)
   replying to ping request (id 7)
-  \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  \x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 The reply is valid
 
@@ -711,7 +711,7 @@ Support for changegroup
   9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   eea13746799a9e0bfd88f29d3c2e9dc9389f524f
   02de42196ebee42ef284b6780a87cdc96e8eaab6
-  start emission of HG2X stream
+  start emission of HG2Y stream
   bundle parameter: 
   start of parts
   bundle part: "b2x:changegroup"
@@ -729,7 +729,7 @@ Support for changegroup
   end of bundle
 
   $ cat ../rev.hg2
-  HG2X\x00\x00\x00\x16\x0fb2x:changegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
+  HG2Y\x00\x00\x00\x00\x00\x00\x00\x16\x0fb2x:changegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02D (esc)
   \x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01D\x00\x00\x00\xa4\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\xcd\x01\x0b\x8c\xd9\x98\xf3\x98\x1aZ\x81\x15\xf9O\x8d\xa4\xabP`\x89\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)4dece9c826f69490507b98c6383a3009b295837d (esc)
   \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02E (esc)
@@ -750,7 +750,7 @@ Support for changegroup
   \x0cI\xd4\xa9\xc5\x01|\xf0pC\xf5NX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02E (esc)
   \x00\x00\x00\x00\x00\x00\x00\x05H\x00\x00\x00b\x85\x00\x18\x9et\xa9\xe0G^\x82 \x93\xbc}\xb0\xd61\xae\xb0\xb4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xdeB\x19n\xbe\xe4.\xf2\x84\xb6x (esc)
   \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02H (esc)
-  \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
   $ hg unbundle2 < ../rev.hg2
   adding changesets
@@ -768,12 +768,12 @@ with reply
   addchangegroup return: 1
 
   $ cat ../rev-reply.hg2
-  HG2X\x00\x00\x003\x15b2x:reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x1f (esc)
+  HG2Y\x00\x00\x00\x00\x00\x00\x003\x15b2x:reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x00\x00\x1f (esc)
   b2x:output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
-  \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  \x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 Check handling of exception during generation.
 ----------------------------------------------
@@ -787,7 +787,7 @@ Should still be a valid bundle
 (is currently not right)
 
   $ cat ../genfailed.hg2
-  HG2X\x00\x00\x00\x11 (esc)
+  HG2Y\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
   b2x:output\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 And its handling on the other size raise a clean exception
@@ -795,7 +795,7 @@ And its handling on the other size raise a clean exception
 
   $ cat ../genfailed.hg2 | hg unbundle2
   0 unread bytes
-  abort: stream ended unexpectedly (got 0 bytes, expected 2)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
 

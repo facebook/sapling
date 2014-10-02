@@ -109,7 +109,7 @@ class localpeer(peer.peerrepository):
                   format='HG10', **kwargs):
         cg = exchange.getbundle(self._repo, source, heads=heads,
                                 common=common, bundlecaps=bundlecaps, **kwargs)
-        if bundlecaps is not None and 'HG2X' in bundlecaps:
+        if bundlecaps is not None and 'HG2Y' in bundlecaps:
             # When requesting a bundle2, getbundle returns a stream to make the
             # wire level function happier. We need to build a proper object
             # from it in local peer.
