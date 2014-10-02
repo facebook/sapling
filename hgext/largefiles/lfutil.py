@@ -134,13 +134,14 @@ def openlfdirstate(ui, repo, create=True):
             lfdirstate.normallookup(lfile)
     return lfdirstate
 
-def lfdirstatestatus(lfdirstate, repo, rev):
+def lfdirstatestatus(lfdirstate, repo):
+    wctx = repo['.']
     match = match_.always(repo.root, repo.getcwd())
     unsure, s = lfdirstate.status(match, [], False, False, False)
     modified, clean = s.modified, s.clean
     for lfile in unsure:
         try:
-            fctx = repo[rev][standin(lfile)]
+            fctx = wctx[standin(lfile)]
         except LookupError:
             fctx = None
         if not fctx or fctx.data().strip() != hashfile(repo.wjoin(lfile)):

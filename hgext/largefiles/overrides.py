@@ -660,7 +660,7 @@ def overriderevert(orig, ui, repo, *pats, **opts):
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
-        s = lfutil.lfdirstatestatus(lfdirstate, repo, repo['.'].rev())
+        s = lfutil.lfdirstatestatus(lfdirstate, repo)
         lfdirstate.write()
         for lfile in s.modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
