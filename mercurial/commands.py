@@ -833,7 +833,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     ('r', 'rev', '', _('revision'), _('REV')),
     ('d', 'delete', False, _('delete a given bookmark')),
     ('m', 'rename', '', _('rename a given bookmark'), _('NAME')),
-    ('i', 'inactive', False, _('mark a bookmark inactive'))],
+    ('i', 'inactive', False, _('mark a bookmark inactive')),
+    ] + formatteropts,
     _('hg bookmarks [OPTIONS]... [NAME]...'))
 def bookmark(ui, repo, *names, **opts):
     '''create a new bookmark or list existing bookmarks
@@ -991,9 +992,10 @@ def bookmark(ui, repo, *names, **opts):
         finally:
             wlock.release()
     else: # show bookmarks
-        hexfn = ui.debugflag and hex or short
+        fm = ui.formatter('bookmarks', opts)
+        hexfn = fm.hexfunc
         marks = repo._bookmarks
-        if len(marks) == 0:
+        if len(marks) == 0 and not fm:
             ui.status(_("no bookmarks set\n"))
         for bmark, n in sorted(marks.iteritems()):
             current = repo._bookmarkcurrent
@@ -1002,15 +1004,16 @@ def bookmark(ui, repo, *names, **opts):
             else:
                 prefix, label = ' ', ''
 
+            fm.startitem()
             if not ui.quiet:
-                ui.write(' %s ' % prefix, label=label)
-            ui.write(bmark, label=label)
+                fm.plain(' %s ' % prefix, label=label)
+            fm.write('bookmark', '%s', bmark, label=label)
             pad = " " * (25 - encoding.colwidth(bmark))
-            if not ui.quiet:
-                ui.write('%s %d:%s' % (
-                    pad, repo.changelog.rev(n), hexfn(n)),
-                    label=label)
-            ui.write('\n')
+            fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s',
+                         repo.changelog.rev(n), hexfn(n), label=label)
+            fm.data(active=(bmark == current))
+            fm.plain('\n')
+        fm.end()
 
 @command('branch',
     [('f', 'force', None,

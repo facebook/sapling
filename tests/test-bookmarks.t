@@ -5,6 +5,10 @@ no bookmarks
   $ hg bookmarks
   no bookmarks set
 
+  $ hg bookmarks -Tjson
+  [
+  ]
+
 bookmark rev -1
 
   $ hg bookmark X
@@ -58,6 +62,28 @@ list bookmarks
   $ echo b > b
   $ hg add b
   $ hg commit -m 1
+
+  $ hg bookmarks -Tjson
+  [
+   {
+    "active": false,
+    "bookmark": "X",
+    "node": "f7b1eb17ad24730a1651fccd46c43826d1bbc2ac",
+    "rev": 0
+   },
+   {
+    "active": true,
+    "bookmark": "X2",
+    "node": "925d80f479bb026b0fb3deb27503780b13f74123",
+    "rev": 1
+   },
+   {
+    "active": false,
+    "bookmark": "Y",
+    "node": "0000000000000000000000000000000000000000",
+    "rev": -1
+   }
+  ]
 
 bookmarks revset
 
