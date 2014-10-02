@@ -683,7 +683,7 @@ class ui(object):
             if not r:
                 r = default
             # sometimes self.interactive disagrees with isatty,
-            # show default response
+            # show response provided on stdin when simulating
             if not util.isatty(self.fin):
                 self.write(r, "\n")
             return r
