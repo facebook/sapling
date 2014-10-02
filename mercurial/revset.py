@@ -2854,14 +2854,6 @@ class _spanset(_orderedsetmixin, abstractsmartset):
             self._end = len(repo)
         self._hiddenrevs = repo.changelog.filteredrevs
 
-    def ascending(self):
-        if not self.isascending():
-            self.reverse()
-
-    def descending(self):
-        if not self.isdescending():
-            self.reverse()
-
     def __iter__(self):
         if self.isascending():
             iterrange = xrange(self._start, self._end)
