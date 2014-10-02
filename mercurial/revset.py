@@ -2291,18 +2291,6 @@ class baseset(list, abstractsmartset):
         super(baseset, self).__init__(data)
         self._set = None
 
-    def ascending(self):
-        """Sorts the set in ascending order (in place).
-
-        This is part of the mandatory API for smartset."""
-        self.sort()
-
-    def descending(self):
-        """Sorts the set in descending order (in place).
-
-        This is part of the mandatory API for smartset."""
-        self.sort(reverse=True)
-
     def min(self):
         return min(self)
 
