@@ -1116,7 +1116,8 @@ def branches(ui, repo, active=False, closed=False, **opts):
         else:
             label = 'branches.inactive'
             notice = _(' (inactive)')
-        if tag == repo.dirstate.branch():
+        current = (tag == repo.dirstate.branch())
+        if current:
             label = 'branches.current'
 
         fm.startitem()
@@ -1126,6 +1127,7 @@ def branches(ui, repo, active=False, closed=False, **opts):
         fmt = ' ' * padsize + ' %d:%s'
         fm.condwrite(not ui.quiet, 'rev node', fmt, rev, hexfunc(ctx.node()),
                      label='log.changeset changeset.%s' % ctx.phasestr())
+        fm.data(active=isactive, closed=not isopen, current=current)
         if not ui.quiet:
             fm.plain(notice)
         fm.plain('\n')

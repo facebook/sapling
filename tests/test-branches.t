@@ -475,27 +475,42 @@ template output:
   $ hg branches -Tjson --closed
   [
    {
+    "active": true,
     "branch": "b",
+    "closed": false,
+    "current": true,
     "node": "e23b5505d1ad24aab6f84fd8c7cb8cd8e5e93be0",
     "rev": 13
    },
    {
+    "active": true,
     "branch": "a branch name much longer than the default justification used by branches",
+    "closed": false,
+    "current": false,
     "node": "10ff5895aa5793bd378da574af8cec8ea408d831",
     "rev": 7
    },
    {
+    "active": false,
     "branch": "c",
+    "closed": true,
+    "current": false,
     "node": "f894c25619d3f1484639d81be950e0a07bc6f1f6",
     "rev": 14
    },
    {
+    "active": false,
     "branch": "a",
+    "closed": false,
+    "current": false,
     "node": "d8cbc61dbaa6dc817175d1e301eecb863f280832",
     "rev": 5
    },
    {
+    "active": false,
     "branch": "default",
+    "closed": false,
+    "current": false,
     "node": "19709c5a4e75bf938f8e349aff97438539bb729e",
     "rev": 0
    }
