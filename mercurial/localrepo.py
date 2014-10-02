@@ -576,8 +576,8 @@ class localrepository(object):
         if not local:
             m = matchmod.exact(self.root, '', ['.hgtags'])
             if util.any(self.status(match=m, unknown=True, ignored=True)):
-                raise util.Abort(_('working copy of .hgtags is changed '
-                                   '(please commit .hgtags manually)'))
+                raise util.Abort(_('working copy of .hgtags is changed'),
+                                 hint=_('please commit .hgtags manually'))
 
         self.tags() # instantiate the cache
         self._tag(names, node, message, local, user, date, editor=editor)

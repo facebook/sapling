@@ -36,7 +36,8 @@ specified)
 
   $ echo foo >> .hgtags
   $ hg tag "bleah2"
-  abort: working copy of .hgtags is changed (please commit .hgtags manually)
+  abort: working copy of .hgtags is changed
+  (please commit .hgtags manually)
   [255]
 
   $ hg revert .hgtags
