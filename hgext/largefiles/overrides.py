@@ -140,7 +140,7 @@ def addlargefiles(ui, repo, *pats, **opts):
         wlock.release()
     return bad
 
-def removelargefiles(ui, repo, *pats, **opts):
+def removelargefiles(ui, repo, isaddremove, *pats, **opts):
     after = opts.get('after')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
@@ -187,7 +187,7 @@ def removelargefiles(ui, repo, *pats, **opts):
             if not after:
                 # If this is being called by addremove, notify the user that we
                 # are removing the file.
-                if getattr(repo, "_isaddremove", False):
+                if isaddremove:
                     ui.status(_('removing %s\n') % f)
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
             lfdirstate.remove(f)
@@ -195,7 +195,7 @@ def removelargefiles(ui, repo, *pats, **opts):
         remove = [lfutil.standin(f) for f in remove]
         # If this is being called by addremove, let the original addremove
         # function handle this.
-        if not getattr(repo, "_isaddremove", False):
+        if not isaddremove:
             for f in remove:
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
         repo[None].forget(remove)
@@ -232,7 +232,7 @@ def overrideremove(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
-    return removelargefiles(ui, repo, *pats, **opts) or result
+    return removelargefiles(ui, repo, False, *pats, **opts) or result
 
 def overridestatusfn(orig, repo, rev2, **opts):
     try:
@@ -1118,9 +1118,7 @@ def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
     # confused state later.
     if s.deleted:
         m = [repo.wjoin(f) for f in s.deleted]
-        repo._isaddremove = True
-        removelargefiles(repo.ui, repo, *m, **opts)
-        repo._isaddremove = False
+        removelargefiles(repo.ui, repo, True, *m, **opts)
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
     addlargefiles(repo.ui, repo, *pats, **opts)
