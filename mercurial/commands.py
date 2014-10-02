@@ -995,21 +995,20 @@ def bookmark(ui, repo, *names, **opts):
         marks = repo._bookmarks
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
-        else:
-            for bmark, n in sorted(marks.iteritems()):
-                current = repo._bookmarkcurrent
-                if bmark == current:
-                    prefix, label = '*', 'bookmarks.current'
-                else:
-                    prefix, label = ' ', ''
+        for bmark, n in sorted(marks.iteritems()):
+            current = repo._bookmarkcurrent
+            if bmark == current:
+                prefix, label = '*', 'bookmarks.current'
+            else:
+                prefix, label = ' ', ''
 
-                if ui.quiet:
-                    ui.write("%s\n" % bmark, label=label)
-                else:
-                    pad = " " * (25 - encoding.colwidth(bmark))
-                    ui.write(" %s %s%s %d:%s\n" % (
-                        prefix, bmark, pad, repo.changelog.rev(n), hexfn(n)),
-                        label=label)
+            if ui.quiet:
+                ui.write("%s\n" % bmark, label=label)
+            else:
+                pad = " " * (25 - encoding.colwidth(bmark))
+                ui.write(" %s %s%s %d:%s\n" % (
+                    prefix, bmark, pad, repo.changelog.rev(n), hexfn(n)),
+                    label=label)
 
 @command('branch',
     [('f', 'force', None,
