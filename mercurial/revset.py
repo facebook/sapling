@@ -2895,10 +2895,8 @@ class _spanset(_orderedsetmixin, abstractsmartset):
         return iter(iterrange)
 
     def __contains__(self, rev):
-        start = self._start
-        end = self._end
         hidden = self._hiddenrevs
-        return (((end < rev <= start) or (start <= rev and rev < end))
+        return ((self._start <= rev < self._end)
                 and not (hidden and rev in hidden))
 
     def __nonzero__(self):
