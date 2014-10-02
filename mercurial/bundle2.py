@@ -447,7 +447,7 @@ class bundle20(object):
             for chunk in part.getchunks():
                 yield chunk
         self.ui.debug('end of bundle\n')
-        yield '\0\0'
+        yield _pack(_fpartheadersize, 0)
 
     def _paramchunk(self):
         """return a encoded version of all stream parameters"""
