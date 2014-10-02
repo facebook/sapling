@@ -221,7 +221,7 @@ Show all commands + options
   bisect: reset, good, bad, skip, extend, command, noupdate
   bookmarks: force, rev, delete, rename, inactive
   branch: force, clean
-  branches: active, closed
+  branches: active, closed, template
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude
   config: untrusted, edit, local, global

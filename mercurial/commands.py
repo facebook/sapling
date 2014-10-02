@@ -1073,9 +1073,10 @@ def branch(ui, repo, label=None, **opts):
 
 @command('branches',
     [('a', 'active', False, _('show only branches that have unmerged heads')),
-    ('c', 'closed', False, _('show normal and closed branches'))],
+     ('c', 'closed', False, _('show normal and closed branches')),
+    ] + formatteropts,
     _('[-ac]'))
-def branches(ui, repo, active=False, closed=False):
+def branches(ui, repo, active=False, closed=False, **opts):
     """list repository named branches
 
     List the repository's named branches, indicating which ones are
@@ -1090,7 +1091,8 @@ def branches(ui, repo, active=False, closed=False):
     Returns 0.
     """
 
-    hexfunc = ui.debugflag and hex or short
+    fm = ui.formatter('branches', opts)
+    hexfunc = fm.hexfunc
 
     allheads = set(repo.heads())
     branches = []
@@ -1116,16 +1118,20 @@ def branches(ui, repo, active=False, closed=False):
             notice = _(' (inactive)')
         if tag == repo.dirstate.branch():
             label = 'branches.current'
+
+        fm.startitem()
+        fm.write('branch', '%s', tag, label=label)
         rev = ctx.rev()
         padsize = max(31 - len(str(rev)) - encoding.colwidth(tag), 0)
         fmt = ' ' * padsize + '%d:%s'
-        rev = ui.label(fmt % (rev, hexfunc(ctx.node())),
-                       'log.changeset changeset.%s' % ctx.phasestr())
-        labeledtag = ui.label(tag, label)
-        if ui.quiet:
-            ui.write("%s\n" % labeledtag)
-        else:
-            ui.write("%s %s%s\n" % (labeledtag, rev, notice))
+        if not ui.quiet:
+            fm.plain(' ')
+        fm.condwrite(not ui.quiet, 'rev node', fmt, rev, hexfunc(ctx.node()),
+                     label='log.changeset changeset.%s' % ctx.phasestr())
+        if not ui.quiet:
+            fm.plain(notice)
+        fm.plain('\n')
+    fm.end()
 
 @command('bundle',
     [('f', 'force', None, _('run even when the destination is unrelated')),

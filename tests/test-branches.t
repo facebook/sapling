@@ -470,4 +470,35 @@ custom closed branch color:
   \x1b[0;35ma\x1b[0m \x1b[0;36m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;35mdefault\x1b[0m \x1b[0;36m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
 
+template output:
+
+  $ hg branches -Tjson --closed
+  [
+   {
+    "branch": "b",
+    "node": "e23b5505d1ad24aab6f84fd8c7cb8cd8e5e93be0",
+    "rev": 13
+   },
+   {
+    "branch": "a branch name much longer than the default justification used by branches",
+    "node": "10ff5895aa5793bd378da574af8cec8ea408d831",
+    "rev": 7
+   },
+   {
+    "branch": "c",
+    "node": "f894c25619d3f1484639d81be950e0a07bc6f1f6",
+    "rev": 14
+   },
+   {
+    "branch": "a",
+    "node": "d8cbc61dbaa6dc817175d1e301eecb863f280832",
+    "rev": 5
+   },
+   {
+    "branch": "default",
+    "node": "19709c5a4e75bf938f8e349aff97438539bb729e",
+    "rev": 0
+   }
+  ]
+
   $ cd ..
