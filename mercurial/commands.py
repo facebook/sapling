@@ -1123,9 +1123,7 @@ def branches(ui, repo, active=False, closed=False, **opts):
         fm.write('branch', '%s', tag, label=label)
         rev = ctx.rev()
         padsize = max(31 - len(str(rev)) - encoding.colwidth(tag), 0)
-        fmt = ' ' * padsize + '%d:%s'
-        if not ui.quiet:
-            fm.plain(' ')
+        fmt = ' ' * padsize + ' %d:%s'
         fm.condwrite(not ui.quiet, 'rev node', fmt, rev, hexfunc(ctx.node()),
                      label='log.changeset changeset.%s' % ctx.phasestr())
         if not ui.quiet:

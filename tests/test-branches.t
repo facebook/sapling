@@ -430,19 +430,19 @@ default branch colors:
   $ hg up -C b
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg branches --color=always
-  \x1b[0;32mb\x1b[0m \x1b[0;33m                            13:e23b5505d1ad\x1b[0m (esc)
-  \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;33m7:10ff5895aa57\x1b[0m (esc)
-  \x1b[0;0ma\x1b[0m \x1b[0;33m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
-  \x1b[0;0mdefault\x1b[0m \x1b[0;33m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
+  \x1b[0;32mb\x1b[0m\x1b[0;33m                             13:e23b5505d1ad\x1b[0m (esc)
+  \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;33m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;0ma\x1b[0m\x1b[0;33m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
+  \x1b[0;0mdefault\x1b[0m\x1b[0;33m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
 default closed branch color:
 
   $ hg branches --color=always --closed
-  \x1b[0;32mb\x1b[0m \x1b[0;33m                            13:e23b5505d1ad\x1b[0m (esc)
-  \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;33m7:10ff5895aa57\x1b[0m (esc)
-  \x1b[0;30;1mc\x1b[0m \x1b[0;33m                            14:f894c25619d3\x1b[0m (closed) (esc)
-  \x1b[0;0ma\x1b[0m \x1b[0;33m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
-  \x1b[0;0mdefault\x1b[0m \x1b[0;33m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
+  \x1b[0;32mb\x1b[0m\x1b[0;33m                             13:e23b5505d1ad\x1b[0m (esc)
+  \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;33m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;30;1mc\x1b[0m\x1b[0;33m                             14:f894c25619d3\x1b[0m (closed) (esc)
+  \x1b[0;0ma\x1b[0m\x1b[0;33m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
+  \x1b[0;0mdefault\x1b[0m\x1b[0;33m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "color =" >> $HGRCPATH
@@ -456,19 +456,19 @@ default closed branch color:
 custom branch colors:
 
   $ hg branches --color=always
-  \x1b[0;31mb\x1b[0m \x1b[0;36m                            13:e23b5505d1ad\x1b[0m (esc)
-  \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;36m7:10ff5895aa57\x1b[0m (esc)
-  \x1b[0;35ma\x1b[0m \x1b[0;36m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
-  \x1b[0;35mdefault\x1b[0m \x1b[0;36m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
+  \x1b[0;31mb\x1b[0m\x1b[0;36m                             13:e23b5505d1ad\x1b[0m (esc)
+  \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;36m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;35ma\x1b[0m\x1b[0;36m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
+  \x1b[0;35mdefault\x1b[0m\x1b[0;36m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
 custom closed branch color:
 
   $ hg branches --color=always --closed
-  \x1b[0;31mb\x1b[0m \x1b[0;36m                            13:e23b5505d1ad\x1b[0m (esc)
-  \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m \x1b[0;36m7:10ff5895aa57\x1b[0m (esc)
-  \x1b[0;34mc\x1b[0m \x1b[0;36m                            14:f894c25619d3\x1b[0m (closed) (esc)
-  \x1b[0;35ma\x1b[0m \x1b[0;36m                             5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
-  \x1b[0;35mdefault\x1b[0m \x1b[0;36m                       0:19709c5a4e75\x1b[0m (inactive) (esc)
+  \x1b[0;31mb\x1b[0m\x1b[0;36m                             13:e23b5505d1ad\x1b[0m (esc)
+  \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;36m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;34mc\x1b[0m\x1b[0;36m                             14:f894c25619d3\x1b[0m (closed) (esc)
+  \x1b[0;35ma\x1b[0m\x1b[0;36m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
+  \x1b[0;35mdefault\x1b[0m\x1b[0;36m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
 template output:
 
