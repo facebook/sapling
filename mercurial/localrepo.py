@@ -574,10 +574,10 @@ class localrepository(object):
         date: date tuple to use if committing'''
 
         if not local:
-            for x in self.status(unknown=True, ignored=True):
-                if '.hgtags' in x:
-                    raise util.Abort(_('working copy of .hgtags is changed '
-                                       '(please commit .hgtags manually)'))
+            m = matchmod.exact(self.root, '', ['.hgtags'])
+            if util.any(self.status(match=m, unknown=True, ignored=True)):
+                raise util.Abort(_('working copy of .hgtags is changed '
+                                   '(please commit .hgtags manually)'))
 
         self.tags() # instantiate the cache
         self._tag(names, node, message, local, user, date, editor=editor)
