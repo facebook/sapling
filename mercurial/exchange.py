@@ -344,11 +344,9 @@ def _pushcheckoutgoing(pushop):
         if unfi.obsstore:
             # this message are here for 80 char limit reason
             mso = _("push includes obsolete changeset: %s!")
-            mst = "push includes %s changeset: %s!"
-            # plain versions for i18n tool to detect them
-            _("push includes unstable changeset: %s!")
-            _("push includes bumped changeset: %s!")
-            _("push includes divergent changeset: %s!")
+            mst = {"unstable": _("push includes unstable changeset: %s!"),
+                   "bumped": _("push includes bumped changeset: %s!"),
+                   "divergent": _("push includes divergent changeset: %s!")}
             # If we are to push if there is at least one
             # obsolete or unstable changeset in missing, at
             # least one of the missinghead will be obsolete or
@@ -358,9 +356,7 @@ def _pushcheckoutgoing(pushop):
                 if ctx.obsolete():
                     raise util.Abort(mso % ctx)
                 elif ctx.troubled():
-                    raise util.Abort(_(mst)
-                                     % (ctx.troubles()[0],
-                                        ctx))
+                    raise util.Abort(mst[ctx.troubles()[0]] % ctx)
         newbm = pushop.ui.configlist('bookmarks', 'pushing')
         discovery.checkheads(unfi, pushop.remote, outgoing,
                              pushop.remoteheads,
