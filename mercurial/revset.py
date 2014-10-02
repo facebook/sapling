@@ -2248,11 +2248,19 @@ class abstractsmartset(object):
 
     def min(self):
         """return the minimum element in the set"""
-        raise NotImplementedError()
+        if self.fastasc is not None:
+            for r in self.fastasc():
+                return r
+            raise ValueError('arg is an empty sequence')
+        return min(self)
 
     def max(self):
         """return the maximum element in the set"""
-        raise NotImplementedError()
+        if self.fastdesc is not None:
+            for r in self.fastdesc():
+                return r
+            raise ValueError('arg is an empty sequence')
+        return max(self)
 
     def reverse(self):
         """reverse the expected iteration order"""
