@@ -338,9 +338,11 @@ def _diverge(ui, b, path, localmarks):
             break
     # try to use an @pathalias suffix
     # if an @pathalias already exists, we overwrite (update) it
-    path = str(util.url(path))
+    if path.startswith("file:"):
+        path = util.url(path).path
     for p, u in ui.configitems("paths"):
-        u = str(util.url(path))
+        if u.startswith("file:"):
+            u = util.url(u).path
         if path == u:
             n = '%s@%s' % (b, p)
     return n
