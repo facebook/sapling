@@ -2855,27 +2855,44 @@ class _spanset(_orderedsetmixin, abstractsmartset):
 
         Spanset will be descending if `end` < `start`.
         """
+        if end is None:
+            end = len(repo)
+        self._ascending = start <= end
+        if not self._ascending:
+            start, end = end + 1, start +1
         self._start = start
-        if end is not None:
-            self._end = end
-        else:
-            self._end = len(repo)
+        self._end = end
         self._hiddenrevs = repo.changelog.filteredrevs
 
-    def __iter__(self):
-        if self.isascending():
-            iterrange = xrange(self._start, self._end)
-        else:
-            iterrange = xrange(self._start, self._end, -1)
+    def sort(self, reverse=False):
+        self._ascending = not reverse
 
-        if self._hiddenrevs:
-            s = self._hiddenrevs
-            for r in iterrange:
-                if r not in s:
-                    yield r
-        else:
-            for r in iterrange:
+    def reverse(self):
+        self._ascending = not self._ascending
+
+    def _iterfilter(self, iterrange):
+        s = self._hiddenrevs
+        for r in iterrange:
+            if r not in s:
                 yield r
+
+    def __iter__(self):
+        if self._ascending:
+            return self.fastasc()
+        else:
+            return self.fastdesc()
+
+    def fastasc(self):
+        iterrange = xrange(self._start, self._end)
+        if self._hiddenrevs:
+            return self._iterfilter(iterrange)
+        return iter(iterrange)
+
+    def fastdesc(self):
+        iterrange = xrange(self._end - 1, self._start - 1, -1)
+        if self._hiddenrevs:
+            return self._iterfilter(iterrange)
+        return iter(iterrange)
 
     def __contains__(self, rev):
         start = self._start
@@ -2922,17 +2939,6 @@ class _spanset(_orderedsetmixin, abstractsmartset):
         # Basic implementation to be changed in future patches.
         l = baseset([r for r in self])
         return l[x]
-
-    def sort(self, reverse=False):
-        if bool(reverse) != (self._start > self._end):
-            self.reverse()
-
-    def reverse(self):
-        # Just switch the _start and _end parameters
-        if self.isascending():
-            self._start, self._end = self._end - 1, self._start - 1
-        else:
-            self._start, self._end = self._end + 1, self._start + 1
 
     def set(self):
         return self
