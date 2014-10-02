@@ -18,7 +18,7 @@ list bookmarks with color
 
   $ hg --config extensions.color= --config color.mode=ansi \
   >     bookmark --color=always
-  \x1b[0;32m * X                         -1:000000000000\x1b[0m (esc)
+  \x1b[0;32m * \x1b[0m\x1b[0;32mX\x1b[0m\x1b[0;32m                         -1:000000000000\x1b[0m (esc)
 
 update to bookmark X
 

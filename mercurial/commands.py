@@ -1002,13 +1002,15 @@ def bookmark(ui, repo, *names, **opts):
             else:
                 prefix, label = ' ', ''
 
-            if ui.quiet:
-                ui.write("%s\n" % bmark, label=label)
-            else:
-                pad = " " * (25 - encoding.colwidth(bmark))
-                ui.write(" %s %s%s %d:%s\n" % (
-                    prefix, bmark, pad, repo.changelog.rev(n), hexfn(n)),
+            if not ui.quiet:
+                ui.write(' %s ' % prefix, label=label)
+            ui.write(bmark, label=label)
+            pad = " " * (25 - encoding.colwidth(bmark))
+            if not ui.quiet:
+                ui.write('%s %d:%s' % (
+                    pad, repo.changelog.rev(n), hexfn(n)),
                     label=label)
+            ui.write('\n')
 
 @command('branch',
     [('f', 'force', None,
