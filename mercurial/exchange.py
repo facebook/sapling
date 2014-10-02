@@ -489,6 +489,8 @@ def _pushb2bookmarks(pushop, bundler):
                     pushop.ui.status(_("updating bookmark %s\n") % book)
                 else:
                     pushop.ui.warn(_('updating bookmark %s failed!\n') % book)
+                    if pushop.bkresult is not None:
+                        pushop.bkresult = 1
     return handlereply
 
 
