@@ -2331,12 +2331,21 @@ class baseset(abstractsmartset):
             data = list(data)
         self._list = data
         self._set = None
+        self._ascending = None
 
     @util.propertycache
     def _asclist(self):
         asclist = self._list[:]
         asclist.sort()
         return asclist
+
+    def __iter__(self):
+        if self._ascending is None:
+            return iter(self._list)
+        elif self._ascending:
+            return iter(self._asclist)
+        else:
+            return reversed(self._asclist)
 
     def fastasc(self):
         return iter(self._asclist)
@@ -2367,9 +2376,6 @@ class baseset(abstractsmartset):
 
     def reverse(self):
         self._list.reverse()
-
-    def __iter__(self):
-        return iter(self._list)
 
     def __len__(self):
         return len(self._list)
