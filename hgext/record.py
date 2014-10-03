@@ -519,12 +519,12 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
             raise util.Abort(_('cannot partially commit a merge '
                                '(use "hg commit" instead)'))
 
-        changes = repo.status(match=match)[:3]
+        status = repo.status(match=match)
         diffopts = opts.copy()
         diffopts['nodates'] = True
         diffopts['git'] = True
         diffopts = patch.diffopts(ui, opts=diffopts)
-        chunks = patch.diff(repo, changes=changes, opts=diffopts)
+        chunks = patch.diff(repo, changes=status, opts=diffopts)
         fp = cStringIO.StringIO()
         fp.write(''.join(chunks))
         fp.seek(0)
@@ -544,13 +544,13 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
             except AttributeError:
                 pass
 
-        changed = changes[0] + changes[1] + changes[2]
+        changed = status.modified + status.added + status.removed
         newfiles = [f for f in changed if f in contenders]
         if not newfiles:
             ui.status(_('no changes to record\n'))
             return 0
 
-        modified = set(changes[0])
+        modified = set(status.modified)
 
         # 2. backup changed files, so we can restore them in the end
         if backupall:
