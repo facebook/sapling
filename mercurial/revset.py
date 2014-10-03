@@ -2291,7 +2291,8 @@ class abstractsmartset(object):
         """Returns a new object with the substraction of the two collections.
 
         This is part of the mandatory API for smartset."""
-        raise NotImplementedError()
+        c = other.__contains__
+        return self.filter(lambda r: not c(r))
 
     def filter(self, condition):
         """Returns this smartset filtered by condition as a new smartset.
