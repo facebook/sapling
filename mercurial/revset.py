@@ -2332,6 +2332,18 @@ class baseset(abstractsmartset):
         self._list = data
         self._set = None
 
+    @util.propertycache
+    def _asclist(self):
+        asclist = self._list[:]
+        asclist.sort()
+        return asclist
+
+    def fastasc(self):
+        return iter(self._asclist)
+
+    def fastdesc(self):
+        return reversed(self._asclist)
+
     def set(self):
         """Returns a set or a smartset containing all the elements.
 
