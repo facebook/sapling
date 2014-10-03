@@ -11,6 +11,7 @@ from mercurial.i18n import _
 from mercurial.node import short
 from mercurial import commands, cmdutil, hg, util, error
 from mercurial.lock import release
+from mercurial import exchange
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -84,7 +85,7 @@ def fetch(ui, repo, source='default', **opts):
                 raise util.Abort(err)
 
         # Are there any changes at all?
-        modheads = repo.pull(other, heads=revs)
+        modheads = exchange.pull(repo, other, heads=revs).cgresult
         if modheads == 0:
             return 0
 
