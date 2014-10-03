@@ -2962,9 +2962,6 @@ class _spanset(_orderedsetmixin, abstractsmartset):
     def isdescending(self):
         return self._start >= self._end
 
-    def filter(self, l):
-        return orderedlazyset(self, l, ascending=self.isascending())
-
 class fullreposet(_spanset):
     """a set containing all revisions in the repo
 
