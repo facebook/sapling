@@ -171,9 +171,8 @@ def _preselect(wstatus, changed):
     '''Retrieves modified and added files from a working directory state
     and returns the subset of each contained in given changed files
     retrieved from a change context.'''
-    modified, added = wstatus[:2]
-    modified = [f for f in modified if f in changed]
-    added = [f for f in added if f in changed]
+    modified = [f for f in wstatus.modified if f in changed]
+    added = [f for f in wstatus.added if f in changed]
     return modified, added
 
 
@@ -349,10 +348,9 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     wlock = repo.wlock()
     try:
         status = _status(ui, repo, wctx, kwt, *pats, **opts)
-        modified, added, removed, deleted, unknown, ignored, clean = status
-        if modified or added or removed or deleted:
+        if status.modified or status.added or status.removed or status.deleted:
             raise util.Abort(_('outstanding uncommitted changes'))
-        kwt.overwrite(wctx, clean, True, expand)
+        kwt.overwrite(wctx, status.clean, True, expand)
     finally:
         wlock.release()
 
@@ -503,20 +501,19 @@ def files(ui, repo, *pats, **opts):
     wctx = repo[None]
     status = _status(ui, repo, wctx, kwt, *pats, **opts)
     cwd = pats and repo.getcwd() or ''
-    modified, added, removed, deleted, unknown, ignored, clean = status
     files = []
     if not opts.get('unknown') or opts.get('all'):
-        files = sorted(modified + added + clean)
+        files = sorted(status.modified + status.added + status.clean)
     kwfiles = kwt.iskwfile(files, wctx)
-    kwdeleted = kwt.iskwfile(deleted, wctx)
-    kwunknown = kwt.iskwfile(unknown, wctx)
+    kwdeleted = kwt.iskwfile(status.deleted, wctx)
+    kwunknown = kwt.iskwfile(status.unknown, wctx)
     if not opts.get('ignore') or opts.get('all'):
         showfiles = kwfiles, kwdeleted, kwunknown
     else:
         showfiles = [], [], []
     if opts.get('all') or opts.get('ignore'):
         showfiles += ([f for f in files if f not in kwfiles],
-                      [f for f in unknown if f not in kwunknown])
+                      [f for f in status.unknown if f not in kwunknown])
     kwlabels = 'enabled deleted enabledunknown ignored ignoredunknown'.split()
     kwstates = zip(kwlabels, 'K!kIi', showfiles)
     fm = ui.formatter('kwfiles', opts)
