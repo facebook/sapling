@@ -2462,9 +2462,6 @@ class filteredset(abstractsmartset):
             return None
         return lambda: self._iterfilter(it())
 
-    def __add__(self, x):
-        return _addset(self, x)
-
     def __nonzero__(self):
         for r in self:
             return True
