@@ -2741,6 +2741,11 @@ class _generatorset(object):
         self._genlist = baseset([])
         self._finished = False
 
+    def __nonzero__(self):
+        for r in self:
+            return True
+        return False
+
     def __contains__(self, x):
         if x in self._cache:
             return self._cache[x]
