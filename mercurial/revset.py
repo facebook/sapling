@@ -70,7 +70,7 @@ def _revdescendants(repo, revs, followfirst):
                         yield i
                         break
 
-    return _ascgeneratorset(iterate())
+    return _generatorset(iterate(), iterasc=True)
 
 def _revsbetween(repo, roots, heads):
     """Return all paths between roots and heads, inclusive of both endpoint
