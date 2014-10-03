@@ -2919,14 +2919,6 @@ class _spanset(_orderedsetmixin, abstractsmartset):
             return True
         return False
 
-    def __add__(self, x):
-        kwargs = {}
-        if self.isascending() and x.isascending():
-            kwargs['ascending'] = True
-        if self.isdescending() and x.isdescending():
-            kwargs['ascending'] = False
-        return _addset(self, x, **kwargs)
-
     def __len__(self):
         if not self._hiddenrevs:
             return abs(self._end - self._start)
