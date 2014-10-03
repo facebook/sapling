@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cPickle
+from node import hex, short
 from i18n import _
 import encoding, util
 
@@ -16,6 +17,8 @@ class baseformatter(object):
         self._style = opts.get("style")
         self._template = opts.get("template")
         self._item = None
+        # function to convert node to string suitable for this output
+        self.hexfunc = hex
     def __nonzero__(self):
         '''return False if we're not doing real templating so we can
         skip extra work'''
@@ -51,6 +54,10 @@ class plainformatter(baseformatter):
     '''the default text output scheme'''
     def __init__(self, ui, topic, opts):
         baseformatter.__init__(self, ui, topic, opts)
+        if ui.debugflag:
+            self.hexfunc = hex
+        else:
+            self.hexfunc = short
     def __nonzero__(self):
         return False
     def startitem(self):

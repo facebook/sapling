@@ -276,10 +276,7 @@ def annotate(ui, repo, *pats, **opts):
 
     fm = ui.formatter('annotate', opts)
     datefunc = ui.quiet and util.shortdate or util.datestr
-    if fm or ui.debugflag:
-        hexfn = hex
-    else:
-        hexfn = short
+    hexfn = fm.hexfunc
 
     opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
              ('number', ' ', lambda x: x[0].rev(), str),
@@ -6086,10 +6083,7 @@ def tags(ui, repo, **opts):
     """
 
     fm = ui.formatter('tags', opts)
-    if fm or ui.debugflag:
-        hexfunc = hex
-    else:
-        hexfunc = short
+    hexfunc = fm.hexfunc
     tagtype = ""
 
     for t, n in reversed(repo.tagslist()):
