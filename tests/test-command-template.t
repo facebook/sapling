@@ -105,6 +105,26 @@ Default style is like normal output:
   $ hg log --debug --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
 
+Default style should also preserve color information (issue2866):
+
+  $ cp $HGRCPATH $HGRCPATH-bak
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > color=
+  > EOF
+
+  $ hg --color=debug log > log.out
+  $ hg --color=debug log --style default > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug -v log > log.out
+  $ hg --color=debug -v log --style default > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug --debug log > log.out
+  $ hg --color=debug --debug log --style default > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+
+  $ mv $HGRCPATH-bak $HGRCPATH
+
 Revision with no copies (used to print a traceback):
 
   $ hg tip -v --template '\n'
