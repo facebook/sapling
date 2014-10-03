@@ -4960,8 +4960,9 @@ def pull(ui, repo, source="default", **opts):
                         "so a rev cannot be specified.")
                 raise util.Abort(err)
 
-        modheads = repo.pull(other, heads=revs, force=opts.get('force'),
-                             bookmarks=opts.get('bookmark', ()))
+        modheads = exchange.pull(repo, other, heads=revs,
+                                 force=opts.get('force'),
+                                 bookmarks=opts.get('bookmark', ())).cgresult
         if checkout:
             checkout = str(repo.changelog.rev(other.lookup(checkout)))
         repo._subtoppath = source
