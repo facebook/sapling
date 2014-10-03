@@ -2,6 +2,7 @@ import os
 
 from mercurial import config
 from mercurial import context
+from mercurial import extensions
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
@@ -24,12 +25,53 @@ except ImportError:
 
 from hgext import schemes
 
+hasexchange = False
+try:
+    from mercurial import exchange
+    hasexchange = bool(getattr(exchange, 'push', False))
+except ImportError:
+    pass
+
+def expush(orig, repo, remote, *args, **kwargs):
+    res = orig(repo, remote, *args, **kwargs)
+    lock = repo.lock()
+    try:
+        try:
+            path = repo._activepath(remote)
+            if path:
+                repo.saveremotebranches(path, remote.branchmap())
+        except Exception, e:
+            ui.debug('remote branches for path %s not saved: %s\n'
+                     % (path, e))
+    finally:
+        lock.release()
+        return res
+
+def expull(orig, repo, remote, *args, **kwargs):
+    res = orig(repo, remote, *args, **kwargs)
+    lock = repo.lock()
+    try:
+        try:
+            path = repo._activepath(remote)
+            if path:
+                repo.saveremotebranches(path, remote.branchmap())
+        except Exception, e:
+            ui.debug('remote branches for path %s not saved: %s\n'
+                     % (path, e))
+    finally:
+        lock.release()
+        return res
+
+if hasexchange:
+    extensions.wrapfunction(exchange, 'push', expush)
+    extensions.wrapfunction(exchange, 'pull', expull)
+
 def reposetup(ui, repo):
     if not repo.local():
         return
 
-    opull = repo.pull
-    opush = repo.push
+    opull = getattr(repo.__class__, 'pull', lambda *args, **kwargs: None)
+    opush = getattr(repo.__class__, 'push', lambda *args, **kwargs: None)
     olookup = repo.lookup
     ofindtags = repo._findtags
 
@@ -69,34 +111,10 @@ def reposetup(ui, repo):
             return olookup(key)
 
         def pull(self, remote, *args, **kwargs):
-            res = opull(remote, *args, **kwargs)
-            lock = self.lock()
-            try:
-                try:
-                    path = self._activepath(remote)
-                    if path:
-                        self.saveremotebranches(path, remote.branchmap())
-                except Exception, e:
-                    ui.debug('remote branches for path %s not saved: %s\n'
-                             % (path, e))
-            finally:
-                lock.release()
-                return res
+            return expull(opull, self, remote, *args, **kwargs)
 
         def push(self, remote, *args, **kwargs):
-            res = opush(remote, *args, **kwargs)
-            lock = self.lock()
-            try:
-                try:
-                    path = self._activepath(remote)
-                    if path:
-                        self.saveremotebranches(path, remote.branchmap())
-                except Exception, e:
-                    ui.debug('remote branches for path %s not saved: %s\n'
-                             % (path, e))
-            finally:
-                lock.release()
-                return res
+            return expush(opush, self, remote, *args, **kwargs)
 
         def _activepath(self, remote):
             conf = config.config()
