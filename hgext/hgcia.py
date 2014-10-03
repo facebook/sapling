@@ -82,14 +82,14 @@ class ciamsg(object):
         if url and url[-1] == '/':
             url = url[:-1]
         elems = []
-        for path in f[0]:
+        for path in f.modified:
             uri = '%s/diff/%s/%s' % (url, short(n), path)
             elems.append(self.fileelem(path, url and uri, 'modify'))
-        for path in f[1]:
+        for path in f.added:
             # TODO: copy/rename ?
             uri = '%s/file/%s/%s' % (url, short(n), path)
             elems.append(self.fileelem(path, url and uri, 'add'))
-        for path in f[2]:
+        for path in f.removed:
             elems.append(self.fileelem(path, '', 'remove'))
 
         return '\n'.join(elems)
