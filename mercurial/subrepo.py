@@ -743,7 +743,7 @@ class hgsubrepo(abstractsubrepo):
             self._repo.ui.status(_('pulling subrepo %s from %s\n')
                                  % (subrelpath(self), srcurl))
             cleansub = self.storeclean(srcurl)
-            self._repo.pull(other)
+            exchange.pull(self._repo, other)
             if cleansub:
                 # keep the repo clean after pull
                 self._cachestorehash(srcurl)
