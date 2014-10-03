@@ -2703,6 +2703,10 @@ class _ascgeneratorset(_generatorset):
     This class does not duck-type baseset and it's only supposed to be used
     internally
     """
+
+    def __init__(self, gen):
+        super(_ascgeneratorset, self).__init__(gen, iterasc=True)
+
     def __contains__(self, x):
         if x in self._cache:
             return self._cache[x]
@@ -2726,6 +2730,10 @@ class _descgeneratorset(_generatorset):
     This class does not duck-type baseset and it's only supposed to be used
     internally
     """
+
+    def __init__(self, gen):
+        super(_descgeneratorset, self).__init__(gen, iterasc=False)
+
     def __contains__(self, x):
         if x in self._cache:
             return self._cache[x]
