@@ -5787,38 +5787,35 @@ def summary(ui, repo, **opts):
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
 
-    st = list(repo.status(unknown=True))[:5]
+    status = repo.status(unknown=True)
 
     c = repo.dirstate.copies()
     copied, renamed = [], []
     for d, s in c.iteritems():
-        if s in st[2]:
-            st[2].remove(s)
+        if s in status.removed:
+            status.removed.remove(s)
             renamed.append(d)
         else:
             copied.append(d)
-        if d in st[1]:
-            st[1].remove(d)
-    st.insert(3, renamed)
-    st.insert(4, copied)
+        if d in status.added:
+            status.added.remove(d)
 
     ms = mergemod.mergestate(repo)
-    st.append([f for f in ms if ms[f] == 'u'])
+    unresolved = [f for f in ms if ms[f] == 'u']
 
     subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
-    st.append(subs)
 
-    labels = [ui.label(_('%d modified'), 'status.modified'),
-              ui.label(_('%d added'), 'status.added'),
-              ui.label(_('%d removed'), 'status.removed'),
-              ui.label(_('%d renamed'), 'status.copied'),
-              ui.label(_('%d copied'), 'status.copied'),
-              ui.label(_('%d deleted'), 'status.deleted'),
-              ui.label(_('%d unknown'), 'status.unknown'),
-              ui.label(_('%d unresolved'), 'resolve.unresolved'),
-              ui.label(_('%d subrepos'), 'status.modified')]
+    labels = [(ui.label(_('%d modified'), 'status.modified'), status.modified),
+              (ui.label(_('%d added'), 'status.added'), status.added),
+              (ui.label(_('%d removed'), 'status.removed'), status.removed),
+              (ui.label(_('%d renamed'), 'status.copied'), renamed),
+              (ui.label(_('%d copied'), 'status.copied'), copied),
+              (ui.label(_('%d deleted'), 'status.deleted'), status.deleted),
+              (ui.label(_('%d unknown'), 'status.unknown'), status.unknown),
+              (ui.label(_('%d unresolved'), 'resolve.unresolved'), unresolved),
+              (ui.label(_('%d subrepos'), 'status.modified'), subs)]
     t = []
-    for s, l in zip(st, labels):
+    for l, s in labels:
         if s:
             t.append(l % len(s))
 
@@ -5834,7 +5831,8 @@ def summary(ui, repo, **opts):
     elif (parents[0].closesbranch() and
           pnode in repo.branchheads(branch, closed=True)):
         t += _(' (head closed)')
-    elif not (st[0] or st[1] or st[2] or st[3] or st[4] or st[8]):
+    elif not (status.modified or status.added or status.removed or renamed or
+              copied or subs):
         t += _(' (clean)')
         cleanworkdir = True
     elif pnode not in bheads:
