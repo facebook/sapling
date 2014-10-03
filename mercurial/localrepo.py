@@ -1728,7 +1728,7 @@ class localrepository(object):
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
         try:
             self.ui.setconfig('ui', 'quietbookmarkmove', True, 'clone')
-            ret = self.pull(remote, heads)
+            ret = exchange.pull(self, remote, heads).cgresult
         finally:
             self.ui.restoreconfig(quiet)
         return ret
