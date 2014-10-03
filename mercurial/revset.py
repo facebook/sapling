@@ -2786,7 +2786,7 @@ def spanset(repo, start=None, end=None):
     return _spanset(repo, start, end)
 
 
-class _spanset(_orderedsetmixin, abstractsmartset):
+class _spanset(abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
 
