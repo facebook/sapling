@@ -2500,9 +2500,6 @@ class filteredset(abstractsmartset):
     def isdescending(self):
         return self._ascending is not None and not self._ascending
 
-    def filter(self, l):
-        return filteredset(self, l)
-
 class orderedlazyset(_orderedsetmixin, filteredset):
     """Subclass of filteredset which subset can be ordered either ascending or
     descendingly
