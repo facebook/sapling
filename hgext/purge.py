@@ -102,7 +102,7 @@ def purge(ui, repo, *dirs, **opts):
     status = repo.status(match=match, ignored=opts['all'], unknown=True)
 
     if removefiles:
-        for f in sorted(status[4] + status[5]):
+        for f in sorted(status.unknown + status.ignored):
             if act:
                 ui.note(_('removing file %s\n') % f)
             remove(util.unlink, f)
