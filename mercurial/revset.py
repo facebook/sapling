@@ -409,7 +409,7 @@ def only(repo, subset, x):
         exclude = getset(repo, spanset(repo), args[1])
 
     results = set(ancestormod.missingancestors(include, exclude, cl.parentrevs))
-    return lazyset(subset, results.__contains__)
+    return filteredset(subset, results.__contains__)
 
 def bisect(repo, subset, x):
     """``bisect(string)``
@@ -668,8 +668,8 @@ def _descendants(repo, subset, x, followfirst=False):
     result = (orderedlazyset(s, subset.__contains__, ascending=True) +
               orderedlazyset(args, subset.__contains__, ascending=True))
 
-    # Wrap result in a lazyset since it's an _addset, which doesn't implement
-    # all the necessary functions to be consumed by callers.
+    # Wrap result in a filteredset since it's an _addset, which doesn't
+    # implement all the necessary functions to be consumed by callers.
     return orderedlazyset(result, lambda r: True, ascending=True)
 
 def descendants(repo, subset, x):
@@ -2330,7 +2330,7 @@ class baseset(list, abstractsmartset):
 
         This is part of the mandatory API for smartset."""
         # If we are operating on 2 baseset, do the computation now since all
-        # data is available. The alternative is to involve a lazyset, which
+        # data is available. The alternative is to involve a filteredset, which
         # may be slow.
         if isinstance(other, baseset):
             other = other.set()
@@ -2371,7 +2371,7 @@ class baseset(list, abstractsmartset):
         boolean.
 
         This is part of the mandatory API for smartset."""
-        return lazyset(self, condition)
+        return filteredset(self, condition)
 
 class _orderedsetmixin(object):
     """Mixin class with utility methods for smartsets
@@ -2404,7 +2404,7 @@ class _orderedsetmixin(object):
             return self._last()
         return self._first()
 
-class lazyset(abstractsmartset):
+class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
     revset
@@ -2452,10 +2452,10 @@ class lazyset(abstractsmartset):
         return lambda: self._iterfilter(it())
 
     def __and__(self, x):
-        return lazyset(self, x.__contains__)
+        return filteredset(self, x.__contains__)
 
     def __sub__(self, x):
-        return lazyset(self, lambda r: r not in x)
+        return filteredset(self, lambda r: r not in x)
 
     def __add__(self, x):
         return _addset(self, x)
@@ -2499,10 +2499,10 @@ class lazyset(abstractsmartset):
         return self._ascending is not None and not self._ascending
 
     def filter(self, l):
-        return lazyset(self, l)
+        return filteredset(self, l)
 
-class orderedlazyset(_orderedsetmixin, lazyset):
-    """Subclass of lazyset which subset can be ordered either ascending or
+class orderedlazyset(_orderedsetmixin, filteredset):
+    """Subclass of filteredset which subset can be ordered either ascending or
     descendingly
     """
     def __init__(self, subset, condition, ascending=True):
@@ -2587,7 +2587,7 @@ class _addset(_orderedsetmixin):
     def filter(self, condition):
         if self._ascending is not None:
             return orderedlazyset(self, condition, ascending=self._ascending)
-        return lazyset(self, condition)
+        return filteredset(self, condition)
 
     def ascending(self):
         if self._ascending is None:
@@ -2609,13 +2609,13 @@ class _addset(_orderedsetmixin):
         filterfunc = other.__contains__
         if self._ascending is not None:
             return orderedlazyset(self, filterfunc, ascending=self._ascending)
-        return lazyset(self, filterfunc)
+        return filteredset(self, filterfunc)
 
     def __sub__(self, other):
         filterfunc = lambda r: r not in other
         if self._ascending is not None:
             return orderedlazyset(self, filterfunc, ascending=self._ascending)
-        return lazyset(self, filterfunc)
+        return filteredset(self, filterfunc)
 
     def __add__(self, other):
         """When both collections are ascending or descending, preserve the order
