@@ -24,4 +24,4 @@ tests-%:
 	(cd $(CREW) ; $(MAKE) clean ) && \
 	cd tests && $(PYTHON) $(CREW)/tests/run-tests.py $(TESTFLAGS)
 
-all-version-tests: tests-1.7.5 tests-1.8.1 tests-1.9.3 tests-2.0.2 tests-2.9 tests-tip
+all-version-tests: tests-1.7.5 tests-1.8.1 tests-1.9.3 tests-2.0.2 tests-2.9 tests-3.1.1 tests-tip
