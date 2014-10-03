@@ -2577,6 +2577,9 @@ class _addset(_orderedsetmixin):
     def __len__(self):
         return len(self._list)
 
+    def __nonzero__(self):
+        return bool(self._r1 or self._r2)
+
     @util.propertycache
     def _list(self):
         if not self._genlist:
