@@ -2726,19 +2726,6 @@ class _generatorset(abstractsmartset):
                 continue
         self._genlist.sort(reverse=reverse)
 
-class _descgeneratorset(_generatorset):
-    """Wrap a generator of descending elements for lazy iteration
-
-    Same structure as _generatorset but stops iterating after it goes past
-    the value when asked for membership and the element is not contained
-
-    This class does not duck-type baseset and it's only supposed to be used
-    internally
-    """
-
-    def __init__(self, gen):
-        super(_descgeneratorset, self).__init__(gen, iterasc=False)
-
 def spanset(repo, start=None, end=None):
     """factory function to dispatch between fullreposet and actual spanset
 
