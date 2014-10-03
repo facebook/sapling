@@ -2721,7 +2721,7 @@ class _addset(_orderedsetmixin):
         if self._ascending is not None:
             self._ascending = not self._ascending
 
-class _generatorset(object):
+class _generatorset(abstractsmartset):
     """Wrap a generator for lazy iteration
 
     Wrapper structure for generators that provides lazy membership and can
