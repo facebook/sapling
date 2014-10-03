@@ -407,8 +407,8 @@ class colorui(uimod.ui):
                 *[self.label(str(a), label) for a in args], **opts)
 
     def showlabel(self, msg, label):
-        if label:
-            if msg and msg[-1] == '\n':
+        if label and msg:
+            if msg[-1] == '\n':
                 return "[%s|%s]\n" % (label, msg[:-1])
             else:
                 return "[%s|%s]" % (label, msg)

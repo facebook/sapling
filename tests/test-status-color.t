@@ -152,6 +152,11 @@ Make sure ui.formatted=False works
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [log.summary|summary:     initial checkin]
   
+Labels on empty strings should not be displayed, labels on custom
+templates should be.
+
+  $ hg log --color=debug -T '{label("my.label",author)}\n{label("skipped.label","")}'
+  [my.label|test]
   $ touch modified added unknown ignored
   $ hg add added
   $ hg remove removed
