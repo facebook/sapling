@@ -2607,17 +2607,6 @@ class _addset(abstractsmartset):
             if self._ascending:
                 self.reverse()
 
-    def __add__(self, other):
-        """When both collections are ascending or descending, preserve the order
-        """
-        kwargs = {}
-        if self._ascending is not None:
-            if self.isascending() and other.isascending():
-                kwargs['ascending'] = True
-            if self.isdescending() and other.isdescending():
-                kwargs['ascending'] = False
-        return _addset(self, other, **kwargs)
-
     def _iterator(self):
         """Iterate over both collections without repeating elements
 
