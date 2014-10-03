@@ -2500,60 +2500,6 @@ class filteredset(abstractsmartset):
     def isdescending(self):
         return self._ascending is not None and not self._ascending
 
-class orderedlazyset(_orderedsetmixin, filteredset):
-    """Subclass of filteredset which subset can be ordered either ascending or
-    descendingly
-    """
-    def __init__(self, subset, condition, ascending=True):
-        super(orderedlazyset, self).__init__(subset, condition)
-        self._ascending = ascending
-
-    def filter(self, l):
-        return orderedlazyset(self, l, ascending=self._ascending)
-
-    def ascending(self):
-        if not self._ascending:
-            self.reverse()
-
-    def descending(self):
-        if self._ascending:
-            self.reverse()
-
-    def __and__(self, x):
-        return orderedlazyset(self, x.__contains__,
-                ascending=self._ascending)
-
-    def __sub__(self, x):
-        return orderedlazyset(self, lambda r: r not in x,
-                ascending=self._ascending)
-
-    def __add__(self, x):
-        kwargs = {}
-        if self.isascending() and x.isascending():
-            kwargs['ascending'] = True
-        if self.isdescending() and x.isdescending():
-            kwargs['ascending'] = False
-        return _addset(self, x, **kwargs)
-
-    def sort(self, reverse=False):
-        if reverse:
-            if self._ascending:
-                self._subset.sort(reverse=reverse)
-        else:
-            if not self._ascending:
-                self._subset.sort(reverse=reverse)
-        self._ascending = not reverse
-
-    def isascending(self):
-        return self._ascending
-
-    def isdescending(self):
-        return not self._ascending
-
-    def reverse(self):
-        self._subset.reverse()
-        self._ascending = not self._ascending
-
 class _addset(abstractsmartset):
     """Represent the addition of two sets
 
