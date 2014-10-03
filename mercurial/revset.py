@@ -2418,12 +2418,6 @@ class lazyset(abstractsmartset):
         self._condition = condition
         self._cache = {}
 
-    def min(self):
-        return min(self)
-
-    def max(self):
-        return max(self)
-
     def __contains__(self, x):
         c = self._cache
         if x not in c:
