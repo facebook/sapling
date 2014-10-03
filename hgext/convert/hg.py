@@ -21,7 +21,7 @@
 import os, time, cStringIO
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
-from mercurial import hg, util, context, bookmarks, error, scmutil
+from mercurial import hg, util, context, bookmarks, error, scmutil, exchange
 
 from common import NoRepo, commit, converter_source, converter_sink
 
@@ -113,7 +113,8 @@ class mercurial_sink(converter_sink):
                 pbranchpath = os.path.join(self.path, pbranch)
                 prepo = hg.peer(self.ui, {}, pbranchpath)
                 self.ui.note(_('pulling from %s into %s\n') % (pbranch, branch))
-                self.repo.pull(prepo, [prepo.lookup(h) for h in heads])
+                exchange.pull(self.repo, prepo,
+                              [prepo.lookup(h) for h in heads])
             self.before()
 
     def _rewritetags(self, source, revmap, data):
