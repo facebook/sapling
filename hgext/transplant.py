@@ -19,7 +19,7 @@ import os, tempfile
 from mercurial.node import short
 from mercurial import bundlerepo, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error, cmdutil
-from mercurial import revset, templatekw
+from mercurial import revset, templatekw, exchange
 
 class TransplantError(error.Abort):
     pass
@@ -145,7 +145,7 @@ class transplanter(object):
                         continue
                     if pulls:
                         if source != repo:
-                            repo.pull(source.peer(), heads=pulls)
+                            exchange.pull(repo, source.peer(), heads=pulls)
                         merge.update(repo, pulls[-1], False, False, None)
                         p1, p2 = repo.dirstate.parents()
                         pulls = []
@@ -157,7 +157,7 @@ class transplanter(object):
                     # transplants before them fail.
                     domerge = True
                     if not hasnode(repo, node):
-                        repo.pull(source.peer(), heads=[node])
+                        exchange.pull(repo, source.peer(), heads=[node])
 
                 skipmerge = False
                 if parents[1] != revlog.nullid:
@@ -209,7 +209,7 @@ class transplanter(object):
                             os.unlink(patchfile)
             tr.close()
             if pulls:
-                repo.pull(source.peer(), heads=pulls)
+                exchange.pull(repo, source.peer(), heads=pulls)
                 merge.update(repo, pulls[-1], False, False, None)
         finally:
             self.saveseries(revmap, merges)
