@@ -2633,8 +2633,10 @@ class _generatorset(abstractsmartset):
         if iterasc is not None:
             if iterasc:
                 self.fastasc = self.__iter__
+                self.__contains__ = self._asccontains
             else:
                 self.fastdesc = self.__iter__
+                self.__contains__ = self._desccontains
 
     def __nonzero__(self):
         for r in self:
@@ -2649,6 +2651,36 @@ class _generatorset(abstractsmartset):
         for l in self._consumegen():
             if l == x:
                 return True
+
+        self._cache[x] = False
+        return False
+
+    def _asccontains(self, x):
+        """version of contains optimised for ascending generator"""
+        if x in self._cache:
+            return self._cache[x]
+
+        # Use new values only, as existing values would be cached.
+        for l in self._consumegen():
+            if l == x:
+                return True
+            if l > x:
+                break
+
+        self._cache[x] = False
+        return False
+
+    def _desccontains(self, x):
+        """version of contains optimised for descending generator"""
+        if x in self._cache:
+            return self._cache[x]
+
+        # Use new values only, as existing values would be cached.
+        for l in self._consumegen():
+            if l == x:
+                return True
+            if l < x:
+                break
 
         self._cache[x] = False
         return False
@@ -2707,20 +2739,6 @@ class _ascgeneratorset(_generatorset):
     def __init__(self, gen):
         super(_ascgeneratorset, self).__init__(gen, iterasc=True)
 
-    def __contains__(self, x):
-        if x in self._cache:
-            return self._cache[x]
-
-        # Use new values only, as existing values would be cached.
-        for l in self._consumegen():
-            if l == x:
-                return True
-            if l > x:
-                break
-
-        self._cache[x] = False
-        return False
-
 class _descgeneratorset(_generatorset):
     """Wrap a generator of descending elements for lazy iteration
 
@@ -2733,20 +2751,6 @@ class _descgeneratorset(_generatorset):
 
     def __init__(self, gen):
         super(_descgeneratorset, self).__init__(gen, iterasc=False)
-
-    def __contains__(self, x):
-        if x in self._cache:
-            return self._cache[x]
-
-        # Use new values only, as existing values would be cached.
-        for l in self._consumegen():
-            if l == x:
-                return True
-            if l < x:
-                break
-
-        self._cache[x] = False
-        return False
 
 def spanset(repo, start=None, end=None):
     """factory function to dispatch between fullreposet and actual spanset
