@@ -2586,22 +2586,6 @@ class _addset(abstractsmartset):
             self._genlist = baseset(self._iterator())
         return self._genlist
 
-    def ascending(self):
-        if self._ascending is None:
-            self.sort()
-            self._ascending = True
-        else:
-            if not self._ascending:
-                self.reverse()
-
-    def descending(self):
-        if self._ascending is None:
-            self.sort(reverse=True)
-            self._ascending = False
-        else:
-            if self._ascending:
-                self.reverse()
-
     def _iterator(self):
         """Iterate over both collections without repeating elements
 
