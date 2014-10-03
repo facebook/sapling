@@ -1235,9 +1235,9 @@ class localrepository(object):
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 
-            changes = self.status(match=match, clean=force)
+            status = self.status(match=match, clean=force)
             if force:
-                changes[0].extend(changes[6]) # mq may commit unchanged files
+                status.modified.extend(status.clean) # mq may commit clean files
 
             # check subrepos
             subs = []
@@ -1246,7 +1246,7 @@ class localrepository(object):
             # only manage subrepos and .hgsubstate if .hgsub is present
             if '.hgsub' in wctx:
                 # we'll decide whether to track this ourselves, thanks
-                for c in changes[:3]:
+                for c in status.modified, status.added, status.removed:
                     if '.hgsubstate' in c:
                         c.remove('.hgsubstate')
 
@@ -1284,23 +1284,24 @@ class localrepository(object):
                         '.hgsub' in (wctx.modified() + wctx.added())):
                         raise util.Abort(
                             _("can't commit subrepos without .hgsub"))
-                    changes[0].insert(0, '.hgsubstate')
+                    status.modified.insert(0, '.hgsubstate')
 
-            elif '.hgsub' in changes[2]:
+            elif '.hgsub' in status.removed:
                 # clean up .hgsubstate when .hgsub is removed
                 if ('.hgsubstate' in wctx and
-                    '.hgsubstate' not in changes[0] + changes[1] + changes[2]):
-                    changes[2].insert(0, '.hgsubstate')
+                    '.hgsubstate' not in (status.modified + status.added +
+                                          status.removed)):
+                    status.removed.insert(0, '.hgsubstate')
 
             # make sure all explicit patterns are matched
             if not force and match.files():
-                matched = set(changes[0] + changes[1] + changes[2])
+                matched = set(status.modified + status.added + status.removed)
 
                 for f in match.files():
                     f = self.dirstate.normalize(f)
                     if f == '.' or f in matched or f in wctx.substate:
                         continue
-                    if f in changes[3]: # missing
+                    if f in status.deleted:
                         fail(f, _('file not found!'))
                     if f in vdirs: # visited directory
                         d = f + '/'
@@ -1312,7 +1313,7 @@ class localrepository(object):
                     elif f not in self.dirstate:
                         fail(f, _("file not tracked!"))
 
-            cctx = context.workingctx(self, text, user, date, extra, changes)
+            cctx = context.workingctx(self, text, user, date, extra, status)
 
             if (not force and not extra.get("close") and not merge
                 and not cctx.files()
@@ -1323,7 +1324,7 @@ class localrepository(object):
                 raise util.Abort(_("cannot commit merge with missing files"))
 
             ms = mergemod.mergestate(self)
-            for f in changes[0]:
+            for f in status.modified:
                 if f in ms and ms[f] == 'u':
                     raise util.Abort(_("unresolved merge conflicts "
                                        "(see hg help resolve)"))
