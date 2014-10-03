@@ -2274,7 +2274,7 @@ class abstractsmartset(object):
         """Returns a new object with the intersection of the two collections.
 
         This is part of the mandatory API for smartset."""
-        raise NotImplementedError()
+        return self.filter(other.__contains__)
 
     def __add__(self, other):
         """Returns a new object with the union of the two collections.
