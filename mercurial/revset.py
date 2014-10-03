@@ -46,7 +46,7 @@ def _revancestors(repo, revs, followfirst):
                     if parent != node.nullrev:
                         heapq.heappush(h, -parent)
 
-    return _descgeneratorset(iterate())
+    return _generatorset(iterate(), iterasc=False)
 
 def _revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
