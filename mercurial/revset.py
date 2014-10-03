@@ -2607,12 +2607,6 @@ class _addset(abstractsmartset):
             if self._ascending:
                 self.reverse()
 
-    def __sub__(self, other):
-        filterfunc = lambda r: r not in other
-        if self._ascending is not None:
-            return orderedlazyset(self, filterfunc, ascending=self._ascending)
-        return filteredset(self, filterfunc)
-
     def __add__(self, other):
         """When both collections are ascending or descending, preserve the order
         """
