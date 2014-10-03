@@ -2409,7 +2409,7 @@ class lazyset(abstractsmartset):
     the subset and contains a function which tests for membership in the
     revset
     """
-    def __init__(self, subset, condition=lambda x: True):
+    def __init__(self, subset, condition=lambda x: True, ascending=None):
         """
         condition: a function that decide whether a revision in the subset
                    belongs to the revset or not.
@@ -2417,6 +2417,9 @@ class lazyset(abstractsmartset):
         self._subset = subset
         self._condition = condition
         self._cache = {}
+        if ascending is not None:
+            ascending = bool(ascending)
+        self._ascending = ascending
 
     def __contains__(self, x):
         c = self._cache
@@ -2473,21 +2476,27 @@ class lazyset(abstractsmartset):
         return l[x]
 
     def sort(self, reverse=False):
-        if not util.safehasattr(self._subset, 'sort'):
-            self._subset = baseset(self._subset)
-        self._subset.sort(reverse=reverse)
+        if self._ascending is None:
+            if not util.safehasattr(self._subset, 'sort'):
+                self._subset = baseset(self._subset)
+            self._subset.sort(reverse=reverse)
+            self._ascending = not reverse
+        elif bool(reverse) == self._ascending:
+            self.reverse()
 
     def reverse(self):
         self._subset.reverse()
+        if self._ascending is not None:
+            self._ascending = not self._ascending
 
     def set(self):
         return set([r for r in self])
 
     def isascending(self):
-        return False
+        return self._ascending is not None and self._ascending
 
     def isdescending(self):
-        return False
+        return self._ascending is not None and not self._ascending
 
     def filter(self, l):
         return lazyset(self, l)
