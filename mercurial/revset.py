@@ -2375,15 +2375,6 @@ class baseset(list, abstractsmartset):
         This is part of the mandatory API for smartset."""
         return False
 
-    def filter(self, condition):
-        """Returns this smartset filtered by condition as a new smartset.
-
-        `condition` is a callable which takes a revision number and returns a
-        boolean.
-
-        This is part of the mandatory API for smartset."""
-        return filteredset(self, condition)
-
 class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
