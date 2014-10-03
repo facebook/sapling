@@ -2622,7 +2622,7 @@ class _generatorset(abstractsmartset):
     This class does not duck-type baseset and it's only supposed to be used
     internally
     """
-    def __init__(self, gen):
+    def __init__(self, gen, iterasc=None):
         """
         gen: a generator producing the values for the generatorset.
         """
@@ -2630,6 +2630,11 @@ class _generatorset(abstractsmartset):
         self._cache = {}
         self._genlist = baseset([])
         self._finished = False
+        if iterasc is not None:
+            if iterasc:
+                self.fastasc = self.__iter__
+            else:
+                self.fastdesc = self.__iter__
 
     def __nonzero__(self):
         for r in self:
