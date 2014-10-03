@@ -2372,10 +2372,13 @@ class baseset(abstractsmartset):
         return bool(self._list)
 
     def sort(self, reverse=False):
-        self._list.sort(reverse=reverse)
+        self._ascending = not bool(reverse)
 
     def reverse(self):
-        self._list.reverse()
+        if self._ascending is None:
+            self._list.reverse()
+        else:
+            self._ascending = not self._ascending
 
     def __len__(self):
         return len(self._list)
@@ -2421,12 +2424,22 @@ class baseset(abstractsmartset):
 
     def first(self):
         if self:
-            return self._list[0]
+            if self._ascending is None:
+                return self._list[0]
+            elif self._ascending:
+                return self._asclist[0]
+            else:
+                return self._asclist[-1]
         return None
 
     def last(self):
         if self:
-            return self._list[-1]
+            if self._ascending is None:
+                return self._list[-1]
+            elif self._ascending:
+                return self._asclist[-1]
+            else:
+                return self._asclist[0]
         return None
 
 class filteredset(abstractsmartset):
