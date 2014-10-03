@@ -866,7 +866,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
         pullop.releasetransaction()
         lock.release()
 
-    return pullop.cgresult
+    return pullop
 
 def _pulldiscovery(pullop):
     """discovery phase for the pull
