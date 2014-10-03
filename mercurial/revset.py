@@ -2586,11 +2586,6 @@ class _addset(abstractsmartset):
             self._genlist = baseset(self._iterator())
         return self._genlist
 
-    def filter(self, condition):
-        if self._ascending is not None:
-            return orderedlazyset(self, condition, ascending=self._ascending)
-        return filteredset(self, condition)
-
     def ascending(self):
         if self._ascending is None:
             self.sort()
