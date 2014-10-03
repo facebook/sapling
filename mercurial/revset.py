@@ -665,12 +665,12 @@ def _descendants(repo, subset, x, followfirst=False):
     # Both sets need to be ascending in order to lazily return the union
     # in the correct order.
     args.ascending()
-    result = (orderedlazyset(s, subset.__contains__, ascending=True) +
-              orderedlazyset(args, subset.__contains__, ascending=True))
+    result = (filteredset(s, subset.__contains__, ascending=True) +
+              filteredset(args, subset.__contains__, ascending=True))
 
     # Wrap result in a filteredset since it's an _addset, which doesn't
     # implement all the necessary functions to be consumed by callers.
-    return orderedlazyset(result, lambda r: True, ascending=True)
+    return filteredset(result, lambda r: True, ascending=True)
 
 def descendants(repo, subset, x):
     """``descendants(set)``
