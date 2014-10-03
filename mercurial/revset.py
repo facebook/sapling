@@ -2659,6 +2659,22 @@ class _addset(_orderedsetmixin):
             return iter(self._genlist)
         return iter(self._iterator())
 
+    @property
+    def fastasc(self):
+        iter1 = self._r1.fastasc
+        iter2 = self._r2.fastasc
+        if None in (iter1, iter2):
+            return None
+        return lambda: self._iterordered(True, iter1(), iter2())
+
+    @property
+    def fastdesc(self):
+        iter1 = self._r1.fastdesc
+        iter2 = self._r2.fastdesc
+        if None in (iter1, iter2):
+            return None
+        return lambda: self._iterordered(False, iter1(), iter2())
+
     def _iterordered(self, ascending, iter1, iter2):
         """produce an ordered iteration from two iterators with the same order
 
