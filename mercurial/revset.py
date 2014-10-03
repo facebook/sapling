@@ -2919,10 +2919,6 @@ class _spanset(_orderedsetmixin, abstractsmartset):
             return True
         return False
 
-    def __and__(self, x):
-        return orderedlazyset(self, x.__contains__,
-                              ascending=self.isascending())
-
     def __sub__(self, x):
         filterfunc = x.__contains__
         return orderedlazyset(self, lambda r: not filterfunc(r),
