@@ -2307,12 +2307,6 @@ class baseset(list, abstractsmartset):
         super(baseset, self).__init__(data)
         self._set = None
 
-    def min(self):
-        return min(self)
-
-    def max(self):
-        return max(self)
-
     def set(self):
         """Returns a set or a smartset containing all the elements.
 
