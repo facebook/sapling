@@ -137,7 +137,7 @@ def openlfdirstate(ui, repo, create=True):
 def lfdirstatestatus(lfdirstate, repo, rev):
     match = match_.always(repo.root, repo.getcwd())
     unsure, s = lfdirstate.status(match, [], False, False, False)
-    modified, added, removed, missing, unknown, ignored, clean = s
+    modified, _added, _removed, _missing, _unknown, _ignored, clean = s
     for lfile in unsure:
         try:
             fctx = repo[rev][standin(lfile)]
@@ -148,7 +148,7 @@ def lfdirstatestatus(lfdirstate, repo, rev):
         else:
             clean.append(lfile)
             lfdirstate.normal(lfile)
-    return (modified, added, removed, missing, unknown, ignored, clean)
+    return s
 
 def listlfiles(repo, rev=None, matcher=None):
     '''return a list of largefiles in the working copy or the
