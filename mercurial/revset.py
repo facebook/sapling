@@ -2623,6 +2623,7 @@ class generatorset(abstractsmartset):
         self._cache = {}
         self._genlist = []
         self._finished = False
+        self._ascending = True
         if iterasc is not None:
             if iterasc:
                 self.fastasc = self._iterator
@@ -2679,7 +2680,17 @@ class generatorset(abstractsmartset):
         return False
 
     def __iter__(self):
-        return self._iterator()
+        if self._ascending:
+            it = self.fastasc
+        else:
+            it = self.fastdesc
+        if it is not None:
+            return it()
+        # we need to consume the iterator
+        for x in self._consumegen():
+            pass
+        # recall the same code
+        return iter(self)
 
     def _iterator(self):
         if self._finished:
@@ -2723,10 +2734,10 @@ class generatorset(abstractsmartset):
         return self
 
     def sort(self, reverse=False):
-        if not self._finished:
-            for i in self:
-                continue
-        self._genlist.sort(reverse=reverse)
+        self._ascending = not reverse
+
+    def reverse(self):
+        self._ascending = not self._ascending
 
 def spanset(repo, start=None, end=None):
     """factory function to dispatch between fullreposet and actual spanset
