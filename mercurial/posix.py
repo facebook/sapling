@@ -217,8 +217,7 @@ if sys.platform == 'darwin':
         '''
 
         try:
-            path.decode('ascii') # throw exception for non-ASCII character
-            return path.lower()
+            return encoding.asciilower(path)  # exception for non-ASCII
         except UnicodeDecodeError:
             pass
         try:
