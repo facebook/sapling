@@ -545,3 +545,63 @@ start without repository:
   *** runcommand init repo2
   *** runcommand id -R repo2
   000000000000 tip
+
+
+unix domain socket:
+
+  $ cd repo
+  $ hg update -q
+
+#if unix-socket
+
+  >>> import cStringIO
+  >>> from hgclient import unixserver, readchannel, runcommand, check
+  >>> server = unixserver('.hg/server.sock', '.hg/server.log')
+  >>> def hellomessage(conn):
+  ...     ch, data = readchannel(conn)
+  ...     print '%c, %r' % (ch, data)
+  ...     runcommand(conn, ['id'])
+  >>> check(hellomessage, server.connect)
+  o, 'capabilities: getencoding runcommand\nencoding: *' (glob)
+  *** runcommand id
+  eff892de26ec tip bm1/bm2/bm3
+  >>> def unknowncommand(conn):
+  ...     readchannel(conn)
+  ...     conn.stdin.write('unknowncommand\n')
+  >>> check(unknowncommand, server.connect)  # error sent to server.log
+  >>> def serverinput(conn):
+  ...     readchannel(conn)
+  ...     patch = """
+  ... # HG changeset patch
+  ... # User test
+  ... # Date 0 0
+  ... 2
+  ... 
+  ... diff -r eff892de26ec -r 1ed24be7e7a0 a
+  ... --- a/a
+  ... +++ b/a
+  ... @@ -1,1 +1,2 @@
+  ...  1
+  ... +2
+  ... """
+  ...     runcommand(conn, ['import', '-'], input=cStringIO.StringIO(patch))
+  ...     runcommand(conn, ['log', '-rtip', '-q'])
+  >>> check(serverinput, server.connect)
+  *** runcommand import -
+  applying patch from stdin
+  *** runcommand log -rtip -q
+  2:1ed24be7e7a0
+  >>> server.shutdown()
+
+  $ cat .hg/server.log
+  listening at .hg/server.sock
+  abort: unknown command unknowncommand
+  killed!
+
+#else
+
+  $ hg serve --cmdserver unix -a .hg/server.sock
+  abort: unsupported platform
+  [255]
+
+#endif

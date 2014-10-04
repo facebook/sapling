@@ -1,5 +1,6 @@
 import os, stat
 import re
+import socket
 import sys
 import tempfile
 
@@ -257,6 +258,10 @@ def has_unix_permissions():
         return True
     finally:
         os.rmdir(d)
+
+@check("unix-socket", "AF_UNIX socket family")
+def has_unix_socket():
+    return getattr(socket, 'AF_UNIX', None) is not None
 
 @check("root", "root permissions")
 def has_root():

@@ -7,7 +7,7 @@
 
 from i18n import _
 import struct
-import sys, os
+import sys, os, errno, traceback, SocketServer
 import dispatch, encoding, util
 
 logfile = None
@@ -256,8 +256,59 @@ class pipeservice(object):
     def run(self):
         return self.server.serve()
 
+class _requesthandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        ui = self.server.ui
+        repo = self.server.repo
+        sv = server(ui, repo, self.rfile, self.wfile)
+        try:
+            try:
+                sv.serve()
+            # handle exceptions that may be raised by command server. most of
+            # known exceptions are caught by dispatch.
+            except util.Abort, inst:
+                ui.warn(_('abort: %s\n') % inst)
+            except IOError, inst:
+                if inst.errno != errno.EPIPE:
+                    raise
+            except KeyboardInterrupt:
+                pass
+        except: # re-raises
+            # also write traceback to error channel. otherwise client cannot
+            # see it because it is written to server's stderr by default.
+            traceback.print_exc(file=sv.cerr)
+            raise
+
+class unixservice(object):
+    """
+    Listens on unix domain socket and forks server per connection
+    """
+    def __init__(self, ui, repo, opts):
+        self.ui = ui
+        self.repo = repo
+        self.address = opts['address']
+        if not util.safehasattr(SocketServer, 'UnixStreamServer'):
+            raise util.Abort(_('unsupported platform'))
+        if not self.address:
+            raise util.Abort(_('no socket path specified with --address'))
+
+    def init(self):
+        class cls(SocketServer.ForkingMixIn, SocketServer.UnixStreamServer):
+            ui = self.ui
+            repo = self.repo
+        self.server = cls(self.address, _requesthandler)
+        self.ui.status(_('listening at %s\n') % self.address)
+        self.ui.flush()  # avoid buffering of status message
+
+    def run(self):
+        try:
+            self.server.serve_forever()
+        finally:
+            os.unlink(self.address)
+
 _servicemap = {
     'pipe': pipeservice,
+    'unix': unixservice,
     }
 
 def createservice(ui, repo, opts):
