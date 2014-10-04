@@ -159,10 +159,10 @@ def reposetup(ui, repo):
                                     if sfindirstate(f)]
                     # Don't waste time getting the ignored and unknown
                     # files from lfdirstate
-                    s = lfdirstate.status(match, [], False,
-                            listclean, False)
-                    (unsure, modified, added, removed, missing, _unknown,
-                            _ignored, clean) = s
+                    unsure, s = lfdirstate.status(match, [], False, listclean,
+                                                  False)
+                    (modified, added, removed, missing, _unknown, _ignored,
+                     clean) = s
                     if parentworking:
                         for lfile in unsure:
                             standin = lfutil.standin(lfile)
@@ -296,9 +296,9 @@ def reposetup(ui, repo):
                     # large.
                     lfdirstate = lfutil.openlfdirstate(ui, self)
                     dirtymatch = match_.always(self.root, self.getcwd())
-                    s = lfdirstate.status(dirtymatch, [], False, False, False)
-                    (unsure, modified, added, removed, _missing, _unknown,
-                            _ignored, _clean) = s
+                    unsure, s = lfdirstate.status(dirtymatch, [], False, False,
+                                                  False)
+                    modified, added, removed = s[:3]
                     modifiedfiles = unsure + modified + added + removed
                     lfiles = lfutil.listlfiles(self)
                     # this only loops through largefiles that exist (not

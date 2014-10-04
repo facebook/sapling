@@ -809,8 +809,8 @@ class dirstate(object):
 
     def status(self, match, subrepos, ignored, clean, unknown):
         '''Determine the status of the working copy relative to the
-        dirstate and return a tuple of lists (unsure, modified, added,
-        removed, deleted, unknown, ignored, clean), where:
+        dirstate and return a nested tuple of lists (unsure, (modified, added,
+        removed, deleted, unknown, ignored, clean)), where:
 
           unsure:
             files that might have been modified since the dirstate was
@@ -908,8 +908,8 @@ class dirstate(object):
             elif state == 'r':
                 radd(fn)
 
-        return (lookup, modified, added, removed, deleted, unknown, ignored,
-                clean)
+        return (lookup, (modified, added, removed, deleted, unknown, ignored,
+                         clean))
 
     def matches(self, match):
         '''

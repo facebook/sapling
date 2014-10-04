@@ -1418,9 +1418,9 @@ class workingctx(committablectx):
         subrepos = []
         if '.hgsub' in self:
             subrepos = sorted(self.substate)
-        s = self._repo.dirstate.status(match, subrepos, listignored,
-                                       listclean, listunknown)
-        cmp, modified, added, removed, deleted, unknown, ignored, clean = s
+        cmp, s = self._repo.dirstate.status(match, subrepos, listignored,
+                                            listclean, listunknown)
+        modified, added, removed, deleted, unknown, ignored, clean = s
 
         # check for any possibly clean files
         if cmp:

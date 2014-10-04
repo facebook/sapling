@@ -351,9 +351,9 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
-        s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
-            [], False, False, False)
-        (unsure, modified, added, removed, missing, unknown, ignored, clean) = s
+        unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
+                                      [], False, False, False)
+        modified = s[0]
 
         if opts['check']:
             mod = len(modified) > 0
@@ -1110,9 +1110,9 @@ def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
         return orig(repo, pats, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-    s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [], False,
-        False, False)
-    (unsure, modified, added, removed, missing, unknown, ignored, clean) = s
+    unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [],
+                                  False, False, False)
+    missing = s[3]
 
     # Call into the normal remove code, but the removing of the standin, we want
     # to have handled by original addremove.  Monkey patching here makes sure
@@ -1288,9 +1288,10 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             # update standins for linear-merge or force-branch-merge,
             # because largefiles in the working directory may be modified
             lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-            s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
-                                  [], False, False, False)
-            unsure, modified, added = s[:3]
+            unsure, s = lfdirstate.status(match_.always(repo.root,
+                                                        repo.getcwd()),
+                                          [], False, False, False)
+            modified, added = s[:2]
             for lfile in unsure + modified + added:
                 lfutil.updatestandin(repo, lfutil.standin(lfile))
 
