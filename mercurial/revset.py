@@ -2621,6 +2621,7 @@ class generatorset(abstractsmartset):
         gen: a generator producing the values for the generatorset.
         """
         self._gen = gen
+        self._asclist = None
         self._cache = {}
         self._genlist = []
         self._finished = False
@@ -2712,7 +2713,13 @@ class generatorset(abstractsmartset):
             cache[item] = True
             genlist(item)
             yield item
-        self._finished = True
+        if not self._finished:
+            self._finished = True
+            asc = self._genlist[:]
+            asc.sort()
+            self._asclist = asc
+            self.fastasc = asc.__iter__
+            self.fastdesc = asc.__reversed__
 
     def set(self):
         return self
