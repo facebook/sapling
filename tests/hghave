@@ -10,7 +10,7 @@ import hghave
 checks = hghave.checks
 
 def list_features():
-    for name, feature in checks.iteritems():
+    for name, feature in sorted(checks.iteritems()):
         desc = feature[1]
         print name + ':', desc
 
