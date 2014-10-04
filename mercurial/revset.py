@@ -46,7 +46,7 @@ def _revancestors(repo, revs, followfirst):
                     if parent != node.nullrev:
                         heapq.heappush(h, -parent)
 
-    return _generatorset(iterate(), iterasc=False)
+    return generatorset(iterate(), iterasc=False)
 
 def _revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
@@ -70,7 +70,7 @@ def _revdescendants(repo, revs, followfirst):
                         yield i
                         break
 
-    return _generatorset(iterate(), iterasc=True)
+    return generatorset(iterate(), iterasc=True)
 
 def _revsbetween(repo, roots, heads):
     """Return all paths between roots and heads, inclusive of both endpoint
@@ -2513,7 +2513,7 @@ class addset(abstractsmartset):
                 iter1 = iter(self._r1)
                 iter2 = iter(self._r2)
                 gen = self._iterordered(self._ascending, iter1, iter2)
-            self._iter = _generatorset(gen)
+            self._iter = generatorset(gen)
         return self._iter
 
     def __iter__(self):
@@ -2608,7 +2608,7 @@ class addset(abstractsmartset):
         if self._ascending is not None:
             self._ascending = not self._ascending
 
-class _generatorset(abstractsmartset):
+class generatorset(abstractsmartset):
     """Wrap a generator for lazy iteration
 
     Wrapper structure for generators that provides lazy membership and can
@@ -2851,7 +2851,7 @@ class fullreposet(_spanset):
             # object.
             other = baseset(other - self._hiddenrevs)
         elif not util.safehasattr(other, 'ascending'):
-            # "other" is _generatorset not a real smart set
+            # "other" is generatorset not a real smart set
             # we fallback to the old way (sad kitten)
             return super(fullreposet, self).__and__(other)
 
