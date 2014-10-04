@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import error
+import error, parsers
 import unicodedata, locale, os
 
 def _getpreferredencoding():
@@ -257,6 +257,15 @@ def trim(s, width, ellipsis='', leftside=False):
         if ucolwidth(usub) <= width:
             return concat(usub.encode(encoding))
     return ellipsis # no enough room for multi-column characters
+
+def asciilower(s):
+    '''convert a string to lowercase if ASCII
+
+    Raises UnicodeDecodeError if non-ASCII characters are found.'''
+    s.decode('ascii')
+    return s.lower()
+
+asciilower = getattr(parsers, 'asciilower', asciilower)
 
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"

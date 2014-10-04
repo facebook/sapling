@@ -35,6 +35,27 @@ static int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
+static char lowertable[128] = {
+	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
+	'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
+	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
+	'\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d', '\x1e', '\x1f',
+	'\x20', '\x21', '\x22', '\x23', '\x24', '\x25', '\x26', '\x27',
+	'\x28', '\x29', '\x2a', '\x2b', '\x2c', '\x2d', '\x2e', '\x2f',
+	'\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37',
+	'\x38', '\x39', '\x3a', '\x3b', '\x3c', '\x3d', '\x3e', '\x3f',
+	'\x40',
+	        '\x61', '\x62', '\x63', '\x64', '\x65', '\x66', '\x67', /* A-G */
+	'\x68', '\x69', '\x6a', '\x6b', '\x6c', '\x6d', '\x6e', '\x6f', /* H-O */
+	'\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77', /* P-W */
+	'\x78', '\x79', '\x7a',                                         /* X-Z */
+	                        '\x5b', '\x5c', '\x5d', '\x5e', '\x5f',
+	'\x60', '\x61', '\x62', '\x63', '\x64', '\x65', '\x66', '\x67',
+	'\x68', '\x69', '\x6a', '\x6b', '\x6c', '\x6d', '\x6e', '\x6f',
+	'\x70', '\x71', '\x72', '\x73', '\x74', '\x75', '\x76', '\x77',
+	'\x78', '\x79', '\x7a', '\x7b', '\x7c', '\x7d', '\x7e', '\x7f'
+};
+
 static inline int hexdigit(const char *p, Py_ssize_t off)
 {
 	int8_t val = hextable[(unsigned char)p[off]];
@@ -70,6 +91,39 @@ static PyObject *unhexlify(const char *str, int len)
 	}
 
 	return ret;
+}
+
+static PyObject *asciilower(PyObject *self, PyObject *args)
+{
+	char *str, *newstr;
+	int i, len;
+	PyObject *newobj = NULL;
+
+	if (!PyArg_ParseTuple(args, "s#", &str, &len))
+		goto quit;
+
+	newobj = PyBytes_FromStringAndSize(NULL, len);
+	if (!newobj)
+		goto quit;
+
+	newstr = PyBytes_AS_STRING(newobj);
+
+	for (i = 0; i < len; i++) {
+		char c = str[i];
+		if (c & 0x80) {
+			PyObject *err = PyUnicodeDecodeError_Create(
+				"ascii", str, len, i, (i + 1),
+				"unexpected code byte");
+			PyErr_SetObject(PyExc_UnicodeDecodeError, err);
+			goto quit;
+		}
+		newstr[i] = lowertable[(unsigned char)c];
+	}
+
+	return newobj;
+quit:
+	Py_XDECREF(newobj);
+	return NULL;
 }
 
 /*
@@ -2165,6 +2219,7 @@ static PyMethodDef methods[] = {
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
+	{"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
 	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
