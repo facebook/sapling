@@ -270,8 +270,7 @@ asciilower = getattr(parsers, 'asciilower', asciilower)
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
-        s.decode('ascii') # throw exception for non-ASCII character
-        return s.lower()
+        return asciilower(s)
     except UnicodeDecodeError:
         pass
     try:
