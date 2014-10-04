@@ -2499,22 +2499,20 @@ class addset(abstractsmartset):
         If the ascending attribute is set, iterate over both collections at the
         same time, yielding only one value at a time in the given order.
         """
-        if not self._iter:
-            if self._ascending is None:
-                def gen():
-                    for r in self._r1:
+        if self._ascending is None:
+            def gen():
+                for r in self._r1:
+                    yield r
+                s = self._r1.set()
+                for r in self._r2:
+                    if r not in s:
                         yield r
-                    s = self._r1.set()
-                    for r in self._r2:
-                        if r not in s:
-                            yield r
-                gen = gen()
-            else:
-                iter1 = iter(self._r1)
-                iter2 = iter(self._r2)
-                gen = self._iterordered(self._ascending, iter1, iter2)
-            self._iter = generatorset(gen)
-        return self._iter
+            gen = gen()
+        else:
+            iter1 = iter(self._r1)
+            iter2 = iter(self._r2)
+            gen = self._iterordered(self._ascending, iter1, iter2)
+        return gen
 
     def __iter__(self):
         if self._genlist:
