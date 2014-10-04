@@ -2622,7 +2622,7 @@ class generatorset(abstractsmartset):
         """
         self._gen = gen
         self._cache = {}
-        self._genlist = baseset([])
+        self._genlist = []
         self._finished = False
         if iterasc is not None:
             if iterasc:
