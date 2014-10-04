@@ -668,7 +668,7 @@ def _descendants(repo, subset, x, followfirst=False):
     result = (filteredset(s, subset.__contains__, ascending=True) +
               filteredset(args, subset.__contains__, ascending=True))
 
-    # Wrap result in a filteredset since it's an _addset, which doesn't
+    # Wrap result in a filteredset since it's an addset, which doesn't
     # implement all the necessary functions to be consumed by callers.
     return filteredset(result, lambda r: True, ascending=True)
 
@@ -2285,7 +2285,7 @@ class abstractsmartset(object):
             kwargs['ascending'] = True
         if self.isdescending() and other.isdescending():
             kwargs['ascending'] = False
-        return _addset(self, other, **kwargs)
+        return addset(self, other, **kwargs)
 
     def __sub__(self, other):
         """Returns a new object with the substraction of the two collections.
@@ -2460,7 +2460,7 @@ class filteredset(abstractsmartset):
     def isdescending(self):
         return self._ascending is not None and not self._ascending
 
-class _addset(abstractsmartset):
+class addset(abstractsmartset):
     """Represent the addition of two sets
 
     Wrapper structure for lazily adding two structures without losing much
