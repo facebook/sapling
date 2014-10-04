@@ -2615,9 +2615,6 @@ class _generatorset(abstractsmartset):
     be iterated more than once.
     When asked for membership it generates values until either it finds the
     requested one or has gone through all the elements in the generator
-
-    This class does not duck-type baseset and it's only supposed to be used
-    internally
     """
     def __init__(self, gen, iterasc=None):
         """
