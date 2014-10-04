@@ -153,7 +153,8 @@ def removelargefiles(ui, repo, *pats, **opts):
     manifest = repo[None].manifest()
     modified, added, deleted, clean = [[f for f in list
                                         if lfutil.standin(f) in manifest]
-                                       for list in [s[0], s[1], s[3], s[6]]]
+                                       for list in (s.modified, s.added,
+                                                    s.deleted, s.clean)]
 
     def warn(files, msg):
         for f in files:
@@ -353,10 +354,9 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
                                       [], False, False, False)
-        modified = s[0]
 
         if opts['check']:
-            mod = len(modified) > 0
+            mod = len(s.modified) > 0
             for lfile in unsure:
                 standin = lfutil.standin(lfile)
                 if repo['.'][standin].data().strip() != \
@@ -660,12 +660,11 @@ def overriderevert(orig, ui, repo, *pats, **opts):
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
-        (modified, added, removed, missing, unknown, ignored, clean) = \
-            lfutil.lfdirstatestatus(lfdirstate, repo, repo['.'].rev())
+        s = lfutil.lfdirstatestatus(lfdirstate, repo, repo['.'].rev())
         lfdirstate.write()
-        for lfile in modified:
+        for lfile in s.modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
-        for lfile in missing:
+        for lfile in s.deleted:
             if (os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
                 os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
@@ -954,17 +953,17 @@ def hgsubrepoarchive(orig, repo, ui, archiver, prefix, match=None):
 def overridebailifchanged(orig, repo):
     orig(repo)
     repo.lfstatus = True
-    modified, added, removed, deleted = repo.status()[:4]
+    s = repo.status()
     repo.lfstatus = False
-    if modified or added or removed or deleted:
+    if s.modified or s.added or s.removed or s.deleted:
         raise util.Abort(_('uncommitted changes'))
 
 # Fetch doesn't use cmdutil.bailifchanged so override it to add the check
 def overridefetch(orig, ui, repo, *pats, **opts):
     repo.lfstatus = True
-    modified, added, removed, deleted = repo.status()[:4]
+    s = repo.status()
     repo.lfstatus = False
-    if modified or added or removed or deleted:
+    if s.modified or s.added or s.removed or s.deleted:
         raise util.Abort(_('uncommitted changes'))
     return orig(ui, repo, *pats, **opts)
 
@@ -979,7 +978,7 @@ def overrideforget(orig, ui, repo, *pats, **opts):
         s = repo.status(match=m, clean=True)
     finally:
         repo.lfstatus = False
-    forget = sorted(s[0] + s[1] + s[3] + s[6])
+    forget = sorted(s.modified + s.added + s.deleted + s.clean)
     forget = [f for f in forget if lfutil.standin(f) in repo[None].manifest()]
 
     for f in forget:
@@ -1112,14 +1111,13 @@ def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
     lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
     unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [],
                                   False, False, False)
-    missing = s[3]
 
     # Call into the normal remove code, but the removing of the standin, we want
     # to have handled by original addremove.  Monkey patching here makes sure
     # we don't remove the standin in the largefiles code, preventing a very
     # confused state later.
-    if missing:
-        m = [repo.wjoin(f) for f in missing]
+    if s.deleted:
+        m = [repo.wjoin(f) for f in s.deleted]
         repo._isaddremove = True
         removelargefiles(repo.ui, repo, *m, **opts)
         repo._isaddremove = False
@@ -1146,15 +1144,13 @@ def overridepurge(orig, ui, repo, *dirs, **opts):
         r = oldstatus(node1, node2, match, ignored, clean, unknown,
                       listsubrepos)
         lfdirstate = lfutil.openlfdirstate(ui, repo)
-        modified, added, removed, deleted, unknown, ignored, clean = r
-        unknown = [f for f in unknown if lfdirstate[f] == '?']
-        ignored = [f for f in ignored if lfdirstate[f] == '?']
-        return scmutil.status(modified, added, removed, deleted,
-                              unknown, ignored, clean)
+        unknown = [f for f in r.unknown if lfdirstate[f] == '?']
+        ignored = [f for f in r.ignored if lfdirstate[f] == '?']
+        return scmutil.status(r.modified, r.added, r.removed, r.deleted,
+                              unknown, ignored, r.clean)
     repo.status = overridestatus
     orig(ui, repo, *dirs, **opts)
     repo.status = oldstatus
-
 def overriderollback(orig, ui, repo, **opts):
     wlock = repo.wlock()
     try:
@@ -1292,8 +1288,7 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             unsure, s = lfdirstate.status(match_.always(repo.root,
                                                         repo.getcwd()),
                                           [], False, False, False)
-            modified, added = s[:2]
-            for lfile in unsure + modified + added:
+            for lfile in unsure + s.modified + s.added:
                 lfutil.updatestandin(repo, lfutil.standin(lfile))
 
         if linearmerge:

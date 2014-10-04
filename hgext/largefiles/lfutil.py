@@ -137,7 +137,7 @@ def openlfdirstate(ui, repo, create=True):
 def lfdirstatestatus(lfdirstate, repo, rev):
     match = match_.always(repo.root, repo.getcwd())
     unsure, s = lfdirstate.status(match, [], False, False, False)
-    modified, _added, _removed, _missing, _unknown, _ignored, clean = s
+    modified, clean = s.modified, s.clean
     for lfile in unsure:
         try:
             fctx = repo[rev][standin(lfile)]

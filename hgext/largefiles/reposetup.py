@@ -161,8 +161,8 @@ def reposetup(ui, repo):
                     # files from lfdirstate
                     unsure, s = lfdirstate.status(match, [], False, listclean,
                                                   False)
-                    (modified, added, removed, missing, _unknown, _ignored,
-                     clean) = s
+                    (modified, added, removed, clean) = (s.modified, s.added,
+                                                         s.removed, s.clean)
                     if parentworking:
                         for lfile in unsure:
                             standin = lfutil.standin(lfile)
@@ -222,7 +222,7 @@ def reposetup(ui, repo):
                     normals = [[fn for fn in filelist
                                 if not lfutil.isstandin(fn)]
                                for filelist in result]
-                    lfstatus = (modified, added, removed, missing, [], [],
+                    lfstatus = (modified, added, removed, s.deleted, [], [],
                                 clean)
                     result = [sorted(list1 + list2)
                               for (list1, list2) in zip(normals, lfstatus)]
@@ -298,8 +298,7 @@ def reposetup(ui, repo):
                     dirtymatch = match_.always(self.root, self.getcwd())
                     unsure, s = lfdirstate.status(dirtymatch, [], False, False,
                                                   False)
-                    modified, added, removed = s[:3]
-                    modifiedfiles = unsure + modified + added + removed
+                    modifiedfiles = unsure + s.modified + s.added + s.removed
                     lfiles = lfutil.listlfiles(self)
                     # this only loops through largefiles that exist (not
                     # removed/renamed)
