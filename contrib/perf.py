@@ -139,6 +139,16 @@ def perfdirstatedirs(ui, repo):
         del repo.dirstate._dirs
     timer(d)
 
+@command('perfdirstatefoldmap')
+def perffoldmap(ui, repo):
+    dirstate = repo.dirstate
+    'a' in dirstate
+    def d():
+        dirstate._foldmap.get('a')
+        del dirstate._foldmap
+        del dirstate._dirs
+    timer(d)
+
 @command('perfdirstatewrite')
 def perfdirstatewrite(ui, repo):
     ds = repo.dirstate
