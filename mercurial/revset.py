@@ -2626,10 +2626,10 @@ class generatorset(abstractsmartset):
         self._finished = False
         if iterasc is not None:
             if iterasc:
-                self.fastasc = self.__iter__
+                self.fastasc = self._iterator
                 self.__contains__ = self._asccontains
             else:
-                self.fastdesc = self.__iter__
+                self.fastdesc = self._iterator
                 self.__contains__ = self._desccontains
 
     def __nonzero__(self):
@@ -2680,6 +2680,9 @@ class generatorset(abstractsmartset):
         return False
 
     def __iter__(self):
+        return self._iterator()
+
+    def _iterator(self):
         if self._finished:
             return iter(self._genlist)
 
