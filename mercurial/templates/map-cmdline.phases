@@ -2,7 +2,7 @@
 # to replace some keywords with 'lkeyword', for 'labelled keyword'
 changeset = '{cset}{branches}{bookmarks}{tags}{lphase}{parents}{user}{ldate}{summary}\n'
 changeset_quiet = '{node}'
-changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\n'
+changeset_verbose = '{cset}{branches}{bookmarks}{tags}{lphase}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\n'
 changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
 
 # File templates
