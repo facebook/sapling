@@ -2739,6 +2739,12 @@ class generatorset(abstractsmartset):
     def reverse(self):
         self._ascending = not self._ascending
 
+    def isascending(self):
+        return self._ascending
+
+    def isdescending(self):
+        return not self._ascending
+
 def spanset(repo, start=None, end=None):
     """factory function to dispatch between fullreposet and actual spanset
 
