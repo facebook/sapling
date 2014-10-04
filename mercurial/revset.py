@@ -2469,9 +2469,6 @@ class _addset(abstractsmartset):
     If the ascending attribute is set, that means the two structures are
     ordered in either an ascending or descending way. Therefore, we can add
     them maintaining the order by iterating over both at the same time
-
-    This class does not duck-type baseset and it's only supposed to be used
-    internally
     """
     def __init__(self, revs1, revs2, ascending=None):
         self._r1 = revs1
