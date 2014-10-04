@@ -877,6 +877,34 @@ Include works:
   1
   0
 
+Check that {phase} works correctly on parents:
+
+  $ cat << EOF > parentphase
+  > changeset_debug = '{rev} ({phase}):{parents}\n'
+  > parent = ' {rev} ({phase})'
+  > EOF
+  $ hg phase -r 5 --public
+  $ hg phase -r 7 --secret --force
+  $ hg log --debug -G --style ./parentphase
+  @  8 (secret): 7 (secret) -1 (public)
+  |
+  o  7 (secret): -1 (public) -1 (public)
+  
+  o    6 (draft): 5 (public) 4 (draft)
+  |\
+  | o  5 (public): 3 (public) -1 (public)
+  | |
+  o |  4 (draft): 3 (public) -1 (public)
+  |/
+  o  3 (public): 2 (public) -1 (public)
+  |
+  o  2 (public): 1 (public) -1 (public)
+  |
+  o  1 (public): 0 (public) -1 (public)
+  |
+  o  0 (public): -1 (public) -1 (public)
+  
+
 Missing non-standard names give no error (backward compatibility):
 
   $ echo "changeset = '{c}'" > t

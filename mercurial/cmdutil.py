@@ -1152,7 +1152,9 @@ class changeset_templater(changeset_printer):
         # behaviour cannot be changed so leave it here for now.
         def showparents(**args):
             ctx = args['ctx']
-            parents = [[('rev', p.rev()), ('node', p.hex())]
+            parents = [[('rev', p.rev()),
+                        ('node', p.hex()),
+                        ('phase', p.phasestr())]
                        for p in self._meaningful_parentrevs(ctx)]
             return showlist('parent', parents, **args)
 
