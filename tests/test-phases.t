@@ -340,6 +340,7 @@ test that phase are displayed in log at debug level
   
   
   changeset:   1:27547f69f25460a52fff66ad004e58da7ad3fb56
+  phase:       public
   parent:      0:4a2df7238c3b48766b5e22fafbb8a2f506ec8256
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    1:cb5cbbc1bfbf24cc34b9e8c16914e9caa2d2a7fd
@@ -352,6 +353,7 @@ test that phase are displayed in log at debug level
   
   
   changeset:   0:4a2df7238c3b48766b5e22fafbb8a2f506ec8256
+  phase:       public
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    0:007d8c9d88841325f5c6b06371b35b4e8a2b1a83

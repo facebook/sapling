@@ -916,7 +916,7 @@ class changeset_printer(object):
             # i18n: column positioning for "hg log"
             self.ui.write(_("tag:         %s\n") % tag,
                           label='log.tag')
-        if self.ui.debugflag and ctx.phase():
+        if self.ui.debugflag:
             # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
                           label='log.phase')
