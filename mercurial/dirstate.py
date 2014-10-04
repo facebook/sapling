@@ -84,11 +84,12 @@ class dirstate(object):
     @propertycache
     def _foldmap(self):
         f = {}
+        normcase = util.normcase
         for name, s in self._map.iteritems():
             if s[0] != 'r':
-                f[util.normcase(name)] = name
+                f[normcase(name)] = name
         for name in self._dirs:
-            f[util.normcase(name)] = name
+            f[normcase(name)] = name
         f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
