@@ -230,9 +230,9 @@ def createcmd(ui, repo, pats, opts):
 
         if not node:
             stat = repo.status(match=scmutil.match(repo[None], pats, opts))
-            if stat[3]:
+            if stat.deleted:
                 ui.status(_("nothing changed (%d missing files, see "
-                            "'hg status')\n") % len(stat[3]))
+                            "'hg status')\n") % len(stat.deleted))
             else:
                 ui.status(_("nothing changed\n"))
             return 1
@@ -404,7 +404,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
         files.extend(shelvectx.parents()[0].files())
 
         # revert will overwrite unknown files, so move them out of the way
-        for file in repo.status(unknown=True)[4]:
+        for file in repo.status(unknown=True).unknown:
             if file in files:
                 util.rename(file, file + ".orig")
         ui.pushbuffer(True)
@@ -550,8 +550,8 @@ def unshelve(ui, repo, *shelved, **opts):
         # to the original pctx.
 
         # Store pending changes in a commit
-        m, a, r, d = repo.status()[:4]
-        if m or a or r or d:
+        s = repo.status()
+        if s.modified or s.added or s.removed or s.deleted:
             ui.status(_("temporarily committing pending changes "
                         "(restore with 'hg unshelve --abort')\n"))
             def commitfunc(ui, repo, message, match, opts):
