@@ -681,8 +681,8 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
 
     # Commit dirty working directory if necessary
     new = None
-    m, a, r, d = repo.status()[:4]
-    if m or a or r or d:
+    s = repo.status()
+    if s.modified or s.added or s.removed or s.deleted:
         # prepare the message for the commit to comes
         if action in ('f', 'fold', 'r', 'roll'):
             message = 'fold-temp-revision %s' % currentnode
