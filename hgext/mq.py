@@ -1359,11 +1359,12 @@ class queue(object):
 
             tobackup = set()
             if (not nobackup and force) or keepchanges:
-                m, a, r, d = self.checklocalchanges(repo, force=True)
+                status = self.checklocalchanges(repo, force=True)
                 if keepchanges:
-                    tobackup.update(m + a + r + d)
+                    tobackup.update(status.modified + status.added +
+                                    status.removed + status.deleted)
                 else:
-                    tobackup.update(m + a)
+                    tobackup.update(status.modified + status.added)
 
             s = self.series[start:end]
             all_files = set()
@@ -1447,13 +1448,13 @@ class queue(object):
 
             tobackup = set()
             if update:
-                m, a, r, d = self.checklocalchanges(
-                    repo, force=force or keepchanges)
+                s = self.checklocalchanges(repo, force=force or keepchanges)
                 if force:
                     if not nobackup:
-                        tobackup.update(m + a)
+                        tobackup.update(s.modified + s.added)
                 elif keepchanges:
-                    tobackup.update(m + a + r + d)
+                    tobackup.update(s.modified + s.added +
+                                    s.removed + s.deleted)
 
             self.applieddirty = True
             end = len(self.applied)

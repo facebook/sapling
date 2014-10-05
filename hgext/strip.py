@@ -32,15 +32,15 @@ def checksubstate(repo, baserev=None):
 
 def checklocalchanges(repo, force=False, excsuffix=''):
     cmdutil.checkunfinished(repo)
-    m, a, r, d = repo.status()[:4]
+    s = repo.status()
     if not force:
-        if (m or a or r or d):
+        if s.modified or s.added or s.removed or s.deleted:
             _("local changes found") # i18n tool detection
             raise util.Abort(_("local changes found" + excsuffix))
         if checksubstate(repo):
             _("local changed subrepos found") # i18n tool detection
             raise util.Abort(_("local changed subrepos found" + excsuffix))
-    return m, a, r, d
+    return s
 
 def strip(ui, repo, revs, update=True, backup=True, force=None, bookmark=None):
     wlock = lock = None
