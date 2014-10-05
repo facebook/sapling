@@ -1051,8 +1051,7 @@ class committablectx(basectx):
 
         copied = self._repo.dirstate.copies()
         ff = self._flagfunc
-        modified, added, removed, deleted = self._status[:4]
-        for i, l in (("a", added), ("m", modified)):
+        for i, l in (("a", self._status.added), ("m", self._status.modified)):
             for f in l:
                 orig = copied.get(f, f)
                 man[f] = getman(orig).get(orig, nullid) + i
@@ -1061,7 +1060,7 @@ class committablectx(basectx):
                 except OSError:
                     pass
 
-        for f in deleted + removed:
+        for f in self._status.deleted + self._status.removed:
             if f in man:
                 del man[f]
 
@@ -1089,22 +1088,23 @@ class committablectx(basectx):
     def description(self):
         return self._text
     def files(self):
-        return sorted(self._status[0] + self._status[1] + self._status[2])
+        return sorted(self._status.modified + self._status.added +
+                      self._status.removed)
 
     def modified(self):
-        return self._status[0]
+        return self._status.modified
     def added(self):
-        return self._status[1]
+        return self._status.added
     def removed(self):
-        return self._status[2]
+        return self._status.removed
     def deleted(self):
-        return self._status[3]
+        return self._status.deleted
     def unknown(self):
-        return self._status[4]
+        return self._status.unknown
     def ignored(self):
-        return self._status[5]
+        return self._status.ignored
     def clean(self):
-        return self._status[6]
+        return self._status.clean
     def branch(self):
         return encoding.tolocal(self._extra['branch'])
     def closesbranch(self):
@@ -1407,7 +1407,7 @@ class workingctx(committablectx):
         susposed to be linking to.
         """
         s[0] = self._filtersuspectsymlink(s[0])
-        self._status = s[:]
+        self._status = scmutil.status(*s)
         return s
 
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
@@ -1613,7 +1613,7 @@ class memctx(committablectx):
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
         files = sorted(set(files))
-        self._status = [files, [], [], [], []]
+        self._status = scmutil.status(files, [], [], [], [], [], [])
         self._filectxfn = filectxfn
         self.substate = {}
 
