@@ -2262,6 +2262,18 @@ class abstractsmartset(object):
             raise ValueError('arg is an empty sequence')
         return max(self)
 
+    def first(self):
+        """return the first element in the set (user iteration perspective)
+
+        Return None if the set is empty"""
+        raise NotImplementedError()
+
+    def last(self):
+        """return the last element in the set (user iteration perspective)
+
+        Return None if the set is empty"""
+        raise NotImplementedError()
+
     def reverse(self):
         """reverse the expected iteration order"""
         raise NotImplementedError()
