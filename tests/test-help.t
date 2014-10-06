@@ -1061,6 +1061,35 @@ Test section lookup
           graphical tools such as "hg log --graph". In Mercurial, the DAG is
           limited by the requirement for children to have at most two parents.
   
+
+  $ hg help hgrc.paths
+      "paths"
+      -------
+  
+      Assigns symbolic names to repositories. The left side is the symbolic
+      name, and the right gives the directory or URL that is the location of the
+      repository. Default paths can be declared by setting the following
+      entries.
+  
+      "default"
+          Directory or URL to use when pulling if no source is specified.
+          Default is set to repository from which the current repository was
+          cloned.
+  
+      "default-push"
+          Optional. Directory or URL to use when pushing if no destination is
+          specified.
+  
+      Custom paths can be defined by assigning the path to a name that later can
+      be used from the command line. Example:
+  
+        [paths]
+        my_path = http://example.com/path
+  
+      To push to the path defined in "my_path" run the command:
+  
+        hg push my_path
+  
   $ hg help glossary.mcguffin
   abort: help section not found
   [255]

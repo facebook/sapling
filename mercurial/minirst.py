@@ -654,9 +654,18 @@ def format(text, width=80, indent=0, keep=None, style='plain', section=None):
     if section:
         sections = getsections(blocks)
         blocks = []
-        for name, nest, b in sections:
+        i = 0
+        while i < len(sections):
+            name, nest, b = sections[i]
             if name == section:
-                blocks = b
+                blocks.extend(b)
+
+                ## Also show all subnested sections
+                while i + 1 < len(sections) and sections[i + 1][1] > nest:
+                    i += 1
+                    blocks.extend(sections[i][2])
+            i += 1
+
     if style == 'html':
         text = formathtml(blocks)
     else:
