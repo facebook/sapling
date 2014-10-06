@@ -22,6 +22,7 @@ import dagparser, context, simplemerge, graphmod
 import random
 import setdiscovery, treediscovery, dagutil, pvec, localrepo
 import phases, obsolete, exchange
+import ui as uimod
 
 table = {}
 
@@ -1558,14 +1559,12 @@ def config(ui, repo, *values, **opts):
             if os.path.exists(f):
                 break
         else:
-            from ui import samplehgrcs
-
             if opts.get('global'):
-                samplehgrc = samplehgrcs['global']
+                samplehgrc = uimod.samplehgrcs['global']
             elif opts.get('local'):
-                samplehgrc = samplehgrcs['local']
+                samplehgrc = uimod.samplehgrcs['local']
             else:
-                samplehgrc = samplehgrcs['user']
+                samplehgrc = uimod.samplehgrcs['user']
 
             f = paths[0]
             fp = open(f, "w")

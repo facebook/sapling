@@ -37,6 +37,7 @@ Push should push to 'default' when 'default-push' not set:
 
 Push should push to 'default-push' when set:
 
+  $ echo '[paths]' >> b/.hg/hgrc
   $ echo 'default-push = ../c' >> b/.hg/hgrc
   $ hg --cwd b push
   pushing to $TESTTMP/c (glob)
@@ -45,4 +46,3 @@ Push should push to 'default-push' when set:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-
