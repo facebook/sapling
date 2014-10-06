@@ -2618,6 +2618,16 @@ class addset(abstractsmartset):
         if self._ascending is not None:
             self._ascending = not self._ascending
 
+    def first(self):
+        if self:
+            return self._list.first()
+        return None
+
+    def last(self):
+        if self:
+            return self._list.last()
+        return None
+
 class generatorset(abstractsmartset):
     """Wrap a generator for lazy iteration
 
