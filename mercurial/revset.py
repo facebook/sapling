@@ -2387,6 +2387,16 @@ class baseset(list, abstractsmartset):
         This is part of the mandatory API for smartset."""
         return False
 
+    def first(self):
+        if self:
+            return self[0]
+        return None
+
+    def last(self):
+        if self:
+            return self[-1]
+        return None
+
 class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
