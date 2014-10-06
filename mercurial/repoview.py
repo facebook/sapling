@@ -13,7 +13,6 @@ import util
 import obsolete
 import struct
 import tags as tagsmod
-from mercurial.i18n import _
 
 def hideablerevs(repo):
     """Revisions candidates to be hidden
@@ -138,14 +137,6 @@ def computehidden(repo):
             blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
             hidden = frozenset(r for r in hideable if r not in blocked)
             trywritehiddencache(repo, hideable, hidden)
-        elif repo.ui.configbool('experimental', 'verifyhiddencache', True):
-            blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
-            computed = frozenset(r for r in hideable if r not in blocked)
-            if computed != hidden:
-                trywritehiddencache(repo, hideable, computed)
-                repo.ui.warn(_('Cache inconsistency detected. Please ' +
-                    'open an issue on http://bz.selenic.com.\n'))
-                hidden = computed
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.
