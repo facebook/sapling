@@ -2862,6 +2862,24 @@ class _spanset(abstractsmartset):
     def isdescending(self):
         return self._start >= self._end
 
+    def first(self):
+        if self._ascending:
+            it = self.fastasc
+        else:
+            it = self.fastdesc
+        for x in it():
+            return x
+        return None
+
+    def last(self):
+        if self._ascending:
+            it = self.fastdesc
+        else:
+            it = self.fastasc
+        for x in it():
+            return x
+        return None
+
 class fullreposet(_spanset):
     """a set containing all revisions in the repo
 
