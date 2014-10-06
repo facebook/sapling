@@ -2320,14 +2320,16 @@ class abstractsmartset(object):
             kwargs['ascending'] = False
         return filteredset(self, condition, **kwargs)
 
-class baseset(list, abstractsmartset):
+class baseset(abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
     operation that it should be able to perform.
 
     Every method in this class should be implemented by any smartset class.
     """
     def __init__(self, data=()):
-        super(baseset, self).__init__(data)
+        if not isinstance(data, list):
+            data = list(data)
+        self._list = data
         self._set = None
 
     def set(self):
@@ -2346,7 +2348,19 @@ class baseset(list, abstractsmartset):
         return self.set().__contains__
 
     def __nonzero__(self):
-        return bool(len(self))
+        return bool(self._list)
+
+    def sort(self, reverse=False):
+        self._list.sort(reverse=reverse)
+
+    def reverse(self):
+        self._list.reverse()
+
+    def __iter__(self):
+        return iter(self._list)
+
+    def __len__(self):
+        return len(self._list)
 
     def __sub__(self, other):
         """Returns a new object with the substraction of the two collections.
@@ -2389,12 +2403,12 @@ class baseset(list, abstractsmartset):
 
     def first(self):
         if self:
-            return self[0]
+            return self._list[0]
         return None
 
     def last(self):
         if self:
-            return self[-1]
+            return self._list[-1]
         return None
 
 class filteredset(abstractsmartset):
