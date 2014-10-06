@@ -478,7 +478,7 @@ def revsingle(repo, revspec, default='.'):
         return repo[default]
 
     l = revrange(repo, [revspec])
-    if len(l) < 1:
+    if not l:
         raise util.Abort(_('empty revision set'))
     return repo[l[-1]]
 
