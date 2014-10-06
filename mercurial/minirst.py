@@ -687,7 +687,7 @@ def getsections(blocks):
             level = nest.index(i) + 1
             nest = nest[:level]
             secs.append((getname(b), level, [b]))
-        if b['type'] == 'definition':
+        elif b['type'] == 'definition':
             i = ' '
             if i not in nest:
                 nest += i
