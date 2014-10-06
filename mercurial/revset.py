@@ -76,7 +76,7 @@ def _revsbetween(repo, roots, heads):
     """Return all paths between roots and heads, inclusive of both endpoint
     sets."""
     if not roots:
-        return baseset([])
+        return baseset()
     parentrevs = repo.changelog.parentrevs
     visit = list(heads)
     reachable = set()
@@ -95,7 +95,7 @@ def _revsbetween(repo, roots, heads):
             if parent >= minroot and parent not in seen:
                 visit.append(parent)
     if not reachable:
-        return baseset([])
+        return baseset()
     for rev in sorted(seen):
         for parent in seen[rev]:
             if parent in reachable:
@@ -257,7 +257,7 @@ def stringset(repo, subset, x):
         return baseset([-1])
     if len(subset) == len(repo) or x in subset:
         return baseset([x])
-    return baseset([])
+    return baseset()
 
 def symbolset(repo, subset, x):
     if x in symbols:
@@ -270,7 +270,7 @@ def rangeset(repo, subset, x, y):
     n = getset(repo, cl, y)
 
     if not m or not n:
-        return baseset([])
+        return baseset()
     m, n = m[0], n[-1]
 
     if m < n:
@@ -341,12 +341,12 @@ def ancestor(repo, subset, x):
 
     if anc is not None and anc.rev() in subset:
         return baseset([anc.rev()])
-    return baseset([])
+    return baseset()
 
 def _ancestors(repo, subset, x, followfirst=False):
     args = getset(repo, spanset(repo), x)
     if not args:
-        return baseset([])
+        return baseset()
     s = _revancestors(repo, args, followfirst)
     return subset.filter(s.__contains__)
 
@@ -400,7 +400,7 @@ def only(repo, subset, x):
     include = getset(repo, spanset(repo), args[0]).set()
     if len(args) == 1:
         if len(include) == 0:
-            return baseset([])
+            return baseset()
 
         descendants = set(_revdescendants(repo, include, False))
         exclude = [rev for rev in cl.headrevs()
@@ -659,7 +659,7 @@ def desc(repo, subset, x):
 def _descendants(repo, subset, x, followfirst=False):
     args = getset(repo, spanset(repo), x)
     if not args:
-        return baseset([])
+        return baseset()
     s = _revdescendants(repo, args, followfirst)
 
     # Both sets need to be ascending in order to lazily return the union
@@ -830,7 +830,7 @@ def _follow(repo, subset, x, name, followfirst=False):
             # include the revision responsible for the most recent version
             s.add(cx.linkrev())
         else:
-            return baseset([])
+            return baseset()
     else:
         s = _revancestors(repo, baseset([c.rev()]), followfirst)
 
@@ -1015,7 +1015,7 @@ def limit(repo, subset, x):
         raise error.ParseError(_("limit expects a number"))
     ss = subset.set()
     os = getset(repo, spanset(repo), l[0])
-    bs = baseset([])
+    bs = baseset()
     it = iter(os)
     for x in xrange(lim):
         try:
@@ -1043,7 +1043,7 @@ def last(repo, subset, x):
     ss = subset.set()
     os = getset(repo, spanset(repo), l[0])
     os.reverse()
-    bs = baseset([])
+    bs = baseset()
     it = iter(os)
     for x in xrange(lim):
         try:
@@ -1063,7 +1063,7 @@ def maxrev(repo, subset, x):
         m = os.max()
         if m in subset:
             return baseset([m])
-    return baseset([])
+    return baseset()
 
 def merge(repo, subset, x):
     """``merge()``
@@ -1082,7 +1082,7 @@ def branchpoint(repo, subset, x):
     getargs(x, 0, 0, _("branchpoint takes no arguments"))
     cl = repo.changelog
     if not subset:
-        return baseset([])
+        return baseset()
     baserev = min(subset)
     parentscount = [0]*(len(repo) - baserev)
     for r in cl.revs(start=baserev + 1):
@@ -1100,7 +1100,7 @@ def minrev(repo, subset, x):
         m = os.min()
         if m in subset:
             return baseset([m])
-    return baseset([])
+    return baseset()
 
 def modifies(repo, subset, x):
     """``modifies(pattern)``
@@ -1200,7 +1200,7 @@ def p1(repo, subset, x):
         p = repo[x].p1().rev()
         if p >= 0:
             return subset & baseset([p])
-        return baseset([])
+        return baseset()
 
     ps = set()
     cl = repo.changelog
@@ -1219,9 +1219,9 @@ def p2(repo, subset, x):
             p = ps[1].rev()
             if p >= 0:
                 return subset & baseset([p])
-            return baseset([])
+            return baseset()
         except IndexError:
-            return baseset([])
+            return baseset()
 
     ps = set()
     cl = repo.changelog
@@ -1281,7 +1281,7 @@ def present(repo, subset, x):
     try:
         return getset(repo, subset, x)
     except error.RepoLookupError:
-        return baseset([])
+        return baseset()
 
 def public(repo, subset, x):
     """``public()``
@@ -1324,7 +1324,7 @@ def remote(repo, subset, x):
         r = repo[n].rev()
         if r in subset:
             return baseset([r])
-    return baseset([])
+    return baseset()
 
 def removes(repo, subset, x):
     """``removes(pattern)``
@@ -1652,7 +1652,7 @@ def user(repo, subset, x):
 def _list(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
-        return baseset([])
+        return baseset()
     ls = [repo[r].rev() for r in s.split('\0')]
     s = subset.set()
     return baseset([r for r in ls if r in s])
@@ -1661,7 +1661,7 @@ def _list(repo, subset, x):
 def _intlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
-        return baseset([])
+        return baseset()
     ls = [int(r) for r in s.split('\0')]
     s = subset.set()
     return baseset([r for r in ls if r in s])
@@ -1670,7 +1670,7 @@ def _intlist(repo, subset, x):
 def _hexlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
-        return baseset([])
+        return baseset()
     cl = repo.changelog
     ls = [cl.rev(node.bin(r)) for r in s.split('\0')]
     s = subset.set()
