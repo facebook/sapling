@@ -1015,16 +1015,16 @@ def limit(repo, subset, x):
         raise error.ParseError(_("limit expects a number"))
     ss = subset.set()
     os = getset(repo, spanset(repo), l[0])
-    bs = baseset()
+    result = []
     it = iter(os)
     for x in xrange(lim):
         try:
             y = it.next()
             if y in ss:
-                bs.append(y)
+                result.append(y)
         except (StopIteration):
             break
-    return bs
+    return baseset(result)
 
 def last(repo, subset, x):
     """``last(set, [n])``
