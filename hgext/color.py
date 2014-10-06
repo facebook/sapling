@@ -1,4 +1,4 @@
-# color.py color output for the status and qseries commands
+# color.py color output for Mercurial commands
 #
 # Copyright (C) 2007 Kevin Christen <kevin.christen@gmail.com>
 #
@@ -7,11 +7,11 @@
 
 '''colorize output from some commands
 
-This extension modifies the status and resolve commands to add color
-to their output to reflect file status, the qseries command to add
-color to reflect patch status (applied, unapplied, missing), and to
-diff-related commands to highlight additions, removals, diff headers,
-tabs, and trailing whitespace.
+The color extension colorizes output from several Mercurial commands.
+For example, the diff command shows additions in green and deletions
+in red, while the status command shows modified files in magenta. Many
+other commands have analogous colors. It is possible to customize
+these colors.
 
 Other effects in addition to color, like bold and underlined text, are
 also available. By default, the terminfo database is used to find the
