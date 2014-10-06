@@ -2767,6 +2767,34 @@ class generatorset(abstractsmartset):
     def isdescending(self):
         return not self._ascending
 
+    def first(self):
+        if self._ascending:
+            it = self.fastasc
+        else:
+            it = self.fastdesc
+        if it is None:
+            # we need to consume all and try again
+            for x in self._consumegen():
+                pass
+            return self.first()
+        if self:
+            return it.next()
+        return None
+
+    def last(self):
+        if self._ascending:
+            it = self.fastdesc
+        else:
+            it = self.fastasc
+        if it is None:
+            # we need to consume all and try again
+            for x in self._consumegen():
+                pass
+            return self.first()
+        if self:
+            return it.next()
+        return None
+
 def spanset(repo, start=None, end=None):
     """factory function to dispatch between fullreposet and actual spanset
 
