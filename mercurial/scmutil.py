@@ -480,7 +480,7 @@ def revsingle(repo, revspec, default='.'):
     l = revrange(repo, [revspec])
     if not l:
         raise util.Abort(_('empty revision set'))
-    return repo[l[-1]]
+    return repo[l.last()]
 
 def revpair(repo, revs):
     if not revs:
