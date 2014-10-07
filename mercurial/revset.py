@@ -2299,12 +2299,7 @@ class abstractsmartset(object):
         boolean.
 
         This is part of the mandatory API for smartset."""
-        kwargs = {}
-        if self.isascending():
-            kwargs['ascending'] = True
-        elif self.isdescending():
-            kwargs['ascending'] = False
-        return filteredset(self, condition, **kwargs)
+        return filteredset(self, condition)
 
 class baseset(abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
@@ -2406,7 +2401,7 @@ class filteredset(abstractsmartset):
     the subset and contains a function which tests for membership in the
     revset
     """
-    def __init__(self, subset, condition=lambda x: True, ascending=None):
+    def __init__(self, subset, condition=lambda x: True):
         """
         condition: a function that decide whether a revision in the subset
                    belongs to the revset or not.
@@ -2414,9 +2409,6 @@ class filteredset(abstractsmartset):
         self._subset = subset
         self._condition = condition
         self._cache = {}
-        if ascending is not None:
-            ascending = bool(ascending)
-        self._ascending = ascending
 
     def __contains__(self, x):
         c = self._cache
@@ -2464,27 +2456,19 @@ class filteredset(abstractsmartset):
         return l[x]
 
     def sort(self, reverse=False):
-        if self._ascending is None:
-            if not util.safehasattr(self._subset, 'sort'):
-                self._subset = baseset(self._subset)
-            self._subset.sort(reverse=reverse)
-            self._ascending = not reverse
-        elif bool(reverse) == self._ascending:
-            self.reverse()
+        self._subset.sort(reverse=reverse)
 
     def reverse(self):
         self._subset.reverse()
-        if self._ascending is not None:
-            self._ascending = not self._ascending
 
     def set(self):
         return set([r for r in self])
 
     def isascending(self):
-        return self._ascending is not None and self._ascending
+        return self._subset.isascending()
 
     def isdescending(self):
-        return self._ascending is not None and not self._ascending
+        return self._subset.isdescending()
 
     def first(self):
         for x in self:
@@ -2493,11 +2477,10 @@ class filteredset(abstractsmartset):
 
     def last(self):
         it = None
-        if self._ascending is not None:
-            if self._ascending:
-                it = self.fastdesc
-            else:
-                it = self.fastasc
+        if self._subset.isascending:
+            it = self.fastdesc
+        elif self._subset.isdescending:
+            it = self.fastdesc
         if it is None:
             # slowly consume everything. This needs improvement
             it = lambda: reversed(list(self))
