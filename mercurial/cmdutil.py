@@ -1856,12 +1856,12 @@ def getgraphlogrevs(repo, pats, opts):
         revs = matcher(repo, revs)
         revs.sort(reverse=True)
     if limit is not None:
-        limitedrevs = revset.baseset()
+        limitedrevs = []
         for idx, rev in enumerate(revs):
             if idx >= limit:
                 break
             limitedrevs.append(rev)
-        revs = limitedrevs
+        revs = revset.baseset(limitedrevs)
 
     return revs, expr, filematcher
 
