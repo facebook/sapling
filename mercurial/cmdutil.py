@@ -1901,7 +1901,7 @@ def getlogrevs(repo, pats, opts):
             revs.sort(reverse=True)
     if limit is not None:
         count = 0
-        limitedrevs = revset.baseset([])
+        limitedrevs = []
         it = iter(revs)
         while count < limit:
             try:
@@ -1909,7 +1909,7 @@ def getlogrevs(repo, pats, opts):
             except (StopIteration):
                 break
             count += 1
-        revs = limitedrevs
+        revs = revset.baseset(limitedrevs)
 
     return revs, expr, filematcher
 
