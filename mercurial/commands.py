@@ -3381,10 +3381,12 @@ def graft(ui, repo, *revs, **opts):
             raise util.Abort(_('no revisions specified'))
         revs = scmutil.revrange(repo, revs)
 
+    skipped = set()
     # check for merges
     for rev in repo.revs('%ld and merge()', revs):
         ui.warn(_('skipping ungraftable merge revision %s\n') % rev)
-        revs.remove(rev)
+        skipped.add(rev)
+    revs = [r for r in revs if r not in skipped]
     if not revs:
         return -1
 
