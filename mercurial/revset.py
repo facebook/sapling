@@ -271,7 +271,7 @@ def rangeset(repo, subset, x, y):
 
     if not m or not n:
         return baseset()
-    m, n = m[0], n[-1]
+    m, n = m.first(), n.last()
 
     if m < n:
         r = spanset(repo, m, n + 1)
