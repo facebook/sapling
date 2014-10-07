@@ -596,7 +596,7 @@ def nearestrebased(repo, rev, state):
     rebased = [r for r in state if state[r] > nullmerge]
     candidates = repo.revs('max(%ld  and (::%d))', rebased, rev)
     if candidates:
-        return state[candidates[0]]
+        return state[candidates.first()]
     else:
         return None
 
