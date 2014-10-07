@@ -1002,8 +1002,7 @@ class queue(object):
             if not self.applied:
                 raise util.Abort(_('no patches applied'))
             revs = scmutil.revrange(repo, opts.get('rev'))
-            if len(revs) > 1 and revs[0] > revs[1]:
-                revs.reverse()
+            revs.sort()
             revpatches = self._revpatches(repo, revs)
             realpatches += revpatches
             numrevs = len(revpatches)
