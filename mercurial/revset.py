@@ -3015,7 +3015,7 @@ class fullreposet(_spanset):
             # `other` was used with "&", let's assume this is a set like
             # object.
             other = baseset(other - self._hiddenrevs)
-        elif not util.safehasattr(other, 'ascending'):
+        elif not util.safehasattr(other, 'isascending'):
             # "other" is generatorset not a real smart set
             # we fallback to the old way (sad kitten)
             return super(fullreposet, self).__and__(other)
