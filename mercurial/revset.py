@@ -668,9 +668,7 @@ def _descendants(repo, subset, x, followfirst=False):
     result = (filteredset(s, subset.__contains__, ascending=True) +
               filteredset(args, subset.__contains__, ascending=True))
 
-    # Wrap result in a filteredset since it's an addset, which doesn't
-    # implement all the necessary functions to be consumed by callers.
-    return filteredset(result, lambda r: True, ascending=True)
+    return result
 
 def descendants(repo, subset, x):
     """``descendants(set)``
