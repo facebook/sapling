@@ -24,7 +24,14 @@ def addbranchrevs(lrepo, other, branches, revs):
     peer = other.peer() # a courtesy to callers using a localrepo for other
     hashbranch, branches = branches
     if not hashbranch and not branches:
-        return revs or None, revs and revs[0] or None
+        x = revs or None
+        if util.safehasattr(revs, 'first'):
+            y =  revs.first()
+        elif revs:
+            y = revs[0]
+        else:
+            y = None
+        return x, y
     revs = revs and list(revs) or []
     if not peer.capable('branchmap'):
         if branches:

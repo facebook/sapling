@@ -99,7 +99,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # is much faster
     newbmtarget = repo.revs('max(parents(%ld) - (%ld))', tostrip, tostrip)
     if newbmtarget:
-        newbmtarget = repo[newbmtarget[0]].node()
+        newbmtarget = repo[newbmtarget.first()].node()
     else:
         newbmtarget = '.'
 
