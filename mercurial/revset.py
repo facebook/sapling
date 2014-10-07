@@ -26,7 +26,7 @@ def _revancestors(repo, revs, followfirst):
         revqueue, revsnode = None, None
         h = []
 
-        revs.descending()
+        revs.sort(reverse=True)
         revqueue = util.deque(revs)
         if revqueue:
             revsnode = revqueue.popleft()
