@@ -1041,7 +1041,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
                     # get the max revision for the given successors set,
                     # i.e. the 'tip' of a set
-                    node = repo.revs("max(%ln)", successors)[0]
+                    node = repo.revs("max(%ln)", successors).first()
                     pas = [p1]
 
         overwrite = force and not branchmerge
