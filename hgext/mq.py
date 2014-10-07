@@ -1995,7 +1995,7 @@ class queue(object):
             heads = repo.changelog.heads(repo.changelog.node(rev[-1]))
             if len(heads) > 1:
                 raise util.Abort(_('revision %d is the root of more than one '
-                                   'branch') % rev[-1])
+                                   'branch') % rev.last())
             if self.applied:
                 base = repo.changelog.node(rev[0])
                 if base in [n.node for n in self.applied]:
