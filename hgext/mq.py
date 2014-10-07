@@ -1992,24 +1992,24 @@ class queue(object):
             # If mq patches are applied, we can only import revisions
             # that form a linear path to qbase.
             # Otherwise, they should form a linear path to a head.
-            heads = repo.changelog.heads(repo.changelog.node(rev[-1]))
+            heads = repo.changelog.heads(repo.changelog.node(rev.first()))
             if len(heads) > 1:
                 raise util.Abort(_('revision %d is the root of more than one '
                                    'branch') % rev.last())
             if self.applied:
-                base = repo.changelog.node(rev[0])
+                base = repo.changelog.node(rev.first())
                 if base in [n.node for n in self.applied]:
                     raise util.Abort(_('revision %d is already managed')
                                      % rev[0])
                 if heads != [self.applied[-1].node]:
                     raise util.Abort(_('revision %d is not the parent of '
-                                       'the queue') % rev[0])
+                                       'the queue') % rev.first())
                 base = repo.changelog.rev(self.applied[0].node)
                 lastparent = repo.changelog.parentrevs(base)[0]
             else:
-                if heads != [repo.changelog.node(rev[0])]:
+                if heads != [repo.changelog.node(rev.first())]:
                     raise util.Abort(_('revision %d has unmanaged children')
-                                     % rev[0])
+                                     % rev.first())
                 lastparent = None
 
             diffopts = self.diffopts({'git': git})
