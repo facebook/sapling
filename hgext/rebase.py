@@ -276,7 +276,10 @@ def rebase(ui, repo, **opts):
                     '(children(ancestor(%ld, %d)) and ::(%ld))::',
                     base, dest, base)
                 if not rebaseset:
-                    if base == [dest.rev()]:
+                    # transform to list because smartsets are not comparable to
+                    # lists. This should be improved to honor lazyness of
+                    # smartset.
+                    if list(base) == [dest.rev()]:
                         if basef:
                             ui.status(_('nothing to rebase - %s is both "base"'
                                         ' and destination\n') % dest)
