@@ -163,8 +163,8 @@ class phasecache(object):
         for a in 'phaseroots dirty opener _phaserevs'.split():
             setattr(self, a, getattr(phcache, a))
 
-    def getphaserevs(self, repo, rebuild=False):
-        if rebuild or self._phaserevs is None:
+    def getphaserevs(self, repo):
+        if self._phaserevs is None:
             repo = repo.unfiltered()
             revs = [public] * len(repo.changelog)
             for phase in trackedphases:
@@ -176,6 +176,8 @@ class phasecache(object):
                         revs[rev] = phase
             self._phaserevs = revs
         return self._phaserevs
+    def invalidate(self):
+        self._phaserevs = None
 
     def phase(self, repo, rev):
         # We need a repo argument here to be able to build _phaserevs
@@ -188,7 +190,8 @@ class phasecache(object):
         if rev < nullrev:
             raise ValueError(_('cannot lookup negative revision'))
         if self._phaserevs is None or rev >= len(self._phaserevs):
-            self._phaserevs = self.getphaserevs(repo, rebuild=True)
+            self.invalidate()
+            self._phaserevs = self.getphaserevs(repo)
         return self._phaserevs[rev]
 
     def write(self):
@@ -208,7 +211,7 @@ class phasecache(object):
 
     def _updateroots(self, phase, newroots, tr):
         self.phaseroots[phase] = newroots
-        self._phaserevs = None
+        self.invalidate()
         self.dirty = True
 
         tr.addfilegenerator('phase', ('phaseroots',), self._write)
@@ -281,7 +284,7 @@ class phasecache(object):
         # anyway. If this change we should consider adding a dedicated
         # "destroyed" function to phasecache or a proper cache key mechanism
         # (see branchmap one)
-        self._phaserevs = None
+        self.invalidate()
 
 def advanceboundary(repo, tr, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
