@@ -2482,6 +2482,25 @@ class filteredset(abstractsmartset):
     def isdescending(self):
         return self._ascending is not None and not self._ascending
 
+    def first(self):
+        for x in self:
+            return x
+        return None
+
+    def last(self):
+        it = None
+        if self._ascending is not None:
+            if self._ascending:
+                it = self.fastdesc
+            else:
+                it = self.fastasc
+        if it is None:
+            # slowly consume everything. This needs improvement
+            it = lambda: reversed(list(self))
+        for x in it():
+            return x
+        return None
+
 class addset(abstractsmartset):
     """Represent the addition of two sets
 
