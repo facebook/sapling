@@ -2228,21 +2228,9 @@ class abstractsmartset(object):
         """True if the set will iterate in ascending order"""
         raise NotImplementedError()
 
-    def ascending(self):
-        """Sorts the set in ascending order (in place).
-
-        This is part of the mandatory API for smartset."""
-        self.sort()
-
     def isdescending(self):
         """True if the set will iterate in descending order"""
         raise NotImplementedError()
-
-    def descending(self):
-        """Sorts the set in descending order (in place).
-
-        This is part of the mandatory API for smartset."""
-        self.sort(reverse=True)
 
     def min(self):
         """return the minimum element in the set"""
