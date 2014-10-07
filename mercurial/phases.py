@@ -167,6 +167,8 @@ class phasecache(object):
         if self._phaserevs is None:
             repo = repo.unfiltered()
             revs = [public] * len(repo.changelog)
+            self._phaserevs = revs
+            self._populatephaseroots(repo)
             for phase in trackedphases:
                 roots = map(repo.changelog.rev, self.phaseroots[phase])
                 if roots:
@@ -174,10 +176,20 @@ class phasecache(object):
                         revs[rev] = phase
                     for rev in repo.changelog.descendants(roots):
                         revs[rev] = phase
-            self._phaserevs = revs
         return self._phaserevs
+
     def invalidate(self):
         self._phaserevs = None
+
+    def _populatephaseroots(self, repo):
+        """Fills the _phaserevs cache with phases for the roots.
+        """
+        cl = repo.changelog
+        phaserevs = self._phaserevs
+        for phase in trackedphases:
+            roots = map(cl.rev, self.phaseroots[phase])
+            for root in roots:
+                phaserevs[root] = phase
 
     def phase(self, repo, rev):
         # We need a repo argument here to be able to build _phaserevs
