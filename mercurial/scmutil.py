@@ -497,9 +497,8 @@ def revpair(repo, revs):
         first = l.max()
         second = l.min()
     else:
-        l = list(l)
-        first = l[0]
-        second = l[-1]
+        first = l.first()
+        second = l.last()
 
     if first is None:
         raise util.Abort(_('empty revision range'))
