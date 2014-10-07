@@ -3020,14 +3020,10 @@ class fullreposet(_spanset):
             # we fallback to the old way (sad kitten)
             return super(fullreposet, self).__and__(other)
 
-        # preserve order:
-        #
-        # this is probably useless and harmful in multiple cases but matches
-        # the current behavior.
         if self.isascending():
-            other.ascending()
+            other.sort()
         else:
-            other.descending()
+            other.sort(reverse)
         return other
 
 # tell hggettext to extract docstrings from these functions:
