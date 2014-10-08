@@ -398,7 +398,7 @@ def only(repo, subset, x):
     args = getargs(x, 1, 2, _('only takes one or two arguments'))
     include = getset(repo, spanset(repo), args[0])
     if len(args) == 1:
-        if len(include) == 0:
+        if not include:
             return baseset()
 
         descendants = set(_revdescendants(repo, include, False))
