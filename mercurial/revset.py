@@ -1675,7 +1675,7 @@ def _hexlist(repo, subset, x):
         return baseset()
     cl = repo.changelog
     ls = [cl.rev(node.bin(r)) for r in s.split('\0')]
-    s = subset.set()
+    s = subset
     return baseset([r for r in ls if r in s])
 
 symbols = {
