@@ -453,10 +453,12 @@ def unshelvecontinue(ui, repo, state, opts):
         if not shelvectx in state.pendingctx.children():
             # rebase was a no-op, so it produced no child commit
             shelvectx = state.pendingctx
+        else:
+            # only strip the shelvectx if the rebase produced it
+            state.stripnodes.append(shelvectx.node())
 
         mergefiles(ui, repo, state.wctx, shelvectx)
 
-        state.stripnodes.append(shelvectx.node())
         repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
         shelvedstate.clear(repo)
         unshelvecleanup(ui, repo, state.name, opts)

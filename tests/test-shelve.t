@@ -690,6 +690,49 @@ unshelve and conflicts with tracked and untracked files
   g
   $ hg shelve --delete default
 
+Recreate some conflict again
+
+  $ cd ../repo
+  $ hg up -C -r 3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark test)
+  $ echo y >> a/a
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up test
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark test)
+  $ hg unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  merging a/a
+  warning: conflicts during merge.
+  merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+
+Test that resolving all conflicts in one direction (so that the rebase
+is a no-op), works (issue4398)
+
+  $ hg revert -a -r .
+  reverting a/a (glob)
+  $ hg resolve -m a/a
+  (no more unresolved files)
+  $ hg unshelve -c
+  unshelve of 'default' complete
+  $ hg diff
+  $ hg status
+  ? a/a.orig
+  ? foo/foo
+  $ hg summary
+  parent: 4:33f7f61e6c5e tip
+   create conflict
+  branch: default
+  bookmarks: *test
+  commit: 2 unknown (clean)
+  update: (current)
+
   $ hg shelve --delete --stat
   abort: options '--delete' and '--stat' may not be used together
   [255]
