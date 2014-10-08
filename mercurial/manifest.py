@@ -49,6 +49,49 @@ class manifestdict(dict):
         # be sure to check the templates/ dir again (especially *-raw.tmpl)
         return ''.join("%s\0%s%s\n" % (f, hex(self[f]), flags(f)) for f in fl)
 
+    def fastdelta(self, base, changes):
+        """Given a base manifest text as an array.array and a list of changes
+        relative to that text, compute a delta that can be used by revlog.
+        """
+        delta = []
+        dstart = None
+        dend = None
+        dline = [""]
+        start = 0
+        # zero copy representation of base as a buffer
+        addbuf = util.buffer(base)
+
+        # start with a readonly loop that finds the offset of
+        # each line and creates the deltas
+        for f, todelete in changes:
+            # bs will either be the index of the item or the insert point
+            start, end = _msearch(addbuf, f, start)
+            if not todelete:
+                l = "%s\0%s%s\n" % (f, revlog.hex(self[f]), self.flags(f))
+            else:
+                if start == end:
+                    # item we want to delete was not found, error out
+                    raise AssertionError(
+                            _("failed to remove %s from manifest") % f)
+                l = ""
+            if dstart is not None and dstart <= start and dend >= start:
+                if dend < end:
+                    dend = end
+                if l:
+                    dline.append(l)
+            else:
+                if dstart is not None:
+                    delta.append([dstart, dend, "".join(dline)])
+                dstart = start
+                dend = end
+                dline = [l]
+
+        if dstart is not None:
+            delta.append([dstart, dend, "".join(dline)])
+        # apply the delta to the base, and get a delta for addrevision
+        deltatext, arraytext = _addlistdelta(base, delta)
+        return arraytext, deltatext
+
 def _msearch(m, s, lo=0, hi=None):
     '''return a tuple (start, end) that says where to find s within m.
 
@@ -173,7 +216,6 @@ class manifest(revlog.revlog):
             # compute a delta here using properties we know about the
             # manifest up-front, which may save time later for the
             # revlog layer.
-            addlist = self._mancache[p1][1]
 
             _checkforbidden(added)
             # combine the changed lists into one list for sorting
@@ -183,45 +225,8 @@ class manifest(revlog.revlog):
             # since the lists are already sorted
             work.sort()
 
-            delta = []
-            dstart = None
-            dend = None
-            dline = [""]
-            start = 0
-            # zero copy representation of addlist as a buffer
-            addbuf = util.buffer(addlist)
-
-            # start with a readonly loop that finds the offset of
-            # each line and creates the deltas
-            for f, todelete in work:
-                # bs will either be the index of the item or the insert point
-                start, end = _msearch(addbuf, f, start)
-                if not todelete:
-                    l = "%s\0%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
-                else:
-                    if start == end:
-                        # item we want to delete was not found, error out
-                        raise AssertionError(
-                                _("failed to remove %s from manifest") % f)
-                    l = ""
-                if dstart is not None and dstart <= start and dend >= start:
-                    if dend < end:
-                        dend = end
-                    if l:
-                        dline.append(l)
-                else:
-                    if dstart is not None:
-                        delta.append([dstart, dend, "".join(dline)])
-                    dstart = start
-                    dend = end
-                    dline = [l]
-
-            if dstart is not None:
-                delta.append([dstart, dend, "".join(dline)])
-            # apply the delta to the addlist, and get a delta for addrevision
-            deltatext, addlist = _addlistdelta(addlist, delta)
-            cachedelta = (self.rev(p1), deltatext)
-            arraytext = addlist
+            arraytext, deltatext = map.fastdelta(self._mancache[p1][1], work)
+            cachedelta = self.rev(p1), deltatext
             text = util.buffer(arraytext)
         else:
             # The first parent manifest isn't already loaded, so we'll
