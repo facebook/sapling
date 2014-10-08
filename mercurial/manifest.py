@@ -160,20 +160,11 @@ class manifest(revlog.revlog):
         return revlog.bin(n[:40]), n[40:-1]
 
     def add(self, map, transaction, link, p1, p2, added, removed):
-        # if we're using the cache, make sure it is valid and
-        # parented by the same node we're diffing against
-        if not (p1 and (p1 in self._mancache)):
-            files = sorted(map)
-            _checkforbidden(files)
-
-            # if this is changed to support newlines in filenames,
-            # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            hex, flags = revlog.hex, map.flags
-            text = ''.join("%s\0%s%s\n" % (f, hex(map[f]), flags(f))
-                           for f in files)
-            arraytext = array.array('c', text)
-            cachedelta = None
-        else:
+        if p1 in self._mancache:
+            # If our first parent is in the manifest cache, we can
+            # compute a delta here using properties we know about the
+            # manifest up-front, which may save time later for the
+            # revlog layer.
             addlist = self._mancache[p1][1]
 
             _checkforbidden(added)
@@ -224,6 +215,21 @@ class manifest(revlog.revlog):
             cachedelta = (self.rev(p1), deltatext)
             arraytext = addlist
             text = util.buffer(arraytext)
+        else:
+            # The first parent manifest isn't already loaded, so we'll
+            # just encode a fulltext of the manifest and pass that
+            # through to the revlog layer, and let it handle the delta
+            # process.
+            files = sorted(map)
+            _checkforbidden(files)
+
+            # if this is changed to support newlines in filenames,
+            # be sure to check the templates/ dir again (especially *-raw.tmpl)
+            hex, flags = revlog.hex, map.flags
+            text = ''.join("%s\0%s%s\n" % (f, hex(map[f]), flags(f))
+                           for f in files)
+            arraytext = array.array('c', text)
+            cachedelta = None
 
         n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         self._mancache[n] = (map, arraytext)
