@@ -684,7 +684,9 @@ class ui(object):
                 r = default
             # sometimes self.interactive disagrees with isatty,
             # show response provided on stdin when simulating
-            if not util.isatty(self.fin):
+            # but commandserver
+            if (not util.isatty(self.fin)
+                and not self.configbool('ui', 'nontty')):
                 self.write(r, "\n")
             return r
         except EOFError:

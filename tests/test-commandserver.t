@@ -497,6 +497,9 @@ check that local configs for the cached repo aren't inherited when -R is used:
   > @command("debuggetpass", norepo=True)
   > def debuggetpass(ui):
   >     ui.write("%s\\n" % ui.getpass())
+  > @command("debugprompt", norepo=True)
+  > def debugprompt(ui):
+  >     ui.write("%s\\n" % ui.prompt("prompt:"))
   > EOF
   $ cat <<EOF >> .hg/hgrc
   > [extensions]
@@ -511,8 +514,13 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['debuggetpass', '--config',
   ...                         'ui.interactive=True'],
   ...                input=cStringIO.StringIO('1234\n'))
+  ...     runcommand(server, ['debugprompt', '--config',
+  ...                         'ui.interactive=True'],
+  ...                input=cStringIO.StringIO('5678\n'))
   *** runcommand debuggetpass --config ui.interactive=True
   password: 1234
+  *** runcommand debugprompt --config ui.interactive=True
+  prompt: 5678
 
 
 start without repository:
