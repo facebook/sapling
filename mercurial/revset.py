@@ -1656,7 +1656,7 @@ def _list(repo, subset, x):
     if not s:
         return baseset()
     ls = [repo[r].rev() for r in s.split('\0')]
-    s = subset.set()
+    s = subset
     return baseset([r for r in ls if r in s])
 
 # for internal use
