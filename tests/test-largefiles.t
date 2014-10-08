@@ -1705,7 +1705,7 @@ Test status after merging with a branch that introduces a new largefile:
 - make sure update of merge with removed largefiles fails as expected
   $ hg rm sub2/large6
   $ hg up -r.
-  abort: outstanding uncommitted merges
+  abort: outstanding uncommitted merge
   [255]
 
 - revert should be able to revert files introduced in a pending merge

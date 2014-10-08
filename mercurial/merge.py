@@ -1058,7 +1058,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
         ### check phase
         if not overwrite and len(pl) > 1:
-            raise util.Abort(_("outstanding uncommitted merges"))
+            raise util.Abort(_("outstanding uncommitted merge"))
         if branchmerge:
             if pas == [p2]:
                 raise util.Abort(_("merging with a working directory ancestor"
