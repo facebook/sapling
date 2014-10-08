@@ -692,9 +692,9 @@ def destination(repo, subset, x):
     is the same as passing all().
     """
     if x is not None:
-        args = getset(repo, spanset(repo), x).set()
+        args = getset(repo, spanset(repo), x)
     else:
-        args = getall(repo, spanset(repo), x).set()
+        args = getall(repo, spanset(repo), x)
 
     dests = set()
 
