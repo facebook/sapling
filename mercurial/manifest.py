@@ -49,6 +49,46 @@ class manifestdict(dict):
         # be sure to check the templates/ dir again (especially *-raw.tmpl)
         return ''.join("%s\0%s%s\n" % (f, hex(self[f]), flags(f)) for f in fl)
 
+def _msearch(m, s, lo=0, hi=None):
+    '''return a tuple (start, end) that says where to find s within m.
+
+    If the string is found m[start:end] are the line containing
+    that string.  If start == end the string was not found and
+    they indicate the proper sorted insertion point.
+
+    m should be a buffer or a string
+    s is a string'''
+    def advance(i, c):
+        while i < lenm and m[i] != c:
+            i += 1
+        return i
+    if not s:
+        return (lo, lo)
+    lenm = len(m)
+    if not hi:
+        hi = lenm
+    while lo < hi:
+        mid = (lo + hi) // 2
+        start = mid
+        while start > 0 and m[start - 1] != '\n':
+            start -= 1
+        end = advance(start, '\0')
+        if m[start:end] < s:
+            # we know that after the null there are 40 bytes of sha1
+            # this translates to the bisect lo = mid + 1
+            lo = advance(end + 40, '\n') + 1
+        else:
+            # this translates to the bisect hi = mid
+            hi = start
+    end = advance(lo, '\0')
+    found = m[lo:end]
+    if s == found:
+        # we know that after the null there are 40 bytes of sha1
+        end = advance(end + 40, '\n')
+        return (lo, end + 1)
+    else:
+        return (lo, lo)
+
 def _checkforbidden(l):
     """Check filenames for illegal characters."""
     for f in l:
@@ -113,46 +153,6 @@ class manifest(revlog.revlog):
         self._mancache[node] = (mapping, arraytext)
         return mapping
 
-    def _search(self, m, s, lo=0, hi=None):
-        '''return a tuple (start, end) that says where to find s within m.
-
-        If the string is found m[start:end] are the line containing
-        that string.  If start == end the string was not found and
-        they indicate the proper sorted insertion point.
-
-        m should be a buffer or a string
-        s is a string'''
-        def advance(i, c):
-            while i < lenm and m[i] != c:
-                i += 1
-            return i
-        if not s:
-            return (lo, lo)
-        lenm = len(m)
-        if not hi:
-            hi = lenm
-        while lo < hi:
-            mid = (lo + hi) // 2
-            start = mid
-            while start > 0 and m[start - 1] != '\n':
-                start -= 1
-            end = advance(start, '\0')
-            if m[start:end] < s:
-                # we know that after the null there are 40 bytes of sha1
-                # this translates to the bisect lo = mid + 1
-                lo = advance(end + 40, '\n') + 1
-            else:
-                # this translates to the bisect hi = mid
-                hi = start
-        end = advance(lo, '\0')
-        found = m[lo:end]
-        if s == found:
-            # we know that after the null there are 40 bytes of sha1
-            end = advance(end + 40, '\n')
-            return (lo, end + 1)
-        else:
-            return (lo, lo)
-
     def find(self, node, f):
         '''look up entry for a single file efficiently.
         return (node, flags) pair if found, (None, None) if not.'''
@@ -160,7 +160,7 @@ class manifest(revlog.revlog):
             mapping = self._mancache[node][0]
             return mapping.get(f), mapping.flags(f)
         text = self.revision(node)
-        start, end = self._search(text, f)
+        start, end = _msearch(text, f)
         if start == end:
             return None, None
         l = text[start:end]
@@ -195,7 +195,7 @@ class manifest(revlog.revlog):
             # each line and creates the deltas
             for f, todelete in work:
                 # bs will either be the index of the item or the insert point
-                start, end = self._search(addbuf, f, start)
+                start, end = _msearch(addbuf, f, start)
                 if not todelete:
                     l = "%s\0%s%s\n" % (f, revlog.hex(map[f]), map.flags(f))
                 else:
