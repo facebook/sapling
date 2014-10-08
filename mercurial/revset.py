@@ -1151,9 +1151,9 @@ def origin(repo, subset, x):
     for the first operation is selected.
     """
     if x is not None:
-        args = getset(repo, spanset(repo), x).set()
+        args = getset(repo, spanset(repo), x)
     else:
-        args = getall(repo, spanset(repo), x).set()
+        args = getall(repo, spanset(repo), x)
 
     def _firstsrc(rev):
         src = _getrevsource(repo, rev)
