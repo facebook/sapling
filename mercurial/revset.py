@@ -497,8 +497,8 @@ def branch(repo, subset, x):
     b = set()
     for r in s:
         b.add(repo[r].branch())
-    s = s.set()
-    return subset.filter(lambda r: r in s or repo[r].branch() in b)
+    c = s.__contains__
+    return subset.filter(lambda r: c(r) or repo[r].branch() in b)
 
 def bumped(repo, subset, x):
     """``bumped()``
