@@ -1043,16 +1043,16 @@ def last(repo, subset, x):
     ss = subset.set()
     os = getset(repo, spanset(repo), l[0])
     os.reverse()
-    bs = baseset()
+    result = []
     it = iter(os)
     for x in xrange(lim):
         try:
             y = it.next()
             if y in ss:
-                bs.append(y)
+                result.append(y)
         except (StopIteration):
             break
-    return bs
+    return baseset(result)
 
 def maxrev(repo, subset, x):
     """``max(set)``
