@@ -1015,7 +1015,7 @@ def limit(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
-    ss = subset.set()
+    ss = subset
     os = getset(repo, spanset(repo), l[0])
     result = []
     it = iter(os)
