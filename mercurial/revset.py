@@ -1478,8 +1478,8 @@ def roots(repo, subset, x):
     """``roots(set)``
     Changesets in set with no parent changeset in set.
     """
-    s = getset(repo, spanset(repo), x).set()
-    subset = baseset([r for r in s if r in subset.set()])
+    s = getset(repo, spanset(repo), x)
+    subset = baseset([r for r in s if r in subset])
     cs = _children(repo, subset, s)
     return subset - cs
 
