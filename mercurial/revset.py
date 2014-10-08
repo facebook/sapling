@@ -282,8 +282,7 @@ def rangeset(repo, subset, x, y):
 def dagrange(repo, subset, x, y):
     r = spanset(repo)
     xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
-    s = subset.set()
-    return xs.filter(s.__contains__)
+    return xs & subset
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
