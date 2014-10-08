@@ -159,11 +159,10 @@ class manifest(revlog.revlog):
         f, n = l.split('\0')
         return revlog.bin(n[:40]), n[40:-1]
 
-    def add(self, map, transaction, link, p1=None, p2=None,
-            changed=None):
+    def add(self, map, transaction, link, p1, p2, added, removed):
         # if we're using the cache, make sure it is valid and
         # parented by the same node we're diffing against
-        if not (changed and p1 and (p1 in self._mancache)):
+        if not (p1 and (p1 in self._mancache)):
             files = sorted(map)
             _checkforbidden(files)
 
@@ -175,7 +174,6 @@ class manifest(revlog.revlog):
             arraytext = array.array('c', text)
             cachedelta = None
         else:
-            added, removed = changed
             addlist = self._mancache[p1][1]
 
             _checkforbidden(added)

@@ -1415,7 +1415,7 @@ class localrepository(object):
                 for f in drop:
                     del m1[f]
                 mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
-                                       p2.manifestnode(), (new, drop))
+                                       p2.manifestnode(), new, drop)
                 files = changed + removed
             else:
                 mn = p1.manifestnode()
