@@ -572,7 +572,7 @@ def children(repo, subset, x):
     """``children(set)``
     Child changesets of changesets in set.
     """
-    s = getset(repo, baseset(repo), x).set()
+    s = getset(repo, baseset(repo), x)
     cs = _children(repo, subset, s)
     return subset & cs
 
