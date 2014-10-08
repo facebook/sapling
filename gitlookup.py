@@ -96,9 +96,10 @@ def gitgetmeta(ui, repo, source='default'):
 
 gitmetafiles = set(['git-mapfile', 'git-tags', 'git-remote-refs'])
 
-def _getbundleextrapart(orig, bundler, repo, source, **kwargs):
+@exchange.getbundle2partsgenerator('gitmeta')
+def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
     '''send git metadata via bundle2'''
-    if 'fb_gitmeta' in kwargs['bundlecaps']:
+    if 'fb_gitmeta' in bundlecaps:
         for fname in sorted(gitmetafiles):
             try:
                 f = repo.opener(fname)
@@ -131,6 +132,4 @@ def bundle2getgitmeta(op, part):
 
 def extsetup(ui):
     wrapwireprotocommand('lookup', remotelookup)
-    extensions.wrapfunction(exchange, '_getbundleextrapart',
-                            _getbundleextrapart)
 
