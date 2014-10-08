@@ -50,10 +50,9 @@ def _makeextrafn(copiers):
 
 @command('rebase',
     [('s', 'source', '',
-     _('rebase from the specified changeset'), _('REV')),
+     _('rebase the specified changeset and descendants'), _('REV')),
     ('b', 'base', '',
-     _('rebase the tree around the specified changeset without '
-       'ancestors of dest'),
+     _('rebase everything from branching point of specified changeset'),
      _('REV')),
     ('r', 'rev', [],
      _('rebase these revisions'),
