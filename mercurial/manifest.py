@@ -40,6 +40,14 @@ class manifestdict(dict):
     def flagsdiff(self, d2):
         return dicthelpers.diff(self._flags, d2._flags, "")
 
+    def text(self):
+        fl = sorted(self)
+        _checkforbidden(fl)
+
+        hex, flags = revlog.hex, self.flags
+        # if this is changed to support newlines in filenames,
+        # be sure to check the templates/ dir again (especially *-raw.tmpl)
+        return ''.join("%s\0%s%s\n" % (f, hex(self[f]), flags(f)) for f in fl)
 
 def _checkforbidden(l):
     """Check filenames for illegal characters."""
@@ -220,14 +228,7 @@ class manifest(revlog.revlog):
             # just encode a fulltext of the manifest and pass that
             # through to the revlog layer, and let it handle the delta
             # process.
-            files = sorted(map)
-            _checkforbidden(files)
-
-            # if this is changed to support newlines in filenames,
-            # be sure to check the templates/ dir again (especially *-raw.tmpl)
-            hex, flags = revlog.hex, map.flags
-            text = ''.join("%s\0%s%s\n" % (f, hex(map[f]), flags(f))
-                           for f in files)
+            text = map.text()
             arraytext = array.array('c', text)
             cachedelta = None
 
