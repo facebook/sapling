@@ -128,8 +128,39 @@ def rebase(ui, repo, **opts):
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
+    .. container:: verbose
+
+      Examples:
+
+      - move "local changes" (current commit back to branching point)
+        to the current branch tip after a pull::
+
+          hg rebase
+
+      - move a single changeset to the stable branch::
+
+          hg rebase -r 5f493448 -d stable
+
+      - splice a commit and all its descendants onto another part of history::
+
+          hg rebase --source c0c3 --dest 4cf9
+
+      - rebase everything on a branch marked by a bookmark onto the
+        default branch::
+
+          hg rebase --base myfeature --dest default
+
+      - collapse a sequence of changes into a single commit::
+
+          hg rebase --collapse -r 1520:1525 -d .
+
+      - move a named branch while preserving its name::
+
+          hg rebase -r "branch(featureX)" -d 1.3 --keepbranches
+
     Returns 0 on success, 1 if nothing to rebase or there are
     unresolved conflicts.
+
     """
     originalwd = target = None
     activebookmark = None
