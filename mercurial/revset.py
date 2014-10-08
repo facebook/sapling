@@ -1042,7 +1042,7 @@ def last(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
-    ss = subset.set()
+    ss = subset
     os = getset(repo, spanset(repo), l[0])
     os.reverse()
     result = []
