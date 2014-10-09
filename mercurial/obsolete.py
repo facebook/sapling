@@ -208,6 +208,27 @@ def _fm0encodeonemarker(marker):
     data.extend(sucs)
     return _pack(format, *data) + metadata
 
+def _fm0encodemeta(meta):
+    """Return encoded metadata string to string mapping.
+
+    Assume no ':' in key and no '\0' in both key and value."""
+    for key, value in meta.iteritems():
+        if ':' in key or '\0' in key:
+            raise ValueError("':' and '\0' are forbidden in metadata key'")
+        if '\0' in value:
+            raise ValueError("':' is forbidden in metadata value'")
+    return '\0'.join(['%s:%s' % (k, meta[k]) for k in sorted(meta)])
+
+def _fm0decodemeta(data):
+    """Return string to string dictionary from encoded version."""
+    d = {}
+    for l in data.split('\0'):
+        if l:
+            key, value = l.split(':')
+            d[key] = value
+    return d
+
+
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {_fm0version: (_fm0readmarkers, _fm0encodeonemarker)}
@@ -231,26 +252,6 @@ def encodemarkers(markers, addheader=False, version=_fm0version):
     for marker in markers:
         yield encodeone(marker)
 
-
-def _fm0encodemeta(meta):
-    """Return encoded metadata string to string mapping.
-
-    Assume no ':' in key and no '\0' in both key and value."""
-    for key, value in meta.iteritems():
-        if ':' in key or '\0' in key:
-            raise ValueError("':' and '\0' are forbidden in metadata key'")
-        if '\0' in value:
-            raise ValueError("':' is forbidden in metadata value'")
-    return '\0'.join(['%s:%s' % (k, meta[k]) for k in sorted(meta)])
-
-def _fm0decodemeta(data):
-    """Return string to string dictionary from encoded version."""
-    d = {}
-    for l in data.split('\0'):
-        if l:
-            key, value = l.split(':')
-            d[key] = value
-    return d
 
 class marker(object):
     """Wrap obsolete marker raw data"""
