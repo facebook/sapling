@@ -88,16 +88,14 @@ set up conflict-free merge
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-BROKEN: resolve --all should do nothing in merge without conflicts
+resolve --all should do nothing in merge without conflicts
   $ hg resolve --all
-  abort: resolve command not applicable when not merging
-  [255]
+  (no more unresolved files)
 
-BROKEN: resolve -m should do nothing in merge without conflicts
+resolve -m should do nothing in merge without conflicts
 
   $ hg resolve -m
-  abort: resolve command not applicable when not merging
-  [255]
+  (no more unresolved files)
 
 get back to conflicting state
 

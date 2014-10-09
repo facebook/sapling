@@ -5283,7 +5283,7 @@ def resolve(ui, repo, *pats, **opts):
     try:
         ms = mergemod.mergestate(repo)
 
-        if not ms.active() and not show:
+        if not (ms.active() or repo.dirstate.p2() != nullid) and not show:
             raise util.Abort(
                 _('resolve command not applicable when not merging'))
 
