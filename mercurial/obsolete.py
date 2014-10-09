@@ -231,10 +231,145 @@ def _fm0decodemeta(data):
             d[key] = value
     return d
 
+## Parsing and writing of version "1"
+#
+# The header is followed by the markers. Each marker is made of:
+#
+# - uint32: total size of the marker (including this field)
+#
+# - float64: date in seconds since epoch
+#
+# - int16: timezone offset in minutes
+#
+# - uint16: a bit field. It is reserved for flags used in common
+#   obsolete marker operations, to avoid repeated decoding of metadata
+#   entries.
+#
+# - uint8: number of successors "N", can be zero.
+#
+# - uint8: number of parents "P", can be zero.
+#
+#     0: parents data stored but no parent,
+#     1: one parent stored,
+#     2: two parents stored,
+#     3: no parent data stored
+#
+# - uint8: number of metadata entries M
+#
+# - 20 or 32 bytes: precursor changeset identifier.
+#
+# - N*(20 or 32) bytes: successors changesets identifiers.
+#
+# - P*(20 or 32) bytes: parents of the precursors changesets.
+#
+# - M*(uint8, uint8): size of all metadata entries (key and value)
+#
+# - remaining bytes: the metadata, each (key, value) pair after the other.
+_fm1version = 1
+_fm1fixed = '>IdhHBBB20s'
+_fm1nodesha1 = '20s'
+_fm1nodesha256 = '32s'
+_fm1fsize = struct.calcsize(_fm1fixed)
+_fm1parentnone = 3
+_fm1parentshift = 14
+_fm1parentmask = (_fm1parentnone << _fm1parentshift)
+_fm1metapair = 'BB'
+_fm1metapairsize = struct.calcsize('BB')
+
+def _fm1readmarkers(data, off=0):
+    # Loop on markers
+    l = len(data)
+    while off + _fm1fsize <= l:
+        # read fixed part
+        cur = data[off:off + _fm1fsize]
+        off += _fm1fsize
+        fixeddata = _unpack(_fm1fixed, cur)
+        ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
+        # extract the number of parents information
+        if numpar == _fm1parentnone:
+            numpar = None
+        # build the date tuple (upgrade tz minutes to seconds)
+        date = (seconds, tz * 60)
+        _fm1node = _fm1nodesha1
+        if flags & usingsha256:
+            _fm1node = _fm1nodesha256
+        fnodesize = struct.calcsize(_fm1node)
+        # read replacement
+        sucs = ()
+        if numsuc:
+            s = (fnodesize * numsuc)
+            cur = data[off:off + s]
+            sucs = _unpack(_fm1node * numsuc, cur)
+            off += s
+        # read parents
+        if numpar is None:
+            parents = None
+        elif numpar == 0:
+            parents = ()
+        elif numpar:  # neither None nor zero
+            s = (fnodesize * numpar)
+            cur = data[off:off + s]
+            parents = _unpack(_fm1node * numpar, cur)
+            off += s
+        # read metadata
+        metaformat = '>' + (_fm1metapair * nummeta)
+        s = _fm1metapairsize * nummeta
+        metapairsize = _unpack(metaformat, data[off:off + s])
+        off += s
+        metadata = []
+        for idx in xrange(0, len(metapairsize), 2):
+            sk = metapairsize[idx]
+            sv = metapairsize[idx + 1]
+            key = data[off:off + sk]
+            value = data[off + sk:off + sk + sv]
+            assert len(key) == sk
+            assert len(value) == sv
+            metadata.append((key, value))
+            off += sk + sv
+        metadata = tuple(metadata)
+
+        yield (prec, sucs, flags, metadata, date, parents)
+
+def _fm1encodeonemarker(marker):
+    pre, sucs, flags, metadata, date, parents = marker
+    # determine node size
+    _fm1node = _fm1nodesha1
+    if flags & usingsha256:
+        _fm1node = _fm1nodesha256
+    numsuc = len(sucs)
+    numextranodes = numsuc
+    if parents is None:
+        numpar = _fm1parentnone
+    else:
+        numpar = len(parents)
+        numextranodes += numpar
+    formatnodes = _fm1node * numextranodes
+    formatmeta = _fm1metapair * len(metadata)
+    format = _fm1fixed + formatnodes + formatmeta
+    # tz is stored in minutes so we divide by 60
+    tz = date[1]//60
+    data = [None, date[0], tz, flags, numsuc, numpar, len(metadata), pre]
+    data.extend(sucs)
+    if parents is not None:
+        data.extend(parents)
+    totalsize = struct.calcsize(format)
+    for key, value in metadata:
+        lk = len(key)
+        lv = len(value)
+        data.append(lk)
+        data.append(lv)
+        totalsize += lk + lv
+    data[0] = totalsize
+    data = [_pack(format, *data)]
+    for key, value in metadata:
+        data.append(key)
+        data.append(value)
+    return ''.join(data)
 
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
-formats = {_fm0version: (_fm0readmarkers, _fm0encodeonemarker)}
+formats = {_fm0version: (_fm0readmarkers, _fm0encodeonemarker),
+           _fm1version: (_fm1readmarkers, _fm1encodeonemarker)}
 
 def _readmarkers(data):
     """Read and enumerate markers from raw data"""
