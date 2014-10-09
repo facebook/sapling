@@ -2382,12 +2382,6 @@ class baseset(abstractsmartset):
 
         return self.filter(lambda x: x not in other)
 
-    def __and__(self, other):
-        """Returns a new object with the intersection of the two collections.
-
-        This is part of the mandatory API for smartset."""
-        return baseset([y for y in self if y in other])
-
     def isascending(self):
         """Returns True if the collection is ascending order, False if not.
 
