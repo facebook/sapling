@@ -13,7 +13,7 @@ test that a commit clears the merge state.
   $ echo bar >> file2
   $ hg commit -Am 'append bar to files'
 
-create a second head
+create a second head with conflicting edits
 
   $ hg up -C 0
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -22,9 +22,17 @@ create a second head
   $ hg commit -Am 'append baz to files'
   created new head
 
+create a third head with no conflicting edits
+  $ hg up -qC 0
+  $ echo foo > file3
+  $ hg commit -Am 'add non-conflicting file'
+  adding file3
+  created new head
+
 failing merge
 
-  $ hg merge --tool=internal:fail
+  $ hg up -qC 2
+  $ hg merge --tool=internal:fail 1
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -61,7 +69,31 @@ resolve -l should be empty after commit
 
   $ hg resolve -l
 
+resolve --all should abort when no merge in progress
+
+  $ hg resolve --all
+  abort: resolve command not applicable when not merging
+  [255]
+
 resolve -m should abort when no merge in progress
+
+  $ hg resolve -m
+  abort: resolve command not applicable when not merging
+  [255]
+
+set up conflict-free merge
+
+  $ hg up -qC 3
+  $ hg merge 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+BROKEN: resolve --all should do nothing in merge without conflicts
+  $ hg resolve --all
+  abort: resolve command not applicable when not merging
+  [255]
+
+BROKEN: resolve -m should do nothing in merge without conflicts
 
   $ hg resolve -m
   abort: resolve command not applicable when not merging
@@ -69,6 +101,7 @@ resolve -m should abort when no merge in progress
 
 test crashed merge with empty mergestate
 
+  $ hg up -qC 1
   $ mkdir .hg/merge
   $ touch .hg/merge/state
 
