@@ -2553,7 +2553,7 @@ class _addset(abstractsmartset):
         val2 = None
 
         choice = max
-        if self._ascending:
+        if ascending:
             choice = min
         try:
             # Consume both iterators in an ordered way until one is
