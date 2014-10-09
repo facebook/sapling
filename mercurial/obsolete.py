@@ -162,18 +162,18 @@ def _fm0readmarkers(data, off=0):
                                'short, %d bytes expected, got %d')
                              % (mdsize, len(metadata)))
         off += mdsize
-        meta = decodemeta(metadata)
+        metadata = decodemeta(metadata)
         try:
-            when, offset = meta.pop('date', '0 0').split(' ')
+            when, offset = metadata.pop('date', '0 0').split(' ')
             date = float(when), int(offset)
         except ValueError:
             date = (0., 0)
         parents = None
-        if 'p2' in meta:
-            parents = (meta.pop('p1', None), meta.pop('p2', None))
-        elif 'p1' in meta:
-            parents = (meta.pop('p1', None),)
-        elif 'p0' in meta:
+        if 'p2' in metadata:
+            parents = (metadata.pop('p1', None), metadata.pop('p2', None))
+        elif 'p1' in metadata:
+            parents = (metadata.pop('p1', None),)
+        elif 'p0' in metadata:
             parents = ()
         if parents is not None:
             try:
@@ -187,13 +187,13 @@ def _fm0readmarkers(data, off=0):
                 # if content cannot be translated to nodeid drop the data.
                 parents = None
 
-        metadata = encodemeta(meta)
+        metadata = tuple(sorted(metadata.iteritems()))
 
         yield (pre, sucs, flags, metadata, date, parents)
 
 def _fm0encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
-    metadata = decodemeta(metadata)
+    metadata = dict(metadata)
     metadata['date'] = '%d %i' % date
     if parents is not None:
         if not parents:
@@ -283,9 +283,7 @@ class marker(object):
 
     def metadata(self):
         """Decoded metadata dictionary"""
-        if self._decodedmeta is None:
-            self._decodedmeta = decodemeta(self._data[3])
-        return self._decodedmeta
+        return dict(self._data[3])
 
     def date(self):
         """Creation date as (unixtime, offset)"""
@@ -365,8 +363,10 @@ class obsstore(object):
                 raise ValueError(succ)
         if prec in succs:
             raise ValueError(_('in-marker cycle with %s') % node.hex(prec))
-        marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata),
-                  date, parents)
+
+        metadata = tuple(sorted(metadata.iteritems()))
+
+        marker = (str(prec), tuple(succs), int(flag), metadata, date, parents)
         return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
