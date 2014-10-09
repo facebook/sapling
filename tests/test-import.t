@@ -1428,7 +1428,7 @@ Importing multiple failing patches:
   $ echo 'B' > b # just to make another commit
   $ hg commit -m "a new base"
   created new head
-  $ hg export --rev 'desc("extended jungle") + desc("four")' | hg import --partial -
+  $ hg export --rev 'desc("four") + desc("extended jungle")' | hg import --partial -
   applying patch from stdin
   patching file a
   Hunk #1 FAILED at 0
