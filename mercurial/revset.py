@@ -2368,12 +2368,16 @@ class baseset(abstractsmartset):
         """Returns True if the collection is ascending order, False if not.
 
         This is part of the mandatory API for smartset."""
+        if len(self) <= 1:
+            return True
         return self._ascending is not None and self._ascending
 
     def isdescending(self):
         """Returns True if the collection is descending order, False if not.
 
         This is part of the mandatory API for smartset."""
+        if len(self) <= 1:
+            return True
         return self._ascending is not None and not self._ascending
 
     def first(self):
