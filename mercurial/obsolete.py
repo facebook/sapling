@@ -117,9 +117,9 @@ bumpedfix = 1
 #
 # The header is followed by the markers. Each marker is made of:
 #
-# - 1 unsigned byte: number of new changesets "N", can be zero.
+# - 1 uint8 : number of new changesets "N", can be zero.
 #
-# - 1 unsigned 32-bits integer: metadata size "M" in bytes.
+# - 1 uint32: metadata size "M" in bytes.
 #
 # - 1 byte: a bit field. It is reserved for flags used in common
 #   obsolete marker operations, to avoid repeated decoding of metadata
