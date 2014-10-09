@@ -2283,12 +2283,7 @@ class abstractsmartset(object):
         """Returns a new object with the union of the two collections.
 
         This is part of the mandatory API for smartset."""
-        kwargs = {}
-        if self.isascending() and other.isascending():
-            kwargs['ascending'] = True
-        if self.isdescending() and other.isdescending():
-            kwargs['ascending'] = False
-        return addset(self, other, **kwargs)
+        return addset(self, other)
 
     def __sub__(self, other):
         """Returns a new object with the substraction of the two collections.

@@ -572,6 +572,29 @@ test intersecting something with an addset
   5
   8
 
+test that `or` operation combines elements in the right order:
+
+  $ log '3:4 or 2:5'
+  3
+  4
+  2
+  5
+  $ log '3:4 or 5:2'
+  3
+  4
+  5
+  2
+  $ log 'sort(3:4 or 2:5)'
+  2
+  3
+  4
+  5
+  $ log 'sort(3:4 or 5:2)'
+  2
+  3
+  4
+  5
+
 check that conversion to only works
   $ try --optimize '::3 - ::1'
   (minus
