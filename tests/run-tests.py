@@ -1189,6 +1189,11 @@ class TestResult(unittest._TextTestResult):
 
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
+        if self.shouldStop:
+            # don't print, some other test case already failed and
+            # printed, we're just stale and probably failed due to our
+            # temp dir getting cleaned up.
+            return
 
         accepted = False
         failed = False

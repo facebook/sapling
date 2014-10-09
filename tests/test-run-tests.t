@@ -215,8 +215,29 @@ Parallel runs
   python hash seed: * (glob)
   [1]
 
+failures in parallel with --first should only print one failure
+  >>> f = open('test-nothing.t', 'w')
+  >>> f.write('foo\n' * 1024)
+  >>> f.write('  $ sleep 1')
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --jobs 2 --first
+  
+  --- $TESTTMP/test-failure*.t (glob)
+  +++ $TESTTMP/test-failure*.t.err (glob)
+  @@ -1,4 +1,4 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+  
+  Failed test-failure*.t: output changed (glob)
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+
 (delete the duplicated test file)
-  $ rm test-failure-copy.t
+  $ rm test-failure-copy.t test-nothing.t
 
 
 Interactive run
