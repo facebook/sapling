@@ -95,3 +95,33 @@
   (run 'hg update' to get a working copy)
   prefetching file contents
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+
+# Make some local commits that produce the same file versions as are on the
+# server. To simulate a situation where we have local commits that were somehow
+# pushed, and we will soon pull.
+
+  $ hg prefetch -r 'all()'
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  $ hg strip -q -r 0
+  $ echo x > x
+  $ echo z > z
+  $ hg commit -qAm x
+  $ echo x2 > x
+  $ echo y > y
+  $ hg commit -qAm y
+
+# prefetch server versions, even if local versions are available
+
+  $ clearcache
+  $ hg strip -q tip
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  updating bookmark foo
+  (run 'hg update' to get a working copy)
+  prefetching file contents
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)

@@ -127,8 +127,7 @@ class fileserverclient(object):
         total = count
         self.ui.progress(_downloading, 0, total=count)
 
-        fallbackrepo = repo.ui.config("remotefilelog", "fallbackrepo",
-                         repo.ui.config("paths", "default"))
+        fallbackpath = repo.fallbackpath
 
         missed = []
         count = 0
@@ -170,7 +169,7 @@ class fileserverclient(object):
                     # outputs
                     self.ui.verbose = False
 
-                    remote = hg.peer(self.ui, {}, fallbackrepo)
+                    remote = hg.peer(self.ui, {}, fallbackpath)
                     remote._callstream("getfiles")
                 finally:
                     self.ui.verbose = verbose

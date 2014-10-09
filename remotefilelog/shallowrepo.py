@@ -19,6 +19,13 @@ def wraprepo(repo):
         def name(self):
             return self.ui.config('remotefilelog', 'reponame', '')
 
+        @util.propertycache
+        def fallbackpath(self):
+            return repo.ui.config("remotefilelog", "fallbackpath",
+                    # fallbackrepo is the old, deprecated name
+                     repo.ui.config("remotefilelog", "fallbackrepo",
+                       repo.ui.config("paths", "default")))
+
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]
@@ -68,6 +75,20 @@ def wraprepo(repo):
         def prefetch(self, revs, base=None, pats=None, opts=None):
             """Prefetches all the necessary file revisions for the given revs
             """
+            fallbackpath = self.fallbackpath
+            if fallbackpath:
+                # If we know a rev is on the server, we should fetch the server
+                # version of those files, since our local file versions might
+                # become obsolete if the local commits are stripped.
+                localrevs = repo.revs('outgoing(%s)', fallbackpath)
+                if base is not None and base != nullrev:
+                    serverbase = repo.revs('first(reverse(::%s) - %ld)', base,
+                                     localrevs)
+                    if serverbase:
+                        base = serverbase[0]
+            else:
+                localrevs = repo
+
             mf = repo.manifest
             if base is not None:
                 mfdict = mf.read(repo[base].manifestnode())
@@ -78,6 +99,7 @@ def wraprepo(repo):
             # Copy the skip set to start large and avoid constant resizing,
             # and since it's likely to be very similar to the prefetch set.
             files = skip.copy()
+            serverfiles = skip.copy()
             visited = set()
             visited.add(nullrev)
             for rev in sorted(revs):
@@ -96,14 +118,26 @@ def wraprepo(repo):
                 else:
                     mfdict = mf.read(mfnode)
 
-                files.update(pf for pf in mfdict.iteritems()
-                    if not pats or m(pf[0]))
+                diff = (pf for pf in mfdict.iteritems() if not pats or m(pf[0]))
+                if rev not in localrevs:
+                    serverfiles.update(diff)
+                else:
+                    files.update(diff)
 
                 visited.add(mfrev)
 
             files.difference_update(skip)
-            results = [(path, hex(fnode)) for (path, fnode) in files]
-            repo.fileservice.prefetch(results)
+            serverfiles.difference_update(skip)
+
+            # Fetch files known to be on the server
+            if serverfiles:
+                results = [(path, hex(fnode)) for (path, fnode) in serverfiles]
+                repo.fileservice.prefetch(results, force=True)
+
+            # Fetch files that may or may not be on the server
+            if files:
+                results = [(path, hex(fnode)) for (path, fnode) in files]
+                repo.fileservice.prefetch(results)
 
     # Wrap dirstate.status here so we can prefetch all file nodes in
     # the lookup set before localrepo.status uses them.
