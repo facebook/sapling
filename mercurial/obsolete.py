@@ -162,7 +162,7 @@ def _fm0readmarkers(data, off=0):
                                'short, %d bytes expected, got %d')
                              % (mdsize, len(metadata)))
         off += mdsize
-        metadata = decodemeta(metadata)
+        metadata = _fm0decodemeta(metadata)
         try:
             when, offset = metadata.pop('date', '0 0').split(' ')
             date = float(when), int(offset)
@@ -243,7 +243,7 @@ def _fm0encodemeta(meta):
             raise ValueError("':' is forbidden in metadata value'")
     return '\0'.join(['%s:%s' % (k, meta[k]) for k in sorted(meta)])
 
-def decodemeta(data):
+def _fm0decodemeta(data):
     """Return string to string dictionary from encoded version."""
     d = {}
     for l in data.split('\0'):
