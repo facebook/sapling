@@ -201,7 +201,7 @@ def _fm0encodeonemarker(marker):
             metadata['p0'] = ''
         for i, p in enumerate(parents):
             metadata['p%i' % (i + 1)] = node.hex(p)
-    metadata = encodemeta(metadata)
+    metadata = _fm0encodemeta(metadata)
     numsuc = len(sucs)
     format = _fm0fixed + (_fm0node * numsuc)
     data = [numsuc, len(metadata), flags, pre]
@@ -232,7 +232,7 @@ def encodemarkers(markers, addheader=False, version=_fm0version):
         yield encodeone(marker)
 
 
-def encodemeta(meta):
+def _fm0encodemeta(meta):
     """Return encoded metadata string to string mapping.
 
     Assume no ':' in key and no '\0' in both key and value."""
