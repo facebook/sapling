@@ -26,13 +26,9 @@
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mv a c
 
-In theory, we shouldn't need the "-y" below, but it prevents this test
-from hanging when "hg update" erroneously prompts the user for "keep
-or delete".
-
 Should abort:
 
-  $ hg update -y 1
+  $ hg update 1
   abort: uncommitted changes
   (commit or update --clean to discard changes)
   [255]
@@ -40,5 +36,5 @@ Should abort:
 
 Should succeed:
 
-  $ hg update -y 1
+  $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
