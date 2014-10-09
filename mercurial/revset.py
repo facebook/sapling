@@ -664,10 +664,15 @@ def _descendants(repo, subset, x, followfirst=False):
 
     # Both sets need to be ascending in order to lazily return the union
     # in the correct order.
-    args.sort()
-    result = (filteredset(s, subset.__contains__, ascending=True) +
-              filteredset(args, subset.__contains__, ascending=True))
-
+    base = subset & args
+    desc = subset & s
+    result = base + desc
+    if subset.isascending():
+        result.sort()
+    elif subset.isdescending():
+        result.sort(reverse=True)
+    else:
+        result = subset & result
     return result
 
 def descendants(repo, subset, x):

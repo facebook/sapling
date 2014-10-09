@@ -1989,6 +1989,187 @@ Test --follow and forward --rev
   |
   o  0 add a
   
+  $ hg export 'all()'
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID f8035bb17114da16215af3436ec5222428ace8ee
+  # Parent  0000000000000000000000000000000000000000
+  add a
+  
+  diff -r 000000000000 -r f8035bb17114 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 000000000000 -r f8035bb17114 aa
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/aa	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +aa
+  diff -r 000000000000 -r f8035bb17114 f
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/f	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +f
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 216d4c92cf98ff2b4641d508b76b529f3d424c92
+  # Parent  f8035bb17114da16215af3436ec5222428ace8ee
+  copy a b
+  
+  diff -r f8035bb17114 -r 216d4c92cf98 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r f8035bb17114 -r 216d4c92cf98 g
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +f
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID bb573313a9e8349099b6ea2b2fb1fc7f424446f3
+  # Parent  216d4c92cf98ff2b4641d508b76b529f3d424c92
+  mv b dir/b
+  
+  diff -r 216d4c92cf98 -r bb573313a9e8 b
+  --- a/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r 216d4c92cf98 -r bb573313a9e8 dir/b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 216d4c92cf98 -r bb573313a9e8 f
+  --- a/f	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/f	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   f
+  +f
+  diff -r 216d4c92cf98 -r bb573313a9e8 g
+  --- a/g	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   f
+  +g
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 5918b8d165d1364e78a66d02e66caa0133c5d1ed
+  # Parent  bb573313a9e8349099b6ea2b2fb1fc7f424446f3
+  mv a b; add d
+  
+  diff -r bb573313a9e8 -r 5918b8d165d1 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r bb573313a9e8 -r 5918b8d165d1 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r bb573313a9e8 -r 5918b8d165d1 d
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/d	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r bb573313a9e8 -r 5918b8d165d1 g
+  --- a/g	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,2 @@
+   f
+  -g
+  +f
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 17d952250a9d03cc3dc77b199ab60e959b9b0260
+  # Parent  5918b8d165d1364e78a66d02e66caa0133c5d1ed
+  mv dir/b e
+  
+  diff -r 5918b8d165d1 -r 17d952250a9d dir/b
+  --- a/dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r 5918b8d165d1 -r 17d952250a9d e
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/e	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 99b31f1c2782e2deb1723cef08930f70fc84b37b
+  # Parent  5918b8d165d1364e78a66d02e66caa0133c5d1ed
+  add another e
+  
+  diff -r 5918b8d165d1 -r 99b31f1c2782 e
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/e	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +ee
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID fc281d8ff18d999ad6497b3d27390bcd695dcc73
+  # Parent  99b31f1c2782e2deb1723cef08930f70fc84b37b
+  # Parent  17d952250a9d03cc3dc77b199ab60e959b9b0260
+  merge 5 and 4
+  
+  diff -r 99b31f1c2782 -r fc281d8ff18d dir/b
+  --- a/dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r 99b31f1c2782 -r fc281d8ff18d e
+  --- a/e	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/e	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -ee
+  +merge
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 02dbb8e276b8ab7abfd07cab50c901647e75c2dd
+  # Parent  fc281d8ff18d999ad6497b3d27390bcd695dcc73
+  Added tag foo-bar for changeset fc281d8ff18d
+  
+  diff -r fc281d8ff18d -r 02dbb8e276b8 .hgtags
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +fc281d8ff18d999ad6497b3d27390bcd695dcc73 foo-bar
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 24c2e826ddebf80f9dcd60b856bdb8e6715c5449
+  # Parent  fc281d8ff18d999ad6497b3d27390bcd695dcc73
+  add g
+  
+  diff -r fc281d8ff18d -r 24c2e826ddeb g
+  --- a/g	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/g	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,2 +1,1 @@
+  -f
+  -f
+  +g
   $ testlog --follow -r6 -r8 -r5 -r7 -r4
   ['6', '8', '5', '7', '4']
   (group
@@ -1999,9 +2180,8 @@ Test --follow and forward --rev
   +++ glog.nodes	* (glob)
   @@ -1,3 +1,3 @@
   -nodetag 6
-  -nodetag 7
    nodetag 8
-  +nodetag 7
+   nodetag 7
   +nodetag 6
 
 Test --follow-first and forward --rev
@@ -2016,9 +2196,8 @@ Test --follow-first and forward --rev
   +++ glog.nodes	* (glob)
   @@ -1,3 +1,3 @@
   -nodetag 6
-  -nodetag 7
    nodetag 8
-  +nodetag 7
+   nodetag 7
   +nodetag 6
 
 Test --follow and backward --rev
