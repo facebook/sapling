@@ -31,7 +31,8 @@ resolve -l should contain an unresolved entry
   $ hg resolve -l
   U file
 
-resolving an unknown path emits a warning
+resolving an unknown path should emit a warning
+
   $ hg resolve -m does-not-exist
   arguments do not match paths that need resolving
 
@@ -42,11 +43,12 @@ resolve the failure
   (no more unresolved files)
   $ hg commit -m 'resolved'
 
-resolve -l should be empty
+resolve -l should be empty after commit
 
   $ hg resolve -l
 
-resolve -m should abort since no merge in progress
+resolve -m should abort when no merge in progress
+
   $ hg resolve -m
   abort: resolve command not applicable when not merging
   [255]
@@ -56,7 +58,7 @@ test crashed merge with empty mergestate
   $ mkdir .hg/merge
   $ touch .hg/merge/state
 
-resolve -l, should be empty
+resolve -l should be empty
 
   $ hg resolve -l
 
