@@ -99,6 +99,45 @@ BROKEN: resolve -m should do nothing in merge without conflicts
   abort: resolve command not applicable when not merging
   [255]
 
+get back to conflicting state
+
+  $ hg up -qC 2
+  $ hg merge --tool=internal:fail 1
+  0 files updated, 0 files merged, 0 files removed, 2 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+
+resolve without arguments should suggest --all
+  $ hg resolve
+  abort: no files or directories specified
+  (use --all to remerge all files)
+  [255]
+
+resolve --all should re-merge all unresolved files
+  $ hg resolve -q --all
+  warning: conflicts during merge.
+  merging file1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts during merge.
+  merging file2 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+  $ grep -q '<<<' file1
+  $ grep -q '<<<' file2
+
+resolve <file> should re-merge file
+  $ echo resolved > file1
+  $ hg resolve -q file1
+  warning: conflicts during merge.
+  merging file1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+  $ grep -q '<<<' file1
+
+resolve <file> should do nothing if 'file' was marked resolved
+  $ echo resolved > file1
+  $ hg resolve -m file1
+  $ hg resolve -q file1
+  $ cat file1
+  resolved
+
 test crashed merge with empty mergestate
 
   $ hg up -qC 1
