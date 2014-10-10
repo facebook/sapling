@@ -925,7 +925,7 @@ def cleanupnode(ui, repo, name, nodes):
         # Find all node that need to be stripped
         # (we hg %lr instead of %ln to silently ignore unknown item
         nm = repo.changelog.nodemap
-        nodes = [n for n in nodes if n in nm]
+        nodes = sorted(n for n in nodes if n in nm)
         roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
         for c in roots:
             # We should process node in reverse order to strip tip most first.
