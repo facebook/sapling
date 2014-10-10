@@ -112,6 +112,7 @@ _enabled = False
 # bumped version and fix the situation, breaking the transitivity of
 # "bumped" here.
 bumpedfix = 1
+usingsha256 = 2
 
 ## Parsing and writing of version "0"
 #
@@ -193,6 +194,8 @@ def _fm0readmarkers(data, off=0):
 
 def _fm0encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
+    if flags & usingsha256:
+        raise util.Abort(_('cannot handle sha256 with old obsstore format'))
     metadata = dict(metadata)
     metadata['date'] = '%d %i' % date
     if parents is not None:
