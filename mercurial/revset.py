@@ -2450,9 +2450,6 @@ class filteredset(abstractsmartset):
     def reverse(self):
         self._subset.reverse()
 
-    def set(self):
-        return set([r for r in self])
-
     def isascending(self):
         return self._subset.isascending()
 
