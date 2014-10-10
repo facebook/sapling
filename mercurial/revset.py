@@ -2207,15 +2207,6 @@ class abstractsmartset(object):
         """provide fast membership testing"""
         raise NotImplementedError()
 
-    def __set__(self):
-        """Returns a set or a smartset containing all the elements.
-
-        The returned structure should be the fastest option for membership
-        testing.
-
-        This is part of the mandatory API for smartset."""
-        raise NotImplementedError()
-
     def __iter__(self):
         """iterate the set in the order it is supposed to be iterated"""
         raise NotImplementedError()
