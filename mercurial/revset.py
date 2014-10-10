@@ -235,7 +235,7 @@ def getset(repo, subset, x):
     if not x:
         raise error.ParseError(_("missing argument"))
     s = methods[x[0]](repo, subset, *x[1:])
-    if util.safehasattr(s, 'set'):
+    if util.safehasattr(s, 'isascending'):
         return s
     return baseset(s)
 
