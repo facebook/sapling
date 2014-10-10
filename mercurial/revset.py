@@ -2352,7 +2352,7 @@ class baseset(abstractsmartset):
 
     @util.propertycache
     def __contains__(self):
-        return self.set().__contains__
+        return self._set.__contains__
 
     def __nonzero__(self):
         return bool(self._list)
