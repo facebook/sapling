@@ -809,28 +809,17 @@ class dirstate(object):
 
     def status(self, match, subrepos, ignored, clean, unknown):
         '''Determine the status of the working copy relative to the
-        dirstate and return a nested tuple of lists (unsure, (modified, added,
-        removed, deleted, unknown, ignored, clean)), where:
+        dirstate and return a pair of (unsure, status), where status is of type
+        scmutil.status and:
 
           unsure:
             files that might have been modified since the dirstate was
             written, but need to be read to be sure (size is the same
             but mtime differs)
-          modified:
+          status.modified:
             files that have definitely been modified since the dirstate
             was written (different size or mode)
-          added:
-            files that have been explicitly added with hg add
-          removed:
-            files that have been explicitly removed with hg remove
-          deleted:
-            files that have been deleted through other means ("missing")
-          unknown:
-            files not in the dirstate that are not ignored
-          ignored:
-            files not in the dirstate that are ignored
-            (by _dirignore())
-          clean:
+          status.clean:
             files that have definitely not been modified since the
             dirstate was written
         '''

@@ -34,30 +34,39 @@ class status(tuple):
 
     @property
     def modified(self):
+        '''files that have been modified'''
         return self[0]
 
     @property
     def added(self):
+        '''files that have been added'''
         return self[1]
 
     @property
     def removed(self):
+        '''files that have been removed'''
         return self[2]
 
     @property
     def deleted(self):
+        '''files that are in the dirstate, but have been deleted from the
+           working copy (aka "missing")
+        '''
         return self[3]
 
     @property
     def unknown(self):
+        '''files not in the dirstate that are not ignored'''
         return self[4]
 
     @property
     def ignored(self):
+        '''files not in the dirstate that are ignored (by _dirignore())'''
         return self[5]
 
     @property
     def clean(self):
+        '''files that have not been modified'''
         return self[6]
 
     def __repr__(self, *args, **kwargs):
