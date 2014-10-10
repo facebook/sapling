@@ -2906,9 +2906,6 @@ class _spanset(abstractsmartset):
         l = baseset([r for r in self])
         return l[x]
 
-    def set(self):
-        return self
-
     def isascending(self):
         return self._start <= self._end
 
