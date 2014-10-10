@@ -2330,17 +2330,6 @@ class baseset(abstractsmartset):
     def fastdesc(self):
         return reversed(self._asclist)
 
-    def set(self):
-        """Returns a set or a smartset containing all the elements.
-
-        The returned structure should be the fastest option for membership
-        testing.
-
-        This is part of the mandatory API for smartset."""
-        if not self._set:
-            self._set = set(self)
-        return self._set
-
     @util.propertycache
     def __contains__(self):
         return self._set.__contains__
