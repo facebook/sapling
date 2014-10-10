@@ -20,6 +20,50 @@ else:
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
 
+class status(tuple):
+    '''Named tuple with a list of files per status. The 'deleted', 'unknown'
+       and 'ignored' properties are only relevant to the working copy.
+    '''
+
+    __slots__ = ()
+
+    def __new__(cls, modified, added, removed, deleted, unknown, ignored,
+                clean):
+        return tuple.__new__(cls, (modified, added, removed, deleted, unknown,
+                                   ignored, clean))
+
+    @property
+    def modified(self):
+        return self[0]
+
+    @property
+    def added(self):
+        return self[1]
+
+    @property
+    def removed(self):
+        return self[2]
+
+    @property
+    def deleted(self):
+        return self[3]
+
+    @property
+    def unknown(self):
+        return self[4]
+
+    @property
+    def ignored(self):
+        return self[5]
+
+    @property
+    def clean(self):
+        return self[6]
+
+    def __repr__(self, *args, **kwargs):
+        return (('<status modified=%r, added=%r, removed=%r, deleted=%r, '
+                 'unknown=%r, ignored=%r, clean=%r>') % self)
+
 def itersubrepos(ctx1, ctx2):
     """find subrepos in ctx1 or ctx2"""
     # Create a (subpath, ctx) mapping where we prefer subpaths from

@@ -908,8 +908,8 @@ class dirstate(object):
             elif state == 'r':
                 radd(fn)
 
-        return (lookup, (modified, added, removed, deleted, unknown, ignored,
-                         clean))
+        return (lookup, scmutil.status(modified, added, removed, deleted,
+                                       unknown, ignored, clean))
 
     def matches(self, match):
         '''
