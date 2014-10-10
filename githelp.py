@@ -32,9 +32,9 @@ def convert(s):
         s = s.replace('HEAD', '.')
     return s
 
-@command('^githelp', [
+@command('^githelp|git', [
     ], _('hg githelp'))
-def backups(ui, repo, *args, **kwargs):
+def githelp(ui, repo, *args, **kwargs):
     '''suggests the Mercurial equivalent of the given git command
 
     Usage: hg githelp -- <git command>
@@ -444,6 +444,42 @@ def log(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def lsfiles(ui, repo, *args, **kwargs):
+    cmdoptions = [
+        ('c', 'cached', None, ''),
+        ('d', 'deleted', None, ''),
+        ('m', 'modified', None, ''),
+        ('o', 'others', None, ''),
+        ('i', 'ignored', None, ''),
+        ('s', 'stage', None, ''),
+        ('z', '_zero', None, ''),
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    if (opts.get('modified') or opts.get('deleted')
+        or opts.get('others') or opts.get('ignored')):
+        cmd = Command('status')
+        if opts.get('deleted'):
+            cmd['-d'] = None
+        if opts.get('modified'):
+            cmd['-m'] = None
+        if opts.get('others'):
+            cmd['-o'] = None
+        if opts.get('ignored'):
+            cmd['-i'] = None
+    else:
+        cmd = Command('files')
+    if opts.get('stage'):
+        ui.status("note: Mercurial doesn't have a staging area, ignoring "
+                  "--stage\n")
+    if opts.get('_zero'):
+        cmd['-0'] = None
+    cmd.append('.')
+    for include in args:
+        cmd['-I'] = util.shellquote(include)
+
+    ui.status(cmd, "\n")
+
 def merge(ui, repo, *args, **kwargs):
     cmdoptions = [
     ]
@@ -795,6 +831,7 @@ gitcommands = {
     'grep': grep,
     'init': init,
     'log': log,
+    'ls-files': lsfiles,
     'merge': merge,
     'mv': mv,
     'pull': pull,
