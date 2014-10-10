@@ -21,7 +21,8 @@ class manifestdict(dict):
         return self._flags.get(f, "")
     def withflags(self):
         return set(self._flags.keys())
-    def set(self, f, flags):
+    def setflag(self, f, flags):
+        """Set the flags (symlink, executable) for path f."""
         self._flags[f] = flags
     def copy(self):
         return manifestdict(self, dict.copy(self._flags))

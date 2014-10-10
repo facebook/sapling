@@ -1063,7 +1063,7 @@ class committablectx(basectx):
                 orig = copied.get(f, f)
                 man[f] = getman(orig).get(orig, nullid) + i
                 try:
-                    man.set(f, ff(f))
+                    man.setflag(f, ff(f))
                 except OSError:
                     pass
 
@@ -1389,7 +1389,7 @@ class workingctx(committablectx):
         modified, added, removed = s[0:3]
         for f in modified + added:
             mf[f] = None
-            mf.set(f, self.flags(f))
+            mf.setflag(f, self.flags(f))
         for f in removed:
             if f in mf:
                 del mf[f]

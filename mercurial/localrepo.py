@@ -1407,7 +1407,7 @@ class localrepository(object):
                             added.append(f)
                             m[f] = self._filecommit(fctx, m1, m2, linkrev,
                                                     trp, changed)
-                            m.set(f, fctx.flags())
+                            m.setflag(f, fctx.flags())
                     except OSError, inst:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
