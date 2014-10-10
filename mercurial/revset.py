@@ -2541,9 +2541,9 @@ class addset(abstractsmartset):
             def gen():
                 for r in self._r1:
                     yield r
-                s = self._r1.set()
+                inr1 = self._r1.__contains__
                 for r in self._r2:
-                    if r not in s:
+                    if not inr1(r):
                         yield r
             gen = gen()
         else:
