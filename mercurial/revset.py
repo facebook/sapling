@@ -2277,7 +2277,7 @@ class abstractsmartset(object):
         """Returns a new object with the intersection of the two collections.
 
         This is part of the mandatory API for smartset."""
-        return self.filter(other.__contains__)
+        return self.filter(other.__contains__, cache=False)
 
     def __add__(self, other):
         """Returns a new object with the union of the two collections.
@@ -2290,15 +2290,18 @@ class abstractsmartset(object):
 
         This is part of the mandatory API for smartset."""
         c = other.__contains__
-        return self.filter(lambda r: not c(r))
+        return self.filter(lambda r: not c(r), cache=False)
 
-    def filter(self, condition):
+    def filter(self, condition, cache=True):
         """Returns this smartset filtered by condition as a new smartset.
 
         `condition` is a callable which takes a revision number and returns a
         boolean.
 
         This is part of the mandatory API for smartset."""
+        # builtin cannot be cached. but do not needs to
+        if cache and util.safehasattr(condition, 'func_code'):
+            condition = util.cachefunc(condition)
         return filteredset(self, condition)
 
 class baseset(abstractsmartset):
