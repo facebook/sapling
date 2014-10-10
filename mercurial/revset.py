@@ -2770,9 +2770,6 @@ class generatorset(abstractsmartset):
             self.fastasc = asc.__iter__
             self.fastdesc = asc.__reversed__
 
-    def set(self):
-        return self
-
     def sort(self, reverse=False):
         self._ascending = not reverse
 
