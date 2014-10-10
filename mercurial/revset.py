@@ -2313,8 +2313,11 @@ class baseset(abstractsmartset):
         if not isinstance(data, list):
             data = list(data)
         self._list = data
-        self._set = None
         self._ascending = None
+
+    @util.propertycache
+    def _set(self):
+        return set(self._list)
 
     @util.propertycache
     def _asclist(self):
