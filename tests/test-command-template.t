@@ -1817,6 +1817,11 @@ Test pad function
 
 Test ifcontains function
 
+  $ hg log --template '{rev} {ifcontains(rev, "2 two 0", "is in the string", "is not")}\n'
+  2 is in the string
+  1 is not
+  0 is in the string
+
   $ hg log --template '{rev} {ifcontains("a", file_adds, "added a", "did not add a")}\n'
   2 did not add a
   1 did not add a

@@ -312,7 +312,8 @@ def ifcontains(context, mapping, args):
 
     # Iterating over items gives a formatted string, so we iterate
     # directly over the raw values.
-    if item in [i.values()[0] for i in items()]:
+    if ((callable(items) and item in [i.values()[0] for i in items()]) or
+        (isinstance(items, str) and item in items)):
         yield _evalifliteral(args[2], context, mapping)
     elif len(args) == 4:
         yield _evalifliteral(args[3], context, mapping)
