@@ -66,11 +66,6 @@ Merging:
   $ echo 2b > baz
   $ echo new > quux
 
-We shouldn't have anything but foo in merge state here:
-
-  $ hg debugstate --nodates | grep "^m"
-  m 644          3 foo
-
   $ hg ci -m "merge"
 
 main: we should have a merge here:

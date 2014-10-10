@@ -415,7 +415,13 @@ class dirstate(object):
         if self._pl[1] == nullid:
             raise util.Abort(_("setting %r to other parent "
                                "only allowed in merges") % f)
-        self._addpath(f, 'n', 0, -2, -1)
+        if f in self and self[f] == 'n':
+            # merge-like
+            self._addpath(f, 'm', 0, -2, -1)
+        else:
+            # add-like
+            self._addpath(f, 'n', 0, -2, -1)
+
         if f in self._copymap:
             del self._copymap[f]
 

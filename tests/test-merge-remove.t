@@ -21,7 +21,7 @@
   (branch merge, don't forget to commit)
 
   $ hg debugstate --nodates
-  n   0         -2 bar
+  m   0         -2 bar
   m 644         14 foo1
   copy: foo -> foo1
 
@@ -37,7 +37,7 @@ Removing foo1 and bar:
   $ hg rm -f foo1 bar
 
   $ hg debugstate --nodates
-  r   0         -2 bar
+  r   0         -1 bar
   r   0         -1 foo1
   copy: foo -> foo1
 
@@ -55,7 +55,7 @@ Re-adding foo1 and bar:
   adding foo1
 
   $ hg debugstate --nodates
-  n   0         -2 bar
+  m 644          5 bar
   m 644         14 foo1
   copy: foo -> foo1
 
@@ -74,7 +74,7 @@ Reverting foo1 and bar:
   reverting foo1
 
   $ hg debugstate --nodates
-  n   0         -2 bar
+  m 644          5 bar
   m 644         14 foo1
   copy: foo -> foo1
 
