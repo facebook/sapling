@@ -1206,10 +1206,12 @@ class TestResult(unittest._TextTestResult):
             os.system("%s %s %s" %
                       (self._options.view, test.refpath, test.errpath))
         else:
-            failed, lines = getdiff(expected, got,
-                                    test.refpath, test.errpath)
-            if failed:
-                self.addFailure(test, 'diff generation failed')
+            servefail, lines = getdiff(expected, got,
+                                       test.refpath, test.errpath)
+            if servefail:
+                self.addFailure(
+                    test,
+                    'server failed to start (HGPORT=%s)' % test._startport)
             else:
                 self.stream.write('\n')
                 for line in lines:
