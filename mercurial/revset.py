@@ -2521,6 +2521,7 @@ class addset(abstractsmartset):
         self._iter = None
         self._ascending = ascending
         self._genlist = None
+        self._asclist = None
 
     def __len__(self):
         return len(self._list)
@@ -2560,12 +2561,31 @@ class addset(abstractsmartset):
         return gen
 
     def __iter__(self):
-        if self._genlist:
-            return iter(self._genlist)
-        return iter(self._iterator())
+        if self._ascending is None:
+            if self._genlist:
+                return iter(self._genlist)
+            return iter(self._iterator())
+        self._trysetasclist()
+        if self._ascending:
+            it = self.fastasc
+        else:
+            it = self.fastdesc
+        if it is None:
+            # consume the gen and try again
+            self._list
+            return iter(self)
+        return it()
+
+    def _trysetasclist(self):
+        """populate the _asclist attribut if possible and necessary"""
+        if self._genlist is not None and self._asclist is None:
+            self._asclist = sorted(self._genlist)
 
     @property
     def fastasc(self):
+        self._trysetasclist()
+        if self._asclist is not None:
+            return self._asclist.__iter__
         iter1 = self._r1.fastasc
         iter2 = self._r2.fastasc
         if None in (iter1, iter2):
@@ -2574,6 +2594,9 @@ class addset(abstractsmartset):
 
     @property
     def fastdesc(self):
+        self._trysetasclist()
+        if self._asclist is not None:
+            return self._asclist.__reversed__
         iter1 = self._r1.fastdesc
         iter2 = self._r2.fastdesc
         if None in (iter1, iter2):
@@ -2633,12 +2656,7 @@ class addset(abstractsmartset):
         For this we use the cached list with all the generated values and if we
         know they are ascending or descending we can sort them in a smart way.
         """
-        if self._ascending is None:
-            self._list.sort(reverse=reverse)
-            self._ascending = not reverse
-        else:
-            if bool(self._ascending) == bool(reverse):
-                self.reverse()
+        self._ascending = not reverse
 
     def isascending(self):
         return self._ascending is not None and self._ascending
@@ -2647,8 +2665,9 @@ class addset(abstractsmartset):
         return self._ascending is not None and not self._ascending
 
     def reverse(self):
-        self._list.reverse()
-        if self._ascending is not None:
+        if self._ascending is None:
+            self._list.reverse()
+        else:
             self._ascending = not self._ascending
 
     def first(self):
