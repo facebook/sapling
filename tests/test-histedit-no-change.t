@@ -181,7 +181,7 @@ abort editing session, after first forcibly updating away
   parent: 0:cb9a9f314b8b 
    a
   branch: default
-  commit: 1 modified, 1 unknown (new branch head)
+  commit: 1 added, 1 unknown (new branch head)
   update: 6 new changesets (update)
   hist:   2 remaining (histedit --continue)
 
@@ -190,7 +190,7 @@ abort editing session, after first forcibly updating away
 
 modified files should survive the abort when we've moved away already
   $ hg st
-  M e
+  A e
   ? edit.sh
 
   $ graphlog "log after abort"

@@ -266,12 +266,17 @@ class dirstate(object):
         self._pl = p1, p2
         copies = {}
         if oldp2 != nullid and p2 == nullid:
-            # Discard 'm' markers when moving away from a merge state
             for f, s in self._map.iteritems():
+                # Discard 'm' markers when moving away from a merge state
                 if s[0] == 'm':
                     if f in self._copymap:
                         copies[f] = self._copymap[f]
                     self.normallookup(f)
+                # Also fix up otherparent markers
+                elif s[0] == 'n' and s[2] == -2:
+                    if f in self._copymap:
+                        copies[f] = self._copymap[f]
+                    self.add(f)
         return copies
 
     def setbranch(self, branch):

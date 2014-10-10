@@ -59,7 +59,7 @@ D onto H - simple rebase:
   HG: --
   HG: user: Nicolas Dumazet <nicdumz.commits@gmail.com>
   HG: branch 'default'
-  HG: changed D
+  HG: added D
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
