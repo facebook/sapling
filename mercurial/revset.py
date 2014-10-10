@@ -2616,9 +2616,6 @@ class addset(abstractsmartset):
     def __contains__(self, x):
         return x in self._r1 or x in self._r2
 
-    def set(self):
-        return self
-
     def sort(self, reverse=False):
         """Sort the added set
 
