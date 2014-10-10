@@ -25,7 +25,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases, commands
 from mercurial import error, hg, mdiff, merge, patch, repair, util
-from mercurial import templatefilters, exchange
+from mercurial import templatefilters, exchange, bundlerepo
 from mercurial import lock as lockmod
 from hgext import rebase
 import errno
@@ -78,6 +78,9 @@ class shelvedfile(object):
         finally:
             fp.close()
 
+    def bundlerepo(self):
+        return bundlerepo.bundlerepository(self.repo.baseui, self.repo.root,
+                                           self.vfs.join(self.fname))
     def writebundle(self, cg):
         changegroup.writebundle(cg, self.fname, 'HG10UN', self.vfs)
 
