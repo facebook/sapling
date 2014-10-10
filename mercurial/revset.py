@@ -2064,7 +2064,7 @@ def match(ui, spec, repo=None):
         tree = findaliases(ui, tree)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
-        if util.safehasattr(subset, 'set'):
+        if util.safehasattr(subset, 'isascending'):
             result = getset(repo, subset, tree)
         else:
             result = getset(repo, baseset(subset), tree)
