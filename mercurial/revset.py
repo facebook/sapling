@@ -2980,7 +2980,7 @@ class fullreposet(_spanset):
         This boldly assumes the other contains valid revs only.
         """
         # other not a smartset, make is so
-        if not util.safehasattr(other, 'set'):
+        if not util.safehasattr(other, 'isascending'):
             # filter out hidden revision
             # (this boldly assumes all smartset are pure)
             #
