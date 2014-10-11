@@ -408,7 +408,7 @@ def only(repo, subset, x):
         exclude = getset(repo, spanset(repo), args[1])
 
     results = set(ancestormod.missingancestors(include, exclude, cl.parentrevs))
-    return filteredset(subset, results.__contains__)
+    return subset & results
 
 def bisect(repo, subset, x):
     """``bisect(string)``
