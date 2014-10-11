@@ -451,11 +451,7 @@ class dirstate(object):
         '''Mark a file merged.'''
         if self._pl[1] == nullid:
             return self.normallookup(f)
-        s = os.lstat(self._join(f))
-        self._addpath(f, 'm', s.st_mode,
-                      s.st_size & _rangemask, int(s.st_mtime) & _rangemask)
-        if f in self._copymap:
-            del self._copymap[f]
+        return self.otherparent(f)
 
     def drop(self, f):
         '''Drop a file from the dirstate'''

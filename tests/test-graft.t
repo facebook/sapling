@@ -92,7 +92,7 @@ Graft a rename:
   HG: --
   HG: user: foo
   HG: branch 'default'
-  HG: changed b
+  HG: added b
   HG: removed a
   $ hg export tip --git
   # HG changeset patch

@@ -22,7 +22,7 @@
 
   $ hg debugstate --nodates
   m   0         -2 bar
-  m 644         14 foo1
+  m   0         -2 foo1
   copy: foo -> foo1
 
   $ hg st -q
@@ -55,8 +55,8 @@ Re-adding foo1 and bar:
   adding foo1
 
   $ hg debugstate --nodates
-  m 644          5 bar
-  m 644         14 foo1
+  n   0         -2 bar
+  n   0         -2 foo1
   copy: foo -> foo1
 
   $ hg st -qC
@@ -74,8 +74,8 @@ Reverting foo1 and bar:
   reverting foo1
 
   $ hg debugstate --nodates
-  m 644          5 bar
-  m 644         14 foo1
+  n   0         -2 bar
+  n   0         -2 foo1
   copy: foo -> foo1
 
   $ hg st -qC
