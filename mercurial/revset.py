@@ -744,7 +744,8 @@ def draft(repo, subset, x):
     # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
     pc = repo._phasecache
-    return subset.filter(lambda r: pc.phase(repo, r) == phases.draft)
+    condition = lambda r: pc.phase(repo, r) == phases.draft
+    return subset.filter(condition, cache=False)
 
 def extinct(repo, subset, x):
     """``extinct()``
@@ -1294,7 +1295,8 @@ def public(repo, subset, x):
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
     pc = repo._phasecache
-    return subset.filter(lambda r: pc.phase(repo, r) == phases.public)
+    condition = lambda r: pc.phase(repo, r) == phases.public
+    return subset.filter(condition, cache=False)
 
 def remote(repo, subset, x):
     """``remote([id [,path]])``
@@ -1492,7 +1494,8 @@ def secret(repo, subset, x):
     # i18n: "secret" is a keyword
     getargs(x, 0, 0, _("secret takes no arguments"))
     pc = repo._phasecache
-    return subset.filter(lambda x: pc.phase(repo, x) == phases.secret)
+    condition = lambda x: pc.phase(repo, x) == phases.secret
+    return subset.filter(condition, cache=False)
 
 def sort(repo, subset, x):
     """``sort(set[, [-]key...])``
