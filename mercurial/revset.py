@@ -1113,10 +1113,9 @@ def head(repo, subset, x):
         hs.update(cl.rev(h) for h in ls)
     # XXX using a set to feed the baseset is wrong. Sets are not ordered.
     # This does not break because of other fullreposet misbehavior.
-    # XXX We should not be using '.filter' here, but combines subset with '&'
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
-    return baseset(hs).filter(subset.__contains__)
+    return baseset(hs) & subset
 
 def heads(repo, subset, x):
     """``heads(set)``
