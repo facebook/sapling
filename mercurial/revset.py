@@ -1132,7 +1132,10 @@ def node_(repo, subset, x):
         if pm is not None:
             rn = repo.changelog.rev(pm)
 
-    return subset.filter(lambda r: r == rn)
+    if rn is None:
+        return baseset()
+    result = baseset([rn])
+    return result & subset
 
 def obsolete(repo, subset, x):
     """``obsolete()``
