@@ -1684,7 +1684,7 @@ def roots(repo, subset, x):
     Changesets in set with no parent changeset in set.
     """
     s = getset(repo, fullreposet(repo), x)
-    subset = baseset([r for r in s if r in subset])
+    subset = subset & s# baseset([r for r in s if r in subset])
     cs = _children(repo, subset, s)
     return subset - cs
 

@@ -17,6 +17,7 @@ min(0::)
 # those two `roots(...)` inputs are close to what phase movement use.
 roots((tip~100::) - (tip~100::tip))
 roots((0::) - (0::tip))
+42:68 and roots(42:tip)
 ::p1(p1(tip))::
 public()
 :10000 and public()
