@@ -1582,7 +1582,7 @@ class gitsubrepo(abstractsubrepo):
             elif status == 'D':
                 removed.append(f)
 
-        deleted = unknown = ignored = clean = []
+        deleted, unknown, ignored, clean = [], [], [], []
         return scmutil.status(modified, added, removed, deleted,
                               unknown, ignored, clean)
 
