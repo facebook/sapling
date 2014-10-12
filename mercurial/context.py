@@ -93,13 +93,13 @@ class basectx(object):
         """
         return match or matchmod.always(self._repo.root, self._repo.getcwd())
 
-    def _prestatus(self, other, s, match, listignored, listclean, listunknown):
+    def _prestatus(self, other):
         """provide a hook to allow child objects to preprocess status results
 
         For example, this allows other contexts, such as workingctx, to query
         the dirstate before comparing the manifests.
         """
-        return s
+        pass
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
         """provide a hook to allow child objects to postprocess status results
@@ -311,8 +311,8 @@ class basectx(object):
             ctx1, ctx2 = ctx2, ctx1
 
         match = ctx2._matchstatus(ctx1, match)
+        ctx2._prestatus(ctx1)
         r = [[], [], [], [], [], [], []]
-        r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
         r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
@@ -1410,14 +1410,14 @@ class workingctx(committablectx):
                 del mf[f]
         return mf
 
-    def _prestatus(self, other, s, match, listignored, listclean, listunknown):
+    def _prestatus(self, other):
         """override the parent hook with a dirstate query
 
         We use this _prestatus hook to populate the status with information from
         the dirstate.
         """
         # doesn't need to call super
-        return self._dirstatestatus(match, listignored, listclean, listunknown)
+        pass
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
         """override the parent hook with a filter for suspect symlinks
@@ -1462,6 +1462,7 @@ class workingctx(committablectx):
         building a new manifest if self (working directory) is not comparing
         against its parent (repo['.']).
         """
+        s = self._dirstatestatus(match, listignored, listclean, listunknown)
         if other != self._repo['.']:
             s = super(workingctx, self)._buildstatus(other, s, match,
                                                      listignored, listclean,
