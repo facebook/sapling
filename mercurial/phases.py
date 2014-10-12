@@ -227,6 +227,7 @@ class phasecache(object):
         self.dirty = True
 
         tr.addfilegenerator('phase', ('phaseroots',), self._write)
+        tr.hookargs['phases_moved'] = '1'
 
     def advanceboundary(self, repo, tr, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update

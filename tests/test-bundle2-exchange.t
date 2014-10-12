@@ -43,7 +43,7 @@ The extension requires a repo (currently unused)
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+3 heads)
-  changegroup hook: HG_SOURCE=unbundle HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
+  changegroup hook: HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ cd ..
@@ -65,7 +65,7 @@ clone --pull
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
@@ -87,7 +87,7 @@ pull
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
@@ -158,8 +158,8 @@ push
   $ hg -R main push other --rev eea13746799a --bookmark book_eea1
   pushing to other
   searching for changes
-  b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=push HG_URL=push
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
+  changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -191,7 +191,7 @@ pull over ssh
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_02de
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -213,7 +213,7 @@ pull over http
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_42cc
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete

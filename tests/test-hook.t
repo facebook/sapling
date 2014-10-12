@@ -87,7 +87,7 @@ test generic hooks
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
-  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a
+  changegroup hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/a
   incoming hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_URL=file:$TESTTMP/a
   incoming hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a
   incoming hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_URL=file:$TESTTMP/a
