@@ -158,8 +158,8 @@ push
   $ hg -R main push other --rev eea13746799a --bookmark book_eea1
   pushing to other
   searching for changes
-  b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
+  changegroup hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -191,7 +191,7 @@ pull over ssh
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_02de
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -213,7 +213,7 @@ pull over http
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_42cc
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete
@@ -234,8 +234,8 @@ push over ssh
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
-  remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
