@@ -99,9 +99,6 @@ class basectx(object):
         For example, this allows other contexts, such as workingctx, to query
         the dirstate before comparing the manifests.
         """
-        # load earliest manifest first for caching reasons
-        if self.rev() < other.rev():
-            self.manifest()
         return s
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
@@ -115,6 +112,9 @@ class basectx(object):
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
         """build a status with respect to another context"""
+        # load earliest manifest first for caching reasons
+        if self.rev() is not None and self.rev() < other.rev():
+            self.manifest()
         mf1 = other._manifestmatches(match, s)
         mf2 = self._manifestmatches(match, s)
 
@@ -1416,9 +1416,7 @@ class workingctx(committablectx):
         We use this _prestatus hook to populate the status with information from
         the dirstate.
         """
-        # doesn't need to call super; if that changes, be aware that super
-        # calls self.manifest which would slow down the common case of calling
-        # status against a workingctx's parent
+        # doesn't need to call super
         return self._dirstatestatus(match, listignored, listclean, listunknown)
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
