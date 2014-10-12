@@ -85,8 +85,7 @@ class basectx(object):
                 del mf[fn]
         return mf
 
-    def _matchstatus(self, other, s, match, listignored, listclean,
-                     listunknown):
+    def _matchstatus(self, other, match):
         """return match.always if match is none
 
         This internal method provides a way for child objects to override the
@@ -311,9 +310,8 @@ class basectx(object):
             reversed = True
             ctx1, ctx2 = ctx2, ctx1
 
+        match = ctx2._matchstatus(ctx1, match)
         r = [[], [], [], [], [], [], []]
-        match = ctx2._matchstatus(ctx1, r, match, listignored, listclean,
-                                  listunknown)
         r = ctx2._prestatus(ctx1, r, match, listignored, listclean, listunknown)
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
@@ -1472,8 +1470,7 @@ class workingctx(committablectx):
                                                      listunknown)
         return s
 
-    def _matchstatus(self, other, s, match, listignored, listclean,
-                     listunknown):
+    def _matchstatus(self, other, match):
         """override the match method with a filter for directory patterns
 
         We use inheritance to customize the match.bad method only in cases of
@@ -1484,8 +1481,7 @@ class workingctx(committablectx):
         just use the default match object sent to us.
         """
         superself = super(workingctx, self)
-        match = superself._matchstatus(other, s, match, listignored, listclean,
-                                       listunknown)
+        match = superself._matchstatus(other, match)
         if other != self._repo['.']:
             def bad(f, msg):
                 # 'f' may be a directory pattern from 'match.files()',
