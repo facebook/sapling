@@ -802,9 +802,8 @@ class pulloperation(object):
         self.remotebookmarks = None
         # result of changegroup pulling (used as return code by pull)
         self.cgresult = None
-        # list of step remaining todo (related to future bundle2 usage)
-        self.todosteps = set(['changegroup', 'phases', 'obsmarkers',
-                              'bookmarks'])
+        # list of step already done
+        self.stepsdone = set()
 
     @util.propertycache
     def pulledsubset(self):
@@ -917,7 +916,7 @@ def _pullbundle2(pullop):
     remotecaps = bundle2.bundle2caps(pullop.remote)
     kwargs = {'bundlecaps': caps20to10(pullop.repo)}
     # pulling changegroup
-    pullop.todosteps.remove('changegroup')
+    pullop.stepsdone.add('changegroup')
 
     kwargs['common'] = pullop.common
     kwargs['heads'] = pullop.heads or pullop.rheads
@@ -934,7 +933,7 @@ def _pullbundle2(pullop):
         remoteversions = bundle2.obsmarkersversion(remotecaps)
         if obsolete.commonversion(remoteversions) is not None:
             kwargs['obsmarkers'] = True
-            pullop.todosteps.remove('obsmarkers')
+            pullop.stepsdone.add('obsmarkers')
     _pullbundle2extraprepare(pullop, kwargs)
     if kwargs.keys() == ['format']:
         return # nothing to pull
@@ -968,9 +967,9 @@ def _pullchangeset(pullop):
     # We delay the open of the transaction as late as possible so we
     # don't open transaction for nothing or you break future useful
     # rollback call
-    if 'changegroup' not in pullop.todosteps:
+    if 'changegroup' in pullop.stepsdone:
         return
-    pullop.todosteps.remove('changegroup')
+    pullop.stepsdone.add('changegroup')
     if not pullop.fetch:
             pullop.repo.ui.status(_("no changes found\n"))
             pullop.cgresult = 0
@@ -999,14 +998,16 @@ def _pullchangeset(pullop):
 
 def _pullphase(pullop):
     # Get remote phases data from remote
-    if 'phases' not in pullop.todosteps:
+    if 'phases' in pullop.stepsdone:
         return
     remotephases = pullop.remote.listkeys('phases')
     _pullapplyphases(pullop, remotephases)
 
 def _pullapplyphases(pullop, remotephases):
     """apply phase movement from observed remote state"""
-    pullop.todosteps.remove('phases')
+    if 'phases' in pullop.stepsdone:
+        return
+    pullop.stepsdone.add('phases')
     publishing = bool(remotephases.get('publishing', False))
     if remotephases and not publishing:
         # remote is new and unpublishing
@@ -1039,9 +1040,9 @@ def _pullapplyphases(pullop, remotephases):
 
 def _pullbookmarks(pullop):
     """process the remote bookmark information to update the local one"""
-    if 'bookmarks' not in pullop.todosteps:
+    if 'bookmarks' in pullop.stepsdone:
         return
-    pullop.todosteps.remove('bookmarks')
+    pullop.stepsdone.add('bookmarks')
     repo = pullop.repo
     remotebookmarks = pullop.remotebookmarks
     bookmod.updatefromremote(repo.ui, repo, remotebookmarks,
@@ -1057,9 +1058,9 @@ def _pullobsolete(pullop):
     a new transaction have been created (when applicable).
 
     Exists mostly to allow overriding for experimentation purpose"""
-    if 'obsmarkers' not in pullop.todosteps:
+    if 'obsmarkers' in pullop.stepsdone:
         return
-    pullop.todosteps.remove('obsmarkers')
+    pullop.stepsdone.add('obsmarkers')
     tr = None
     if obsolete._enabled:
         pullop.repo.ui.debug('fetching remote obsolete markers\n')
