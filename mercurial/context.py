@@ -93,14 +93,6 @@ class basectx(object):
         """
         return match or matchmod.always(self._repo.root, self._repo.getcwd())
 
-    def _prestatus(self, other):
-        """provide a hook to allow child objects to preprocess status results
-
-        For example, this allows other contexts, such as workingctx, to query
-        the dirstate before comparing the manifests.
-        """
-        pass
-
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
         """provide a hook to allow child objects to postprocess status results
 
@@ -311,7 +303,6 @@ class basectx(object):
             ctx1, ctx2 = ctx2, ctx1
 
         match = ctx2._matchstatus(ctx1, match)
-        ctx2._prestatus(ctx1)
         r = [[], [], [], [], [], [], []]
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
@@ -1409,15 +1400,6 @@ class workingctx(committablectx):
             if f in mf:
                 del mf[f]
         return mf
-
-    def _prestatus(self, other):
-        """override the parent hook with a dirstate query
-
-        We use this _prestatus hook to populate the status with information from
-        the dirstate.
-        """
-        # doesn't need to call super
-        pass
 
     def _poststatus(self, other, s, match, listignored, listclean, listunknown):
         """override the parent hook with a filter for suspect symlinks
