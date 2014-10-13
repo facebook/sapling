@@ -1,4 +1,6 @@
-"""Compatability functions for old Mercurial versions."""
+"""Compatibility functions for old Mercurial versions and other utility
+functions."""
+from dulwich import errors
 try:
     from collections import OrderedDict
 except ImportError:
@@ -31,3 +33,12 @@ def parse_hgsubstate(lines):
 def serialize_hgsubstate(data):
     """Produces a string from OrderedDict hgsubstate content"""
     return ''.join(['%s %s\n' % (data[n], n) for n in sorted(data)])
+
+def transform_notgit(f):
+    '''use as a decorator around functions and methods that call into dulwich'''
+    def inner(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except errors.NotGitRepository:
+            raise util.Abort('not a git repository')
+    return inner

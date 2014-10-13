@@ -5,36 +5,26 @@ from mercurial import util as hgutil
 
 from git_handler import GitHandler
 from gitrepo import gitrepo
-
-from dulwich import errors
-
-def _transform_notgit(f):
-    def inner(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except errors.NotGitRepository:
-            raise util.Abort('not a git repository')
-    return inner
-
+import util
 
 def generate_repo_subclass(baseclass):
     class hgrepo(baseclass):
-        @_transform_notgit
-        def pull(self, remote, heads=None, force=False):
+        @util.transform_notgit
+        def pull(self, remote, heads=None, force=False):  # Mercurial < 3.2
             if isinstance(remote, gitrepo):
                 return self.githandler.fetch(remote.path, heads)
             else: #pragma: no cover
                 return super(hgrepo, self).pull(remote, heads, force)
 
         # TODO figure out something useful to do with the newbranch param
-        @_transform_notgit
+        @util.transform_notgit
         def push(self, remote, force=False, revs=None, newbranch=False):
             if isinstance(remote, gitrepo):
                 return self.githandler.push(remote.path, revs, force)
             else: #pragma: no cover
                 return super(hgrepo, self).push(remote, force, revs, newbranch)
 
-        @_transform_notgit
+        @util.transform_notgit
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             if isinstance(remote, gitrepo):
                 base, heads = self.githandler.get_refs(remote.path)
