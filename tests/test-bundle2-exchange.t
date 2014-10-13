@@ -25,6 +25,8 @@ enable obsolescence
   > allow_push = *
   > [phases]
   > publish=False
+  > [hooks]
+  > b2x-transactionclose = sh -c  "HG_LOCAL= HG_NODE= HG_TAG= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
   > EOF
 
 The extension requires a repo (currently unused)
@@ -152,6 +154,7 @@ push
   $ hg -R main push other --rev eea13746799a --bookmark book_eea1
   pushing to other
   searching for changes
+  b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=push HG_URL=push
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -224,6 +227,7 @@ push over ssh
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
+  remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
