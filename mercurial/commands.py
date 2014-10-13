@@ -4855,7 +4855,11 @@ def phase(ui, repo, *revs, **opts):
             if not revs:
                 raise util.Abort(_('empty revision set'))
             nodes = [repo[r].node() for r in revs]
-            olddata = repo._phasecache.getphaserevs(repo)[:]
+            # moving revision from public to draft may hide them
+            # We have to check result on an unfiltered repository
+            unfi = repo.unfiltered()
+            getphase = unfi._phasecache.phase
+            olddata = [getphase(unfi, r) for r in unfi]
             phases.advanceboundary(repo, tr, targetphase, nodes)
             if opts['force']:
                 phases.retractboundary(repo, tr, targetphase, nodes)
@@ -4864,11 +4868,9 @@ def phase(ui, repo, *revs, **opts):
             if tr is not None:
                 tr.release()
             lock.release()
-        # moving revision from public to draft may hide them
-        # We have to check result on an unfiltered repository
-        unfi = repo.unfiltered()
-        newdata = repo._phasecache.getphaserevs(unfi)
-        changes = sum(o != newdata[i] for i, o in enumerate(olddata))
+        getphase = unfi._phasecache.phase
+        newdata = [getphase(unfi, r) for r in unfi]
+        changes = sum(newdata[r] != olddata[r] for r in unfi)
         cl = unfi.changelog
         rejected = [n for n in nodes
                     if newdata[cl.rev(n)] < targetphase]
