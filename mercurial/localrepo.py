@@ -1378,7 +1378,6 @@ class localrepository(object):
         """
 
         tr = lock = None
-        removed = list(ctx.removed())
         p1, p2 = ctx.p1(), ctx.p2()
         user = ctx.user()
 
@@ -1394,6 +1393,7 @@ class localrepository(object):
                 # check in files
                 new = {}
                 changed = []
+                removed = list(ctx.removed())
                 linkrev = len(self)
                 for f in sorted(ctx.modified() + ctx.added()):
                     self.ui.note(f + "\n")
