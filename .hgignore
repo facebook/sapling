@@ -42,6 +42,7 @@ mercurial.egg-info
 .DS_Store
 tags
 cscope.*
+.idea/*
 i18n/hg.pot
 locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
