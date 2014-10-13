@@ -420,3 +420,22 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
 
     if of in ma:
         diverge.setdefault(of, []).append(f)
+
+def duplicatecopies(repo, rev, fromrev, skiprev=None):
+    '''reproduce copies from fromrev to rev in the dirstate
+
+    If skiprev is specified, it's a revision that should be used to
+    filter copy records. Any copies that occur between fromrev and
+    skiprev will not be duplicated, even if they appear in the set of
+    copies between fromrev and rev.
+    '''
+    exclude = {}
+    if skiprev is not None:
+        exclude = pathcopies(repo[fromrev], repo[skiprev])
+    for dst, src in pathcopies(repo[fromrev], repo[rev]).iteritems():
+        # copies.pathcopies returns backward renames, so dst might not
+        # actually be in the dirstate
+        if dst in exclude:
+            continue
+        if repo.dirstate[dst] in "nma":
+            repo.dirstate.copy(src, dst)

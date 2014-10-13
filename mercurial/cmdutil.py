@@ -2105,25 +2105,6 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
 
     return err
 
-def duplicatecopies(repo, rev, fromrev, skiprev=None):
-    '''reproduce copies from fromrev to rev in the dirstate
-
-    If skiprev is specified, it's a revision that should be used to
-    filter copy records. Any copies that occur between fromrev and
-    skiprev will not be duplicated, even if they appear in the set of
-    copies between fromrev and rev.
-    '''
-    exclude = {}
-    if skiprev is not None:
-        exclude = copies.pathcopies(repo[fromrev], repo[skiprev])
-    for dst, src in copies.pathcopies(repo[fromrev], repo[rev]).iteritems():
-        # copies.pathcopies returns backward renames, so dst might not
-        # actually be in the dirstate
-        if dst in exclude:
-            continue
-        if repo.dirstate[dst] in "nma":
-            repo.dirstate.copy(src, dst)
-
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
     date = opts.get('date')

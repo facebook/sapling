@@ -18,7 +18,7 @@ import extensions
 from hgweb import server as hgweb_server
 import merge as mergemod
 import minirst, revset, fileset
-import dagparser, context, simplemerge, graphmod
+import dagparser, context, simplemerge, graphmod, copies
 import random
 import setdiscovery, treediscovery, dagutil, pvec, localrepo
 import phases, obsolete, exchange
@@ -3490,7 +3490,7 @@ def graft(ui, repo, *revs, **opts):
                     repo.setparents(current.node(), nullid)
                     repo.dirstate.write()
                     # fix up dirstate for copies and renames
-                    cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
+                    copies.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
                     repo.dirstate.endparentchange()
                 finally:
                     repo.ui.setconfig('ui', 'forcemerge', '', 'graft')

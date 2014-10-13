@@ -234,7 +234,7 @@ def applychanges(ui, repo, ctx, opts):
         repo.dirstate.endparentchange()
         repo.dirstate.write()
         # fix up dirstate for copies and renames
-        cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
+        copies.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
     return stats
 
 def collapse(repo, first, last, commitopts):

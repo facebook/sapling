@@ -16,6 +16,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
+from mercurial import copies
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -382,7 +383,7 @@ def rebase(ui, repo, **opts):
                     finally:
                         ui.setconfig('ui', 'forcemerge', '', 'rebase')
                 if collapsef:
-                    cmdutil.duplicatecopies(repo, rev, target)
+                    copies.duplicatecopies(repo, rev, target)
                 else:
                     # If we're not using --collapse, we need to
                     # duplicate copies between the revision we're
@@ -390,7 +391,7 @@ def rebase(ui, repo, **opts):
                     # duplicate any copies that have already been
                     # performed in the destination.
                     p1rev = repo[rev].p1().rev()
-                    cmdutil.duplicatecopies(repo, rev, p1rev, skiprev=target)
+                    copies.duplicatecopies(repo, rev, p1rev, skiprev=target)
                 if not collapsef:
                     merging = repo[p2].rev() != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
