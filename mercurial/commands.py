@@ -3454,7 +3454,6 @@ def graft(ui, repo, *revs, **opts):
 
     wlock = repo.wlock()
     try:
-        current = repo['.']
         for pos, ctx in enumerate(repo.set("%ld", revs)):
 
             ui.status(_('grafting revision %s\n') % ctx.rev())
@@ -3482,16 +3481,8 @@ def graft(ui, repo, *revs, **opts):
                     # ui.forcemerge is an internal variable, do not document
                     repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                       'graft')
-                    stats = mergemod.update(repo, ctx.node(), True, True, False,
-                                            ctx.p1().node(),
-                                            labels=['local', 'graft'])
-                    # drop the second merge parent
-                    repo.dirstate.beginparentchange()
-                    repo.setparents(current.node(), nullid)
-                    repo.dirstate.write()
-                    # fix up dirstate for copies and renames
-                    copies.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
-                    repo.dirstate.endparentchange()
+                    stats = mergemod.graft(repo, ctx, ctx.p1(),
+                                           ['local', 'graft'])
                 finally:
                     repo.ui.setconfig('ui', 'forcemerge', '', 'graft')
                 # report any conflicts
@@ -3510,8 +3501,6 @@ def graft(ui, repo, *revs, **opts):
                         date=date, extra=extra, editor=editor)
             if node is None:
                 ui.status(_('graft for revision %s is empty\n') % ctx.rev())
-            else:
-                current = repo[node]
     finally:
         wlock.release()
 
