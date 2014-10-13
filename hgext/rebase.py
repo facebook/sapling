@@ -611,40 +611,40 @@ def defineparents(repo, rev, target, state, targetancestors):
     parents = repo[rev].parents()
     p1 = p2 = nullrev
 
-    P1n = parents[0].rev()
-    if P1n in targetancestors:
+    p1n = parents[0].rev()
+    if p1n in targetancestors:
         p1 = target
-    elif P1n in state:
-        if state[P1n] == nullmerge:
+    elif p1n in state:
+        if state[p1n] == nullmerge:
             p1 = target
-        elif state[P1n] == revignored:
-            p1 = nearestrebased(repo, P1n, state)
+        elif state[p1n] == revignored:
+            p1 = nearestrebased(repo, p1n, state)
             if p1 is None:
                 p1 = target
         else:
-            p1 = state[P1n]
-    else: # P1n external
+            p1 = state[p1n]
+    else: # p1n external
         p1 = target
-        p2 = P1n
+        p2 = p1n
 
     if len(parents) == 2 and parents[1].rev() not in targetancestors:
-        P2n = parents[1].rev()
+        p2n = parents[1].rev()
         # interesting second parent
-        if P2n in state:
-            if p1 == target: # P1n in targetancestors or external
-                p1 = state[P2n]
-            elif state[P2n] == revignored:
-                p2 = nearestrebased(repo, P2n, state)
+        if p2n in state:
+            if p1 == target: # p1n in targetancestors or external
+                p1 = state[p2n]
+            elif state[p2n] == revignored:
+                p2 = nearestrebased(repo, p2n, state)
                 if p2 is None:
                     # no ancestors rebased yet, detach
                     p2 = target
             else:
-                p2 = state[P2n]
-        else: # P2n external
-            if p2 != nullrev: # P1n external too => rev is a merged revision
+                p2 = state[p2n]
+        else: # p2n external
+            if p2 != nullrev: # p1n external too => rev is a merged revision
                 raise util.Abort(_('cannot use revision %d as base, result '
                         'would have 3 parents') % rev)
-            p2 = P2n
+            p2 = p2n
     repo.ui.debug(" future parents are %d and %d\n" %
                             (repo[p1].rev(), repo[p2].rev()))
     return p1, p2
