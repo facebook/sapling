@@ -1387,8 +1387,9 @@ class localrepository(object):
             trp = weakref.proxy(tr)
 
             if ctx.files():
-                m1 = p1.manifest().copy()
+                m1 = p1.manifest()
                 m2 = p2.manifest()
+                m = m1.copy()
 
                 # check in files
                 new = {}
@@ -1404,7 +1405,7 @@ class localrepository(object):
                         else:
                             new[f] = self._filecommit(fctx, m1, m2, linkrev,
                                                       trp, changed)
-                            m1.set(f, fctx.flags())
+                            m.set(f, fctx.flags())
                     except OSError, inst:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
@@ -1415,13 +1416,14 @@ class localrepository(object):
                         raise
 
                 # update manifest
-                m1.update(new)
+                m.update(new)
                 removed = [f for f in sorted(removed) if f in m1 or f in m2]
-                drop = [f for f in removed if f in m1]
+                drop = [f for f in removed if f in m]
                 for f in drop:
-                    del m1[f]
-                mn = self.manifest.add(m1, trp, linkrev, p1.manifestnode(),
-                                       p2.manifestnode(), new, drop)
+                    del m[f]
+                mn = self.manifest.add(m, trp, linkrev,
+                                       p1.manifestnode(), p2.manifestnode(),
+                                       new, drop)
                 files = changed + removed
             else:
                 mn = p1.manifestnode()
