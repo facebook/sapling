@@ -1,7 +1,7 @@
 import os
 
 from mercurial.node import bin
-from mercurial import util
+from mercurial import util as hgutil
 
 from git_handler import GitHandler
 from gitrepo import gitrepo
@@ -53,7 +53,7 @@ def generate_repo_subclass(baseclass):
             tags.update(self.githandler.remote_refs)
             return (tags, tagtypes)
 
-        @util.propertycache
+        @hgutil.propertycache
         def githandler(self):
             '''get the GitHandler for an hg repo
 
