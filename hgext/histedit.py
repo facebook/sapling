@@ -221,20 +221,13 @@ def applychanges(ui, repo, ctx, opts):
         cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
         stats = None
     else:
-        repo.dirstate.beginparentchange()
         try:
             # ui.forcemerge is an internal variable, do not document
             repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                               'histedit')
-            stats = mergemod.update(repo, ctx.node(), True, True, False,
-                                    ctx.p1().node())
+            stats = mergemod.graft(repo, ctx, ctx.p1(), ['local', 'histedit'])
         finally:
             repo.ui.setconfig('ui', 'forcemerge', '', 'histedit')
-        repo.setparents(wcpar, node.nullid)
-        repo.dirstate.endparentchange()
-        repo.dirstate.write()
-        # fix up dirstate for copies and renames
-        copies.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
     return stats
 
 def collapse(repo, first, last, commitopts):
