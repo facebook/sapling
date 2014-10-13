@@ -1149,3 +1149,29 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
     if not partial:
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
     return stats
+
+def graft(repo, ctx, pctx, labels):
+    """Do a graft-like merge.
+
+    This is a merge where the merge ancestor is chosen such that one
+    or more changesets are grafted onto the current changeset. In
+    addition to the merge, this fixes up the dirstate to include only
+    a single parent and tries to duplicate any renames/copies
+    appropriately.
+
+    ctx - changeset to rebase
+    pctx - merge base, usually ctx.p1()
+    labels - merge labels eg ['local', 'graft']
+
+    """
+
+    stats = update(repo, ctx.node(), True, True, False, pctx.node(),
+                   labels=labels)
+    # drop the second merge parent
+    repo.dirstate.beginparentchange()
+    repo.setparents(repo['.'].node(), nullid)
+    repo.dirstate.write()
+    # fix up dirstate for copies and renames
+    copies.duplicatecopies(repo, ctx.rev(), pctx.rev())
+    repo.dirstate.endparentchange()
+    return stats
