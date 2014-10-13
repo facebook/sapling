@@ -1377,7 +1377,7 @@ class localrepository(object):
         Revision information is passed via the context argument.
         """
 
-        tr = lock = None
+        tr = None
         p1, p2 = ctx.p1(), ctx.p2()
         user = ctx.user()
 
