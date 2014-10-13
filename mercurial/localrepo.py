@@ -1392,7 +1392,7 @@ class localrepository(object):
                 m = m1.copy()
 
                 # check in files
-                new = {}
+                added = []
                 changed = []
                 removed = list(ctx.removed())
                 linkrev = len(self)
@@ -1403,8 +1403,9 @@ class localrepository(object):
                         if fctx is None:
                             removed.append(f)
                         else:
-                            new[f] = self._filecommit(fctx, m1, m2, linkrev,
-                                                      trp, changed)
+                            added.append(f)
+                            m[f] = self._filecommit(fctx, m1, m2, linkrev,
+                                                    trp, changed)
                             m.set(f, fctx.flags())
                     except OSError, inst:
                         self.ui.warn(_("trouble committing %s!\n") % f)
@@ -1416,14 +1417,13 @@ class localrepository(object):
                         raise
 
                 # update manifest
-                m.update(new)
                 removed = [f for f in sorted(removed) if f in m1 or f in m2]
                 drop = [f for f in removed if f in m]
                 for f in drop:
                     del m[f]
                 mn = self.manifest.add(m, trp, linkrev,
                                        p1.manifestnode(), p2.manifestnode(),
-                                       new, drop)
+                                       added, drop)
                 files = changed + removed
             else:
                 mn = p1.manifestnode()
