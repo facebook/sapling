@@ -375,23 +375,14 @@ def rebase(ui, repo, **opts):
                     try:
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                      'rebase')
-                        stats = rebasenode(repo, rev, p1, state, collapsef)
+                        stats = rebasenode(repo, rev, p1, state, collapsef,
+                                           target)
                         if stats and stats[3] > 0:
                             raise error.InterventionRequired(
                                 _('unresolved conflicts (see hg '
                                   'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '', 'rebase')
-                if collapsef:
-                    copies.duplicatecopies(repo, rev, target)
-                else:
-                    # If we're not using --collapse, we need to
-                    # duplicate copies between the revision we're
-                    # rebasing and its first parent, but *not*
-                    # duplicate any copies that have already been
-                    # performed in the destination.
-                    p1rev = repo[rev].p1().rev()
-                    copies.duplicatecopies(repo, rev, p1rev, skiprev=target)
                 if not collapsef:
                     merging = repo[p2].rev() != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
@@ -535,7 +526,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         repo.dirstate.invalidate()
         raise
 
-def rebasenode(repo, rev, p1, state, collapse):
+def rebasenode(repo, rev, p1, state, collapse, target):
     'Rebase a single revision'
     # Merge phase
     # Update to target and merge it with local
@@ -592,8 +583,19 @@ def rebasenode(repo, rev, p1, state, collapse):
         repo.ui.debug("   detach base %d:%s\n" % (repo[base].rev(), repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
-    return merge.update(repo, rev, True, True, False, base, collapse,
+    stats = merge.update(repo, rev, True, True, False, base, collapse,
                         labels=['dest', 'source'])
+    if collapse:
+        copies.duplicatecopies(repo, rev, target)
+    else:
+        # If we're not using --collapse, we need to
+        # duplicate copies between the revision we're
+        # rebasing and its first parent, but *not*
+        # duplicate any copies that have already been
+        # performed in the destination.
+        p1rev = repo[rev].p1().rev()
+        copies.duplicatecopies(repo, rev, p1rev, skiprev=target)
+    return stats
 
 def nearestrebased(repo, rev, state):
     """return the nearest ancestors of rev in the rebase result"""

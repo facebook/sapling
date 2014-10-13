@@ -231,24 +231,18 @@ ensure that we have a merge with unresolved conflicts
   +=======
   +a
   +>>>>>>> source: 4702e8911fe0 - shelve: changes to '[mq]: second.patch'
-  diff --git a/b.rename/b b/b.rename/b
-  new file mode 100644
-  --- /dev/null
-  +++ b/b.rename/b
-  @@ -0,0 +1,1 @@
-  +b
+  diff --git a/b/b b/b.rename/b
+  rename from b/b
+  rename to b.rename/b
   diff --git a/b/b b/b/b
   deleted file mode 100644
   --- a/b/b
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -b
-  diff --git a/c.copy b/c.copy
-  new file mode 100644
-  --- /dev/null
-  +++ b/c.copy
-  @@ -0,0 +1,1 @@
-  +c
+  diff --git a/c b/c.copy
+  copy from c
+  copy to c.copy
   $ hg resolve -l
   U a/a
 
