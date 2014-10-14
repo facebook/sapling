@@ -76,6 +76,7 @@ Create an extension to test bundle2 API
   >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),
   >           ('', 'reply', False, 'produce a reply bundle'),
   >           ('', 'pushrace', False, 'includes a check:head part with unknown nodes'),
+  >           ('', 'genraise', False, 'includes a part that raise an exception during generation'),
   >           ('r', 'rev', [], 'includes those changeset in the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
@@ -128,14 +129,22 @@ Create an extension to test bundle2 API
   >        bundler.newpart('test:SONG', [('randomparams', '')])
   >     if opts['parts']:
   >        bundler.newpart('test:ping')
+  >     if opts['genraise']:
+  >        def genraise():
+  >            yield 'first line\n'
+  >            raise RuntimeError('Someone set up us the bomb!')
+  >        bundler.newpart('b2x:output', data=genraise())
   > 
   >     if path is None:
   >        file = sys.stdout
   >     else:
   >         file = open(path, 'wb')
   > 
-  >     for chunk in bundler.getchunks():
-  >         file.write(chunk)
+  >     try:
+  >         for chunk in bundler.getchunks():
+  >             file.write(chunk)
+  >     except RuntimeError, exc:
+  >         raise util.Abort(exc)
   > 
   > @command('unbundle2', [], '')
   > def cmdunbundle2(ui, repo, replypath=None):
@@ -765,5 +774,29 @@ with reply
   adding file changes
   added 0 changesets with 0 changes to 3 files
   \x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+
+Check handling of exception during generation.
+----------------------------------------------
+(is currently not right)
+
+  $ hg bundle2 --genraise > ../genfailed.hg2
+  abort: Someone set up us the bomb!
+  [255]
+
+Should still be a valid bundle
+(is currently not right)
+
+  $ cat ../genfailed.hg2
+  HG2X\x00\x00\x00\x11 (esc)
+  b2x:output\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+
+And its handling on the other size raise a clean exception
+(is currently not right)
+
+  $ cat ../genfailed.hg2 | hg unbundle2
+  0 unread bytes
+  abort: stream ended unexpectedly (got 0 bytes, expected 2)
+  [255]
+
 
   $ cd ..
