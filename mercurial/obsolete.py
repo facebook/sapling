@@ -81,6 +81,9 @@ _SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 # you have to rely on third party extension extension to enable this.
 _enabled = False
 
+# Options for obsolescence
+createmarkersopt = 'createmarkers'
+
 ### obsolescence marker flag
 
 ## bumpedfix flag

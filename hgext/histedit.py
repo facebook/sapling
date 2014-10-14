@@ -640,7 +640,7 @@ def _histedit(ui, repo, *freeargs, **opts):
         if mapping:
             movebookmarks(ui, repo, mapping, topmost, ntm)
             # TODO update mq state
-        if obsolete._enabled:
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
             markers = []
             # sort by revision number because it sound "right"
             for prec in sorted(mapping, key=repo.changelog.rev):

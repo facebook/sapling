@@ -928,7 +928,7 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
     `collapsedas` node."""
-    if obsolete._enabled:
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
         markers = []
         for rev, newrev in sorted(state.items()):
             if newrev >= 0:

@@ -2283,7 +2283,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                         marks[bm] = newid
                     marks.write()
             #commit the whole amend process
-            if obsolete._enabled and newid != old.node():
+            createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
+            if createmarkers and newid != old.node():
                 # mark the new changeset as successor of the rewritten one
                 new = repo[newid]
                 obs = [(old, (new,))]
@@ -2294,7 +2295,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             tr.close()
         finally:
             tr.release()
-        if (not obsolete._enabled) and newid != old.node():
+        if not createmarkers and newid != old.node():
             # Strip the intermediate commit (if there was one) and the amended
             # commit
             if node:
