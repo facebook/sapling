@@ -82,8 +82,8 @@ def wraprepo(repo):
                 # become obsolete if the local commits are stripped.
                 localrevs = repo.revs('outgoing(%s)', fallbackpath)
                 if base is not None and base != nullrev:
-                    serverbase = repo.revs('first(reverse(::%s) - %ld)', base,
-                                     localrevs)
+                    serverbase = list(repo.revs('first(reverse(::%s) - %ld)', base,
+                                     localrevs))
                     if serverbase:
                         base = serverbase[0]
             else:

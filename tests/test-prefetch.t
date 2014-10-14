@@ -68,7 +68,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  updating bookmark foo
+  adding remote bookmark foo
   (run 'hg update' to get a working copy)
   prefetching file contents
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
