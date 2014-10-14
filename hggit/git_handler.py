@@ -664,7 +664,7 @@ class GitHandler(object):
         # import heads and fetched tags as remote references
         todo = []
         done = set()
-        convert_list = {}
+        commit_cache = {}
 
         # get a list of all the head shas
         seenheads = set()
@@ -700,11 +700,11 @@ class GitHandler(object):
                 todo.pop()
                 continue
             assert isinstance(sha, str)
-            if sha in convert_list:
-                obj = convert_list[sha]
+            if sha in commit_cache:
+                obj = commit_cache[sha]
             else:
                 obj = self.git.get_object(sha)
-                convert_list[sha] = obj
+                commit_cache[sha] = obj
             assert isinstance(obj, Commit)
             for p in obj.parents:
                 if p not in done and p not in self._map_git:
@@ -717,10 +717,10 @@ class GitHandler(object):
                 done.add(sha)
                 todo.pop()
 
-        return convert_list, commits
+        return commit_cache, commits
 
     def import_git_objects(self, remote_name=None, refs=None):
-        convert_list, commits = self.getnewgitcommits(refs)
+        commit_cache, commits = self.getnewgitcommits(refs)
         # import each of the commits, oldest first
         total = len(commits)
         if total:
@@ -730,7 +730,7 @@ class GitHandler(object):
 
         for i, csha in enumerate(commits):
             self.ui.progress('importing', i, total=total, unit='commits')
-            commit = convert_list[csha]
+            commit = commit_cache[csha]
             self.import_git_commit(commit)
         self.ui.progress('importing', None, total=total, unit='commits')
 
