@@ -660,7 +660,7 @@ class GitHandler(object):
 
         return message, git_extra
 
-    def getnewgitcommits(self, refs=None):
+    def getnewgitcommits(self, refs):
         # import heads and fetched tags as remote references
         todo = []
         done = set()
