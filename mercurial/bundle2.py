@@ -292,50 +292,8 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
     part = None
     try:
         for part in iterparts:
-            parttype = part.type
-            # part key are matched lower case
-            key = parttype.lower()
-            try:
-                handler = parthandlermapping.get(key)
-                if handler is None:
-                    raise error.BundleValueError(parttype=key)
-                op.ui.debug('found a handler for part %r\n' % parttype)
-                unknownparams = part.mandatorykeys - handler.params
-                if unknownparams:
-                    unknownparams = list(unknownparams)
-                    unknownparams.sort()
-                    raise error.BundleValueError(parttype=key,
-                                                   params=unknownparams)
-            except error.BundleValueError, exc:
-                if key != parttype: # mandatory parts
-                    raise
-                op.ui.debug('ignoring unsupported advisory part %s\n' % exc)
-                # consuming the part
-                part.read()
-                continue
-
-
-            # handler is called outside the above try block so that we don't
-            # risk catching KeyErrors from anything other than the
-            # parthandlermapping lookup (any KeyError raised by handler()
-            # itself represents a defect of a different variety).
-            output = None
-            if op.reply is not None:
-                op.ui.pushbuffer(error=True)
-                output = ''
-            try:
-                handler(op, part)
-            finally:
-                if output is not None:
-                    output = op.ui.popbuffer()
-            if output:
-                outpart = op.reply.newpart('b2x:output', data=output)
-                outpart.addparam('in-reply-to', str(part.id), mandatory=False)
-            part.read()
+            _processpart(op, part)
     except Exception, exc:
-        if part is not None:
-            # consume the bundle content
-            part.read()
         for part in iterparts:
             # consume the bundle content
             part.read()
@@ -347,6 +305,53 @@ def processbundle(repo, unbundler, transactiongetter=_notransaction):
         exc.duringunbundle2 = True
         raise
     return op
+
+def _processpart(op, part):
+    """process a single part from a bundle
+
+    The part is guaranteed to have been fully consumed when the function exits
+    (even if an exception is raised)."""
+    try:
+        parttype = part.type
+        # part key are matched lower case
+        key = parttype.lower()
+        try:
+            handler = parthandlermapping.get(key)
+            if handler is None:
+                raise error.BundleValueError(parttype=key)
+            op.ui.debug('found a handler for part %r\n' % parttype)
+            unknownparams = part.mandatorykeys - handler.params
+            if unknownparams:
+                unknownparams = list(unknownparams)
+                unknownparams.sort()
+                raise error.BundleValueError(parttype=key,
+                                               params=unknownparams)
+        except error.BundleValueError, exc:
+            if key != parttype: # mandatory parts
+                raise
+            op.ui.debug('ignoring unsupported advisory part %s\n' % exc)
+            return # skip to part processing
+
+        # handler is called outside the above try block so that we don't
+        # risk catching KeyErrors from anything other than the
+        # parthandlermapping lookup (any KeyError raised by handler()
+        # itself represents a defect of a different variety).
+        output = None
+        if op.reply is not None:
+            op.ui.pushbuffer(error=True)
+            output = ''
+        try:
+            handler(op, part)
+        finally:
+            if output is not None:
+                output = op.ui.popbuffer()
+        if output:
+            outpart = op.reply.newpart('b2x:output', data=output)
+            outpart.addparam('in-reply-to', str(part.id), mandatory=False)
+    finally:
+        # consume the part content to not corrupt the stream.
+        part.read()
+
 
 def decodecaps(blob):
     """decode a bundle2 caps bytes blob into a dictionnary
