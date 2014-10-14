@@ -1165,4 +1165,10 @@ def isenabled(repo, option):
     if len(result) == 0 and _enabled:
         return True
 
+    # createmarkers must be enabled if other options are enabled
+    if ((allowunstableopt in result or exchangeopt in result) and
+        not createmarkersopt in result):
+        raise util.Abort(_("'createmarkers' obsolete option must be enabled "
+                           "if other obsolete options are enabled"))
+
     return option in result
