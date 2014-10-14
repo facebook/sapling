@@ -1,16 +1,12 @@
 Check that obsolete properly strip heads
-  $ cat > obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
   $ cat >> $HGRCPATH << EOF
   > [phases]
   > # public changeset are not obsolete
   > publish=false
   > [ui]
   > logtemplate='{node|short} ({phase}) {desc|firstline}\n'
-  > [extensions]
-  > obs=${TESTTMP}/obs.py
+  > [experimental]
+  > evolution=createmarkers
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"

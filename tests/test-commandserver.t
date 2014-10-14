@@ -408,13 +408,9 @@ check that local configs for the cached repo aren't inherited when -R is used:
   *** runcommand branches
   default                        1:731265503d86
 
-  $ cat <<EOF > obs.py
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
-  $ cat <<EOF >> .hg/hgrc
-  > [extensions]
-  > obs = obs.py
+  $ cat >> .hg/hgrc << EOF
+  > [experimental]
+  > evolution=createmarkers
   > EOF
 
   >>> import os

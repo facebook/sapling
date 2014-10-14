@@ -7,15 +7,9 @@ Test exchange of common information using bundle2
 
 enable obsolescence
 
-  $ cat > obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
-
   $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > obsolete=$TESTTMP/obs.py
   > [experimental]
+  > evolution=createmarkers,exchange
   > bundle2-exp=True
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"

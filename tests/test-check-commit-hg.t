@@ -2,12 +2,10 @@
 
 Enable obsolescence to avoid the warning issue when obsmarker are found
 
-  $ cat > obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > evolution=createmarkers
   > EOF
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
 Go back in the hg repo
 

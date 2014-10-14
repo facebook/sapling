@@ -23,7 +23,6 @@ Create an extension to test bundle2 API
   > from mercurial import error
   > from mercurial import obsolete
   > 
-  > obsolete._enabled = True
   > 
   > try:
   >     import msvcrt
@@ -197,6 +196,7 @@ Create an extension to test bundle2 API
   > bundle2=$TESTTMP/bundle2.py
   > [experimental]
   > bundle2-exp=True
+  > evolution=createmarkers
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}

@@ -2,21 +2,16 @@
 
 Enable obsolete
 
-  $ cat > ${TESTTMP}/obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
-
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}
   > [phases]
   > publish=False
+  > [experimental]
+  > evolution=createmarkers,allowunstable
   > [extensions]
   > histedit=
   > rebase=
-  > 
-  > obs=${TESTTMP}/obs.py
   > EOF
 
   $ hg init base

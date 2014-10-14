@@ -37,12 +37,10 @@ Checking that the feature is properly disabled
 
 Enabling it
 
-  $ cat > ../obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > evolution=createmarkers,exchange
   > EOF
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
 Killing a single changeset without replacement
 
@@ -644,16 +642,16 @@ check that web.view config option:
 
 Checking _enable=False warning if obsolete marker exists
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=!" >> $HGRCPATH
+  $ echo '[experimental]' >> $HGRCPATH
+  $ echo "evolution=" >> $HGRCPATH
   $ hg log -r tip
   obsolete feature not enabled but 68 markers found!
   68:c15e9edfca13 (draft) [tip ] add celestine
 
 reenable for later test
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+  $ echo '[experimental]' >> $HGRCPATH
+  $ echo "evolution=createmarkers,exchange" >> $HGRCPATH
 
 #endif
 

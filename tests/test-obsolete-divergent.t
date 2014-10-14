@@ -5,15 +5,11 @@ file.
 
 Enable obsolete
 
-  $ cat > obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > logtemplate = {rev}:{node|short} {desc}\n
-  > [extensions]
-  > obs=${TESTTMP}/obs.py
+  > [experimental]
+  > evolution=createmarkers
   > [alias]
   > debugobsolete = debugobsolete -d '0 0'
   > [phases]

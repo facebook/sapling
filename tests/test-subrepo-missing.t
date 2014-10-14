@@ -70,17 +70,13 @@ delete .hgsubstate and update
 
 Enable obsolete
 
-  $ cat > ${TESTTMP}/obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}
   > [phases]
   > publish=False
-  > [extensions]'
-  > obs=${TESTTMP}/obs.py
+  > [experimental]
+  > evolution=createmarkers
   > EOF
 
 check that we can update parent repo with missing (amended) subrepo revision

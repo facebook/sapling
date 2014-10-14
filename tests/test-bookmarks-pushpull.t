@@ -5,13 +5,9 @@
   > logtemplate={rev}:{node|short} {desc|firstline}
   > [phases]
   > publish=False
-  > [extensions]
+  > [experimental]
+  > evolution=createmarkers,exchange
   > EOF
-  $ cat > obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
 initialize
 

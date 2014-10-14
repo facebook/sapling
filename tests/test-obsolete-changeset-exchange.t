@@ -1,12 +1,10 @@
 Test changesets filtering during exchanges (some tests are still in
 test-obsolete.t)
 
-  $ cat > obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > evolution=createmarkers
   > EOF
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
 Push does not corrupt remote
 ----------------------------

@@ -2251,12 +2251,10 @@ Test subdir
 Test --hidden
  (enable obsolete)
 
-  $ cat > ${TESTTMP}/obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > evolution=createmarkers
   > EOF
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
   $ hg debugobsolete `hg id --debug -i -r 8`
   $ testlog

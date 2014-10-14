@@ -4,19 +4,15 @@ Test rebase with obsolete
 
 Enable obsolete
 
-  $ cat > ${TESTTMP}/obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
-  > EOF
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}
+  > [experimental]
+  > evolution=createmarkers,allowunstable
   > [phases]
   > publish=False
   > [extensions]'
   > rebase=
-  > 
-  > obs=${TESTTMP}/obs.py
   > EOF
 
 Setup rebase canonical repo
