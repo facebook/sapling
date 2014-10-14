@@ -603,7 +603,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
     tr = repo.transaction("\n".join([srctype, util.hidepassword(url)]))
     try:
-        repo.hook('prechangegroup', throw=True, source=srctype, url=url)
+        repo.hook('prechangegroup', throw=True, source=srctype, url=url,
+                  **tr.hookargs)
 
         trp = weakref.proxy(tr)
         # pull off the changeset group
