@@ -26,6 +26,7 @@ from mercurial import error
 from mercurial import url
 
 import _ssh
+import git2hg
 import hg2git
 import util
 from overlay import overlayrepo
@@ -663,63 +664,7 @@ class GitHandler(object):
     def get_git_incoming(self, refs):
         if refs is None:
             refs = self.git.refs.as_dict()
-        git_object_store = self.git.object_store
-
-        # import heads and fetched tags as remote references
-        todo = []
-        done = set()
-        commit_cache = {}
-
-        # get a list of all the head shas
-        seenheads = set()
-        if refs:
-            for sha in refs.itervalues():
-                # refs contains all the refs in the server, not just the ones
-                # we are pulling
-                if sha in git_object_store:
-                    obj = git_object_store[sha]
-                    while isinstance(obj, Tag):
-                        obj_type, sha = obj.object
-                        obj = git_object_store[sha]
-                    if isinstance (obj, Commit) and sha not in seenheads:
-                        seenheads.add(sha)
-                        todo.append(sha)
-
-        # sort by commit date
-        def commitdate(sha):
-            obj = git_object_store[sha]
-            return obj.commit_time-obj.commit_timezone
-
-        todo.sort(key=commitdate, reverse=True)
-
-        # traverse the heads getting a list of all the unique commits in
-        # topological order
-        commits = []
-        seen = set(todo)
-        while todo:
-            sha = todo[-1]
-            if sha in done or sha in self._map_git:
-                todo.pop()
-                continue
-            assert isinstance(sha, str)
-            if sha in commit_cache:
-                obj = commit_cache[sha]
-            else:
-                obj = git_object_store[sha]
-                commit_cache[sha] = obj
-            assert isinstance(obj, Commit)
-            for p in obj.parents:
-                if p not in done and p not in self._map_git:
-                    todo.append(p)
-                    # process parents of a commit before processing the
-                    # commit itself, and come back to this commit later
-                    break
-            else:
-                commits.append(sha)
-                done.add(sha)
-                todo.pop()
-
-        return commit_cache, commits
+        return git2hg.find_incoming(self.git.object_store, self._map_git, refs)
 
     def import_git_objects(self, remote_name=None, refs=None):
         commit_cache, commits = self.get_git_incoming(refs)
