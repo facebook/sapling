@@ -738,7 +738,7 @@ def between(repo, old, new, keep):
     When keep is false, the specified set can't have children."""
     ctxs = list(repo.set('%n::%n', old, new))
     if ctxs and not keep:
-        if (not obsolete._enabled and
+        if (not obsolete.isenabled(repo, obsolete.allowunstableopt) and
             repo.revs('(%ld::) - (%ld)', ctxs, ctxs)):
             raise util.Abort(_('cannot edit history that would orphan nodes'))
         if repo.revs('(%ld) and merge()', ctxs):

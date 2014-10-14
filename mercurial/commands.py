@@ -1450,7 +1450,8 @@ def commit(ui, repo, *pats, **opts):
             raise util.Abort(_('cannot amend public changesets'))
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot amend while merging'))
-        if (not obsolete._enabled) and old.children():
+        allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
+        if not allowunstable and old.children():
             raise util.Abort(_('cannot amend changeset with children'))
 
         # commitfunc is used only for temporary amend commit by cmdutil.amend

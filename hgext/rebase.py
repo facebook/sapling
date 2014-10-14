@@ -303,7 +303,8 @@ def rebase(ui, repo, **opts):
                                   ('+'.join(str(repo[r]) for r in base), dest))
                     return 1
 
-            if (not (keepf or obsolete._enabled)
+            allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
+            if (not (keepf or allowunstable)
                   and repo.revs('first(children(%ld) - %ld)',
                                 rebaseset, rebaseset)):
                 raise util.Abort(

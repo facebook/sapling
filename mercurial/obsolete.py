@@ -83,6 +83,7 @@ _enabled = False
 
 # Options for obsolescence
 createmarkersopt = 'createmarkers'
+allowunstableopt = 'allowunstable'
 
 ### obsolescence marker flag
 
