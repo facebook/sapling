@@ -1,5 +1,6 @@
 import os
 
+from mercurial import localrepo
 from mercurial.node import bin
 from mercurial import util as hgutil
 
@@ -9,12 +10,14 @@ import util
 
 def generate_repo_subclass(baseclass):
     class hgrepo(baseclass):
-        @util.transform_notgit
-        def pull(self, remote, heads=None, force=False):  # Mercurial < 3.2
-            if isinstance(remote, gitrepo):
-                return self.githandler.fetch(remote.path, heads)
-            else: #pragma: no cover
-                return super(hgrepo, self).pull(remote, heads, force)
+        if hgutil.safehasattr(localrepo.localrepository, 'pull'):
+            # Mercurial < 3.2
+            @util.transform_notgit
+            def pull(self, remote, heads=None, force=False):
+                if isinstance(remote, gitrepo):
+                    return self.githandler.fetch(remote.path, heads)
+                else: #pragma: no cover
+                    return super(hgrepo, self).pull(remote, heads, force)
 
         # TODO figure out something useful to do with the newbranch param
         @util.transform_notgit

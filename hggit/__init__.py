@@ -27,6 +27,7 @@ from mercurial import commands
 from mercurial import demandimport
 from mercurial import dirstate
 from mercurial import discovery
+from mercurial import exchange
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
@@ -44,7 +45,7 @@ demandimport.ignore.extend([
     'collections',
     ])
 
-import gitrepo, hgrepo
+import gitrepo, hgrepo, util
 from git_handler import GitHandler
 import verify
 
@@ -209,6 +210,25 @@ def peer(orig, uiorrepo, *args, **opts):
             newpeer.localrepo = uiorrepo
     return newpeer
 extensions.wrapfunction(hg, 'peer', peer)
+
+@util.transform_notgit
+def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
+    if isinstance(remote, gitrepo.gitrepo):
+        pullop = exchange.pulloperation(repo, remote, heads, force,
+                                        bookmarks=bookmarks)
+        lock = repo.lock()
+        try:
+            pullop.cgresult = repo.githandler.fetch(remote.path, heads)
+            pullop.closetransaction()
+            return pullop
+        finally:
+            pullop.releasetransaction()
+            lock.release()
+    else:
+        return orig(repo, remote, heads, force, bookmarks=bookmarks)
+if not hgutil.safehasattr(localrepo.localrepository, 'pull'):
+    # Mercurial >= 3.2
+    extensions.wrapfunction(exchange, 'pull', exchangepull)
 
 def revset_fromgit(repo, subset, x):
     '''``fromgit()``
