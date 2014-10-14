@@ -1,7 +1,6 @@
 The short version:
  * Patches should have a good summary line for first line of commit message
  * Patches should be sent to the Google Group[0]
-   even look at those.
  * Patch needs to do exactly one thing
  * testsuite passes
 
