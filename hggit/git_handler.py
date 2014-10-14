@@ -369,7 +369,7 @@ class GitHandler(object):
         else:
             reqrefs = refs
 
-        commits = [bin(c) for c in self.get_git_incoming(reqrefs)[1]]
+        commits = [bin(c) for c in self.get_git_incoming(reqrefs).commits]
 
         b = overlayrepo(self, commits, refs)
 
@@ -667,7 +667,9 @@ class GitHandler(object):
         return git2hg.find_incoming(self.git.object_store, self._map_git, refs)
 
     def import_git_objects(self, remote_name=None, refs=None):
-        commit_cache, commits = self.get_git_incoming(refs)
+        result = self.get_git_incoming(refs)
+        commits = result.commits
+        commit_cache = result.commit_cache
         # import each of the commits, oldest first
         total = len(commits)
         if total:

@@ -63,4 +63,10 @@ def find_incoming(git_object_store, git_map, refs):
             done.add(sha)
             todo.pop()
 
-    return commit_cache, commits
+    return GitIncomingResult(commits, commit_cache)
+
+class GitIncomingResult(object):
+    '''struct to store result from find_incoming'''
+    def __init__(self, commits, commit_cache):
+        self.commits = commits
+        self.commit_cache = commit_cache
