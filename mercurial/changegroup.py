@@ -592,8 +592,6 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
     if not source:
         return 0
 
-    repo.hook('prechangegroup', throw=True, source=srctype, url=url)
-
     changesets = files = revisions = 0
     efiles = set()
 
@@ -605,6 +603,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
     tr = repo.transaction("\n".join([srctype, util.hidepassword(url)]))
     try:
+        repo.hook('prechangegroup', throw=True, source=srctype, url=url)
+
         trp = weakref.proxy(tr)
         # pull off the changeset group
         repo.ui.status(_("adding changesets\n"))
