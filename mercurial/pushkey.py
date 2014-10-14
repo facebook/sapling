@@ -11,7 +11,7 @@ def _nslist(repo):
     n = {}
     for k in _namespaces:
         n[k] = ""
-    if not obsolete._enabled:
+    if not obsolete.isenabled(repo, obsolete.exchangeopt):
         n.pop('obsolete')
     return n
 

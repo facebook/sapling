@@ -84,6 +84,7 @@ _enabled = False
 # Options for obsolescence
 createmarkersopt = 'createmarkers'
 allowunstableopt = 'allowunstable'
+exchangeopt = 'exchange'
 
 ### obsolescence marker flag
 

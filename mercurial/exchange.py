@@ -309,7 +309,7 @@ def _pushdiscoveryphase(pushop):
 
 @pushdiscovery('obsmarker')
 def _pushdiscoveryobsmarkers(pushop):
-    if (obsolete._enabled
+    if (obsolete.isenabled(pushop.repo, obsolete.exchangeopt)
         and pushop.repo.obsstore
         and 'obsolete' in pushop.remote.listkeys('namespaces')):
         repo = pushop.repo
@@ -929,7 +929,7 @@ def _pullbundle2(pullop):
     else:
         if pullop.heads is None and list(pullop.common) == [nullid]:
             pullop.repo.ui.status(_("requesting all changes\n"))
-    if obsolete._enabled:
+    if obsolete.isenabled(pullop.repo, obsolete.exchangeopt):
         remoteversions = bundle2.obsmarkersversion(remotecaps)
         if obsolete.commonversion(remoteversions) is not None:
             kwargs['obsmarkers'] = True
@@ -1062,7 +1062,7 @@ def _pullobsolete(pullop):
         return
     pullop.stepsdone.add('obsmarkers')
     tr = None
-    if obsolete._enabled:
+    if obsolete.isenabled(pullop.repo, obsolete.exchangeopt):
         pullop.repo.ui.debug('fetching remote obsolete markers\n')
         remoteobs = pullop.remote.listkeys('obsolete')
         if 'dump0' in remoteobs:
