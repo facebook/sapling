@@ -12,10 +12,6 @@ locally is only to provide a test fixture.
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-Skip if Mercurial < 2.1; workflow was different before that
-  $ python -c 'from mercurial import util ; assert \
-  >  util.version() != "unknown" and util.version() >= "2.1"' || exit 80
-
   $ gitcount=10
   $ gitcommit()
   > {
