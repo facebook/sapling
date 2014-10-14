@@ -42,6 +42,7 @@ class manifestdict(dict):
         return dicthelpers.diff(self._flags, d2._flags, "")
 
     def text(self):
+        """Get the full data of this manifest as a bytestring."""
         fl = sorted(self)
         _checkforbidden(fl)
 
