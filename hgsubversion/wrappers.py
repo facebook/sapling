@@ -518,6 +518,19 @@ def pull(repo, source, heads=[], force=False):
     else:
         ui.status("pulled %d revisions\n" % revisions)
 
+def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
+    capable = getattr(remote, 'capable', lambda x: False)
+    if capable('subversion'):
+        pullop = exchange.pulloperation(repo, remote, heads, force,
+                                        bookmarks=bookmarks)
+        try:
+            pullop.cgresult = pull(repo, remote, heads, force)
+            return pullop
+        finally:
+            pullop.releasetransaction()
+    else:
+        return orig(repo, remote, heads, force, bookmarks=bookmarks)
+
 def rebase(orig, ui, repo, **opts):
     """rebase current unpushed revisions onto the Subversion head
 

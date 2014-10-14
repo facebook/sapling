@@ -103,9 +103,11 @@ def generate_repo_class(ui, repo):
             def push(self, remote, force=False, revs=None, newbranch=None):
                 return wrappers.push(self, remote, force, revs)
 
-        @remotesvn
-        def pull(self, remote, heads=[], force=False):
-            return wrappers.pull(self, remote, heads, force)
+        if hgutil.safehasattr(localrepo.localrepository, 'pull'):
+            # Mercurial < 3.2
+            @remotesvn
+            def pull(self, remote, heads=[], force=False):
+                return wrappers.pull(self, remote, heads, force)
 
         @remotesvn
         def findoutgoing(self, remote, base=None, heads=None, force=False):

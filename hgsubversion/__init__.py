@@ -146,6 +146,9 @@ def extsetup(ui):
     if not hgutil.safehasattr(localrepo.localrepository, 'push'):
         # Mercurial >= 3.2
         extensions.wrapfunction(exchange, 'push', wrappers.exchangepush)
+    if not hgutil.safehasattr(localrepo.localrepository, 'pull'):
+        # Mercurial >= 3.2
+        extensions.wrapfunction(exchange, 'pull', wrappers.exchangepull)
 
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
 
