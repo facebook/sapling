@@ -821,6 +821,8 @@ def handlechangegroup(op, inpart):
     # for the whole processing scope.
     op.gettransaction()
     cg = changegroup.cg1unpacker(inpart, 'UN')
+    # the source and url passed here are overwritten by the one contained in
+    # the transaction.hookargs argument. So 'bundle2' is a placeholder
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
