@@ -474,13 +474,10 @@ Test amend with obsolete
 
 Enable obsolete
 
-  $ cat > ${TESTTMP}/obs.py << EOF
-  > import mercurial.obsolete
-  > mercurial.obsolete._enabled = True
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > evolution=createmarkers,allowunstable
   > EOF
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
-
 
 Amend with no files changes
 
@@ -808,7 +805,8 @@ This shouldn't be possible:
   $ hg branch closewithamend
   marked working directory as branch closewithamend
   (branches are permanent and global, did you want a bookmark?)
-  $ hg add obs.py
+  $ touch foo
+  $ hg add foo
   $ hg ci -m..
   $ hg ci --amend --close-branch -m 'closing'
   abort: can only close branch heads
@@ -853,6 +851,6 @@ Test that amend with --edit invokes editor forcibly
   HG: --
   HG: user: test
   HG: branch 'silliness'
-  HG: changed obs.py
+  HG: changed foo
   $ hg parents --template "{desc}\n"
   editor should be invoked
