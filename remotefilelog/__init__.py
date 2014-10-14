@@ -17,7 +17,7 @@ from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
 from mercurial import copies, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
 from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch, verify
-from mercurial import match
+from mercurial import match, exchange
 import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
 import stat
 
@@ -147,6 +147,8 @@ def onetimeclientsetup(ui):
 
         return s
     wrapfunction(store, 'store', storewrapper)
+
+    extensions.wrapfunction(exchange, 'pull', exchangepull)
 
     # prefetch files before update
     def applyupdates(orig, repo, actions, wctx, mctx, overwrite, labels=None):
@@ -536,6 +538,37 @@ def pull(orig, ui, repo, *pats, **opts):
             repo.prefetch(revs, base=base)
 
     return result
+
+def exchangepull(orig, repo, remote, *args, **kwargs):
+    # Hook into the callstream/getbundle to insert bundle capabilities
+    # during a pull.
+    def remotecallstream(orig, command, **opts):
+        if command == 'getbundle' and 'remotefilelog' in remote._capabilities():
+            bundlecaps = opts.get('bundlecaps')
+            if bundlecaps:
+                bundlecaps = [bundlecaps]
+            else:
+                bundlecaps = []
+            bundlecaps.append('remotefilelog')
+            if repo.includepattern:
+                bundlecaps.append("includepattern=" + '\0'.join(repo.includepattern))
+            if repo.excludepattern:
+                bundlecaps.append("excludepattern=" + '\0'.join(repo.excludepattern))
+            opts['bundlecaps'] = ','.join(bundlecaps)
+        return orig(command, **opts)
+
+    def localgetbundle(orig, source, heads=None, common=None, bundlecaps=None):
+        if not bundlecaps:
+            bundlecaps = []
+        bundlecaps.append('remotefilelog')
+        return orig(source, heads=heads, common=common, bundlecaps=bundlecaps)
+
+    if hasattr(remote, '_callstream'):
+        wrapfunction(remote, '_callstream', remotecallstream)
+    elif hasattr(remote, 'getbundle'):
+        wrapfunction(remote, 'getbundle', localgetbundle)
+
+    return orig(repo, remote, *args, **kwargs)
 
 def revert(orig, ui, repo, ctx, parents, *pats, **opts):
     # prefetch prior to reverting
