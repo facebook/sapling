@@ -19,13 +19,16 @@ def generate_repo_subclass(baseclass):
                 else: #pragma: no cover
                     return super(hgrepo, self).pull(remote, heads, force)
 
-        # TODO figure out something useful to do with the newbranch param
-        @util.transform_notgit
-        def push(self, remote, force=False, revs=None, newbranch=False):
-            if isinstance(remote, gitrepo):
-                return self.githandler.push(remote.path, revs, force)
-            else: #pragma: no cover
-                return super(hgrepo, self).push(remote, force, revs, newbranch)
+        if hgutil.safehasattr(localrepo.localrepository, 'push'):
+            # Mercurial < 3.2
+            # TODO figure out something useful to do with the newbranch param
+            @util.transform_notgit
+            def push(self, remote, force=False, revs=None, newbranch=False):
+                if isinstance(remote, gitrepo):
+                    return self.githandler.push(remote.path, revs, force)
+                else: #pragma: no cover
+                    return super(hgrepo, self).push(remote, force, revs,
+                                                    newbranch)
 
         @util.transform_notgit
         def findoutgoing(self, remote, base=None, heads=None, force=False):

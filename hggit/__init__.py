@@ -230,6 +230,21 @@ if not hgutil.safehasattr(localrepo.localrepository, 'pull'):
     # Mercurial >= 3.2
     extensions.wrapfunction(exchange, 'pull', exchangepull)
 
+# TODO figure out something useful to do with the newbranch param
+@util.transform_notgit
+def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
+                 bookmarks=()):
+    if isinstance(remote, gitrepo.gitrepo):
+        pushop = exchange.pushoperation(repo, remote, force, revs, newbranch,
+                                        bookmarks)
+        pushop.cgresult = repo.githandler.push(remote.path, revs, force)
+        return pushop
+    else:
+        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks)
+if not hgutil.safehasattr(localrepo.localrepository, 'push'):
+    # Mercurial >= 3.2
+    extensions.wrapfunction(exchange, 'push', exchangepush)
+
 def revset_fromgit(repo, subset, x):
     '''``fromgit()``
     Select changesets that originate from Git.
