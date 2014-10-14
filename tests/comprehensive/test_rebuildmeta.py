@@ -13,7 +13,9 @@ except ImportError:
 from mercurial import context
 from mercurial import extensions
 from mercurial import hg
+from mercurial import localrepo
 from mercurial import ui
+from mercurial import util as hgutil
 
 from hgsubversion import compathacks
 from hgsubversion import svncommands
@@ -85,7 +87,12 @@ def _do_case(self, name, layout):
         # remove the wrapper
         context.changectx.children = origchildren
 
-    dest.pull(src)
+    if hgutil.safehasattr(localrepo.localrepository, 'pull'):
+        dest.pull(src)
+    else:
+        # Mercurial >= 3.2
+        from mercurial import exchange
+        exchange.pull(dest, src)
 
     # insert a wrapper that prevents calling changectx.children()
     extensions.wrapfunction(context.changectx, 'children', failfn)
