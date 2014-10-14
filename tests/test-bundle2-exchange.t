@@ -59,7 +59,7 @@ clone --pull
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
-  changegroup hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
@@ -81,7 +81,7 @@ pull
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
-  changegroup hook: HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
@@ -185,7 +185,7 @@ pull over ssh
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_02de
-  changegroup hook: HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_SOURCE=pull HG_URL=ssh://user@dummy/main
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -207,7 +207,7 @@ pull over http
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_42cc
-  changegroup hook: HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete

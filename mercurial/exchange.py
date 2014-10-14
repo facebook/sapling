@@ -827,6 +827,8 @@ class pulloperation(object):
         """get appropriate pull transaction, creating it if needed"""
         if self._tr is None:
             self._tr = self.repo.transaction(self._trname)
+            self._tr.hookargs['source'] = 'pull'
+            self._tr.hookargs['url'] = self.remote.url()
         return self._tr
 
     def closetransaction(self):

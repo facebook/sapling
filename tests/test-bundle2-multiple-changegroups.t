@@ -82,17 +82,17 @@ Pull the new commits in the clone
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_PENDING=$TESTTMP/clone HG_SOURCE=bundle2 HG_URL=bundle2
+  pretxnchangegroup hook: HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_PENDING=$TESTTMP/clone HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
   remote: changegroup2
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  changegroup hook: HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=bundle2 HG_URL=bundle2
-  changegroup hook: HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  pretxnchangegroup hook: HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 1
   (run 'hg update' to get a working copy)
   $ hg update
@@ -152,20 +152,20 @@ pullop.cgresult
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  pretxnchangegroup hook: HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_PENDING=$TESTTMP/clone HG_SOURCE=bundle2 HG_URL=bundle2
+  pretxnchangegroup hook: HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_PENDING=$TESTTMP/clone HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
   remote: changegroup2
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
-  pretxnchangegroup hook: HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  changegroup hook: HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=bundle2 HG_URL=bundle2
-  changegroup hook: HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=1d14c3ce6ac0582d2809220d33e8cd7a696e0156 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  pretxnchangegroup hook: HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=1d14c3ce6ac0582d2809220d33e8cd7a696e0156 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 3
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -G
@@ -225,17 +225,17 @@ pullop.cgresult
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (-1 heads)
-  pretxnchangegroup hook: HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_PENDING=$TESTTMP/clone HG_SOURCE=bundle2 HG_URL=bundle2
+  pretxnchangegroup hook: HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_PENDING=$TESTTMP/clone HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
   remote: changegroup2
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  changegroup hook: HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=bundle2 HG_URL=bundle2
-  changegroup hook: HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
-  incoming hook: HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  pretxnchangegroup hook: HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
+  incoming hook: HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/repo
   pullop.cgresult is -2
   (run 'hg update' to get a working copy)
   $ hg log -G
