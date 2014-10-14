@@ -602,9 +602,14 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
     oldheads = cl.heads()
 
     tr = repo.transaction("\n".join([srctype, util.hidepassword(url)]))
+    # The transaction could have been created before and already carries source
+    # information. In this case we use the top level data. We overwrite the
+    # argument because we need to use the top level value (if they exist) in
+    # this function.
+    srctype = tr.hookargs.setdefault('source', srctype)
+    url = tr.hookargs.setdefault('url', url)
     try:
-        repo.hook('prechangegroup', throw=True, source=srctype, url=url,
-                  **tr.hookargs)
+        repo.hook('prechangegroup', throw=True, **tr.hookargs)
 
         trp = weakref.proxy(tr)
         # pull off the changeset group
@@ -692,8 +697,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             else:
                 hookargs = dict(tr.hookargs)
                 hookargs['node'] = hex(cl.node(clstart))
-            repo.hook('pretxnchangegroup', throw=True, source=srctype,
-                      url=url, pending=p, **hookargs)
+            repo.hook('pretxnchangegroup', throw=True, pending=p, **hookargs)
 
         added = [cl.node(r) for r in xrange(clstart, clend)]
         publishing = repo.ui.configbool('phases', 'publish', True)
@@ -739,13 +743,12 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
                 # forcefully update the on-disk branch cache
                 repo.ui.debug("updating the branch cache\n")
-                repo.hook("changegroup", source=srctype, url=url,
-                          **hookargs)
+                repo.hook("changegroup", **hookargs)
 
                 for n in added:
                     args = hookargs.copy()
                     args['node'] = hex(n)
-                    repo.hook("incoming", source=srctype, url=url, **args)
+                    repo.hook("incoming", **args)
 
                 newheads = [h for h in repo.heads() if h not in oldheads]
                 repo.ui.log("incoming",

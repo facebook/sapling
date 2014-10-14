@@ -1235,15 +1235,16 @@ def unbundle(repo, cg, heads, source, url):
         if util.safehasattr(cg, 'params'):
             try:
                 tr = repo.transaction('unbundle')
+                tr.hookargs['source'] = source
+                tr.hookargs['url'] = url
                 tr.hookargs['bundle2-exp'] = '1'
                 r = bundle2.processbundle(repo, cg, lambda: tr).reply
                 cl = repo.unfiltered().changelog
                 p = cl.writepending() and repo.root or ""
-                repo.hook('b2x-pretransactionclose', throw=True, source=source,
-                          url=url, pending=p, **tr.hookargs)
-                tr.close()
-                repo.hook('b2x-transactionclose', source=source, url=url,
+                repo.hook('b2x-pretransactionclose', throw=True, pending=p,
                           **tr.hookargs)
+                tr.close()
+                repo.hook('b2x-transactionclose', **tr.hookargs)
             except Exception, exc:
                 exc.duringunbundle2 = True
                 raise

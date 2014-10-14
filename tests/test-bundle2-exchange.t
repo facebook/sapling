@@ -153,7 +153,7 @@ push
   pushing to other
   searching for changes
   b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_SOURCE=push HG_URL=push
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -229,7 +229,7 @@ push over ssh
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
   remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=bundle2 HG_URL=bundle2
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
@@ -456,7 +456,7 @@ Doing the actual push: hook abort
   searching for changes
   transaction abort!
   rollback completed
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=push HG_URL=push
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   [255]
 
@@ -466,7 +466,7 @@ Doing the actual push: hook abort
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=bundle2 HG_URL=bundle2
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
