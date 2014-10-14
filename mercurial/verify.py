@@ -267,6 +267,9 @@ def _verify(repo):
                     if len(fl.revision(n)) != fl.size(i):
                         err(lr, _("unpacked size is %s, %s expected") %
                             (l, fl.size(i)), f)
+            except error.CensoredNodeError:
+                if ui.config("censor", "policy", "abort") == "abort":
+                    err(lr, _("censored file data"), f)
             except Exception, inst:
                 exc(lr, _("unpacking %s") % short(n), inst, f)
 
