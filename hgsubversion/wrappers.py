@@ -289,7 +289,7 @@ def push(repo, dest, force, revs):
 
             # 5. Pull the latest changesets from subversion, which will
             # include the one we just committed (and possibly others).
-            r = repo.pull(dest, force=force)
+            r = pull(repo, dest, force=force)
             assert not r or r == 0
             meta = repo.svnmeta(svn.uuid, svn.subdir)
             hashes = meta.revmap.hashes()
