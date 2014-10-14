@@ -742,8 +742,9 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                           **hookargs)
 
                 for n in added:
-                    repo.hook("incoming", node=hex(n), source=srctype,
-                              url=url)
+                    args = hookargs.copy()
+                    args['node'] = hex(n)
+                    repo.hook("incoming", source=srctype, url=url, **args)
 
                 newheads = [h for h in repo.heads() if h not in oldheads]
                 repo.ui.log("incoming",
