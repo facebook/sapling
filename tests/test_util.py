@@ -24,7 +24,7 @@ from mercurial import i18n
 from mercurial import node
 from mercurial import scmutil
 from mercurial import ui
-from mercurial import util
+from mercurial import util as hgutil
 from mercurial import extensions
 
 from hgsubversion import compathacks
@@ -454,9 +454,15 @@ class TestBase(unittest.TestCase):
 
         self.oldenv = dict([(k, os.environ.get(k, None),) for k in
                            ('LANG', 'LC_ALL', 'HGRCPATH',)])
-        self.oldt = i18n.t
-        os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
-        i18n.t = gettext.translation('hg', i18n.localedir, fallback=True)
+        try:
+            self.oldugettext = i18n._ugettext  # Mercurial >= 3.2
+        except AttributeError:
+            self.oldt = i18n.t
+            os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+            i18n.t = gettext.translation('hg', i18n.localedir, fallback=True)
+        else:
+            os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
+            i18n.setdatapath(hgutil.datapath)
 
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp(
@@ -503,7 +509,10 @@ class TestBase(unittest.TestCase):
                 del os.environ[var]
             else:
                 os.environ[var] = val
-        i18n.t = self.oldt
+        try:
+            i18n._ugettext = self.oldugettext  # Mercurial >= 3.2
+        except AttributeError:
+            i18n.t = self.oldt
         rmtree(self.tmpdir)
         os.chdir(self.oldwd)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
