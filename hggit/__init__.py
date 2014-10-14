@@ -27,7 +27,12 @@ from mercurial import commands
 from mercurial import demandimport
 from mercurial import dirstate
 from mercurial import discovery
-from mercurial import exchange
+try:
+    from mercurial import exchange
+    exchange.push # existed in first iteration of this file
+except ImportError:
+    # We only *use* the exchange module in hg 3.2+, so this is safe
+    pass
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
