@@ -930,7 +930,14 @@ class filectx(basefilectx):
                        filelog=self._filelog)
 
     def data(self):
-        return self._filelog.read(self._filenode)
+        try:
+            return self._filelog.read(self._filenode)
+        except error.CensoredNodeError:
+            if self._repo.ui.config("censor", "policy", "abort") == "ignore":
+                return ""
+            raise util.Abort(_("censored node: %s") % short(self._filenode),
+                             hint="set censor.policy to ignore errors")
+
     def size(self):
         return self._filelog.size(self._filerev)
 
