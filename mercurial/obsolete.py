@@ -450,7 +450,7 @@ class obsstore(object):
     # parents: (tuple of nodeid) or None, parents of precursors
     #          None is used when no data has been recorded
 
-    def __init__(self, sopener, defaultformat=_fm1version):
+    def __init__(self, sopener, defaultformat=_fm1version, readonly=False):
         # caches for various obsolescence related cache
         self.caches = {}
         self._all = []
@@ -460,6 +460,7 @@ class obsstore(object):
         self.sopener = sopener
         data = sopener.tryread('obsstore')
         self._version = defaultformat
+        self._readonly = readonly
         if data:
             self._version, markers = _readmarkers(data)
             self._load(markers)
@@ -513,8 +514,9 @@ class obsstore(object):
 
         Take care of filtering duplicate.
         Return the number of new marker."""
-        if not _enabled:
-            raise util.Abort('obsolete feature is not enabled on this repo')
+        if self._readonly:
+            raise util.Abort('creating obsolete markers is not enabled on this '
+                             'repo')
         known = set(self._all)
         new = []
         for m in markers:

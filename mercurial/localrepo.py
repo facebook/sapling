@@ -406,7 +406,8 @@ class localrepository(object):
         kwargs = {}
         if defaultformat is not None:
             kwargs['defaultformat'] = defaultformat
-        store = obsolete.obsstore(self.sopener, **kwargs)
+        store = obsolete.obsstore(self.sopener, readonly=not obsolete._enabled,
+                                  **kwargs)
         if store and not obsolete._enabled:
             # message is rare enough to not be translated
             msg = 'obsolete feature not enabled but %i markers found!\n'
