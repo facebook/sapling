@@ -12,7 +12,7 @@ import os
 
 from mercurial import error, manifest, match as match_, util
 from mercurial.i18n import _
-from mercurial import localrepo
+from mercurial import localrepo, scmutil
 
 import lfcommands
 import lfutil
@@ -242,7 +242,7 @@ def reposetup(ui, repo):
                     wlock.release()
 
             self.lfstatus = True
-            return result
+            return scmutil.status(*result)
 
         # As part of committing, copy all of the largefiles into the
         # cache.

@@ -341,7 +341,7 @@ class basectx(object):
             l.sort()
 
         # we return a tuple to signify that this list isn't changing
-        return tuple(r)
+        return scmutil.status(*r)
 
 
 def makememctx(repo, parents, text, user, date, branch, files, store,
@@ -1482,7 +1482,7 @@ class workingctx(committablectx):
         # (s[1] is 'added' and s[2] is 'removed')
         s = list(s)
         s[1], s[2] = s[2], s[1]
-        return tuple(s)
+        return scmutil.status(*s)
 
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context

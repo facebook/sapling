@@ -9,7 +9,7 @@ import errno, os, re, shutil, posixpath, sys
 import xml.dom.minidom
 import stat, subprocess, tarfile
 from i18n import _
-import config, util, node, error, cmdutil, match as matchmod
+import config, util, node, error, cmdutil, scmutil, match as matchmod
 import phases
 import pathutil
 import exchange
@@ -448,7 +448,7 @@ class abstractsubrepo(object):
         return 1
 
     def status(self, rev2, **opts):
-        return [], [], [], [], [], [], []
+        return scmutil.status([], [], [], [], [], [], [])
 
     def diff(self, ui, diffopts, node2, match, prefix, **opts):
         pass
@@ -650,7 +650,7 @@ class hgsubrepo(abstractsubrepo):
         except error.RepoLookupError, inst:
             self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
                                % (inst, subrelpath(self)))
-            return [], [], [], [], [], [], []
+            return scmutil.status([], [], [], [], [], [], [])
 
     @annotatesubrepoerror
     def diff(self, ui, diffopts, node2, match, prefix, **opts):
@@ -1583,7 +1583,8 @@ class gitsubrepo(abstractsubrepo):
                 removed.append(f)
 
         deleted = unknown = ignored = clean = []
-        return modified, added, removed, deleted, unknown, ignored, clean
+        return scmutil.status(modified, added, removed, deleted,
+                              unknown, ignored, clean)
 
     def shortid(self, revid):
         return revid[:7]

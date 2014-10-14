@@ -1149,7 +1149,8 @@ def overridepurge(orig, ui, repo, *dirs, **opts):
         modified, added, removed, deleted, unknown, ignored, clean = r
         unknown = [f for f in unknown if lfdirstate[f] == '?']
         ignored = [f for f in ignored if lfdirstate[f] == '?']
-        return modified, added, removed, deleted, unknown, ignored, clean
+        return scmutil.status(modified, added, removed, deleted,
+                              unknown, ignored, clean)
     repo.status = overridestatus
     orig(ui, repo, *dirs, **opts)
     repo.status = oldstatus
