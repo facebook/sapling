@@ -1144,3 +1144,18 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
         tr.close()
     finally:
         tr.release()
+
+def isenabled(repo, option):
+    """Returns True if the given repository has the given obsolete option
+    enabled.
+    """
+    result = set(repo.ui.configlist('experimental', 'evolution'))
+    if 'all' in result:
+        return True
+
+    # For migration purposes, temporarily return true if the config hasn't been
+    # set but _enabled is true.
+    if len(result) == 0 and _enabled:
+        return True
+
+    return option in result
