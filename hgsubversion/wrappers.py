@@ -2,6 +2,12 @@ from hgext import rebase as hgrebase
 
 from mercurial import cmdutil
 from mercurial import discovery
+try:
+    from mercurial import exchange
+    exchange.push  # existed in first iteration of this file
+except ImportError:
+    # We only *use* the exchange module in hg 3.2+, so this is safe
+    pass
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
@@ -362,6 +368,16 @@ def push(repo, dest, force, revs):
             util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
 
+def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
+                 bookmarks=()):
+    capable = getattr(remote, 'capable', lambda x: False)
+    if capable('subversion'):
+        pushop = exchange.pushoperation(repo, remote, force, revs, newbranch,
+                                        bookmarks=bookmarks)
+        pushop.cgresult = push(repo, remote, force, revs)
+        return pushop
+    else:
+        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks)
 
 def pull(repo, source, heads=[], force=False):
     """pull new revisions from Subversion"""

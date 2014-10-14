@@ -20,9 +20,16 @@ import sys
 import traceback
 
 from mercurial import commands
+try:
+    from mercurial import exchange
+    exchange.push  # existed in first iteration of this file
+except ImportError:
+    # We only *use* the exchange module in hg 3.2+, so this is safe
+    pass
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
+from mercurial import localrepo
 from mercurial import util as hgutil
 from mercurial import demandimport
 demandimport.ignore.extend([
@@ -135,6 +142,10 @@ def extsetup(ui):
         entry[1].append(('', 'svn', None, 'automatic svn rebase'))
     except:
         pass
+
+    if not hgutil.safehasattr(localrepo.localrepository, 'push'):
+        # Mercurial >= 3.2
+        extensions.wrapfunction(exchange, 'push', wrappers.exchangepush)
 
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
 

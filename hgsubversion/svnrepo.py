@@ -17,6 +17,7 @@ subclass: pull() is called on the instance pull *to*, but not the one pulled
 import errno
 
 from mercurial import error
+from mercurial import localrepo
 from mercurial import util as hgutil
 
 try:
@@ -95,10 +96,12 @@ def generate_repo_class(ui, repo):
                 self.pushkey('phases', self[hash].hex(), str(phases.draft), str(phases.public))
             return hash
 
-        # TODO use newbranch to allow branch creation in Subversion?
-        @remotesvn
-        def push(self, remote, force=False, revs=None, newbranch=None):
-            return wrappers.push(self, remote, force, revs)
+        if hgutil.safehasattr(localrepo.localrepository, 'push'):
+            # Mercurial < 3.2
+            # TODO use newbranch to allow branch creation in Subversion?
+            @remotesvn
+            def push(self, remote, force=False, revs=None, newbranch=None):
+                return wrappers.push(self, remote, force, revs)
 
         @remotesvn
         def pull(self, remote, heads=[], force=False):
