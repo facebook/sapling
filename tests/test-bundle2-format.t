@@ -777,25 +777,22 @@ with reply
 
 Check handling of exception during generation.
 ----------------------------------------------
-(is currently not right)
 
   $ hg bundle2 --genraise > ../genfailed.hg2
   abort: Someone set up us the bomb!
   [255]
 
 Should still be a valid bundle
-(is currently not right)
 
   $ cat ../genfailed.hg2
   HG2Y\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
-  b2x:output\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  b2x:output\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00L\x0fb2x:error:abort\x00\x00\x00\x00\x01\x00\x07-messageunexpected error: Someone set up us the bomb!\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
 And its handling on the other size raise a clean exception
-(is currently not right)
 
   $ cat ../genfailed.hg2 | hg unbundle2
   0 unread bytes
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  abort: unexpected error: Someone set up us the bomb!
   [255]
 
 

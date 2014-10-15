@@ -145,6 +145,7 @@ future, dropping the stream may become an option for channel we do not care to
 preserve.
 """
 
+import sys
 import util
 import struct
 import urllib
@@ -673,9 +674,22 @@ class bundlepart(object):
         yield _pack(_fpartheadersize, len(headerchunk))
         yield headerchunk
         ## payload
-        for chunk in self._payloadchunks():
-            yield _pack(_fpayloadsize, len(chunk))
-            yield chunk
+        try:
+            for chunk in self._payloadchunks():
+                yield _pack(_fpayloadsize, len(chunk))
+                yield chunk
+        except Exception, exc:
+            # backup exception data for later
+            exc_info = sys.exc_info()
+            msg = 'unexpected error: %s' % exc
+            interpart = bundlepart('b2x:error:abort', [('message', msg)])
+            interpart.id = 0
+            yield _pack(_fpayloadsize, -1)
+            for chunk in interpart.getchunks():
+                yield chunk
+            # abort current part payload
+            yield _pack(_fpayloadsize, 0)
+            raise exc_info[0], exc_info[1], exc_info[2]
         # end of payload
         yield _pack(_fpayloadsize, 0)
         self._generated = True
