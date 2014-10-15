@@ -86,7 +86,6 @@
   added 1 changesets with 1 changes to 1 files
   updating bookmark foo
   (run 'hg update' to get a working copy)
-  importing bookmark foo
   $ hg log -l 1 --template '{rev} {bookmarks}\n'
   2 foo
 

@@ -80,7 +80,7 @@ def uisetup(ui):
 
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
 
-    wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
+    wrapfunction(bookmarks.bmstore, '_write', bookmarkwrite)
     wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
     wrapfunction(changegroup, 'addchangegroup', addchangegroup)
     wrapfunction(exchange, '_localphasemove', _localphasemove)
@@ -943,10 +943,10 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
     else:
         return _bookmarkcommand()
 
-def bookmarkwrite(orig, self):
+def bookmarkwrite(orig, self, fp):
     repo = self._repo
     if not repo.ui.configbool("hgsql", "enabled") or repo.disablesync:
-        return orig(self)
+        return orig(self, fp)
 
     if not repo.sqlconn:
         raise util.Abort("attempted bookmark write without sql connection")
@@ -963,7 +963,7 @@ def bookmarkwrite(orig, self):
                            VALUES(%s, 'bookmarks', %s, %s)""",
                            (repo.sqlreponame, k, hex(v)))
         repo.sqlconn.commit()
-        return orig(self)
+        return orig(self, fp)
     except:
         repo.sqlconn.rollback()
         raise
