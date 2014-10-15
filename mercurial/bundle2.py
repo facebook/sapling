@@ -321,15 +321,15 @@ def _processpart(op, part):
         try:
             handler = parthandlermapping.get(key)
             if handler is None:
-                raise error.BundleValueError(parttype=key)
+                raise error.UnsupportedPartError(parttype=key)
             op.ui.debug('found a handler for part %r\n' % parttype)
             unknownparams = part.mandatorykeys - handler.params
             if unknownparams:
                 unknownparams = list(unknownparams)
                 unknownparams.sort()
-                raise error.BundleValueError(parttype=key,
+                raise error.UnsupportedPartError(parttype=key,
                                                params=unknownparams)
-        except error.BundleValueError, exc:
+        except error.UnsupportedPartError, exc:
             if key != parttype: # mandatory parts
                 raise
             op.ui.debug('ignoring unsupported advisory part %s\n' % exc)
@@ -538,7 +538,7 @@ class unbundle20(unpackermixin):
         if name[0].islower():
             self.ui.debug("ignoring unknown parameter %r\n" % name)
         else:
-            raise error.BundleValueError(params=(name,))
+            raise error.UnsupportedPartError(params=(name,))
 
 
     def iterparts(self):
@@ -894,7 +894,7 @@ def handlereplycaps(op, inpart):
     if params is not None:
         kwargs['params'] = params.split('\0')
 
-    raise error.BundleValueError(**kwargs)
+    raise error.UnsupportedPartError(**kwargs)
 
 @parthandler('b2x:error:pushraced', ('message',))
 def handlereplycaps(op, inpart):
