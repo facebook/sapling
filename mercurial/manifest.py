@@ -38,8 +38,15 @@ class manifestdict(dict):
                 if flags:
                     ret._flags[fn] = flags
         return ret
-    def flagsdiff(self, d2):
-        return dicthelpers.diff(self._flags, d2._flags, "")
+
+    def diff(self, m2):
+        '''Finds changes between the current manifest and m2. The result is
+        returned as a dict with filename as key and values of the form
+        ((n1,n2),(fl1,fl2)), where n1/n2 is the nodeid in the current/other
+        manifest and fl1/fl2 is the flag in the current/other manifest.'''
+        flagsdiff = dicthelpers.diff(self._flags, m2._flags, "")
+        fdiff = dicthelpers.diff(self, m2)
+        return dicthelpers.join(fdiff, flagsdiff)
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""

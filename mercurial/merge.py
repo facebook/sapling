@@ -10,7 +10,7 @@ import struct
 from node import nullid, nullrev, hex, bin
 from i18n import _
 from mercurial import obsolete
-import error as errormod, util, filemerge, copies, subrepo, worker, dicthelpers
+import error as errormod, util, filemerge, copies, subrepo, worker
 import errno, os, shutil
 
 _pack = struct.pack
@@ -422,11 +422,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     aborts = []
     # Compare manifests
-    fdiff = dicthelpers.diff(m1, m2)
-    flagsdiff = m1.flagsdiff(m2)
-    diff12 = dicthelpers.join(fdiff, flagsdiff)
+    diff = m1.diff(m2)
 
-    for f, (n12, fl12) in diff12.iteritems():
+    for f, (n12, fl12) in diff.iteritems():
         if n12:
             n1, n2 = n12
         else: # file contents didn't change, but flags did
