@@ -2255,6 +2255,12 @@ class abstractsmartset(object):
         Return None if the set is empty"""
         raise NotImplementedError()
 
+    def __len__(self):
+        """return the length of the smartsets
+
+        This can be expensive on smartset that could be lazy otherwise."""
+        raise NotImplementedError()
+
     def reverse(self):
         """reverse the expected iteration order"""
         raise NotImplementedError()
