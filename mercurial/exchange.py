@@ -834,7 +834,14 @@ class pulloperation(object):
     def closetransaction(self):
         """close transaction if created"""
         if self._tr is not None:
+            repo = self.repo
+            cl = repo.unfiltered().changelog
+            p = cl.writepending() and repo.root or ""
+            p = cl.writepending() and repo.root or ""
+            repo.hook('b2x-pretransactionclose', throw=True, pending=p,
+                      **self._tr.hookargs)
             self._tr.close()
+            repo.hook('b2x-transactionclose', **self._tr.hookargs)
 
     def releasetransaction(self):
         """release transaction if created"""
