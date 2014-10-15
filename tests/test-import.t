@@ -589,7 +589,7 @@ Test importing a patch ending with a binary file removal
   $ hg init binaryremoval
   $ cd binaryremoval
   $ echo a > a
-  $ python -c "file('b', 'wb').write('a\x00b')"
+  $ $PYTHON -c "file('b', 'wb').write('a\x00b')"
   $ hg ci -Am addall
   adding a
   adding b

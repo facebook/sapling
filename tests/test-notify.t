@@ -176,7 +176,7 @@ of the very long subject line
 pull (minimal config)
 
   $ hg --traceback --cwd b pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n[\t ]", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n[\t ]", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -229,7 +229,7 @@ pull
   $ hg --cwd b rollback
   repository tip rolled back to revision 0 (undo pull)
   $ hg --traceback --cwd b pull ../a  | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -273,7 +273,7 @@ pull
   $ hg --cwd b rollback
   repository tip rolled back to revision 0 (undo pull)
   $ hg --traceback --cwd b pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -322,7 +322,7 @@ test merge
   $ hg ci -m merge -d '3 0'
   $ cd ..
   $ hg --traceback --cwd b pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -378,9 +378,9 @@ non-ascii content and truncation of multi-byte subject
   > EOF
   $ echo a >> a/a
   $ hg --cwd a --encoding utf-8 commit -A -d '0 0' \
-  >   -m `python -c 'print "\xc3\xa0\xc3\xa1\xc3\xa2\xc3\xa3\xc3\xa4"'`
+  >   -m `$PYTHON -c 'print "\xc3\xa0\xc3\xa1\xc3\xa2\xc3\xa3\xc3\xa4"'`
   $ hg --traceback --cwd b --encoding utf-8 pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -424,7 +424,7 @@ long lines
   > test = False
   > mbox = mbox
   > EOF
-  $ python -c 'file("a/a", "ab").write("no" * 500 + "\n")'
+  $ $PYTHON -c 'file("a/a", "ab").write("no" * 500 + "\n")'
   $ hg --cwd a commit -A -m "long line"
   $ hg --traceback --cwd b pull ../a
   pulling from ../a
@@ -435,7 +435,7 @@ long lines
   added 1 changesets with 1 changes to 1 files
   notify: sending 2 subscribers 1 changes
   (run 'hg update' to get a working copy)
-  $ python -c 'import sys,re; print re.sub("\n\t", " ", file("b/mbox").read()),'
+  $ $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", file("b/mbox").read()),'
   From test@test.com ... ... .. ..:..:.. .... (re)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
@@ -501,7 +501,7 @@ long lines
   $ echo a >> a/a
   $ hg --cwd a ci -m test -d '1 0'
   $ hg --traceback --cwd b pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets
@@ -531,7 +531,7 @@ from different branch
   $ echo a >> a/a
   $ hg --cwd a ci -m test -d '1 0'
   $ hg --traceback --cwd b pull ../a | \
-  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
   pulling from ../a
   searching for changes
   adding changesets

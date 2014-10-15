@@ -52,7 +52,7 @@ not testing these
   >          p4 add -t $T file_$T2
   >          ;;
   >       binary*)
-  >          python -c "file('file_$T2', 'wb').write('this is $T')"
+  >          $PYTHON -c "file('file_$T2', 'wb').write('this is $T')"
   >          p4 add -t $T file_$T2
   >          ;;
   >       *)

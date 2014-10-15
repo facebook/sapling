@@ -25,7 +25,7 @@
 
 Test different --eol values
 
-  $ python -c 'file("a", "wb").write("a\nbbb\ncc\n\nd\ne")'
+  $ $PYTHON -c 'file("a", "wb").write("a\nbbb\ncc\n\nd\ne")'
   $ hg ci -Am adda
   adding .hgignore
   adding a
@@ -89,7 +89,7 @@ auto EOL on LF file
 
 auto EOL on CRLF file
 
-  $ python -c 'file("a", "wb").write("a\r\nbbb\r\ncc\r\n\r\nd\r\ne")'
+  $ $PYTHON -c 'file("a", "wb").write("a\r\nbbb\r\ncc\r\n\r\nd\r\ne")'
   $ hg commit -m 'switch EOLs in a'
   $ hg --traceback --config patch.eol='auto' import eol.diff
   applying eol.diff
@@ -105,11 +105,11 @@ auto EOL on CRLF file
 
 auto EOL on new file or source without any EOL
 
-  $ python -c 'file("noeol", "wb").write("noeol")'
+  $ $PYTHON -c 'file("noeol", "wb").write("noeol")'
   $ hg add noeol
   $ hg commit -m 'add noeol'
-  $ python -c 'file("noeol", "wb").write("noeol\r\nnoeol\n")'
-  $ python -c 'file("neweol", "wb").write("neweol\nneweol\r\n")'
+  $ $PYTHON -c 'file("noeol", "wb").write("noeol\r\nnoeol\n")'
+  $ $PYTHON -c 'file("neweol", "wb").write("neweol\nneweol\r\n")'
   $ hg add neweol
   $ hg diff --git > noeol.diff
   $ hg revert --no-backup noeol neweol
@@ -127,10 +127,10 @@ auto EOL on new file or source without any EOL
 
 Test --eol and binary patches
 
-  $ python -c 'file("b", "wb").write("a\x00\nb\r\nd")'
+  $ $PYTHON -c 'file("b", "wb").write("a\x00\nb\r\nd")'
   $ hg ci -Am addb
   adding b
-  $ python -c 'file("b", "wb").write("a\x00\nc\r\nd")'
+  $ $PYTHON -c 'file("b", "wb").write("a\x00\nc\r\nd")'
   $ hg diff --git > bin.diff
   $ hg revert --no-backup b
 

@@ -207,7 +207,7 @@ too many labels
 
 binary file
 
-  $ python -c "f = file('binary-local', 'w'); f.write('\x00'); f.close()"
+  $ $PYTHON -c "f = file('binary-local', 'w'); f.write('\x00'); f.close()"
   $ cat orig >> binary-local
   $ python simplemerge -p binary-local base other
   warning: binary-local looks like a binary file.

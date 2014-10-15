@@ -81,12 +81,12 @@ Test 'file:' uri handling:
 It's tricky to make file:// URLs working on every platform with
 regular shell commands.
 
-  $ URL=`python -c "import os; print 'file://foobar' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
+  $ URL=`$PYTHON -c "import os; print 'file://foobar' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
   $ hg pull -q "$URL"
   abort: file:// URLs can only refer to localhost
   [255]
 
-  $ URL=`python -c "import os; print 'file://localhost' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
+  $ URL=`$PYTHON -c "import os; print 'file://localhost' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
   $ hg pull -q "$URL"
 
   $ cd ..

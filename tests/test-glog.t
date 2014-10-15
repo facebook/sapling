@@ -1631,7 +1631,7 @@ Test multiple --include/--exclude/paths
 
 Test glob expansion of pats
 
-  $ expandglobs=`python -c "import mercurial.util; \
+  $ expandglobs=`$PYTHON -c "import mercurial.util; \
   >   print mercurial.util.expandglobs and 'true' or 'false'"`
   $ if [ $expandglobs = "true" ]; then
   >    testlog 'a*';

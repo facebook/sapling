@@ -310,11 +310,11 @@ Test patterns:
 
 Test listfile and listfile0
 
-  $ python -c "file('listfile0', 'wb').write('fenugreek\0new\0')"
+  $ $PYTHON -c "file('listfile0', 'wb').write('fenugreek\0new\0')"
   $ hg debugwalk -I 'listfile0:listfile0'
   f  fenugreek  fenugreek
   f  new        new
-  $ python -c "file('listfile', 'wb').write('fenugreek\nnew\r\nmammals/skunk\n')"
+  $ $PYTHON -c "file('listfile', 'wb').write('fenugreek\nnew\r\nmammals/skunk\n')"
   $ hg debugwalk -I 'listfile:listfile'
   f  fenugreek      fenugreek
   f  mammals/skunk  mammals/skunk
@@ -336,7 +336,7 @@ Test split patterns on overflow
 
   $ cd t
   $ echo fennel > overflow.list
-  $ python -c "for i in xrange(20000 / 100): print 'x' * 100" >> overflow.list
+  $ $PYTHON -c "for i in xrange(20000 / 100): print 'x' * 100" >> overflow.list
   $ echo fenugreek >> overflow.list
   $ hg debugwalk 'listfile:overflow.list' 2>&1 | grep -v '^xxx'
   f  fennel     fennel     exact

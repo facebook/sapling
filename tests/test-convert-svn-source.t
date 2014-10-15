@@ -10,9 +10,9 @@
   $ svnadmin create svn-repo
   $ SVNREPOPATH=`pwd`/svn-repo
 #if windows
-  $ SVNREPOURL=file:///`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+  $ SVNREPOURL=file:///`$PYTHON -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
 #else
-  $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+  $ SVNREPOURL=file://`$PYTHON -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
 #endif
   $ INVALIDREVISIONID=svn:x2147622-4a9f-4db4-a8d3-13562ff547b2/proj%20B/mytrunk@1
   $ VALIDREVISIONID=svn:a2147622-4a9f-4db4-a8d3-13562ff547b2/proj%20B/mytrunk/mytrunk@1

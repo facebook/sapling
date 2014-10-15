@@ -118,7 +118,7 @@ and now for something completely different
   $ hg rem f
   $ hg ci -m 4
 
-  $ python -c 'file("bin", "wb").write("hello\x00\x0D\x0A")'
+  $ $PYTHON -c 'file("bin", "wb").write("hello\x00\x0D\x0A")'
   $ hg add bin
   $ hg ci -m 5
   $ hg log -v
@@ -342,7 +342,7 @@ and now for something completely different
   
   $ rm .hg/hgrc
   $ (echo some; echo text) > f3
-  $ python -c 'file("f4.bat", "wb").write("rem empty\x0D\x0A")'
+  $ $PYTHON -c 'file("f4.bat", "wb").write("rem empty\x0D\x0A")'
   $ hg add f3 f4.bat
   $ hg ci -m 6
   $ cat bin
@@ -395,7 +395,7 @@ Disable warning:
   $ cat f4.bat
   rem empty\r (esc)
 
-  $ python -c 'file("f5.sh", "wb").write("# empty\x0D\x0A")'
+  $ $PYTHON -c 'file("f5.sh", "wb").write("# empty\x0D\x0A")'
   $ hg add f5.sh
   $ hg ci -m 7
   $ cat f5.sh

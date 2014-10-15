@@ -2034,7 +2034,7 @@ Stop and restart with HGENCODING=cp932 and preferuncompressed
 commit message with Japanese Kanji 'Noh', which ends with '\x5c'
 
   $ echo foo >> foo
-  $ HGENCODING=cp932 hg ci -m `python -c 'print("\x94\x5c")'`
+  $ HGENCODING=cp932 hg ci -m `$PYTHON -c 'print("\x94\x5c")'`
 
 Graph json escape of multibyte character
 

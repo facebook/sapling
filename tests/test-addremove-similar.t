@@ -1,7 +1,7 @@
   $ hg init rep; cd rep
 
   $ touch empty-file
-  $ python -c 'for x in range(10000): print x' > large-file
+  $ $PYTHON -c 'for x in range(10000): print x' > large-file
 
   $ hg addremove
   adding empty-file
@@ -10,7 +10,7 @@
   $ hg commit -m A
 
   $ rm large-file empty-file
-  $ python -c 'for x in range(10,10000): print x' > another-file
+  $ $PYTHON -c 'for x in range(10,10000): print x' > another-file
 
   $ hg addremove -s50
   adding another-file
@@ -34,8 +34,8 @@ comparing two empty files caused ZeroDivisionError in the past
 
   $ hg init rep2; cd rep2
 
-  $ python -c 'for x in range(10000): print x' > large-file
-  $ python -c 'for x in range(50): print x' > tiny-file
+  $ $PYTHON -c 'for x in range(10000): print x' > large-file
+  $ $PYTHON -c 'for x in range(50): print x' > tiny-file
 
   $ hg addremove
   adding large-file
@@ -43,7 +43,7 @@ comparing two empty files caused ZeroDivisionError in the past
 
   $ hg commit -m A
 
-  $ python -c 'for x in range(70): print x' > small-file
+  $ $PYTHON -c 'for x in range(70): print x' > small-file
   $ rm tiny-file
   $ rm large-file
 

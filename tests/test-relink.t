@@ -47,7 +47,7 @@ don't sit forever trying to double-lock the source repo
 
 Test files are read in binary mode
 
-  $ python -c "file('.hg/store/data/dummy.i', 'wb').write('a\r\nb\n')"
+  $ $PYTHON -c "file('.hg/store/data/dummy.i', 'wb').write('a\r\nb\n')"
   $ cd ..
 
 
@@ -65,7 +65,7 @@ clone and pull to break links
   $ echo b >> b
   $ hg ci -m changeb
   created new head
-  $ python -c "file('.hg/store/data/dummy.i', 'wb').write('a\nb\r\n')"
+  $ $PYTHON -c "file('.hg/store/data/dummy.i', 'wb').write('a\nb\r\n')"
 
 
 relink

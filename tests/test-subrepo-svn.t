@@ -2,9 +2,9 @@
 
   $ SVNREPOPATH=`pwd`/svn-repo
 #if windows
-  $ SVNREPOURL=file:///`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+  $ SVNREPOURL=file:///`$PYTHON -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
 #else
-  $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+  $ SVNREPOURL=file://`$PYTHON -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
 #endif
 
 create subversion repo
@@ -242,7 +242,7 @@ debugsub in clone
 
 verify subrepo is contained within the repo directory
 
-  $ python -c "import os.path; print os.path.exists('s')"
+  $ $PYTHON -c "import os.path; print os.path.exists('s')"
   True
 
 update to nullrev (must delete the subrepo)

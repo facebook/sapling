@@ -110,7 +110,7 @@ follow
 
 match in last "line" without newline
 
-  $ python -c 'fp = open("noeol", "wb"); fp.write("no infinite loop"); fp.close();'
+  $ $PYTHON -c 'fp = open("noeol", "wb"); fp.write("no infinite loop"); fp.close();'
   $ hg ci -Amnoeol
   adding noeol
   $ hg grep loop

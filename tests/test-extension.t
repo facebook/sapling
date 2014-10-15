@@ -729,7 +729,7 @@ Older extension is tested with current version, the other only with newer:
   ** Extensions loaded: throw, older
 
 Declare the version as supporting this hg version, show regular bts link:
-  $ hgver=`python -c 'from mercurial import util; print util.version().split("+")[0]'`
+  $ hgver=`$PYTHON -c 'from mercurial import util; print util.version().split("+")[0]'`
   $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
   $ rm -f throw.pyc throw.pyo
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
