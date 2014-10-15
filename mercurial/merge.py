@@ -424,7 +424,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     # Compare manifests
     diff = m1.diff(m2)
 
-    for f, ((n1, n2), (fl1, fl2)) in diff.iteritems():
+    for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
         if partial and not partial(f):
             continue
         if n1 and n2:

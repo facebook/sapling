@@ -42,7 +42,7 @@ class manifestdict(dict):
     def diff(self, m2):
         '''Finds changes between the current manifest and m2. The result is
         returned as a dict with filename as key and values of the form
-        ((n1,n2),(fl1,fl2)), where n1/n2 is the nodeid in the current/other
+        ((n1,fl1),(n2,fl2)), where n1/n2 is the nodeid in the current/other
         manifest and fl1/fl2 is the flag in the current/other manifest. Where
         the file does not exist, the nodeid will be None and the flags will be
         the empty string.'''
@@ -55,12 +55,12 @@ class manifestdict(dict):
             if n2 is None:
                 fl2 = ''
             if n1 != n2 or fl1 != fl2:
-                diff[fn] = ((n1, n2), (fl1, fl2))
+                diff[fn] = ((n1, fl1), (n2, fl2))
 
         for fn, n2 in m2.iteritems():
             if fn not in self:
                 fl2 = m2._flags.get(fn, '')
-                diff[fn] = ((None, n2), ('', fl2))
+                diff[fn] = ((None, ''), (n2, fl2))
 
         return diff
 
