@@ -368,7 +368,7 @@ class GitHandler(object):
         else:
             reqrefs = refs
 
-        commits = [bin(c) for c in self.getnewgitcommits(reqrefs)[1]]
+        commits = [bin(c) for c in self.get_git_incoming(reqrefs)[1]]
 
         b = overlayrepo(self, commits, refs)
 
@@ -660,7 +660,7 @@ class GitHandler(object):
 
         return message, git_extra
 
-    def getnewgitcommits(self, refs):
+    def get_git_incoming(self, refs):
         # import heads and fetched tags as remote references
         todo = []
         done = set()
@@ -720,7 +720,7 @@ class GitHandler(object):
         return commit_cache, commits
 
     def import_git_objects(self, remote_name=None, refs=None):
-        commit_cache, commits = self.getnewgitcommits(refs)
+        commit_cache, commits = self.get_git_incoming(refs)
         # import each of the commits, oldest first
         total = len(commits)
         if total:
