@@ -90,15 +90,6 @@ def reposetup(ui, repo):
             working = ctx2.rev() is None
             parentworking = working and ctx1 == self['.']
 
-            def inctx(file, ctx):
-                try:
-                    if ctx.rev() is None:
-                        return file in ctx.manifest()
-                    ctx[file]
-                    return True
-                except KeyError:
-                    return False
-
             if match is None:
                 match = match_.always(self.root, self.getcwd())
 
@@ -182,7 +173,7 @@ def reposetup(ui, repo):
 
                         for lfile in tocheck:
                             standin = lfutil.standin(lfile)
-                            if inctx(standin, ctx1):
+                            if standin in ctx1:
                                 if ctx1[standin].data().strip() != \
                                         lfutil.hashfile(self.wjoin(lfile)):
                                     modified.append(lfile)
