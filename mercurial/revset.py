@@ -2776,6 +2776,11 @@ class generatorset(abstractsmartset):
             self.fastasc = asc.__iter__
             self.fastdesc = asc.__reversed__
 
+    def __len__(self):
+        for x in self._consumegen():
+            pass
+        return len(self._genlist)
+
     def sort(self, reverse=False):
         self._ascending = not reverse
 
