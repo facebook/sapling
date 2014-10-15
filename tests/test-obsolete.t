@@ -73,6 +73,7 @@ Killing a single changeset with itself should fail
   $ cd ..
 
 Killing a single changeset with replacement
+(and testing the format option)
 
   $ hg init tmpb
   $ cd tmpb
@@ -84,7 +85,7 @@ Killing a single changeset with replacement
   $ mkcommit new_c
   created new head
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
-  $ hg debugobsolete --flag 12 `getid original_c`  `getid new_c` -d '56 120'
+  $ hg debugobsolete --config format.obsstore-version=0 --flag 12 `getid original_c`  `getid new_c` -d '56 120'
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
   2:245bde4270cd add original_c
   $ hg debugrevlog -cd
@@ -95,6 +96,11 @@ Killing a single changeset with replacement
       3     1    -1   204   271        204  204   59    0      66       258           0     2        0
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Wed Dec 31 23:58:56 1969 -0002) {'user': 'test'}
+
+(check for version number of the obsstore)
+
+  $ dd bs=1 count=1 if=.hg/store/obsstore 2>/dev/null
+  \x00 (no-eol) (esc)
 
 do it again (it read the obsstore before adding new changeset)
 

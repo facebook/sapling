@@ -405,7 +405,7 @@ class localrepository(object):
         # rely on obsstore class default when possible.
         kwargs = {}
         if defaultformat is not None:
-            defaultformat['defaultformat'] = defaultformat
+            kwargs['defaultformat'] = defaultformat
         store = obsolete.obsstore(self.sopener, **kwargs)
         if store and not obsolete._enabled:
             # message is rare enough to not be translated
