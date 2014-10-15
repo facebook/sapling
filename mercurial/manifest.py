@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import mdiff, parsers, error, revlog, util, dicthelpers
+import mdiff, parsers, error, revlog, util
 import array, struct
 
 class manifestdict(dict):
@@ -43,10 +43,26 @@ class manifestdict(dict):
         '''Finds changes between the current manifest and m2. The result is
         returned as a dict with filename as key and values of the form
         ((n1,n2),(fl1,fl2)), where n1/n2 is the nodeid in the current/other
-        manifest and fl1/fl2 is the flag in the current/other manifest.'''
-        flagsdiff = dicthelpers.diff(self._flags, m2._flags, "")
-        fdiff = dicthelpers.diff(self, m2)
-        return dicthelpers.join(fdiff, flagsdiff)
+        manifest and fl1/fl2 is the flag in the current/other manifest. Where
+        the file does not exist, the nodeid will be None and the flags will be
+        the empty string.'''
+        diff = {}
+
+        for fn, n1 in self.iteritems():
+            fl1 = self._flags.get(fn, '')
+            n2 = m2.get(fn, None)
+            fl2 = m2._flags.get(fn, '')
+            if n2 is None:
+                fl2 = ''
+            if n1 != n2 or fl1 != fl2:
+                diff[fn] = ((n1, n2), (fl1, fl2))
+
+        for fn, n2 in m2.iteritems():
+            if fn not in self:
+                fl2 = m2._flags.get(fn, '')
+                diff[fn] = ((None, n2), ('', fl2))
+
+        return diff
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
