@@ -18,6 +18,7 @@ setup(
         'gitlookup',
         'gitrevset',
         'phrevset',
+        'reflog',
         'smartlog',
         'tweakdefaults',
     ],
