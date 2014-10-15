@@ -378,11 +378,7 @@ class changectx(basectx):
 
         try:
             if isinstance(changeid, int):
-                try:
-                    self._node = repo.changelog.node(changeid)
-                except IndexError:
-                    raise error.RepoLookupError(
-                        _("unknown revision '%s'") % changeid)
+                self._node = repo.changelog.node(changeid)
                 self._rev = changeid
                 return
             if isinstance(changeid, long):
@@ -463,8 +459,8 @@ class changectx(basectx):
                     changeid = hex(changeid)
             except TypeError:
                 pass
-        except Exception:
-            raise
+        except IndexError:
+            pass
         raise error.RepoLookupError(
             _("unknown revision '%s'") % changeid)
 
