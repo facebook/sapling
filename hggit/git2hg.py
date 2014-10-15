@@ -9,30 +9,34 @@ def find_incoming(git_object_store, git_map, refs):
     git_map is a map with keys being Git commits that have already been imported
     refs is a map of refs to SHAs that we're interested in.'''
 
-    todo = []
     done = set()
     commit_cache = {}
-
-    # get a list of all the head shas
-    seenheads = set()
-    for sha in refs.itervalues():
-        # refs could contain refs on the server that we haven't pulled down the
-        # objects for
-        if sha in git_object_store:
-            obj = git_object_store[sha]
-            while isinstance(obj, Tag):
-                obj_type, sha = obj.object
-                obj = git_object_store[sha]
-            if isinstance (obj, Commit) and sha not in seenheads:
-                seenheads.add(sha)
-                todo.append(sha)
 
     # sort by commit date
     def commitdate(sha):
         obj = git_object_store[sha]
         return obj.commit_time-obj.commit_timezone
 
-    todo.sort(key=commitdate, reverse=True)
+    # get a list of all the head shas
+    def get_heads(refs):
+        todo = []
+        seenheads = set()
+        for sha in refs.itervalues():
+            # refs could contain refs on the server that we haven't pulled down
+            # the objects for
+            if sha in git_object_store:
+                obj = git_object_store[sha]
+                while isinstance(obj, Tag):
+                    obj_type, sha = obj.object
+                    obj = git_object_store[sha]
+                if isinstance(obj, Commit) and sha not in seenheads:
+                    seenheads.add(sha)
+                    todo.append(sha)
+
+        todo.sort(key=commitdate, reverse=True)
+        return todo
+
+    todo = get_heads(refs)
 
     # traverse the heads getting a list of all the unique commits in
     # topological order
