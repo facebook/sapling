@@ -663,6 +663,8 @@ class GitHandler(object):
     def get_git_incoming(self, refs):
         if refs is None:
             refs = self.git.refs.as_dict()
+        git_object_store = self.git.object_store
+
         # import heads and fetched tags as remote references
         todo = []
         done = set()
@@ -674,18 +676,18 @@ class GitHandler(object):
             for sha in refs.itervalues():
                 # refs contains all the refs in the server, not just the ones
                 # we are pulling
-                if sha in self.git.object_store:
-                    obj = self.git.get_object(sha)
+                if sha in git_object_store:
+                    obj = git_object_store[sha]
                     while isinstance(obj, Tag):
                         obj_type, sha = obj.object
-                        obj = self.git.get_object(sha)
+                        obj = git_object_store[sha]
                     if isinstance (obj, Commit) and sha not in seenheads:
                         seenheads.add(sha)
                         todo.append(sha)
 
         # sort by commit date
         def commitdate(sha):
-            obj = self.git.get_object(sha)
+            obj = git_object_store[sha]
             return obj.commit_time-obj.commit_timezone
 
         todo.sort(key=commitdate, reverse=True)
@@ -703,7 +705,7 @@ class GitHandler(object):
             if sha in commit_cache:
                 obj = commit_cache[sha]
             else:
-                obj = self.git.get_object(sha)
+                obj = git_object_store[sha]
                 commit_cache[sha] = obj
             assert isinstance(obj, Commit)
             for p in obj.parents:
