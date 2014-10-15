@@ -9,7 +9,6 @@ def find_incoming(git_object_store, git_map, refs):
     git_map is a map with keys being Git commits that have already been imported
     refs is a map of refs to SHAs that we're interested in.'''
 
-    # import heads and fetched tags as remote references
     todo = []
     done = set()
     commit_cache = {}
@@ -17,8 +16,8 @@ def find_incoming(git_object_store, git_map, refs):
     # get a list of all the head shas
     seenheads = set()
     for sha in refs.itervalues():
-        # refs contains all the refs in the server, not just the ones
-        # we are pulling
+        # refs could contain refs on the server that we haven't pulled down the
+        # objects for
         if sha in git_object_store:
             obj = git_object_store[sha]
             while isinstance(obj, Tag):
