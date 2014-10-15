@@ -22,7 +22,7 @@ bookmarktype = 'bookmark'
 workingcopyparenttype = 'workingcopyparent'
 
 def extsetup(ui):
-    wrapfunction(bookmarks.bmstore, 'write', recordbookmarks)
+    wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
     wrapfunction(dirstate.dirstate, 'write', recorddirstateparents)
 
 def reposetup(ui, repo):
@@ -32,7 +32,7 @@ def reposetup(ui, repo):
         repo.reflog = reflog(repo, currentcommand)
         repo.dirstate.repo = repo
 
-def recordbookmarks(orig, self):
+def recordbookmarks(orig, self, fp):
     """Records all bookmark changes to the reflog."""
     repo = self._repo
     oldmarks = bookmarks.bmstore(repo)
@@ -40,7 +40,7 @@ def recordbookmarks(orig, self):
         oldvalue = oldmarks.get(mark, nullid)
         if value != oldvalue:
             repo.reflog.addentry(bookmarktype, mark, oldvalue, value)
-    return orig(self)
+    return orig(self, fp)
 
 def recorddirstateparents(orig, self):
     """Records all dirstate parent changes to the reflog."""

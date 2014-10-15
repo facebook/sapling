@@ -115,3 +115,17 @@ Test JSON output
     "user": "*" (glob)
    }
   ]
+
+Test pulls
+
+  $ hg init ../repo2
+  $ hg push -q -B foo ../repo2
+  $ hg strip -q -r . --config extensions.strip=
+  $ hg pull -q ../repo2
+  $ hg reflog foo
+  Previous locations of 'foo':
+  1e6c11564562  pull -q ../repo2
+  cb9a9f314b8b  strip -q -r . --config extensions.strip=
+  1e6c11564562  up
+  cb9a9f314b8b  book -f foo
+  1e6c11564562  book -r tip foo
