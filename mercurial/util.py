@@ -372,6 +372,9 @@ class sortdict(dict):
     def iteritems(self):
         for k in self._list:
             yield k, self[k]
+    def insert(self, index, key, val):
+        self._list.insert(index, key)
+        dict.__setitem__(self, key, val)
 
 class lrucachedict(object):
     '''cache most recent gets from or sets to this dictionary'''
