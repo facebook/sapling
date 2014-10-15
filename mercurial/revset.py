@@ -2445,11 +2445,6 @@ class filteredset(abstractsmartset):
         l = baseset([r for r in self])
         return len(l)
 
-    def __getitem__(self, x):
-        # Basic implementation to be changed in future patches.
-        l = baseset([r for r in self])
-        return l[x]
-
     def sort(self, reverse=False):
         self._subset.sort(reverse=reverse)
 
