@@ -376,92 +376,95 @@ class changectx(basectx):
             changeid = '.'
         self._repo = repo
 
-        if isinstance(changeid, int):
-            try:
-                self._node = repo.changelog.node(changeid)
-            except IndexError:
-                raise error.RepoLookupError(
-                    _("unknown revision '%s'") % changeid)
-            self._rev = changeid
-            return
-        if isinstance(changeid, long):
-            changeid = str(changeid)
-        if changeid == '.':
-            self._node = repo.dirstate.p1()
-            self._rev = repo.changelog.rev(self._node)
-            return
-        if changeid == 'null':
-            self._node = nullid
-            self._rev = nullrev
-            return
-        if changeid == 'tip':
-            self._node = repo.changelog.tip()
-            self._rev = repo.changelog.rev(self._node)
-            return
-        if len(changeid) == 20:
-            try:
-                self._node = changeid
-                self._rev = repo.changelog.rev(changeid)
-                return
-            except LookupError:
-                pass
-
         try:
-            r = int(changeid)
-            if str(r) != changeid:
-                raise ValueError
-            l = len(repo.changelog)
-            if r < 0:
-                r += l
-            if r < 0 or r >= l:
-                raise ValueError
-            self._rev = r
-            self._node = repo.changelog.node(r)
-            return
-        except (ValueError, OverflowError, IndexError):
-            pass
-
-        if len(changeid) == 40:
-            try:
-                self._node = bin(changeid)
+            if isinstance(changeid, int):
+                try:
+                    self._node = repo.changelog.node(changeid)
+                except IndexError:
+                    raise error.RepoLookupError(
+                        _("unknown revision '%s'") % changeid)
+                self._rev = changeid
+                return
+            if isinstance(changeid, long):
+                changeid = str(changeid)
+            if changeid == '.':
+                self._node = repo.dirstate.p1()
                 self._rev = repo.changelog.rev(self._node)
                 return
-            except (TypeError, LookupError):
+            if changeid == 'null':
+                self._node = nullid
+                self._rev = nullrev
+                return
+            if changeid == 'tip':
+                self._node = repo.changelog.tip()
+                self._rev = repo.changelog.rev(self._node)
+                return
+            if len(changeid) == 20:
+                try:
+                    self._node = changeid
+                    self._rev = repo.changelog.rev(changeid)
+                    return
+                except LookupError:
+                    pass
+
+            try:
+                r = int(changeid)
+                if str(r) != changeid:
+                    raise ValueError
+                l = len(repo.changelog)
+                if r < 0:
+                    r += l
+                if r < 0 or r >= l:
+                    raise ValueError
+                self._rev = r
+                self._node = repo.changelog.node(r)
+                return
+            except (ValueError, OverflowError, IndexError):
                 pass
 
-        if changeid in repo._bookmarks:
-            self._node = repo._bookmarks[changeid]
-            self._rev = repo.changelog.rev(self._node)
-            return
-        if changeid in repo._tagscache.tags:
-            self._node = repo._tagscache.tags[changeid]
-            self._rev = repo.changelog.rev(self._node)
-            return
-        try:
-            self._node = repo.branchtip(changeid)
-            self._rev = repo.changelog.rev(self._node)
-            return
-        except error.RepoLookupError:
-            pass
+            if len(changeid) == 40:
+                try:
+                    self._node = bin(changeid)
+                    self._rev = repo.changelog.rev(self._node)
+                    return
+                except (TypeError, LookupError):
+                    pass
 
-        self._node = repo.changelog._partialmatch(changeid)
-        if self._node is not None:
-            self._rev = repo.changelog.rev(self._node)
-            return
+            if changeid in repo._bookmarks:
+                self._node = repo._bookmarks[changeid]
+                self._rev = repo.changelog.rev(self._node)
+                return
+            if changeid in repo._tagscache.tags:
+                self._node = repo._tagscache.tags[changeid]
+                self._rev = repo.changelog.rev(self._node)
+                return
+            try:
+                self._node = repo.branchtip(changeid)
+                self._rev = repo.changelog.rev(self._node)
+                return
+            except error.RepoLookupError:
+                pass
 
-        # lookup failed
-        # check if it might have come from damaged dirstate
-        #
-        # XXX we could avoid the unfiltered if we had a recognizable exception
-        # for filtered changeset access
-        if changeid in repo.unfiltered().dirstate.parents():
-            raise error.Abort(_("working directory has unknown parent '%s'!")
-                              % short(changeid))
-        try:
-            if len(changeid) == 20:
-                changeid = hex(changeid)
-        except TypeError:
-            pass
+            self._node = repo.changelog._partialmatch(changeid)
+            if self._node is not None:
+                self._rev = repo.changelog.rev(self._node)
+                return
+
+            # lookup failed
+            # check if it might have come from damaged dirstate
+            #
+            # XXX we could avoid the unfiltered if we had a recognizable
+            # exception for filtered changeset access
+            if changeid in repo.unfiltered().dirstate.parents():
+                msg = _("working directory has unknown parent '%s'!")
+                raise error.Abort(msg % short(changeid))
+            try:
+                if len(changeid) == 20:
+                    changeid = hex(changeid)
+            except TypeError:
+                pass
+        except Exception:
+            raise
         raise error.RepoLookupError(
             _("unknown revision '%s'") % changeid)
 
