@@ -2907,11 +2907,6 @@ class _spanset(abstractsmartset):
                     count += 1
             return abs(self._end - self._start) - count
 
-    def __getitem__(self, x):
-        # Basic implementation to be changed in future patches.
-        l = baseset([r for r in self])
-        return l[x]
-
     def isascending(self):
         return self._start <= self._end
 
