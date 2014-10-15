@@ -190,12 +190,14 @@ editcomment = _("""# Edit history between %s and %s
 
 class histeditstate(object):
     def __init__(self, repo, parentctx=None, rules=None, keep=None,
-            topmost=None, replacements=None):
+            topmost=None, replacements=None, lock=None, wlock=None):
         self.repo = repo
         self.rules = rules
         self.keep = keep
         self.topmost = topmost
         self.parentctx = parentctx
+        self.lock = lock
+        self.wlock = wlock
         if replacements is None:
             self.replacements = []
         else:
@@ -537,15 +539,15 @@ def histedit(ui, repo, *freeargs, **opts):
     for intentional "edit" command, but also for resolving unexpected
     conflicts).
     """
-    lock = wlock = None
+    state = histeditstate(repo)
     try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-        _histedit(ui, repo, *freeargs, **opts)
+        state.wlock = repo.wlock()
+        state.lock = repo.lock()
+        _histedit(ui, repo, state, *freeargs, **opts)
     finally:
-        release(lock, wlock)
+        release(state.lock, state.wlock)
 
-def _histedit(ui, repo, *freeargs, **opts):
+def _histedit(ui, repo, state, *freeargs, **opts):
     # TODO only abort if we try and histedit mq patches, not just
     # blanket if mq patches are applied somewhere
     mq = getattr(repo, 'mq', None)
@@ -660,8 +662,11 @@ def _histedit(ui, repo, *freeargs, **opts):
 
         parentctx = repo[root].parents()[0]
 
-        state = histeditstate(repo, parentctx, rules, keep, topmost,
-                    replacements)
+        state.parentctx = parentctx
+        state.rules = rules
+        state.keep = keep
+        state.topmost = topmost
+        state.replacements = replacements
 
     while state.rules:
         state.write()
