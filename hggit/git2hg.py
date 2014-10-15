@@ -1,5 +1,6 @@
 # git2hg.py - convert Git repositories and commits to Mercurial ones
 
+import urllib
 from dulwich.objects import Commit, Tag
 
 def find_incoming(git_object_store, git_map, refs):
@@ -77,3 +78,48 @@ class GitIncomingResult(object):
     def __init__(self, commits, commit_cache):
         self.commits = commits
         self.commit_cache = commit_cache
+
+def extract_hg_metadata(message, git_extra):
+    split = message.split("\n--HG--\n", 1)
+    renames = {}
+    extra = {}
+    branch = False
+    if len(split) == 2:
+        message, meta = split
+        lines = meta.split("\n")
+        for line in lines:
+            if line == '':
+                continue
+
+            if ' : ' not in line:
+                break
+            command, data = line.split(" : ", 1)
+
+            if command == 'rename':
+                before, after = data.split(" => ", 1)
+                renames[after] = before
+            if command == 'branch':
+                branch = data
+            if command == 'extra':
+                k, v = data.split(" : ", 1)
+                extra[k] = urllib.unquote(v)
+
+    git_fn = 0
+    for field, data in git_extra:
+        if field.startswith('HG:'):
+            command = field[3:]
+            if command == 'rename':
+                before, after = data.split(':', 1)
+                renames[urllib.unquote(after)] = urllib.unquote(before)
+            elif command == 'extra':
+                k, v = data.split(':', 1)
+                extra[urllib.unquote(k)] = urllib.unquote(v)
+        else:
+            # preserve ordering in Git by using an incrementing integer for
+            # each field. Note that extra metadata in Git is an ordered list
+            # of pairs.
+            hg_field = 'GIT%d-%s' % (git_fn, field)
+            git_fn += 1
+            extra[urllib.quote(hg_field)] = urllib.quote(data)
+
+    return (message, renames, branch, extra)

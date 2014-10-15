@@ -690,7 +690,7 @@ class GitHandler(object):
         self.ui.debug(_("importing: %s\n") % commit.id)
 
         (strip_message, hg_renames,
-         hg_branch, extra) = self.extract_hg_metadata(
+         hg_branch, extra) = git2hg.extract_hg_metadata(
              commit.message, commit.extra)
 
         gparents = map(self.map_hg_get, commit.parents)
@@ -1248,51 +1248,6 @@ class GitHandler(object):
         if mode in convert:
             return convert[mode]
         return ''
-
-    def extract_hg_metadata(self, message, git_extra):
-        split = message.split("\n--HG--\n", 1)
-        renames = {}
-        extra = {}
-        branch = False
-        if len(split) == 2:
-            message, meta = split
-            lines = meta.split("\n")
-            for line in lines:
-                if line == '':
-                    continue
-
-                if ' : ' not in line:
-                    break
-                command, data = line.split(" : ", 1)
-
-                if command == 'rename':
-                    before, after = data.split(" => ", 1)
-                    renames[after] = before
-                if command == 'branch':
-                    branch = data
-                if command == 'extra':
-                    k, v = data.split(" : ", 1)
-                    extra[k] = urllib.unquote(v)
-
-        git_fn = 0
-        for field, data in git_extra:
-            if field.startswith('HG:'):
-                command = field[3:]
-                if command == 'rename':
-                    before, after = data.split(':', 1)
-                    renames[urllib.unquote(after)] = urllib.unquote(before)
-                elif command == 'extra':
-                    k, v = data.split(':', 1)
-                    extra[urllib.unquote(k)] = urllib.unquote(v)
-            else:
-                # preserve ordering in Git by using an incrementing integer for
-                # each field. Note that extra metadata in Git is an ordered list
-                # of pairs.
-                hg_field = 'GIT%d-%s' % (git_fn, field)
-                git_fn += 1
-                extra[urllib.quote(hg_field)] = urllib.quote(data)
-
-        return (message, renames, branch, extra)
 
     def get_file(self, commit, f):
         otree = self.git.tree(commit.tree)
