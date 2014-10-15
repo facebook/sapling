@@ -569,9 +569,7 @@ def _histedit(ui, repo, *freeargs, **opts):
     # rebuild state
     if goal == 'continue':
         state = readstate(repo)
-        state.parentctx, repl = bootstrapcontinue(ui, repo, state.parentctx,
-                state.rules, opts)
-        state.replacements.extend(repl)
+        state = bootstrapcontinue(ui, state, opts)
     elif goal == 'abort':
         state = readstate(repo)
         mapping, tmpnodes, leafs, _ntm = processreplacement(repo,
@@ -702,8 +700,9 @@ def gatherchildren(repo, ctx):
         newchildren.pop(0)  # remove ctx
     return newchildren
 
-def bootstrapcontinue(ui, repo, parentctx, rules, opts):
-    action, currentnode = rules.pop(0)
+def bootstrapcontinue(ui, state, opts):
+    repo, parentctx = state.repo, state.parentctx
+    action, currentnode = state.rules.pop(0)
     ctx = repo[currentnode]
 
     newchildren = gatherchildren(repo, parentctx)
@@ -758,8 +757,11 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
     elif newchildren:
         # otherwise update "parentctx" before proceeding to further operation
         parentctx = repo[newchildren[-1]]
-    return parentctx, replacements
 
+    state.parentctx = parentctx
+    state.replacements.extend(replacements)
+
+    return state
 
 def between(repo, old, new, keep):
     """select and validate the set of revision to edit
