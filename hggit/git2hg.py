@@ -37,7 +37,6 @@ def find_incoming(git_object_store, git_map, refs):
     # traverse the heads getting a list of all the unique commits in
     # topological order
     commits = []
-    seen = set(todo)
     while todo:
         sha = todo[-1]
         if sha in done or sha in git_map:
