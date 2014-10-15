@@ -560,20 +560,27 @@ def _histedit(ui, repo, *freeargs, **opts):
                     _('histedit requires exactly one ancestor revision'))
 
 
+    replacements = []
+    keep = opts.get('keep', False)
+
+    # rebuild state
     if goal == 'continue':
-        (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
-        parentctx = repo[parentctxnode]
-        parentctx, repl = bootstrapcontinue(ui, repo, parentctx, rules, opts)
-        replacements.extend(repl)
+        state = readstate(repo)
+        parentctx = repo[state.parentctxnode]
+        parentctx, repl = bootstrapcontinue(ui, repo, parentctx, state.rules,
+                opts)
+        state.replacements.extend(repl)
+        state.parentctxnode = parentctx.node()
     elif goal == 'abort':
-        (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
-        mapping, tmpnodes, leafs, _ntm = processreplacement(repo, replacements)
-        ui.debug('restore wc to old parent %s\n' % node.short(topmost))
+        state = readstate(repo)
+        mapping, tmpnodes, leafs, _ntm = processreplacement(repo,
+                state.replacements)
+        ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
         # check whether we should update away
         parentnodes = [c.node() for c in repo[None].parents()]
-        for n in leafs | set([parentctxnode]):
+        for n in leafs | set([state.parentctxnode]):
             if n in parentnodes:
-                hg.clean(repo, topmost)
+                hg.clean(repo, state.topmost)
                 break
         else:
             pass
@@ -599,7 +606,6 @@ def _histedit(ui, repo, *freeargs, **opts):
                     'exactly one common root'))
             root = rr[0].node()
 
-        keep = opts.get('keep', False)
         revs = between(repo, root, topmost, keep)
         if not revs:
             raise util.Abort(_('%s is not an ancestor of working directory') %
@@ -629,20 +635,25 @@ def _histedit(ui, repo, *freeargs, **opts):
         rules = verifyrules(rules, repo, ctxs)
 
         parentctx = repo[root].parents()[0]
-        replacements = []
 
+        state = histeditstate(repo, parentctx.node(), rules, keep,
+                    topmost, replacements)
 
-    while rules:
-        writestate(repo, parentctx.node(), rules, keep, topmost, replacements)
-        action, ha = rules.pop(0)
+    while state.rules:
+        state.write()
+        action, ha = state.rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha))
         actfunc = actiontable[action]
-        parentctx, replacement_ = actfunc(ui, repo, parentctx, ha, opts)
-        replacements.extend(replacement_)
+        parentctx = repo[state.parentctxnode]
+        parentctx, replacement_ = actfunc(ui, repo, parentctx,
+                ha, opts)
+        state.parentctxnode = parentctx.node()
+        state.replacements.extend(replacement_)
 
-    hg.update(repo, parentctx.node())
+    hg.update(repo, state.parentctxnode)
 
-    mapping, tmpnodes, created, ntm = processreplacement(repo, replacements)
+    mapping, tmpnodes, created, ntm = processreplacement(repo,
+            state.replacements)
     if mapping:
         for prec, succs in mapping.iteritems():
             if not succs:
@@ -657,7 +668,7 @@ def _histedit(ui, repo, *freeargs, **opts):
 
     if not keep:
         if mapping:
-            movebookmarks(ui, repo, mapping, topmost, ntm)
+            movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             markers = []
@@ -767,23 +778,20 @@ def between(repo, old, new, keep):
             raise util.Abort(_('cannot edit immutable changeset: %s') % root)
     return [c.node() for c in ctxs]
 
-
-def writestate(repo, parentnode, rules, keep, topmost, replacements):
-    fp = open(os.path.join(repo.path, 'histedit-state'), 'w')
-    pickle.dump((parentnode, rules, keep, topmost, replacements), fp)
-    fp.close()
-
 def readstate(repo):
-    """Returns a tuple of (parentnode, rules, keep, topmost, replacements).
+    """Reads a state from file and returns a histeditstate object
     """
     try:
-        fp = open(os.path.join(repo.path, 'histedit-state'))
+        fp = repo.vfs('histedit-state', 'r')
     except IOError, err:
         if err.errno != errno.ENOENT:
             raise
         raise util.Abort(_('no histedit in progress'))
-    return pickle.load(fp)
 
+    (parentctxnode, rules, keep, topmost, replacements) = pickle.load(fp)
+
+    return histeditstate(repo, parentctxnode, rules,
+        keep, topmost, replacements)
 
 def makedesc(c):
     """build a initial action line for a ctx `c`
@@ -950,12 +958,12 @@ def cleanupnode(ui, repo, name, nodes):
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('histedit-state')):
         return
-    (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
-    if rules:
+    state = readstate(repo)
+    if state.rules:
         # i18n: column positioning for "hg summary"
         ui.write(_('hist:   %s (histedit --continue)\n') %
                  (ui.label(_('%d remaining'), 'histedit.remaining') %
-                  len(rules)))
+                  len(state.rules)))
 
 def extsetup(ui):
     cmdutil.summaryhooks.add('histedit', summaryhook)
