@@ -201,6 +201,24 @@ class histeditstate(object):
         else:
             self.replacements = replacements
 
+    def read(self):
+        """Reads a state from file and returns a histeditstate object
+        """
+        try:
+            fp = self.repo.vfs('histedit-state', 'r')
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+            raise util.Abort(_('no histedit in progress'))
+
+        (parentctxnode, rules, keep, topmost, replacements) = pickle.load(fp)
+
+        self.parentctx = self.repo[parentctxnode]
+        self.rules = rules
+        self.keep = keep
+        self.topmost = topmost
+        self.replacements = replacements
+
     def write(self):
         fp = self.repo.vfs('histedit-state', 'w')
         pickle.dump((self.parentctx.node(), self.rules, self.keep,
@@ -574,10 +592,12 @@ def _histedit(ui, repo, *freeargs, **opts):
 
     # rebuild state
     if goal == 'continue':
-        state = readstate(repo)
+        state = histeditstate(repo)
+        state.read()
         state = bootstrapcontinue(ui, state, opts)
     elif goal == 'abort':
-        state = readstate(repo)
+        state = histeditstate(repo)
+        state.read()
         mapping, tmpnodes, leafs, _ntm = processreplacement(repo, state)
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
         # check whether we should update away
@@ -640,8 +660,8 @@ def _histedit(ui, repo, *freeargs, **opts):
 
         parentctx = repo[root].parents()[0]
 
-        state = histeditstate(repo, parentctx, rules, keep,
-                    topmost, replacements)
+        state = histeditstate(repo, parentctx, rules, keep, topmost,
+                    replacements)
 
     while state.rules:
         state.write()
@@ -781,21 +801,6 @@ def between(repo, old, new, keep):
         if not root.mutable():
             raise util.Abort(_('cannot edit immutable changeset: %s') % root)
     return [c.node() for c in ctxs]
-
-def readstate(repo):
-    """Reads a state from file and returns a histeditstate object
-    """
-    try:
-        fp = repo.vfs('histedit-state', 'r')
-    except IOError, err:
-        if err.errno != errno.ENOENT:
-            raise
-        raise util.Abort(_('no histedit in progress'))
-
-    (parentctxnode, rules, keep, topmost, replacements) = pickle.load(fp)
-
-    return histeditstate(repo, repo[parentctxnode], rules,
-        keep, topmost, replacements)
 
 def makedesc(c):
     """build a initial action line for a ctx `c`
@@ -963,7 +968,8 @@ def cleanupnode(ui, repo, name, nodes):
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('histedit-state')):
         return
-    state = readstate(repo)
+    state = histeditstate(repo)
+    state.read()
     if state.rules:
         # i18n: column positioning for "hg summary"
         ui.write(_('hist:   %s (histedit --continue)\n') %
