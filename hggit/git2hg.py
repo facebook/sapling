@@ -16,18 +16,17 @@ def find_incoming(git_object_store, git_map, refs):
 
     # get a list of all the head shas
     seenheads = set()
-    if refs:
-        for sha in refs.itervalues():
-            # refs contains all the refs in the server, not just the ones
-            # we are pulling
-            if sha in git_object_store:
+    for sha in refs.itervalues():
+        # refs contains all the refs in the server, not just the ones
+        # we are pulling
+        if sha in git_object_store:
+            obj = git_object_store[sha]
+            while isinstance(obj, Tag):
+                obj_type, sha = obj.object
                 obj = git_object_store[sha]
-                while isinstance(obj, Tag):
-                    obj_type, sha = obj.object
-                    obj = git_object_store[sha]
-                if isinstance (obj, Commit) and sha not in seenheads:
-                    seenheads.add(sha)
-                    todo.append(sha)
+            if isinstance (obj, Commit) and sha not in seenheads:
+                seenheads.add(sha)
+                todo.append(sha)
 
     # sort by commit date
     def commitdate(sha):
