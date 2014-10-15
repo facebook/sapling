@@ -661,6 +661,8 @@ class GitHandler(object):
         return message, git_extra
 
     def get_git_incoming(self, refs):
+        if refs is None:
+            refs = self.git.refs.as_dict()
         # import heads and fetched tags as remote references
         todo = []
         done = set()
@@ -668,8 +670,6 @@ class GitHandler(object):
 
         # get a list of all the head shas
         seenheads = set()
-        if refs is None:
-            refs = self.git.refs.as_dict()
         if refs:
             for sha in refs.itervalues():
                 # refs contains all the refs in the server, not just the ones
