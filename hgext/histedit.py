@@ -326,7 +326,8 @@ def collapse(repo, first, last, commitopts):
                          editor=editor)
     return repo.commitctx(new)
 
-def pick(ui, repo, ctx, ha, opts):
+def pick(ui, state, ha, opts):
+    repo, ctx = state.repo, state.parentctx
     oldctx = repo[ha]
     if oldctx.parents()[0] == ctx:
         ui.debug('node %s unchanged\n' % ha)
@@ -348,7 +349,8 @@ def pick(ui, repo, ctx, ha, opts):
     return new, [(oldctx.node(), (n,))]
 
 
-def edit(ui, repo, ctx, ha, opts):
+def edit(ui, state, ha, opts):
+    repo, ctx = state.repo, state.parentctx
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     applychanges(ui, repo, oldctx, opts)
@@ -356,12 +358,14 @@ def edit(ui, repo, ctx, ha, opts):
         _('Make changes as needed, you may commit or record as needed now.\n'
           'When you are finished, run hg histedit --continue to resume.'))
 
-def rollup(ui, repo, ctx, ha, opts):
+def rollup(ui, state, ha, opts):
+    ctx = state.parentctx
     rollupopts = opts.copy()
     rollupopts['rollup'] = True
-    return fold(ui, repo, ctx, ha, rollupopts)
+    return fold(ui, state, ha, rollupopts)
 
-def fold(ui, repo, ctx, ha, opts):
+def fold(ui, state, ha, opts):
+    repo, ctx = state.repo, state.parentctx
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
@@ -417,11 +421,13 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
         replacements.append((ich, (n,)))
     return repo[n], replacements
 
-def drop(ui, repo, ctx, ha, opts):
+def drop(ui, state, ha, opts):
+    repo, ctx = state.repo, state.parentctx
     return ctx, [(repo[ha].node(), ())]
 
 
-def message(ui, repo, ctx, ha, opts):
+def message(ui, state, ha, opts):
+    repo, ctx = state.repo, state.parentctx
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
@@ -642,8 +648,7 @@ def _histedit(ui, repo, *freeargs, **opts):
         action, ha = state.rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha))
         actfunc = actiontable[action]
-        state.parentctx, replacement_ = actfunc(ui, repo, state.parentctx,
-                ha, opts)
+        state.parentctx, replacement_ = actfunc(ui, state, ha, opts)
         state.replacements.extend(replacement_)
 
     hg.update(repo, state.parentctx.node())
