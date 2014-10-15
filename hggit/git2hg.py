@@ -36,33 +36,39 @@ def find_incoming(git_object_store, git_map, refs):
         todo.sort(key=commitdate, reverse=True)
         return todo
 
-    todo = get_heads(refs)
+    def get_unseen_commits(todo):
+        '''get all unseen commits reachable from todo in topological order
 
-    # traverse the heads getting a list of all the unique commits in
-    # topological order
-    commits = []
-    while todo:
-        sha = todo[-1]
-        if sha in done or sha in git_map:
-            todo.pop()
-            continue
-        assert isinstance(sha, str)
-        if sha in commit_cache:
-            obj = commit_cache[sha]
-        else:
-            obj = git_object_store[sha]
-            commit_cache[sha] = obj
-        assert isinstance(obj, Commit)
-        for p in obj.parents:
-            if p not in done and p not in git_map:
-                todo.append(p)
-                # process parents of a commit before processing the
-                # commit itself, and come back to this commit later
-                break
-        else:
-            commits.append(sha)
-            done.add(sha)
-            todo.pop()
+        'unseen' means not reachable from the done set and not in the git map.
+        Mutates todo and the done set in the process.'''
+        commits = []
+        while todo:
+            sha = todo[-1]
+            if sha in done or sha in git_map:
+                todo.pop()
+                continue
+            assert isinstance(sha, str)
+            if sha in commit_cache:
+                obj = commit_cache[sha]
+            else:
+                obj = git_object_store[sha]
+                commit_cache[sha] = obj
+            assert isinstance(obj, Commit)
+            for p in obj.parents:
+                if p not in done and p not in git_map:
+                    todo.append(p)
+                    # process parents of a commit before processing the
+                    # commit itself, and come back to this commit later
+                    break
+            else:
+                commits.append(sha)
+                done.add(sha)
+                todo.pop()
+
+        return commits
+
+    todo = get_heads(refs)
+    commits = get_unseen_commits(todo)
 
     return GitIncomingResult(commits, commit_cache)
 
