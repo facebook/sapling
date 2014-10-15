@@ -351,11 +351,12 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
     # largefiles getting updated
     wlock = repo.wlock()
     try:
-        lfdirstate = lfutil.openlfdirstate(ui, repo)
-        unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
-                                      [], False, False, False)
-
         if opts['check']:
+            lfdirstate = lfutil.openlfdirstate(ui, repo)
+            unsure, s = lfdirstate.status(
+                match_.always(repo.root, repo.getcwd()),
+                [], False, False, False)
+
             mod = len(s.modified) > 0
             for lfile in unsure:
                 standin = lfutil.standin(lfile)
