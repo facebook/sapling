@@ -156,9 +156,12 @@ def checklink(path):
     name = tempfile.mktemp(dir=path, prefix='hg-checklink-')
     try:
         fd = tempfile.NamedTemporaryFile(dir=path, prefix='hg-checklink-')
-        os.symlink(os.path.basename(fd.name), name)
-        os.unlink(name)
-        return True
+        try:
+            os.symlink(os.path.basename(fd.name), name)
+            os.unlink(name)
+            return True
+        finally:
+            fd.close()
     except AttributeError:
         return False
     except OSError, inst:
