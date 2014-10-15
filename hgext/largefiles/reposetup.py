@@ -217,12 +217,8 @@ def reposetup(ui, repo):
                                 clean)
                     result = [sorted(list1 + list2)
                               for (list1, list2) in zip(normals, lfstatus)]
-                else:
-                    def toname(f):
-                        if lfutil.isstandin(f):
-                            return lfutil.splitstandin(f)
-                        return f
-                    result = [[toname(f) for f in items]
+                else: # not against working directory
+                    result = [[lfutil.splitstandin(f) or f for f in items]
                               for items in result]
 
                 if wlock:
