@@ -115,13 +115,13 @@ def addlargefiles(ui, repo, *pats, **opts):
                     ui.status(_('adding %s as a largefile\n') % m.rel(f))
 
     bad = []
-    standins = []
 
     # Need to lock, otherwise there could be a race condition between
     # when standins are created and added to the repo.
     wlock = repo.wlock()
     try:
         if not opts.get('dry_run'):
+            standins = []
             lfdirstate = lfutil.openlfdirstate(ui, repo)
             for f in lfnames:
                 standinname = lfutil.standin(f)
