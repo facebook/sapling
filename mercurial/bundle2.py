@@ -509,6 +509,9 @@ class unbundle20(unpackermixin):
         self.ui.debug('reading bundle2 stream parameters\n')
         params = {}
         paramssize = self._unpack(_fstreamparamsize)[0]
+        if paramssize < 0:
+            raise error.BundleValueError('negative bundle param size: %i'
+                                         % paramssize)
         if paramssize:
             for p in self._readexact(paramssize).split(' '):
                 p = p.split('=', 1)
@@ -558,6 +561,9 @@ class unbundle20(unpackermixin):
 
         returns None if empty"""
         headersize = self._unpack(_fpartheadersize)[0]
+        if headersize < 0:
+            raise error.BundleValueError('negative part header size: %i'
+                                         % headersize)
         self.ui.debug('part header size: %i\n' % headersize)
         if headersize:
             return self._readexact(headersize)
@@ -765,6 +771,9 @@ class unbundlepart(unpackermixin):
             payloadsize = self._unpack(_fpayloadsize)[0]
             self.ui.debug('payload chunk size: %i\n' % payloadsize)
             while payloadsize:
+                if payloadsize < 0:
+                    msg = 'negative payload chunk size: %i' % payloadsize
+                    raise error.BundleValueError(msg)
                 yield self._readexact(payloadsize)
                 payloadsize = self._unpack(_fpayloadsize)[0]
                 self.ui.debug('payload chunk size: %i\n' % payloadsize)
