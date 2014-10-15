@@ -343,10 +343,10 @@ def ancestor(repo, subset, x):
     return baseset()
 
 def _ancestors(repo, subset, x, followfirst=False):
-    args = getset(repo, spanset(repo), x)
-    if not args:
+    heads = getset(repo, spanset(repo), x)
+    if not heads:
         return baseset()
-    s = _revancestors(repo, args, followfirst)
+    s = _revancestors(repo, heads, followfirst)
     return subset.filter(s.__contains__)
 
 def ancestors(repo, subset, x):
@@ -656,14 +656,14 @@ def desc(repo, subset, x):
     return subset.filter(matches)
 
 def _descendants(repo, subset, x, followfirst=False):
-    args = getset(repo, spanset(repo), x)
-    if not args:
+    roots = getset(repo, spanset(repo), x)
+    if not roots:
         return baseset()
-    s = _revdescendants(repo, args, followfirst)
+    s = _revdescendants(repo, roots, followfirst)
 
     # Both sets need to be ascending in order to lazily return the union
     # in the correct order.
-    base = subset & args
+    base = subset & roots
     desc = subset & s
     result = base + desc
     if subset.isascending():
@@ -692,15 +692,15 @@ def destination(repo, subset, x):
     is the same as passing all().
     """
     if x is not None:
-        args = getset(repo, spanset(repo), x)
+        sources = getset(repo, spanset(repo), x)
     else:
-        args = getall(repo, spanset(repo), x)
+        sources = getall(repo, spanset(repo), x)
 
     dests = set()
 
     # subset contains all of the possible destinations that can be returned, so
-    # iterate over them and see if their source(s) were provided in the args.
-    # Even if the immediate src of r is not in the args, src's source (or
+    # iterate over them and see if their source(s) were provided in the arg set.
+    # Even if the immediate src of r is not in the arg set, src's source (or
     # further back) may be.  Scanning back further than the immediate src allows
     # transitive transplants and rebases to yield the same results as transitive
     # grafts.
@@ -720,7 +720,7 @@ def destination(repo, subset, x):
             # different iteration over subset.  Likewise, if the src was already
             # selected, the current lineage can be selected without going back
             # further.
-            if src in args or src in dests:
+            if src in sources or src in dests:
                 dests.update(lineage)
                 break
 
@@ -1151,9 +1151,9 @@ def origin(repo, subset, x):
     for the first operation is selected.
     """
     if x is not None:
-        args = getset(repo, spanset(repo), x)
+        dests = getset(repo, spanset(repo), x)
     else:
-        args = getall(repo, spanset(repo), x)
+        dests = getall(repo, spanset(repo), x)
 
     def _firstsrc(rev):
         src = _getrevsource(repo, rev)
@@ -1167,7 +1167,7 @@ def origin(repo, subset, x):
                 return src
             src = prev
 
-    o = set([_firstsrc(r) for r in args])
+    o = set([_firstsrc(r) for r in dests])
     o -= set([None])
     return subset & o
 
