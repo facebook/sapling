@@ -202,7 +202,8 @@ def _fm0encodeonemarker(marker):
     if flags & usingsha256:
         raise util.Abort(_('cannot handle sha256 with old obsstore format'))
     metadata = dict(metadata)
-    metadata['date'] = '%d %i' % date
+    time, tz = date
+    metadata['date'] = '%r %i' % (time, tz)
     if parents is not None:
         if not parents:
             # mark that we explicitly recorded no parents
