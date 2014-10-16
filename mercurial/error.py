@@ -16,6 +16,9 @@ imports.
 class RevlogError(Exception):
     pass
 
+class FilteredIndexError(IndexError):
+    pass
+
 class LookupError(RevlogError, KeyError):
     def __init__(self, name, index, message):
         self.name = name
