@@ -182,7 +182,7 @@ check that various commands work well with filtering
   abort: unknown revision '6'!
   [255]
   $ hg log -r 4
-  abort: unknown revision '4'!
+  abort: filtered revision '4'!
   [255]
 
 Check that public changeset are not accounted as obsolete:

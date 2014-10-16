@@ -400,6 +400,8 @@ class changectx(basectx):
                     self._node = changeid
                     self._rev = repo.changelog.rev(changeid)
                     return
+                except error.FilteredRepoLookupError:
+                    raise
                 except LookupError:
                     pass
 
@@ -415,6 +417,8 @@ class changectx(basectx):
                 self._rev = r
                 self._node = repo.changelog.node(r)
                 return
+            except error.FilteredIndexError:
+                raise
             except (ValueError, OverflowError, IndexError):
                 pass
 
@@ -423,6 +427,8 @@ class changectx(basectx):
                     self._node = bin(changeid)
                     self._rev = repo.changelog.rev(self._node)
                     return
+                except error.FilteredLookupError:
+                    raise
                 except (TypeError, LookupError):
                     pass
 
@@ -438,10 +444,12 @@ class changectx(basectx):
                 self._node = repo.branchtip(changeid)
                 self._rev = repo.changelog.rev(self._node)
                 return
+            except error.FilteredRepoLookupError:
+                raise
             except error.RepoLookupError:
                 pass
 
-            self._node = repo.changelog._partialmatch(changeid)
+            self._node = repo.unfiltered().changelog._partialmatch(changeid)
             if self._node is not None:
                 self._rev = repo.changelog.rev(self._node)
                 return
@@ -459,6 +467,10 @@ class changectx(basectx):
                     changeid = hex(changeid)
             except TypeError:
                 pass
+        except (error.FilteredIndexError, error.FilteredLookupError,
+                error.FilteredRepoLookupError):
+            raise error.FilteredRepoLookupError(_("filtered revision '%s'")
+                                                % changeid)
         except IndexError:
             pass
         raise error.RepoLookupError(
