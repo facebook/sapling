@@ -204,8 +204,7 @@ class histeditstate(object):
             self.replacements = replacements
 
     def read(self):
-        """Reads a state from file and returns a histeditstate object
-        """
+        """Load histedit state from disk and set fields appropriately."""
         try:
             fp = self.repo.vfs('histedit-state', 'r')
         except IOError, err:
