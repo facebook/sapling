@@ -7,6 +7,15 @@
 
   $ echo "fbhistedit=$(echo $(dirname $TESTDIR))/fbhistedit.py" >> $HGRCPATH
 
+Enable obsolete
+
+  $ cat > ${TESTTMP}/obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
   $ initrepo ()
   > {
   >     hg init r
@@ -65,21 +74,21 @@ stop & continue cannot preserve hashes without obsolence
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Changes commited as 04d2fab98077. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume.
+  When you are finished, run hg histedit --continue to resume
 
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/e860deea161a-backup.hg
 
   $ hg log --graph
-  @  changeset:   5:794fe033d0a0
+  @  changeset:   7:794fe033d0a0
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:04d2fab98077
+  o  changeset:   6:04d2fab98077
+  |  parent:      3:055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -115,21 +124,19 @@ stop on a commit
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Changes commited as d28623a90f2b. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume.
+  When you are finished, run hg histedit --continue to resume
 
   $ hg id -r . -i
   d28623a90f2b
   $ echo added > added
   $ hg add added
   $ hg commit --amend
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d28623a90f2b-amend-backup.hg
 
   $ hg log -v -r '.' --template '{files}\n'
   added e
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/04d2fab98077-backup.hg
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  099559071076 f f
@@ -147,12 +154,12 @@ stop on a commit
 
 check histedit_source
 
-  $ hg log --debug --rev 4
-  changeset:   4:d51720eb7a133e2dabf74a445e509a3900e9c0b5
+  $ hg log --debug --rev d51720eb7a133e2dabf74a445e509a3900e9c0b5
+  changeset:   10:d51720eb7a133e2dabf74a445e509a3900e9c0b5
   phase:       draft
   parent:      3:055a42cdd88768532f9cf79daa407fc8d138de9b
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    4:b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
+  manifest:    7:b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      added e
@@ -176,12 +183,12 @@ fold a commit to check if other non-pick actions are handled correctly
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Changes commited as 08cf87522012. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume.
+  When you are finished, run hg histedit --continue to resume
 
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/177f92b77385-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/8f09d743de05-backup.hg
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f

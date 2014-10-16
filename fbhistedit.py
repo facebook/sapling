@@ -23,14 +23,15 @@ command = cmdutil.command(cmdtable)
 
 testedwith = 'internal'
 
-def stop(ui, repo, ctx, ha, opts):
+def stop(ui, state, ha, opts):
+    repo, ctx = state.repo, state.parentctx
     oldctx = repo[ha]
 
     hg.update(repo, ctx.node())
     stats = histedit.applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
         raise error.InterventionRequired(
-            _('Fix up the change and run hg histedit --continue')
+            _('Fix up the change and run hg histedit --continue'))
 
     commit = histedit.commitfuncfor(repo, oldctx)
     new = commit(text=oldctx.description(), user=oldctx.user(),
