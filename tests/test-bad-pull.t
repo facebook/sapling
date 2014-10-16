@@ -1,4 +1,4 @@
-#require serve
+#require serve killdaemons
 
 #if windows
   $ hg clone http://localhost:$HGPORT/ copy
@@ -13,21 +13,9 @@
   $ test -d copy
   [1]
 
-  $ cat > dumb.py <<EOF
-  > import BaseHTTPServer, SimpleHTTPServer, os, signal
-  > def run(server_class=BaseHTTPServer.HTTPServer,
-  >         handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
-  >     server_address = ('localhost', int(os.environ['HGPORT']))
-  >     httpd = server_class(server_address, handler_class)
-  >     open("listening", "w")
-  >     httpd.handle_request()
-  > run()
-  > EOF
-
-  $ python dumb.py 2> log &
-  $ P=$!
-  $ while [ ! -f listening ]; do sleep 0; done
+  $ python "$TESTDIR/dumbhttp.py" -p $HGPORT --pid dumb.pid
+  $ cat dumb.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/foo copy2
   abort: HTTP Error 404: * (glob)
   [255]
-  $ wait $P
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS

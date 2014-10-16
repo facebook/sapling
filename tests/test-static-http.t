@@ -15,36 +15,7 @@
 This server doesn't do range requests so it's basically only good for
 one pull
 
-  $ cat > dumb.py <<EOF
-  > import BaseHTTPServer, SimpleHTTPServer, os, signal, sys
-  > 
-  > def run(server_class=BaseHTTPServer.HTTPServer,
-  >         handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
-  >     server_address = ('localhost', int(os.environ['HGPORT']))
-  >     httpd = server_class(server_address, handler_class)
-  >     httpd.serve_forever()
-  > 
-  > signal.signal(signal.SIGTERM, lambda x, y: sys.exit(0))
-  > fp = file('dumb.pid', 'wb')
-  > fp.write(str(os.getpid()) + '\n')
-  > fp.close()
-  > run()
-  > EOF
-  $ python dumb.py 2>/dev/null &
-
-Cannot just read $!, it will not be set to the right value on Windows/MinGW
-
-  $ cat > wait.py <<EOF
-  > import time
-  > while True:
-  >     try:
-  >         if '\n' in file('dumb.pid', 'rb').read():
-  >             break
-  >     except IOError:
-  >         pass
-  >     time.sleep(0.2)
-  > EOF
-  $ python wait.py
+  $ python "$TESTDIR/dumbhttp.py" -p $HGPORT --pid dumb.pid
   $ cat dumb.pid >> $DAEMON_PIDS
   $ hg init remote
   $ cd remote
