@@ -879,9 +879,6 @@ class GitHandler(object):
         if commit.encoding:
             extra['encoding'] = commit.encoding
 
-        if hg_branch:
-            extra['branch'] = hg_branch
-
         if octopus:
             extra['hg-git'] ='octopus-done'
 
