@@ -188,6 +188,25 @@ editcomment = _("""# Edit history between %s and %s
 #
 """)
 
+class histeditstate(object):
+    def __init__(self, repo, parentctxnode=None, rules=None, keep=None,
+            topmost=None, replacements=None):
+        self.repo = repo
+        self.parentctxnode = parentctxnode
+        self.rules = rules
+        self.keep = keep
+        self.topmost = topmost
+        if replacements is None:
+            self.replacements = []
+        else:
+            self.replacements = replacements
+
+    def write(self):
+        fp = self.repo.vfs('histedit-state', 'w')
+        pickle.dump((self.parentctxnode, self.rules, self.keep,
+            self.topmost, self.replacements), fp)
+        fp.close()
+
 def commitfuncfor(repo, src):
     """Build a commit function for the replacement of <src>
 
