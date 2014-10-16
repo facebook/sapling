@@ -207,6 +207,9 @@ class histeditstate(object):
             self.topmost, self.replacements), fp)
         fp.close()
 
+    def clear(self):
+        self.repo.vfs.unlink('histedit-state')
+
 def commitfuncfor(repo, src):
     """Build a commit function for the replacement of <src>
 
@@ -586,7 +589,7 @@ def _histedit(ui, repo, *freeargs, **opts):
             pass
         cleanupnode(ui, repo, 'created', tmpnodes)
         cleanupnode(ui, repo, 'temp', leafs)
-        os.unlink(os.path.join(repo.path, 'histedit-state'))
+        state.clear()
         return
     else:
         cmdutil.checkunfinished(repo)
@@ -683,7 +686,7 @@ def _histedit(ui, repo, *freeargs, **opts):
             cleanupnode(ui, repo, 'replaced', mapping)
 
     cleanupnode(ui, repo, 'temp', tmpnodes)
-    os.unlink(os.path.join(repo.path, 'histedit-state'))
+    state.clear()
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
 
