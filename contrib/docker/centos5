@@ -1,4 +1,4 @@
-FROM saltstack/centos-5-minimal
+FROM centos:centos5
 RUN yum install -y gcc make rpm-build gettext tar
 RUN yum install -y python-devel python-docutils
 # For creating repo meta data
