@@ -379,7 +379,6 @@ def edit(ui, state, ha, opts):
           'When you are finished, run hg histedit --continue to resume.'))
 
 def rollup(ui, state, ha, opts):
-    ctx = state.parentctx
     rollupopts = opts.copy()
     rollupopts['rollup'] = True
     return fold(ui, state, ha, rollupopts)
@@ -600,7 +599,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     elif goal == 'abort':
         state = histeditstate(repo)
         state.read()
-        mapping, tmpnodes, leafs, _ntm = processreplacement(repo, state)
+        mapping, tmpnodes, leafs, _ntm = processreplacement(state)
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
         # check whether we should update away
         parentnodes = [c.node() for c in repo[None].parents()]
@@ -678,7 +677,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
     hg.update(repo, state.parentctx.node())
 
-    mapping, tmpnodes, created, ntm = processreplacement(repo, state)
+    mapping, tmpnodes, created, ntm = processreplacement(state)
     if mapping:
         for prec, succs in mapping.iteritems():
             if not succs:
@@ -854,7 +853,7 @@ def verifyrules(rules, repo, ctxs):
                          hint=_('do you want to use the drop action?'))
     return parsed
 
-def processreplacement(repo, state):
+def processreplacement(state):
     """process the list of replacements to return
 
     1) the final mapping between original and created nodes
@@ -897,20 +896,21 @@ def processreplacement(repo, state):
         del final[n]
     # we expect all changes involved in final to exist in the repo
     # turn `final` into list (topologically sorted)
-    nm = repo.changelog.nodemap
+    nm = state.repo.changelog.nodemap
     for prec, succs in final.items():
         final[prec] = sorted(succs, key=nm.get)
 
     # computed topmost element (necessary for bookmark)
     if new:
-        newtopmost = sorted(new, key=repo.changelog.rev)[-1]
+        newtopmost = sorted(new, key=state.repo.changelog.rev)[-1]
     elif not final:
         # Nothing rewritten at all. we won't need `newtopmost`
         # It is the same as `oldtopmost` and `processreplacement` know it
         newtopmost = None
     else:
         # every body died. The newtopmost is the parent of the root.
-        newtopmost = repo[sorted(final, key=repo.changelog.rev)[0]].p1().node()
+        r = state.repo.changelog.rev
+        newtopmost = state.repo[sorted(final, key=r)[0]].p1().node()
 
     return final, tmpnodes, new, newtopmost
 
