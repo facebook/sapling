@@ -572,8 +572,7 @@ def _histedit(ui, repo, *freeargs, **opts):
         state = bootstrapcontinue(ui, state, opts)
     elif goal == 'abort':
         state = readstate(repo)
-        mapping, tmpnodes, leafs, _ntm = processreplacement(repo,
-                state.replacements)
+        mapping, tmpnodes, leafs, _ntm = processreplacement(repo, state)
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
         # check whether we should update away
         parentnodes = [c.node() for c in repo[None].parents()]
@@ -649,8 +648,7 @@ def _histedit(ui, repo, *freeargs, **opts):
 
     hg.update(repo, state.parentctx.node())
 
-    mapping, tmpnodes, created, ntm = processreplacement(repo,
-            state.replacements)
+    mapping, tmpnodes, created, ntm = processreplacement(repo, state)
     if mapping:
         for prec, succs in mapping.iteritems():
             if not succs:
@@ -841,12 +839,13 @@ def verifyrules(rules, repo, ctxs):
                          hint=_('do you want to use the drop action?'))
     return parsed
 
-def processreplacement(repo, replacements):
+def processreplacement(repo, state):
     """process the list of replacements to return
 
     1) the final mapping between original and created nodes
     2) the list of temporary node created by histedit
     3) the list of new commit created by histedit"""
+    replacements = state.replacements
     allsuccs = set()
     replaced = set()
     fullmapping = {}
