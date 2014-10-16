@@ -20,8 +20,8 @@ enable obsolescence
   > [phases]
   > publish=False
   > [hooks]
-  > changegroup = sh -c  "HG_LOCAL= HG_NODE= HG_TAG= python \"$TESTDIR/printenv.py\" changegroup"
-  > b2x-transactionclose = sh -c  "HG_LOCAL= HG_NODE= HG_TAG= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
+  > changegroup = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" changegroup"
+  > b2x-transactionclose = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
   > EOF
 
 The extension requires a repo (currently unused)
@@ -37,7 +37,7 @@ The extension requires a repo (currently unused)
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+3 heads)
-  changegroup hook: HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
+  changegroup hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_URL=bundle:/home/pyd/src/mercurial-dev/tests/bundles/rebase.hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ cd ..
@@ -59,7 +59,7 @@ clone --pull
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
@@ -81,7 +81,7 @@ pull
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
-  changegroup hook: HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
@@ -152,8 +152,8 @@ push
   $ hg -R main push other --rev eea13746799a --bookmark book_eea1
   pushing to other
   searching for changes
-  b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
-  changegroup hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
+  changegroup hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -185,7 +185,7 @@ pull over ssh
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_02de
-  changegroup hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -207,7 +207,7 @@ pull over http
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   updating bookmark book_42cc
-  changegroup hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=bundle2 HG_URL=bundle2
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete
@@ -228,8 +228,8 @@ push over ssh
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
-  remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_SOURCE=bundle2 HG_URL=bundle2
+  remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=bundle2 HG_URL=bundle2
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
@@ -456,7 +456,7 @@ Doing the actual push: hook abort
   searching for changes
   transaction abort!
   rollback completed
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=0 HG_SOURCE=bundle2 HG_URL=bundle2
+  changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=0 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=bundle2 HG_URL=bundle2
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   [255]
 
@@ -466,7 +466,7 @@ Doing the actual push: hook abort
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=0 HG_SOURCE=bundle2 HG_URL=bundle2
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=0 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=bundle2 HG_URL=bundle2
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
