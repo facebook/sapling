@@ -183,6 +183,37 @@ class digester(object):
                 return k
         return None
 
+class digestchecker(object):
+    """file handle wrapper that additionally checks content against a given
+    size and digests.
+
+        d = digestchecker(fh, size, {'md5': '...'})
+
+    When multiple digests are given, all of them are validated.
+    """
+
+    def __init__(self, fh, size, digests):
+        self._fh = fh
+        self._size = size
+        self._got = 0
+        self._digests = dict(digests)
+        self._digester = digester(self._digests.keys())
+
+    def read(self, length=-1):
+        content = self._fh.read(length)
+        self._digester.update(content)
+        self._got += len(content)
+        return content
+
+    def validate(self):
+        if self._size != self._got:
+            raise Abort(_('size mismatch: expected %d, got %d') %
+                (self._size, self._got))
+        for k, v in self._digests.items():
+            if v != self._digester[k]:
+                raise Abort(_('%s mismatch: expected %s, got %s') %
+                    (k, v, self._digester[k]))
+
 try:
     buffer = buffer
 except NameError:
