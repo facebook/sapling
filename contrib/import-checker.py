@@ -169,7 +169,7 @@ def check_one_mod(mod, imports, path=None, ignore=None):
         ignore = []
     path = path + [mod]
     for i in sorted(imports.get(mod, [])):
-        if i not in stdlib_modules:
+        if i not in stdlib_modules and not i.startswith('mercurial.'):
             i = mod.rsplit('.', 1)[0] + '.' + i
         if i in path:
             firstspot = path.index(i)
