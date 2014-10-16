@@ -175,6 +175,16 @@ docker-centos6:
 	mkdir -p packages/centos6
 	contrib/dockerrpm centos6
 
+centos7:
+	mkdir -p packages/centos7
+	contrib/buildrpm
+	cp rpmbuild/RPMS/*/* packages/centos7
+	cp rpmbuild/SRPMS/* packages/centos7
+
+docker-centos7:
+	mkdir -p packages/centos7
+	contrib/dockerrpm centos7
+
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc dist dist-notests tests \
 	update-pot fedora20 docker-fedora20

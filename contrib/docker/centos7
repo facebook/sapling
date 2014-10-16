@@ -1,0 +1,9 @@
+FROM centos:centos7
+RUN yum install -y gcc
+RUN yum install -y python-devel python-docutils
+RUN yum install -y make
+RUN yum install -y rpm-build
+RUN yum install -y gettext
+RUN yum install -y tar
+# For creating repo meta data
+RUN yum install -y createrepo
