@@ -854,3 +854,61 @@ Test that amend with --edit invokes editor forcibly
   HG: changed foo
   $ hg parents --template "{desc}\n"
   editor should be invoked
+
+Check for issue4405
+-------------------
+
+Setup the repo with a file that gets moved in a second commit.
+  $ hg init repo
+  $ cd repo
+  $ touch a0
+  $ hg add a0
+  $ hg commit -m a0
+  $ hg mv a0 a1
+  $ hg commit -m a1
+  $ hg up -q 0
+  $ hg log -G --template '{rev} {desc}'
+  o  1 a1
+  |
+  @  0 a0
+  
+
+Now we branch the repro, but re-use the file contents, so we have a divergence
+in the file revlog topology and the changelog topology.
+  $ hg revert --rev 1 --all
+  removing a0
+  adding a1
+  $ hg ci -qm 'a1-amend'
+  $ hg log -G --template '{rev} {desc}'
+  @  2 a1-amend
+  |
+  | o  1 a1
+  |/
+  o  0 a0
+  
+
+The way mercurial does amends is to create a temporary commit (rev 3) and then
+fold the new and old commits together into another commit (rev 4). During this
+process, findlimit is called to check how far back to look for the transitive
+closure of file copy information, but due to the divergence of the filelog
+and changelog graph topologies, before findlimit was fixed, it returned a rev
+which was not far enough back in this case.
+  $ hg mv a1 a2
+  $ hg status --copies --rev 0
+  A a2
+    a0
+  R a0
+  $ hg ci --amend -q
+  $ hg log -G --template '{rev} {desc}'
+  @  4 a1-amend
+  |
+  | o  1 a1
+  |/
+  o  0 a0
+  
+
+Before the fix, the copy information was lost.
+  $ hg status --copies --rev 0
+  A a2
+    a0
+  R a0

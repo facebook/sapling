@@ -19,9 +19,15 @@ def _dirname(f):
     return f[:s]
 
 def _findlimit(repo, a, b):
-    """Find the earliest revision that's an ancestor of a or b but not both,
+    """
+    Find the last revision that needs to be checked to ensure that a full
+    transitive closure for file copies can be properly calculated.
+    Generally, this means finding the earliest revision number that's an
+    ancestor of a or b but not both, except when a or b is a direct descendent
+    of the other, in which case we can return the minimum revnum of a and b.
     None if no such revision exists.
     """
+
     # basic idea:
     # - mark a and b with different sides
     # - if a parent's children are all on the same side, the parent is
@@ -73,7 +79,29 @@ def _findlimit(repo, a, b):
 
     if not hascommonancestor:
         return None
-    return limit
+
+    # Consider the following flow (see test-commit-amend.t under issue4405):
+    # 1/ File 'a0' committed
+    # 2/ File renamed from 'a0' to 'a1' in a new commit (call it 'a1')
+    # 3/ Move back to first commit
+    # 4/ Create a new commit via revert to contents of 'a1' (call it 'a1-amend')
+    # 5/ Rename file from 'a1' to 'a2' and commit --amend 'a1-msg'
+    #
+    # During the amend in step five, we will be in this state:
+    #
+    # @  3 temporary amend commit for a1-amend
+    # |
+    # o  2 a1-amend
+    # |
+    # | o  1 a1
+    # |/
+    # o  0 a0
+    #
+    # When findlimit is called, a and b are revs 3 and 0, so limit will be 2,
+    # yet the filelog has the copy information in rev 1 and we will not look
+    # back far enough unless we also look at the a and b as candidates.
+    # This only occurs when a is a descendent of b or visa-versa.
+    return min(limit, a, b)
 
 def _chain(src, dst, a, b):
     '''chain two sets of copies a->b'''
