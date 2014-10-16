@@ -212,7 +212,7 @@ class histeditstate(object):
                 raise
             raise util.Abort(_('no histedit in progress'))
 
-        (parentctxnode, rules, keep, topmost, replacements) = pickle.load(fp)
+        parentctxnode, rules, keep, topmost, replacements = pickle.load(fp)
 
         self.parentctx = self.repo[parentctxnode]
         self.rules = rules
@@ -223,7 +223,7 @@ class histeditstate(object):
     def write(self):
         fp = self.repo.vfs('histedit-state', 'w')
         pickle.dump((self.parentctx.node(), self.rules, self.keep,
-            self.topmost, self.replacements), fp)
+                     self.topmost, self.replacements), fp)
         fp.close()
 
     def clear(self):
@@ -361,8 +361,7 @@ def pick(ui, state, ha, opts):
     n = commit(text=oldctx.description(), user=oldctx.user(),
                date=oldctx.date(), extra=oldctx.extra())
     if n is None:
-        ui.warn(_('%s: empty changeset\n')
-                     % node.hex(ha))
+        ui.warn(_('%s: empty changeset\n') % node.hex(ha))
         return ctx, []
     new = repo[n]
     return new, [(oldctx.node(), (n,))]
@@ -393,8 +392,7 @@ def fold(ui, state, ha, opts):
     n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
     if n is None:
-        ui.warn(_('%s: empty changeset')
-                     % node.hex(ha))
+        ui.warn(_('%s: empty changeset') % node.hex(ha))
         return ctx, []
     return finishfold(ui, repo, ctx, oldctx, n, opts, [])
 
@@ -432,9 +430,9 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
         return ctx, []
     hg.update(repo, n)
     replacements = [(oldctx.node(), (newnode,)),
-                     (ctx.node(), (n,)),
-                     (newnode, (n,)),
-                    ]
+                    (ctx.node(), (n,)),
+                    (newnode, (n,)),
+                   ]
     for ich in internalchanges:
         replacements.append((ich, (n,)))
     return repo[n], replacements
@@ -456,8 +454,7 @@ def message(ui, state, ha, opts):
     commit = commitfuncfor(repo, oldctx)
     editor = cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
     new = commit(text=message, user=oldctx.user(), date=oldctx.date(),
-                 extra=oldctx.extra(),
-                 editor=editor)
+                 extra=oldctx.extra(), editor=editor)
     newctx = repo[new]
     if oldctx.node() != newctx.node():
         return newctx, [(oldctx.node(), (new,))]
@@ -747,9 +744,8 @@ def bootstrapcontinue(ui, state, opts):
         editform = 'histedit.%s' % canonaction.get(action, action)
         editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
         commit = commitfuncfor(repo, ctx)
-        new = commit(text=message, user=ctx.user(),
-                     date=ctx.date(), extra=ctx.extra(),
-                     editor=editor)
+        new = commit(text=message, user=ctx.user(), date=ctx.date(),
+                     extra=ctx.extra(), editor=editor)
         if new is not None:
             newchildren.append(new)
 
