@@ -30,6 +30,9 @@ class LookupError(RevlogError, KeyError):
     def __str__(self):
         return RevlogError.__str__(self)
 
+class FilteredLookupError(LookupError):
+    pass
+
 class ManifestLookupError(LookupError):
     pass
 
