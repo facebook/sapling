@@ -8,11 +8,13 @@ import sys
 import BaseHTTPServer
 import zlib
 
-def dotted_name_of_path(path):
+def dotted_name_of_path(path, trimpure=False):
     """Given a relative path to a source file, return its dotted module name.
 
     >>> dotted_name_of_path('mercurial/error.py')
     'mercurial.error'
+    >>> dotted_name_of_path('mercurial/pure/parsers.py', trimpure=True)
+    'mercurial.parsers'
     >>> dotted_name_of_path('zlibmodule.so')
     'zlib'
     """
@@ -20,6 +22,8 @@ def dotted_name_of_path(path):
     parts[-1] = parts[-1].split('.', 1)[0] # remove .py and .so and .ARCH.so
     if parts[-1].endswith('module'):
         parts[-1] = parts[-1][:-6]
+    if trimpure:
+        return '.'.join(p for p in parts if p != 'pure')
     return '.'.join(parts)
 
 
@@ -220,7 +224,7 @@ def main(argv):
     any_errors = False
     for source_path in argv[1:]:
         f = open(source_path)
-        modname = dotted_name_of_path(source_path)
+        modname = dotted_name_of_path(source_path, trimpure=True)
         src = f.read()
         used_imports[modname] = sorted(
             imported_modules(src, ignore_nested=True))
