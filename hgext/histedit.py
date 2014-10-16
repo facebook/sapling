@@ -189,13 +189,13 @@ editcomment = _("""# Edit history between %s and %s
 """)
 
 class histeditstate(object):
-    def __init__(self, repo, parentctxnode=None, rules=None, keep=None,
+    def __init__(self, repo, parentctx=None, rules=None, keep=None,
             topmost=None, replacements=None):
         self.repo = repo
-        self.parentctxnode = parentctxnode
         self.rules = rules
         self.keep = keep
         self.topmost = topmost
+        self.parentctx = parentctx
         if replacements is None:
             self.replacements = []
         else:
@@ -203,7 +203,7 @@ class histeditstate(object):
 
     def write(self):
         fp = self.repo.vfs('histedit-state', 'w')
-        pickle.dump((self.parentctxnode, self.rules, self.keep,
+        pickle.dump((self.parentctx.node(), self.rules, self.keep,
             self.topmost, self.replacements), fp)
         fp.close()
 
@@ -569,11 +569,9 @@ def _histedit(ui, repo, *freeargs, **opts):
     # rebuild state
     if goal == 'continue':
         state = readstate(repo)
-        parentctx = repo[state.parentctxnode]
-        parentctx, repl = bootstrapcontinue(ui, repo, parentctx, state.rules,
-                opts)
+        state.parentctx, repl = bootstrapcontinue(ui, repo, state.parentctx,
+                state.rules, opts)
         state.replacements.extend(repl)
-        state.parentctxnode = parentctx.node()
     elif goal == 'abort':
         state = readstate(repo)
         mapping, tmpnodes, leafs, _ntm = processreplacement(repo,
@@ -581,7 +579,7 @@ def _histedit(ui, repo, *freeargs, **opts):
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
         # check whether we should update away
         parentnodes = [c.node() for c in repo[None].parents()]
-        for n in leafs | set([state.parentctxnode]):
+        for n in leafs | set([state.parentctx.node()]):
             if n in parentnodes:
                 hg.clean(repo, state.topmost)
                 break
@@ -639,7 +637,7 @@ def _histedit(ui, repo, *freeargs, **opts):
 
         parentctx = repo[root].parents()[0]
 
-        state = histeditstate(repo, parentctx.node(), rules, keep,
+        state = histeditstate(repo, parentctx, rules, keep,
                     topmost, replacements)
 
     while state.rules:
@@ -647,13 +645,11 @@ def _histedit(ui, repo, *freeargs, **opts):
         action, ha = state.rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha))
         actfunc = actiontable[action]
-        parentctx = repo[state.parentctxnode]
-        parentctx, replacement_ = actfunc(ui, repo, parentctx,
+        state.parentctx, replacement_ = actfunc(ui, repo, state.parentctx,
                 ha, opts)
-        state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
 
-    hg.update(repo, state.parentctxnode)
+    hg.update(repo, state.parentctx.node())
 
     mapping, tmpnodes, created, ntm = processreplacement(repo,
             state.replacements)
@@ -793,7 +789,7 @@ def readstate(repo):
 
     (parentctxnode, rules, keep, topmost, replacements) = pickle.load(fp)
 
-    return histeditstate(repo, parentctxnode, rules,
+    return histeditstate(repo, repo[parentctxnode], rules,
         keep, topmost, replacements)
 
 def makedesc(c):
