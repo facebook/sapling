@@ -687,8 +687,12 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             p = lambda: cl.writepending() and repo.root or ""
             if 'node' not in tr.hookargs:
                 tr.hookargs['node'] = hex(cl.node(clstart))
+                hookargs = dict(tr.hookargs)
+            else:
+                hookargs = dict(tr.hookargs)
+                hookargs['node'] = hex(cl.node(clstart))
             repo.hook('pretxnchangegroup', throw=True, source=srctype,
-                      url=url, pending=p, **tr.hookargs)
+                      url=url, pending=p, **hookargs)
 
         added = [cl.node(r) for r in xrange(clstart, clend)]
         publishing = repo.ui.configbool('phases', 'publish', True)
@@ -724,6 +728,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                 # `destroyed` will repair it.
                 # In other case we can safely update cache on disk.
                 branchmap.updatecache(repo.filtered('served'))
+
             def runhooks():
                 # These hooks run when the lock releases, not when the
                 # transaction closes. So it's possible for the changelog
@@ -734,7 +739,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                 # forcefully update the on-disk branch cache
                 repo.ui.debug("updating the branch cache\n")
                 repo.hook("changegroup", source=srctype, url=url,
-                          **tr.hookargs)
+                          **hookargs)
 
                 for n in added:
                     repo.hook("incoming", node=hex(n), source=srctype,
