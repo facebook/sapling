@@ -65,6 +65,9 @@ class RepoError(Exception):
 class RepoLookupError(RepoError):
     pass
 
+class FilteredRepoLookupError(RepoLookupError):
+    pass
+
 class CapabilityError(RepoError):
     pass
 
