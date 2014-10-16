@@ -117,6 +117,72 @@ def md5(s=''):
     md5 = _md5
     return _md5(s)
 
+DIGESTS = {
+    'md5': md5,
+    'sha1': sha1,
+}
+# List of digest types from strongest to weakest
+DIGESTS_BY_STRENGTH = ['sha1', 'md5']
+
+try:
+    import hashlib
+    DIGESTS.update({
+        'sha512': hashlib.sha512,
+    })
+    DIGESTS_BY_STRENGTH.insert(0, 'sha512')
+except ImportError:
+    pass
+
+for k in DIGESTS_BY_STRENGTH:
+    assert k in DIGESTS
+
+class digester(object):
+    """helper to compute digests.
+
+    This helper can be used to compute one or more digests given their name.
+
+    >>> d = digester(['md5', 'sha1'])
+    >>> d.update('foo')
+    >>> [k for k in sorted(d)]
+    ['md5', 'sha1']
+    >>> d['md5']
+    'acbd18db4cc2f85cedef654fccc4a4d8'
+    >>> d['sha1']
+    '0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33'
+    >>> digester.preferred(['md5', 'sha1'])
+    'sha1'
+    """
+
+    def __init__(self, digests, s=''):
+        self._hashes = {}
+        for k in digests:
+            if k not in DIGESTS:
+                raise Abort(_('unknown digest type: %s') % k)
+            self._hashes[k] = DIGESTS[k]()
+        if s:
+            self.update(s)
+
+    def update(self, data):
+        for h in self._hashes.values():
+            h.update(data)
+
+    def __getitem__(self, key):
+        if key not in DIGESTS:
+            raise Abort(_('unknown digest type: %s') % k)
+        return self._hashes[key].hexdigest()
+
+    def __iter__(self):
+        return iter(self._hashes)
+
+    @staticmethod
+    def preferred(supported):
+        """returns the strongest digest type in both supported and DIGESTS."""
+
+        for k in DIGESTS_BY_STRENGTH:
+            if k in supported:
+                return k
+        return None
+
 try:
     buffer = buffer
 except NameError:
