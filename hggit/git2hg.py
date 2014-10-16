@@ -83,7 +83,7 @@ def extract_hg_metadata(message, git_extra):
     split = message.split("\n--HG--\n", 1)
     renames = {}
     extra = {}
-    branch = False
+    branch = None
     if len(split) == 2:
         message, meta = split
         lines = meta.split("\n")
