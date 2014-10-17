@@ -445,8 +445,9 @@ def _pushb2ctx(pushop, bundler):
                                      pushop.outgoing)
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
-    cg = changegroup.getlocalchangegroup(pushop.repo, 'push', pushop.outgoing)
-    cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg.getchunks())
+    cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
+                                            pushop.outgoing)
+    cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg)
     def handlereply(op):
         """extract addchangegroup returns from server reply"""
         cgreplies = op.records.getreplies(cgpart.id)
@@ -1185,11 +1186,11 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
     cg = None
     if kwargs.get('cg', True):
         # build changegroup bundle here.
-        cg = changegroup.getchangegroup(repo, source, heads=heads,
-                                        common=common, bundlecaps=bundlecaps)
+        cg = changegroup.getchangegroupraw(repo, source, heads=heads,
+                                           common=common, bundlecaps=bundlecaps)
 
     if cg:
-        bundler.newpart('b2x:changegroup', data=cg.getchunks())
+        bundler.newpart('b2x:changegroup', data=cg)
 
 @getbundle2partsgenerator('listkeys')
 def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,

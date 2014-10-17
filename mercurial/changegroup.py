@@ -443,7 +443,7 @@ def _changegroupinfo(repo, nodes, source):
         for node in nodes:
             repo.ui.debug("%s\n" % hex(node))
 
-def getsubset(repo, outgoing, bundler, source, fastpath=False):
+def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     repo = repo.unfiltered()
     commonrevs = outgoing.common
     csets = outgoing.missing
@@ -457,7 +457,10 @@ def getsubset(repo, outgoing, bundler, source, fastpath=False):
 
     repo.hook('preoutgoing', throw=True, source=source)
     _changegroupinfo(repo, csets, source)
-    gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
+    return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
+
+def getsubset(repo, outgoing, bundler, source, fastpath=False):
+    gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
     return cg1unpacker(util.chunkbuffer(gengroup), 'UN')
 
 def changegroupsubset(repo, roots, heads, source):
@@ -484,6 +487,16 @@ def changegroupsubset(repo, roots, heads, source):
     outgoing = discovery.outgoing(cl, discbases, heads)
     bundler = cg1packer(repo)
     return getsubset(repo, outgoing, bundler, source)
+
+def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None):
+    """Like getbundle, but taking a discovery.outgoing as an argument.
+
+    This is only implemented for local repos and reuses potentially
+    precomputed sets in outgoing. Returns a raw changegroup generator."""
+    if not outgoing.missing:
+        return None
+    bundler = cg1packer(repo, bundlecaps)
+    return getsubsetraw(repo, outgoing, bundler, source)
 
 def getlocalchangegroup(repo, source, outgoing, bundlecaps=None):
     """Like getbundle, but taking a discovery.outgoing as an argument.
@@ -513,6 +526,18 @@ def _computeoutgoing(repo, heads, common):
     if not heads:
         heads = cl.heads()
     return discovery.outgoing(cl, common, heads)
+
+def getchangegroupraw(repo, source, heads=None, common=None, bundlecaps=None):
+    """Like changegroupsubset, but returns the set difference between the
+    ancestors of heads and the ancestors common.
+
+    If heads is None, use the local heads. If common is None, use [nullid].
+
+    The nodes in common might not all be known locally due to the way the
+    current discovery protocol works. Returns a raw changegroup generator.
+    """
+    outgoing = _computeoutgoing(repo, heads, common)
+    return getlocalchangegroupraw(repo, source, outgoing, bundlecaps=bundlecaps)
 
 def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None):
     """Like changegroupsubset, but returns the set difference between the
