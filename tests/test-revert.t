@@ -465,8 +465,8 @@ Write the python script to disk
   > 
   > # build the combination of possible states
   > combination = []
-  > for ctxkey, ctxvalue in ctxcontent.iteritems():
-  >     for wckey in wccontent:
+  > for ctxkey, ctxvalue in sorted(ctxcontent.iteritems()):
+  >     for wckey in sorted(wccontent):
   >         base, parent = ctxvalue
   >         if (base == parent and 'revert' in wckey):
   >             continue
@@ -477,9 +477,6 @@ Write the python script to disk
   >         filename = "%s_%s" % (ctxkey, wckey)
   >         combination.append((filename, base, parent,
   >                             wccontent[wckey](ctxvalue)))
-  > 
-  > # make sure we have stable output
-  > combination.sort()
   > 
   > # retrieve the state we must generate
   > target = sys.argv[1]
