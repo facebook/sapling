@@ -13,6 +13,7 @@ import struct, os, bz2, zlib, tempfile
 import discovery, error, phases, branchmap
 
 _CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
+_CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
 
 def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
@@ -215,6 +216,14 @@ class cg1unpacker(object):
                     pos = next
             yield closechunk()
 
+class cg2unpacker(cg1unpacker):
+    deltaheader = _CHANGEGROUPV2_DELTA_HEADER
+    deltaheadersize = struct.calcsize(deltaheader)
+
+    def _deltaheader(self, headertuple, prevnode):
+        node, p1, p2, deltabase, cs = headertuple
+        return node, p1, p2, deltabase, cs
+
 class headerlessfixup(object):
     def __init__(self, fh, h):
         self._h = h
@@ -410,10 +419,13 @@ class cg1packer(object):
                                         reorder=reorder):
                     yield chunk
 
+    def deltaparent(self, revlog, rev, p1, p2, prev):
+        return prev
+
     def revchunk(self, revlog, rev, prev, linknode):
         node = revlog.node(rev)
         p1, p2 = revlog.parentrevs(rev)
-        base = prev
+        base = self.deltaparent(revlog, rev, p1, p2, prev)
 
         prefix = ''
         if base == nullrev:
@@ -433,7 +445,29 @@ class cg1packer(object):
         # do nothing with basenode, it is implicitly the previous one in HG10
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
 
-packermap = {'01': (cg1packer, cg1unpacker)}
+class cg2packer(cg1packer):
+
+    deltaheader = _CHANGEGROUPV2_DELTA_HEADER
+
+    def group(self, nodelist, revlog, lookup, units=None, reorder=None):
+        if (revlog._generaldelta and reorder is not True):
+            reorder = False
+        return cg1packer.group(self, nodelist, revlog, lookup,
+                               units=units, reorder=reorder)
+
+    def deltaparent(self, revlog, rev, p1, p2, prev):
+        dp = revlog.deltaparent(rev)
+        # avoid storing full revisions; pick prev in those cases
+        # also pick prev when we can't be sure remote has dp
+        if dp == nullrev or (dp != p1 and dp != p2 and dp != prev):
+            return prev
+        return dp
+
+    def builddeltaheader(self, node, p1n, p2n, basenode, linknode):
+        return struct.pack(self.deltaheader, node, p1n, p2n, basenode, linknode)
+
+packermap = {'01': (cg1packer, cg1unpacker),
+             '02': (cg2packer, cg2unpacker)}
 
 def _changegroupinfo(repo, nodes, source):
     if repo.ui.verbose or source == 'bundle':
