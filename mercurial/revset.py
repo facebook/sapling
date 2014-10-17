@@ -1383,7 +1383,7 @@ def matching(repo, subset, x):
     # i18n: "matching" is a keyword
     l = getargs(x, 1, 2, _("matching takes 1 or 2 arguments"))
 
-    revs = getset(repo, baseset(repo.changelog), l[0])
+    revs = getset(repo, fullreposet(repo), l[0])
 
     fieldlist = ['metadata']
     if len(l) > 1:
