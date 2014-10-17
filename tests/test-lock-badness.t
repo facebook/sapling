@@ -11,6 +11,42 @@ Prepare
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+Test that raising an exception in the release function doesn't cause the lock to choke
+
+  $ cat > testlock.py << EOF
+  > from mercurial import cmdutil, error, util
+  > 
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > def acquiretestlock(repo, releaseexc):
+  >     def unlock():
+  >         if releaseexc:
+  >             raise util.Abort('expected release exception')
+  >     l = repo._lock(repo.vfs, 'testlock', False, unlock, None, 'test lock')
+  >     return l
+  > 
+  > @command('testlockexc')
+  > def testlockexc(ui, repo):
+  >     testlock = acquiretestlock(repo, True)
+  >     try:
+  >         testlock.release()
+  >     finally:
+  >         try:
+  >             testlock = acquiretestlock(repo, False)
+  >         except error.LockHeld:
+  >             raise util.Abort('lockfile on disk even after releasing!')
+  >         testlock.release()
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > testlock=$TESTTMP/testlock.py
+  > EOF
+
+  $ hg -R b testlockexc
+  abort: expected release exception
+  [255]
+
 One process waiting for another
 
   $ cat > hooks.py << EOF

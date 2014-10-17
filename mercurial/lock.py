@@ -139,12 +139,14 @@ class lock(object):
             if os.getpid() != self.pid:
                 # we forked, and are not the parent
                 return
-            if self.releasefn:
-                self.releasefn()
             try:
-                self.vfs.unlink(self.f)
-            except OSError:
-                pass
+                if self.releasefn:
+                    self.releasefn()
+            finally:
+                try:
+                    self.vfs.unlink(self.f)
+                except OSError:
+                    pass
             for callback in self.postrelease:
                 callback()
 
