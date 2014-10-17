@@ -1257,7 +1257,7 @@ def parentspec(repo, subset, x, n):
         raise error.ParseError(_("^ expects a number 0, 1, or 2"))
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, baseset(cl), x):
+    for r in getset(repo, fullreposet(repo), x):
         if n == 0:
             ps.add(r)
         elif n == 1:
