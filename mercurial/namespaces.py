@@ -23,3 +23,18 @@ class namespaces(object):
 
     def __init__(self):
         self._names = util.sortdict()
+
+    def addnamespace(self, namespace, namemap, order=None):
+        """
+        register a namespace
+
+        namespace: the name to be registered (in plural form)
+        namemap: function that inputs a node, output name(s)
+        order: optional argument to specify the order of namespaces
+               (e.g. 'branches' should be listed before 'bookmarks')
+        """
+        val = {'namemap': namemap}
+        if order is not None:
+            self._names.insert(order, namespace, val)
+        else:
+            self._names[namespace] = val
