@@ -118,8 +118,8 @@ resolve --all should re-merge all unresolved files
   warning: conflicts during merge.
   merging file2 incomplete! (edit conflicts, then use 'hg resolve --mark')
   [1]
-  $ grep -q '<<<' file1
-  $ grep -q '<<<' file2
+  $ grep '<<<' file1 > /dev/null
+  $ grep '<<<' file2 > /dev/null
 
 resolve <file> should re-merge file
   $ echo resolved > file1
@@ -127,7 +127,7 @@ resolve <file> should re-merge file
   warning: conflicts during merge.
   merging file1 incomplete! (edit conflicts, then use 'hg resolve --mark')
   [1]
-  $ grep -q '<<<' file1
+  $ grep '<<<' file1 > /dev/null
 
 resolve <file> should do nothing if 'file' was marked resolved
   $ echo resolved > file1
