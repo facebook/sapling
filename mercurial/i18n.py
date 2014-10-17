@@ -41,6 +41,8 @@ def setdatapath(datapath):
     global _ugettext
     _ugettext = t.ugettext
 
+_msgcache = {}
+
 def gettext(message):
     """Translate message.
 
@@ -55,24 +57,26 @@ def gettext(message):
     if message is None or not _ugettext:
         return message
 
-    if type(message) is unicode:
-        # goofy unicode docstrings in test
-        paragraphs = message.split(u'\n\n')
-    else:
-        paragraphs = [p.decode("ascii") for p in message.split('\n\n')]
-    # Be careful not to translate the empty string -- it holds the
-    # meta data of the .po file.
-    u = u'\n\n'.join([p and _ugettext(p) or '' for p in paragraphs])
-    try:
-        # encoding.tolocal cannot be used since it will first try to
-        # decode the Unicode string. Calling u.decode(enc) really
-        # means u.encode(sys.getdefaultencoding()).decode(enc). Since
-        # the Python encoding defaults to 'ascii', this fails if the
-        # translated string use non-ASCII characters.
-        return u.encode(encoding.encoding, "replace")
-    except LookupError:
-        # An unknown encoding results in a LookupError.
-        return message
+    if message not in _msgcache:
+        if type(message) is unicode:
+            # goofy unicode docstrings in test
+            paragraphs = message.split(u'\n\n')
+        else:
+            paragraphs = [p.decode("ascii") for p in message.split('\n\n')]
+        # Be careful not to translate the empty string -- it holds the
+        # meta data of the .po file.
+        u = u'\n\n'.join([p and _ugettext(p) or '' for p in paragraphs])
+        try:
+            # encoding.tolocal cannot be used since it will first try to
+            # decode the Unicode string. Calling u.decode(enc) really
+            # means u.encode(sys.getdefaultencoding()).decode(enc). Since
+            # the Python encoding defaults to 'ascii', this fails if the
+            # translated string use non-ASCII characters.
+            _msgcache[message] = u.encode(encoding.encoding, "replace")
+        except LookupError:
+            # An unknown encoding results in a LookupError.
+            _msgcache[message] = message
+    return _msgcache[message]
 
 def _plain():
     if 'HGPLAIN' not in os.environ and 'HGPLAINEXCEPT' not in os.environ:
