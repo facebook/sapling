@@ -470,6 +470,8 @@ Write the python script to disk
   >     for wckey in wccontent:
   >         if (ctxvalue[0] == ctxvalue[1] and 'revert' in wckey):
   >             continue
+  >         if not ctxvalue[0] and 'revert' in wckey:
+  >             continue
   >         filename = "%s_%s" % (ctxkey, wckey)
   >         combination.append((filename, ctxkey, wckey))
   > 
@@ -511,9 +513,7 @@ check list of planned files
   added_clean
   added_deleted
   added_removed
-  added_revert
   added_untracked-clean
-  added_untracked-revert
   added_untracked-wc
   added_wc
   clean_clean
@@ -651,9 +651,7 @@ Create parent changeset
   adding added_clean
   adding added_deleted
   adding added_removed
-  adding added_revert
   adding added_untracked-clean
-  adding added_untracked-revert
   adding added_untracked-wc
   adding added_wc
   removing removed_clean
@@ -676,9 +674,7 @@ Create parent changeset
   A added_clean
   A added_deleted
   A added_removed
-  A added_revert
   A added_untracked-clean
-  A added_untracked-revert
   A added_untracked-wc
   A added_wc
   R removed_clean
@@ -698,9 +694,7 @@ Create parent changeset
   parent added_clean
   parent added_deleted
   parent added_removed
-  parent added_revert
   parent added_untracked-clean
-  parent added_untracked-revert
   parent added_untracked-wc
   parent added_wc
   base   clean_clean
@@ -723,8 +717,6 @@ Setup working directory
   $ python ../gen-revert-cases.py wc
   $ hg addremove --similarity 0
   removing added_removed
-  removing added_revert
-  removing added_untracked-revert
   removing clean_removed
   adding missing_deleted
   adding missing_untracked-wc
@@ -746,9 +738,7 @@ Setup working directory
   A removed_revert
   A removed_wc
   R added_removed
-  R added_revert
   R added_untracked-clean
-  R added_untracked-revert
   R added_untracked-wc
   R clean_removed
   R clean_untracked-clean
@@ -834,9 +824,7 @@ check revert output
   $ hg revert --all
   reverting added_deleted
   undeleting added_removed
-  undeleting added_revert
   undeleting added_untracked-clean
-  undeleting added_untracked-revert
   undeleting added_untracked-wc
   reverting added_wc
   reverting clean_deleted
@@ -960,11 +948,7 @@ revert all files individually and check the output
   
   ### revert for: added_removed
   
-  ### revert for: added_revert
-  
   ### revert for: added_untracked-clean
-  
-  ### revert for: added_untracked-revert
   
   ### revert for: added_untracked-wc
   
@@ -1069,14 +1053,8 @@ revert all files individually and check the output
   ### revert for: added_removed
   no changes needed to added_removed
   
-  ### revert for: added_revert
-  no changes needed to added_revert
-  
   ### revert for: added_untracked-clean
   no changes needed to added_untracked-clean
-  
-  ### revert for: added_untracked-revert
-  no changes needed to added_untracked-revert
   
   ### revert for: added_untracked-wc
   no changes needed to added_untracked-wc
