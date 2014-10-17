@@ -265,9 +265,8 @@ def symbolset(repo, subset, x):
     return stringset(repo, subset, x)
 
 def rangeset(repo, subset, x, y):
-    cl = baseset(repo.changelog)
-    m = getset(repo, cl, x)
-    n = getset(repo, cl, y)
+    m = getset(repo, fullreposet(repo), x)
+    n = getset(repo, fullreposet(repo), y)
 
     if not m or not n:
         return baseset()
