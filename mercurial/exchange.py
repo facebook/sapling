@@ -1186,11 +1186,26 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
     cg = None
     if kwargs.get('cg', True):
         # build changegroup bundle here.
-        cg = changegroup.getchangegroupraw(repo, source, heads=heads,
-                                           common=common, bundlecaps=bundlecaps)
+        version = None
+        cgversions = b2caps.get('b2x:changegroup')
+        if cgversions is None:
+            cg = changegroup.getchangegroupraw(repo, source, heads=heads,
+                                               common=common,
+                                               bundlecaps=bundlecaps)
+        else:
+            cgversions = [v for v in cgversions if v in changegroup.packermap]
+            if not cgversions:
+                raise ValueError(_('no common changegroup version'))
+            version = max(cgversions)
+            cg = changegroup.getchangegroupraw(repo, source, heads=heads,
+                                               common=common,
+                                               bundlecaps=bundlecaps,
+                                               version=version)
 
     if cg:
-        bundler.newpart('b2x:changegroup', data=cg)
+        part = bundler.newpart('b2x:changegroup', data=cg)
+        if version is not None:
+            part.addparam('version', version)
 
 @getbundle2partsgenerator('listkeys')
 def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,
