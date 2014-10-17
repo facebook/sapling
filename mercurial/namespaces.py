@@ -44,6 +44,9 @@ class namespaces(object):
         addns("tags",
               lambda repo, name: tolist(repo._tagscache.tags.get(name)))
 
+        addns("branches",
+              lambda repo, name: tolist(repo.branchtip(name)))
+
     def addnamespace(self, namespace, namemap, order=None):
         """
         register a namespace

@@ -414,11 +414,6 @@ class changectx(basectx):
                 return
             except KeyError:
                 pass
-
-            try:
-                self._node = repo.branchtip(changeid)
-                self._rev = repo.changelog.rev(self._node)
-                return
             except error.FilteredRepoLookupError:
                 raise
             except error.RepoLookupError:
