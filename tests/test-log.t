@@ -1393,7 +1393,7 @@ enable obsolete to test hidden feature
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
   $ hg log -r a
-  abort: filtered revision 'a'!
+  abort: filtered revision 'a' (not in 'visible' subset)!
   [255]
 
 test that parent prevent a changeset to be hidden

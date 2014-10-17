@@ -469,8 +469,9 @@ class changectx(basectx):
                 pass
         except (error.FilteredIndexError, error.FilteredLookupError,
                 error.FilteredRepoLookupError):
-            raise error.FilteredRepoLookupError(_("filtered revision '%s'")
-                                                % changeid)
+            msg = _("filtered revision '%s' (not in '%s' subset)")
+            msg %= (changeid, repo.filtername)
+            raise error.FilteredRepoLookupError(msg)
         except IndexError:
             pass
         raise error.RepoLookupError(

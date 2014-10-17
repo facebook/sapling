@@ -2175,7 +2175,7 @@ proper status for filtered revision
   Content-Type: text/plain; charset=ascii\r (esc)
   \r (esc)
   
-  error: filtered revision '5'
+  error: filtered revision '5' (not in 'served' subset)
 
 
 
@@ -2189,7 +2189,7 @@ proper status for filtered revision
   Content-Type: text/plain; charset=ascii\r (esc)
   \r (esc)
   
-  error: filtered revision '4'
+  error: filtered revision '4' (not in 'served' subset)
 
 filtered '0' changeset
 
