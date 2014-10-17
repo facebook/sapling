@@ -151,6 +151,7 @@ import urllib
 import string
 import obsolete
 import pushkey
+import url
 
 import changegroup, error
 from i18n import _
@@ -797,6 +798,8 @@ capabilities = {'HG2Y': (),
                 'b2x:listkeys': (),
                 'b2x:pushkey': (),
                 'b2x:changegroup': (),
+                'digests': tuple(sorted(util.DIGESTS.keys())),
+                'b2x:remote-changegroup': ('http', 'https'),
                }
 
 def getrepocaps(repo):
@@ -848,6 +851,80 @@ def handlechangegroup(op, inpart):
         part = op.reply.newpart('b2x:reply:changegroup')
         part.addparam('in-reply-to', str(inpart.id), mandatory=False)
         part.addparam('return', '%i' % ret, mandatory=False)
+    assert not inpart.read()
+
+_remotechangegroupparams = tuple(['url', 'size', 'digests'] +
+    ['digest:%s' % k for k in util.DIGESTS.keys()])
+@parthandler('b2x:remote-changegroup', _remotechangegroupparams)
+def handleremotechangegroup(op, inpart):
+    """apply a bundle10 on the repo, given an url and validation information
+
+    All the information about the remote bundle to import are given as
+    parameters. The parameters include:
+      - url: the url to the bundle10.
+      - size: the bundle10 file size. It is used to validate what was
+        retrieved by the client matches the server knowledge about the bundle.
+      - digests: a space separated list of the digest types provided as
+        parameters.
+      - digest:<digest-type>: the hexadecimal representation of the digest with
+        that name. Like the size, it is used to validate what was retrieved by
+        the client matches what the server knows about the bundle.
+
+    When multiple digest types are given, all of them are checked.
+    """
+    try:
+        raw_url = inpart.params['url']
+    except KeyError:
+        raise util.Abort(_('remote-changegroup: missing "%s" param') % 'url')
+    parsed_url = util.url(raw_url)
+    if parsed_url.scheme not in capabilities['b2x:remote-changegroup']:
+        raise util.Abort(_('remote-changegroup does not support %s urls') %
+            parsed_url.scheme)
+
+    try:
+        size = int(inpart.params['size'])
+    except ValueError:
+        raise util.Abort(_('remote-changegroup: invalid value for param "%s"')
+            % 'size')
+    except KeyError:
+        raise util.Abort(_('remote-changegroup: missing "%s" param') % 'size')
+
+    digests = {}
+    for typ in inpart.params.get('digests', '').split():
+        param = 'digest:%s' % typ
+        try:
+            value = inpart.params[param]
+        except KeyError:
+            raise util.Abort(_('remote-changegroup: missing "%s" param') %
+                param)
+        digests[typ] = value
+
+    real_part = util.digestchecker(url.open(op.ui, raw_url), size, digests)
+
+    # Make sure we trigger a transaction creation
+    #
+    # The addchangegroup function will get a transaction object by itself, but
+    # we need to make sure we trigger the creation of a transaction object used
+    # for the whole processing scope.
+    op.gettransaction()
+    import exchange
+    cg = exchange.readbundle(op.repo.ui, real_part, raw_url)
+    if not isinstance(cg, changegroup.cg1unpacker):
+        raise util.Abort(_('%s: not a bundle version 1.0') %
+            util.hidepassword(raw_url))
+    ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
+    op.records.add('changegroup', {'return': ret})
+    if op.reply is not None:
+        # This is definitly not the final form of this
+        # return. But one need to start somewhere.
+        part = op.reply.newpart('b2x:reply:changegroup')
+        part.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        part.addparam('return', '%i' % ret, mandatory=False)
+    try:
+        real_part.validate()
+    except util.Abort, e:
+        raise util.Abort(_('bundle at %s is corrupted:\n%s') %
+            (util.hidepassword(raw_url), str(e)))
     assert not inpart.read()
 
 @parthandler('b2x:reply:changegroup', ('return', 'in-reply-to'))
