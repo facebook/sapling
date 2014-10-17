@@ -415,10 +415,6 @@ class changectx(basectx):
             except KeyError:
                 pass
 
-            if changeid in repo._tagscache.tags:
-                self._node = repo._tagscache.tags[changeid]
-                self._rev = repo.changelog.rev(self._node)
-                return
             try:
                 self._node = repo.branchtip(changeid)
                 self._rev = repo.changelog.rev(self._node)

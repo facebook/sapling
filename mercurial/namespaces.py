@@ -34,10 +34,15 @@ class namespaces(object):
     def __init__(self):
         self._names = util.sortdict()
 
+        addns = self.addnamespace
+
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
-        self.addnamespace("bookmarks",
-                          lambda repo, name: tolist(repo._bookmarks.get(name)))
+        addns("bookmarks",
+              lambda repo, name: tolist(repo._bookmarks.get(name)))
+
+        addns("tags",
+              lambda repo, name: tolist(repo._tagscache.tags.get(name)))
 
     def addnamespace(self, namespace, namemap, order=None):
         """
