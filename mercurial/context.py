@@ -407,10 +407,14 @@ class changectx(basectx):
                 except (TypeError, LookupError):
                     pass
 
-            if changeid in repo._bookmarks:
-                self._node = repo._bookmarks[changeid]
+            # lookup bookmarks through the name interface
+            try:
+                self._node = repo.names.singlenode(changeid)
                 self._rev = repo.changelog.rev(self._node)
                 return
+            except KeyError:
+                pass
+
             if changeid in repo._tagscache.tags:
                 self._node = repo._tagscache.tags[changeid]
                 self._rev = repo.changelog.rev(self._node)
