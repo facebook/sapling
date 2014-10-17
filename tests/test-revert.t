@@ -466,8 +466,10 @@ Write the python script to disk
   > 
   > # build the combination of possible states
   > combination = []
-  > for ctxkey in ctxcontent:
+  > for ctxkey, ctxvalue in ctxcontent.iteritems():
   >     for wckey in wccontent:
+  >         if (ctxvalue[0] == ctxvalue[1] and 'revert' in wckey):
+  >             continue
   >         filename = "%s_%s" % (ctxkey, wckey)
   >         combination.append((filename, ctxkey, wckey))
   > 
@@ -517,17 +519,13 @@ check list of planned files
   clean_clean
   clean_deleted
   clean_removed
-  clean_revert
   clean_untracked-clean
-  clean_untracked-revert
   clean_untracked-wc
   clean_wc
   missing_clean
   missing_deleted
   missing_removed
-  missing_revert
   missing_untracked-clean
-  missing_untracked-revert
   missing_untracked-wc
   missing_wc
   modified_clean
@@ -575,9 +573,7 @@ Generate base changeset
   adding clean_clean
   adding clean_deleted
   adding clean_removed
-  adding clean_revert
   adding clean_untracked-clean
-  adding clean_untracked-revert
   adding clean_untracked-wc
   adding clean_wc
   adding modified_clean
@@ -600,9 +596,7 @@ Generate base changeset
   A clean_clean
   A clean_deleted
   A clean_removed
-  A clean_revert
   A clean_untracked-clean
-  A clean_untracked-revert
   A clean_untracked-wc
   A clean_wc
   A modified_clean
@@ -630,9 +624,7 @@ Generate base changeset
   base   clean_clean
   base   clean_deleted
   base   clean_removed
-  base   clean_revert
   base   clean_untracked-clean
-  base   clean_untracked-revert
   base   clean_untracked-wc
   base   clean_wc
   base   modified_clean
@@ -714,9 +706,7 @@ Create parent changeset
   base   clean_clean
   base   clean_deleted
   base   clean_removed
-  base   clean_revert
   base   clean_untracked-clean
-  base   clean_untracked-revert
   base   clean_untracked-wc
   base   clean_wc
   parent modified_clean
@@ -762,7 +752,6 @@ Setup working directory
   R added_untracked-wc
   R clean_removed
   R clean_untracked-clean
-  R clean_untracked-revert
   R clean_untracked-wc
   R modified_removed
   R modified_untracked-clean
@@ -787,7 +776,6 @@ Setup working directory
   A missing_wc
   R clean_removed
   R clean_untracked-clean
-  R clean_untracked-revert
   R clean_untracked-wc
   R modified_removed
   R modified_untracked-clean
@@ -815,9 +803,7 @@ Setup working directory
   wc     added_untracked-wc
   wc     added_wc
   base   clean_clean
-  base   clean_revert
   base   clean_untracked-clean
-  base   clean_untracked-revert
   wc     clean_untracked-wc
   wc     clean_wc
   wc     missing_untracked-wc
@@ -856,7 +842,6 @@ check revert output
   reverting clean_deleted
   undeleting clean_removed
   undeleting clean_untracked-clean
-  undeleting clean_untracked-revert
   undeleting clean_untracked-wc
   reverting clean_wc
   forgetting missing_deleted
@@ -912,7 +897,6 @@ check revert output
   reverting clean_deleted
   undeleting clean_removed
   undeleting clean_untracked-clean
-  undeleting clean_untracked-revert
   undeleting clean_untracked-wc
   reverting clean_wc
   forgetting missing_deleted
@@ -993,12 +977,7 @@ revert all files individually and check the output
   
   ### revert for: clean_removed
   
-  ### revert for: clean_revert
-  no changes needed to clean_revert
-  
   ### revert for: clean_untracked-clean
-  
-  ### revert for: clean_untracked-revert
   
   ### revert for: clean_untracked-wc
   
@@ -1012,14 +991,8 @@ revert all files individually and check the output
   ### revert for: missing_removed
   missing_removed: no such file in rev * (glob)
   
-  ### revert for: missing_revert
-  missing_revert: no such file in rev * (glob)
-  
   ### revert for: missing_untracked-clean
   missing_untracked-clean: no such file in rev * (glob)
-  
-  ### revert for: missing_untracked-revert
-  missing_untracked-revert: no such file in rev * (glob)
   
   ### revert for: missing_untracked-wc
   file not managed: missing_untracked-wc
@@ -1117,12 +1090,7 @@ revert all files individually and check the output
   
   ### revert for: clean_removed
   
-  ### revert for: clean_revert
-  no changes needed to clean_revert
-  
   ### revert for: clean_untracked-clean
-  
-  ### revert for: clean_untracked-revert
   
   ### revert for: clean_untracked-wc
   
@@ -1136,14 +1104,8 @@ revert all files individually and check the output
   ### revert for: missing_removed
   missing_removed: no such file in rev * (glob)
   
-  ### revert for: missing_revert
-  missing_revert: no such file in rev * (glob)
-  
   ### revert for: missing_untracked-clean
   missing_untracked-clean: no such file in rev * (glob)
-  
-  ### revert for: missing_untracked-revert
-  missing_untracked-revert: no such file in rev * (glob)
   
   ### revert for: missing_untracked-wc
   file not managed: missing_untracked-wc
