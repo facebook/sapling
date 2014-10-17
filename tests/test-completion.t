@@ -90,6 +90,7 @@ Show debug commands if there are no other candidates
   debugknown
   debuglabelcomplete
   debuglocks
+  debugnamecomplete
   debugobsolete
   debugpathcomplete
   debugpushkey
@@ -247,6 +248,7 @@ Show all commands + options
   debugknown: 
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock
+  debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, date, user
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 
@@ -321,16 +323,16 @@ Test debugpathcomplete
   $ hg debugpathcomplete -r F
   Fum
 
-Test debuglabelcomplete
+Test debugnamecomplete
 
-  $ hg debuglabelcomplete
+  $ hg debugnamecomplete
   Fum
   default
   fee
   fie
   fo
   tip
-  $ hg debuglabelcomplete f
+  $ hg debugnamecomplete f
   fee
   fie
   fo

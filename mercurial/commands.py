@@ -2344,18 +2344,23 @@ def debugknown(ui, repopath, *ids, **opts):
 
 @command('debuglabelcomplete', [], _('LABEL...'))
 def debuglabelcomplete(ui, repo, *args):
-    '''complete "labels" - tags, open branch names, bookmark names'''
+    '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
+    debugnamecomplete(ui, repo, *args)
 
-    labels = set()
-    labels.update(t[0] for t in repo.tagslist())
-    labels.update(repo._bookmarks.keys())
-    labels.update(tag for (tag, heads, tip, closed)
-                  in repo.branchmap().iterbranches() if not closed)
+@command('debugnamecomplete', [], _('NAME...'))
+def debugnamecomplete(ui, repo, *args):
+    '''complete "names" - tags, open branch names, bookmark names'''
+
+    names = set()
+    names.update(t[0] for t in repo.tagslist())
+    names.update(repo._bookmarks.keys())
+    names.update(tag for (tag, heads, tip, closed)
+                 in repo.branchmap().iterbranches() if not closed)
     completions = set()
     if not args:
         args = ['']
     for a in args:
-        completions.update(l for l in labels if l.startswith(a))
+        completions.update(n for n in names if n.startswith(a))
     ui.write('\n'.join(sorted(completions)))
     ui.write('\n')
 

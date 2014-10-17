@@ -110,7 +110,7 @@ _hg_bookmarks()
 
 _hg_labels()
 {
-    local labels="$(_hg_cmd debuglabelcomplete "$cur")"
+    local labels="$(_hg_cmd debugnamecomplete "$cur")"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$labels' -- "$cur"))
 }

@@ -780,9 +780,9 @@ Test list of internal help commands
                  dump an index DAG as a graphviz dot file
    debuginstall  test Mercurial installation
    debugknown    test whether node ids are known to a repo
-   debuglabelcomplete
-                 complete "labels" - tags, open branch names, bookmark names
    debuglocks    show or modify state of locks
+   debugnamecomplete
+                 complete "names" - tags, open branch names, bookmark names
    debugobsolete
                  create arbitrary obsolete marker
    debugoptDEP   (no help text available)
