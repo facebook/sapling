@@ -177,6 +177,9 @@ DAG
     Mercurial, the DAG is limited by the requirement for children to
     have at most two parents.
 
+Deprecated
+    Feature removed from documentation, but not scheduled for removal.
+
 Default branch
     See 'Branch, default'.
 
@@ -216,6 +219,9 @@ Draft
     Changesets in the draft phase have not been shared with publishing
     repositories and may thus be safely changed by history-modifying
     extensions. See :hg:`help phases`.
+
+Experimental
+    Feature that may change or be removed at a later date.
 
 Graph
     See DAG and :hg:`log --graph`.
