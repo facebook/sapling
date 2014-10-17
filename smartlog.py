@@ -36,7 +36,7 @@ def uisetup(ui):
         if type == 'F':
             char = "."
         # Color the current commits. @ is too subtle
-        if enabled:
+        if enabled and getattr(ui, '_colormode', '') == 'ansi':
             color = None
             if char == "@":
                 color = "\033[35m"
@@ -273,9 +273,9 @@ Excludes:
                 master = 'tip'
 
         try:
-            master = repo.revs(master)[0]
+            master = repo.revs(master).first()
         except error.RepoLookupError:
-            master = repo.revs('tip')[0]
+            master = repo.revs('tip').first()
 
         masterbranch = branchinfo(master)[0]
 
@@ -283,9 +283,9 @@ Excludes:
             if branch != masterbranch:
                 try:
                     branchmaster = repo.revs(
-                        'first(reverse(branch("%s")) & public())' % branch)[0]
+                        'first(reverse(branch("%s")) & public())' % branch).first()
                 except:
-                    branchmaster = repo.revs('tip')[0]
+                    branchmaster = repo.revs('tip').first()
             else:
                 branchmaster = master
 
@@ -325,7 +325,7 @@ Excludes:
         for r in opts.get('rev'):
             revs.update(repo.revs(r))
         try:
-            master = repo.revs('.')[0]
+            master = repo.revs('.').first()
         except error.RepoLookupError:
             master = revs[0]
 
