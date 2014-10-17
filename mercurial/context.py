@@ -469,6 +469,10 @@ class changectx(basectx):
                 pass
         except (error.FilteredIndexError, error.FilteredLookupError,
                 error.FilteredRepoLookupError):
+            if repo.filtername == 'visible':
+                msg = _("hidden revision '%s'") % changeid
+                hint = _('use --hidden to access hidden revisions')
+                raise error.FilteredRepoLookupError(msg, hint=hint)
             msg = _("filtered revision '%s' (not in '%s' subset)")
             msg %= (changeid, repo.filtername)
             raise error.FilteredRepoLookupError(msg)
