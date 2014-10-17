@@ -1,3 +1,4 @@
+from i18n import _
 from mercurial import util
 import weakref
 
@@ -58,3 +59,22 @@ class namespaces(object):
             self._names.insert(order, namespace, val)
         else:
             self._names[namespace] = val
+
+    def singlenode(self, name):
+        """
+        Return the 'best' node for the given name. Best means the first node
+        in the first nonempty list returned by a name-to-nodes mapping function
+        in the defined precedence order.
+
+        Raises a KeyError if there is no such node.
+        """
+        for ns, v in self._names.iteritems():
+            n = v['namemap'](self.repo, name)
+            if n:
+                # return max revision number
+                if len(n) > 1:
+                    cl = self.repo.changelog
+                    maxrev = max(cl.rev(node) for node in n)
+                    return cl.node(maxrev)
+                return n[0]
+        raise KeyError(_('no such name: %s') % name)
