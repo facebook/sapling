@@ -902,20 +902,26 @@ class changeset_printer(object):
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
                       label='log.changeset changeset.%s' % ctx.phasestr())
 
+        # branches are shown first before any other names due to backwards
+        # compatibility
         branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
             # i18n: column positioning for "hg log"
             self.ui.write(_("branch:      %s\n") % branch,
                           label='log.branch')
-        for bookmark in self.repo.nodebookmarks(changenode):
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("bookmark:    %s\n") % bookmark,
-                    label='log.bookmark')
-        for tag in self.repo.nodetags(changenode):
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("tag:         %s\n") % tag,
-                          label='log.tag')
+
+        for name, ns in self.repo.names.iteritems():
+            # branches has special logic already handled above, so here we just
+            # skip it
+            if name == 'branches':
+                continue
+            # we will use the templatename as the color name since those two
+            # should be the same
+            for name in ns.names(self.repo, changenode):
+                # i18n: column positioning for "hg log"
+                tname = _(("%s:" % ns.templatename).ljust(13) + "%s\n") % name
+                self.ui.write("%s" % tname, label='log.%s' % ns.templatename)
         if self.ui.debugflag:
             # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
