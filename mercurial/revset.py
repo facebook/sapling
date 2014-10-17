@@ -743,8 +743,9 @@ def draft(repo, subset, x):
     Changeset in draft phase."""
     # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
-    pc = repo._phasecache
-    condition = lambda r: pc.phase(repo, r) == phases.draft
+    phase = repo._phasecache.phase
+    target = phases.draft
+    condition = lambda r: phase(repo, r) == target
     return subset.filter(condition, cache=False)
 
 def extinct(repo, subset, x):
@@ -1294,8 +1295,9 @@ def public(repo, subset, x):
     Changeset in public phase."""
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
-    pc = repo._phasecache
-    condition = lambda r: pc.phase(repo, r) == phases.public
+    phase = repo._phasecache.phase
+    target = phases.public
+    condition = lambda r: phase(repo, r) == target
     return subset.filter(condition, cache=False)
 
 def remote(repo, subset, x):
@@ -1493,8 +1495,9 @@ def secret(repo, subset, x):
     Changeset in secret phase."""
     # i18n: "secret" is a keyword
     getargs(x, 0, 0, _("secret takes no arguments"))
-    pc = repo._phasecache
-    condition = lambda x: pc.phase(repo, x) == phases.secret
+    phase = repo._phasecache.phase
+    target = phases.secret
+    condition = lambda r: phase(repo, r) == target
     return subset.filter(condition, cache=False)
 
 def sort(repo, subset, x):
