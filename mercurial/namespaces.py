@@ -1,5 +1,6 @@
 from i18n import _
 from mercurial import util
+import templatekw
 
 def tolist(val):
     """
@@ -73,6 +74,13 @@ class namespaces(object):
             self._names.insert(order, namespace, val)
         else:
             self._names[namespace] = val
+
+        # we only generate a template keyword if one does not already exist
+        if namespace not in templatekw.keywords:
+            def generatekw(**args):
+                return templatekw.shownames(namespace, **args)
+
+            templatekw.keywords[namespace] = generatekw
 
     def singlenode(self, repo, name):
         """
