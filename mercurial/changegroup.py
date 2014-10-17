@@ -488,14 +488,15 @@ def changegroupsubset(repo, roots, heads, source):
     bundler = cg1packer(repo)
     return getsubset(repo, outgoing, bundler, source)
 
-def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None):
+def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
+                           version='01'):
     """Like getbundle, but taking a discovery.outgoing as an argument.
 
     This is only implemented for local repos and reuses potentially
     precomputed sets in outgoing. Returns a raw changegroup generator."""
     if not outgoing.missing:
         return None
-    bundler = cg1packer(repo, bundlecaps)
+    bundler = packermap[version][0](repo, bundlecaps)
     return getsubsetraw(repo, outgoing, bundler, source)
 
 def getlocalchangegroup(repo, source, outgoing, bundlecaps=None):
@@ -527,17 +528,21 @@ def _computeoutgoing(repo, heads, common):
         heads = cl.heads()
     return discovery.outgoing(cl, common, heads)
 
-def getchangegroupraw(repo, source, heads=None, common=None, bundlecaps=None):
+def getchangegroupraw(repo, source, heads=None, common=None, bundlecaps=None,
+                      version='01'):
     """Like changegroupsubset, but returns the set difference between the
     ancestors of heads and the ancestors common.
 
     If heads is None, use the local heads. If common is None, use [nullid].
 
+    If version is None, use a version '1' changegroup.
+
     The nodes in common might not all be known locally due to the way the
     current discovery protocol works. Returns a raw changegroup generator.
     """
     outgoing = _computeoutgoing(repo, heads, common)
-    return getlocalchangegroupraw(repo, source, outgoing, bundlecaps=bundlecaps)
+    return getlocalchangegroupraw(repo, source, outgoing, bundlecaps=bundlecaps,
+                                  version=version)
 
 def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None):
     """Like changegroupsubset, but returns the set difference between the
