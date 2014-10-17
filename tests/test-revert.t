@@ -472,6 +472,8 @@ Write the python script to disk
   >             continue
   >         if not ctxvalue[0] and 'revert' in wckey:
   >             continue
+  >         if not ctxvalue[1] and ('removed' in wckey or 'deleted' in wckey):
+  >             continue
   >         filename = "%s_%s" % (ctxkey, wckey)
   >         combination.append((filename, ctxkey, wckey))
   > 
@@ -523,8 +525,6 @@ check list of planned files
   clean_untracked-wc
   clean_wc
   missing_clean
-  missing_deleted
-  missing_removed
   missing_untracked-clean
   missing_untracked-wc
   missing_wc
@@ -537,8 +537,6 @@ check list of planned files
   modified_untracked-wc
   modified_wc
   removed_clean
-  removed_deleted
-  removed_removed
   removed_revert
   removed_untracked-clean
   removed_untracked-revert
@@ -585,8 +583,6 @@ Generate base changeset
   adding modified_untracked-wc
   adding modified_wc
   adding removed_clean
-  adding removed_deleted
-  adding removed_removed
   adding removed_revert
   adding removed_untracked-clean
   adding removed_untracked-revert
@@ -608,8 +604,6 @@ Generate base changeset
   A modified_untracked-wc
   A modified_wc
   A removed_clean
-  A removed_deleted
-  A removed_removed
   A removed_revert
   A removed_untracked-clean
   A removed_untracked-revert
@@ -636,8 +630,6 @@ Generate base changeset
   base   modified_untracked-wc
   base   modified_wc
   base   removed_clean
-  base   removed_deleted
-  base   removed_removed
   base   removed_revert
   base   removed_untracked-clean
   base   removed_untracked-revert
@@ -655,8 +647,6 @@ Create parent changeset
   adding added_untracked-wc
   adding added_wc
   removing removed_clean
-  removing removed_deleted
-  removing removed_removed
   removing removed_revert
   removing removed_untracked-clean
   removing removed_untracked-revert
@@ -678,8 +668,6 @@ Create parent changeset
   A added_untracked-wc
   A added_wc
   R removed_clean
-  R removed_deleted
-  R removed_removed
   R removed_revert
   R removed_untracked-clean
   R removed_untracked-revert
@@ -718,11 +706,9 @@ Setup working directory
   $ hg addremove --similarity 0
   removing added_removed
   removing clean_removed
-  adding missing_deleted
   adding missing_untracked-wc
   adding missing_wc
   removing modified_removed
-  adding removed_deleted
   adding removed_revert
   adding removed_untracked-revert
   adding removed_untracked-wc
@@ -749,9 +735,7 @@ Setup working directory
   R modified_untracked-wc
   ! added_deleted
   ! clean_deleted
-  ! missing_deleted
   ! modified_deleted
-  ! removed_deleted
   ? missing_untracked-wc
   ? removed_untracked-revert
   ? removed_untracked-wc
@@ -772,16 +756,12 @@ Setup working directory
   R modified_untracked-revert
   R modified_untracked-wc
   R removed_clean
-  R removed_deleted
-  R removed_removed
   R removed_untracked-clean
   R removed_untracked-revert
   R removed_untracked-wc
   ! added_deleted
   ! clean_deleted
-  ! missing_deleted
   ! modified_deleted
-  ! removed_deleted
   ? missing_untracked-wc
 
 (create a simple text version of the content)
@@ -832,7 +812,6 @@ check revert output
   undeleting clean_untracked-clean
   undeleting clean_untracked-wc
   reverting clean_wc
-  forgetting missing_deleted
   forgetting missing_wc
   reverting modified_deleted
   undeleting modified_removed
@@ -841,7 +820,6 @@ check revert output
   undeleting modified_untracked-revert
   undeleting modified_untracked-wc
   reverting modified_wc
-  forgetting removed_deleted
   forgetting removed_revert
   forgetting removed_wc
 
@@ -887,7 +865,6 @@ check revert output
   undeleting clean_untracked-clean
   undeleting clean_untracked-wc
   reverting clean_wc
-  forgetting missing_deleted
   forgetting missing_wc
   reverting modified_clean
   reverting modified_deleted
@@ -897,8 +874,6 @@ check revert output
   undeleting modified_untracked-wc
   reverting modified_wc
   adding removed_clean
-  reverting removed_deleted
-  adding removed_removed
   adding removed_untracked-clean
   adding removed_untracked-revert
   adding removed_untracked-wc
@@ -970,11 +945,6 @@ revert all files individually and check the output
   ### revert for: missing_clean
   missing_clean: no such file in rev * (glob)
   
-  ### revert for: missing_deleted
-  
-  ### revert for: missing_removed
-  missing_removed: no such file in rev * (glob)
-  
   ### revert for: missing_untracked-clean
   missing_untracked-clean: no such file in rev * (glob)
   
@@ -1002,11 +972,6 @@ revert all files individually and check the output
   
   ### revert for: removed_clean
   removed_clean: no such file in rev * (glob)
-  
-  ### revert for: removed_deleted
-  
-  ### revert for: removed_removed
-  removed_removed: no such file in rev * (glob)
   
   ### revert for: removed_revert
   
@@ -1077,11 +1042,6 @@ revert all files individually and check the output
   ### revert for: missing_clean
   missing_clean: no such file in rev * (glob)
   
-  ### revert for: missing_deleted
-  
-  ### revert for: missing_removed
-  missing_removed: no such file in rev * (glob)
-  
   ### revert for: missing_untracked-clean
   missing_untracked-clean: no such file in rev * (glob)
   
@@ -1108,10 +1068,6 @@ revert all files individually and check the output
   ### revert for: modified_wc
   
   ### revert for: removed_clean
-  
-  ### revert for: removed_deleted
-  
-  ### revert for: removed_removed
   
   ### revert for: removed_revert
   no changes needed to removed_revert
