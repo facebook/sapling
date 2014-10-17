@@ -445,9 +445,23 @@ def _pushb2ctx(pushop, bundler):
                                      pushop.outgoing)
     if not pushop.force:
         bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
-    cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
-                                            pushop.outgoing)
+    b2caps = bundle2.bundle2caps(pushop.remote)
+    version = None
+    cgversions = b2caps.get('b2x:changegroup')
+    if cgversions is None:
+        cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
+                                                pushop.outgoing)
+    else:
+        cgversions = [v for v in cgversions if v in changegroup.packermap]
+        if not cgversions:
+            raise ValueError(_('no common changegroup version'))
+        version = max(cgversions)
+        cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
+                                                pushop.outgoing,
+                                                version=version)
     cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg)
+    if version is not None:
+        cgpart.addparam('version', version)
     def handlereply(op):
         """extract addchangegroup returns from server reply"""
         cgreplies = op.records.getreplies(cgpart.id)
