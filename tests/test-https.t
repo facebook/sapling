@@ -115,7 +115,8 @@ Test server address cannot be reused
 #endif
   $ cd ..
 
-OS X has a dummy CA cert that enables use of the system CA store
+OS X has a dummy CA cert that enables use of the system CA store when using
+Apple's OpenSSL. This trick do not work with plain OpenSSL.
 
   $ DISABLEOSXDUMMYCERT=
 #if osx

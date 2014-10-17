@@ -88,6 +88,20 @@ def _verifycert(cert, hostname):
 # We COMPLETELY ignore CERT_REQUIRED on Python <= 2.5, as it's totally
 # busted on those versions.
 
+def _plainapplepython():
+    """return true if this seems to be a pure Apple Python that
+    * is unfrozen and presumably has the whole mercurial module in the file
+      system
+    * presumably is an Apple Python that uses Apple OpenSSL which has patches
+      for using system certificate store CAs in addition to the provided
+      cacerts file
+    """
+    if sys.platform != 'darwin' or util.mainfrozen():
+        return False
+    exe = (sys.executable or '').lower()
+    return (exe.startswith('/usr/bin/python') or
+            exe.startswith('/system/library/frameworks/python.framework/'))
+
 def sslkwargs(ui, host):
     forcetls = ui.configbool('ui', 'tls', default=True)
     if forcetls:
@@ -104,7 +118,7 @@ def sslkwargs(ui, host):
         cacerts = util.expandpath(cacerts)
         if not os.path.exists(cacerts):
             raise util.Abort(_('could not find web.cacerts: %s') % cacerts)
-    elif cacerts is None and sys.platform == 'darwin' and not util.mainfrozen():
+    elif cacerts is None and _plainapplepython():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
         if os.path.exists(dummycert):
             ui.debug('using %s to enable OS X system CA\n' % dummycert)
