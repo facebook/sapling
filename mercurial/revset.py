@@ -370,7 +370,7 @@ def ancestorspec(repo, subset, x, n):
         raise error.ParseError(_("~ expects a number"))
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, baseset(cl), x):
+    for r in getset(repo, fullreposet(repo), x):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
