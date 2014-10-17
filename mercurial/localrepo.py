@@ -718,12 +718,21 @@ class localrepository(object):
         branchmap.updatecache(self)
         return self._branchcaches[self.filtername]
 
-    def branchtip(self, branch):
-        '''return the tip node for a given branch'''
+    def branchtip(self, branch, ignoremissing=False):
+        '''return the tip node for a given branch
+
+        If ignoremissing is True, then this method will not raise an error.
+        This is helpful for callers that only expect None for a missing branch
+        (e.g. namespace).
+
+        '''
         try:
             return self.branchmap().branchtip(branch)
         except KeyError:
-            raise error.RepoLookupError(_("unknown branch '%s'") % branch)
+            if not ignoremissing:
+                raise error.RepoLookupError(_("unknown branch '%s'") % branch)
+            else:
+                pass
 
     def lookup(self, key):
         return self[key].node()

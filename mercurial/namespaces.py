@@ -41,7 +41,7 @@ class namespaces(object):
 
         n = ns("branches", "branch",
                lambda repo: repo.branchmap().keys(),
-               lambda repo, name: tolist(repo.branchtip(name)),
+               lambda repo, name: tolist(repo.branchtip(name, True)),
                lambda repo, node: [repo[node].branch()])
         self.addnamespace(n)
 
