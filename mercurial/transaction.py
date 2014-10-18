@@ -266,8 +266,8 @@ class transaction(object):
     @active
     def close(self):
         '''commit the transaction'''
-        self._generatefiles()
         if self.count == 1 and self.onclose is not None:
+            self._generatefiles()
             self.onclose()
 
         self.count -= 1
