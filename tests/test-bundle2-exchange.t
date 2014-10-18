@@ -304,6 +304,15 @@ Check final content.
   6666666666666666666666666666666666666666 5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   7777777777777777777777777777777777777777 32af7686d403cf45b5d95f2d70cebea587ac806a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
+(check that no 'pending' files remain)
+
+  $ ls -1 other/.hg/bookmarks*
+  other/.hg/bookmarks
+  $ ls -1 other/.hg/store/phaseroots*
+  other/.hg/store/phaseroots
+  $ ls -1 other/.hg/store/00changelog.i*
+  other/.hg/store/00changelog.i
+
 Error Handling
 ==============
 
@@ -479,4 +488,12 @@ Doing the actual push: hook abort
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   [255]
 
+(check that no 'pending' files remain)
+
+  $ ls -1 other/.hg/bookmarks*
+  other/.hg/bookmarks
+  $ ls -1 other/.hg/store/phaseroots*
+  other/.hg/store/phaseroots
+  $ ls -1 other/.hg/store/00changelog.i*
+  other/.hg/store/00changelog.i
 

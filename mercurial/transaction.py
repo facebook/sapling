@@ -342,6 +342,7 @@ class transaction(object):
             # remove callback since the data will have been flushed
             any = self._pendingcallback.pop(cat)(self)
             self._anypending = self._anypending or any
+        self._anypending |= self._generatefiles(suffix='.pending')
         return self._anypending
 
     @active
