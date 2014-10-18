@@ -16,7 +16,7 @@
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
-  o, 'capabilities: getencoding runcommand\nencoding: *' (glob)
+  o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
   *** runcommand id
   000000000000 tip
 
@@ -531,7 +531,7 @@ start without repository:
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
-  o, 'capabilities: getencoding runcommand\nencoding: *' (glob)
+  o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
   *** runcommand id
   abort: there is no Mercurial repository here (.hg not found)
    [255]
@@ -562,7 +562,7 @@ unix domain socket:
   ...     print '%c, %r' % (ch, data)
   ...     runcommand(conn, ['id'])
   >>> check(hellomessage, server.connect)
-  o, 'capabilities: getencoding runcommand\nencoding: *' (glob)
+  o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
   *** runcommand id
   eff892de26ec tip bm1/bm2/bm3
   >>> def unknowncommand(conn):

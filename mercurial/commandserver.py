@@ -232,6 +232,8 @@ class server(object):
         hellomsg = 'capabilities: ' + ' '.join(sorted(self.capabilities))
         hellomsg += '\n'
         hellomsg += 'encoding: ' + encoding.encoding
+        hellomsg += '\n'
+        hellomsg += 'pid: %d' % os.getpid()
 
         # write the hello msg in -one- chunk
         self.cout.write(hellomsg)
