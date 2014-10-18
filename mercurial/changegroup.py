@@ -661,12 +661,6 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
     changesets = files = revisions = 0
     efiles = set()
 
-    # write changelog data to temp files so concurrent readers will not see
-    # inconsistent view
-    cl = repo.changelog
-    cl.delayupdate()
-    oldheads = cl.heads()
-
     tr = repo.transaction("\n".join([srctype, util.hidepassword(url)]))
     # The transaction could have been created before and already carries source
     # information. In this case we use the top level data. We overwrite the
@@ -674,6 +668,12 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
     # this function.
     srctype = tr.hookargs.setdefault('source', srctype)
     url = tr.hookargs.setdefault('url', url)
+
+    # write changelog data to temp files so concurrent readers will not see
+    # inconsistent view
+    cl = repo.changelog
+    cl.delayupdate(tr)
+    oldheads = cl.heads()
     try:
         repo.hook('prechangegroup', throw=True, **tr.hookargs)
 
@@ -756,7 +756,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
         repo.invalidatevolatilesets()
 
         if changesets > 0:
-            p = lambda: cl.writepending() and repo.root or ""
+            p = lambda: tr.writepending() and repo.root or ""
             if 'node' not in tr.hookargs:
                 tr.hookargs['node'] = hex(cl.node(clstart))
                 hookargs = dict(tr.hookargs)

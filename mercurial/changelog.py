@@ -224,7 +224,7 @@ class changelog(revlog.revlog):
             raise error.FilteredIndexError(rev)
         return super(changelog, self).flags(rev)
 
-    def delayupdate(self):
+    def delayupdate(self, tr):
         "delay visibility of index updates to other readers"
 
         if not self._delayed:
@@ -238,6 +238,7 @@ class changelog(revlog.revlog):
                 self.opener = _delayopener(self._realopener, self.indexfile,
                                            self._delaybuf)
         self._delayed = True
+        tr.addpending('cl-%i' % id(self), self._writepending)
 
     def finalize(self, tr):
         "finalize index updates"
@@ -266,7 +267,7 @@ class changelog(revlog.revlog):
         self._nodecache = r._nodecache
         self._chunkcache = r._chunkcache
 
-    def writepending(self):
+    def _writepending(self):
         "create a file containing the unfinalized state for pretxnchangegroup"
         if self._delaybuf:
             # make a temporary copy of the index

@@ -854,9 +854,7 @@ class pulloperation(object):
         """close transaction if created"""
         if self._tr is not None:
             repo = self.repo
-            cl = repo.unfiltered().changelog
-            p = cl.writepending() and repo.root or ""
-            p = cl.writepending() and repo.root or ""
+            p = lambda: self._tr.writepending() and repo.root or ""
             repo.hook('b2x-pretransactionclose', throw=True, pending=p,
                       **self._tr.hookargs)
             self._tr.close()
@@ -1279,8 +1277,7 @@ def unbundle(repo, cg, heads, source, url):
                 tr.hookargs['url'] = url
                 tr.hookargs['bundle2-exp'] = '1'
                 r = bundle2.processbundle(repo, cg, lambda: tr).reply
-                cl = repo.unfiltered().changelog
-                p = cl.writepending() and repo.root or ""
+                p = lambda: tr.writepending() and repo.root or ""
                 repo.hook('b2x-pretransactionclose', throw=True, pending=p,
                           **tr.hookargs)
                 tr.close()
