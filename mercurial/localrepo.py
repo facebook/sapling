@@ -1445,7 +1445,6 @@ class localrepository(object):
             xp1, xp2 = p1.hex(), p2 and p2.hex() or ''
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2, pending=p)
-            self.changelog.finalize(trp)
             # set the new commit is proper phase
             targetphase = subrepo.newcommitphase(self.ui, ctx)
             if targetphase:

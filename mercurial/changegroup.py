@@ -788,8 +788,6 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             # strip should not touch boundary at all
             phases.retractboundary(repo, tr, targetphase, added)
 
-        # make changelog see real files again
-        cl.finalize(trp)
 
         tr.close()
 

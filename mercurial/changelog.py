@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import weakref
 from node import bin, hex, nullid
 from i18n import _
 import util, error, revlog, encoding
@@ -239,8 +240,10 @@ class changelog(revlog.revlog):
                                            self._delaybuf)
         self._delayed = True
         tr.addpending('cl-%i' % id(self), self._writepending)
+        trp = weakref.proxy(tr)
+        tr.addfinalize('cl-%i' % id(self), lambda: self._finalize(trp))
 
-    def finalize(self, tr):
+    def _finalize(self, tr):
         "finalize index updates"
         self._delayed = False
         self.opener = self._realopener
