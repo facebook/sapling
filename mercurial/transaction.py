@@ -264,7 +264,9 @@ class transaction(object):
 
     def _generatefiles(self, suffix=''):
         # write files registered for generation
+        any = False
         for entry in sorted(self._filegenerators.values()):
+            any = True
             order, filenames, genfunc, location = entry
             vfs = self._vfsmap[location]
             files = []
@@ -280,6 +282,7 @@ class transaction(object):
             finally:
                 for f in files:
                     f.close()
+        return any
 
     @active
     def find(self, file):
