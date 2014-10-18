@@ -100,6 +100,7 @@ Note: old client behave as a publishing server with draft only content
 
 """
 
+import os
 import errno
 from node import nullid, nullrev, bin, hex, short
 from i18n import _
@@ -124,7 +125,15 @@ def _readroots(repo, phasedefaults=None):
     dirty = False
     roots = [set() for i in allphases]
     try:
-        f = repo.sopener('phaseroots')
+        f = None
+        if 'HG_PENDING' in os.environ:
+            try:
+                f = repo.svfs('phaseroots.pending')
+            except IOError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+        if f is None:
+            f = repo.sopener('phaseroots')
         try:
             for line in f:
                 phase, nh = line.split()
