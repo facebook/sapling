@@ -882,7 +882,8 @@ class localrepository(object):
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
-        tr = transaction.transaction(rp, self.sopener,
+        vfsmap = {'plain': self.opener} # root of .hg/
+        tr = transaction.transaction(rp, self.sopener, vfsmap,
                                      "journal",
                                      aftertrans(renames),
                                      self.store.createmode,

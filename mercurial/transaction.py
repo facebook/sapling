@@ -70,8 +70,8 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
             opener.unlink(f)
 
 class transaction(object):
-    def __init__(self, report, opener, journal, after=None, createmode=None,
-            onclose=None, onabort=None):
+    def __init__(self, report, opener, vfsmap, journal, after=None,
+                 createmode=None, onclose=None, onabort=None):
         """Begin a new transaction
 
         Begins a new transaction that allows rolling back writes in the event of
@@ -87,7 +87,12 @@ class transaction(object):
         self.count = 1
         self.usages = 1
         self.report = report
+        # a vfs to the store content
         self.opener = opener
+        # a map to access file in various {location -> vfs}
+        vfsmap = vfsmap.copy()
+        vfsmap[''] = opener  # set default value
+        self._vfsmap = vfsmap
         self.after = after
         self.onclose = onclose
         self.onabort = onabort
