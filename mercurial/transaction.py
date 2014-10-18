@@ -25,7 +25,8 @@ def active(func):
         return func(self, *args, **kwds)
     return _active
 
-def _playback(journal, report, opener, entries, backupentries, unlink=True):
+def _playback(journal, report, opener, vfsmap, entries, backupentries,
+              unlink=True):
     for f, o, _ignore in entries:
         if o or not unlink:
             try:
@@ -44,9 +45,10 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
 
     backupfiles = []
     for l, f, b, c in backupentries:
+        vfs = vfsmap[l]
         if f and b:
-            filepath = opener.join(f)
-            backuppath = opener.join(b)
+            filepath = vfs.join(f)
+            backuppath = vfs.join(b)
             try:
                 util.copyfile(backuppath, filepath)
                 backupfiles.append(b)
@@ -56,7 +58,7 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
         else:
             target = f or b
             try:
-                opener.unlink(target)
+                vfs.unlink(target)
             except (IOError, OSError), inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -105,9 +107,11 @@ class transaction(object):
         self.file = opener.open(self.journal, "w")
 
         # a list of ('location', 'path', 'backuppath', cache) entries.
-        # if 'backuppath' is empty, no file existed at backup time
-        # if 'path' is empty, this is a temporary transaction file
-        # (location, and cache are current unused)
+        # - if 'backuppath' is empty, no file existed at backup time
+        # - if 'path' is empty, this is a temporary transaction file
+        # - if 'location' is not empty, the path is outside main opener reach.
+        #   use 'location' value as a key in a vfsmap to find the right 'vfs'
+        # (cache is currently unused)
         self._backupentries = []
         self._backupmap = {}
         self._backupjournal = "%s.backupfiles" % journal
@@ -361,9 +365,10 @@ class transaction(object):
         self.file.close()
         self._backupsfile.close()
         # cleanup temporary files
-        for _l, f, b, _c in self._backupentries:
-            if not f and b and self.opener.exists(b):
-                self.opener.unlink(b)
+        for l, f, b, _c in self._backupentries:
+            vfs = self._vfsmap[l]
+            if not f and b and vfs.exists(b):
+                vfs.unlink(b)
         self.entries = []
         if self.after:
             self.after()
@@ -372,8 +377,9 @@ class transaction(object):
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
             for _l, _f, b, _c in self._backupentries:
-                if b and self.opener.exists(b):
-                    self.opener.unlink(b)
+                vfs = self._vfsmap[l]
+                if b and vfs.exists(b):
+                    vfs.unlink(b)
         self._backupentries = []
         self.journal = None
         # run post close action
@@ -408,7 +414,7 @@ class transaction(object):
             self.report(_("transaction abort!\n"))
 
             try:
-                _playback(self.journal, self.report, self.opener,
+                _playback(self.journal, self.report, self.opener, self._vfsmap,
                           self.entries, self._backupentries, False)
                 self.report(_("rollback completed\n"))
             except Exception:
@@ -417,7 +423,7 @@ class transaction(object):
             self.journal = None
 
 
-def rollback(opener, file, report):
+def rollback(opener, vfsmap, file, report):
     """Rolls back the transaction contained in the given file
 
     Reads the entries in the specified file, and the corresponding
@@ -459,4 +465,4 @@ def rollback(opener, file, report):
                 report(_("journal was created by a different version of "
                          "Mercurial"))
 
-    _playback(file, report, opener, entries, backupentries)
+    _playback(file, report, opener, vfsmap, entries, backupentries)

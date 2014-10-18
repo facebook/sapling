@@ -919,7 +919,9 @@ class localrepository(object):
         try:
             if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
-                transaction.rollback(self.sopener, "journal",
+                vfsmap = {'': self.sopener,
+                          'plain': self.opener,}
+                transaction.rollback(self.sopener, vfsmap, "journal",
                                      self.ui.warn)
                 self.invalidate()
                 return True
@@ -975,7 +977,8 @@ class localrepository(object):
 
         parents = self.dirstate.parents()
         self.destroying()
-        transaction.rollback(self.sopener, 'undo', ui.warn)
+        vfsmap = {'plain': self.opener}
+        transaction.rollback(self.sopener, vfsmap, 'undo', ui.warn)
         if self.vfs.exists('undo.bookmarks'):
             self.vfs.rename('undo.bookmarks', 'bookmarks')
         if self.svfs.exists('undo.phaseroots'):
