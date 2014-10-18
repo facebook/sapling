@@ -107,8 +107,6 @@ IMPL_PATH = 'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = 'JYTHONPATH'
 
-TESTDIR = HGTMP = INST = BINDIR = TMPBINDIR = PYTHONDIR = None
-
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
