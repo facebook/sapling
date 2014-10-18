@@ -101,6 +101,10 @@ class transaction(object):
 
         # hold file generations to be performed on commit
         self._filegenerators = {}
+        # hold callbalk to write pending data for hooks
+        self._pendingcallback = {}
+        # True is any pending data have been written ever
+        self._anypending = False
 
     def __del__(self):
         if self.journal:
@@ -262,6 +266,26 @@ class transaction(object):
 
     def running(self):
         return self.count > 0
+
+    def addpending(self, category, callback):
+        """add a callback to be called when the transaction is pending
+
+        Category is a unique identifier to allow overwriting an old callback
+        with a newer callback.
+        """
+        self._pendingcallback[category] = callback
+
+    @active
+    def writepending(self):
+        '''write pending file to temporary version
+
+        This is used to allow hooks to view a transaction before commit'''
+        categories = sorted(self._pendingcallback)
+        for cat in categories:
+            # remove callback since the data will have been flushed
+            any = self._pendingcallback.pop(cat)()
+            self._anypending = self._anypending or any
+        return self._anypending
 
     @active
     def close(self):
