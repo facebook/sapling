@@ -105,6 +105,8 @@ class transaction(object):
         self._pendingcallback = {}
         # True is any pending data have been written ever
         self._anypending = False
+        # holds callback to call when writing the transaction
+        self._finalizecallback = {}
 
     def __del__(self):
         if self.journal:
@@ -288,10 +290,22 @@ class transaction(object):
         return self._anypending
 
     @active
+    def addfinalize(self, category, callback):
+        """add a callback to be called when the transaction is closed
+
+        Category is a unique identifier to allow overwriting old callbacks with
+        newer callbacks.
+        """
+        self._finalizecallback[category] = callback
+
+    @active
     def close(self):
         '''commit the transaction'''
         if self.count == 1 and self.onclose is not None:
             self._generatefiles()
+            categories = sorted(self._finalizecallback)
+            for cat in categories:
+                self._finalizecallback[cat]()
             self.onclose()
 
         self.count -= 1
