@@ -234,7 +234,8 @@ class transaction(object):
         self._addbackupentry(('', '', tmpfile, False))
 
     @active
-    def addfilegenerator(self, genid, filenames, genfunc, order=0, vfs=None):
+    def addfilegenerator(self, genid, filenames, genfunc, order=0,
+                         location=''):
         """add a function to generates some files at transaction commit
 
         The `genfunc` argument is a function capable of generating proper
@@ -252,18 +253,20 @@ class transaction(object):
 
         The `order` argument may be used to control the order in which multiple
         generator will be executed.
+
+        The `location` arguments may be used to indicate the files are located
+        outside of the the standard directory for transaction. It should match
+        one of the key of the `transaction.vfsmap` dictionnary.
         """
         # For now, we are unable to do proper backup and restore of custom vfs
         # but for bookmarks that are handled outside this mechanism.
-        assert vfs is None or filenames == ('bookmarks',)
-        self._filegenerators[genid] = (order, filenames, genfunc, vfs)
+        self._filegenerators[genid] = (order, filenames, genfunc, location)
 
     def _generatefiles(self):
         # write files registered for generation
         for entry in sorted(self._filegenerators.values()):
-            order, filenames, genfunc, vfs = entry
-            if vfs is None:
-                vfs = self.opener
+            order, filenames, genfunc, location = entry
+            vfs = self._vfsmap[location]
             files = []
             try:
                 for name in filenames:
@@ -271,7 +274,7 @@ class transaction(object):
                     # localrepo. Until this is properly fixed we disable the
                     # backup for them.
                     if name not in ('phaseroots', 'bookmarks'):
-                        self.addbackup(name)
+                        self.addbackup(name, location=location)
                     files.append(vfs(name, 'w', atomictemp=True))
                 genfunc(*files)
             finally:

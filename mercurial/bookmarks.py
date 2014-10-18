@@ -52,7 +52,7 @@ class bmstore(dict):
 
         The transaction is then responsible for updating the file content."""
         tr.addfilegenerator('bookmarks', ('bookmarks',), self._write,
-                            vfs=self._repo.vfs)
+                            location='plain')
         tr.hookargs['bookmark_moved'] = '1'
 
     def write(self):
