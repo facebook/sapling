@@ -427,59 +427,20 @@ Write the python script to disk
   > import sys
   > import os
   > 
-  > # content of the file in "base" and "parent"
-  > # None means no file at all
-  > ctxcontent = {
-  >     # clean: no change from base to parent
-  >     'clean': ['content1', 'content1'],
-  >     # modified: file content change from base to parent
-  >     'modified': ['content1', 'content2'],
-  >     # added: file is missing from base and added in parent
-  >     'added': [None, 'content2'],
-  >     # removed: file exist in base but is removed from parent
-  >     'removed': ['content1', None],
-  >     # file exist neither in base not in parent
-  >     'missing': [None, None],
-  > }
-  > 
-  > # content of file in working copy
-  > wccontent = {
-  >     # clean: wc content is the same as parent
-  >     'clean': (True, lambda cc: cc[1]),
-  >     # revert: wc content is the same as base
-  >     'revert': (True, lambda cc: cc[0]),
-  >     # wc: file exist with a content different from base and parent
-  >     'wc': (True, lambda cc: 'content3'),
-  >     # deleted: file is recorded as tracked but missing
-  >     #          rely on file deletion outside of this script
-  >     'deleted': (True, lambda cc: None),
-  > }
-  > # untracked-X is a version of X where the file is not tracked (? unknown)
-  > wccontent['untracked-clean'] = (False, wccontent['clean'][1])
-  > wccontent['untracked-deleted'] = (False, wccontent['deleted'][1])
-  > wccontent['untracked-revert'] = (False, wccontent['revert'][1])
-  > wccontent['untracked-wc'] = (False, wccontent['wc'][1])
-  > 
   > # build the combination of possible states
   > combination = []
-  > for ctxkey, ctxvalue in ctxcontent.iteritems():
-  >     for wckey, (tracked, wcfunc) in wccontent.iteritems():
-  >         base, parent = ctxvalue
-  >         if (base == parent and 'revert' in wckey):
-  >             continue
-  >         if not base and 'revert' in wckey:
-  >             continue
-  >         if not parent and 'deleted' in wckey:
-  >             continue
-  >         def statestring(content):
-  >             return content is None and 'missing' or content
-  >         wcc = wcfunc(ctxvalue)
-  >         trackedstring = tracked and 'tracked' or 'untracked'
-  >         filename = "%s_%s_%s-%s" % (statestring(base),
-  >                                     statestring(parent),
-  >                                     statestring(wcc),
-  >                                     trackedstring)
-  >         combination.append((filename, base, parent, wcc))
+  > for base in [None, 'content1']:
+  >     for parent in set([None, 'content2']) | set([base]):
+  >         for wcc in set([None, 'content3']) | set([base, parent]):
+  >             for tracked in (False, True):
+  >                 def statestring(content):
+  >                     return content is None and 'missing' or content
+  >                 trackedstring = tracked and 'tracked' or 'untracked'
+  >                 filename = "%s_%s_%s-%s" % (statestring(base),
+  >                                             statestring(parent),
+  >                                             statestring(wcc),
+  >                                             trackedstring)
+  >                 combination.append((filename, base, parent, wcc))
   > 
   > # make sure we have stable output
   > combination.sort()
