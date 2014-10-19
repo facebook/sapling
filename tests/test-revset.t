@@ -437,6 +437,18 @@ Test empty set input
   4
   8
   9
+
+Test explicit numeric revision
+  $ log 'rev(-1)'
+  $ log 'rev(0)'
+  0
+  $ log 'rev(9)'
+  9
+  $ log 'rev(10)'
+  $ log 'rev(tip)'
+  hg: parse error: rev expects a number
+  [255]
+
   $ log 'outgoing()'
   8
   9

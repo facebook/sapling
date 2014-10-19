@@ -1351,6 +1351,8 @@ def rev(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
+    if l not in repo.changelog:
+        return baseset()
     return subset & baseset([l])
 
 def matching(repo, subset, x):

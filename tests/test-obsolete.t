@@ -185,6 +185,8 @@ check that various commands work well with filtering
   abort: hidden revision '4'!
   (use --hidden to access hidden revisions)
   [255]
+  $ hg debugrevspec 'rev(6)'
+  $ hg debugrevspec 'rev(4)'
 
 Check that public changeset are not accounted as obsolete:
 
