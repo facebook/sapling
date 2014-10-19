@@ -127,7 +127,6 @@ install -m 644 contrib/mercurial.el $RPM_BUILD_ROOT%{emacs_lispdir}/
 install -m 644 contrib/mq.el $RPM_BUILD_ROOT%{emacs_lispdir}/
 
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/mercurial/hgrc.d
-install -m 644 contrib/mergetools.hgrc $RPM_BUILD_ROOT%{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -150,7 +149,6 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/bash_completion.d/mercurial.sh
 %dir %{_sysconfdir}/mercurial
 %dir %{_sysconfdir}/mercurial/hgrc.d
-%config(noreplace) %{_sysconfdir}/mercurial/hgrc.d/mergetools.rc
 %if "%{?withpython}"
 %{_bindir}/%{pythonhg}
 %{hgpyprefix}

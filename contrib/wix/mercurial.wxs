@@ -79,7 +79,7 @@
                     ReadOnly='yes' KeyPath='yes'/>
             </Component>
             <Component Id='mergetools.rc' Guid='$(var.mergetools.rc.guid)' Win64='$(var.IsX64)'>
-              <File Id='mergetools.rc' Name='MergeTools.rc' Source='contrib\mergetools.hgrc'
+              <File Id='mergetools.rc' Name='MergeTools.rc' Source='mercurial\default-hgrc.d\mergetools.rc'
                     ReadOnly='yes' KeyPath='yes'/>
             </Component>
             <Component Id='paths.rc' Guid='$(var.paths.rc.guid)' Win64='$(var.IsX64)'>

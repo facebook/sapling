@@ -67,7 +67,6 @@ Source: contrib\mq.el; DestDir: {app}/Contrib
 Source: contrib\hgweb.fcgi; DestDir: {app}/Contrib
 Source: contrib\hgweb.wsgi; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
-Source: contrib\mergetools.hgrc; DestDir: {tmp};
 Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Check: CheckFile; AfterInstall: ConcatenateFiles;
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
@@ -86,6 +85,7 @@ Source: dist\cacert.pem; Destdir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
 Source: doc\style.css; DestDir: {app}\Docs
 Source: mercurial\help\*.txt; DestDir: {app}\help
+Source: mercurial\default-hgrc.d\*.rc; DestDir: {app}\default-hgrc.d
 Source: mercurial\locale\*.*; DestDir: {app}\locale; Flags: recursesubdirs createallsubdirs skipifsourcedoesntexist
 Source: mercurial\templates\*.*; DestDir: {app}\Templates; Flags: recursesubdirs createallsubdirs
 Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
