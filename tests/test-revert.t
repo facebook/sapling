@@ -467,14 +467,16 @@ Write the python script to disk
   > combination = []
   > for ctxkey, ctxvalue in ctxcontent.iteritems():
   >     for wckey in wccontent:
-  >         if (ctxvalue[0] == ctxvalue[1] and 'revert' in wckey):
+  >         base, parent = ctxvalue
+  >         if (base == parent and 'revert' in wckey):
   >             continue
-  >         if not ctxvalue[0] and 'revert' in wckey:
+  >         if not base and 'revert' in wckey:
   >             continue
-  >         if not ctxvalue[1] and 'deleted' in wckey:
+  >         if not parent and 'deleted' in wckey:
   >             continue
   >         filename = "%s_%s" % (ctxkey, wckey)
-  >         combination.append((filename, ctxkey, wckey))
+  >         combination.append((filename, base, parent,
+  >                             wccontent[wckey](ctxvalue)))
   > 
   > # make sure we have stable output
   > combination.sort()
@@ -484,16 +486,15 @@ Write the python script to disk
   > 
   > # compute file content
   > content = []
-  > for filename, ctxkey, wckey in combination:
-  >     cc = ctxcontent[ctxkey]
+  > for filename, base, parent, wcc in combination:
   >     if target == 'filelist':
   >         print filename
   >     elif target == 'base':
-  >         content.append((filename, cc[0]))
+  >         content.append((filename, base))
   >     elif target == 'parent':
-  >         content.append((filename, cc[1]))
+  >         content.append((filename, parent))
   >     elif target == 'wc':
-  >         content.append((filename, wccontent[wckey](cc)))
+  >         content.append((filename, wcc))
   >     else:
   >         print >> sys.stderr, "unknown target:", target
   >         sys.exit(1)
