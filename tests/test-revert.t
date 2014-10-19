@@ -462,8 +462,8 @@ Write the python script to disk
   > 
   > # build the combination of possible states
   > combination = []
-  > for ctxkey, ctxvalue in sorted(ctxcontent.iteritems()):
-  >     for wckey, (tracked, wcfunc) in sorted(wccontent.iteritems()):
+  > for ctxkey, ctxvalue in ctxcontent.iteritems():
+  >     for wckey, (tracked, wcfunc) in wccontent.iteritems():
   >         base, parent = ctxvalue
   >         if (base == parent and 'revert' in wckey):
   >             continue
@@ -480,6 +480,9 @@ Write the python script to disk
   >                                     statestring(wcc),
   >                                     trackedstring)
   >         combination.append((filename, base, parent, wcc))
+  > 
+  > # make sure we have stable output
+  > combination.sort()
   > 
   > # retrieve the state we must generate
   > target = sys.argv[1]
@@ -512,36 +515,36 @@ Write the python script to disk
 check list of planned files
 
   $ python gen-revert-cases.py filelist
-  missing_content2_content2-tracked
-  missing_content2_missing-tracked
-  missing_content2_content2-untracked
-  missing_content2_missing-untracked
-  missing_content2_content3-untracked
-  missing_content2_content3-tracked
   content1_content1_content1-tracked
-  content1_content1_missing-tracked
   content1_content1_content1-untracked
-  content1_content1_missing-untracked
-  content1_content1_content3-untracked
   content1_content1_content3-tracked
+  content1_content1_content3-untracked
+  content1_content1_missing-tracked
+  content1_content1_missing-untracked
+  content1_content2_content1-tracked
+  content1_content2_content1-untracked
+  content1_content2_content2-tracked
+  content1_content2_content2-untracked
+  content1_content2_content3-tracked
+  content1_content2_content3-untracked
+  content1_content2_missing-tracked
+  content1_content2_missing-untracked
+  content1_missing_content1-tracked
+  content1_missing_content1-untracked
+  content1_missing_content3-tracked
+  content1_missing_content3-untracked
+  content1_missing_missing-tracked
+  content1_missing_missing-untracked
+  missing_content2_content2-tracked
+  missing_content2_content2-untracked
+  missing_content2_content3-tracked
+  missing_content2_content3-untracked
+  missing_content2_missing-tracked
+  missing_content2_missing-untracked
+  missing_missing_content3-tracked
+  missing_missing_content3-untracked
   missing_missing_missing-tracked
   missing_missing_missing-untracked
-  missing_missing_content3-untracked
-  missing_missing_content3-tracked
-  content1_content2_content2-tracked
-  content1_content2_missing-tracked
-  content1_content2_content1-tracked
-  content1_content2_content2-untracked
-  content1_content2_missing-untracked
-  content1_content2_content1-untracked
-  content1_content2_content3-untracked
-  content1_content2_content3-tracked
-  content1_missing_missing-tracked
-  content1_missing_content1-tracked
-  content1_missing_missing-untracked
-  content1_missing_content1-untracked
-  content1_missing_content3-untracked
-  content1_missing_content3-tracked
 
 Script to make a simple text version of the content
 ---------------------------------------------------
@@ -913,75 +916,75 @@ revert all files individually and check the output
   >   hg revert $file;
   >   echo
   > done
-  ### revert for: missing_content2_content2-tracked
-  no changes needed to missing_content2_content2-tracked
-  
-  ### revert for: missing_content2_missing-tracked
-  
-  ### revert for: missing_content2_content2-untracked
-  
-  ### revert for: missing_content2_missing-untracked
-  
-  ### revert for: missing_content2_content3-untracked
-  
-  ### revert for: missing_content2_content3-tracked
-  
   ### revert for: content1_content1_content1-tracked
   no changes needed to content1_content1_content1-tracked
   
-  ### revert for: content1_content1_missing-tracked
-  
   ### revert for: content1_content1_content1-untracked
   
-  ### revert for: content1_content1_missing-untracked
+  ### revert for: content1_content1_content3-tracked
   
   ### revert for: content1_content1_content3-untracked
   
-  ### revert for: content1_content1_content3-tracked
+  ### revert for: content1_content1_missing-tracked
+  
+  ### revert for: content1_content1_missing-untracked
+  
+  ### revert for: content1_content2_content1-tracked
+  
+  ### revert for: content1_content2_content1-untracked
+  
+  ### revert for: content1_content2_content2-tracked
+  no changes needed to content1_content2_content2-tracked
+  
+  ### revert for: content1_content2_content2-untracked
+  
+  ### revert for: content1_content2_content3-tracked
+  
+  ### revert for: content1_content2_content3-untracked
+  
+  ### revert for: content1_content2_missing-tracked
+  
+  ### revert for: content1_content2_missing-untracked
+  
+  ### revert for: content1_missing_content1-tracked
+  
+  ### revert for: content1_missing_content1-untracked
+  file not managed: content1_missing_content1-untracked
+  
+  ### revert for: content1_missing_content3-tracked
+  
+  ### revert for: content1_missing_content3-untracked
+  file not managed: content1_missing_content3-untracked
+  
+  ### revert for: content1_missing_missing-tracked
+  content1_missing_missing-tracked: no such file in rev * (glob)
+  
+  ### revert for: content1_missing_missing-untracked
+  content1_missing_missing-untracked: no such file in rev * (glob)
+  
+  ### revert for: missing_content2_content2-tracked
+  no changes needed to missing_content2_content2-tracked
+  
+  ### revert for: missing_content2_content2-untracked
+  
+  ### revert for: missing_content2_content3-tracked
+  
+  ### revert for: missing_content2_content3-untracked
+  
+  ### revert for: missing_content2_missing-tracked
+  
+  ### revert for: missing_content2_missing-untracked
+  
+  ### revert for: missing_missing_content3-tracked
+  
+  ### revert for: missing_missing_content3-untracked
+  file not managed: missing_missing_content3-untracked
   
   ### revert for: missing_missing_missing-tracked
   missing_missing_missing-tracked: no such file in rev * (glob)
   
   ### revert for: missing_missing_missing-untracked
   missing_missing_missing-untracked: no such file in rev * (glob)
-  
-  ### revert for: missing_missing_content3-untracked
-  file not managed: missing_missing_content3-untracked
-  
-  ### revert for: missing_missing_content3-tracked
-  
-  ### revert for: content1_content2_content2-tracked
-  no changes needed to content1_content2_content2-tracked
-  
-  ### revert for: content1_content2_missing-tracked
-  
-  ### revert for: content1_content2_content1-tracked
-  
-  ### revert for: content1_content2_content2-untracked
-  
-  ### revert for: content1_content2_missing-untracked
-  
-  ### revert for: content1_content2_content1-untracked
-  
-  ### revert for: content1_content2_content3-untracked
-  
-  ### revert for: content1_content2_content3-tracked
-  
-  ### revert for: content1_missing_missing-tracked
-  content1_missing_missing-tracked: no such file in rev * (glob)
-  
-  ### revert for: content1_missing_content1-tracked
-  
-  ### revert for: content1_missing_missing-untracked
-  content1_missing_missing-untracked: no such file in rev * (glob)
-  
-  ### revert for: content1_missing_content1-untracked
-  file not managed: content1_missing_content1-untracked
-  
-  ### revert for: content1_missing_content3-untracked
-  file not managed: content1_missing_content3-untracked
-  
-  ### revert for: content1_missing_content3-tracked
   
 
 check resulting directory against the --all run
@@ -1008,74 +1011,74 @@ revert all files individually and check the output
   >   hg revert $file --rev 'desc(base)';
   >   echo
   > done
-  ### revert for: missing_content2_content2-tracked
+  ### revert for: content1_content1_content1-tracked
+  no changes needed to content1_content1_content1-tracked
   
-  ### revert for: missing_content2_missing-tracked
+  ### revert for: content1_content1_content1-untracked
+  
+  ### revert for: content1_content1_content3-tracked
+  
+  ### revert for: content1_content1_content3-untracked
+  
+  ### revert for: content1_content1_missing-tracked
+  
+  ### revert for: content1_content1_missing-untracked
+  
+  ### revert for: content1_content2_content1-tracked
+  no changes needed to content1_content2_content1-tracked
+  
+  ### revert for: content1_content2_content1-untracked
+  
+  ### revert for: content1_content2_content2-tracked
+  
+  ### revert for: content1_content2_content2-untracked
+  
+  ### revert for: content1_content2_content3-tracked
+  
+  ### revert for: content1_content2_content3-untracked
+  
+  ### revert for: content1_content2_missing-tracked
+  
+  ### revert for: content1_content2_missing-untracked
+  
+  ### revert for: content1_missing_content1-tracked
+  no changes needed to content1_missing_content1-tracked
+  
+  ### revert for: content1_missing_content1-untracked
+  
+  ### revert for: content1_missing_content3-tracked
+  
+  ### revert for: content1_missing_content3-untracked
+  
+  ### revert for: content1_missing_missing-tracked
+  
+  ### revert for: content1_missing_missing-untracked
+  
+  ### revert for: missing_content2_content2-tracked
   
   ### revert for: missing_content2_content2-untracked
   no changes needed to missing_content2_content2-untracked
   
-  ### revert for: missing_content2_missing-untracked
-  no changes needed to missing_content2_missing-untracked
+  ### revert for: missing_content2_content3-tracked
   
   ### revert for: missing_content2_content3-untracked
   no changes needed to missing_content2_content3-untracked
   
-  ### revert for: missing_content2_content3-tracked
+  ### revert for: missing_content2_missing-tracked
   
-  ### revert for: content1_content1_content1-tracked
-  no changes needed to content1_content1_content1-tracked
+  ### revert for: missing_content2_missing-untracked
+  no changes needed to missing_content2_missing-untracked
   
-  ### revert for: content1_content1_missing-tracked
+  ### revert for: missing_missing_content3-tracked
   
-  ### revert for: content1_content1_content1-untracked
-  
-  ### revert for: content1_content1_missing-untracked
-  
-  ### revert for: content1_content1_content3-untracked
-  
-  ### revert for: content1_content1_content3-tracked
+  ### revert for: missing_missing_content3-untracked
+  file not managed: missing_missing_content3-untracked
   
   ### revert for: missing_missing_missing-tracked
   missing_missing_missing-tracked: no such file in rev * (glob)
   
   ### revert for: missing_missing_missing-untracked
   missing_missing_missing-untracked: no such file in rev * (glob)
-  
-  ### revert for: missing_missing_content3-untracked
-  file not managed: missing_missing_content3-untracked
-  
-  ### revert for: missing_missing_content3-tracked
-  
-  ### revert for: content1_content2_content2-tracked
-  
-  ### revert for: content1_content2_missing-tracked
-  
-  ### revert for: content1_content2_content1-tracked
-  no changes needed to content1_content2_content1-tracked
-  
-  ### revert for: content1_content2_content2-untracked
-  
-  ### revert for: content1_content2_missing-untracked
-  
-  ### revert for: content1_content2_content1-untracked
-  
-  ### revert for: content1_content2_content3-untracked
-  
-  ### revert for: content1_content2_content3-tracked
-  
-  ### revert for: content1_missing_missing-tracked
-  
-  ### revert for: content1_missing_content1-tracked
-  no changes needed to content1_missing_content1-tracked
-  
-  ### revert for: content1_missing_missing-untracked
-  
-  ### revert for: content1_missing_content1-untracked
-  
-  ### revert for: content1_missing_content3-untracked
-  
-  ### revert for: content1_missing_content3-tracked
   
 
 check resulting directory against the --all run
