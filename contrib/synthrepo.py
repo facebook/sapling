@@ -410,16 +410,18 @@ def synthesize(ui, repo, descpath, **opts):
                         break
         if filesadded:
             dirs = list(pctx.dirs())
-            dirs.append('')
+            dirs.insert(0, '')
         for __ in xrange(pick(filesadded)):
-            path = [random.choice(dirs)]
-            if pick(dirsadded):
+            pathstr = ''
+            while pathstr in dirs:
+                path = [random.choice(dirs)]
+                if pick(dirsadded):
+                    path.append(random.choice(words))
                 path.append(random.choice(words))
-            path.append(random.choice(words))
-            path = '/'.join(filter(None, path))
+                pathstr = '/'.join(filter(None, path))
             data = '\n'.join(makeline()
                              for __ in xrange(pick(linesinfilesadded))) + '\n'
-            changes[path] = context.memfilectx(repo, path, data)
+            changes[pathstr] = context.memfilectx(repo, pathstr, data)
         def filectxfn(repo, memctx, path):
             return changes[path]
         if not changes:
