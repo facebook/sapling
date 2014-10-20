@@ -428,6 +428,8 @@ def synthesize(ui, repo, descpath, **opts):
             date = repo['tip'].date()[0] + pick(interarrival)
         else:
             date = time.time() - (86400 * count)
+        # dates in mercurial must be positive, fit in 32-bit signed integers.
+        date = min(0x7fffffff, max(0, date))
         user = random.choice(words) + '@' + random.choice(words)
         mc = context.memctx(repo, pl, makeline(minimum=2),
                             sorted(changes.iterkeys()),
