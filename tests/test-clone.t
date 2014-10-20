@@ -555,9 +555,15 @@ No local source
 
 No remote source
 
+#if windows
+  $ hg clone http://127.0.0.1:3121/a b
+  abort: error: * (glob)
+  [255]
+#else
   $ hg clone http://127.0.0.1:3121/a b
   abort: error: *refused* (glob)
   [255]
+#endif
   $ rm -rf b # work around bug with http clone
 
 
