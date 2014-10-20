@@ -963,12 +963,14 @@ Mock "Preserve chmod +x"
   > EOF
   diff --git a/subdir/f1 b/subdir/f1
   1 hunks, 1 lines changed
-  examine changes to 'subdir/f1'? [Ynesfdaq?] 
+  examine changes to 'subdir/f1'? [Ynesfdaq?] y
+  
   @@ -1,2 +1,3 @@
    a
    a
   +a
-  record this change to 'subdir/f1'? [Ynesfdaq?] 
+  record this change to 'subdir/f1'? [Ynesfdaq?] y
+  
 
   $ hg tip --config diff.git=True -p
   changeset:   22:0d463bd428f5
@@ -996,13 +998,15 @@ Mock "Preserve execute permission on original"
   > EOF
   diff --git a/subdir/f1 b/subdir/f1
   1 hunks, 1 lines changed
-  examine changes to 'subdir/f1'? [Ynesfdaq?] 
+  examine changes to 'subdir/f1'? [Ynesfdaq?] y
+  
   @@ -1,3 +1,4 @@
    a
    a
    a
   +b
-  record this change to 'subdir/f1'? [Ynesfdaq?] 
+  record this change to 'subdir/f1'? [Ynesfdaq?] y
+  
 
   $ hg tip --config diff.git=True -p
   changeset:   23:0eab41a3e524
@@ -1032,13 +1036,15 @@ Mock "Preserve chmod -x"
   > EOF
   diff --git a/subdir/f1 b/subdir/f1
   1 hunks, 1 lines changed
-  examine changes to 'subdir/f1'? [Ynesfdaq?] 
+  examine changes to 'subdir/f1'? [Ynesfdaq?] y
+  
   @@ -2,3 +2,4 @@
    a
    a
    b
   +c
-  record this change to 'subdir/f1'? [Ynesfdaq?] 
+  record this change to 'subdir/f1'? [Ynesfdaq?] y
+  
 
   $ hg tip --config diff.git=True -p
   changeset:   24:f4f718f27b7c
