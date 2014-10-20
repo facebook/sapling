@@ -452,7 +452,7 @@ Write the python script to disk
   >     'wc': (True, lambda cc: 'content3'),
   >     # deleted: file is recorded as tracked but missing
   >     #          rely on file deletion outside of this script
-  >     'deleted': (True, lambda cc:'TOBEDELETED'),
+  >     'deleted': (True, lambda cc: None),
   > }
   > # untracked-X is a version of X where the file is not tracked (? unknown)
   > wccontent['untracked-clean'] = (False, wccontent['clean'][1])
@@ -472,7 +472,7 @@ Write the python script to disk
   >         if not parent and 'deleted' in wckey:
   >             continue
   >         def statestring(content):
-  >             return content in (None, 'TOBEDELETED') and 'missing' or content
+  >             return content is None and 'missing' or content
   >         wcc = wcfunc(ctxvalue)
   >         trackedstring = tracked and 'tracked' or 'untracked'
   >         filename = "%s_%s_%s-%s" % (statestring(base),
@@ -497,7 +497,9 @@ Write the python script to disk
   >     elif target == 'parent':
   >         content.append((filename, parent))
   >     elif target == 'wc':
-  >         content.append((filename, wcc))
+  >         # Make sure there is content so the file gets written and can be
+  >         # tracked. It will be deleted outside of this script.
+  >         content.append((filename, wcc or 'TOBEDELETED'))
   >     else:
   >         print >> sys.stderr, "unknown target:", target
   >         sys.exit(1)
@@ -711,8 +713,12 @@ Setup working directory
   adding content1_missing_content1-untracked
   adding content1_missing_content3-tracked
   adding content1_missing_content3-untracked
+  adding content1_missing_missing-tracked
+  adding content1_missing_missing-untracked
   adding missing_missing_content3-tracked
   adding missing_missing_content3-untracked
+  adding missing_missing_missing-tracked
+  adding missing_missing_missing-untracked
   $ hg forget *_*_*-untracked
   $ rm *_*_missing-*
   $ hg status
@@ -735,7 +741,9 @@ Setup working directory
   R missing_content2_missing-untracked
   ! content1_content1_missing-tracked
   ! content1_content2_missing-tracked
+  ! content1_missing_missing-tracked
   ! missing_content2_missing-tracked
+  ! missing_missing_missing-tracked
   ? content1_missing_content1-untracked
   ? content1_missing_content3-untracked
   ? missing_missing_content3-untracked
@@ -761,7 +769,9 @@ Setup working directory
   R content1_missing_missing-untracked
   ! content1_content1_missing-tracked
   ! content1_content2_missing-tracked
+  ! content1_missing_missing-tracked
   ! missing_content2_missing-tracked
+  ! missing_missing_missing-tracked
   ? missing_missing_content3-untracked
 
 (create a simple text version of the content)
@@ -816,12 +826,14 @@ check revert output
   undeleting content1_content2_missing-untracked
   forgetting content1_missing_content1-tracked
   forgetting content1_missing_content3-tracked
+  forgetting content1_missing_missing-tracked
   undeleting missing_content2_content2-untracked
   reverting missing_content2_content3-tracked
   undeleting missing_content2_content3-untracked
   reverting missing_content2_missing-tracked
   undeleting missing_content2_missing-untracked
   forgetting missing_missing_content3-tracked
+  forgetting missing_missing_missing-tracked
 
 Compare resulting directory with revert target.
 
@@ -872,12 +884,13 @@ check revert output
   adding content1_missing_content1-untracked
   reverting content1_missing_content3-tracked
   adding content1_missing_content3-untracked
-  adding content1_missing_missing-tracked
+  reverting content1_missing_missing-tracked
   adding content1_missing_missing-untracked
   removing missing_content2_content2-tracked
   removing missing_content2_content3-tracked
   removing missing_content2_missing-tracked
   forgetting missing_missing_content3-tracked
+  forgetting missing_missing_missing-tracked
 
 Compare resulting directory with revert target.
 
@@ -957,7 +970,6 @@ revert all files individually and check the output
   file not managed: content1_missing_content3-untracked
   
   ### revert for: content1_missing_missing-tracked
-  content1_missing_missing-tracked: no such file in rev * (glob)
   
   ### revert for: content1_missing_missing-untracked
   content1_missing_missing-untracked: no such file in rev * (glob)
@@ -981,7 +993,6 @@ revert all files individually and check the output
   file not managed: missing_missing_content3-untracked
   
   ### revert for: missing_missing_missing-tracked
-  missing_missing_missing-tracked: no such file in rev * (glob)
   
   ### revert for: missing_missing_missing-untracked
   missing_missing_missing-untracked: no such file in rev * (glob)
@@ -1075,7 +1086,6 @@ revert all files individually and check the output
   file not managed: missing_missing_content3-untracked
   
   ### revert for: missing_missing_missing-tracked
-  missing_missing_missing-tracked: no such file in rev * (glob)
   
   ### revert for: missing_missing_missing-untracked
   missing_missing_missing-untracked: no such file in rev * (glob)
