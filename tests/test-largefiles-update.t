@@ -116,8 +116,13 @@ Test that "hg rollback" restores status of largefiles correctly
   $ hg commit -m 'will be rollback-ed soon'
   $ echo largeY > largeY
   $ hg add --large largeY
+#if windows
+  $ hg status -A large1
+  large1: * (glob)
+#else
   $ hg status -A large1
   large1: No such file or directory
+#endif
   $ hg status -A large2
   ? large2
   $ hg status -A largeX
@@ -202,24 +207,39 @@ automated commit like rebase/transplant
   $ hg commit -m '#4'
 
   $ hg rebase -s 1 -d 2 --keep
+#if windows
+  $ hg status -A large1
+  large1: * (glob)
+#else
   $ hg status -A large1
   large1: No such file or directory
+#endif
   $ hg status -A largeX
   C largeX
   $ hg strip -q 5
 
   $ hg update -q -C 2
   $ hg transplant -q 1 4
+#if windows
+  $ hg status -A large1
+  large1: * (glob)
+#else
   $ hg status -A large1
   large1: No such file or directory
+#endif
   $ hg status -A largeX
   C largeX
   $ hg strip -q 5
 
   $ hg update -q -C 2
   $ hg transplant -q --merge 1 --merge 4
+#if windows
+  $ hg status -A large1
+  large1: * (glob)
+#else
   $ hg status -A large1
   large1: No such file or directory
+#endif
   $ hg status -A largeX
   C largeX
   $ hg strip -q 5
