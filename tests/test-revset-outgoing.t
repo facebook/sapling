@@ -38,7 +38,7 @@
   $ cat .hg/hgrc
   # example repository config (see "hg help config" for more info)
   [paths]
-  default = $TESTTMP/a#stable
+  default = $TESTTMP/a#stable (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see "hg help config.paths" for more info)
@@ -90,7 +90,7 @@
   $ cat .hg/hgrc
   # example repository config (see "hg help config" for more info)
   [paths]
-  default = $TESTTMP/a#stable
+  default = $TESTTMP/a#stable (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see "hg help config.paths" for more info)
