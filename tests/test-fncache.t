@@ -236,3 +236,46 @@ Aborting transaction prevents fncache change
   [255]
   $ cat .hg/store/fncache
   data/y.i
+
+Aborted transactions can be recovered later
+
+  $ cat > ../exceptionext.py <<EOF
+  > import os
+  > from mercurial import commands, util, transaction
+  > from mercurial.extensions import wrapfunction
+  > 
+  > def closewrapper(orig, self, *args, **kwargs):
+  >     origonclose = self.onclose
+  >     def onclose():
+  >         origonclose()
+  >         raise util.Abort("forced transaction failure")
+  >     self.onclose = onclose
+  >     return orig(self, *args, **kwargs)
+  > 
+  > def abortwrapper(orig, self, *args, **kwargs):
+  >     raise util.Abort("forced transaction failure")
+  > 
+  > def uisetup(ui):
+  >     wrapfunction(transaction.transaction, 'close', closewrapper)
+  >     wrapfunction(transaction.transaction, '_abort', abortwrapper)
+  > 
+  > cmdtable = {}
+  > 
+  > EOF
+  $ rm -f "${extpath}c"
+  $ hg up -q 1
+  $ touch z
+  $ hg ci -qAm z 2>/dev/null
+  [255]
+  $ cat .hg/store/fncache | sort
+  data/y.i
+  data/z.i
+  $ hg recover
+  rolling back interrupted transaction
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+  $ cat .hg/store/fncache
+  data/y.i

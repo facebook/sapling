@@ -349,8 +349,9 @@ def rollback(opener, file, report):
         data = fp.read()
         if len(data) > 0:
             parts = data.split('\0')
-            for i in xrange(0, len(parts), 2):
-                f, b = parts[i:i + 1]
+            # Skip the final part, since it's just a trailing empty space
+            for i in xrange(0, len(parts) - 1, 2):
+                f, b = parts[i:i + 2]
                 backupentries.append((f, b, None))
 
     _playback(file, report, opener, entries, backupentries)
