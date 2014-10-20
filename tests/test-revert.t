@@ -422,9 +422,6 @@ that happen between them), "working-copy-state" is self explanatory.
 All known states are not tested yet. See inline documentation for details.
 Special cases from merge and rename are not tested by this section.
 
-There are also multiple cases where the current revert implementation is known to
-slightly misbehave.
-
 Write the python script to disk
 -------------------------------
 
