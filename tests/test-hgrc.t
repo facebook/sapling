@@ -30,7 +30,7 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   $ cat .hg/hgrc
   # example repository config (see "hg help config" for more info)
   [paths]
-  default = $TESTTMP/foo%bar
+  default = $TESTTMP/foo%bar (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see "hg help config.paths" for more info)
@@ -224,4 +224,4 @@ source of paths is not mangled
   $ hg showconfig --debug paths
   plain: True
   read config from: $TESTTMP/hgrc
-  $TESTTMP/hgrc:17: paths.foo=$TESTTMP/bar
+  $TESTTMP/hgrc:17: paths.foo=$TESTTMP/bar (glob)
