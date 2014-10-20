@@ -43,7 +43,7 @@ Test basic functionality of url#rev syntax
   $ cat clone/.hg/hgrc
   # example repository config (see "hg help config" for more info)
   [paths]
-  default = $TESTTMP/repo#foo
+  default = $TESTTMP/repo#foo (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see "hg help config.paths" for more info)
