@@ -21,16 +21,41 @@ version = 0
 bookmarktype = 'bookmark'
 workingcopyparenttype = 'workingcopyparent'
 
+def wrapfilecache(cls, propname, wrapper):
+    """Wraps a filecache property. These can't be wrapped using the normal
+    wrapfunction. This should eventually go into upstream Mercurial.
+    """
+    origcls = cls
+    assert callable(wrapper)
+    while cls is not object:
+        if propname in cls.__dict__:
+            origfn = cls.__dict__[propname].func
+            assert callable(origfn)
+            def wrap(*args, **kwargs):
+                return wrapper(origfn, *args, **kwargs)
+            cls.__dict__[propname].func = wrap
+            break
+        cls = cls.__bases__[0]
+
+    if cls is object:
+        raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
+                             propname))
+
 def extsetup(ui):
     wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
     wrapfunction(dirstate.dirstate, 'write', recorddirstateparents)
+
+    def wrapdirstate(orig, self):
+        dirstate = orig(self)
+        dirstate.reflogrepo = self
+        return dirstate
+    wrapfilecache(localrepo.localrepository, 'dirstate', wrapdirstate)
 
 def reposetup(ui, repo):
     if repo.local():
         currentcommand = ' '.join(sys.argv[1:])
         currentcommand = currentcommand.split('\n', 1)[0]
         repo.reflog = reflog(repo, currentcommand)
-        repo.dirstate.repo = repo
 
 def recordbookmarks(orig, self, fp):
     """Records all bookmark changes to the reflog."""
@@ -64,7 +89,7 @@ def recorddirstateparents(orig, self):
         newhashes = [parents[0]]
         if parents[1] != nullid:
             newhashes.append(parents[1])
-        self.repo.reflog.addentry(workingcopyparenttype, '.', oldhashes,
+        self.reflogrepo.reflog.addentry(workingcopyparenttype, '.', oldhashes,
             newhashes)
     return orig(self)
 
