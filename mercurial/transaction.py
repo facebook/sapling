@@ -128,7 +128,7 @@ class transaction(object):
         self.file.write(d)
         self.file.flush()
 
-        d = ''.join(['%s\0%s\0' % (f, b) for f, b in backups])
+        d = ''.join(['%s\0%s\n' % (f, b) for f, b in backups])
         self.backupsfile.write(d)
         self.backupsfile.flush()
 
@@ -177,7 +177,7 @@ class transaction(object):
 
         self.backupentries.append((file, backupfile, None))
         self.backupmap[file] = len(self.backupentries) - 1
-        self.backupsfile.write("%s\0%s\0" % (file, backupfile))
+        self.backupsfile.write("%s\0%s\n" % (file, backupfile))
         self.backupsfile.flush()
 
     @active
@@ -349,20 +349,16 @@ def rollback(opener, file, report):
     backupjournal = "%s.backupfiles" % file
     if opener.exists(backupjournal):
         fp = opener.open(backupjournal)
-        data = fp.read()
-        if len(data) > 0:
-            ver = version
-            versionend = data.find('\n')
-            if versionend != -1:
-                ver = data[:versionend]
-                data = data[versionend + 1:]
-
+        lines = fp.readlines()
+        if lines:
+            ver = lines[0][:-1]
             if ver == str(version):
-                parts = data.split('\0')
-                # Skip the final part, since it's just a trailing empty space
-                for i in xrange(0, len(parts) - 1, 2):
-                    f, b = parts[i:i + 2]
-                    backupentries.append((f, b, None))
+                for line in lines[1:]:
+                    if line:
+                        # Shave off the trailing newline
+                        line = line[:-1]
+                        f, b = line.split('\0')
+                        backupentries.append((f, b, None))
             else:
                 report(_("journal was created by a newer version of "
                          "Mercurial"))
