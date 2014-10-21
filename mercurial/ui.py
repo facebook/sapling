@@ -711,11 +711,7 @@ class ui(object):
             r = self._readline(self.label(msg, 'ui.prompt'))
             if not r:
                 r = default
-            # sometimes self.interactive disagrees with isatty,
-            # show response provided on stdin when simulating
-            # but commandserver
-            if (not util.isatty(self.fin)
-                and not self.configbool('ui', 'nontty')):
+            if self.configbool('ui', 'promptecho'):
                 self.write(r, "\n")
             return r
         except EOFError:

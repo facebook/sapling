@@ -8,6 +8,7 @@ Create a repository:
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed
+  ui.promptecho=True
   $ hg init t
   $ cd t
 

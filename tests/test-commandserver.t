@@ -5,6 +5,11 @@
 #endif
   $ export PYTHONPATH
 
+typical client does not want echo-back messages, so test without it:
+
+  $ grep -v '^promptecho ' < $HGRCPATH >> $HGRCPATH.new
+  $ mv $HGRCPATH.new $HGRCPATH
+
   $ hg init repo
   $ cd repo
 
