@@ -398,26 +398,23 @@ revert file added by p2() to p1() state
 Systematic behavior validation of most possible cases
 =====================================================
 
-This section tests most of the possible combinations of working directory
-changes and inter-revision changes. The number of possible cases is significant
+This section tests most of the possible combinations of revision states and
+working directory states. The number of possible cases is significant but they
 but they all have a slightly different handling. So this section commits to
-generating and testing all of them to allow safe refactoring of the revert code.
+and testing all of them to allow safe refactoring of the revert code.
 
 A python script is used to generate a file history for each combination of
-changes between, on one side the working directory and its parent and on
-the other side, changes between a revert target (--rev) and working directory
-parent. The three states generated are:
+states, on one side the content (or lack thereof) in two revisions, and
+on the other side, the content and "tracked-ness" of the working directory. The
+three states generated are:
 
 - a "base" revision
 - a "parent" revision
 - the working directory (based on "parent")
 
-The file generated have names of the form:
+The files generated have names of the form:
 
- <changeset-state>_<working-copy-state>
-
-Here, "changeset-state" conveys the state in "base" and "parent" (or the change
-that happen between them), "working-copy-state" is self explanatory.
+ <rev1-content>_<rev2-content>_<working-copy-content>-<tracked-ness>
 
 All known states are not tested yet. See inline documentation for details.
 Special cases from merge and rename are not tested by this section.
@@ -434,13 +431,13 @@ Write the python script to disk
   > # None means no file at all
   > ctxcontent = {
   >     # clean: no change from base to parent
-  >     'clean': ['base', 'base'],
+  >     'clean': ['content1', 'content1'],
   >     # modified: file content change from base to parent
-  >     'modified': ['base', 'parent'],
+  >     'modified': ['content1', 'content2'],
   >     # added: file is missing from base and added in parent
-  >     'added': [None, 'parent'],
+  >     'added': [None, 'content2'],
   >     # removed: file exist in base but is removed from parent
-  >     'removed': ['base', None],
+  >     'removed': ['content1', None],
   >     # file exist neither in base not in parent
   >     'missing': [None, None],
   > }
@@ -448,25 +445,25 @@ Write the python script to disk
   > # content of file in working copy
   > wccontent = {
   >     # clean: wc content is the same as parent
-  >     'clean': lambda cc: cc[1],
+  >     'clean': (True, lambda cc: cc[1]),
   >     # revert: wc content is the same as base
-  >     'revert': lambda cc: cc[0],
+  >     'revert': (True, lambda cc: cc[0]),
   >     # wc: file exist with a content different from base and parent
-  >     'wc': lambda cc: 'wc',
+  >     'wc': (True, lambda cc: 'content3'),
   >     # deleted: file is recorded as tracked but missing
   >     #          rely on file deletion outside of this script
-  >     'deleted': lambda cc:'TOBEDELETED',
+  >     'deleted': (True, lambda cc:'TOBEDELETED'),
   > }
   > # untracked-X is a version of X where the file is not tracked (? unknown)
-  > wccontent['untracked-clean'] = wccontent['clean']
-  > wccontent['untracked-deleted'] = wccontent['deleted']
-  > wccontent['untracked-revert'] = wccontent['revert']
-  > wccontent['untracked-wc'] = wccontent['wc']
+  > wccontent['untracked-clean'] = (False, wccontent['clean'][1])
+  > wccontent['untracked-deleted'] = (False, wccontent['deleted'][1])
+  > wccontent['untracked-revert'] = (False, wccontent['revert'][1])
+  > wccontent['untracked-wc'] = (False, wccontent['wc'][1])
   > 
   > # build the combination of possible states
   > combination = []
   > for ctxkey, ctxvalue in sorted(ctxcontent.iteritems()):
-  >     for wckey in sorted(wccontent):
+  >     for wckey, (tracked, wcfunc) in sorted(wccontent.iteritems()):
   >         base, parent = ctxvalue
   >         if (base == parent and 'revert' in wckey):
   >             continue
@@ -474,9 +471,15 @@ Write the python script to disk
   >             continue
   >         if not parent and 'deleted' in wckey:
   >             continue
-  >         filename = "%s_%s" % (ctxkey, wckey)
-  >         combination.append((filename, base, parent,
-  >                             wccontent[wckey](ctxvalue)))
+  >         def statestring(content):
+  >             return content in (None, 'TOBEDELETED') and 'missing' or content
+  >         wcc = wcfunc(ctxvalue)
+  >         trackedstring = tracked and 'tracked' or 'untracked'
+  >         filename = "%s_%s_%s-%s" % (statestring(base),
+  >                                     statestring(parent),
+  >                                     statestring(wcc),
+  >                                     trackedstring)
+  >         combination.append((filename, base, parent, wcc))
   > 
   > # retrieve the state we must generate
   > target = sys.argv[1]
@@ -509,36 +512,36 @@ Write the python script to disk
 check list of planned files
 
   $ python gen-revert-cases.py filelist
-  added_clean
-  added_deleted
-  added_untracked-clean
-  added_untracked-deleted
-  added_untracked-wc
-  added_wc
-  clean_clean
-  clean_deleted
-  clean_untracked-clean
-  clean_untracked-deleted
-  clean_untracked-wc
-  clean_wc
-  missing_clean
-  missing_untracked-clean
-  missing_untracked-wc
-  missing_wc
-  modified_clean
-  modified_deleted
-  modified_revert
-  modified_untracked-clean
-  modified_untracked-deleted
-  modified_untracked-revert
-  modified_untracked-wc
-  modified_wc
-  removed_clean
-  removed_revert
-  removed_untracked-clean
-  removed_untracked-revert
-  removed_untracked-wc
-  removed_wc
+  missing_content2_content2-tracked
+  missing_content2_missing-tracked
+  missing_content2_content2-untracked
+  missing_content2_missing-untracked
+  missing_content2_content3-untracked
+  missing_content2_content3-tracked
+  content1_content1_content1-tracked
+  content1_content1_missing-tracked
+  content1_content1_content1-untracked
+  content1_content1_missing-untracked
+  content1_content1_content3-untracked
+  content1_content1_content3-tracked
+  missing_missing_missing-tracked
+  missing_missing_missing-untracked
+  missing_missing_content3-untracked
+  missing_missing_content3-tracked
+  content1_content2_content2-tracked
+  content1_content2_missing-tracked
+  content1_content2_content1-tracked
+  content1_content2_content2-untracked
+  content1_content2_missing-untracked
+  content1_content2_content1-untracked
+  content1_content2_content3-untracked
+  content1_content2_content3-tracked
+  content1_missing_missing-tracked
+  content1_missing_content1-tracked
+  content1_missing_missing-untracked
+  content1_missing_content1-untracked
+  content1_missing_content3-untracked
+  content1_missing_content3-tracked
 
 Script to make a simple text version of the content
 ---------------------------------------------------
@@ -565,223 +568,223 @@ Generate base changeset
 
   $ python ../gen-revert-cases.py base
   $ hg addremove --similarity 0
-  adding clean_clean
-  adding clean_deleted
-  adding clean_untracked-clean
-  adding clean_untracked-deleted
-  adding clean_untracked-wc
-  adding clean_wc
-  adding modified_clean
-  adding modified_deleted
-  adding modified_revert
-  adding modified_untracked-clean
-  adding modified_untracked-deleted
-  adding modified_untracked-revert
-  adding modified_untracked-wc
-  adding modified_wc
-  adding removed_clean
-  adding removed_revert
-  adding removed_untracked-clean
-  adding removed_untracked-revert
-  adding removed_untracked-wc
-  adding removed_wc
+  adding content1_content1_content1-tracked
+  adding content1_content1_content1-untracked
+  adding content1_content1_content3-tracked
+  adding content1_content1_content3-untracked
+  adding content1_content1_missing-tracked
+  adding content1_content1_missing-untracked
+  adding content1_content2_content1-tracked
+  adding content1_content2_content1-untracked
+  adding content1_content2_content2-tracked
+  adding content1_content2_content2-untracked
+  adding content1_content2_content3-tracked
+  adding content1_content2_content3-untracked
+  adding content1_content2_missing-tracked
+  adding content1_content2_missing-untracked
+  adding content1_missing_content1-tracked
+  adding content1_missing_content1-untracked
+  adding content1_missing_content3-tracked
+  adding content1_missing_content3-untracked
+  adding content1_missing_missing-tracked
+  adding content1_missing_missing-untracked
   $ hg status
-  A clean_clean
-  A clean_deleted
-  A clean_untracked-clean
-  A clean_untracked-deleted
-  A clean_untracked-wc
-  A clean_wc
-  A modified_clean
-  A modified_deleted
-  A modified_revert
-  A modified_untracked-clean
-  A modified_untracked-deleted
-  A modified_untracked-revert
-  A modified_untracked-wc
-  A modified_wc
-  A removed_clean
-  A removed_revert
-  A removed_untracked-clean
-  A removed_untracked-revert
-  A removed_untracked-wc
-  A removed_wc
+  A content1_content1_content1-tracked
+  A content1_content1_content1-untracked
+  A content1_content1_content3-tracked
+  A content1_content1_content3-untracked
+  A content1_content1_missing-tracked
+  A content1_content1_missing-untracked
+  A content1_content2_content1-tracked
+  A content1_content2_content1-untracked
+  A content1_content2_content2-tracked
+  A content1_content2_content2-untracked
+  A content1_content2_content3-tracked
+  A content1_content2_content3-untracked
+  A content1_content2_missing-tracked
+  A content1_content2_missing-untracked
+  A content1_missing_content1-tracked
+  A content1_missing_content1-untracked
+  A content1_missing_content3-tracked
+  A content1_missing_content3-untracked
+  A content1_missing_missing-tracked
+  A content1_missing_missing-untracked
   $ hg commit -m 'base'
 
 (create a simple text version of the content)
 
   $ python ../dircontent.py > ../content-base.txt
   $ cat ../content-base.txt
-  base   clean_clean
-  base   clean_deleted
-  base   clean_untracked-clean
-  base   clean_untracked-deleted
-  base   clean_untracked-wc
-  base   clean_wc
-  base   modified_clean
-  base   modified_deleted
-  base   modified_revert
-  base   modified_untracked-clean
-  base   modified_untracked-deleted
-  base   modified_untracked-revert
-  base   modified_untracked-wc
-  base   modified_wc
-  base   removed_clean
-  base   removed_revert
-  base   removed_untracked-clean
-  base   removed_untracked-revert
-  base   removed_untracked-wc
-  base   removed_wc
+  content1 content1_content1_content1-tracked
+  content1 content1_content1_content1-untracked
+  content1 content1_content1_content3-tracked
+  content1 content1_content1_content3-untracked
+  content1 content1_content1_missing-tracked
+  content1 content1_content1_missing-untracked
+  content1 content1_content2_content1-tracked
+  content1 content1_content2_content1-untracked
+  content1 content1_content2_content2-tracked
+  content1 content1_content2_content2-untracked
+  content1 content1_content2_content3-tracked
+  content1 content1_content2_content3-untracked
+  content1 content1_content2_missing-tracked
+  content1 content1_content2_missing-untracked
+  content1 content1_missing_content1-tracked
+  content1 content1_missing_content1-untracked
+  content1 content1_missing_content3-tracked
+  content1 content1_missing_content3-untracked
+  content1 content1_missing_missing-tracked
+  content1 content1_missing_missing-untracked
 
 Create parent changeset
 
   $ python ../gen-revert-cases.py parent
   $ hg addremove --similarity 0
-  adding added_clean
-  adding added_deleted
-  adding added_untracked-clean
-  adding added_untracked-deleted
-  adding added_untracked-wc
-  adding added_wc
-  removing removed_clean
-  removing removed_revert
-  removing removed_untracked-clean
-  removing removed_untracked-revert
-  removing removed_untracked-wc
-  removing removed_wc
+  removing content1_missing_content1-tracked
+  removing content1_missing_content1-untracked
+  removing content1_missing_content3-tracked
+  removing content1_missing_content3-untracked
+  removing content1_missing_missing-tracked
+  removing content1_missing_missing-untracked
+  adding missing_content2_content2-tracked
+  adding missing_content2_content2-untracked
+  adding missing_content2_content3-tracked
+  adding missing_content2_content3-untracked
+  adding missing_content2_missing-tracked
+  adding missing_content2_missing-untracked
   $ hg status
-  M modified_clean
-  M modified_deleted
-  M modified_revert
-  M modified_untracked-clean
-  M modified_untracked-deleted
-  M modified_untracked-revert
-  M modified_untracked-wc
-  M modified_wc
-  A added_clean
-  A added_deleted
-  A added_untracked-clean
-  A added_untracked-deleted
-  A added_untracked-wc
-  A added_wc
-  R removed_clean
-  R removed_revert
-  R removed_untracked-clean
-  R removed_untracked-revert
-  R removed_untracked-wc
-  R removed_wc
+  M content1_content2_content1-tracked
+  M content1_content2_content1-untracked
+  M content1_content2_content2-tracked
+  M content1_content2_content2-untracked
+  M content1_content2_content3-tracked
+  M content1_content2_content3-untracked
+  M content1_content2_missing-tracked
+  M content1_content2_missing-untracked
+  A missing_content2_content2-tracked
+  A missing_content2_content2-untracked
+  A missing_content2_content3-tracked
+  A missing_content2_content3-untracked
+  A missing_content2_missing-tracked
+  A missing_content2_missing-untracked
+  R content1_missing_content1-tracked
+  R content1_missing_content1-untracked
+  R content1_missing_content3-tracked
+  R content1_missing_content3-untracked
+  R content1_missing_missing-tracked
+  R content1_missing_missing-untracked
   $ hg commit -m 'parent'
 
 (create a simple text version of the content)
 
   $ python ../dircontent.py > ../content-parent.txt
   $ cat ../content-parent.txt
-  parent added_clean
-  parent added_deleted
-  parent added_untracked-clean
-  parent added_untracked-deleted
-  parent added_untracked-wc
-  parent added_wc
-  base   clean_clean
-  base   clean_deleted
-  base   clean_untracked-clean
-  base   clean_untracked-deleted
-  base   clean_untracked-wc
-  base   clean_wc
-  parent modified_clean
-  parent modified_deleted
-  parent modified_revert
-  parent modified_untracked-clean
-  parent modified_untracked-deleted
-  parent modified_untracked-revert
-  parent modified_untracked-wc
-  parent modified_wc
+  content1 content1_content1_content1-tracked
+  content1 content1_content1_content1-untracked
+  content1 content1_content1_content3-tracked
+  content1 content1_content1_content3-untracked
+  content1 content1_content1_missing-tracked
+  content1 content1_content1_missing-untracked
+  content2 content1_content2_content1-tracked
+  content2 content1_content2_content1-untracked
+  content2 content1_content2_content2-tracked
+  content2 content1_content2_content2-untracked
+  content2 content1_content2_content3-tracked
+  content2 content1_content2_content3-untracked
+  content2 content1_content2_missing-tracked
+  content2 content1_content2_missing-untracked
+  content2 missing_content2_content2-tracked
+  content2 missing_content2_content2-untracked
+  content2 missing_content2_content3-tracked
+  content2 missing_content2_content3-untracked
+  content2 missing_content2_missing-tracked
+  content2 missing_content2_missing-untracked
 
 Setup working directory
 
   $ python ../gen-revert-cases.py wc
   $ hg addremove --similarity 0
-  adding missing_untracked-wc
-  adding missing_wc
-  adding removed_revert
-  adding removed_untracked-revert
-  adding removed_untracked-wc
-  adding removed_wc
-  $ hg forget *untracked*
-  $ rm *deleted*
+  adding content1_missing_content1-tracked
+  adding content1_missing_content1-untracked
+  adding content1_missing_content3-tracked
+  adding content1_missing_content3-untracked
+  adding missing_missing_content3-tracked
+  adding missing_missing_content3-untracked
+  $ hg forget *_*_*-untracked
+  $ rm *_*_missing-*
   $ hg status
-  M added_wc
-  M clean_wc
-  M modified_revert
-  M modified_wc
-  A missing_wc
-  A removed_revert
-  A removed_wc
-  R added_untracked-clean
-  R added_untracked-deleted
-  R added_untracked-wc
-  R clean_untracked-clean
-  R clean_untracked-deleted
-  R clean_untracked-wc
-  R modified_untracked-clean
-  R modified_untracked-deleted
-  R modified_untracked-revert
-  R modified_untracked-wc
-  ! added_deleted
-  ! clean_deleted
-  ! modified_deleted
-  ? missing_untracked-wc
-  ? removed_untracked-revert
-  ? removed_untracked-wc
+  M content1_content1_content3-tracked
+  M content1_content2_content1-tracked
+  M content1_content2_content3-tracked
+  M missing_content2_content3-tracked
+  A content1_missing_content1-tracked
+  A content1_missing_content3-tracked
+  A missing_missing_content3-tracked
+  R content1_content1_content1-untracked
+  R content1_content1_content3-untracked
+  R content1_content1_missing-untracked
+  R content1_content2_content1-untracked
+  R content1_content2_content2-untracked
+  R content1_content2_content3-untracked
+  R content1_content2_missing-untracked
+  R missing_content2_content2-untracked
+  R missing_content2_content3-untracked
+  R missing_content2_missing-untracked
+  ! content1_content1_missing-tracked
+  ! content1_content2_missing-tracked
+  ! missing_content2_missing-tracked
+  ? content1_missing_content1-untracked
+  ? content1_missing_content3-untracked
+  ? missing_missing_content3-untracked
 
   $ hg status --rev 'desc("base")'
-  M clean_wc
-  M modified_clean
-  M modified_wc
-  M removed_wc
-  A added_clean
-  A added_wc
-  A missing_wc
-  R clean_untracked-clean
-  R clean_untracked-deleted
-  R clean_untracked-wc
-  R modified_untracked-clean
-  R modified_untracked-deleted
-  R modified_untracked-revert
-  R modified_untracked-wc
-  R removed_clean
-  R removed_untracked-clean
-  R removed_untracked-revert
-  R removed_untracked-wc
-  ! added_deleted
-  ! clean_deleted
-  ! modified_deleted
-  ? missing_untracked-wc
+  M content1_content1_content3-tracked
+  M content1_content2_content2-tracked
+  M content1_content2_content3-tracked
+  M content1_missing_content3-tracked
+  A missing_content2_content2-tracked
+  A missing_content2_content3-tracked
+  A missing_missing_content3-tracked
+  R content1_content1_content1-untracked
+  R content1_content1_content3-untracked
+  R content1_content1_missing-untracked
+  R content1_content2_content1-untracked
+  R content1_content2_content2-untracked
+  R content1_content2_content3-untracked
+  R content1_content2_missing-untracked
+  R content1_missing_content1-untracked
+  R content1_missing_content3-untracked
+  R content1_missing_missing-tracked
+  R content1_missing_missing-untracked
+  ! content1_content1_missing-tracked
+  ! content1_content2_missing-tracked
+  ! missing_content2_missing-tracked
+  ? missing_missing_content3-untracked
 
 (create a simple text version of the content)
 
   $ python ../dircontent.py > ../content-wc.txt
   $ cat ../content-wc.txt
-  parent added_clean
-  parent added_untracked-clean
-  wc     added_untracked-wc
-  wc     added_wc
-  base   clean_clean
-  base   clean_untracked-clean
-  wc     clean_untracked-wc
-  wc     clean_wc
-  wc     missing_untracked-wc
-  wc     missing_wc
-  parent modified_clean
-  base   modified_revert
-  parent modified_untracked-clean
-  base   modified_untracked-revert
-  wc     modified_untracked-wc
-  wc     modified_wc
-  base   removed_revert
-  base   removed_untracked-revert
-  wc     removed_untracked-wc
-  wc     removed_wc
+  content1 content1_content1_content1-tracked
+  content1 content1_content1_content1-untracked
+  content3 content1_content1_content3-tracked
+  content3 content1_content1_content3-untracked
+  content1 content1_content2_content1-tracked
+  content1 content1_content2_content1-untracked
+  content2 content1_content2_content2-tracked
+  content2 content1_content2_content2-untracked
+  content3 content1_content2_content3-tracked
+  content3 content1_content2_content3-untracked
+  content1 content1_missing_content1-tracked
+  content1 content1_missing_content1-untracked
+  content3 content1_missing_content3-tracked
+  content3 content1_missing_content3-untracked
+  content2 missing_content2_content2-tracked
+  content2 missing_content2_content2-untracked
+  content3 missing_content2_content3-tracked
+  content3 missing_content2_content3-untracked
+  content3 missing_missing_content3-tracked
+  content3 missing_missing_content3-untracked
 
   $ cd ..
 
@@ -796,26 +799,26 @@ Test revert --all to parent content
 check revert output
 
   $ hg revert --all
-  reverting added_deleted
-  undeleting added_untracked-clean
-  undeleting added_untracked-deleted
-  undeleting added_untracked-wc
-  reverting added_wc
-  reverting clean_deleted
-  undeleting clean_untracked-clean
-  undeleting clean_untracked-deleted
-  undeleting clean_untracked-wc
-  reverting clean_wc
-  forgetting missing_wc
-  reverting modified_deleted
-  reverting modified_revert
-  undeleting modified_untracked-clean
-  undeleting modified_untracked-deleted
-  undeleting modified_untracked-revert
-  undeleting modified_untracked-wc
-  reverting modified_wc
-  forgetting removed_revert
-  forgetting removed_wc
+  undeleting content1_content1_content1-untracked
+  reverting content1_content1_content3-tracked
+  undeleting content1_content1_content3-untracked
+  reverting content1_content1_missing-tracked
+  undeleting content1_content1_missing-untracked
+  reverting content1_content2_content1-tracked
+  undeleting content1_content2_content1-untracked
+  undeleting content1_content2_content2-untracked
+  reverting content1_content2_content3-tracked
+  undeleting content1_content2_content3-untracked
+  reverting content1_content2_missing-tracked
+  undeleting content1_content2_missing-untracked
+  forgetting content1_missing_content1-tracked
+  forgetting content1_missing_content3-tracked
+  undeleting missing_content2_content2-untracked
+  reverting missing_content2_content3-tracked
+  undeleting missing_content2_content3-untracked
+  reverting missing_content2_missing-tracked
+  undeleting missing_content2_missing-untracked
+  forgetting missing_missing_content3-tracked
 
 Compare resulting directory with revert target.
 
@@ -825,20 +828,20 @@ additional `.orig` backup file when applicable.
   $ python ../dircontent.py > ../content-parent-all.txt
   $ cd ..
   $ diff -U 0 -- content-parent.txt content-parent-all.txt | grep _
-  +wc     added_untracked-wc.orig
-  +wc     added_wc.orig
-  +wc     clean_untracked-wc.orig
-  +wc     clean_wc.orig
-  +wc     missing_untracked-wc
-  +wc     missing_wc
-  +base   modified_revert.orig
-  +base   modified_untracked-revert.orig
-  +wc     modified_untracked-wc.orig
-  +wc     modified_wc.orig
-  +base   removed_revert
-  +base   removed_untracked-revert
-  +wc     removed_untracked-wc
-  +wc     removed_wc
+  +content3 content1_content1_content3-tracked.orig
+  +content3 content1_content1_content3-untracked.orig
+  +content1 content1_content2_content1-tracked.orig
+  +content1 content1_content2_content1-untracked.orig
+  +content3 content1_content2_content3-tracked.orig
+  +content3 content1_content2_content3-untracked.orig
+  +content1 content1_missing_content1-tracked
+  +content1 content1_missing_content1-untracked
+  +content3 content1_missing_content3-tracked
+  +content3 content1_missing_content3-untracked
+  +content3 missing_content2_content3-tracked.orig
+  +content3 missing_content2_content3-untracked.orig
+  +content3 missing_missing_content3-tracked
+  +content3 missing_missing_content3-untracked
 
 Test revert --all to "base" content
 -----------------------------------
@@ -851,27 +854,27 @@ Test revert --all to "base" content
 check revert output
 
   $ hg revert --all --rev 'desc(base)'
-  removing added_clean
-  removing added_deleted
-  removing added_wc
-  reverting clean_deleted
-  undeleting clean_untracked-clean
-  undeleting clean_untracked-deleted
-  undeleting clean_untracked-wc
-  reverting clean_wc
-  forgetting missing_wc
-  reverting modified_clean
-  reverting modified_deleted
-  undeleting modified_untracked-clean
-  undeleting modified_untracked-deleted
-  undeleting modified_untracked-revert
-  undeleting modified_untracked-wc
-  reverting modified_wc
-  adding removed_clean
-  adding removed_untracked-clean
-  adding removed_untracked-revert
-  adding removed_untracked-wc
-  reverting removed_wc
+  undeleting content1_content1_content1-untracked
+  reverting content1_content1_content3-tracked
+  undeleting content1_content1_content3-untracked
+  reverting content1_content1_missing-tracked
+  undeleting content1_content1_missing-untracked
+  undeleting content1_content2_content1-untracked
+  reverting content1_content2_content2-tracked
+  undeleting content1_content2_content2-untracked
+  reverting content1_content2_content3-tracked
+  undeleting content1_content2_content3-untracked
+  reverting content1_content2_missing-tracked
+  undeleting content1_content2_missing-untracked
+  adding content1_missing_content1-untracked
+  reverting content1_missing_content3-tracked
+  adding content1_missing_content3-untracked
+  adding content1_missing_missing-tracked
+  adding content1_missing_missing-untracked
+  removing missing_content2_content2-tracked
+  removing missing_content2_content3-tracked
+  removing missing_content2_missing-tracked
+  forgetting missing_missing_content3-tracked
 
 Compare resulting directory with revert target.
 
@@ -881,18 +884,18 @@ additional `.orig` backup file when applicable.
   $ python ../dircontent.py > ../content-base-all.txt
   $ cd ..
   $ diff -U 0 -- content-base.txt content-base-all.txt | grep _
-  +parent added_untracked-clean
-  +wc     added_untracked-wc
-  +wc     added_wc.orig
-  +wc     clean_untracked-wc.orig
-  +wc     clean_wc.orig
-  +wc     missing_untracked-wc
-  +wc     missing_wc
-  +parent modified_untracked-clean.orig
-  +wc     modified_untracked-wc.orig
-  +wc     modified_wc.orig
-  +wc     removed_untracked-wc.orig
-  +wc     removed_wc.orig
+  +content3 content1_content1_content3-tracked.orig
+  +content3 content1_content1_content3-untracked.orig
+  +content2 content1_content2_content2-untracked.orig
+  +content3 content1_content2_content3-tracked.orig
+  +content3 content1_content2_content3-untracked.orig
+  +content3 content1_missing_content3-tracked.orig
+  +content3 content1_missing_content3-untracked.orig
+  +content2 missing_content2_content2-untracked
+  +content3 missing_content2_content3-tracked.orig
+  +content3 missing_content2_content3-untracked
+  +content3 missing_missing_content3-tracked
+  +content3 missing_missing_content3-untracked
 
 Test revert to parent content with explicit file name
 -----------------------------------------------------
@@ -910,75 +913,75 @@ revert all files individually and check the output
   >   hg revert $file;
   >   echo
   > done
-  ### revert for: added_clean
-  no changes needed to added_clean
+  ### revert for: missing_content2_content2-tracked
+  no changes needed to missing_content2_content2-tracked
   
-  ### revert for: added_deleted
+  ### revert for: missing_content2_missing-tracked
   
-  ### revert for: added_untracked-clean
+  ### revert for: missing_content2_content2-untracked
   
-  ### revert for: added_untracked-deleted
+  ### revert for: missing_content2_missing-untracked
   
-  ### revert for: added_untracked-wc
+  ### revert for: missing_content2_content3-untracked
   
-  ### revert for: added_wc
+  ### revert for: missing_content2_content3-tracked
   
-  ### revert for: clean_clean
-  no changes needed to clean_clean
+  ### revert for: content1_content1_content1-tracked
+  no changes needed to content1_content1_content1-tracked
   
-  ### revert for: clean_deleted
+  ### revert for: content1_content1_missing-tracked
   
-  ### revert for: clean_untracked-clean
+  ### revert for: content1_content1_content1-untracked
   
-  ### revert for: clean_untracked-deleted
+  ### revert for: content1_content1_missing-untracked
   
-  ### revert for: clean_untracked-wc
+  ### revert for: content1_content1_content3-untracked
   
-  ### revert for: clean_wc
+  ### revert for: content1_content1_content3-tracked
   
-  ### revert for: missing_clean
-  missing_clean: no such file in rev * (glob)
+  ### revert for: missing_missing_missing-tracked
+  missing_missing_missing-tracked: no such file in rev * (glob)
   
-  ### revert for: missing_untracked-clean
-  missing_untracked-clean: no such file in rev * (glob)
+  ### revert for: missing_missing_missing-untracked
+  missing_missing_missing-untracked: no such file in rev * (glob)
   
-  ### revert for: missing_untracked-wc
-  file not managed: missing_untracked-wc
+  ### revert for: missing_missing_content3-untracked
+  file not managed: missing_missing_content3-untracked
   
-  ### revert for: missing_wc
+  ### revert for: missing_missing_content3-tracked
   
-  ### revert for: modified_clean
-  no changes needed to modified_clean
+  ### revert for: content1_content2_content2-tracked
+  no changes needed to content1_content2_content2-tracked
   
-  ### revert for: modified_deleted
+  ### revert for: content1_content2_missing-tracked
   
-  ### revert for: modified_revert
+  ### revert for: content1_content2_content1-tracked
   
-  ### revert for: modified_untracked-clean
+  ### revert for: content1_content2_content2-untracked
   
-  ### revert for: modified_untracked-deleted
+  ### revert for: content1_content2_missing-untracked
   
-  ### revert for: modified_untracked-revert
+  ### revert for: content1_content2_content1-untracked
   
-  ### revert for: modified_untracked-wc
+  ### revert for: content1_content2_content3-untracked
   
-  ### revert for: modified_wc
+  ### revert for: content1_content2_content3-tracked
   
-  ### revert for: removed_clean
-  removed_clean: no such file in rev * (glob)
+  ### revert for: content1_missing_missing-tracked
+  content1_missing_missing-tracked: no such file in rev * (glob)
   
-  ### revert for: removed_revert
+  ### revert for: content1_missing_content1-tracked
   
-  ### revert for: removed_untracked-clean
-  removed_untracked-clean: no such file in rev * (glob)
+  ### revert for: content1_missing_missing-untracked
+  content1_missing_missing-untracked: no such file in rev * (glob)
   
-  ### revert for: removed_untracked-revert
-  file not managed: removed_untracked-revert
+  ### revert for: content1_missing_content1-untracked
+  file not managed: content1_missing_content1-untracked
   
-  ### revert for: removed_untracked-wc
-  file not managed: removed_untracked-wc
+  ### revert for: content1_missing_content3-untracked
+  file not managed: content1_missing_content3-untracked
   
-  ### revert for: removed_wc
+  ### revert for: content1_missing_content3-tracked
   
 
 check resulting directory against the --all run
@@ -1005,74 +1008,74 @@ revert all files individually and check the output
   >   hg revert $file --rev 'desc(base)';
   >   echo
   > done
-  ### revert for: added_clean
+  ### revert for: missing_content2_content2-tracked
   
-  ### revert for: added_deleted
+  ### revert for: missing_content2_missing-tracked
   
-  ### revert for: added_untracked-clean
-  no changes needed to added_untracked-clean
+  ### revert for: missing_content2_content2-untracked
+  no changes needed to missing_content2_content2-untracked
   
-  ### revert for: added_untracked-deleted
-  no changes needed to added_untracked-deleted
+  ### revert for: missing_content2_missing-untracked
+  no changes needed to missing_content2_missing-untracked
   
-  ### revert for: added_untracked-wc
-  no changes needed to added_untracked-wc
+  ### revert for: missing_content2_content3-untracked
+  no changes needed to missing_content2_content3-untracked
   
-  ### revert for: added_wc
+  ### revert for: missing_content2_content3-tracked
   
-  ### revert for: clean_clean
-  no changes needed to clean_clean
+  ### revert for: content1_content1_content1-tracked
+  no changes needed to content1_content1_content1-tracked
   
-  ### revert for: clean_deleted
+  ### revert for: content1_content1_missing-tracked
   
-  ### revert for: clean_untracked-clean
+  ### revert for: content1_content1_content1-untracked
   
-  ### revert for: clean_untracked-deleted
+  ### revert for: content1_content1_missing-untracked
   
-  ### revert for: clean_untracked-wc
+  ### revert for: content1_content1_content3-untracked
   
-  ### revert for: clean_wc
+  ### revert for: content1_content1_content3-tracked
   
-  ### revert for: missing_clean
-  missing_clean: no such file in rev * (glob)
+  ### revert for: missing_missing_missing-tracked
+  missing_missing_missing-tracked: no such file in rev * (glob)
   
-  ### revert for: missing_untracked-clean
-  missing_untracked-clean: no such file in rev * (glob)
+  ### revert for: missing_missing_missing-untracked
+  missing_missing_missing-untracked: no such file in rev * (glob)
   
-  ### revert for: missing_untracked-wc
-  file not managed: missing_untracked-wc
+  ### revert for: missing_missing_content3-untracked
+  file not managed: missing_missing_content3-untracked
   
-  ### revert for: missing_wc
+  ### revert for: missing_missing_content3-tracked
   
-  ### revert for: modified_clean
+  ### revert for: content1_content2_content2-tracked
   
-  ### revert for: modified_deleted
+  ### revert for: content1_content2_missing-tracked
   
-  ### revert for: modified_revert
-  no changes needed to modified_revert
+  ### revert for: content1_content2_content1-tracked
+  no changes needed to content1_content2_content1-tracked
   
-  ### revert for: modified_untracked-clean
+  ### revert for: content1_content2_content2-untracked
   
-  ### revert for: modified_untracked-deleted
+  ### revert for: content1_content2_missing-untracked
   
-  ### revert for: modified_untracked-revert
+  ### revert for: content1_content2_content1-untracked
   
-  ### revert for: modified_untracked-wc
+  ### revert for: content1_content2_content3-untracked
   
-  ### revert for: modified_wc
+  ### revert for: content1_content2_content3-tracked
   
-  ### revert for: removed_clean
+  ### revert for: content1_missing_missing-tracked
   
-  ### revert for: removed_revert
-  no changes needed to removed_revert
+  ### revert for: content1_missing_content1-tracked
+  no changes needed to content1_missing_content1-tracked
   
-  ### revert for: removed_untracked-clean
+  ### revert for: content1_missing_missing-untracked
   
-  ### revert for: removed_untracked-revert
+  ### revert for: content1_missing_content1-untracked
   
-  ### revert for: removed_untracked-wc
+  ### revert for: content1_missing_content3-untracked
   
-  ### revert for: removed_wc
+  ### revert for: content1_missing_content3-tracked
   
 
 check resulting directory against the --all run
