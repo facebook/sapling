@@ -15,6 +15,8 @@ from i18n import _
 import errno
 import error, util
 
+version = 1
+
 def active(func):
     def _active(self, *args, **kwds):
         if self.count == 0:
@@ -92,6 +94,7 @@ class transaction(object):
         self.backupjournal = "%s.backupfiles" % journal
         self.file = opener.open(self.journal, "w")
         self.backupsfile = opener.open(self.backupjournal, 'w')
+        self.backupsfile.write('%d\n' % version)
         if createmode is not None:
             opener.chmod(self.journal, createmode & 0666)
             opener.chmod(self.backupjournal, createmode & 0666)
@@ -348,10 +351,20 @@ def rollback(opener, file, report):
         fp = opener.open(backupjournal)
         data = fp.read()
         if len(data) > 0:
-            parts = data.split('\0')
-            # Skip the final part, since it's just a trailing empty space
-            for i in xrange(0, len(parts) - 1, 2):
-                f, b = parts[i:i + 2]
-                backupentries.append((f, b, None))
+            ver = version
+            versionend = data.find('\n')
+            if versionend != -1:
+                ver = data[:versionend]
+                data = data[versionend + 1:]
+
+            if ver == str(version):
+                parts = data.split('\0')
+                # Skip the final part, since it's just a trailing empty space
+                for i in xrange(0, len(parts) - 1, 2):
+                    f, b = parts[i:i + 2]
+                    backupentries.append((f, b, None))
+            else:
+                report(_("journal was created by a newer version of "
+                         "Mercurial"))
 
     _playback(file, report, opener, entries, backupentries)
