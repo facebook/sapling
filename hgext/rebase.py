@@ -273,9 +273,9 @@ def rebase(ui, repo, **opts):
                     ui.status(_('empty "base" revision set - '
                                 "can't compute rebase set\n"))
                     return 1
-                rebaseset = repo.revs(
-                    '(children(ancestor(%ld, %d)) and ::(%ld))::',
-                    base, dest, base)
+                commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
+                rebaseset = repo.revs('(%d::(%ld) - %d)::',
+                                      commonanc, base, commonanc)
                 if not rebaseset:
                     # transform to list because smartsets are not comparable to
                     # lists. This should be improved to honor lazyness of
