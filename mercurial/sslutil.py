@@ -14,7 +14,6 @@ try:
     # avoid using deprecated/broken FakeSocket in python 2.6
     import ssl
     CERT_REQUIRED = ssl.CERT_REQUIRED
-    PROTOCOL_SSLv23 = ssl.PROTOCOL_SSLv23
     PROTOCOL_TLSv1 = ssl.PROTOCOL_TLSv1
     def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
                 cert_reqs=ssl.CERT_NONE, ca_certs=None):
@@ -29,7 +28,6 @@ try:
 except ImportError:
     CERT_REQUIRED = 2
 
-    PROTOCOL_SSLv23 = 2
     PROTOCOL_TLSv1 = 3
 
     import socket, httplib
@@ -103,12 +101,7 @@ def _plainapplepython():
             exe.startswith('/system/library/frameworks/python.framework/'))
 
 def sslkwargs(ui, host):
-    forcetls = ui.configbool('ui', 'tls', default=True)
-    if forcetls:
-        ssl_version = PROTOCOL_TLSv1
-    else:
-        ssl_version = PROTOCOL_SSLv23
-    kws = {'ssl_version': ssl_version,
+    kws = {'ssl_version': PROTOCOL_TLSv1,
            }
     hostfingerprint = ui.config('hostfingerprints', host)
     if hostfingerprint:
