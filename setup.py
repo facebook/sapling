@@ -14,6 +14,7 @@ setup(
     py_modules=[
         'backups',
         'fbamend',
+        'fbhistedit',
         'githelp',
         'gitlookup',
         'gitrevset',
