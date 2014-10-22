@@ -111,8 +111,7 @@ def wraprepo(repo):
     # Wrap dirstate.status here so we can prefetch all file nodes in
     # the lookup set before localrepo.status uses them.
     def status(orig, match, subrepos, ignored, clean, unknown):
-        lookup, modified, added, removed, deleted, unknown, ignored, \
-            clean = orig(match, subrepos, ignored, clean, unknown)
+        lookup, status = orig(match, subrepos, ignored, clean, unknown)
 
         if lookup:
             files = []
@@ -125,8 +124,7 @@ def wraprepo(repo):
 
             repo.fileservice.prefetch(files)
 
-        return (lookup, modified, added, removed, deleted, unknown, \
-                ignored, clean)
+        return lookup, status
 
     wrapfunction(repo.dirstate, 'status', status)
 
