@@ -899,7 +899,6 @@ def _matchfiles(repo, subset, x):
     # i18n: "_matchfiles" is a keyword
     l = getargs(x, 1, -1, _("_matchfiles requires at least one argument"))
     pats, inc, exc = [], [], []
-    hasset = False
     rev, default = None, None
     for arg in l:
         # i18n: "_matchfiles" is a keyword
@@ -926,21 +925,14 @@ def _matchfiles(repo, subset, x):
         else:
             # i18n: "_matchfiles" is a keyword
             raise error.ParseError(_('invalid _matchfiles prefix: %s') % prefix)
-        if not hasset and matchmod.patkind(value) == 'set':
-            hasset = True
     if not default:
         default = 'glob'
 
+    m = matchmod.match(repo.root, repo.getcwd(), pats, include=inc,
+                       exclude=exc, ctx=repo[rev], default=default)
+
     def matches(x):
-        m = None
-        c = repo[x]
-        if not m or (hasset and rev is None):
-            ctx = c
-            if rev is not None:
-                ctx = repo[rev or None]
-            m = matchmod.match(repo.root, repo.getcwd(), pats, include=inc,
-                               exclude=exc, ctx=ctx, default=default)
-        for f in c.files():
+        for f in repo[x].files():
             if m(f):
                 return True
         return False
