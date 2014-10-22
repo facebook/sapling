@@ -333,10 +333,10 @@ def reposetup(ui, repo):
             for f in sorted(ctx.added() + ctx.modified()):
                 if not self._eolfile(f):
                     continue
-                try:
-                    data = ctx[f].data()
-                except IOError:
+                fctx = ctx[f]
+                if fctx is None:
                     continue
+                data = fctx.data()
                 if util.binary(data):
                     # We should not abort here, since the user should
                     # be able to say "** = native" to automatically

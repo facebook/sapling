@@ -525,4 +525,19 @@ append a line without trailing newline
   fourth
   fifth
 
+amend of changesets with renamed/deleted files expose new code paths
+
+  $ hg mv a.txt b.txt
+  $ hg ci --amend -q
+  $ hg diff -c.
+  diff --git a/a.txt b/b.txt
+  rename from a.txt
+  rename to b.txt
+  --- a/a.txt
+  +++ b/b.txt
+  @@ -1,2 +1,3 @@
+   third
+   fourth
+  +fifth
+
   $ cd ..
