@@ -1559,7 +1559,31 @@ issue3772: hg log -r :null showing revision 0 as well
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
+Check that adding an arbitrary name shows up in log automatically
 
+  $ cat > ../names.py <<EOF
+  > """A small extension to test adding arbitrary names to a repo"""
+  > from mercurial.namespaces import namespace
+  > 
+  > def reposetup(ui, repo):
+  >     foo = {'foo': repo[0].node()}
+  >     ns = namespace("bars", "bar",
+  >                    lambda r: foo.keys(),
+  >                    lambda r, name: foo.get(name),
+  >                    lambda r, node: [name for name, n
+  >                                     in foo.iteritems()
+  >                                     if n == node])
+  >     repo.names.addnamespace(ns)
+  > EOF
+
+  $ hg --config extensions.names=../names.py log -r 0
+  changeset:   0:65624cd9070a
+  tag:         tip
+  bar:         foo
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a bunch of weird directories
+  
   $ cd ..
 
 hg log -f dir across branches
