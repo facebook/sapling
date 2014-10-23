@@ -211,6 +211,7 @@ class digestchecker(object):
                 (self._size, self._got))
         for k, v in self._digests.items():
             if v != self._digester[k]:
+                # i18n: first parameter is a digest name
                 raise Abort(_('%s mismatch: expected %s, got %s') %
                     (k, v, self._digester[k]))
 
