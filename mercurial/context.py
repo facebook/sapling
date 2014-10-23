@@ -71,19 +71,7 @@ class basectx(object):
         object oriented way for other contexts to customize the manifest
         generation.
         """
-        if match.always():
-            return self.manifest().copy()
-
-        files = match.files()
-        if (match.matchfn == match.exact or
-            (not match.anypats() and util.all(fn in self for fn in files))):
-            return self.manifest().intersectfiles(files)
-
-        mf = self.manifest().copy()
-        for fn in mf.keys():
-            if not match(fn):
-                del mf[fn]
-        return mf
+        return self.manifest().matches(match)
 
     def _matchstatus(self, other, match):
         """return match.always if match is none

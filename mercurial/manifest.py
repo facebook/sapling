@@ -39,6 +39,22 @@ class manifestdict(dict):
                     ret._flags[fn] = flags
         return ret
 
+    def matches(self, match):
+        '''generate a new manifest filtered by the match argument'''
+        if match.always():
+            return self.copy()
+
+        files = match.files()
+        if (match.matchfn == match.exact or
+            (not match.anypats() and util.all(fn in self for fn in files))):
+            return self.intersectfiles(files)
+
+        mf = self.copy()
+        for fn in mf.keys():
+            if not match(fn):
+                del mf[fn]
+        return mf
+
     def diff(self, m2):
         '''Finds changes between the current manifest and m2. The result is
         returned as a dict with filename as key and values of the form
