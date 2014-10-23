@@ -16,7 +16,7 @@ from mercurial import ancestor, mdiff, parsers, error, util, dagutil
 from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
 from mercurial import copies, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
-from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch, verify
+from mercurial import templatekw, repoview, revset, hg, patch, verify
 from mercurial import match, exchange
 import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
 import stat
@@ -117,8 +117,7 @@ def reposetup(ui, repo):
         remotefilelogserver.setupserver(ui, repo)
 
 def setupclient(ui, repo):
-    if (not isinstance(repo, localrepo.localrepository) or
-        isinstance(repo, bundlerepo.bundlerepository)):
+    if not isinstance(repo, localrepo.localrepository):
         return
 
     # Even clients get the server setup since they need to have the

@@ -8,7 +8,8 @@
 import fileserverclient, remotefilelog
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import changegroup, revlog, phases, mdiff, match
+from mercurial import changegroup, revlog, phases, mdiff, match, bundlerepo
+from mercurial import util
 from mercurial.i18n import _
 
 NoFiles = 0
@@ -89,6 +90,16 @@ class shallowbundle(changegroup.cg1packer):
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         if requirement in self._repo.requirements:
             repo = self._repo
+            if isinstance(repo, bundlerepo.bundlerepository):
+                # If the bundle contains filelogs, we can't pull from it, since
+                # bundlerepo is heavily tied to revlogs. Instead require that
+                # the user use unbundle instead.
+                # Force load the filelog data.
+                bundlerepo.bundlerepository.file(repo, 'foo')
+                if repo.bundlefilespos:
+                    raise util.Abort("cannot pull from full bundles",
+                                     hint="use `hg unbundle` instead")
+                return []
             filestosend = self.shouldaddfilegroups(source)
             if filestosend == NoFiles:
                 changedfiles = list([f for f in changedfiles if not repo.shallowmatch(f)])
