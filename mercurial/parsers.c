@@ -873,12 +873,13 @@ static PyObject *list_copy(PyObject *list)
 	return newlist;
 }
 
-static int check_filter(PyObject *filter, Py_ssize_t arg) {
+/* arg should be Py_ssize_t but Python 2.4 do not support the n format */
+static int check_filter(PyObject *filter, unsigned long arg) {
 	if (filter) {
 		PyObject *arglist, *result;
 		int isfiltered;
 
-		arglist = Py_BuildValue("(n)", arg);
+		arglist = Py_BuildValue("(k)", arg);
 		if (!arglist) {
 			return -1;
 		}
