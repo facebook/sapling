@@ -298,6 +298,7 @@ def getdiff(expected, output, ref, err):
     lines = []
     for line in difflib.unified_diff(expected, output, ref, err):
         if line.startswith('+++') or line.startswith('---'):
+            line = line.replace('\\', '/')
             if line.endswith(' \n'):
                 line = line[:-2] + '\n'
         lines.append(line)
