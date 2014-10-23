@@ -619,7 +619,7 @@ def reposetup(ui, repo):
                 ret = super(kwrepo, self).rollback(dryrun, force)
                 if not dryrun:
                     ctx = self['.']
-                    modified, added = _preselect(self[None].status(), changed)
+                    modified, added = _preselect(ctx.status(), changed)
                     kwt.overwrite(ctx, modified, True, True)
                     kwt.overwrite(ctx, added, True, False)
                 return ret
@@ -702,7 +702,7 @@ def reposetup(ui, repo):
             # therefore compare nodes before and after
             kwt.postcommit = True
             ctx = repo['.']
-            wstatus = repo[None].status()
+            wstatus = ctx.status()
             ret = orig(ui, repo, commitfunc, *pats, **opts)
             recctx = repo['.']
             if ctx != recctx:
