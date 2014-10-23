@@ -667,7 +667,7 @@ class GitHandler(object):
             refs = self.git.refs.as_dict()
         return git2hg.find_incoming(self.git.object_store, self._map_git, refs)
 
-    def import_git_objects(self, remote_name=None, refs=None):
+    def import_git_objects(self, remote_name, refs):
         result = self.get_git_incoming(refs)
         commits = result.commits
         commit_cache = result.commit_cache
