@@ -403,7 +403,7 @@ required):
 
 Configuring items below instead of ``changeset`` allows showing
 customized message only for specific actions, or showing different
-messages for each actions.
+messages for each action.
 
 - ``changeset.backout`` for :hg:`backout`
 - ``changeset.commit.amend.merge`` for :hg:`commit --amend` on merges
