@@ -93,14 +93,6 @@ class basectx(object):
         """
         return match or matchmod.always(self._repo.root, self._repo.getcwd())
 
-    def _poststatus(self, other, s, match, listignored, listclean, listunknown):
-        """provide a hook to allow child objects to postprocess status results
-
-        For example, this allows other contexts, such as workingctx, to filter
-        suspect symlinks in the case of FAT32 and NTFS filesystems.
-        """
-        return s
-
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
         """build a status with respect to another context"""
@@ -306,8 +298,6 @@ class basectx(object):
         r = [[], [], [], [], [], [], []]
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
-        r = ctx2._poststatus(ctx1, r, match, listignored, listclean,
-                             listunknown)
 
         if reversed:
             # reverse added and removed
@@ -1401,17 +1391,6 @@ class workingctx(committablectx):
                 del mf[f]
         return mf
 
-    def _poststatus(self, other, s, match, listignored, listclean, listunknown):
-        """override the parent hook with a filter for suspect symlinks
-
-        We use this _poststatus hook to filter out symlinks that might have
-        accidentally ended up with the entire contents of the file they are
-        supposed to be linking to.
-        """
-        s[0] = self._filtersuspectsymlink(s[0])
-        self._status = scmutil.status(*s)
-        return s
-
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
@@ -1449,6 +1428,11 @@ class workingctx(committablectx):
             s = super(workingctx, self)._buildstatus(other, s, match,
                                                      listignored, listclean,
                                                      listunknown)
+        # Filter out symlinks that, in the case of FAT32 and NTFS filesytems,
+        # might have accidentally ended up with the entire contents of the file
+        # they are susposed to be linking to.
+        s[0] = self._filtersuspectsymlink(s[0])
+        self._status = scmutil.status(*s)
         return s
 
     def _matchstatus(self, other, match):
