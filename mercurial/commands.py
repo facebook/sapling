@@ -3204,7 +3204,7 @@ def files(ui, repo, *pats, **opts):
 
           hg files "set:binary()"
 
-      - find files containing a regular expression:
+      - find files containing a regular expression::
 
           hg files "set:grep('bob')"
 
