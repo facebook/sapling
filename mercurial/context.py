@@ -1496,14 +1496,6 @@ class workingctx(committablectx):
             match.bad = bad
         return match
 
-    def status(self, other='.', match=None, listignored=False,
-               listclean=False, listunknown=False, listsubrepos=False):
-        # yet to be determined: what to do if 'other' is a 'workingctx' or a
-        # 'memctx'?
-        return super(workingctx, self).status(other, match, listignored,
-                                              listclean, listunknown,
-                                              listsubrepos)
-
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context
     that wants the ability to commit, e.g. workingfilectx or memfilectx."""
