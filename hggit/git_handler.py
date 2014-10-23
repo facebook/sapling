@@ -219,8 +219,9 @@ class GitHandler(object):
     ## COMMANDS METHODS
 
     def import_commits(self, remote_name):
-        self.import_git_objects(remote_name)
-        self.update_hg_bookmarks(self.git.get_refs())
+        refs = self.git.refs.as_dict()
+        self.import_git_objects(remote_name, refs)
+        self.update_hg_bookmarks(refs)
         self.save_map()
 
     def fetch(self, remote, heads):
