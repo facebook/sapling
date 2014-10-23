@@ -663,8 +663,6 @@ class GitHandler(object):
         return message, git_extra
 
     def get_git_incoming(self, refs):
-        if refs is None:
-            refs = self.git.refs.as_dict()
         return git2hg.find_incoming(self.git.object_store, self._map_git, refs)
 
     def import_git_objects(self, remote_name, refs):
