@@ -355,6 +355,10 @@ def _pushdiscoverybookmarks(pushop):
             explicit.remove(b)
             # treat as "deleted locally"
             pushop.outbookmarks.append((b, dcid, ''))
+    # identical bookmarks shouldn't get reported
+    for b, scid, dcid in same:
+        if b in explicit:
+            explicit.remove(b)
 
     if explicit:
         explicit = sorted(explicit)

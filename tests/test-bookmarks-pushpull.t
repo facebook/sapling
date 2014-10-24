@@ -438,3 +438,29 @@ pushing a new bookmark on a new head does not require -f if -B is specified
   cc978a373a53 tip W
 
   $ cd ..
+
+pushing an unchanged bookmark should result in no changes
+
+  $ hg init unchanged-a
+  $ hg init unchanged-b
+  $ cd unchanged-a
+  $ echo initial > foo
+  $ hg commit -A -m initial
+  adding foo
+  $ hg bookmark @
+  $ hg push -B @ ../unchanged-b
+  pushing to ../unchanged-b
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  exporting bookmark @
+
+  $ hg push -B @ ../unchanged-b
+  pushing to ../unchanged-b
+  searching for changes
+  no changes found
+  [1]
+
+  $ cd ..
