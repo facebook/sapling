@@ -25,7 +25,7 @@ class basedag(object):
         self._inverse = None
 
     def nodeset(self):
-        '''set of all node idxs'''
+        '''set of all node ixs'''
         raise NotImplementedError
 
     def heads(self):
@@ -77,7 +77,7 @@ class basedag(object):
         return self._internalize(id)
 
     def internalizeall(self, ids, filterunknown=False):
-        '''return a list of (or set if given a set) of node ids'''
+        '''return a list of (or set if given a set) of node ixs'''
         ixs = self._internalizeall(ids, filterunknown)
         if isinstance(ids, set):
             return set(ixs)
