@@ -790,7 +790,7 @@ def _pushbookmark(pushop):
 class pulloperation(object):
     """A object that represent a single pull operation
 
-    It purpose is to carry push related state and very common operation.
+    It purpose is to carry pull related state and very common operation.
 
     A new should be created at the beginning of each pull and discarded
     afterward.
