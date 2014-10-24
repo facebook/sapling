@@ -271,6 +271,7 @@ def compare(repo, srcmarks, dstmarks,
     :diverge: diverge
     :differ:  changed, but changeset referred on src is unknown on dst
     :invalid: unknown on both side
+    :same:    same on both side
 
     Each elements of lists in result tuple is tuple "(bookmark name,
     changeset ID on source side, changeset ID on destination
@@ -299,12 +300,9 @@ def compare(repo, srcmarks, dstmarks,
     else:
         srcmarkset = set(srcmarks)
         dstmarkset = set(dstmarks)
-        bset = srcmarkset ^ dstmarkset
-        for b in srcmarkset & dstmarkset:
-            if srchex(srcmarks[b]) != dsthex(dstmarks[b]):
-                bset.add(b)
+        bset = srcmarkset | dstmarkset
 
-    results = ([], [], [], [], [], [], [])
+    results = ([], [], [], [], [], [], [], [])
     addsrc = results[0].append
     adddst = results[1].append
     advsrc = results[2].append
@@ -312,6 +310,7 @@ def compare(repo, srcmarks, dstmarks,
     diverge = results[4].append
     differ = results[5].append
     invalid = results[6].append
+    same = results[7].append
 
     for b in sorted(bset):
         if b not in srcmarks:
@@ -324,7 +323,9 @@ def compare(repo, srcmarks, dstmarks,
         else:
             scid = srchex(srcmarks[b])
             dcid = dsthex(dstmarks[b])
-            if scid in repo and dcid in repo:
+            if scid == dcid:
+                same((b, scid, dcid))
+            elif scid in repo and dcid in repo:
                 sctx = repo[scid]
                 dctx = repo[dcid]
                 if sctx.rev() < dctx.rev():
@@ -365,7 +366,7 @@ def _diverge(ui, b, path, localmarks):
 def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
     ui.debug("checking for updated bookmarks\n")
     localmarks = repo._bookmarks
-    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same
      ) = compare(repo, remotemarks, localmarks, dsthex=hex)
 
     status = ui.status
