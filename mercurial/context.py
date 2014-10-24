@@ -1499,13 +1499,9 @@ class workingctx(committablectx):
                listclean=False, listunknown=False, listsubrepos=False):
         # yet to be determined: what to do if 'other' is a 'workingctx' or a
         # 'memctx'?
-        s = super(workingctx, self).status(other, match, listignored, listclean,
-                                           listunknown, listsubrepos)
-        # calling 'super' subtly reveresed the contexts, so we flip the results
-        # (s[1] is 'added' and s[2] is 'removed')
-        s = list(s)
-        s[1], s[2] = s[2], s[1]
-        return scmutil.status(*s)
+        return super(workingctx, self).status(other, match, listignored,
+                                              listclean, listunknown,
+                                              listsubrepos)
 
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context

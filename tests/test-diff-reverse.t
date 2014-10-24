@@ -42,3 +42,24 @@
   -g
   -h
 
+should show removed file 'a' as being added
+  $ hg revert a
+  $ hg rm a
+  $ hg diff --reverse --nodates a
+  diff -r 2855cdcfcbb7 a
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,3 @@
+  +d
+  +e
+  +f
+
+should show added file 'b' as being removed
+  $ echo b >> b
+  $ hg add b
+  $ hg diff --reverse --nodates b
+  diff -r 2855cdcfcbb7 b
+  --- a/b
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -b
