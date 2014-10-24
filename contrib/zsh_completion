@@ -709,7 +709,7 @@ _hg_cmd_log() {
   '(-f --follow)--follow-first[only follow the first parent of merge changesets]' \
   '(--copies -C)'{-C,--copies}'[show copied files]' \
   '(--keyword -k)'{-k+,--keyword}'[search for a keyword]:' \
-  '*'{-r,--rev}'[show the specified revision or range]:revision:_hg_revrange' \
+  '*'{-r,--rev}'[show the specified revision or revset]:revision:_hg_revrange' \
   '(--only-merges -m)'{-m,--only-merges}'[show only merges]' \
   '(--prune -P)'{-P+,--prune}'[do not display revision or any of its ancestors]:revision:_hg_labels' \
   '(--graph -G)'{-G+,--graph}'[show the revision DAG]' \

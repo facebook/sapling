@@ -4322,7 +4322,7 @@ def locate(ui, repo, *pats, **opts):
     ('C', 'copies', None, _('show copied files')),
     ('k', 'keyword', [],
      _('do case-insensitive search for a given text'), _('TEXT')),
-    ('r', 'rev', [], _('show the specified revision or range'), _('REV')),
+    ('r', 'rev', [], _('show the specified revision or revset'), _('REV')),
     ('', 'removed', None, _('include revisions where files were removed')),
     ('m', 'only-merges', None, _('show only merges (DEPRECATED)')),
     ('u', 'user', [], _('revisions committed by user'), _('USER')),

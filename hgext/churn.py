@@ -92,7 +92,7 @@ def countrate(ui, repo, amap, *pats, **opts):
 
 @command('churn',
     [('r', 'rev', [],
-     _('count rate for the specified revision or range'), _('REV')),
+     _('count rate for the specified revision or revset'), _('REV')),
     ('d', 'date', '',
      _('count rate for revisions matching date spec'), _('DATE')),
     ('t', 'template', '{author|email}',
