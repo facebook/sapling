@@ -1424,14 +1424,14 @@ class workingctx(committablectx):
         against its parent (repo['.']).
         """
         s = self._dirstatestatus(match, listignored, listclean, listunknown)
-        if other != self._repo['.']:
-            s = super(workingctx, self)._buildstatus(other, s, match,
-                                                     listignored, listclean,
-                                                     listunknown)
         # Filter out symlinks that, in the case of FAT32 and NTFS filesytems,
         # might have accidentally ended up with the entire contents of the file
         # they are susposed to be linking to.
         s[0] = self._filtersuspectsymlink(s[0])
+        if other != self._repo['.']:
+            s = super(workingctx, self)._buildstatus(other, s, match,
+                                                     listignored, listclean,
+                                                     listunknown)
         self._status = scmutil.status(*s)
         return s
 
