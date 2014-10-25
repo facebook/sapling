@@ -1014,9 +1014,9 @@ def _pullchangeset(pullop):
         return
     pullop.stepsdone.add('changegroup')
     if not pullop.fetch:
-            pullop.repo.ui.status(_("no changes found\n"))
-            pullop.cgresult = 0
-            return
+        pullop.repo.ui.status(_("no changes found\n"))
+        pullop.cgresult = 0
+        return
     pullop.gettransaction()
     if pullop.heads is None and list(pullop.common) == [nullid]:
         pullop.repo.ui.status(_("requesting all changes\n"))
