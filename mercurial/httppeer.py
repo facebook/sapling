@@ -214,6 +214,7 @@ class httppeer(wireproto.wirepeer):
 
     def _calltwowaystream(self, cmd, fp, **args):
         fh = None
+        fp_ = None
         filename = None
         try:
             # dump bundle to disk
@@ -225,10 +226,12 @@ class httppeer(wireproto.wirepeer):
                 d = fp.read(4096)
             fh.close()
             # start http push
-            fp = httpconnection.httpsendfile(self.ui, filename, "rb")
+            fp_ = httpconnection.httpsendfile(self.ui, filename, "rb")
             headers = {'Content-Type': 'application/mercurial-0.1'}
-            return self._callstream(cmd, data=fp, headers=headers, **args)
+            return self._callstream(cmd, data=fp_, headers=headers, **args)
         finally:
+            if fp_ is not None:
+                fp_.close()
             if fh is not None:
                 fh.close()
                 os.unlink(filename)
