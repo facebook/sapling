@@ -2109,7 +2109,9 @@ static PyMethodDef index_methods[] = {
 	{"get", (PyCFunction)index_m_get, METH_VARARGS,
 	 "get an index entry"},
 	{"headrevs", (PyCFunction)index_headrevs, METH_VARARGS,
-	 "get head revisions"},
+	 "get head revisions"}, /* Can do filtering since 3.2 */
+	{"headrevsfiltered", (PyCFunction)index_headrevs, METH_VARARGS,
+	 "get filtered head revisions"}, /* Can always do filtering */
 	{"insert", (PyCFunction)index_insert, METH_VARARGS,
 	 "insert an index entry"},
 	{"partialmatch", (PyCFunction)index_partialmatch, METH_VARARGS,
