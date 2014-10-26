@@ -172,10 +172,10 @@ class changelog(revlog.revlog):
     def headrevs(self):
         if self.filteredrevs:
             try:
-                return self.index.headrevs(self.filteredrevs)
-            # AttributeError covers non-c-extension environments.
-            # TypeError allows us work with old c extensions.
-            except (AttributeError, TypeError):
+                return self.index.headrevsfiltered(self.filteredrevs)
+            # AttributeError covers non-c-extension environments and
+            # old c extensions without filter handling.
+            except AttributeError:
                 return self._headrevs()
 
         return super(changelog, self).headrevs()
