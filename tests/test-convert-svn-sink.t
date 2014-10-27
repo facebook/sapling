@@ -224,15 +224,21 @@ Symlinks
   adding link
   $ hg --cwd a mv link newlink
   $ hg --cwd a commit -m 'move symlink'
-  $ hg convert -d svn a
-  assuming destination a-hg
-  initializing svn working copy 'a-hg-wc'
+  $ hg convert -d svn a a-svnlink
+  initializing svn repository 'a-svnlink'
+  initializing svn working copy 'a-svnlink-wc'
   scanning source...
   sorting...
   converting...
+  7 add a file
+  6 modify a file
+  5 rename a file
+  4 copy a file
+  3 remove a file
+  2 make a file executable
   1 add symlink
   0 move symlink
-  $ svnupanddisplay a-hg-wc 1
+  $ svnupanddisplay a-svnlink-wc 1
    8 1 test d1
    8 1 test d1/d2
    8 1 test d1/d2/b
@@ -244,6 +250,13 @@ Symlinks
   msg: move symlink
    D /link
    A /newlink (from /link@7)
+
+Make sure our changes don't affect the rest of the test cases
+
+  $ hg --cwd a up 5
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg --cwd a --config extensions.strip= strip -r 6
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/bd4f7b7a7067-backup.hg
 
 #endif
 
@@ -260,17 +273,16 @@ Convert with --full adds and removes files that didn't change
   converting...
   0 f
   $ svnupanddisplay a-hg-wc 1
-   9 9 test .
-   9 9 test d
-   9 9 test f
-  revision: 9
+   7 7 test .
+   7 7 test d
+   7 7 test f
+  revision: 7
   author: test
   msg: f
    D /c
    A /d
    D /d1
    A /f
-   D /newlink
 
   $ rm -rf a a-hg a-hg-wc
 
