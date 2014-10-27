@@ -2,9 +2,15 @@ DBHOSTPORT=$($TESTDIR/getdb.sh)
 DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
 DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
 DBNAME=`echo $DBHOSTPORT | cut -d : -f 3`
+DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
+DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
 
-mysql -h $DBHOST -P $DBPORT -e "CREATE DATABASE $DBNAME;"
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -e 'CREATE TABLE revisions(
+mysql -h $DBHOST -P $DBPORT -u $DBUSER -p$DBPASS -e "
+CREATE DATABASE IF NOT EXISTS $DBNAME;"
+mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p$DBPASS -e '
+DROP TABLE IF EXISTS revisions;
+
+CREATE TABLE IF NOT EXISTS revisions(
 repo CHAR(32) BINARY NOT NULL,
 path VARCHAR(256) BINARY NOT NULL,
 chunk INT UNSIGNED NOT NULL,
@@ -19,6 +25,8 @@ createdtime DATETIME NOT NULL,
 INDEX linkrevs (repo, linkrev),
 PRIMARY KEY (repo, path, rev, chunk)
 );
+
+DROP TABLE IF EXISTS revision_references;
 
 CREATE TABLE revision_references(
 autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -41,7 +49,8 @@ strip=
 enabled = True
 host = $DBHOST
 database = $DBNAME
-user = $USER
+user = $DBUSER
+password = $DBPASS
 port = $DBPORT
 reponame = $2
 
