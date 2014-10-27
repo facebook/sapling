@@ -552,4 +552,31 @@ in the target context.
   R largeX
   $ hg status -A --rev '.^1' largeX
 
+#if execbit
+
+Test that "hg status" against revisions other than parent notices exec
+bit changes of largefiles.
+
+  $ hg update -q -C 4
+
+(the case that large2 doesn't have exec bit in the target context but
+in the working context)
+
+  $ chmod +x large2
+  $ hg status -A --rev 0 large2
+  M large2
+  $ hg commit -m 'chmod +x large2'
+
+(the case that large2 has exec bit in the target context but not in
+the working context)
+
+  $ echo dummy > dummy
+  $ hg add dummy
+  $ hg commit -m 'revision for separation'
+  $ chmod -x large2
+  $ hg status -A --rev '.^1' large2
+  M large2
+
+#endif
+
   $ cd ..

@@ -174,8 +174,11 @@ def reposetup(ui, repo):
                         for lfile in tocheck:
                             standin = lfutil.standin(lfile)
                             if standin in ctx1:
-                                if ctx1[standin].data().strip() != \
-                                        lfutil.hashfile(self.wjoin(lfile)):
+                                abslfile = self.wjoin(lfile)
+                                if ((ctx1[standin].data().strip() !=
+                                     lfutil.hashfile(abslfile)) or
+                                    (('x' in ctx1.flags(standin)) !=
+                                     bool(lfutil.getexecutable(abslfile)))):
                                     modified.append(lfile)
                                 elif listclean:
                                     clean.append(lfile)
