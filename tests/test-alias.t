@@ -394,9 +394,18 @@ command provided extension, should be aborted.
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > hgext.rebase =
+  > EOF
+#if windows
+  $ cat >> .hg/hgrc <<EOF
+  > [alias]
+  > rebate = !echo this is %HG_ARGS%
+  > EOF
+#else
+  $ cat >> .hg/hgrc <<EOF
   > [alias]
   > rebate = !echo this is \$HG_ARGS
   > EOF
+#endif
   $ hg reba
   hg: command 'reba' is ambiguous:
       rebase rebate
