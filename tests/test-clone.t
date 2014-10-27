@@ -67,7 +67,6 @@ No update, with debug option:
 #else
   $ hg --debug clone -U . ../c
   copied 8 files
-  listing keys for "bookmarks"
 #endif
   $ cd ../c
 
