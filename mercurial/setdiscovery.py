@@ -133,7 +133,7 @@ def findcommonheads(ui, local, remote,
     ui.debug("query 1; heads\n")
     roundtrips += 1
     ownheads = dag.heads()
-    sample = ownheads
+    sample = _limitsample(ownheads, initialsamplesize)
     if remote.local():
         # stopgap until we have a proper localpeer that supports batch()
         srvheadhashes = remote.heads()

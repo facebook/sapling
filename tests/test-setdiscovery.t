@@ -311,16 +311,16 @@ One with >200 heads, which used to use up all of the sample:
   searching for changes
   taking quick initial sample
   searching: 2 queries
-  query 2; still undecided: 1080, sample size is: 260
+  query 2; still undecided: 1240, sample size is: 260
   sampling from both directions
   searching: 3 queries
-  query 3; still undecided: 820, sample size is: 260
+  query 3; still undecided: 980, sample size is: 260
   sampling from both directions
   searching: 4 queries
-  query 4; still undecided: 560, sample size is: 260
+  query 4; still undecided: 720, sample size is: 260
   sampling from both directions
   searching: 5 queries
-  query 5; still undecided: 300, sample size is: 200
+  query 5; still undecided: 460, sample size is: 200
   5 total queries
   common heads: 3ee37d65064a
 
