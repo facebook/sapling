@@ -495,6 +495,7 @@ def installhg(options):
     usecorrectpython()
 
     vlog("# Installing dummy diffstat")
+    os.makedirs(BINDIR)
     f = open(os.path.join(BINDIR, 'diffstat'), 'w')
     f.write('#!' + sys.executable + '\n'
             'import sys\n'
