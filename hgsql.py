@@ -41,6 +41,7 @@ from mercurial import util, changegroup, exchange
 import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
 import warnings
+import sys
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -48,7 +49,11 @@ testedwith = 'internal'
 
 writelock = 'write_lock'
 
-disableinitialsync = False
+INITIAL_SYNC_NORMAL = 'normal'
+INITIAL_SYNC_DISABLE = 'disabled'
+INITIAL_SYNC_FORCE = 'force'
+
+initialsync = INITIAL_SYNC_NORMAL
 
 class CorruptionException(Exception):
     pass
@@ -85,15 +90,32 @@ def uisetup(ui):
     wrapfunction(changegroup, 'addchangegroup', addchangegroup)
     wrapfunction(exchange, '_localphasemove', _localphasemove)
 
+def extsetup(ui):
+    if ui.configbool('hgsql', 'enabled'):
+        commands.globalopts.append(
+                ('', 'forcesync', False,
+                 _('force hgsql sync even on read-only commands'),
+                 _('TYPE')))
+
+    # Directly examining argv seems like a terrible idea, but it seems
+    # neccesary unless we refactor mercurial dispatch code. This is because
+    # the first place we have access to parsed options is in the same function
+    # (dispatch.dispatch) that created the repo and the repo creation initiates
+    # the sync operation in which the lock is elided unless we set this.
+    if '--forcesync' in sys.argv:
+        ui.debug('forcesync enabled\n')
+        global initialsync
+        initialsync = INITIAL_SYNC_FORCE
+
 def reposetup(ui, repo):
     if repo.ui.configbool("hgsql", "enabled"):
         wraprepo(repo)
 
-        if not disableinitialsync:
+        if initialsync != INITIAL_SYNC_DISABLE:
             # Use a noop to force a sync
             def noop():
                 pass
-            executewithsql(repo, noop)
+            executewithsql(repo, noop, initialsync == INITIAL_SYNC_FORCE)
 
 # Incoming commits are only allowed via push and pull
 def unbundle(orig, *args, **kwargs):
@@ -160,7 +182,7 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     success = False
     try:
         if connected:
-            repo.syncdb(readonly=not sqllock)
+            repo.syncdb(waitforlock=sqllock)
         result = action(*args, **kwargs)
         success = True
     finally:
@@ -277,18 +299,18 @@ def wraprepo(repo):
             outofsync = heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
             return outofsync, sqlheads, sqlbookmarks, tip
 
-        def syncdb(self, readonly=True):
-            if not self.needsync()[0]:
-                return
-
+        def syncdb(self, waitforlock=False):
             ui = self.ui
+            if not self.needsync()[0]:
+                ui.debug("syncing not needed\n")
+                return
             ui.debug("syncing with mysql\n")
 
             try:
-                lock = self.lock(wait=not readonly)
+                lock = self.lock(wait=waitforlock)
             except error.LockHeld:
-                # Oh well. Don't block read only operations.
-                ui.debug("skipping sync for readonly operation\n")
+                # Oh well. Don't block this non-critical read-only operation.
+                ui.debug("skipping sync for current operation\n")
                 return
 
             try:
@@ -632,7 +654,7 @@ class bufferedopener(object):
     def flush(self):
         buffer = self.buffer
         self.buffer = []
-        
+
         if buffer:
             fp = self.opener(self.path, self.mode)
             fp.write(''.join(buffer))
@@ -673,7 +695,7 @@ def addentries(repo, queue, transaction):
     leftover = None
     exit = False
 
-    # Read one linkrev at a time from the queue 
+    # Read one linkrev at a time from the queue
     while not exit:
         currentlinkrev = -1
 
@@ -990,8 +1012,8 @@ def sqlrecover(ui, *args, **opts):
     server.
     """
 
-    global disableinitialsync
-    disableinitialsync = True
+    global initialsync
+    initialsync = INITIAL_SYNC_DISABLE
     repo = hg.repository(ui, ui.environ['PWD'])
     repo.disablesync = True
 
@@ -1052,8 +1074,8 @@ def sqlstrip(ui, rev, *args, **opts):
             "command will break your servers until you run it on each one. " +
             "Only the Mercurial server admins should ever run this.")
 
-    global disableinitialsync
-    disableinitialsync = True
+    global initialsync
+    initialsync = INITIAL_SYNC_DISABLE
     repo = hg.repository(ui, ui.environ['PWD'])
     repo.disablesync = True
 
