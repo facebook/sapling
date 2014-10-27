@@ -16,6 +16,8 @@ from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
 # cannot use argparse, python 2.7 only
 from optparse import OptionParser
 
+DEFAULTVARIANTS = ['plain']
+
 def check_output(*args, **kwargs):
     kwargs.setdefault('stderr', PIPE)
     kwargs.setdefault('stdout', PIPE)
@@ -144,32 +146,37 @@ def formatfactor(factor):
         return 'x%ix%i' % (factor, order)
 
 _marker = object()
-def printresult(idx, data, maxidx, verbose=False, reference=_marker):
+def printresult(variants, idx, data, maxidx, verbose=False, reference=_marker):
     """print a line of result to stdout"""
     mask = '%%0%ii) %%s' % idxwidth(maxidx)
-    out = ['%10.6f' % data['wall']]
-    if reference is not _marker:
-        factor = None
-        if reference is not None:
-            factor = getfactor(reference, data, 'wall')
-        out.append(formatfactor(factor))
-    if verbose:
-        out.append('%10.6f' % data['comb'])
-        out.append('%10.6f' % data['user'])
-        out.append('%10.6f' % data['sys'])
-        out.append('%6d'    % data['count'])
+    out = []
+    for var in variants:
+        out.append('%10.6f' % data[var]['wall'])
+        if reference is not _marker:
+            factor = None
+            if reference is not None:
+                factor = getfactor(reference[var], data[var], 'wall')
+            out.append(formatfactor(factor))
+        if verbose:
+            out.append('%10.6f' % data[var]['comb'])
+            out.append('%10.6f' % data[var]['user'])
+            out.append('%10.6f' % data[var]['sys'])
+            out.append('%6d'    % data[var]['count'])
     print mask % (idx, ' '.join(out))
 
-def printheader(maxidx, verbose=False, relative=False):
-    header = [' ' * (idxwidth(maxidx) + 1),
-              '  %-8s' % 'time']
-    if relative:
-        header.append('    ')
-    if verbose:
-        header.append('  %-8s' % 'comb')
-        header.append('  %-8s' % 'user')
-        header.append('  %-8s' % 'sys')
-        header.append('%6s' % 'count')
+def printheader(variants, maxidx, verbose=False, relative=False):
+    header = [' ' * (idxwidth(maxidx) + 1)]
+    for var in variants:
+        if not var:
+            var = 'iter'
+        header.append('  %-8s' % var)
+        if relative:
+            header.append('    ')
+        if verbose:
+            header.append('  %-8s' % 'comb')
+            header.append('  %-8s' % 'user')
+            header.append('  %-8s' % 'sys')
+            header.append('%6s' % 'count')
     print ' '.join(header)
 
 def getrevs(spec):
@@ -182,6 +189,12 @@ def getrevs(spec):
     return [r for r in out.split() if r]
 
 
+def applyvariants(revset, variant):
+    if variant == 'plain':
+        return revset
+    return '%s(%s)' % (variant, revset)
+
+
 parser = OptionParser(usage="usage: %prog [options] <revs>")
 parser.add_option("-f", "--file",
                   help="read revset from FILE (stdin if omitted)",
@@ -192,6 +205,11 @@ parser.add_option("-R", "--repo",
 parser.add_option("-v", "--verbose",
                   action='store_true',
                   help="display all timing data (not just best total time)")
+
+parser.add_option("", "--variants",
+                  default=','.join(DEFAULTVARIANTS),
+                  help="comma separated list of variant to test "
+                       "(eg: plain,min,sorted) (plain = no modification)")
 
 (options, args) = parser.parse_args()
 
@@ -221,6 +239,8 @@ revs = []
 for a in args:
     revs.extend(getrevs(a))
 
+variants = options.variants.split(',')
+
 results = []
 for r in revs:
     print "----------------------------"
@@ -229,11 +249,16 @@ for r in revs:
     update(r)
     res = []
     results.append(res)
-    printheader(len(revsets), verbose=options.verbose)
+    printheader(variants, len(revsets), verbose=options.verbose)
     for idx, rset in enumerate(revsets):
-        data = perf(rset, target=options.repo)
-        res.append(data)
-        printresult(idx, data, len(revsets), verbose=options.verbose)
+        varres = {}
+        for var in variants:
+            varrset = applyvariants(rset, var)
+            data = perf(varrset, target=options.repo)
+            varres[var] = data
+        res.append(varres)
+        printresult(variants, idx, varres, len(revsets),
+                    verbose=options.verbose)
         sys.stdout.flush()
     print "----------------------------"
 
@@ -256,10 +281,10 @@ print
 for ridx, rset in enumerate(revsets):
 
     print "revset #%i: %s" % (ridx, rset)
-    printheader(len(results), verbose=options.verbose, relative=True)
+    printheader(variants, len(results), verbose=options.verbose, relative=True)
     ref = None
     for idx, data in enumerate(results):
-        printresult(idx, data[ridx], len(results), verbose=options.verbose,
-                    reference=ref)
+        printresult(variants, idx, data[ridx], len(results),
+                    verbose=options.verbose, reference=ref)
         ref = data[ridx]
     print
