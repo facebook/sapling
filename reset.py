@@ -7,11 +7,24 @@ from mercurial.node import short, hex
 from mercurial import extensions, merge, dicthelpers, scmutil, hg
 from mercurial import cmdutil, obsolete, repair, util, bundlerepo, error
 from mercurial import exchange
-import struct, os, glob
+import struct, os, glob, binascii
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
+
+def _isevolverepo(repo):
+    try:
+        return extensions.find('evolve')
+    except KeyError:
+        return None
+
+def _isahash(rev):
+    try:
+        binascii.unhexlify(rev)
+        return True
+    except TypeError:
+        return False
 
 @command("reset", [
         ('C', 'clean', None, _('wipe the working copy clean when reseting')),
@@ -32,27 +45,7 @@ def reset(ui, repo, *args, **opts):
     delete any commits that belonged only to that bookmark. Use --keep/-k to
     avoid deleting any commits.
     """
-    try:
-        extensions.find('evolve')
-        raise util.Abort(_('hg reset does not work with Changeset Evolution '
-                           'yet (it\'s coming soon)'))
-    except KeyError:
-        # Evolve is off! Proceed
-        pass
-
-    repo = repo.unfiltered()
     rev = args[0] if args else '.'
-    try:
-        revs = repo.revs(rev)
-        if len(revs) > 1:
-            raise util.Abort(_('exactly one revision must be specified'))
-        rev = revs.first()
-    except error.RepoLookupError:
-        # `rev` can be anything, a hash, a partial hash, a revset, etc. If it's
-        # a revset, repo.revs() will convert it.  If it's a hash that only
-        # exists in a bundle, repo.revs() will throw an exception, but it's
-        # still valid input since we'll recover the commit shortly.
-        pass
     oldctx = repo['.']
 
     wlock = None
@@ -74,15 +67,62 @@ def _revive(repo, rev):
     """Brings the given rev back into the repository. Finding it in backup
     bundles if necessary.
     """
-    if rev not in repo:
-        other, rev = _findbundle(repo, rev)
-        if not other:
-            raise util.Abort("could not find '%s' in the repo or the backup"
-                             " bundles" % rev)
-        exchange.pull(repo, other, heads=[rev])
+    if _isahash(rev):
+        # If it appears to be a hash, just read it directly.
+        try:
+            return repo[rev]
+        except error.FilteredRepoLookupError:
+            return _touch(repo, repo.unfiltered()[rev])
+        except error.RepoLookupError:
+            # It could either be a revset or a stripped commit.
+            pass
 
-        if rev not in repo:
-            raise util.Abort("unable to get rev %s from repo" % rev)
+    try:
+        revs = repo.revs(rev)
+        if len(revs) > 1:
+            raise util.Abort(_('exactly one revision must be specified'))
+        if len(revs) == 1:
+            return repo[revs.first()]
+    except error.RepoLookupError:
+        revs = []
+
+    return _pullbundle(repo, rev)
+
+def _touch(repo, rev):
+    """Touch the given rev and any of its ancestors to bring it back into the
+    repository.
+    """
+    unfi = repo.unfiltered()
+    evolve = _isevolverepo(repo.ui)
+    if evolve:
+        needtouch = unfi.revs('::%d & obsolete()', rev)
+        opts = {
+            # Use 'duplicate' to avoid divergence. We may want something better
+            # later.
+            'duplicate': True,
+            'rev': [],
+        }
+        evolve.touch(repo.ui, unfi, *needtouch, **opts)
+        # Return the newly revived version of rev.
+        # Use tip, since it's guaranteed to be the latest commit in the
+        # repo, since it will have been the last commit revived.
+        return repo['tip']
+    else:
+        raise util.Abort("unable to revive '%s' because it is hidden and "
+                         "evolve is disabled" % rev)
+
+def _pullbundle(repo, rev):
+    """Find the given rev in a backup bundle and pull it back into the
+    repository.
+    """
+    other, rev = _findbundle(repo, rev)
+    if not other:
+        raise util.Abort("could not find '%s' in the repo or the backup"
+                         " bundles" % rev)
+    exchange.pull(repo, other, heads=[rev])
+
+    if rev not in repo:
+        raise util.Abort("unable to get rev %s from repo" % rev)
 
     return repo[rev]
 
@@ -160,4 +200,11 @@ def _deleteunreachable(repo, ctx):
     """
     hiderevs = repo.revs('::%s - ::(bookmark() + .)', ctx.rev())
     if hiderevs:
-        repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
+        if _isevolverepo(repo.ui):
+            markers = []
+            for rev in hiderevs:
+                markers.append((repo[rev], ()))
+            obsolete.createmarkers(repo, markers)
+            repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
+        else:
+            repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
