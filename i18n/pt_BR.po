@@ -1292,6 +1292,9 @@ msgstr "analisando"
 msgid "count rate for the specified revision or range"
 msgstr "conta a frequência para uma revisão ou faixa especificada"
 
+msgid "count rate for the specified revision or revset"
+msgstr "conta a frequência para uma revisão ou revset especificado"
+
 msgid "DATE"
 msgstr "DATA"
 
@@ -3816,6 +3819,9 @@ msgstr "faz uma busca insensível a maiúsculas / minúsculas por um texto dado"
 
 msgid "show the specified revision or range"
 msgstr "mostra a revisão ou sequência de revisões especificada"
+
+msgid "show the specified revision or revset"
+msgstr "mostra a revisão ou revset especificado"
 
 msgid "include revisions where files were removed"
 msgstr "inclui revisões nas quais arquivos foram removidos"
