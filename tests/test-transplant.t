@@ -99,7 +99,11 @@ clone so subsequent rollback isn't affected
   > env | grep HGEDITFORM
   > true
   > EOF
-  $ HGEDITOR="sh $TESTTMP/checkeditform.sh; cat" hg transplant --edit 7
+  $ cat > $TESTTMP/checkeditform-n-cat.sh <<EOF
+  > env | grep HGEDITFORM
+  > cat \$*
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/checkeditform-n-cat.sh" hg transplant --edit 7
   applying ffd6818a3975
   HGEDITFORM=transplant.normal
   b3
