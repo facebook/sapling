@@ -105,12 +105,17 @@ def _takefullsample(dag, nodes, size):
     # update from roots
     _updatesample(dag.inverse(), nodes, sample, always)
     assert sample
-    if len(sample) > desiredlen:
-        sample = set(random.sample(sample, desiredlen))
-    elif len(sample) < desiredlen:
+    sample = _limitsample(sample, desiredlen)
+    if len(sample) < desiredlen:
         more = desiredlen - len(sample)
         sample.update(random.sample(list(nodes - sample - always), more))
     sample.update(always)
+    return sample
+
+def _limitsample(sample, desiredlen):
+    """return a random subset of sample of at most desiredlen item"""
+    if len(sample) > desiredlen:
+        sample = set(random.sample(sample, desiredlen))
     return sample
 
 def findcommonheads(ui, local, remote,
