@@ -543,4 +543,13 @@ changed, even if it is aborted by conflict of other.
   $ cat largeX
   largeX
 
+Test that "hg status" doesn't show removal of largefiles not managed
+in the target context.
+
+  $ hg update -q -C 4
+  $ hg remove largeX
+  $ hg status -A largeX
+  R largeX
+  $ hg status -A --rev '.^1' largeX
+
   $ cd ..

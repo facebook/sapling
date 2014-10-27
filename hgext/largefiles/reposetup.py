@@ -182,6 +182,13 @@ def reposetup(ui, repo):
                             else:
                                 added.append(lfile)
 
+                        # at this point, 'removed' contains largefiles
+                        # marked as 'R' in the working context.
+                        # then, largefiles not managed also in the target
+                        # context should be excluded from 'removed'.
+                        removed = [lfile for lfile in removed
+                                   if lfutil.standin(lfile) in ctx1]
+
                     # Standins no longer found in lfdirstate has been
                     # removed
                     for standin in ctx1.walk(lfutil.getstandinmatcher(self)):
