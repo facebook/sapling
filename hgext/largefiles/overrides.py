@@ -35,7 +35,7 @@ def installnormalfilesmatchfn(manifest):
         m._fmap = set(m._files)
         m._always = False
         origmatchfn = m.matchfn
-        m.matchfn = lambda f: notlfile(f) and origmatchfn(f) or None
+        m.matchfn = lambda f: notlfile(f) and origmatchfn(f)
         return m
     oldmatch = installmatchfn(overridematch)
 
