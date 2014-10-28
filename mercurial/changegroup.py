@@ -788,9 +788,6 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             # strip should not touch boundary at all
             phases.retractboundary(repo, tr, targetphase, added)
 
-
-        tr.close()
-
         if changesets > 0:
             if srctype != 'strip':
                 # During strip, branchcache is invalid but coming call to
@@ -819,7 +816,11 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                             "%s incoming changes - new heads: %s\n",
                             len(added),
                             ', '.join([hex(c[:6]) for c in newheads]))
-            repo._afterlock(runhooks)
+
+            tr.addpostclose('changegroup-runhooks-%020i' % clstart,
+                            lambda: repo._afterlock(runhooks))
+
+        tr.close()
 
     finally:
         tr.release()

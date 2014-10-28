@@ -462,7 +462,6 @@ Doing the actual push: hook abort
   searching for changes
   transaction abort!
   rollback completed
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=push HG_URL=push
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   [255]
 
@@ -472,7 +471,6 @@ Doing the actual push: hook abort
   abort: b2x-pretransactionclose.failpush hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=e7ec4e813ba6b07be2a0516ce1a74bb4e503f91a HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
