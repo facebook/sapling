@@ -857,11 +857,12 @@ class pulloperation(object):
             p = lambda: self._tr.writepending() and repo.root or ""
             repo.hook('b2x-pretransactionclose', throw=True, pending=p,
                       **self._tr.hookargs)
-            self._tr.close()
             hookargs = dict(self._tr.hookargs)
             def runhooks():
                 repo.hook('b2x-transactionclose', **hookargs)
-            repo._afterlock(runhooks)
+            self._tr.addpostclose('b2x-hook-transactionclose',
+                                  lambda: repo._afterlock(runhooks))
+            self._tr.close()
 
     def releasetransaction(self):
         """release transaction if created"""
@@ -1281,11 +1282,12 @@ def unbundle(repo, cg, heads, source, url):
                 p = lambda: tr.writepending() and repo.root or ""
                 repo.hook('b2x-pretransactionclose', throw=True, pending=p,
                           **tr.hookargs)
-                tr.close()
                 hookargs = dict(tr.hookargs)
                 def runhooks():
                     repo.hook('b2x-transactionclose', **hookargs)
-                repo._afterlock(runhooks)
+                tr.addpostclose('b2x-hook-transactionclose',
+                                lambda: repo._afterlock(runhooks))
+                tr.close()
             except Exception, exc:
                 exc.duringunbundle2 = True
                 raise
