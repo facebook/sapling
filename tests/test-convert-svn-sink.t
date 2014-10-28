@@ -256,7 +256,7 @@ Make sure our changes don't affect the rest of the test cases
   $ hg --cwd a up 5
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --cwd a --config extensions.strip= strip -r 6
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/bd4f7b7a7067-backup.hg
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/bd4f7b7a7067-backup.hg (glob)
 
 #endif
 
