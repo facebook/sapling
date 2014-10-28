@@ -608,7 +608,7 @@ class GitHandler(object):
                                               False)
         extra_message = ''
         git_extra = []
-        if not ctx.branch() == 'default':
+        if ctx.branch() != 'default':
             # we always store the branch in the extra message
             extra_message += "branch : " + ctx.branch() + "\n"
 
