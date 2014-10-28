@@ -107,6 +107,8 @@ class transaction(object):
         self._anypending = False
         # holds callback to call when writing the transaction
         self._finalizecallback = {}
+        # hold callbalk for post transaction close
+        self._postclosecallback = {}
 
     def __del__(self):
         if self.journal:
@@ -299,6 +301,15 @@ class transaction(object):
         self._finalizecallback[category] = callback
 
     @active
+    def addpostclose(self, category, callback):
+        """add a callback to be called after the transaction is closed
+
+        Category is a unique identifier to allow overwriting an old callback
+        with a newer callback.
+        """
+        self._postclosecallback[category] = callback
+
+    @active
     def close(self):
         '''commit the transaction'''
         if self.count == 1 and self.onclose is not None:
@@ -324,6 +335,10 @@ class transaction(object):
                 self.opener.unlink(b)
         self.backupentries = []
         self.journal = None
+        # run post close action
+        categories = sorted(self._postclosecallback)
+        for cat in categories:
+            self._postclosecallback[cat]()
 
     @active
     def abort(self):
