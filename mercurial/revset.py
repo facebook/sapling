@@ -2500,7 +2500,7 @@ class addset(abstractsmartset):
         return len(self._list)
 
     def __nonzero__(self):
-        return bool(self._r1 or self._r2)
+        return bool(self._r1) or bool(self._r2)
 
     @util.propertycache
     def _list(self):
