@@ -956,7 +956,6 @@ class GitHandler(object):
 
     def get_changed_refs(self, refs, exportable, force):
         new_refs = refs.copy()
-        all_heads = self.local_heads()
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
         if refs.keys()[0] == 'capabilities^{}':
