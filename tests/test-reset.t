@@ -76,14 +76,19 @@ Reset should not strip reachable commits
 Reset to '.' by default
 
   $ echo z >> x
+  $ echo z >> y
+  $ hg add y
   $ hg st
   M x
+  A y
   $ hg reset
-  reseting without any arguments does nothing
   $ hg st
   M x
+  ? y
   $ hg reset -C
   $ hg st
+  ? y
+  $ rm y
 
 Keep old commits
 

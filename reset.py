@@ -64,10 +64,6 @@ def reset(ui, repo, *args, **opts):
             ui.warn(_('reseting without an active bookmark\n'))
 
         ctx = _revive(repo, rev)
-        if ctx.node() == oldctx.node() and not opts.get('clean'):
-            ui.status(_('reseting without any arguments does nothing\n'))
-            return
-
         _moveto(repo, bookmark, ctx, clean=opts.get('clean'))
         if not opts.get('keep'):
             _deleteunreachable(repo, oldctx)
