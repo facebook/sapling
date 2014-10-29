@@ -1123,15 +1123,9 @@ class GitHandler(object):
             return [(_filter_bm(bm), bm) for bm in bms]
 
     def local_heads(self):
-        try:
-            if getattr(bookmarks, 'parse', None):
-                bms = bookmarks.parse(self.repo)
-            else:
-                bms = self.repo._bookmarks
-            return dict([(filtered_bm, hex(bms[bm])) for
-                        filtered_bm, bm in self._filter_for_bookmarks(bms)])
-        except AttributeError: #pragma: no cover
-            return {}
+        bms = self.repo._bookmarks
+        return dict([(filtered_bm, hex(bms[bm])) for
+                     filtered_bm, bm in self._filter_for_bookmarks(bms)])
 
     def import_tags(self, refs):
         keys = refs.keys()
