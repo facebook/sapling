@@ -1084,14 +1084,15 @@ class GitHandler(object):
         return filteredrefs
 
     def update_references(self):
-        heads = self.local_heads()
+        exportable = self.get_exportable()
 
         # Create a local Git branch name for each
         # Mercurial bookmark.
-        for key, (git_ref, hg_sha) in heads.iteritems():
-            git_sha = self.map_git_get(hg_sha)
-            if git_sha:
-                self.git.refs[git_ref] = git_sha
+        for hg_sha, refs in exportable.iteritems():
+            for git_ref in refs.heads:
+                git_sha = self.map_git_get(hg_sha)
+                if git_sha:
+                    self.git.refs[git_ref] = git_sha
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
