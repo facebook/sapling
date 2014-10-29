@@ -1,4 +1,4 @@
-import os, math, urllib, urllib2, re
+import collections, itertools, os, math, urllib, urllib2, re
 import stat, posixpath, StringIO
 
 from dulwich.errors import HangupException, GitProtocolError, UpdateRefsError
@@ -1122,6 +1122,25 @@ class GitHandler(object):
                 else:
                     return bm
             return [(_filter_bm(bm), bm) for bm in bms]
+
+    def get_exportable(self):
+        class heads_tags(object):
+            def __init__(self):
+                self.heads = set()
+                self.tags = set()
+            def __iter__(self):
+                return itertools.chain(self.heads, self.tags)
+            def __nonzero__(self):
+                return bool(self.heads) or bool(self.tags)
+
+        res = collections.defaultdict(heads_tags)
+
+        bms = self.repo._bookmarks
+        for filtered_bm, bm in self._filter_for_bookmarks(bms):
+            res[hex(bms[bm])].heads.add('refs/heads/' + filtered_bm)
+        for tag, sha in self.tags.iteritems():
+            res[sha].tags.add('refs/tags/' + tag)
+        return res
 
     def local_heads(self):
         bms = self.repo._bookmarks
