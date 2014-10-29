@@ -32,6 +32,14 @@ def reset(ui, repo, *args, **opts):
     delete any commits that belonged only to that bookmark. Use --keep/-k to
     avoid deleting any commits.
     """
+    try:
+        extensions.find('evolve')
+        raise util.Abort(_('hg reset does not work with Changeset Evolution '
+                           'yet (it\'s coming soon)'))
+    except KeyError:
+        # Evolve is off! Proceed
+        pass
+
     repo = repo.unfiltered()
     rev = args[0] if args else '.'
     try:
