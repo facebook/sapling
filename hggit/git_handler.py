@@ -946,10 +946,11 @@ class GitHandler(object):
 
     def get_changed_refs(self, refs, revs, force):
         new_refs = refs.copy()
+        all_heads = self.local_heads()
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
         if refs.keys()[0] == 'capabilities^{}':
-            if not self.local_heads():
+            if not all_heads:
                 tip = self.repo.lookup('tip')
                 if tip != nullid:
                     del new_refs['capabilities^{}']
@@ -972,7 +973,7 @@ class GitHandler(object):
                 labels = lambda c: ctx.tags()
             prep = lambda itr: [i.replace(' ', '_') for i in itr]
 
-            heads = [t for t in prep(labels(ctx)) if t in self.local_heads()]
+            heads = [t for t in prep(labels(ctx)) if t in all_heads]
             tags = [t for t in prep(labels(ctx)) if t in self.tags]
 
             if not (heads or tags):
