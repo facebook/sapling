@@ -20,6 +20,7 @@ setup(
         'gitrevset',
         'phrevset',
         'reflog',
+        'reset',
         'smartlog',
         'tweakdefaults',
     ],
