@@ -1089,9 +1089,9 @@ class GitHandler(object):
         # Create a local Git branch name for each
         # Mercurial bookmark.
         for key in heads:
-            git_ref = self.map_git_get(heads[key])
-            if git_ref:
-                self.git.refs['refs/heads/' + key] = self.map_git_get(heads[key])
+            git_sha = self.map_git_get(heads[key])
+            if git_sha:
+                self.git.refs['refs/heads/' + key] = git_sha
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
