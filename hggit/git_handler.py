@@ -967,13 +967,10 @@ class GitHandler(object):
 
         for rev in revs:
             ctx = self.repo[rev]
-            if getattr(ctx, 'bookmarks', None):
-                labels = lambda c: ctx.tags() + [
-                                fltr for fltr, bm
-                                in self._filter_for_bookmarks(ctx.bookmarks())
-                            ]
-            else:
-                labels = lambda c: ctx.tags()
+            labels = lambda c: ctx.tags() + [
+                fltr for fltr, bm
+                in self._filter_for_bookmarks(ctx.bookmarks())
+            ]
             prep = lambda itr: [i.replace(' ', '_') for i in itr]
 
             heads = [t for t in prep(labels(ctx)) if t in all_heads]
