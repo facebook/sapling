@@ -229,6 +229,9 @@ class match(object):
     def isexact(self):
         return self.matchfn == self.exact
 
+    def prefix(self):
+        return not self.always() and not self.isexact() and not self.anypats()
+
     def _normalize(self, patterns, default, root, cwd, auditor):
         '''Convert 'kind:pat' from the patterns list to tuples with kind and
         normalized and rooted patterns and with listfiles expanded.'''
