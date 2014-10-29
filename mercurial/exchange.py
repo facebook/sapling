@@ -1182,10 +1182,11 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
             b2caps.update(bundle2.decodecaps(blob))
     bundler = bundle2.bundle20(repo.ui, b2caps)
 
+    kwargs['heads'] = heads
+    kwargs['common'] = common
+
     for name in getbundle2partsorder:
         func = getbundle2partsmapping[name]
-        kwargs['heads'] = heads
-        kwargs['common'] = common
         func(bundler, repo, source, bundlecaps=bundlecaps, b2caps=b2caps,
              **kwargs)
 
