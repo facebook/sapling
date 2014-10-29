@@ -1698,7 +1698,7 @@ def walkchangerevs(repo, match, opts, prepare):
     # wanted: a cache of filenames that were changed (ctx.files()) and that
     # match the file filtering conditions.
 
-    if not slowpath and not match.files():
+    if match.always():
         # No files, no patterns.  Display all revs.
         wanted = revs
 
