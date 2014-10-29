@@ -287,9 +287,8 @@ class GitHandler(object):
         new_refs = {}
         def changed(refs):
             old_refs.update(refs)
-            to_push = set([v[1] for v in self.local_heads().itervalues()] +
-                          self.tags.values())
-            new_refs.update(self.get_changed_refs(refs, to_push, True))
+            exportable = self.get_exportable()
+            new_refs.update(self.get_changed_refs(refs, exportable, True))
             return refs # always return the same refs to make the send a no-op
 
         try:
@@ -912,10 +911,18 @@ class GitHandler(object):
         def changed(refs):
             self.ui.status(_("searching for changes\n"))
             old_refs.update(refs)
-            to_push = revs or set(
-                [v[1] for v in self.local_heads().itervalues()] +
-                self.tags.values())
-            return self.get_changed_refs(refs, to_push, force)
+            all_exportable = self.get_exportable()
+            if revs is None:
+                exportable = all_exportable
+            else:
+                exportable = {}
+                for rev in (hex(r) for r in revs):
+                    if rev not in all_exportable:
+                        raise hgutil.Abort("revision %s cannot be pushed since"
+                                           " it doesn't have a ref" %
+                                           self.repo[rev])
+                    exportable[rev] = all_exportable[rev]
+            return self.get_changed_refs(refs, exportable, force)
 
         def genpack(have, want):
             commits = []
@@ -947,7 +954,7 @@ class GitHandler(object):
         except (HangupException, GitProtocolError), e:
             raise hgutil.Abort(_("git remote error: ") + str(e))
 
-    def get_changed_refs(self, refs, revs, force):
+    def get_changed_refs(self, refs, exportable, force):
         new_refs = refs.copy()
         all_heads = self.local_heads()
 
@@ -965,18 +972,9 @@ class GitHandler(object):
                     bookmarks.setcurrent(self.repo, 'master')
                     new_refs['refs/heads/master'] = self.map_git_get(tip)
 
-        for rev in revs:
+        for rev, rev_refs in exportable.iteritems():
             ctx = self.repo[rev]
-            labels = lambda c: ctx.tags() + [
-                fltr for fltr, bm
-                in self._filter_for_bookmarks(ctx.bookmarks())
-            ]
-            prep = lambda itr: [i.replace(' ', '_') for i in itr]
-
-            heads = [t for t in prep(labels(ctx)) if t in all_heads]
-            tags = [t for t in prep(labels(ctx)) if t in self.tags]
-
-            if not (heads or tags):
+            if not rev_refs:
                 raise hgutil.Abort("revision %s cannot be pushed since"
                                    " it doesn't have a ref" % ctx)
 
@@ -988,8 +986,7 @@ class GitHandler(object):
             # dereferenced and stored as lightweight ones, as the annotated tag
             # is still stored in the git repo.
             uptodate_annotated_tags = []
-            for r in tags:
-                ref = 'refs/tags/'+r
+            for ref in rev_refs.tags:
                 # Check tag.
                 if not ref in refs:
                     continue
@@ -1004,12 +1001,7 @@ class GitHandler(object):
                 # If we've reached here, the tag's good.
                 uptodate_annotated_tags.append(ref)
 
-            for r in heads + tags:
-                if r in heads:
-                    ref = 'refs/heads/'+r
-                else:
-                    ref = 'refs/tags/'+r
-
+            for ref in rev_refs:
                 if ref not in refs:
                     new_refs[ref] = self.map_git_get(ctx.hex())
                 elif new_refs[ref] in self._map_git:
