@@ -1124,8 +1124,8 @@ class GitHandler(object):
 
     def local_heads(self):
         bms = self.repo._bookmarks
-        return dict([(filtered_bm, hex(bms[bm])) for
-                     filtered_bm, bm in self._filter_for_bookmarks(bms)])
+        return dict((filtered_bm, hex(bms[bm])) for
+                     filtered_bm, bm in self._filter_for_bookmarks(bms))
 
     def import_tags(self, refs):
         keys = refs.keys()
