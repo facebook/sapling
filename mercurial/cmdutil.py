@@ -2121,6 +2121,11 @@ def commit(ui, repo, commitfunc, pats, opts):
                       scmutil.match(repo[None], pats, opts), opts)
 
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
+    # amend will reuse the existing user if not specified, but the obsolete
+    # marker creation requires that the current user's name is specified.
+    if obsolete._enabled:
+        ui.username() # raise exception if username not set
+
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
 
