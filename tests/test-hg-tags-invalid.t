@@ -20,19 +20,27 @@ Load commonly used test logic
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ fn_hg_tag alph#a
   $ fn_hg_tag bet*a
+  $ fn_hg_tag 'gamm a'
   $ hg push
   pushing to $TESTTMP/gitrepo
   Skipping export of tag bet*a because it has invalid name as a git refname.
   searching for changes
   adding objects
-  added 2 commits with 2 trees and 2 blobs
+  added 3 commits with 3 trees and 3 blobs
   updating reference refs/heads/master
   adding reference refs/tags/alph#a
+  adding reference refs/tags/gamm_a
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   2:e72bdd9ef5c0
+  @  changeset:   3:33a29389ddad
   |  tag:         default/master
   |  tag:         tip
+  |  user:        test
+  |  date:        Mon Jan 01 00:00:13 2007 +0000
+  |  summary:     Added tag gamm a for changeset e72bdd9ef5c0
+  |
+  o  changeset:   2:e72bdd9ef5c0
+  |  tag:         gamm a
   |  user:        test
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     Added tag bet*a for changeset 432ce25d86bc
@@ -56,15 +64,23 @@ Load commonly used test logic
 git should have only the valid tag alph#a but have full commit log including the missing invalid bet*a tag commit
   $ git tag -l
   alph#a
+  gamm_a
 
   $ cd ..
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   2:e72bdd9ef5c0
+  @  changeset:   3:33a29389ddad
   |  tag:         default/master
   |  tag:         tip
+  |  user:        test
+  |  date:        Mon Jan 01 00:00:13 2007 +0000
+  |  summary:     Added tag gamm a for changeset e72bdd9ef5c0
+  |
+  o  changeset:   2:e72bdd9ef5c0
+  |  tag:         gamm a
+  |  tag:         gamm_a
   |  user:        test
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     Added tag bet*a for changeset 432ce25d86bc
@@ -87,3 +103,4 @@ the tag should be in .hgtags
   $ cat hgrepo2/.hgtags
   3442585be8a60c6cd476bbc4e45755339f2a23ef alph#a
   432ce25d86bc4281747aa42e27b473b992e2b0b9 bet*a
+  e72bdd9ef5c0d6c50022480ee74cd9e48ae74e19 gamm a
