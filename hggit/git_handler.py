@@ -287,7 +287,8 @@ class GitHandler(object):
         new_refs = {}
         def changed(refs):
             old_refs.update(refs)
-            to_push = set(self.local_heads().values() + self.tags.values())
+            to_push = set([v[1] for v in self.local_heads().itervalues()] +
+                          self.tags.values())
             new_refs.update(self.get_changed_refs(refs, to_push, True))
             return refs # always return the same refs to make the send a no-op
 
@@ -911,7 +912,9 @@ class GitHandler(object):
         def changed(refs):
             self.ui.status(_("searching for changes\n"))
             old_refs.update(refs)
-            to_push = revs or set(self.local_heads().values() + self.tags.values())
+            to_push = revs or set(
+                [v[1] for v in self.local_heads().itervalues()] +
+                self.tags.values())
             return self.get_changed_refs(refs, to_push, force)
 
         def genpack(have, want):
@@ -1089,7 +1092,7 @@ class GitHandler(object):
         # Create a local Git branch name for each
         # Mercurial bookmark.
         for key in heads:
-            git_sha = self.map_git_get(heads[key])
+            git_sha = self.map_git_get(heads[key][1])
             if git_sha:
                 self.git.refs['refs/heads/' + key] = git_sha
 
@@ -1125,8 +1128,8 @@ class GitHandler(object):
 
     def local_heads(self):
         bms = self.repo._bookmarks
-        return dict((filtered_bm, hex(bms[bm])) for
-                     filtered_bm, bm in self._filter_for_bookmarks(bms))
+        return dict((filtered_bm, ('refs/heads/' + filtered_bm, hex(bms[bm])))
+                    for filtered_bm, bm in self._filter_for_bookmarks(bms))
 
     def import_tags(self, refs):
         keys = refs.keys()
