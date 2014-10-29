@@ -249,10 +249,6 @@ class GitHandler(object):
                 if bms:
                     bookmarks.setcurrent(self.repo, bms[0])
 
-        def remoteref(ref):
-            rn = remote_name or 'default'
-            return 'refs/remotes/' + rn + ref[10:]
-
         self.save_map()
 
         if imported == 0:
