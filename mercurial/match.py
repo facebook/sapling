@@ -171,6 +171,9 @@ class match(object):
         - optimization might be possible and necessary.'''
         return self._always
 
+    def isexact(self):
+        return self.matchfn == self.exact
+
 def exact(root, cwd, files):
     return match(root, cwd, files, exact=True)
 

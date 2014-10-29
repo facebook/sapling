@@ -611,7 +611,7 @@ class dirstate(object):
         dirsnotfound = []
         notfoundadd = dirsnotfound.append
 
-        if match.matchfn != match.exact and self._checkcase:
+        if not match.isexact() and self._checkcase:
             normalize = self._normalize
         else:
             normalize = None
@@ -711,7 +711,7 @@ class dirstate(object):
         join = self._join
 
         exact = skipstep3 = False
-        if matchfn == match.exact: # match.exact
+        if match.isexact(): # match.exact
             exact = True
             dirignore = util.always # skip step 2
         elif match.files() and not match.anypats(): # match.match, no patterns
@@ -912,7 +912,7 @@ class dirstate(object):
         if match.always():
             return dmap.keys()
         files = match.files()
-        if match.matchfn == match.exact:
+        if match.isexact():
             # fast path -- filter the other way around, since typically files is
             # much smaller than dmap
             return [f for f in files if f in dmap]

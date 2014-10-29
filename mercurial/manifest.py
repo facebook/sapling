@@ -164,7 +164,7 @@ class manifestdict(object):
             return self.copy()
 
         files = match.files()
-        if (len(files) < 100 and (match.matchfn == match.exact or
+        if (len(files) < 100 and (match.isexact() or
             (not match.anypats() and util.all(fn in self for fn in files)))):
             return self.intersectfiles(files)
 
@@ -519,7 +519,7 @@ class treemanifest(object):
             return self.copy()
 
         files = match.files()
-        if (match.matchfn == match.exact or
+        if (match.isexact() or
             (not match.anypats() and util.all(fn in self for fn in files))):
             return self.intersectfiles(files)
 
