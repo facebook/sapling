@@ -1,3 +1,17 @@
+# gitrevset.py 
+#
+# Copyright 2014 Facebook, Inc.
+"""FBONLY: map a git hash to a Mercurial hash:
+
+  $ hg log -r 'gitnode($HASH)'
+  $ hg id -r 'gitnode($HASH)'
+
+shortversion:
+
+  $ hg log -r 'g$HASH'
+  $ hg id -r 'g$HASH'
+
+"""
 from mercurial import extensions
 from mercurial import hg
 from mercurial import templatekw
@@ -23,7 +37,8 @@ def showgitnode(repo, ctx, templ, **args):
     return remoterev.encode('hex')
 
 def gitnode(repo, subset, x):
-    """Return the hg revision corresponding to a given git rev"""
+    """``gitnode(id)``
+    Return the hg revision corresponding to a given git rev."""
     l = revset.getargs(x, 1, 1, _("id requires one argument"))
     n = revset.getstring(l[0], _("id requires a string"))
     peerpath = repo.ui.expandpath('default')

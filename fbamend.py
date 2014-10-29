@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""extends the existing commit amend functionality
+"""FBONLY: extends the existing commit amend functionality
 
 Adds an hg amend command that amends the current parent commit with the
 changes in the working copy.  Similiar to the existing hg commit --amend

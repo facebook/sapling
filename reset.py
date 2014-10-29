@@ -1,5 +1,6 @@
 # Copyright 2014 Facebook Inc.
 #
+"""FBONLY: reset the active bookmark and working copy to a desired revision"""
 
 from mercurial.i18n import _
 from mercurial.node import short, hex

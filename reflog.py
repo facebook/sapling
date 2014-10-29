@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""FBONLY: show the previous position of bookmarks and the working copy"""
 
 from mercurial import util, cmdutil, commands, hg, scmutil, localrepo
 from mercurial import bookmarks, dispatch, dirstate

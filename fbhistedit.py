@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""extends the existing histedit functionality
+"""FBONLY: extends the existing histedit functionality
 
 Adds a s/stop verb to histedit to stop after a commit was picked.
 """

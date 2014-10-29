@@ -4,7 +4,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""try mapping git commands to Mercurial commands
 
+Tries to map a given git command to a Mercurial command:
+
+  $ hg githelp -- git checkout master
+  hg update master
+
+"""
 from mercurial import extensions, util, cmdutil, commands, error
 from mercurial import hg, changegroup, fancyopts
 from mercurial.extensions import wrapfunction

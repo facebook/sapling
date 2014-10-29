@@ -4,6 +4,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""FBONLY: user friendly deafults
+
+This extension changes defaults to be more user friendly.
+
+  hg log      always follows history (-f)
+  hg rebase   does nothing without arguments
+  hg update   does nothing without arguments
+"""
 
 from mercurial import util, cmdutil, commands, hg, scmutil
 from mercurial import bookmarks
