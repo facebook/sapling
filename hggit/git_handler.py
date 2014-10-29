@@ -960,7 +960,7 @@ class GitHandler(object):
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
         if refs.keys()[0] == 'capabilities^{}':
-            if not all_heads:
+            if not exportable:
                 tip = self.repo.lookup('tip')
                 if tip != nullid:
                     del new_refs['capabilities^{}']
