@@ -1134,11 +1134,6 @@ class GitHandler(object):
             res[sha].tags.add('refs/tags/' + tag)
         return res
 
-    def local_heads(self):
-        bms = self.repo._bookmarks
-        return dict((filtered_bm, ('refs/heads/' + filtered_bm, hex(bms[bm])))
-                    for filtered_bm, bm in self._filter_for_bookmarks(bms))
-
     def import_tags(self, refs):
         keys = refs.keys()
         if not keys:
