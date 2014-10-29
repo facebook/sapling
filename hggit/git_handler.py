@@ -1094,7 +1094,7 @@ class GitHandler(object):
         for key in heads:
             git_sha = self.map_git_get(heads[key][1])
             if git_sha:
-                self.git.refs['refs/heads/' + key] = git_sha
+                self.git.refs[heads[key][0]] = git_sha
 
     def export_hg_tags(self):
         for tag, sha in self.repo.tags().iteritems():
