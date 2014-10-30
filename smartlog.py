@@ -135,7 +135,7 @@ def sortnodes(nodes, parentfunc, masters):
 
     return results
 
-def getdag(repo, revs, master):
+def getdag(ui, repo, revs, master):
     cl = repo.changelog
     lowestrev = min(revs)
 
@@ -211,7 +211,11 @@ def getdag(repo, revs, master):
     order = sortnodes([r[0] for r in results], parentfunc, masters)
 
     # Sort the actual results based on their position in the 'order'
-    return sorted(results, key=lambda x: order.index(x[0]) , reverse=True)
+    try:
+        return sorted(results, key=lambda x: order.index(x[0]) , reverse=True)
+    except ValueError: # Happend when 'order' is empty
+        ui.warn('note: Smartlog encountered an error, so the sorting might be wrong.\n\n')
+        return sorted(results, reverse=True)
 
 def smartlogrevset(repo, subset, x):
     """``smartlog([scope, [master]])``
@@ -398,7 +402,7 @@ Excludes:
     global enabled
     try:
         enabled = True
-        revdag = getdag(repo, revs, master)
+        revdag = getdag(ui, repo, revs, master)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         showparents = [ctx.node() for ctx in repo[None].parents()]
         cmdutil.displaygraph(ui, revdag, displayer, showparents,
