@@ -256,3 +256,51 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
+
+add old and new commits to the git repo -- make sure we're using the commit date
+and not the author date
+  $ cat >> $HGRCPATH <<EOF
+  > [git]
+  > mindate = 2014-01-02 00:00:00 +0000
+  > EOF
+  $ cd gitrepo
+  $ git checkout -q master
+  $ echo oldcommit > oldcommit
+  $ git add oldcommit
+  $ GIT_AUTHOR_DATE="2014-03-01 00:00:00 +0000" \
+  > GIT_COMMITTER_DATE="2009-01-01 00:00:00 +0000" \
+  > git commit -m oldcommit > /dev/null || echo "git commit error"
+  $ cd ..
+  $ hg -R hgrepo pull
+  pulling from $TESTTMP/gitrepo
+  no changes found
+  $ hg -R hgrepo log -r master
+  changeset:   4:892d20308ddf
+  bookmark:    master
+  parent:      3:56cabe48c4b0
+  parent:      1:7bcd915dc873
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:13 2007 +0000
+  summary:     Merge branch 'beta'
+  
+
+  $ cd gitrepo
+  $ echo newcommit > newcommit
+  $ git add newcommit
+  $ GIT_AUTHOR_DATE="2014-01-01 00:00:00 +0000" \
+  > GIT_COMMITTER_DATE="2014-01-02 00:00:00 +0000" \
+  > git commit -m newcommit > /dev/null || echo "git commit error"
+  $ cd ..
+  $ hg -R hgrepo pull
+  pulling from $TESTTMP/gitrepo
+  importing git objects into hg
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg -R hgrepo log -r master
+  changeset:   8:c7d0cf1a7601
+  bookmark:    master
+  tag:         default/master
+  tag:         tip
+  user:        test <test@example.org>
+  date:        Wed Jan 01 00:00:00 2014 +0000
+  summary:     newcommit
+  
