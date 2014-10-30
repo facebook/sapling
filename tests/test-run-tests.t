@@ -206,30 +206,8 @@ Parallel runs
 (duplicate the failing test to get predictable output)
   $ cp test-failure.t test-failure-copy.t
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --jobs 2 test-failure*.t
-  
-  --- $TESTTMP/test-failure*.t (glob)
-  +++ $TESTTMP/test-failure*.t.err (glob)
-  @@ -1,4 +1,4 @@
-     $ echo babar
-  -  rataxes
-  +  babar
-   This is a noop statement so that
-   this test is still more bytes than success.
-  
-  ERROR: test-failure*.t output changed (glob)
-  !
-  --- $TESTTMP/test-failure*.t (glob)
-  +++ $TESTTMP/test-failure*.t.err (glob)
-  @@ -1,4 +1,4 @@
-     $ echo babar
-  -  rataxes
-  +  babar
-   This is a noop statement so that
-   this test is still more bytes than success.
-  
-  ERROR: test-failure*.t output changed (glob)
-  !
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` --jobs 2 test-failure*.t -n
+  !!
   Failed test-failure*.t: output changed (glob)
   Failed test-failure*.t: output changed (glob)
   # Ran 2 tests, 0 skipped, 0 warned, 2 failed.
