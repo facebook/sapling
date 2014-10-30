@@ -220,7 +220,8 @@ class GitHandler(object):
 
     def import_commits(self, remote_name):
         refs = self.git.refs.as_dict()
-        self.import_git_objects(remote_name, refs)
+        filteredrefs = self.filter_min_date(refs)
+        self.import_git_objects(remote_name, filteredrefs)
         self.update_hg_bookmarks(refs)
         self.save_map()
 

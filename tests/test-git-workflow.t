@@ -75,3 +75,60 @@ get things back to hg
 gimport should have updated the bookmarks as well
   $ hg bookmarks
      master                    1:7108ae7bd184
+
+gimport support for git.mindate
+  $ cat >> .hg/hgrc << EOF
+  > [git]
+  > mindate = 2014-01-02 00:00:00 +0000
+  > EOF
+  $ echo oldcommit > oldcommit
+  $ git add oldcommit
+  $ GIT_AUTHOR_DATE="2014-03-01 00:00:00 +0000" \
+  > GIT_COMMITTER_DATE="2009-01-01 00:00:00 +0000" \
+  > git commit -m oldcommit > /dev/null || echo "git commit error"
+  $ hg gimport
+  no changes found
+  $ hg log --graph
+  o  changeset:   1:7108ae7bd184
+  |  bookmark:    master
+  |  tag:         tip
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:11 2007 +0000
+  |  summary:     add beta
+  |
+  o  changeset:   0:0221c246a567
+     user:        test
+     date:        Mon Jan 01 00:00:10 2007 +0000
+     summary:     add alpha
+  
+
+  $ echo newcommit > newcommit
+  $ git add newcommit
+  $ GIT_AUTHOR_DATE="2014-01-01 00:00:00 +0000" \
+  > GIT_COMMITTER_DATE="2014-01-02 00:00:00 +0000" \
+  > git commit -m newcommit > /dev/null || echo "git commit error"
+  $ hg gimport
+  importing git objects into hg
+  $ hg log --graph
+  o  changeset:   3:865f98279824
+  |  bookmark:    master
+  |  tag:         tip
+  |  user:        test <test@example.org>
+  |  date:        Wed Jan 01 00:00:00 2014 +0000
+  |  summary:     newcommit
+  |
+  o  changeset:   2:b6cde64c110c
+  |  user:        test <test@example.org>
+  |  date:        Sat Mar 01 00:00:00 2014 +0000
+  |  summary:     oldcommit
+  |
+  o  changeset:   1:7108ae7bd184
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:11 2007 +0000
+  |  summary:     add beta
+  |
+  o  changeset:   0:0221c246a567
+     user:        test
+     date:        Mon Jan 01 00:00:10 2007 +0000
+     summary:     add alpha
+  
