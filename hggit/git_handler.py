@@ -1082,6 +1082,19 @@ class GitHandler(object):
         # returned
         return util.OrderedDict((r, refs[r]) for r in filteredrefs)
 
+    def filter_min_date(self, refs):
+        '''filter refs by minimum date
+
+        This only works for refs that are available locally.'''
+        min_date = self.ui.config('git', 'mindate')
+        if min_date is None:
+            return refs
+
+        # filter refs older than min_timestamp
+        min_timestamp, min_offset = hgutil.parsedate(min_date)
+        return util.OrderedDict((ref, sha) for ref, sha in refs.iteritems()
+                                if self.git[sha].commit_time >= min_timestamp)
+
     def update_references(self):
         exportable = self.get_exportable()
 
