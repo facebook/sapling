@@ -1068,6 +1068,7 @@ class GitHandler(object):
                     and (ref.startswith('refs/heads/')
                          or ref.startswith('refs/tags/'))):
                     filteredrefs.append(ref)
+            filteredrefs.sort()
 
         # the choice of OrderedDict vs plain dict has no impact on stock hg-git,
         # but allows extensions to customize the order in which refs are
