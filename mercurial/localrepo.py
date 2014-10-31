@@ -1724,14 +1724,15 @@ class localrepository(object):
         if stream and not heads:
             # 'stream' means remote revlog format is revlogv1 only
             if remote.capable('stream'):
-                return self.stream_in(remote, set(('revlogv1',)))
-            # otherwise, 'streamreqs' contains the remote revlog format
-            streamreqs = remote.capable('streamreqs')
-            if streamreqs:
-                streamreqs = set(streamreqs.split(','))
-                # if we support it, stream in and adjust our requirements
-                if not streamreqs - self.supportedformats:
-                    return self.stream_in(remote, streamreqs)
+                self.stream_in(remote, set(('revlogv1',)))
+            else:
+                # otherwise, 'streamreqs' contains the remote revlog format
+                streamreqs = remote.capable('streamreqs')
+                if streamreqs:
+                    streamreqs = set(streamreqs.split(','))
+                    # if we support it, stream in and adjust our requirements
+                    if not streamreqs - self.supportedformats:
+                        self.stream_in(remote, streamreqs)
 
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
         try:

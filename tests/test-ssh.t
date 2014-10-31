@@ -38,6 +38,8 @@ clone remote via stream
   streaming all changes
   4 files to transfer, 392 bytes of data
   transferred 392 bytes in * seconds (*/sec) (glob)
+  searching for changes
+  no changes found
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local-stream
@@ -48,6 +50,23 @@ clone remote via stream
   checking files
   2 files, 1 changesets, 2 total revisions
   $ cd ..
+
+clone bookmarks via stream
+
+  $ hg -R local-stream book mybook
+  $ hg clone -e "python \"$TESTDIR/dummyssh\"" --uncompressed ssh://user@dummy/local-stream stream2
+  streaming all changes
+  4 files to transfer, 392 bytes of data
+  transferred 392 bytes in * seconds (* KB/sec) (glob)
+  searching for changes
+  no changes found
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd stream2
+  $ hg book
+     mybook                    0:1160648e36ce
+  $ cd ..
+  $ rm -rf local-stream stream2
 
 clone remote via pull
 
@@ -404,6 +423,7 @@ stderr from remote commands should be printed before stdout from local code (iss
   Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
   Got arguments 1:user@dummy 2:hg -R /$TESTTMP/nonexistent serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R local-stream serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio

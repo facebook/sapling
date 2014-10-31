@@ -35,6 +35,8 @@ clone via stream
   streaming all changes
   6 files to transfer, 606 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
+  searching for changes
+  no changes found
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg verify -R copy
@@ -195,6 +197,8 @@ test http authentication
   streaming all changes
   7 files to transfer, 916 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
+  searching for changes
+  no changes found
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -251,6 +255,9 @@ test http authentication
   "GET /?cmd=branchmap HTTP/1.1" 200 -
   "GET /?cmd=stream_out HTTP/1.1" 401 -
   "GET /?cmd=stream_out HTTP/1.1" 200 -
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D5fed3813f7f5e1824344fdc9cf8f63bb662c292d
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip
   "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces

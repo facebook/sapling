@@ -18,6 +18,8 @@ url for proxy, stream
   streaming all changes
   3 files to transfer, 303 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
+  searching for changes
+  no changes found
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd b
@@ -101,6 +103,9 @@ do not use the proxy if it is in the no list
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=branchmap HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=stream_out HTTP/1.1" - - (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D83180e7845de420a1bb46896fd5fe05294f8d629 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   *- - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
   *- - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
