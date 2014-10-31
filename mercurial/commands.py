@@ -853,7 +853,7 @@ def bookmark(ui, repo, *names, **opts):
     Bookmarks can be pushed and pulled between repositories (see
     :hg:`help push` and :hg:`help pull`). If a shared bookmark has
     diverged, a new 'divergent bookmark' of the form 'name@path' will
-    be created. Using :hg:'merge' will resolve the divergence.
+    be created. Using :hg:`merge` will resolve the divergence.
 
     A bookmark named '@' has the special property that :hg:`clone` will
     check it out by default if it exists.
@@ -3212,7 +3212,7 @@ def files(ui, repo, *pats, **opts):
 
           hg files -0 | xargs -0 grep foo
 
-    See :hg:'help pattern' and :hg:'help filesets' for more information
+    See :hg:`help pattern` and :hg:`help filesets` for more information
     on specifying file patterns.
 
     Returns 0 if a match is found, 1 otherwise.
