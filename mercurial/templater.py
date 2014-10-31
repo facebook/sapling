@@ -217,6 +217,7 @@ def buildfunc(exp, context):
 
 def date(context, mapping, args):
     if not (1 <= len(args) <= 2):
+        # i18n: "date" is a keyword
         raise error.ParseError(_("date expects one or two arguments"))
 
     date = args[0][0](context, mapping, args[0][1])
@@ -244,6 +245,7 @@ def diff(context, mapping, args):
 
 def fill(context, mapping, args):
     if not (1 <= len(args) <= 4):
+        # i18n: "fill" is a keyword
         raise error.ParseError(_("fill expects one to four arguments"))
 
     text = stringify(args[0][0](context, mapping, args[0][1]))
@@ -254,6 +256,7 @@ def fill(context, mapping, args):
         try:
             width = int(stringify(args[1][0](context, mapping, args[1][1])))
         except ValueError:
+            # i18n: "fill" is a keyword
             raise error.ParseError(_("fill expects an integer width"))
         try:
             initindent = stringify(_evalifliteral(args[2], context, mapping))
@@ -267,6 +270,7 @@ def pad(context, mapping, args):
     """usage: pad(text, width, fillchar=' ', right=False)
     """
     if not (2 <= len(args) <= 4):
+        # i18n: "pad" is a keyword
         raise error.ParseError(_("pad() expects two to four arguments"))
 
     width = int(args[1][1])
@@ -422,6 +426,7 @@ def shortest(context, mapping, args):
     """usage: shortest(node, minlength=4)
     """
     if not (1 <= len(args) <= 2):
+        # i18n: "shortest" is a keyword
         raise error.ParseError(_("shortest() expects one or two arguments"))
 
     node = stringify(args[0][0](context, mapping, args[0][1]))
@@ -471,6 +476,7 @@ def shortest(context, mapping, args):
 
 def strip(context, mapping, args):
     if not (1 <= len(args) <= 2):
+        # i18n: "strip" is a keyword
         raise error.ParseError(_("strip expects one or two arguments"))
 
     text = stringify(args[0][0](context, mapping, args[0][1]))
