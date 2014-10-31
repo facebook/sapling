@@ -1047,7 +1047,7 @@ class GitHandler(object):
         that match the heads. Otherwise, return refs that are heads or tags.
 
         '''
-        filteredrefs = {}
+        filteredrefs = []
         if heads is not None:
             # contains pairs of ('refs/(heads|tags|...)/foo', 'foo')
             # if ref is just '<foo>', then we get ('foo', 'foo')
@@ -1059,7 +1059,7 @@ class GitHandler(object):
                 if not r:
                     raise hgutil.Abort("ref %s not found on remote server" % h)
                 elif len(r) == 1:
-                    filteredrefs[r[0]] = refs[r[0]]
+                    filteredrefs.append(r[0])
                 else:
                     raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
         else:
@@ -1067,8 +1067,12 @@ class GitHandler(object):
                 if (not ref.endswith('^{}')
                     and (ref.startswith('refs/heads/')
                          or ref.startswith('refs/tags/'))):
-                    filteredrefs[ref] = sha
-        return filteredrefs
+                    filteredrefs.append(ref)
+
+        # the choice of OrderedDict vs plain dict has no impact on stock hg-git,
+        # but allows extensions to customize the order in which refs are
+        # returned
+        return util.OrderedDict((r, refs[r]) for r in filteredrefs)
 
     def update_references(self):
         exportable = self.get_exportable()
