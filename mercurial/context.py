@@ -953,7 +953,7 @@ class filectx(basefilectx):
             if self._repo.ui.config("censor", "policy", "abort") == "ignore":
                 return ""
             raise util.Abort(_("censored node: %s") % short(self._filenode),
-                             hint="set censor.policy to ignore errors")
+                             hint=_("set censor.policy to ignore errors"))
 
     def size(self):
         return self._filelog.size(self._filerev)
