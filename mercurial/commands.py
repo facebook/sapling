@@ -3212,7 +3212,7 @@ def files(ui, repo, *pats, **opts):
 
           hg files -0 | xargs -0 grep foo
 
-    See :hg:'help pattern' and :hg:'help revsets' for more information
+    See :hg:'help pattern' and :hg:'help filesets' for more information
     on specifying file patterns.
 
     Returns 0 if a match is found, 1 otherwise.
