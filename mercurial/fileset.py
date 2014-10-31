@@ -251,6 +251,7 @@ def hgignore(mctx, x):
     """``hgignore()``
     File that matches the active .hgignore pattern.
     """
+    # i18n: "hgignore" is a keyword
     getargs(x, 0, 0, _("hgignore takes no arguments"))
     ignore = mctx.ctx._repo.dirstate._ignore
     return [f for f in mctx.subset if ignore(f)]
@@ -388,6 +389,7 @@ def subrepo(mctx, x):
     ctx = mctx.ctx
     sstate = sorted(ctx.substate)
     if x:
+        # i18n: "subrepo" is a keyword
         pat = getstring(x, _("subrepo requires a pattern or no arguments"))
 
         import match as matchmod # avoid circular import issues
