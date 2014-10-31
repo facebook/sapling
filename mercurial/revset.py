@@ -526,14 +526,15 @@ def bundle(repo, subset, x):
 def checkstatus(repo, subset, pat, field):
     hasset = matchmod.patkind(pat) == 'set'
 
+    mcache = [None]
     def matches(x):
-        m = None
-        fname = None
         c = repo[x]
-        if not m or hasset:
-            m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
-            if not m.anypats() and len(m.files()) == 1:
-                fname = m.files()[0]
+        if not mcache[0] or hasset:
+            mcache[0] = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+        m = mcache[0]
+        fname = None
+        if not m.anypats() and len(m.files()) == 1:
+            fname = m.files()[0]
         if fname is not None:
             if fname not in c.files():
                 return False
