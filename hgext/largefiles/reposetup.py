@@ -102,12 +102,12 @@ def reposetup(ui, repo):
                 except error.LockError:
                     pass
 
-                # First check if there were files specified on the
-                # command line.  If there were, and none of them were
+                # First check if paths or patterns were specified on the
+                # command line.  If there were, and they don't match any
                 # largefiles, we should just bail here and let super
                 # handle it -- thus gaining a big performance boost.
                 lfdirstate = lfutil.openlfdirstate(ui, self)
-                if match.files() and not match.anypats():
+                if not match.always():
                     for f in lfdirstate:
                         if match(f):
                             break
