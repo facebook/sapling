@@ -48,11 +48,11 @@ Some sample queries:
 
 - Find text files that contain a string::
 
-    hg locate "set:grep(magic) and not binary()"
+    hg files "set:grep(magic) and not binary()"
 
 - Find C files in a non-standard encoding::
 
-    hg locate "set:**.c and not encoding('UTF-8')"
+    hg files "set:**.c and not encoding('UTF-8')"
 
 - Revert copies of large binary files::
 
