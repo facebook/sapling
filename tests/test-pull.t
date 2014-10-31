@@ -179,3 +179,80 @@ pull the merge
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
+pull with wildcards
+  $ cd gitrepo
+  $ git checkout -qb releases/v1 master
+  $ echo zeta > zeta
+  $ git add zeta
+  $ fn_git_commit -m 'add zeta'
+  $ git checkout -qb releases/v2 master
+  $ echo eta > eta
+  $ git add eta
+  $ fn_git_commit -m 'add eta'
+  $ git checkout -qb notreleases/v1 master
+  $ echo theta > theta
+  $ git add theta
+  $ fn_git_commit -m 'add theta'
+
+ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
+  $ cd ..
+  $ hg -R hgrepo pull -r 'releases/*'
+  pulling from $TESTTMP/gitrepo
+  importing git objects into hg
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg -R hgrepo log --graph
+  o  changeset:   6:bdc34645137e
+  |  bookmark:    releases/v2
+  |  tag:         default/releases/v2
+  |  tag:         tip
+  |  parent:      4:892d20308ddf
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:15 2007 +0000
+  |  summary:     add eta
+  |
+  | o  changeset:   5:3e35a45c61f9
+  |/   bookmark:    releases/v1
+  |    tag:         default/releases/v1
+  |    user:        test <test@example.org>
+  |    date:        Mon Jan 01 00:00:14 2007 +0000
+  |    summary:     add zeta
+  |
+  o    changeset:   4:892d20308ddf
+  |\   bookmark:    master
+  | |  tag:         default/master
+  | |  parent:      3:56cabe48c4b0
+  | |  parent:      1:7bcd915dc873
+  | |  user:        test <test@example.org>
+  | |  date:        Mon Jan 01 00:00:13 2007 +0000
+  | |  summary:     Merge branch 'beta'
+  | |
+  | o  changeset:   3:56cabe48c4b0
+  | |  parent:      0:3442585be8a6
+  | |  user:        test <test@example.org>
+  | |  date:        Mon Jan 01 00:00:13 2007 +0000
+  | |  summary:     add gamma
+  | |
+  | | o  changeset:   2:4d41070bf840
+  | |/   bookmark:    delta
+  | |    tag:         default/delta
+  | |    parent:      0:3442585be8a6
+  | |    user:        test <test@example.org>
+  | |    date:        Mon Jan 01 00:00:12 2007 +0000
+  | |    summary:     add delta
+  | |
+  o |  changeset:   1:7bcd915dc873
+  |/   bookmark:    beta
+  |    tag:         default/beta
+  |    tag:         t_beta
+  |    user:        test <test@example.org>
+  |    date:        Mon Jan 01 00:00:11 2007 +0000
+  |    summary:     add beta
+  |
+  @  changeset:   0:3442585be8a6
+     bookmark:    epsilon
+     tag:         default/epsilon
+     tag:         t_alpha
+     user:        test <test@example.org>
+     date:        Mon Jan 01 00:00:10 2007 +0000
+     summary:     add alpha
+  

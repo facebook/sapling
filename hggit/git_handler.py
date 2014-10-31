@@ -1055,13 +1055,20 @@ class GitHandler(object):
                 (r, r[r.find('/', r.find('/')+1)+1:])
                     for r in refs]
             for h in heads:
-                r = [pair[0] for pair in stripped_refs if pair[1] == h]
-                if not r:
-                    raise hgutil.Abort("ref %s not found on remote server" % h)
-                elif len(r) == 1:
-                    filteredrefs.append(r[0])
+                if h.endswith('/*'):
+                    prefix = h[:-1]  # include the / but not the *
+                    r = [pair[0] for pair in stripped_refs
+                         if pair[1].startswith(prefix)]
+                    r.sort()
+                    filteredrefs.extend(r)
                 else:
-                    raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
+                    r = [pair[0] for pair in stripped_refs if pair[1] == h]
+                    if not r:
+                        raise hgutil.Abort("ref %s not found on remote server" % h)
+                    elif len(r) == 1:
+                        filteredrefs.append(r[0])
+                    else:
+                        raise hgutil.Abort("ambiguous reference %s: %r" % (h, r))
         else:
             for ref, sha in refs.iteritems():
                 if (not ref.endswith('^{}')
