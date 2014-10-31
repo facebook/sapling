@@ -221,3 +221,10 @@ not a `release_7_maintenance` named branch already, the bookmark will be named
 The `branch_bookmark_suffix` option is, like the `authors` option, intended for
 migrating legacy hg named branches.   Going forward, an hg repo that is to 
 be linked with a git repo should only use bookmarks for named branching.
+
+git.mindate
+-----------
+
+If set, branches where the latest commit's commit time is older than this will
+not be imported. Accepts any date formats that Mercurial does -- see
+`hg help dates` for more.
