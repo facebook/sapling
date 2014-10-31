@@ -576,7 +576,6 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
                 lfile = lambda f: lfutil.standin(f) in manifest
                 m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
                 m._fmap = set(m._files)
-                m._always = False
                 origmatchfn = m.matchfn
                 m.matchfn = lambda f: (lfutil.isstandin(f) and
                                     (f in manifest) and
@@ -684,7 +683,6 @@ def overriderevert(orig, ui, repo, *pats, **opts):
             m._files = [tostandin(f) for f in m._files]
             m._files = [f for f in m._files if f is not None]
             m._fmap = set(m._files)
-            m._always = False
             origmatchfn = m.matchfn
             def matchfn(f):
                 if lfutil.isstandin(f):
