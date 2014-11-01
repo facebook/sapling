@@ -3837,7 +3837,7 @@ def help_(ui, name=None, **opts):
 
     section = None
     if name and '.' in name:
-        name, section = name.split('.')
+        name, section = name.split('.', 1)
 
     text = help.help_(ui, name, **opts)
 

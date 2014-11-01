@@ -1094,6 +1094,10 @@ Test section lookup
   abort: help section not found
   [255]
 
+  $ hg help glossary.mc.guffin
+  abort: help section not found
+  [255]
+
 Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
