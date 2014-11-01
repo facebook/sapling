@@ -1382,7 +1382,7 @@ User interface controls.
     remote command to use for clone/push/pull operations. Default is ``hg``.
 
 ``reportoldssl``
-    Warn if an SSL certificate is unable to be due to using Python
+    Warn if an SSL certificate is unable to be used due to using Python
     2.5 or earlier. True or False. Default is True.
 
 ``report_untrusted``
