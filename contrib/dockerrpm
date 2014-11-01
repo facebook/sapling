@@ -45,9 +45,9 @@ $DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
 cat << EOF > $RPMBUILDDIR/mercurial.repo
 # Place this file in /etc/yum.repos.d/mercurial.repo
 [mercurial]
-name=Mercurial packages for $NAME
+name=Mercurial packages for $PLATFORM
 # baseurl=file://$RPMBUILDDIR/
-baseurl=http://hg.example.com/build/$NAME/
+baseurl=http://hg.example.com/build/$PLATFORM/
 skip_if_unavailable=True
 gpgcheck=0
 enabled=1
