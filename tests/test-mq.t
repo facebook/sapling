@@ -1596,4 +1596,11 @@ Test interraction with revset (issue4426)
   $ hg ci -m a
   $ hg qimport -r 0::
 
+reimport things
+
+  $ hg qimport -r 1::
+  abort: revision 2 is already managed
+  [255]
+
+
   $ cd ..

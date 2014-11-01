@@ -2001,7 +2001,7 @@ class queue(object):
                 base = repo.changelog.node(rev.first())
                 if base in [n.node for n in self.applied]:
                     raise util.Abort(_('revision %d is already managed')
-                                     % rev[0])
+                                     % rev.first())
                 if heads != [self.applied[-1].node]:
                     raise util.Abort(_('revision %d is not the parent of '
                                        'the queue') % rev.first())
