@@ -1289,9 +1289,6 @@ msgstr "a revisão %d é uma mesclagem, ignorando...\n"
 msgid "analyzing"
 msgstr "analisando"
 
-msgid "count rate for the specified revision or range"
-msgstr "conta a frequência para uma revisão ou faixa especificada"
-
 msgid "count rate for the specified revision or revset"
 msgstr "conta a frequência para uma revisão ou revset especificado"
 
@@ -3816,9 +3813,6 @@ msgstr "mostra arquivos copiados"
 
 msgid "do case-insensitive search for a given text"
 msgstr "faz uma busca insensível a maiúsculas / minúsculas por um texto dado"
-
-msgid "show the specified revision or range"
-msgstr "mostra a revisão ou sequência de revisões especificada"
 
 msgid "show the specified revision or revset"
 msgstr "mostra a revisão ou revset especificado"
@@ -11355,13 +11349,13 @@ msgid ""
 "    Bookmarks can be pushed and pulled between repositories (see\n"
 "    :hg:`help push` and :hg:`help pull`). If a shared bookmark has\n"
 "    diverged, a new 'divergent bookmark' of the form 'name@path' will\n"
-"    be created. Using :hg:'merge' will resolve the divergence."
+"    be created. Using :hg:`merge` will resolve the divergence."
 msgstr ""
 "    Marcadores podem ser transferidos entre repositórios usando push\n"
 "    e pull (veja :hg:`help push` e :hg:`help pull`).\n"
 "    Se um marcador compartilhado tiver divergido, será criado um\n"
 "    novo 'marcador divergente' com a forma 'nome@caminho'.\n"
-"    A divergência pode ser resolvida usando 'hg merge'."
+"    A divergência pode ser resolvida usando :hg:`merge`."
 
 msgid ""
 "    A bookmark named '@' has the special property that :hg:`clone` will\n"
@@ -13109,10 +13103,10 @@ msgid "          hg files -0 | xargs -0 grep foo"
 msgstr "          hg files -0 | xargs -0 grep foo"
 
 msgid ""
-"    See :hg:'help pattern' and :hg:'help revsets' for more information\n"
+"    See :hg:`help pattern` and :hg:`help filesets` for more information\n"
 "    on specifying file patterns."
 msgstr ""
-"    Veja :hg:`help pattern` e :hg:`help revsets` para mais\n"
+"    Veja :hg:`help pattern` e :hg:`help filesets` para mais\n"
 "    informações sobre a especificação de padrões de arquivo."
 
 msgid "    Returns 0 if a match is found, 1 otherwise."
@@ -15837,6 +15831,9 @@ msgstr "não há tal arquivo na revisão %s"
 msgid "censored node: %s"
 msgstr "nó censurado: %s"
 
+msgid "set censor.policy to ignore errors"
+msgstr "defina censor.policy para ignorar erros"
+
 msgid "branch name not in UTF-8!"
 msgstr "nome do ramo não está em UTF-8!"
 
@@ -16646,6 +16643,7 @@ msgstr ""
 "``hgignore()``\n"
 "    O nome do arquivo combina com um padrão do arquivo .hgignore ativo."
 
+#. i18n: "hgignore" is a keyword
 msgid "hgignore takes no arguments"
 msgstr "hgignore não tem argumentos"
 
@@ -16743,6 +16741,7 @@ msgstr ""
 msgid "subrepo takes at most one argument"
 msgstr "subrepo recebe um ou nenhum argumento"
 
+#. i18n: "subrepo" is a keyword
 msgid "subrepo requires a pattern or no arguments"
 msgstr "subrepo requer um padrão ou nenhum argumento"
 
@@ -19137,7 +19136,8 @@ msgid ""
 "  launching external tool.  Options are ``true``, ``false``, ``keep`` or\n"
 "  ``keep-merge3``. The ``keep`` option will leave markers in the file if the\n"
 "  premerge fails. The ``keep-merge3`` will do the same but include information\n"
-"  about the base of the merge in the marker (see internal:merge3).\n"
+"  about the base of the merge in the marker (see internal :merge3 in\n"
+"  :hg:`help merge-tools`).\n"
 "  Default: True"
 msgstr ""
 "``premerge``\n"
@@ -19146,7 +19146,7 @@ msgstr ""
 "  ``true``, ``false``, ``keep`` para deixar marcações no conteúdo\n"
 "  do arquivo se o premerge falhar, ou ``keep-merge3`` para incluir\n"
 "  nas tais marcações informações sobre a base da mesclagem\n"
-"  (veja internal:merge3).\n"
+"  (veja a ferramenta interna :merge3 em :hg:`help merge-tools`).\n"
 "  Padrão: True"
 
 msgid ""
@@ -21341,14 +21341,14 @@ msgstr "    hg forget \"set:hgignore() and not ignored()\""
 msgid "- Find text files that contain a string::"
 msgstr "- Encontra arquivos texto que contém uma string::"
 
-msgid "    hg locate \"set:grep(magic) and not binary()\""
-msgstr "    hg locate \"set:grep(magic) and not binary()\""
+msgid "    hg files \"set:grep(magic) and not binary()\""
+msgstr "    hg files \"set:grep(magic) and not binary()\""
 
 msgid "- Find C files in a non-standard encoding::"
 msgstr "- Encontra arquivos C em uma codificação não padrão::"
 
-msgid "    hg locate \"set:**.c and not encoding('UTF-8')\""
-msgstr "    hg locate \"set:**.c and not encoding('UTF-8')\""
+msgid "    hg files \"set:**.c and not encoding('UTF-8')\""
+msgstr "    hg files \"set:**.c and not encoding('UTF-8')\""
 
 msgid "- Revert copies of large binary files::"
 msgstr "- Reverte cópias de arquivos binários grandes::"
@@ -27332,19 +27332,23 @@ msgstr "o filtro de modelo '%s' não é compatível com a palavra chave '%s'"
 msgid "filter %s expects one argument"
 msgstr "o filtro %s espera um argumento"
 
+#. i18n: "date" is a keyword
 msgid "date expects one or two arguments"
-msgstr "data espera um ou dois argumentos"
+msgstr "date espera um ou dois argumentos"
 
 #. i18n: "diff" is a keyword
 msgid "diff expects one, two or no arguments"
 msgstr "diff espera um, dois ou nenhum argumento"
 
+#. i18n: "fill" is a keyword
 msgid "fill expects one to four arguments"
 msgstr "fill espera de um a quatro argumentos"
 
+#. i18n: "fill" is a keyword
 msgid "fill expects an integer width"
 msgstr "fill espera um número inteiro"
 
+#. i18n: "pad" is a keyword
 msgid "pad() expects two to four arguments"
 msgstr "pad() espera de dois a quatro argumentos"
 
@@ -27380,9 +27384,11 @@ msgstr "revset espera um ou mais argumentos"
 msgid "rstdoc expects two arguments"
 msgstr "rstdoc espera dois argumentos"
 
+#. i18n: "shortest" is a keyword
 msgid "shortest() expects one or two arguments"
 msgstr "shortest() espera um ou dois argumentos"
 
+#. i18n: "strip" is a keyword
 msgid "strip expects one or two arguments"
 msgstr "strip espera um ou dois argumentos"
 
