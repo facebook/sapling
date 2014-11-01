@@ -149,8 +149,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2014-10-31 23:48+0900\n"
-"PO-Revision-Date: 2014-11-01 00:53+0900\n"
+"POT-Creation-Date: 2014-11-01 17:00+0900\n"
+"PO-Revision-Date: 2014-11-01 17:57+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -11169,13 +11169,13 @@ msgid ""
 "    Bookmarks can be pushed and pulled between repositories (see\n"
 "    :hg:`help push` and :hg:`help pull`). If a shared bookmark has\n"
 "    diverged, a new 'divergent bookmark' of the form 'name@path' will\n"
-"    be created. Using :hg:'merge' will resolve the divergence."
+"    be created. Using :hg:`merge` will resolve the divergence."
 msgstr ""
 "    ブックマークは、 リポジトリ間での取り込みや反映が可能です\n"
 "    (:hg:`help push` および :hg:`help pull` 参照)。 連携先リポジトリで、\n"
 "    同名ブックマークの参照先が分岐 (divergent) する場合、\n"
 "    'ブックマーク名@連携先' 形式の '分岐ブックマーク' が新規作成されます。\n"
-"    分岐は :hg:`merge` で解消してください。"
+"    履歴の分岐は :hg:`merge` で解消してください。"
 
 msgid ""
 "    A bookmark named '@' has the special property that :hg:`clone` will\n"
@@ -12872,7 +12872,7 @@ msgid "          hg files -0 | xargs -0 grep foo"
 msgstr "          hg files -0 | xargs -0 grep foo"
 
 msgid ""
-"    See :hg:'help pattern' and :hg:'help revsets' for more information\n"
+"    See :hg:`help pattern` and :hg:`help filesets` for more information\n"
 "    on specifying file patterns."
 msgstr ""
 "    ファイルの指定方法の詳細に関しては、 :hg:`help pattern` および\n"
@@ -15504,6 +15504,9 @@ msgstr "リビジョン %s に当該ファイルは存在しません"
 msgid "censored node: %s"
 msgstr "監査ノードです: %s"
 
+msgid "set censor.policy to ignore errors"
+msgstr "エラーを無視する場合は censor.policy 設定を ignore に"
+
 msgid "branch name not in UTF-8!"
 msgstr "ブランチ名が UTF-8 ではありません!"
 
@@ -16298,6 +16301,7 @@ msgstr ""
 "``hgignore()``\n"
 "    有効な .hgignore パターンに合致するファイル"
 
+#. i18n: "hgignore" is a keyword
 msgid "hgignore takes no arguments"
 msgstr "hgignore には引数が指定できません"
 
@@ -16394,6 +16398,7 @@ msgstr ""
 msgid "subrepo takes at most one argument"
 msgstr "subrepo の引数は最大１つです"
 
+#. i18n: "subrepo" is a keyword
 msgid "subrepo requires a pattern or no arguments"
 msgstr "subrepo の引数は、パターン指定か、引数無しです"
 
@@ -18743,7 +18748,8 @@ msgid ""
 "the\n"
 "  premerge fails. The ``keep-merge3`` will do the same but include "
 "information\n"
-"  about the base of the merge in the marker (see internal:merge3).\n"
+"  about the base of the merge in the marker (see internal :merge3 in\n"
+"  :hg:`help merge-tools`).\n"
 "  Default: True"
 msgstr ""
 "``premerge``\n"
@@ -18751,7 +18757,8 @@ msgstr ""
 "  ``true``  ``false`` ``keep`` および ``keep-merge3`` を指定可能です。\n"
 "  事前マージが失敗した場合、 ``keep`` はマージマークをファイルに残します。\n"
 "  ``keep-merge3`` はマージ対象に関する情報を残す点以外は ``keep``\n"
-"  と同じ動作です (内部マージツール ``:merge3`` の説明も参照してください)"
+"  と同じ動作です (内部マージツール ``:merge3`` の説明も参照してください)\n"
+"  デフォルト値: True"
 
 msgid ""
 "``binary``\n"
@@ -20891,14 +20898,14 @@ msgstr "    hg forget \"set:hgignore() and not ignored()\""
 msgid "- Find text files that contain a string::"
 msgstr "- 正規表現 magic が含まれているテキストファイルの名前を表示::"
 
-msgid "    hg locate \"set:grep(magic) and not binary()\""
-msgstr "    hg locate \"set:grep(magic) and not binary()\""
+msgid "    hg files \"set:grep(magic) and not binary()\""
+msgstr "    hg files \"set:grep(magic) and not binary()\""
 
 msgid "- Find C files in a non-standard encoding::"
 msgstr "- UTF-8 以外の文字コードを使う C 言語ソースのファイル名を表示::"
 
-msgid "    hg locate \"set:**.c and not encoding('UTF-8')\""
-msgstr "    hg locate \"set:**.c and not encoding('UTF-8')\""
+msgid "    hg files \"set:**.c and not encoding('UTF-8')\""
+msgstr "    hg files \"set:**.c and not encoding('UTF-8')\""
 
 msgid "- Revert copies of large binary files::"
 msgstr "- 指定サイズ以上でバイナリ扱いのファイルの複製を取り消し::"
@@ -26712,6 +26719,7 @@ msgstr "フィルタ指定 '%s' はキーワード '%s' と互換性がありま
 msgid "filter %s expects one argument"
 msgstr "フィルタ %s は引数が1つ必要です"
 
+#. i18n: "date" is a keyword
 msgid "date expects one or two arguments"
 msgstr "date の引数は1つまたは2つです"
 
@@ -26719,12 +26727,15 @@ msgstr "date の引数は1つまたは2つです"
 msgid "diff expects one, two or no arguments"
 msgstr "diff の引数は最大２つです"
 
+#. i18n: "fill" is a keyword
 msgid "fill expects one to four arguments"
 msgstr "fill の引数は1つから4つの間です"
 
+#. i18n: "fill" is a keyword
 msgid "fill expects an integer width"
 msgstr "fill には数値を指定してください"
 
+#. i18n: "pad" is a keyword
 msgid "pad() expects two to four arguments"
 msgstr "pad() の引数は2つから4つの間です"
 
@@ -26760,9 +26771,11 @@ msgstr "revset の引数は1つまたは2つです"
 msgid "rstdoc expects two arguments"
 msgstr "rstdoc の引数は2つです"
 
+#. i18n: "shortest" is a keyword
 msgid "shortest() expects one or two arguments"
 msgstr "shortest() の引数は1つまたは2つです"
 
+#. i18n: "strip" is a keyword
 msgid "strip expects one or two arguments"
 msgstr "strip の引数は1つまたは2つです"
 
