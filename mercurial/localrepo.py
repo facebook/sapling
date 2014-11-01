@@ -1680,15 +1680,22 @@ class localrepository(object):
 
             if rbranchmap:
                 rbheads = []
+                closed = []
                 for bheads in rbranchmap.itervalues():
                     rbheads.extend(bheads)
+                    for h in bheads:
+                        r = self.changelog.rev(h)
+                        b, c = self.changelog.branchinfo(r)
+                        if c:
+                            closed.append(h)
 
                 if rbheads:
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
                     cache = branchmap.branchcache(rbranchmap,
                                                   self[rtiprev].node(),
-                                                  rtiprev)
+                                                  rtiprev,
+                                                  closednodes=closed)
                     # Try to stick it as low as possible
                     # filter above served are unlikely to be fetch from a clone
                     for candidate in ('base', 'immutable', 'served'):
