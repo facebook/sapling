@@ -86,6 +86,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     For the old 'hg grep', see 'histgrep'."""
 
+    grepcommand = ui.config('grep', 'command', default='grep')
     optstr = ''
     if opts.get('after_context'):
         optstr += '-A' + opts.get('after_context') + ' '
@@ -118,9 +119,9 @@ def grep(ui, repo, pattern, *pats, **opts):
     wctx = repo[None]
     m = scmutil.match(wctx, ['.'], {'include': pats})
     p = subprocess.Popen(
-        'xargs -0 grep --no-messages --binary-files=without-match '
+        'xargs -0 %s --no-messages --binary-files=without-match '
         '--with-filename --regexp=%s %s --' %
-        (util.shellquote(pattern), optstr),
+        (grepcommand, util.shellquote(pattern), optstr),
         shell=True, bufsize=-1, close_fds=util.closefds,
         stdin=subprocess.PIPE)
 
