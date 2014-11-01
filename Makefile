@@ -186,5 +186,7 @@ docker-centos7:
 	contrib/dockerrpm centos7
 
 .PHONY: help all local build doc clean install install-bin install-doc \
-	install-home install-home-bin install-home-doc dist dist-notests tests \
-	update-pot fedora20 docker-fedora20
+	install-home install-home-bin install-home-doc \
+	dist dist-notests check tests check-code update-pot \
+	osx fedora20 docker-fedora20 \
+	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7
