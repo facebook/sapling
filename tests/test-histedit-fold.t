@@ -446,3 +446,45 @@ Folding with initial rename (issue3729)
   0:6c795aa153cb a
 
   $ cd ..
+
+Folding with swapping
+---------------------
+
+This is an excuse to test hook with histedit temporary commit (issue4422)
+
+
+  $ hg init issue4422
+  $ cd issue4422
+  $ echo a > a.txt
+  $ hg add a.txt
+  $ hg commit -m a
+  $ echo b > b.txt
+  $ hg add b.txt
+  $ hg commit -m b
+  $ echo c > c.txt
+  $ hg add c.txt
+  $ hg commit -m c
+
+  $ hg logt
+  2:a1a953ffb4b0 c
+  1:199b6bb90248 b
+  0:6c795aa153cb a
+
+  $ hg histedit 6c795aa153cb --config hooks.commit="echo commit \$HG_NODE" --commands - 2>&1 << EOF | fixbundle
+  > pick 199b6bb90248 b
+  > fold a1a953ffb4b0 c
+  > pick 6c795aa153cb a
+  > EOF
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
+
+  $ hg logt
+  1:9599899f62c0 a
+  0:79b99e9c8e49 b
+
+  $ cd ..
