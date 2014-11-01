@@ -2352,7 +2352,7 @@ def debuglabelcomplete(ui, repo, *args):
          [('L', 'force-lock', None, _('free the store lock (DANGEROUS)')),
           ('W', 'force-wlock', None,
            _('free the working state lock (DANGEROUS)'))],
-         _(''))
+         _('[OPTION]...'))
 def debuglocks(ui, repo, **opts):
     """show or modify state of locks
 
