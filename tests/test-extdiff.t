@@ -178,6 +178,26 @@ Test with revsets:
   */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
   [1]
 
+Fallback to merge-tools.tool.executable|regkey
+  $ mkdir dir
+  $ cat > 'dir/tool.sh' << EOF
+  > #!/bin/sh
+  > echo "** custom diff **"
+  > EOF
+  $ chmod +x dir/tool.sh
+  $ tool=`pwd`/dir/tool.sh
+  $ hg --debug tl --config extdiff.tl= --config merge-tools.tl.executable=$tool
+  making snapshot of 2 files from rev * (glob)
+    a
+    b
+  making snapshot of 2 files from working directory
+    a
+    b
+  running "'$TESTTMP/a/dir/tool.sh'  'a.*' 'a'" in */extdiff.* (glob)
+  ** custom diff **
+  cleaning up temp directory
+  [1]
+
   $ cd ..
 
 #endif

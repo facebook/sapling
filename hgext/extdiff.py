@@ -26,7 +26,9 @@ you do not need to type :hg:`extdiff -p kdiff3` always. ::
   # add new command called vdiff, runs kdiff3
   vdiff = kdiff3
 
-  # add new command called meld, runs meld (no need to name twice)
+  # add new command called meld, runs meld (no need to name twice).  If
+  # the meld executable is not available, the meld tool in [merge-tools]
+  # will be used, if available
   meld =
 
   # add new command called vimdiff, runs gvimdiff with DirDiff plugin
@@ -63,7 +65,7 @@ pretty fast (at least faster than having to compare the entire tree).
 
 from mercurial.i18n import _
 from mercurial.node import short, nullid
-from mercurial import cmdutil, scmutil, util, commands, encoding
+from mercurial import cmdutil, scmutil, util, commands, encoding, filemerge
 import os, shlex, shutil, tempfile, re
 
 cmdtable = {}
@@ -279,7 +281,9 @@ def uisetup(ui):
         if cmd.startswith('cmd.'):
             cmd = cmd[4:]
             if not path:
-                path = cmd
+                path = util.findexe(cmd)
+                if path is None:
+                    path = filemerge.findexternaltool(ui, cmd) or cmd
             diffopts = ui.config('extdiff', 'opts.' + cmd, '')
             diffopts = diffopts and [diffopts] or []
         elif cmd.startswith('opts.'):
@@ -290,7 +294,9 @@ def uisetup(ui):
                 diffopts = shlex.split(path)
                 path = diffopts.pop(0)
             else:
-                path, diffopts = cmd, []
+                path, diffopts = util.findexe(cmd), []
+                if path is None:
+                    path = filemerge.findexternaltool(ui, cmd) or cmd
         # look for diff arguments in [diff-tools] then [merge-tools]
         if diffopts == []:
             args = ui.config('diff-tools', cmd+'.diffargs') or \
