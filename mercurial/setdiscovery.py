@@ -203,15 +203,19 @@ def findcommonheads(ui, local, remote,
         if full:
             ui.note(_("sampling from both directions\n"))
             sample = _takefullsample(dag, undecided, size=fullsamplesize)
+            targetsize = fullsamplesize
         elif common:
             # use cheapish initial sample
             ui.debug("taking initial sample\n")
             sample = _takefullsample(dag, undecided, size=fullsamplesize)
+            targetsize = fullsamplesize
         else:
             # use even cheaper initial sample
             ui.debug("taking quick initial sample\n")
             sample = _takequicksample(dag, undecided, size=initialsamplesize,
                                       initial=True)
+            targetsize = initialsamplesize
+        sample = _limitsample(sample, targetsize)
 
         roundtrips += 1
         ui.progress(_('searching'), roundtrips, unit=_('queries'))
