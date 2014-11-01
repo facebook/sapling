@@ -1581,3 +1581,19 @@ Test that secret mq patch does not break hgweb
   tip	[0-9a-f]{40} (re)
 
   $ cd ..
+
+Test interraction with revset (issue4426)
+
+  $ hg init issue4426
+  $ cd issue4426
+
+  $ echo a > a
+  $ hg ci -Am a
+  adding a
+  $ echo a >> a
+  $ hg ci -m a
+  $ echo a >> a
+  $ hg ci -m a
+  $ hg qimport -r 0::
+
+  $ cd ..

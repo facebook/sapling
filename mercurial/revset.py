@@ -2642,14 +2642,15 @@ class addset(abstractsmartset):
             self._ascending = not self._ascending
 
     def first(self):
-        if self:
-            return self._list.first()
+        for x in self:
+            return x
         return None
 
     def last(self):
-        if self:
-            return self._list.last()
-        return None
+        self.reverse()
+        val = self.first()
+        self.reverse()
+        return val
 
 class generatorset(abstractsmartset):
     """Wrap a generator for lazy iteration
