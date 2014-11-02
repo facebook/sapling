@@ -222,6 +222,8 @@ class RevMap(dict):
 
     @util.gcdisable
     def _load(self):
+        lastpulled = self.meta.lastpulled
+        firstpulled = self.meta.firstpulled
         for l in self.readmapfile(self.meta.revmap_file):
             revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
@@ -229,11 +231,13 @@ class RevMap(dict):
             else:
                 branch = branch[:-1]
             revnum = int(revnum)
-            if revnum > self.meta.lastpulled or not self.meta.lastpulled:
-                self.meta.lastpulled = revnum
-            if revnum < self.meta.firstpulled or not self.meta.firstpulled:
-                self.meta.firstpulled = revnum
+            if revnum > lastpulled or not lastpulled:
+                lastpulled = revnum
+            if revnum < firstpulled or not firstpulled:
+                firstpulled = revnum
             dict.__setitem__(self, (revnum, branch), node.bin(ha))
+        self.meta.lastpulled = lastpulled
+        self.meta.firstpulled = firstpulled
 
     def _write(self):
         f = open(self.meta.revmap_file, 'w')
