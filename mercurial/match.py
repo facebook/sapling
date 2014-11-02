@@ -156,13 +156,11 @@ class match(object):
         - optimization might be possible and necessary.'''
         return self._always
 
-class exact(match):
-    def __init__(self, root, cwd, files):
-        match.__init__(self, root, cwd, files, exact=True)
+def exact(root, cwd, files):
+    return match(root, cwd, files, exact=True)
 
-class always(match):
-    def __init__(self, root, cwd):
-        match.__init__(self, root, cwd, [])
+def always(root, cwd):
+    return match(root, cwd, [])
 
 class narrowmatcher(match):
     """Adapt a matcher to work on a subdirectory only.
