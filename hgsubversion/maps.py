@@ -3,7 +3,7 @@
 import errno
 import os
 from mercurial import util as hgutil
-from mercurial import node
+from mercurial.node import bin, hex, nullid
 
 import svncommands
 import util
@@ -155,7 +155,7 @@ class Tags(dict):
                 break
             if not tag:
                 continue
-            dict.__setitem__(self, tag, node.bin(ha))
+            dict.__setitem__(self, tag, bin(ha))
         f.close()
 
     def _write(self):
@@ -170,7 +170,7 @@ class Tags(dict):
 
     def __contains__(self, tag):
         return (tag and dict.__contains__(self, tag)
-                and dict.__getitem__(self, tag) != node.nullid)
+                and dict.__getitem__(self, tag) != nullid)
 
     def __getitem__(self, tag):
         if tag and tag in self:
@@ -182,7 +182,7 @@ class Tags(dict):
             raise hgutil.Abort('tag cannot be empty')
         ha, revision = info
         f = open(self.meta.tagfile, 'a')
-        f.write('%s %s %s\n' % (node.hex(ha), revision, tag))
+        f.write('%s %s %s\n' % (hex(ha), revision, tag))
         f.close()
         dict.__setitem__(self, tag, ha)
 
@@ -235,7 +235,7 @@ class RevMap(dict):
                 lastpulled = revnum
             if revnum < firstpulled or not firstpulled:
                 firstpulled = revnum
-            dict.__setitem__(self, (revnum, branch), node.bin(ha))
+            dict.__setitem__(self, (revnum, branch), bin(ha))
         self.meta.lastpulled = lastpulled
         self.meta.firstpulled = firstpulled
 
@@ -248,7 +248,7 @@ class RevMap(dict):
         revnum, branch = key
         f = open(self.meta.revmap_file, 'a')
         b = branch or ''
-        f.write(str(revnum) + ' ' + node.hex(ha) + ' ' + b + '\n')
+        f.write(str(revnum) + ' ' + hex(ha) + ' ' + b + '\n')
         f.close()
         if revnum > self.meta.lastpulled or not self.meta.lastpulled:
             self.meta.lastpulled = revnum
