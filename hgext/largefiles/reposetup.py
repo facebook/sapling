@@ -284,8 +284,7 @@ def reposetup(ui, repo):
                 # Case 1: user calls commit with no specific files or
                 # include/exclude patterns: refresh and commit all files that
                 # are "dirty".
-                if ((match is None) or
-                    (not match.anypats() and not match.files())):
+                if match is None or match.always():
                     # Spend a bit of time here to get a list of files we know
                     # are modified so we can compare only against those.
                     # It can cost a lot of time (several seconds)
