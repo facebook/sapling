@@ -23,9 +23,6 @@ you do not need to type :hg:`extdiff -p kdiff3` always. ::
   #cmd.cdiff = gdiff
   #opts.cdiff = -Nprc5
 
-  # add new command called vdiff, runs kdiff3
-  vdiff = kdiff3
-
   # add new command called meld, runs meld (no need to name twice).  If
   # the meld executable is not available, the meld tool in [merge-tools]
   # will be used, if available
