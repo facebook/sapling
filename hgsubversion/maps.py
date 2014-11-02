@@ -224,6 +224,7 @@ class RevMap(dict):
     def _load(self):
         lastpulled = self.meta.lastpulled
         firstpulled = self.meta.firstpulled
+        setitem = dict.__setitem__
         for l in self.readmapfile(self.meta.revmap_file):
             revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
@@ -235,7 +236,7 @@ class RevMap(dict):
                 lastpulled = revnum
             if revnum < firstpulled or not firstpulled:
                 firstpulled = revnum
-            dict.__setitem__(self, (revnum, branch), bin(ha))
+            setitem(self, (revnum, branch), bin(ha))
         self.meta.lastpulled = lastpulled
         self.meta.firstpulled = firstpulled
 
