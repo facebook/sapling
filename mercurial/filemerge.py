@@ -37,6 +37,9 @@ def internaltool(name, trymerge, onfailure=None):
 def _findtool(ui, tool):
     if tool in internals:
         return tool
+    return findexternaltool(ui, tool)
+
+def findexternaltool(ui, tool):
     for kn in ("regkey", "regkeyalt"):
         k = _toolstr(ui, tool, kn)
         if not k:
