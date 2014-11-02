@@ -6,7 +6,7 @@
 
 %global pythonver %{withpython}
 %global pythonname Python-%{withpython}
-%global docutilsname docutils-0.11
+%global docutilsname docutils-0.12
 %global pythonhg python-hg
 %global hgpyprefix /usr/%{pythonhg}
 # byte compilation will fail on some some Python /test/ files

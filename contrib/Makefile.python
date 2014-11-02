@@ -1,4 +1,4 @@
-PYTHONVER=2.7.6
+PYTHONVER=2.7.8
 PYTHONNAME=python-
 PREFIX=$(HOME)/bin/prefix-$(PYTHONNAME)$(PYTHONVER)
 SYMLINKDIR=$(HOME)/bin
@@ -27,7 +27,7 @@ help:
 # debian: apt-get install zlib1g-dev libbz2-dev libssl-dev
 	@echo
 	@echo 'To build a nice collection of interesting Python versions:'
-	@echo '  $$ for v in 2.{4{,.2,.3},5{,.6},6{,.1,.2,.9},7{,.6}}; do'
+	@echo '  $$ for v in 2.{4{,.2,.3},5{,.6},6{,.1,.2,.9},7{,.8}}; do'
 	@echo '    make -f Makefile.python symlink PYTHONVER=$$v || break; done'
 	@echo 'To run a Mercurial test on all these Python versions:'
 	@echo '  $$ for py in `cd ~/bin && ls $(PYTHONNAME)2.*`; do'
@@ -60,7 +60,7 @@ $(PREFIX)/bin/python:
 	printf 'import sys, zlib, bz2\nif sys.version_info >= (2,6):\n import ssl' | $(PREFIX)/bin/python
 	rm -rf $(PYTHON_SRCDIR)
 
-DOCUTILSVER=0.11
+DOCUTILSVER=0.12
 DOCUTILS_SRCDIR=docutils-$(DOCUTILSVER)
 DOCUTILS_SRCFILE=$(DOCUTILS_SRCDIR).tar.gz
 
