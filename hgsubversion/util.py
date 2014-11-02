@@ -4,6 +4,7 @@ import re
 import os
 import urllib
 import json
+import gc
 
 from mercurial import cmdutil
 from mercurial import error
@@ -55,6 +56,18 @@ def filterdiff(diff, oldrev, newrev):
     diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
     return diff
 
+def gcdisable(orig):
+    """decorator to disable GC for a function or method"""
+    def wrapper(*args, **kwargs):
+        enabled = gc.isenabled()
+        if enabled:
+            gc.disable()
+        try:
+            orig(*args, **kwargs)
+        finally:
+            if enabled:
+                gc.enable()
+    return wrapper
 
 def parentrev(ui, repo, meta, hashes):
     """Find the svn parent revision of the repo's dirstate.
