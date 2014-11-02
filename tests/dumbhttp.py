@@ -5,15 +5,18 @@ Small and dumb HTTP server for use in tests.
 """
 
 from optparse import OptionParser
-import BaseHTTPServer, SimpleHTTPServer, os, signal, subprocess, sys
+import BaseHTTPServer, SimpleHTTPServer, signal, sys
 
+from mercurial import cmdutil
 
-def run(server_class=BaseHTTPServer.HTTPServer,
-        handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler,
-        server_address=('localhost', 8000)):
-    httpd = server_class(server_address, handler_class)
-    httpd.serve_forever()
-
+class simplehttpservice(object):
+    def __init__(self, host, port):
+        self.address = (host, port)
+    def init(self):
+        self.httpd = BaseHTTPServer.HTTPServer(
+            self.address, SimpleHTTPServer.SimpleHTTPRequestHandler)
+    def run(self):
+        self.httpd.serve_forever()
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -26,6 +29,7 @@ if __name__ == '__main__':
     parser.add_option('-f', '--foreground', dest='foreground',
         action='store_true',
         help='do not start the HTTP server in the background')
+    parser.add_option('--daemon-pipefds')
 
     (options, args) = parser.parse_args()
 
@@ -34,21 +38,9 @@ if __name__ == '__main__':
     if options.foreground and options.pid:
         parser.error("options --pid and --foreground are mutually exclusive")
 
-    if options.foreground:
-        run(server_address=(options.host, options.port))
-    else:
-        # This doesn't attempt to cleanly detach the process, as it's not
-        # meant to be a long-lived, independent process. As a consequence,
-        # it's still part of the same process group, and keeps any file
-        # descriptors it might have inherited besided stdin/stdout/stderr.
-        # Trying to do things cleanly is more complicated, requires
-        # OS-dependent code, and is not worth the effort.
-        proc = subprocess.Popen([sys.executable, __file__, '-f',
-            '-H', options.host, '-p', str(options.port)],
-            stdin=open(os.devnull, 'r'),
-            stdout=open(os.devnull, 'w'),
-            stderr=subprocess.STDOUT)
-        if options.pid:
-            fp = file(options.pid, 'wb')
-            fp.write(str(proc.pid) + '\n')
-            fp.close()
+    opts = {'pid_file': options.pid,
+            'daemon': not options.foreground,
+            'daemon_pipefds': options.daemon_pipefds}
+    service = simplehttpservice(options.host, options.port)
+    cmdutil.service(opts, initfn=service.init, runfn=service.run,
+                    runargs=[sys.executable, __file__] + sys.argv[1:])
