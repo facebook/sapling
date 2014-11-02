@@ -155,6 +155,17 @@ docker-fedora20:
 	mkdir -p packages/fedora20
 	contrib/dockerrpm fedora20
 
+fedora21:
+	mkdir -p packages/fedora21
+	contrib/buildrpm
+	cp rpmbuild/RPMS/*/* packages/fedora21
+	cp rpmbuild/SRPMS/* packages/fedora21
+	rm -rf rpmbuild
+
+docker-fedora21:
+	mkdir -p packages/fedora21
+	contrib/dockerrpm fedora21
+
 centos5:
 	mkdir -p packages/centos5
 	contrib/buildrpm --withpython
@@ -188,5 +199,5 @@ docker-centos7:
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc \
 	dist dist-notests check tests check-code update-pot \
-	osx fedora20 docker-fedora20 \
+	osx fedora20 docker-fedora20 fedora21 docker-fedora21 \
 	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7
