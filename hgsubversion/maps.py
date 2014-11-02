@@ -220,6 +220,7 @@ class RevMap(dict):
             raise hgutil.Abort('revmap too new -- please upgrade')
         return f
 
+    @util.gcdisable
     def _load(self):
         for l in self.readmapfile(self.meta.revmap_file):
             revnum, ha, branch = l.split(' ', 2)
