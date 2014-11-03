@@ -90,7 +90,7 @@ def snapshot(ui, repo, files, node, tmproot):
     wopener = scmutil.opener(base)
     fns_and_mtime = []
     ctx = repo[node]
-    for fn in files:
+    for fn in sorted(files):
         wfn = util.pconvert(fn)
         if wfn not in ctx:
             # File doesn't exist; could be a bogus modify
