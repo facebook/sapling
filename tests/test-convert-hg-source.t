@@ -16,6 +16,12 @@
   $ hg copy foo baz
   $ hg ci -m 'make bar and baz copies of foo' -d '2 0'
   created new head
+
+Test that template can print all file copies (issue4362)
+  $ hg log -r . --template "{file_copies % ' File: {file_copy}\n'}"
+   File: bar (foo)
+   File: baz (foo)
+
   $ hg bookmark premerge1
   $ hg merge -r 1
   merging baz and foo to baz

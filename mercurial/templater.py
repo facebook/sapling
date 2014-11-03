@@ -153,8 +153,6 @@ def runsymbol(context, mapping, key):
         return v(**mapping)
     if isinstance(v, types.GeneratorType):
         v = list(v)
-        mapping[key] = v
-        return v
     return v
 
 def buildfilter(exp, context):
