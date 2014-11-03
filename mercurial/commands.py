@@ -5477,7 +5477,7 @@ def root(ui, repo):
     [('A', 'accesslog', '', _('name of access log file to write to'),
      _('FILE')),
     ('d', 'daemon', None, _('run server in background')),
-    ('', 'daemon-pipefds', '', _('used internally by daemon mode'), _('NUM')),
+    ('', 'daemon-pipefds', '', _('used internally by daemon mode'), _('FILE')),
     ('E', 'errorlog', '', _('name of error log file to write to'), _('FILE')),
     # use string type, then we can check if something was passed
     ('p', 'port', '', _('port to listen on (default: 8000)'), _('PORT')),
