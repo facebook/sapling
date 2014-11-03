@@ -733,7 +733,7 @@ Create parent changeset
 
 Setup working directory
 
-  $ python ../gen-revert-cases.py wc | cat
+  $ python ../gen-revert-cases.py wc
   $ hg addremove --similarity 0
   removing added_removed
   removing added_revert
