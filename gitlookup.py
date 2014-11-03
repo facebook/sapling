@@ -21,7 +21,7 @@ from mercurial import bundle2, cmdutil, exchange, extensions, encoding, hg
 from mercurial import util, wireproto, error
 from mercurial.node import nullid
 from mercurial.i18n import _
-import urllib
+import errno, urllib
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -94,7 +94,8 @@ def gitgetmeta(ui, repo, source='default'):
     ui.status(_('wrote %d files (%d bytes)\n') %
               (len(writebytes), sum(writebytes)))
 
-gitmetafiles = set(['git-mapfile', 'git-tags', 'git-remote-refs'])
+gitmetafiles = set(['git-mapfile', 'git-named-branches', 'git-tags',
+                    'git-remote-refs'])
 
 @exchange.getbundle2partsgenerator('gitmeta')
 def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
@@ -104,7 +105,9 @@ def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
             try:
                 f = repo.opener(fname)
             except (IOError, OSError), e:
-                repo.ui.warn(_("warning: unable to read %s: %s\n") % (fname, e))
+                if e.errno != errno.ENOENT:
+                    repo.ui.warn(_("warning: unable to read %s: %s\n") %
+                                 (fname, e))
                 continue
             part = bundle2.bundlepart('b2x:fb:gitmeta',
                                       [('filename', fname)],

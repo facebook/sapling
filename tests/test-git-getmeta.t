@@ -68,12 +68,14 @@ Set up the hg-git files
 
 Change a file upstream and see that it gets reflected here
   $ echo '2222222222222222222222222222222222222222 dddddddddddddddddddddddddddddddddddddddd' >> ../repo1/.hg/git-mapfile
+  $ echo 'releases/foo1 foo1' >> ../repo1/.hg/git-named-branches
   $ hg gitgetmeta -v
   getting git metadata from ssh://user@dummy/repo1
   writing .hg/git-mapfile
+  writing .hg/git-named-branches
   writing .hg/git-remote-refs
   writing .hg/git-tags
-  wrote 3 files (347 bytes)
+  wrote 4 files (366 bytes)
 
   $ cat .hg/git-mapfile
   ffffffffffffffffffffffffffffffffffffffff 3903775176ed42b1458a6281db4a0ccf4d9f287a
