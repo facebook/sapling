@@ -103,6 +103,7 @@ BROKEN: file appears twice; should be '!'
   R content1_missing_content3-untracked
   $ hg status -A --rev 1 missing_content2_missing-tracked
   ! missing_content2_missing-tracked
+BROKEN: file exists, so should be listed (as '?')
   $ hg status -A --rev 1 missing_content2_content2-untracked
   $ hg status -A --rev 1 missing_content2_content3-tracked
   A missing_content2_content3-tracked
