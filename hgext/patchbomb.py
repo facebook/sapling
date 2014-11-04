@@ -168,6 +168,31 @@ def _getpatches(repo, revs, **opts):
         cmdutil.export(repo, [r], fp=output,
                      opts=patch.diffopts(ui, opts))
         yield output.getvalue().split('\n')
+def _getbundle(repo, dest, **opts):
+    """return a bundle containing changesets missing in "dest"
+
+    The `opts` keyword-arguments are the same as the one accepted by the
+    `bundle` command.
+
+    The bundle is a returned as a single in-memory binary blob.
+    """
+    ui = repo.ui
+    tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
+    tmpfn = os.path.join(tmpdir, 'bundle')
+    try:
+        commands.bundle(ui, repo, tmpfn, dest, **opts)
+        fp = open(tmpfn, 'rb')
+        data = fp.read()
+        fp.close()
+        return data
+    finally:
+        try:
+            os.unlink(tmpfn)
+        except OSError:
+            pass
+        os.rmdir(tmpdir)
+
+
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
@@ -307,22 +332,6 @@ def patchbomb(ui, repo, *revs, **opts):
             return []
         return [str(r) for r in revs]
 
-    def getbundle(dest):
-        tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
-        tmpfn = os.path.join(tmpdir, 'bundle')
-        try:
-            commands.bundle(ui, repo, tmpfn, dest, **opts)
-            fp = open(tmpfn, 'rb')
-            data = fp.read()
-            fp.close()
-            return data
-        finally:
-            try:
-                os.unlink(tmpfn)
-            except OSError:
-                pass
-            os.rmdir(tmpdir)
-
     if not (opts.get('test') or mbox):
         # really sending
         mail.validateconfig(ui)
@@ -452,7 +461,7 @@ def patchbomb(ui, repo, *revs, **opts):
     if patches:
         msgs = getpatchmsgs(patches, opts.get('patchnames'))
     elif bundle:
-        msgs = getbundlemsgs(getbundle(dest))
+        msgs = getbundlemsgs(_getbundle(repo, dest, **opts))
     else:
         msgs = getpatchmsgs(list(_getpatches(repo, revs, **opts)))
 
