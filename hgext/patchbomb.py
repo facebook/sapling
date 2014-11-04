@@ -213,6 +213,31 @@ def _getdescription(repo, defaultbody, sender, **opts):
         msgfile.close()
     return body
 
+def _getbundlemsgs(repo, sender, bundle, **opts):
+    """Get the full email for sending a given bundle
+
+    This function returns a list of "email" tuples (subject, content, None).
+    The list is always one message long in that case.
+    """
+    ui = repo.ui
+    _charsets = mail._charsets(ui)
+    subj = (opts.get('subject')
+            or prompt(ui, 'Subject:', 'A bundle for your repository'))
+
+    body = _getdescription(repo, '', sender, **opts)
+    msg = email.MIMEMultipart.MIMEMultipart()
+    if body:
+        msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
+    datapart = email.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
+    datapart.set_payload(bundle)
+    bundlename = '%s.hg' % opts.get('bundlename', 'bundle')
+    datapart.add_header('Content-Disposition', 'attachment',
+                        filename=bundlename)
+    email.Encoders.encode_base64(datapart)
+    msg.attach(datapart)
+    msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
+    return [(msg, subj, None)]
+
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
@@ -443,24 +468,6 @@ def patchbomb(ui, repo, *revs, **opts):
                                          opts.get('test'))
         return (msg, subj, diffstat)
 
-    def getbundlemsgs(bundle):
-        subj = (opts.get('subject')
-                or prompt(ui, 'Subject:', 'A bundle for your repository'))
-
-        body = _getdescription(repo, '', sender, **opts)
-        msg = email.MIMEMultipart.MIMEMultipart()
-        if body:
-            msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
-        datapart = email.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
-        datapart.set_payload(bundle)
-        bundlename = '%s.hg' % opts.get('bundlename', 'bundle')
-        datapart.add_header('Content-Disposition', 'attachment',
-                            filename=bundlename)
-        email.Encoders.encode_base64(datapart)
-        msg.attach(datapart)
-        msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
-        return [(msg, subj, None)]
-
     sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
               prompt(ui, 'From', ui.username()))
@@ -468,7 +475,10 @@ def patchbomb(ui, repo, *revs, **opts):
     if patches:
         msgs = getpatchmsgs(patches, opts.get('patchnames'))
     elif bundle:
-        msgs = getbundlemsgs(_getbundle(repo, dest, **opts))
+        bundledata = _getbundle(repo, dest, **opts)
+        bundleopts = opts.copy()
+        bundleopts.pop('bundle', None)  # already processed
+        msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
         msgs = getpatchmsgs(list(_getpatches(repo, revs, **opts)))
 
