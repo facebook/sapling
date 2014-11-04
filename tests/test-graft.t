@@ -478,6 +478,12 @@ The graft case
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
+Test that template correctly expands more than one 'extra' (issue4362)
+  $ hg -R ../converted log -r 7 --template "{extras % ' Extra: {extra}\n'}"
+   Extra: branch=default
+   Extra: convert_revision=ef0ef43d49e79e81ddafdc7997401ba0041efc82
+   Extra: source=e0213322b2c1a5d5d236c74e79666441bee67a7d
+
 The transplant case
   $ hg -R ../converted log -r tip --template "{rev}: {node}\n{join(extras, '\n')}\n"
   21: fbb6c5cc81002f2b4b49c9d731404688bcae5ade
