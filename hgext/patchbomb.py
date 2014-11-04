@@ -483,14 +483,14 @@ def patchbomb(ui, repo, *revs, **opts):
     replyto = getaddrs('Reply-To')
 
     if opts.get('diffstat') or opts.get('confirm'):
-        ui.write(_('\nFinal summary:\n\n'))
-        ui.write(('From: %s\n' % sender))
+        ui.write(_('\nFinal summary:\n\n'), label='patchbomb.finalsummary')
+        ui.write(('From: %s\n' % sender), label='patchbomb.from')
         for addr in showaddrs:
-            ui.write('%s\n' % addr)
+            ui.write('%s\n' % addr, label='patchbomb.to')
         for m, subj, ds in msgs:
-            ui.write(('Subject: %s\n' % subj))
+            ui.write(('Subject: %s\n' % subj), label='patchbomb.subject')
             if ds:
-                ui.write(ds)
+                ui.write(ds, label='patchbomb.diffstats')
         ui.write('\n')
         if ui.promptchoice(_('are you sure you want to send (yn)?'
                              '$$ &Yes $$ &No')):
