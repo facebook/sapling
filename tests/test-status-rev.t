@@ -110,37 +110,3 @@ BROKEN: file exists, so should be listed (as '?')
   $ hg status -A --rev 1 missing_content2_missing-untracked
   $ hg status -A --rev 1 missing_missing_content3-untracked
   ? missing_missing_content3-untracked
-
-Status compared to two revisions back
-
-  $ hg status -A --rev 0 content1_content1_content1-tracked
-  A content1_content1_content1-tracked
-  $ hg status -A --rev 0 content1_content1_missing-tracked
-  ! content1_content1_missing-tracked
-BROKEN: file exists, so should be listed (as '?')
-  $ hg status -A --rev 0 content1_content1_content1-untracked
-  $ hg status -A --rev 0 content1_content1_content3-tracked
-  A content1_content1_content3-tracked
-  $ hg status -A --rev 0 content1_content1_missing-untracked
-  $ hg status -A --rev 0 content1_content2_content2-tracked
-  A content1_content2_content2-tracked
-  $ hg status -A --rev 0 content1_content2_missing-tracked
-  ! content1_content2_missing-tracked
-BROKEN: file exists, so should be listed (as '?')
-  $ hg status -A --rev 0 content1_content2_content2-untracked
-  $ hg status -A --rev 0 content1_content2_content3-tracked
-  A content1_content2_content3-tracked
-  $ hg status -A --rev 0 content1_content2_missing-untracked
-  $ hg status -A --rev 0 content1_missing_content3-tracked
-  A content1_missing_content3-tracked
-  $ hg status -A --rev 0 content1_missing_missing-tracked
-  ! content1_missing_missing-tracked
-  $ hg status -A --rev 0 content1_missing_content3-untracked
-  ? content1_missing_content3-untracked
-  $ hg status -A --rev 0 missing_content2_missing-tracked
-  ! missing_content2_missing-tracked
-BROKEN: file exists, so should be listed (as '?')
-  $ hg status -A --rev 0 missing_content2_content2-untracked
-  $ hg status -A --rev 0 missing_content2_content3-tracked
-  A missing_content2_content3-tracked
-  $ hg status -A --rev 0 missing_content2_missing-untracked
