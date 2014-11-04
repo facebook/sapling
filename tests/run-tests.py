@@ -649,7 +649,8 @@ class Test(unittest.TestCase):
         env["HGPORT2"] = str(self._startport + 2)
         env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
-        env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+        env["HGEDITOR"] = ('"' + sys.executable + '"'
+                           + ' -c "import sys; sys.exit(0)"')
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"]   = "test"
         env["HGENCODING"] = "ascii"
