@@ -15,10 +15,12 @@
   > f.close()
   > 
   > EOF
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "git=1" >> $HGRCPATH
+  > cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > [diff]
+  > git = 1
+  > EOF
   $ hg init repo
   $ cd repo
 

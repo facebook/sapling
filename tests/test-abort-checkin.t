@@ -7,9 +7,11 @@
   > EOF
   $ abspath=`pwd`/abortcommit.py
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "abortcommit = $abspath" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > abortcommit = $abspath
+  > EOF
 
   $ hg init foo
   $ cd foo

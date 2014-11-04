@@ -1,9 +1,11 @@
 Setup
 
-  $ echo "[color]" >> $HGRCPATH
-  $ echo "mode = ansi" >> $HGRCPATH
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "color=" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [color]
+  > mode = ansi
+  > [extensions]
+  > color =
+  > EOF
   $ hg init repo
   $ cd repo
   $ cat > a <<EOF
@@ -66,11 +68,13 @@ diffstat
   $ hg diff --stat --color=always
    a |  2 \x1b[0;32m+\x1b[0m\x1b[0;31m-\x1b[0m (esc)
    1 files changed, 1 insertions(+), 1 deletions(-)
-  $ echo "record=" >> $HGRCPATH
-  $ echo "[ui]" >> $HGRCPATH
-  $ echo "interactive=true" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "git=True" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > record =
+  > [ui]
+  > interactive = true
+  > [diff]
+  > git = True
+  > EOF
 
 #if execbit
 

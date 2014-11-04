@@ -419,10 +419,12 @@ branch b
   
 default branch colors:
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "color =" >> $HGRCPATH
-  $ echo "[color]" >> $HGRCPATH
-  $ echo "mode = ansi" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > color =
+  > [color]
+  > mode = ansi
+  > EOF
 
   $ hg up -C c
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -444,14 +446,16 @@ default closed branch color:
   \x1b[0;0ma\x1b[0m\x1b[0;33m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;0mdefault\x1b[0m\x1b[0;33m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "color =" >> $HGRCPATH
-  $ echo "[color]" >> $HGRCPATH
-  $ echo "branches.active = green" >> $HGRCPATH
-  $ echo "branches.closed = blue" >> $HGRCPATH
-  $ echo "branches.current = red" >> $HGRCPATH
-  $ echo "branches.inactive = magenta" >> $HGRCPATH
-  $ echo "log.changeset = cyan" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > color =
+  > [color]
+  > branches.active = green
+  > branches.closed = blue
+  > branches.current = red
+  > branches.inactive = magenta
+  > log.changeset = cyan
+  > EOF
 
 custom branch colors:
 

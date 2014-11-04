@@ -2,10 +2,12 @@
 Test interactions between mq and patch.eol
 
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "nodates=1" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > [diff]
+  > nodates = 1
+  > EOF
 
   $ cat > makepatch.py <<EOF
   > f = file('eol.diff', 'wb')

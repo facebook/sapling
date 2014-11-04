@@ -1,8 +1,10 @@
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "convert = " >> $HGRCPATH
-  $ echo "[convert]" >> $HGRCPATH
-  $ echo "hg.tagsbranch=0" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > convert =
+  > [convert]
+  > hg.tagsbranch = 0
+  > EOF
   $ hg init source
   $ cd source
   $ echo a > a

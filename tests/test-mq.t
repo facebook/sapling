@@ -5,11 +5,12 @@
   >     fi
   > }
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-
-  $ echo "[mq]" >> $HGRCPATH
-  $ echo "plain=true" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > [mq]
+  > plain = true
+  > EOF
 
 
 help

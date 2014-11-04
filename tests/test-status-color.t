@@ -1,7 +1,9 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "color=" >> $HGRCPATH
-  $ echo "[color]" >> $HGRCPATH
-  $ echo "mode=ansi" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > color =
+  > [color]
+  > mode = ansi
+  > EOF
 Terminfo codes compatibility fix
   $ echo "color.none=0" >> $HGRCPATH
 

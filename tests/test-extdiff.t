@@ -16,11 +16,13 @@ Should diff cloned directories:
   Only in a: b
   [1]
 
-  $ echo "[extdiff]" >> $HGRCPATH
-  $ echo "cmd.falabala=echo" >> $HGRCPATH
-  $ echo "opts.falabala=diffing" >> $HGRCPATH
-  $ echo "cmd.edspace=echo" >> $HGRCPATH
-  $ echo 'opts.edspace="name  <user@example.com>"' >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extdiff]
+  > cmd.falabala = echo
+  > opts.falabala = diffing
+  > cmd.edspace = echo
+  > opts.edspace = "name  <user@example.com>"
+  > EOF
 
   $ hg falabala
   diffing a.000000000000 a

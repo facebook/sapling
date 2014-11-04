@@ -1,9 +1,11 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "shelve=" >> $HGRCPATH
-  $ echo "[defaults]" >> $HGRCPATH
-  $ echo "diff = --nodates --git" >> $HGRCPATH
-  $ echo "qnew = --date '0 0'" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > shelve =
+  > [defaults]
+  > diff = --nodates --git
+  > qnew = --date '0 0'
+  > EOF
 
   $ hg init repo
   $ cd repo

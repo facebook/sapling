@@ -23,11 +23,13 @@ XXX copied from test-convert-cvs-synthetic
 
 XXX copied from test-convert-cvs-synthetic
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "convert = " >> $HGRCPATH
-  $ echo "[convert]" >> $HGRCPATH
-  $ echo "cvsps.cache=0" >> $HGRCPATH
-  $ echo "cvsps.mergefrom=\[MERGE from (\S+)\]" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > convert =
+  > [convert]
+  > cvsps.cache = 0
+  > cvsps.mergefrom = \[MERGE from (\S+)\]
+  > EOF
 
 create cvs repository with one project
 

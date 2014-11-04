@@ -176,10 +176,12 @@ Catch exporting unknown revisions (especially empty revsets, see issue3353)
   [255]
 
 Check for color output
-  $ echo "[color]" >> $HGRCPATH
-  $ echo "mode = ansi" >> $HGRCPATH
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "color=" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [color]
+  > mode = ansi
+  > [extensions]
+  > color =
+  > EOF
 
   $ hg export --color always --nodates tip
   # HG changeset patch

@@ -7,10 +7,12 @@ and http://mercurial.selenic.com/bts/issue1447
   > {
   >     cvs -f "$@" > /dev/null
   > }
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "convert = " >> $HGRCPATH
-  $ echo "[convert]" >> $HGRCPATH
-  $ echo "cvsps.cache=0" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > convert =
+  > [convert]
+  > cvsps.cache = 0
+  > EOF
 
 create cvs repository
 

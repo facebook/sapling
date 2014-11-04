@@ -44,9 +44,11 @@ Reset hgrc
 
 Test case sensitive configuration
 
-  $ echo '[Section]' >> $HGRCPATH
-  $ echo 'KeY = Case Sensitive' >> $HGRCPATH
-  $ echo 'key = lower case' >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [Section]
+  > KeY = Case Sensitive
+  > key = lower case
+  > EOF
 
   $ hg showconfig Section
   Section.KeY=Case Sensitive

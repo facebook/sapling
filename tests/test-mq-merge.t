@@ -1,9 +1,11 @@
 Setup extension:
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq =" >> $HGRCPATH
-  $ echo "[mq]" >> $HGRCPATH
-  $ echo "git = keep" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > [mq]
+  > git = keep
+  > EOF
 
 Test merge with mq changeset as the second parent:
 

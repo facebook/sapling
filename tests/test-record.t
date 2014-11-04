@@ -1,9 +1,11 @@
 Set up a repo
 
-  $ echo "[ui]" >> $HGRCPATH
-  $ echo "interactive=true" >> $HGRCPATH
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "record=" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interactive = true
+  > [extensions]
+  > record =
+  > EOF
 
   $ hg init a
   $ cd a

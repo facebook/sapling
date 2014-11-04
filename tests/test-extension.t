@@ -557,11 +557,13 @@ Issue811: Problem loading extensions twice (by site and by user)
   >     "yet another debug command"
   >     ui.write("%s\n" % '\n'.join([x for x, y in extensions.extensions()]))
   > EOF
-  $ echo "debugissue811 = $debugpath" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "strip=" >> $HGRCPATH
-  $ echo "hgext.mq=" >> $HGRCPATH
-  $ echo "hgext/mq=" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > debugissue811 = $debugpath
+  > mq =
+  > strip =
+  > hgext.mq =
+  > hgext/mq =
+  > EOF
 
 Show extensions:
 (note that mq force load strip, also checking it's not loaded twice)
@@ -812,9 +814,11 @@ Commands handling multiple repositories at a time should invoke only
   $ hg -q -R pull-src1 pull src
   reposetup() for $TESTTMP/reposetup-test/src (glob)
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo '# disable extension globally and explicitly' >> $HGRCPATH
-  $ echo 'reposetuptest = !' >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > # disable extension globally and explicitly
+  > reposetuptest = !
+  > EOF
   $ hg clone -U src clone-dst2
   reposetup() for $TESTTMP/reposetup-test/src (glob)
   $ hg init push-dst2
@@ -824,9 +828,11 @@ Commands handling multiple repositories at a time should invoke only
   $ hg -q -R pull-src2 pull src
   reposetup() for $TESTTMP/reposetup-test/src (glob)
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo '# enable extension globally' >> $HGRCPATH
-  $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > # enable extension globally
+  > reposetuptest = $TESTTMP/reposetuptest.py
+  > EOF
   $ hg clone -U src clone-dst3
   reposetup() for $TESTTMP/reposetup-test/src (glob)
   reposetup() for $TESTTMP/reposetup-test/clone-dst3 (glob)
@@ -862,9 +868,11 @@ disabling in command line overlays with all configuration
   $ hg --config extensions.reposetuptest=! init pull-src5
   $ hg --config extensions.reposetuptest=! -q -R pull-src5 pull src
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo '# disable extension globally and explicitly' >> $HGRCPATH
-  $ echo 'reposetuptest = !' >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > # disable extension globally and explicitly
+  > reposetuptest = !
+  > EOF
   $ hg init parent
   $ hg init parent/sub1
   $ echo 1 > parent/sub1/1

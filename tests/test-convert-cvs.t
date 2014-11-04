@@ -18,9 +18,11 @@
   >     print "%s hook: %d changesets"%(hooktype,len(changesets))
   > EOF
   $ hookpath=`pwd`
-  $ echo "[hooks]" >> $HGRCPATH
-  $ echo "cvslog=python:$hookpath/cvshooks.py:cvslog" >> $HGRCPATH
-  $ echo "cvschangesets=python:$hookpath/cvshooks.py:cvschangesets" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [hooks]
+  > cvslog = python:$hookpath/cvshooks.py:cvslog
+  > cvschangesets = python:$hookpath/cvshooks.py:cvschangesets
+  > EOF
 
 create cvs repository
 

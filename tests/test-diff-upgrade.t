@@ -1,9 +1,11 @@
 #require execbit
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "autodiff=$TESTDIR/autodiff.py" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "nodates=1" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > autodiff = $TESTDIR/autodiff.py
+  > [diff]
+  > nodates = 1
+  > EOF
 
   $ hg init repo
   $ cd repo

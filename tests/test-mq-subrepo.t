@@ -1,10 +1,12 @@
-  $ echo "[ui]" >> $HGRCPATH
-  $ echo "commitsubrepos = Yes" >> $HGRCPATH
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "record=" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "nodates=1" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > commitsubrepos = Yes
+  > [extensions]
+  > mq =
+  > record =
+  > [diff]
+  > nodates = 1
+  > EOF
 
   $ stdin=`pwd`/stdin.tmp
 

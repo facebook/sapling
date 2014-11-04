@@ -1,8 +1,10 @@
 #require svn svn-bindings
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "convert = " >> $HGRCPATH
-  $ echo "mq = " >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > convert =
+  > mq =
+  > EOF
 
   $ SVNREPOPATH=`pwd`/svn-repo
 #if windows

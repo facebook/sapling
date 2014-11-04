@@ -1,9 +1,11 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "[mq]" >> $HGRCPATH
-  $ echo "git=keep" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "nodates=1" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > [mq]
+  > git = keep
+  > [diff]
+  > nodates = 1
+  > EOF
 
 init:
 

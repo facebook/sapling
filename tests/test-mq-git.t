@@ -1,10 +1,12 @@
 # Test the plumbing of mq.git option
 # Automatic upgrade itself is tested elsewhere.
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mq=" >> $HGRCPATH
-  $ echo "[diff]" >> $HGRCPATH
-  $ echo "nodates=1" >> $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > mq =
+  > [diff]
+  > nodates = 1
+  > EOF
 
   $ hg init repo-auto
   $ cd repo-auto
