@@ -67,7 +67,6 @@ Source: contrib\mq.el; DestDir: {app}/Contrib
 Source: contrib\hgweb.fcgi; DestDir: {app}/Contrib
 Source: contrib\hgweb.wsgi; DestDir: {app}/Contrib
 Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
-Source: contrib\win32\mercurial.ini; DestDir: {app}; DestName: Mercurial.ini; Check: CheckFile;
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 #if ARCH == "x64"
@@ -93,10 +92,13 @@ Source: COPYING; DestDir: {app}; DestName: Copying.txt
 
 [INI]
 Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http://mercurial.selenic.com/
-Filename: {app}\Mercurial.ini; Section: web; Key: cacerts; String: {app}\cacert.pem
+Filename: {app}\default.d\editor.rc; Section: ui; Key: editor; String: notepad
+Filename: {app}\default.d\cacerts.rc; Section: web; Key: cacerts; String: {app}\cacert.pem
 
 [UninstallDelete]
 Type: files; Name: {app}\Mercurial.url
+Type: filesandordirs; Name: {app}\default.d
+Type: files; Name: "{app}\hg.exe.local"
 
 [Icons]
 Name: {group}\Uninstall Mercurial; Filename: {uninstallexe}
@@ -111,26 +113,7 @@ Filename: "{app}\add_path.exe"; Parameters: "{app}"; Flags: postinstall; Descrip
 [UninstallRun]
 Filename: "{app}\add_path.exe"; Parameters: "/del {app}"
 
-[UninstallDelete]
-Type: files; Name: "{app}\hg.exe.local"
-
 [Code]
-var
-  WriteFile: Boolean;
-  CheckDone: Boolean;
-
-function CheckFile(): Boolean;
-begin
-  if not CheckDone then begin
-    WriteFile := True;
-    if FileExists(ExpandConstant(CurrentFileName)) then begin
-        WriteFile := MsgBox('' + ExpandConstant(CurrentFileName) + '' #13#13 'The file already exists.' #13#13 'Would you like Setup to overwrite it?', mbConfirmation, MB_YESNO) = idYes;
-    end;
-    CheckDone := True;
-  end;
-  Result := WriteFile;
-end;
-
 procedure Touch(fn: String);
 begin
   SaveStringToFile(ExpandConstant(fn), '', False);
