@@ -192,6 +192,26 @@ def _getbundle(repo, dest, **opts):
             pass
         os.rmdir(tmpdir)
 
+def _getdescription(repo, defaultbody, sender, **opts):
+    """obtain the body of the introduction message and return it
+
+    This is also used for the body of email with an attached bundle.
+
+    The body can be obtained either from the command line option or entered by
+    the user through the editor.
+    """
+    ui = repo.ui
+    if opts.get('desc'):
+        body = open(opts.get('desc')).read()
+    else:
+        ui.write(_('\nWrite the introductory message for the '
+                   'patch series.\n\n'))
+        body = ui.edit(defaultbody, sender)
+        # Save series description in case sendmail fails
+        msgfile = repo.opener('last-email.txt', 'wb')
+        msgfile.write(body)
+        msgfile.close()
+    return body
 
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
@@ -368,19 +388,6 @@ def patchbomb(ui, repo, *revs, **opts):
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
 
-    def getdescription(body, sender):
-        if opts.get('desc'):
-            body = open(opts.get('desc')).read()
-        else:
-            ui.write(_('\nWrite the introductory message for the '
-                       'patch series.\n\n'))
-            body = ui.edit(body, sender)
-            # Save series description in case sendmail fails
-            msgfile = repo.opener('last-email.txt', 'wb')
-            msgfile.write(body)
-            msgfile.close()
-        return body
-
     def getpatchmsgs(patches, patchnames=None):
         msgs = []
 
@@ -430,7 +437,7 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             diffstat = None
 
-        body = getdescription(body, sender)
+        body = _getdescription(repo, body, sender, **opts)
         msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
         msg['Subject'] = mail.headencode(ui, subj, _charsets,
                                          opts.get('test'))
@@ -440,7 +447,7 @@ def patchbomb(ui, repo, *revs, **opts):
         subj = (opts.get('subject')
                 or prompt(ui, 'Subject:', 'A bundle for your repository'))
 
-        body = getdescription('', sender)
+        body = _getdescription(repo, '', sender, **opts)
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
