@@ -422,62 +422,9 @@ Special cases from merge and rename are not tested by this section.
 Write the python script to disk
 -------------------------------
 
-  $ cat << EOF > gen-revert-cases.py
-  > # generate proper file state to test revert behavior
-  > import sys
-  > import os
-  > 
-  > # build the combination of possible states
-  > combination = []
-  > for base in [None, 'content1']:
-  >     for parent in set([None, 'content2']) | set([base]):
-  >         for wcc in set([None, 'content3']) | set([base, parent]):
-  >             for tracked in (False, True):
-  >                 def statestring(content):
-  >                     return content is None and 'missing' or content
-  >                 trackedstring = tracked and 'tracked' or 'untracked'
-  >                 filename = "%s_%s_%s-%s" % (statestring(base),
-  >                                             statestring(parent),
-  >                                             statestring(wcc),
-  >                                             trackedstring)
-  >                 combination.append((filename, base, parent, wcc))
-  > 
-  > # make sure we have stable output
-  > combination.sort()
-  > 
-  > # retrieve the state we must generate
-  > target = sys.argv[1]
-  > 
-  > # compute file content
-  > content = []
-  > for filename, base, parent, wcc in combination:
-  >     if target == 'filelist':
-  >         print filename
-  >     elif target == 'base':
-  >         content.append((filename, base))
-  >     elif target == 'parent':
-  >         content.append((filename, parent))
-  >     elif target == 'wc':
-  >         # Make sure there is content so the file gets written and can be
-  >         # tracked. It will be deleted outside of this script.
-  >         content.append((filename, wcc or 'TOBEDELETED'))
-  >     else:
-  >         print >> sys.stderr, "unknown target:", target
-  >         sys.exit(1)
-  > 
-  > # write actual content
-  > for filename, data in content:
-  >     if data is not None:
-  >         f = open(filename, 'w')
-  >         f.write(data + '\n')
-  >         f.close()
-  >     elif os.path.exists(filename):
-  >        os.remove(filename)
-  > EOF
-
 check list of planned files
 
-  $ python gen-revert-cases.py filelist
+  $ python $TESTDIR/generate-working-copy-states.py filelist
   content1_content1_content1-tracked
   content1_content1_content1-untracked
   content1_content1_content3-tracked
@@ -532,7 +479,7 @@ Generate appropriate repo state
 
 Generate base changeset
 
-  $ python ../gen-revert-cases.py base
+  $ python $TESTDIR/generate-working-copy-states.py base
   $ hg addremove --similarity 0
   adding content1_content1_content1-tracked
   adding content1_content1_content1-untracked
@@ -604,7 +551,7 @@ Generate base changeset
 
 Create parent changeset
 
-  $ python ../gen-revert-cases.py parent
+  $ python $TESTDIR/generate-working-copy-states.py parent
   $ hg addremove --similarity 0
   removing content1_missing_content1-tracked
   removing content1_missing_content1-untracked
@@ -668,7 +615,7 @@ Create parent changeset
 
 Setup working directory
 
-  $ python ../gen-revert-cases.py wc
+  $ python $TESTDIR/generate-working-copy-states.py wc
   $ hg addremove --similarity 0
   adding content1_missing_content1-tracked
   adding content1_missing_content1-untracked
@@ -885,7 +832,7 @@ Test revert to parent content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-  $ for file in `python ../gen-revert-cases.py filelist`; do
+  $ for file in `python $TESTDIR/generate-working-copy-states.py filelist`; do
   >   echo '### revert for:' $file;
   >   hg revert $file;
   >   echo
@@ -978,7 +925,7 @@ Test revert to "base" content with explicit file name
 revert all files individually and check the output
 (output is expected to be different than in the --all case)
 
-  $ for file in `python ../gen-revert-cases.py filelist`; do
+  $ for file in `python $TESTDIR/generate-working-copy-states.py filelist`; do
   >   echo '### revert for:' $file;
   >   hg revert $file --rev 'desc(base)';
   >   echo
