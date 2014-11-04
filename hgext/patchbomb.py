@@ -153,6 +153,21 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     msg['X-Mercurial-Series-Total'] = '%i' % total
     return msg, subj, ds
 
+def _getpatches(repo, revs, **opts):
+    """return a list of patches for a list of revisions
+
+    Each patch in the list is itself a list of lines.
+    """
+    ui = repo.ui
+    prev = repo['.'].rev()
+    for r in scmutil.revrange(repo, revs):
+        if r == prev and (repo[None].files() or repo[None].deleted()):
+            ui.warn(_('warning: working directory has '
+                      'uncommitted changes\n'))
+        output = cStringIO.StringIO()
+        cmdutil.export(repo, [r], fp=output,
+                     opts=patch.diffopts(ui, opts))
+        yield output.getvalue().split('\n')
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
@@ -291,17 +306,6 @@ def patchbomb(ui, repo, *revs, **opts):
             ui.status(_("no changes found\n"))
             return []
         return [str(r) for r in revs]
-
-    def getpatches(revs):
-        prev = repo['.'].rev()
-        for r in scmutil.revrange(repo, revs):
-            if r == prev and (repo[None].files() or repo[None].deleted()):
-                ui.warn(_('warning: working directory has '
-                          'uncommitted changes\n'))
-            output = cStringIO.StringIO()
-            cmdutil.export(repo, [r], fp=output,
-                         opts=patch.diffopts(ui, opts))
-            yield output.getvalue().split('\n')
 
     def getbundle(dest):
         tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
@@ -450,7 +454,7 @@ def patchbomb(ui, repo, *revs, **opts):
     elif bundle:
         msgs = getbundlemsgs(getbundle(dest))
     else:
-        msgs = getpatchmsgs(list(getpatches(revs)))
+        msgs = getpatchmsgs(list(_getpatches(repo, revs, **opts)))
 
     showaddrs = []
 
