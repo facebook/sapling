@@ -1093,8 +1093,13 @@ class GitHandler(object):
 
         # filter refs older than min_timestamp
         min_timestamp, min_offset = hgutil.parsedate(min_date)
+        def check_min_time(obj):
+            if isinstance(obj, Tag):
+                return obj.tag_time >= min_timestamp
+            else:
+                return obj.commit_time >= min_timestamp
         return util.OrderedDict((ref, sha) for ref, sha in refs.iteritems()
-                                if self.git[sha].commit_time >= min_timestamp)
+                                if check_min_time(self.git[sha]))
 
     def update_references(self):
         exportable = self.get_exportable()

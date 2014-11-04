@@ -270,6 +270,15 @@ and not the author date
   $ GIT_AUTHOR_DATE="2014-03-01 00:00:00 +0000" \
   > GIT_COMMITTER_DATE="2009-01-01 00:00:00 +0000" \
   > git commit -m oldcommit > /dev/null || echo "git commit error"
+also add an annotated tag
+  $ git checkout -q master^
+  $ echo oldtag > oldtag
+  $ git add oldtag
+  $ GIT_AUTHOR_DATE="2014-03-01 00:00:00 +0000" \
+  > GIT_COMMITTER_DATE="2009-01-01 00:00:00 +0000" \
+  > git commit -m oldtag > /dev/null || echo "git commit error"
+  $ GIT_COMMITTER_DATE="2009-02-01 00:00:00 +0000" \
+  > git tag -a -m 'tagging oldtag' oldtag
   $ cd ..
   $ hg -R hgrepo pull
   pulling from $TESTTMP/gitrepo
@@ -285,22 +294,57 @@ and not the author date
   
 
   $ cd gitrepo
+  $ git checkout -q master
   $ echo newcommit > newcommit
   $ git add newcommit
   $ GIT_AUTHOR_DATE="2014-01-01 00:00:00 +0000" \
   > GIT_COMMITTER_DATE="2014-01-02 00:00:00 +0000" \
   > git commit -m newcommit > /dev/null || echo "git commit error"
+  $ git checkout -q refs/tags/oldtag
+  $ GIT_COMMITTER_DATE="2014-01-02 00:00:00 +0000" \
+  > git tag -a -m 'tagging newtag' newtag
   $ cd ..
   $ hg -R hgrepo pull
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg heads .' to see heads, 'hg merge' to merge)
-  $ hg -R hgrepo log -r master
-  changeset:   8:c7d0cf1a7601
+  $ hg -R hgrepo heads
+  changeset:   9:c7d0cf1a7601
   bookmark:    master
   tag:         default/master
   tag:         tip
   user:        test <test@example.org>
   date:        Wed Jan 01 00:00:00 2014 +0000
   summary:     newcommit
+  
+  changeset:   7:d416c428c92d
+  tag:         newtag
+  tag:         oldtag
+  parent:      4:892d20308ddf
+  user:        test <test@example.org>
+  date:        Sat Mar 01 00:00:00 2014 +0000
+  summary:     oldtag
+  
+  changeset:   6:bdc34645137e
+  bookmark:    releases/v2
+  tag:         default/releases/v2
+  parent:      4:892d20308ddf
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:15 2007 +0000
+  summary:     add eta
+  
+  changeset:   5:3e35a45c61f9
+  bookmark:    releases/v1
+  tag:         default/releases/v1
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:14 2007 +0000
+  summary:     add zeta
+  
+  changeset:   2:4d41070bf840
+  bookmark:    delta
+  tag:         default/delta
+  parent:      0:3442585be8a6
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:12 2007 +0000
+  summary:     add delta
   
