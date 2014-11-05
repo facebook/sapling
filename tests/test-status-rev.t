@@ -69,44 +69,41 @@ Working copy
 
 Status compared to one revision back
 
-  $ hg status -A --rev 1 content1_content1_content1-tracked
-  C content1_content1_content1-tracked
-BROKEN: file appears twice; should be '!'
-  $ hg status -A --rev 1 content1_content1_missing-tracked
-  ! content1_content1_missing-tracked
-  C content1_content1_missing-tracked
-  $ hg status -A --rev 1 content1_content1_content1-untracked
-  R content1_content1_content1-untracked
-  $ hg status -A --rev 1 content1_content1_content3-tracked
+  $ hg status -A --rev 1 'glob:content1_*_content[23]-tracked'
   M content1_content1_content3-tracked
-  $ hg status -A --rev 1 content1_content1_missing-untracked
-  R content1_content1_missing-untracked
-  $ hg status -A --rev 1 content1_content2_content2-tracked
   M content1_content2_content2-tracked
-BROKEN: file appears twice; should be '!'
-  $ hg status -A --rev 1 content1_content2_missing-tracked
-  ! content1_content2_missing-tracked
-  C content1_content2_missing-tracked
-  $ hg status -A --rev 1 content1_content2_content2-untracked
-  R content1_content2_content2-untracked
-  $ hg status -A --rev 1 content1_content2_content3-tracked
   M content1_content2_content3-tracked
-  $ hg status -A --rev 1 content1_content2_missing-untracked
-  R content1_content2_missing-untracked
-  $ hg status -A --rev 1 content1_missing_content3-tracked
   M content1_missing_content3-tracked
-BROKEN: file appears twice; should be '!'
-  $ hg status -A --rev 1 content1_missing_missing-tracked
-  R content1_missing_missing-tracked
-  ! content1_missing_missing-tracked
-  $ hg status -A --rev 1 content1_missing_content3-untracked
-  R content1_missing_content3-untracked
-  $ hg status -A --rev 1 missing_content2_missing-tracked
-  ! missing_content2_missing-tracked
-BROKEN: file exists, so should be listed (as '?')
-  $ hg status -A --rev 1 missing_content2_content2-untracked
-  $ hg status -A --rev 1 missing_content2_content3-tracked
+  $ hg status -A --rev 1 'glob:content1_*_content1-tracked'
+  C content1_content1_content1-tracked
+  C content1_content2_content1-tracked
+  C content1_missing_content1-tracked
+  $ hg status -A --rev 1 'glob:missing_*_content?-tracked'
+  A missing_content2_content2-tracked
   A missing_content2_content3-tracked
-  $ hg status -A --rev 1 missing_content2_missing-untracked
-  $ hg status -A --rev 1 missing_missing_content3-untracked
+  A missing_missing_content3-tracked
+BROKEN: missing_content2_content[23]-untracked exist, so should be listed
+  $ hg status -A --rev 1 'glob:missing_*_content?-untracked'
   ? missing_missing_content3-untracked
+  $ hg status -A --rev 1 'glob:content1_*_*-untracked'
+  R content1_content1_content1-untracked
+  R content1_content1_content3-untracked
+  R content1_content1_missing-untracked
+  R content1_content2_content1-untracked
+  R content1_content2_content2-untracked
+  R content1_content2_content3-untracked
+  R content1_content2_missing-untracked
+  R content1_missing_content1-untracked
+  R content1_missing_content3-untracked
+  R content1_missing_missing-untracked
+BROKEN: content1_*_missing-tracked appear twice; should just be '!'
+  $ hg status -A --rev 1 'glob:*_*_missing-tracked'
+  R content1_missing_missing-tracked
+  ! content1_content1_missing-tracked
+  ! content1_content2_missing-tracked
+  ! content1_missing_missing-tracked
+  ! missing_content2_missing-tracked
+  ! missing_missing_missing-tracked
+  C content1_content1_missing-tracked
+  C content1_content2_missing-tracked
+  $ hg status -A --rev 1 'glob:missing_*_missing-untracked'
