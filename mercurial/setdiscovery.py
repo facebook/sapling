@@ -134,6 +134,8 @@ def findcommonheads(ui, local, remote,
     roundtrips += 1
     ownheads = dag.heads()
     sample = _limitsample(ownheads, initialsamplesize)
+    # indices between sample and externalized version must match
+    sample = list(sample)
     if remote.local():
         # stopgap until we have a proper localpeer that supports batch()
         srvheadhashes = remote.heads()
@@ -165,7 +167,7 @@ def findcommonheads(ui, local, remote,
         ui.debug("all remote heads known locally\n")
         return (srvheadhashes, False, srvheadhashes,)
 
-    if sample and util.all(yesno):
+    if sample and len(ownheads) <= initialsamplesize and util.all(yesno):
         ui.note(_("all local heads known remotely\n"))
         ownheadhashes = dag.externalizeall(ownheads)
         return (ownheadhashes, True, srvheadhashes,)
