@@ -11,11 +11,10 @@
 import os
 import copy
 
-from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
+from mercurial import hg, util, cmdutil, scmutil, match as match_, \
         archival, pathutil, revset
 from mercurial.i18n import _
 from mercurial.node import hex
-from hgext import rebase
 
 import lfutil
 import lfcommands
@@ -710,37 +709,14 @@ def overriderevert(orig, ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
-# When we rebase a repository with remotely changed largefiles, we need to
-# take some extra care so that the largefiles are correctly updated in the
-# working copy
+# after pulling changesets, we need to take some extra care to get
+# largefiles updated remotely
 def overridepull(orig, ui, repo, source=None, **opts):
     revsprepull = len(repo)
     if not source:
         source = 'default'
     repo.lfpullsource = source
-    if opts.get('rebase', False):
-        repo._isrebasing = True
-        try:
-            if opts.get('update'):
-                del opts['update']
-                ui.debug('--update and --rebase are not compatible, ignoring '
-                         'the update flag\n')
-            del opts['rebase']
-            origpostincoming = commands.postincoming
-            def _dummy(*args, **kwargs):
-                pass
-            commands.postincoming = _dummy
-            try:
-                result = commands.pull(ui, repo, source, **opts)
-            finally:
-                commands.postincoming = origpostincoming
-            revspostpull = len(repo)
-            if revspostpull > revsprepull:
-                result = result or rebase.rebase(ui, repo)
-        finally:
-            repo._isrebasing = False
-    else:
-        result = orig(ui, repo, source, **opts)
+    result = orig(ui, repo, source, **opts)
     revspostpull = len(repo)
     lfrevs = opts.get('lfrev', [])
     if opts.get('all_largefiles'):
