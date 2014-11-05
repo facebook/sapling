@@ -104,6 +104,7 @@ def _smtp(ui):
         if util.parsebool(verifycert) is not False:
             raise util.Abort(_('invalid smtp.verifycert configuration: %s')
                              % (verifycert))
+        verifycert = False
     if (starttls or smtps) and verifycert:
         sslkwargs = sslutil.sslkwargs(ui, mailhost)
     else:
