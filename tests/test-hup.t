@@ -34,5 +34,14 @@ Do test while holding fifo open
   rollback completed
   killed!
 
-  $ echo .hg/* .hg/store/*
-  .hg/00changelog.i .hg/journal.bookmarks .hg/journal.branch .hg/journal.desc .hg/journal.dirstate .hg/requires .hg/store .hg/store/00changelog.i .hg/store/00changelog.i.a .hg/store/journal.phaseroots
+  $ ls -1d .hg/* .hg/store/*
+  .hg/00changelog.i
+  .hg/journal.bookmarks
+  .hg/journal.branch
+  .hg/journal.desc
+  .hg/journal.dirstate
+  .hg/requires
+  .hg/store
+  .hg/store/00changelog.i
+  .hg/store/00changelog.i.a
+  .hg/store/journal.phaseroots
