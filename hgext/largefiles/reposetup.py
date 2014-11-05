@@ -262,7 +262,8 @@ def reposetup(ui, repo):
 
             wlock = self.wlock()
             try:
-                match = lfutil.updatestandinsbymatch(self, match)
+                lfcommithook = self._lfcommithooks[-1]
+                match = lfcommithook(self, match)
                 result = orig(text=text, user=user, date=date, match=match,
                                 force=force, editor=editor, extra=extra)
                 return result
@@ -337,6 +338,10 @@ def reposetup(ui, repo):
             return actualfiles
 
     repo.__class__ = lfilesrepo
+
+    # stack of hooks being executed before committing.
+    # only last element ("_lfcommithooks[-1]") is used for each committing.
+    repo._lfcommithooks = [lfutil.updatestandinsbymatch]
 
     def prepushoutgoinghook(local, remote, outgoing):
         if outgoing.missing:
