@@ -91,19 +91,20 @@ class transaction(object):
         self.onabort = onabort
         self.entries = []
         self.map = {}
-        # a list of ('path', 'backuppath') entries.
-        # if 'backuppath' is empty, no file existed at backup time
-        self._backupentries = []
-        self._backupmap = {}
         self.journal = journal
         self._queue = []
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
-
-        self._backupjournal = "%s.backupfiles" % journal
         self.file = opener.open(self.journal, "w")
+
+        # a list of ('path', 'backuppath') entries.
+        # if 'backuppath' is empty, no file existed at backup time
+        self._backupentries = []
+        self._backupmap = {}
+        self._backupjournal = "%s.backupfiles" % journal
         self._backupsfile = opener.open(self._backupjournal, 'w')
         self._backupsfile.write('%d\n' % version)
+
         if createmode is not None:
             opener.chmod(self.journal, createmode & 0666)
             opener.chmod(self._backupjournal, createmode & 0666)
