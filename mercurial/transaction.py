@@ -44,7 +44,7 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
 
     backupfiles = []
     for f, b in backupentries:
-        if b:
+        if f and b:
             filepath = opener.join(f)
             backuppath = opener.join(b)
             try:
@@ -54,8 +54,9 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
                 report(_("failed to recover %s\n") % f)
                 raise
         else:
+            target = f or b
             try:
-                opener.unlink(f)
+                opener.unlink(target)
             except (IOError, OSError), inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -65,7 +66,8 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
     if opener.exists(backuppath):
         opener.unlink(backuppath)
     for f in backupfiles:
-        opener.unlink(f)
+        if opener.exists(f):
+            opener.unlink(f)
 
 class transaction(object):
     def __init__(self, report, opener, journal, after=None, createmode=None,
@@ -99,6 +101,7 @@ class transaction(object):
 
         # a list of ('path', 'backuppath') entries.
         # if 'backuppath' is empty, no file existed at backup time
+        # if 'path' is empty, this is a temporary transaction file
         self._backupentries = []
         self._backupmap = {}
         self._backupjournal = "%s.backupfiles" % journal
@@ -198,6 +201,15 @@ class transaction(object):
         self._backupmap[file] = len(self._backupentries) - 1
         self._backupsfile.write("%s\0%s\n" % entry)
         self._backupsfile.flush()
+
+    @active
+    def registertmp(self, tmpfile):
+        """register a temporary transaction file
+
+        Such file will be delete when the transaction exit (on both failure and
+        success).
+        """
+        self._addbackupentry(('', tmpfile))
 
     @active
     def addfilegenerator(self, genid, filenames, genfunc, order=0, vfs=None):
@@ -342,6 +354,10 @@ class transaction(object):
             return
         self.file.close()
         self._backupsfile.close()
+        # cleanup temporary files
+        for f, b in self._backupentries:
+            if not f and b and self.opener.exists(b):
+                self.opener.unlink(b)
         self.entries = []
         if self.after:
             self.after()
@@ -350,7 +366,7 @@ class transaction(object):
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
             for _f, b in self._backupentries:
-                if b:
+                if b and self.opener.exists(b):
                     self.opener.unlink(b)
         self._backupentries = []
         self.journal = None
