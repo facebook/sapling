@@ -792,11 +792,11 @@ def hgclone(orig, ui, opts, *args, **kwargs):
 def overriderebase(orig, ui, repo, **opts):
     resuming = opts.get('continue')
     repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
-    repo._isrebasing = True
+    repo._lfstatuswriters.append(lambda *msg, **opts: None)
     try:
         return orig(ui, repo, **opts)
     finally:
-        repo._isrebasing = False
+        repo._lfstatuswriters.pop()
         repo._lfcommithooks.pop()
 
 def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
@@ -1280,8 +1280,7 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
 
         printmessage = None
-        if (getattr(repo, "_isrebasing", False) or
-            getattr(repo, "_istransplanting", False)):
+        if getattr(repo, "_istransplanting", False):
             # suppress status message while automated committing
             printmessage = False
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
