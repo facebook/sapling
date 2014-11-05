@@ -54,6 +54,17 @@ import bookmark by name
   X	4e3505fd95835d721066b76e75dbb8cc554d7f77
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   Z	4e3505fd95835d721066b76e75dbb8cc554d7f77
+
+delete the bookmark to repull it
+
+  $ hg book -d X
+  $ hg pull -B X ../a
+  pulling from ../a
+  no changes found
+  adding remote bookmark X
+
+finally no-op pull
+
   $ hg pull -B X ../a
   pulling from ../a
   no changes found
@@ -165,6 +176,18 @@ divergent bookmarks
    * X                         1:0d2164f0ce0d
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
+
+explicite pull should overwrite the local version (issue4439)
+
+  $ hg pull --config paths.foo=../a foo -B X
+  pulling from $TESTTMP/a (glob)
+  no changes found
+  divergent bookmark @ stored as @foo
+  importing bookmark X
+
+reinstall state for further testing:
+
+  $ hg book -fr 9b140be10808 X
 
 revsets should not ignore divergent bookmarks
 

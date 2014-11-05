@@ -390,7 +390,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
         if b in explicit:
             explicit.discard(b)
             changed.append((b, bin(scid), status,
-                            _("importing bookmark %s\n") % (b, b)))
+                            _("importing bookmark %s\n") % (b)))
         else:
             db = _diverge(ui, b, path, localmarks)
             changed.append((db, bin(scid), warn,
@@ -400,7 +400,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
         if b in explicit:
             explicit.discard(b)
             changed.append((b, bin(scid), status,
-                            _("importing bookmark %s\n") % (b, b)))
+                            _("importing bookmark %s\n") % (b)))
 
     if changed:
         tr = trfunc()
