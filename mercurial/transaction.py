@@ -83,6 +83,7 @@ class transaction(object):
         self.onclose = onclose
         self.onabort = onabort
         self.entries = []
+        # a list of ('path', 'backuppath') entries.
         self.backupentries = []
         self.map = {}
         self.backupmap = {}
