@@ -64,7 +64,62 @@ Working copy
   $ hg forget *_*_*-untracked
   $ rm *_*_missing-*
 
-Status compared to one revision back
+Status compared to parent of the working copy, i.e. the dirstate status
+
+  $ hg status -A --rev 1 'glob:missing_content2_content3-tracked'
+  M missing_content2_content3-tracked
+  $ hg status -A --rev 1 'glob:missing_content2_content2-tracked'
+  C missing_content2_content2-tracked
+  $ hg status -A --rev 1 'glob:missing_missing_content3-tracked'
+  A missing_missing_content3-tracked
+  $ hg status -A --rev 1 'glob:missing_missing_content3-untracked'
+  ? missing_missing_content3-untracked
+  $ hg status -A --rev 1 'glob:missing_content2_*-untracked'
+  R missing_content2_content2-untracked
+  R missing_content2_content3-untracked
+  R missing_content2_missing-untracked
+  $ hg status -A --rev 1 'glob:missing_*_missing-tracked'
+  ! missing_content2_missing-tracked
+  ! missing_missing_missing-tracked
+  $ hg status -A --rev 1 'glob:missing_missing_missing-untracked'
+  missing_missing_missing-untracked: No such file or directory
+
+Status between first and second commit. Should ignore dirstate status.
+
+  $ hg status -A --rev 0:1 'glob:content1_content2_*'
+  M content1_content2_content1-tracked
+  M content1_content2_content1-untracked
+  M content1_content2_content2-tracked
+  M content1_content2_content2-untracked
+  M content1_content2_content3-tracked
+  M content1_content2_content3-untracked
+  M content1_content2_missing-tracked
+  M content1_content2_missing-untracked
+  $ hg status -A --rev 0:1 'glob:content1_content1_*'
+  C content1_content1_content1-tracked
+  C content1_content1_content1-untracked
+  C content1_content1_content3-tracked
+  C content1_content1_content3-untracked
+  C content1_content1_missing-tracked
+  C content1_content1_missing-untracked
+  $ hg status -A --rev 0:1 'glob:missing_content2_*'
+  A missing_content2_content2-tracked
+  A missing_content2_content2-untracked
+  A missing_content2_content3-tracked
+  A missing_content2_content3-untracked
+  A missing_content2_missing-tracked
+  A missing_content2_missing-untracked
+  $ hg status -A --rev 0:1 'glob:content1_missing_*'
+  R content1_missing_content1-tracked
+  R content1_missing_content1-untracked
+  R content1_missing_content3-tracked
+  R content1_missing_content3-untracked
+  R content1_missing_missing-tracked
+  R content1_missing_missing-untracked
+  $ hg status -A --rev 0:1 'glob:missing_missing_*'
+
+Status compared to one revision back, checking that the dirstate status
+is correctly combined with the inter-revision status
 
   $ hg status -A --rev 0 'glob:content1_*_content[23]-tracked'
   M content1_content1_content3-tracked
