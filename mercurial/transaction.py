@@ -121,7 +121,7 @@ class transaction(object):
 
         This is used by strip to delay vision of strip offset. The transaction
         sees either none or all of the strip actions to be done."""
-        self._queue.append(([], []))
+        self._queue.append([])
 
     @active
     def endgroup(self):
@@ -130,31 +130,22 @@ class transaction(object):
         This is used by strip to delay vision of strip offset. The transaction
         sees either none or all of the strip actions to be done."""
         q = self._queue.pop()
-        self.entries.extend(q[0])
-        self._backupentries.extend(q[1])
+        self.entries.extend(q)
 
         offsets = []
-        backups = []
-        for f, o, _data in q[0]:
+        for f, o, _data in q:
             offsets.append((f, o))
-
-        for f, b in q[1]:
-            backups.append((f, b))
 
         d = ''.join(['%s\0%d\n' % (f, o) for f, o in offsets])
         self.file.write(d)
         self.file.flush()
-
-        d = ''.join(['%s\0%s\n' % (f, b) for f, b in backups])
-        self._backupsfile.write(d)
-        self._backupsfile.flush()
 
     @active
     def add(self, file, offset, data=None):
         if file in self.map or file in self._backupmap:
             return
         if self._queue:
-            self._queue[-1][0].append((file, offset, data))
+            self._queue[-1].append((file, offset, data))
             return
 
         self.entries.append((file, offset, data))
@@ -174,6 +165,9 @@ class transaction(object):
         * `file`: the file path, relative to .hg/store
         * `hardlink`: use a hardlink to quickly create the backup
         """
+        if self._queue:
+            msg = 'cannot use transaction.addbackup inside "group"'
+            raise RuntimeError(msg)
 
         if file in self.map or file in self._backupmap:
             return
@@ -186,10 +180,6 @@ class transaction(object):
             util.copyfiles(filepath, backuppath, hardlink=hardlink)
         else:
             self.add(file, 0)
-            return
-
-        if self._queue:
-            self._queue[-1][1].append((file, backupfile))
             return
 
         self._backupentries.append((file, backupfile))
