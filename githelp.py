@@ -413,12 +413,13 @@ def log(ui, repo, *args, **kwargs):
         ('p', 'patch', None, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
-
+    ui.status('note: -v prints the entire commit message like Git does. To ' +
+              'print just the first line, drop the -v.\n\n')
     ui.status("note: see hg help revset for information on how to filter " +
         "log output.\n\n")
 
     cmd = Command('log')
-    cmd['-f'] = None
+    cmd['-v'] = None
 
     if opts.get('number'):
         cmd['-l'] = opts.get('number')
