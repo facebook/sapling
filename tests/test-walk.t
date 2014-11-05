@@ -170,6 +170,32 @@
   f  beans/black    beans/black
   f  fenugreek      fenugreek
   f  mammals/skunk  mammals/skunk
+  $ hg debugwalk -Ibeans mammals
+  $ hg debugwalk -Inon-existent
+  $ hg debugwalk -Inon-existent -Ibeans/black
+  f  beans/black  beans/black
+  $ hg debugwalk -Ibeans beans/black
+  f  beans/black  beans/black  exact
+  $ hg debugwalk -Ibeans/black beans
+  f  beans/black  beans/black
+  $ hg debugwalk -Xbeans/black beans
+  f  beans/borlotti  beans/borlotti
+  f  beans/kidney    beans/kidney
+  f  beans/navy      beans/navy
+  f  beans/pinto     beans/pinto
+  f  beans/turtle    beans/turtle
+  $ hg debugwalk -Xbeans/black -Ibeans
+  f  beans/borlotti  beans/borlotti
+  f  beans/kidney    beans/kidney
+  f  beans/navy      beans/navy
+  f  beans/pinto     beans/pinto
+  f  beans/turtle    beans/turtle
+  $ hg debugwalk -Xbeans/black beans/black
+  f  beans/black  beans/black  exact
+  $ hg debugwalk -Xbeans/black -Ibeans/black
+  $ hg debugwalk -Xbeans beans/black
+  f  beans/black  beans/black  exact
+  $ hg debugwalk -Xbeans -Ibeans/black
   $ hg debugwalk 'glob:mammals/../beans/b*'
   f  beans/black     beans/black
   f  beans/borlotti  beans/borlotti
