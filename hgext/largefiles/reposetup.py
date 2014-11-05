@@ -243,9 +243,14 @@ def reposetup(ui, repo):
 
         # As part of committing, copy all of the largefiles into the
         # cache.
-        def commitctx(self, *args, **kwargs):
-            node = super(lfilesrepo, self).commitctx(*args, **kwargs)
+        def commitctx(self, ctx, *args, **kwargs):
+            node = super(lfilesrepo, self).commitctx(ctx, *args, **kwargs)
             lfutil.copyalltostore(self, node)
+            class lfilesctx(ctx.__class__):
+                def markcommitted(self, node):
+                    orig = super(lfilesctx, self).markcommitted
+                    return lfutil.markcommitted(orig, self, node)
+            ctx.__class__ = lfilesctx
             return node
 
         # Before commit, largefile standins have not had their
@@ -270,16 +275,6 @@ def reposetup(ui, repo):
                         getattr(self, "_istransplanting", False):
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
-
-                    if result:
-                        lfdirstate = lfutil.openlfdirstate(ui, self)
-                        for f in self[result].files():
-                            if lfutil.isstandin(f):
-                                lfile = lfutil.splitstandin(f)
-                                lfutil.synclfdirstate(self, lfdirstate, lfile,
-                                                      False)
-                        lfdirstate.write()
-
                     return result
                 # Case 1: user calls commit with no specific files or
                 # include/exclude patterns: refresh and commit all files that
@@ -308,22 +303,10 @@ def reposetup(ui, repo):
                                 if os.path.exists(self.wjoin(lfile)):
                                     lfutil.updatestandin(self,
                                         lfutil.standin(lfile))
-                                    lfdirstate.normal(lfile)
 
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
 
-                    if result is not None:
-                        for lfile in lfdirstate:
-                            if lfile in modifiedfiles:
-                                if (not os.path.exists(self.wjoin(
-                                   lfutil.standin(lfile)))) or \
-                                   (not os.path.exists(self.wjoin(lfile))):
-                                    lfdirstate.drop(lfile)
-
-                    # This needs to be after commit; otherwise precommit hooks
-                    # get the wrong status
-                    lfdirstate.write()
                     return result
 
                 lfiles = lfutil.listlfiles(self)
@@ -350,9 +333,6 @@ def reposetup(ui, repo):
                     lfile = lfutil.splitstandin(standin)
                     if lfdirstate[lfile] != 'r':
                         lfutil.updatestandin(self, standin)
-                        lfdirstate.normal(lfile)
-                    else:
-                        lfdirstate.drop(lfile)
 
                 # Cook up a new matcher that only matches regular files or
                 # standins corresponding to the big files requested by the
@@ -386,9 +366,6 @@ def reposetup(ui, repo):
                 match.matchfn = matchfn
                 result = orig(text=text, user=user, date=date, match=match,
                                 force=force, editor=editor, extra=extra)
-                # This needs to be after commit; otherwise precommit hooks
-                # get the wrong status
-                lfdirstate.write()
                 return result
             finally:
                 wlock.release()

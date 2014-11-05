@@ -386,6 +386,18 @@ def synclfdirstate(repo, lfdirstate, lfile, normallookup):
     elif state == '?':
         lfdirstate.drop(lfile)
 
+def markcommitted(orig, ctx, node):
+    repo = ctx._repo
+
+    orig(node)
+
+    lfdirstate = openlfdirstate(repo.ui, repo)
+    for f in ctx.files():
+        if isstandin(f):
+            lfile = splitstandin(f)
+            synclfdirstate(repo, lfdirstate, lfile, False)
+    lfdirstate.write()
+
 def getlfilestoupdate(oldstandins, newstandins):
     changedstandins = set(oldstandins).symmetric_difference(set(newstandins))
     filelist = []
