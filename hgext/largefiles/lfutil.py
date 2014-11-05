@@ -447,8 +447,7 @@ def updatestandinsbymatch(repo, match):
     # (2) aborting when standins are matched by "match",
     #     because automated committing may specify them directly
     #
-    if getattr(repo, "_isrebasing", False) or \
-            getattr(repo, "_istransplanting", False):
+    if getattr(repo, "_istransplanting", False):
         return match
 
     # Case 1: user calls commit with no specific files or
@@ -537,3 +536,24 @@ def updatestandinsbymatch(repo, match):
     match.matchfn = matchfn
 
     return match
+
+class automatedcommithook(object):
+    '''Statefull hook to update standins at the 1st commit of resuming
+
+    For efficiency, updating standins in the working directory should
+    be avoided while automated committing (like rebase, transplant and
+    so on), because they should be updated before committing.
+
+    But the 1st commit of resuming automated committing (e.g. ``rebase
+    --continue``) should update them, because largefiles may be
+    modified manually.
+    '''
+    def __init__(self, resuming):
+        self.resuming = resuming
+
+    def __call__(self, repo, match):
+        if self.resuming:
+            self.resuming = False # avoids updating at subsequent commits
+            return updatestandinsbymatch(repo, match)
+        else:
+            return match

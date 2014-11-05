@@ -509,8 +509,25 @@ it is aborted by conflict.
   $ cat large1
   large1 in #1
 
-  $ hg rebase -q --abort
-  rebase aborted
+Test that rebase updates standins for manually modified largefiles at
+the 1st commit of resuming.
+
+  $ echo "manually modified before 'hg rebase --continue'" > large1
+  $ hg resolve -m normal1
+  (no more unresolved files)
+  $ hg rebase --continue --config ui.interactive=True <<EOF
+  > c
+  > EOF
+  local changed .hglf/large1 which remote deleted
+  use (c)hanged version or (d)elete? c
+
+  $ hg diff -c "tip~1" --nodates .hglf/large1 | grep '^[+-][0-9a-z]'
+  -e5bb990443d6a92aaf7223813720f7566c9dd05b
+  +8a4f783556e7dea21139ca0466eafce954c75c13
+  $ rm -f large1
+  $ hg update -q -C tip
+  $ cat large1
+  manually modified before 'hg rebase --continue'
 
 Test that transplant updates largefiles, of which standins are safely
 changed, even if it is aborted by conflict of other.

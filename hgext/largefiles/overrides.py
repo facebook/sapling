@@ -790,11 +790,14 @@ def hgclone(orig, ui, opts, *args, **kwargs):
     return result
 
 def overriderebase(orig, ui, repo, **opts):
+    resuming = opts.get('continue')
+    repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
     repo._isrebasing = True
     try:
         return orig(ui, repo, **opts)
     finally:
         repo._isrebasing = False
+        repo._lfcommithooks.pop()
 
 def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
             prefix=None, mtime=None, subrepos=None):
