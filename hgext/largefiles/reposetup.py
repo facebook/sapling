@@ -262,108 +262,7 @@ def reposetup(ui, repo):
 
             wlock = self.wlock()
             try:
-                # Case 0: Automated committing
-                #
-                # While automated committing (like rebase, transplant
-                # and so on), this code path is used to avoid:
-                # (1) updating standins, because standins should
-                #     be already updated at this point
-                # (2) aborting when standins are matched by "match",
-                #     because automated committing may specify them directly
-                #
-                if getattr(self, "_isrebasing", False) or \
-                        getattr(self, "_istransplanting", False):
-                    result = orig(text=text, user=user, date=date, match=match,
-                                    force=force, editor=editor, extra=extra)
-                    return result
-                # Case 1: user calls commit with no specific files or
-                # include/exclude patterns: refresh and commit all files that
-                # are "dirty".
-                if match is None or match.always():
-                    # Spend a bit of time here to get a list of files we know
-                    # are modified so we can compare only against those.
-                    # It can cost a lot of time (several seconds)
-                    # otherwise to update all standins if the largefiles are
-                    # large.
-                    lfdirstate = lfutil.openlfdirstate(ui, self)
-                    dirtymatch = match_.always(self.root, self.getcwd())
-                    unsure, s = lfdirstate.status(dirtymatch, [], False, False,
-                                                  False)
-                    modifiedfiles = unsure + s.modified + s.added + s.removed
-                    lfiles = lfutil.listlfiles(self)
-                    # this only loops through largefiles that exist (not
-                    # removed/renamed)
-                    for lfile in lfiles:
-                        if lfile in modifiedfiles:
-                            if os.path.exists(
-                                    self.wjoin(lfutil.standin(lfile))):
-                                # this handles the case where a rebase is being
-                                # performed and the working copy is not updated
-                                # yet.
-                                if os.path.exists(self.wjoin(lfile)):
-                                    lfutil.updatestandin(self,
-                                        lfutil.standin(lfile))
-
-                    result = orig(text=text, user=user, date=date, match=match,
-                                    force=force, editor=editor, extra=extra)
-
-                    return result
-
-                lfiles = lfutil.listlfiles(self)
-                match._files = self._subdirlfs(match.files(), lfiles)
-
-                # Case 2: user calls commit with specified patterns: refresh
-                # any matching big files.
-                smatcher = lfutil.composestandinmatcher(self, match)
-                standins = self.dirstate.walk(smatcher, [], False, False)
-
-                # No matching big files: get out of the way and pass control to
-                # the usual commit() method.
-                if not standins:
-                    return orig(text=text, user=user, date=date, match=match,
-                                    force=force, editor=editor, extra=extra)
-
-                # Refresh all matching big files.  It's possible that the
-                # commit will end up failing, in which case the big files will
-                # stay refreshed.  No harm done: the user modified them and
-                # asked to commit them, so sooner or later we're going to
-                # refresh the standins.  Might as well leave them refreshed.
-                lfdirstate = lfutil.openlfdirstate(ui, self)
-                for standin in standins:
-                    lfile = lfutil.splitstandin(standin)
-                    if lfdirstate[lfile] != 'r':
-                        lfutil.updatestandin(self, standin)
-
-                # Cook up a new matcher that only matches regular files or
-                # standins corresponding to the big files requested by the
-                # user.  Have to modify _files to prevent commit() from
-                # complaining "not tracked" for big files.
-                match = copy.copy(match)
-                origmatchfn = match.matchfn
-
-                # Check both the list of largefiles and the list of
-                # standins because if a largefile was removed, it
-                # won't be in the list of largefiles at this point
-                match._files += sorted(standins)
-
-                actualfiles = []
-                for f in match._files:
-                    fstandin = lfutil.standin(f)
-
-                    # ignore known largefiles and standins
-                    if f in lfiles or fstandin in standins:
-                        continue
-
-                    actualfiles.append(f)
-                match._files = actualfiles
-
-                def matchfn(f):
-                    if origmatchfn(f):
-                        return f not in lfiles
-                    else:
-                        return f in standins
-
-                match.matchfn = matchfn
+                match = lfutil.updatestandinsbymatch(self, match)
                 result = orig(text=text, user=user, date=date, match=match,
                                 force=force, editor=editor, extra=extra)
                 return result
@@ -381,6 +280,8 @@ def reposetup(ui, repo):
             return super(lfilesrepo, self).push(remote, force=force, revs=revs,
                 newbranch=newbranch)
 
+        # TODO: _subdirlfs should be moved into "lfutil.py", because
+        # it is referred only from "lfutil.updatestandinsbymatch"
         def _subdirlfs(self, files, lfiles):
             '''
             Adjust matched file list
