@@ -343,6 +343,11 @@ def reposetup(ui, repo):
     # only last element ("_lfcommithooks[-1]") is used for each committing.
     repo._lfcommithooks = [lfutil.updatestandinsbymatch]
 
+    # Stack of status writer functions taking "*msg, **opts" arguments
+    # like "ui.status()". Only last element ("_lfupdatereporters[-1]")
+    # is used to write status out.
+    repo._lfstatuswriters = [ui.status]
+
     def prepushoutgoinghook(local, remote, outgoing):
         if outgoing.missing:
             toupload = set()

@@ -557,3 +557,20 @@ class automatedcommithook(object):
             return updatestandinsbymatch(repo, match)
         else:
             return match
+
+def getstatuswriter(ui, repo, forcibly=None):
+    '''Return the function to write largefiles specific status out
+
+    If ``forcibly`` is ``None``, this returns the last element of
+    ``repo._lfupdatereporters`` as "default" writer function.
+
+    Otherwise, this returns the function to always write out (or
+    ignore if ``not forcibly``) status.
+    '''
+    if forcibly is None:
+        return repo._lfstatuswriters[-1]
+    else:
+        if forcibly:
+            return ui.status # forcibly WRITE OUT
+        else:
+            return lambda *msg, **opts: None # forcibly IGNORE
