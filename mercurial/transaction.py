@@ -15,7 +15,7 @@ from i18n import _
 import errno
 import error, util
 
-version = 1
+version = 0
 
 def active(func):
     def _active(self, *args, **kwds):
@@ -43,7 +43,7 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
                     raise
 
     backupfiles = []
-    for f, b in backupentries:
+    for l, f, b, c in backupentries:
         if f and b:
             filepath = opener.join(f)
             backuppath = opener.join(b)
@@ -99,9 +99,10 @@ class transaction(object):
         self.hookargs = {}
         self.file = opener.open(self.journal, "w")
 
-        # a list of ('path', 'backuppath') entries.
+        # a list of ('location', 'path', 'backuppath', cache) entries.
         # if 'backuppath' is empty, no file existed at backup time
         # if 'path' is empty, this is a temporary transaction file
+        # (location, and cache are current unused)
         self._backupentries = []
         self._backupmap = {}
         self._backupjournal = "%s.backupfiles" % journal
@@ -193,13 +194,13 @@ class transaction(object):
         else:
             backupfile = ''
 
-        self._addbackupentry((file, backupfile))
+        self._addbackupentry(('', file, backupfile, False))
 
     def _addbackupentry(self, entry):
         """register a new backup entry and write it to disk"""
         self._backupentries.append(entry)
         self._backupmap[file] = len(self._backupentries) - 1
-        self._backupsfile.write("%s\0%s\n" % entry)
+        self._backupsfile.write("%s\0%s\0%s\0%d\n" % entry)
         self._backupsfile.flush()
 
     @active
@@ -209,7 +210,7 @@ class transaction(object):
         Such file will be delete when the transaction exit (on both failure and
         success).
         """
-        self._addbackupentry(('', tmpfile))
+        self._addbackupentry(('', '', tmpfile, False))
 
     @active
     def addfilegenerator(self, genid, filenames, genfunc, order=0, vfs=None):
@@ -355,7 +356,7 @@ class transaction(object):
         self.file.close()
         self._backupsfile.close()
         # cleanup temporary files
-        for f, b in self._backupentries:
+        for _l, f, b, _c in self._backupentries:
             if not f and b and self.opener.exists(b):
                 self.opener.unlink(b)
         self.entries = []
@@ -365,7 +366,7 @@ class transaction(object):
             self.opener.unlink(self.journal)
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
-            for _f, b in self._backupentries:
+            for _l, _f, b, _c in self._backupentries:
                 if b and self.opener.exists(b):
                     self.opener.unlink(b)
         self._backupentries = []
@@ -447,10 +448,10 @@ def rollback(opener, file, report):
                     if line:
                         # Shave off the trailing newline
                         line = line[:-1]
-                        f, b = line.split('\0')
-                        backupentries.append((f, b))
+                        l, f, b, c = line.split('\0')
+                        backupentries.append((l, f, b, bool(c)))
             else:
-                report(_("journal was created by a newer version of "
+                report(_("journal was created by a different version of "
                          "Mercurial"))
 
     _playback(file, report, opener, entries, backupentries)
