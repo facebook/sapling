@@ -59,17 +59,25 @@ class CorruptionException(Exception):
     pass
 
 def uisetup(ui):
+    # Enable SQL for local commands that write to the repository.
     wrapcommand(commands.table, 'pull', pull)
     wrapcommand(commands.table, 'commit', commit)
 
+    wrapcommand(commands.table, 'bookmark', bookmarkcommand)
+    wrapfunction(exchange, '_localphasemove', _localphasemove)
+
+    # Enable SQL for remote commands that write to the repository
     wrapfunction(wireproto, 'unbundle', unbundle)
     wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
+    wrapfunction(exchange, 'unbundle', unbundle)
 
     wrapfunction(wireproto, 'pushkey', pushkey)
     wireproto.commands['pushkey'] = (wireproto.pushkey, 'namespace key old new')
 
-    wrapcommand(commands.table, 'bookmark', bookmarkcommand)
+    wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
+    wrapfunction(changegroup, 'addchangegroup', addchangegroup)
 
+    # Record revlog writes
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
         """records each revlog write to the repo's pendingrev list"""
         if not util.safehasattr(transaction, "repo"):
@@ -83,12 +91,11 @@ def uisetup(ui):
         return orig(self, transaction, ifh, dfh, entry, data, link, offset)
     wrapfunction(revlog.revlog, '_writeentry', writeentry)
 
+    # Reorder incoming revs to be in linkrev order
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
 
+    # Write SQL bookmarks at the same time as local bookmarks
     wrapfunction(bookmarks.bmstore, '_write', bookmarkwrite)
-    wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
-    wrapfunction(changegroup, 'addchangegroup', addchangegroup)
-    wrapfunction(exchange, '_localphasemove', _localphasemove)
 
 def extsetup(ui):
     if ui.configbool('hgsql', 'enabled'):
