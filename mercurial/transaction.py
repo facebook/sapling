@@ -142,6 +142,7 @@ class transaction(object):
 
     @active
     def add(self, file, offset, data=None):
+        """record the state of an append-only file before update"""
         if file in self.map or file in self._backupmap:
             return
         if self._queue:
