@@ -190,9 +190,13 @@ class transaction(object):
         else:
             backupfile = ''
 
-        self._backupentries.append((file, backupfile))
+        self._addbackupentry((file, backupfile))
+
+    def _addbackupentry(self, entry):
+        """register a new backup entry and write it to disk"""
+        self._backupentries.append(entry)
         self._backupmap[file] = len(self._backupentries) - 1
-        self._backupsfile.write("%s\0%s\n" % (file, backupfile))
+        self._backupsfile.write("%s\0%s\n" % entry)
         self._backupsfile.flush()
 
     @active
