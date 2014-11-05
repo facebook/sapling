@@ -130,15 +130,8 @@ class transaction(object):
         This is used by strip to delay vision of strip offset. The transaction
         sees either none or all of the strip actions to be done."""
         q = self._queue.pop()
-        self.entries.extend(q)
-
-        offsets = []
-        for f, o, _data in q:
-            offsets.append((f, o))
-
-        d = ''.join(['%s\0%d\n' % (f, o) for f, o in offsets])
-        self.file.write(d)
-        self.file.flush()
+        for f, o, data in q:
+            self._addentry(f, o, data)
 
     @active
     def add(self, file, offset, data=None):
@@ -149,6 +142,12 @@ class transaction(object):
             self._queue[-1].append((file, offset, data))
             return
 
+        self._addentry(file, offset, data)
+
+    def _addentry(self, file, offset, data):
+        """add a append-only entry to memory and on-disk state"""
+        if file in self.map or file in self._backupmap:
+            return
         self.entries.append((file, offset, data))
         self.map[file] = len(self.entries) - 1
         # add enough data to the journal to do the truncate
