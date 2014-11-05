@@ -435,8 +435,14 @@ def downloadlfiles(ui, repo, rev=None):
         ui.status(_("%d largefiles failed to download\n") % totalmissing)
     return totalsuccess, totalmissing
 
-def updatelfiles(ui, repo, filelist=None, printmessage=True,
+def updatelfiles(ui, repo, filelist=None, printmessage=None,
                  normallookup=False):
+    '''Update largefiles according to standins in the working directory
+
+    If ``printmessage`` is other than ``None``, it means "print (or
+    ignore, for false) message forcibly".
+    '''
+    statuswriter = lfutil.getstatuswriter(ui, repo, printmessage)
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
@@ -482,8 +488,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True,
         lfdirstate.write()
 
         if lfiles:
-            if printmessage:
-                ui.status(_('getting changed largefiles\n'))
+            statuswriter(_('getting changed largefiles\n'))
             cachelfiles(ui, repo, None, lfiles)
 
         for lfile in lfiles:
@@ -527,8 +532,8 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True,
                     lfutil.synclfdirstate(repo, lfdirstate, lfile, True)
 
         lfdirstate.write()
-        if printmessage and lfiles:
-            ui.status(_('%d largefiles updated, %d removed\n') % (updated,
+        if lfiles:
+            statuswriter(_('%d largefiles updated, %d removed\n') % (updated,
                 removed))
     finally:
         wlock.release()

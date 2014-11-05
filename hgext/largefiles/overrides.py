@@ -1279,9 +1279,11 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             newstandins = lfutil.getstandinsstate(repo)
             filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
 
-        # suppress status message while automated committing
-        printmessage = not (getattr(repo, "_isrebasing", False) or
-                            getattr(repo, "_istransplanting", False))
+        printmessage = None
+        if (getattr(repo, "_isrebasing", False) or
+            getattr(repo, "_istransplanting", False)):
+            # suppress status message while automated committing
+            printmessage = False
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
                                 printmessage=printmessage,
                                 normallookup=partial)
