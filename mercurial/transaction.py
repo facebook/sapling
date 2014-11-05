@@ -44,14 +44,21 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
 
     backupfiles = []
     for f, b in backupentries:
-        filepath = opener.join(f)
-        backuppath = opener.join(b)
-        try:
-            util.copyfile(backuppath, filepath)
-            backupfiles.append(b)
-        except IOError:
-            report(_("failed to recover %s\n") % f)
-            raise
+        if b:
+            filepath = opener.join(f)
+            backuppath = opener.join(b)
+            try:
+                util.copyfile(backuppath, filepath)
+                backupfiles.append(b)
+            except IOError:
+                report(_("failed to recover %s\n") % f)
+                raise
+        else:
+            try:
+                opener.unlink(f)
+            except (IOError, OSError), inst:
+                if inst.errno != errno.ENOENT:
+                    raise
 
     opener.unlink(journal)
     backuppath = "%s.backupfiles" % journal
@@ -85,6 +92,7 @@ class transaction(object):
         self.entries = []
         self.map = {}
         # a list of ('path', 'backuppath') entries.
+        # if 'backuppath' is empty, no file existed at backup time
         self._backupentries = []
         self._backupmap = {}
         self.journal = journal
@@ -179,8 +187,7 @@ class transaction(object):
             backuppath = self.opener.join(backupfile)
             util.copyfiles(filepath, backuppath, hardlink=hardlink)
         else:
-            self.add(file, 0)
-            return
+            backupfile = ''
 
         self._backupentries.append((file, backupfile))
         self._backupmap[file] = len(self._backupentries) - 1
@@ -331,7 +338,8 @@ class transaction(object):
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
             for _f, b in self._backupentries:
-                self.opener.unlink(b)
+                if b:
+                    self.opener.unlink(b)
         self._backupentries = []
         self.journal = None
         # run post close action
