@@ -8,55 +8,64 @@ combined correctly with the dirstate status.
 
 First commit
 
-  $ echo a >content1_content1_content1-tracked
-  $ echo a >content1_content1_missing-tracked
-  $ echo a >content1_content1_content1-untracked
-  $ echo a >content1_content1_content3-tracked
-  $ echo a >content1_content1_missing-untracked
-  $ echo a >content1_content2_content2-tracked
-  $ echo a >content1_content2_missing-tracked
-  $ echo a >content1_content2_content2-untracked
-  $ echo a >content1_content2_content3-tracked
-  $ echo a >content1_content2_missing-untracked
-  $ echo a >content1_missing_content3-tracked
-  $ echo a >content1_missing_missing-tracked
-  $ echo a >content1_missing_content3-untracked
-  $ hg commit -Aqm first
+  $ python $TESTDIR/generate-working-copy-states.py base
+  $ hg addremove --similarity 0
+  adding content1_content1_content1-tracked
+  adding content1_content1_content1-untracked
+  adding content1_content1_content3-tracked
+  adding content1_content1_content3-untracked
+  adding content1_content1_missing-tracked
+  adding content1_content1_missing-untracked
+  adding content1_content2_content1-tracked
+  adding content1_content2_content1-untracked
+  adding content1_content2_content2-tracked
+  adding content1_content2_content2-untracked
+  adding content1_content2_content3-tracked
+  adding content1_content2_content3-untracked
+  adding content1_content2_missing-tracked
+  adding content1_content2_missing-untracked
+  adding content1_missing_content1-tracked
+  adding content1_missing_content1-untracked
+  adding content1_missing_content3-tracked
+  adding content1_missing_content3-untracked
+  adding content1_missing_missing-tracked
+  adding content1_missing_missing-untracked
+  $ hg commit -m first
 
 Second commit
 
-  $ echo b >missing_content2_missing-tracked
-  $ echo b >missing_content2_content2-untracked
-  $ echo b >missing_content2_content3-tracked
-  $ echo b >missing_content2_missing-untracked
-  $ echo b >content1_content2_content2-tracked
-  $ echo b >content1_content2_content3-tracked
-  $ echo b >content1_content2_content2-untracked
-  $ echo b >content1_content2_content3-tracked
-  $ echo b >content1_content2_missing-untracked
-  $ hg rm content1_missing_content3-tracked
-  $ hg rm content1_missing_missing-tracked
-  $ hg rm content1_missing_content3-untracked
-  $ hg commit -Aqm second
+  $ python $TESTDIR/generate-working-copy-states.py parent
+  $ hg addremove --similarity 0
+  removing content1_missing_content1-tracked
+  removing content1_missing_content1-untracked
+  removing content1_missing_content3-tracked
+  removing content1_missing_content3-untracked
+  removing content1_missing_missing-tracked
+  removing content1_missing_missing-untracked
+  adding missing_content2_content2-tracked
+  adding missing_content2_content2-untracked
+  adding missing_content2_content3-tracked
+  adding missing_content2_content3-untracked
+  adding missing_content2_missing-tracked
+  adding missing_content2_missing-untracked
+  $ hg commit -m second
 
 Working copy
 
-  $ echo c >content1_content1_content3-tracked
-  $ echo c >content1_content2_content3-tracked
-  $ echo c >missing_content2_content3-tracked
-  $ echo c >content1_missing_content3-tracked && hg add content1_missing_content3-tracked
-  $ echo c >content1_missing_missing-tracked && hg add content1_missing_missing-tracked && rm content1_missing_missing-tracked
-  $ echo c >content1_missing_content3-untracked
-  $ hg rm content1_content2_missing-untracked
-  $ hg rm content1_content1_missing-untracked
-  $ hg rm missing_content2_missing-untracked
-  $ rm content1_content1_missing-tracked
-  $ rm content1_content2_missing-tracked
-  $ rm missing_content2_missing-tracked
-  $ hg forget content1_content1_content1-untracked
-  $ hg forget content1_content2_content2-untracked
-  $ hg forget missing_content2_content2-untracked
-  $ touch missing_missing_content3-untracked
+  $ python $TESTDIR/generate-working-copy-states.py wc
+  $ hg addremove --similarity 0
+  adding content1_missing_content1-tracked
+  adding content1_missing_content1-untracked
+  adding content1_missing_content3-tracked
+  adding content1_missing_content3-untracked
+  adding content1_missing_missing-tracked
+  adding content1_missing_missing-untracked
+  adding missing_missing_content3-tracked
+  adding missing_missing_content3-untracked
+  adding missing_missing_missing-tracked
+  adding missing_missing_missing-untracked
+  $ hg forget *_*_*-untracked
+  $ rm *_*_missing-*
 
 Status compared to one revision back
 
