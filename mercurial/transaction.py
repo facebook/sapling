@@ -117,10 +117,18 @@ class transaction(object):
 
     @active
     def startgroup(self):
+        """delay registration of file entry
+
+        This is used by strip to delay vision of strip offset. The transaction
+        sees either none or all of the strip actions to be done."""
         self._queue.append(([], []))
 
     @active
     def endgroup(self):
+        """apply delayed registration of file entry.
+
+        This is used by strip to delay vision of strip offset. The transaction
+        sees either none or all of the strip actions to be done."""
         q = self._queue.pop()
         self.entries.extend(q[0])
         self._backupentries.extend(q[1])
