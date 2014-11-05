@@ -43,7 +43,7 @@ def _playback(journal, report, opener, entries, backupentries, unlink=True):
                     raise
 
     backupfiles = []
-    for f, b, _ignore in backupentries:
+    for f, b in backupentries:
         filepath = opener.join(f)
         backuppath = opener.join(b)
         try:
@@ -129,7 +129,7 @@ class transaction(object):
         for f, o, _data in q[0]:
             offsets.append((f, o))
 
-        for f, b, _data in q[1]:
+        for f, b in q[1]:
             backups.append((f, b))
 
         d = ''.join(['%s\0%d\n' % (f, o) for f, o in offsets])
@@ -183,7 +183,7 @@ class transaction(object):
             self._queue[-1][1].append((file, backupfile))
             return
 
-        self.backupentries.append((file, backupfile, None))
+        self.backupentries.append((file, backupfile))
         self.backupmap[file] = len(self.backupentries) - 1
         self.backupsfile.write("%s\0%s\n" % (file, backupfile))
         self.backupsfile.flush()
@@ -331,7 +331,7 @@ class transaction(object):
             self.opener.unlink(self.journal)
         if self.opener.isfile(self.backupjournal):
             self.opener.unlink(self.backupjournal)
-            for _f, b, _ignore in self.backupentries:
+            for _f, b in self.backupentries:
                 self.opener.unlink(b)
         self.backupentries = []
         self.journal = None
@@ -413,7 +413,7 @@ def rollback(opener, file, report):
                         # Shave off the trailing newline
                         line = line[:-1]
                         f, b = line.split('\0')
-                        backupentries.append((f, b, None))
+                        backupentries.append((f, b))
             else:
                 report(_("journal was created by a newer version of "
                          "Mercurial"))
