@@ -188,7 +188,7 @@ class transaction(object):
         self.file.flush()
 
     @active
-    def addbackup(self, file, hardlink=True, vfs=None):
+    def addbackup(self, file, hardlink=True, location=''):
         """Adds a backup of the file to the transaction
 
         Calling addbackup() creates a hardlink backup of the specified file
@@ -205,11 +205,9 @@ class transaction(object):
         if file in self.map or file in self._backupmap:
             return
         dirname, filename = os.path.split(file)
-
         backupfilename = "%s.backup.%s" % (self.journal, filename)
         backupfile = os.path.join(dirname, backupfilename)
-        if vfs is None:
-            vfs = self.opener
+        vfs = self._vfsmap[location]
         if vfs.exists(file):
             filepath = vfs.join(file)
             backuppath = vfs.join(backupfile)
@@ -217,7 +215,7 @@ class transaction(object):
         else:
             backupfile = ''
 
-        self._addbackupentry(('', file, backupfile, False))
+        self._addbackupentry((location, file, backupfile, False))
 
     def _addbackupentry(self, entry):
         """register a new backup entry and write it to disk"""
