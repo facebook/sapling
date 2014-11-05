@@ -83,22 +83,22 @@ class transaction(object):
         self.onclose = onclose
         self.onabort = onabort
         self.entries = []
-        # a list of ('path', 'backuppath') entries.
-        self.backupentries = []
         self.map = {}
-        self.backupmap = {}
+        # a list of ('path', 'backuppath') entries.
+        self._backupentries = []
+        self._backupmap = {}
         self.journal = journal
         self._queue = []
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
 
-        self.backupjournal = "%s.backupfiles" % journal
+        self._backupjournal = "%s.backupfiles" % journal
         self.file = opener.open(self.journal, "w")
-        self.backupsfile = opener.open(self.backupjournal, 'w')
-        self.backupsfile.write('%d\n' % version)
+        self._backupsfile = opener.open(self._backupjournal, 'w')
+        self._backupsfile.write('%d\n' % version)
         if createmode is not None:
             opener.chmod(self.journal, createmode & 0666)
-            opener.chmod(self.backupjournal, createmode & 0666)
+            opener.chmod(self._backupjournal, createmode & 0666)
 
         # hold file generations to be performed on commit
         self._filegenerators = {}
@@ -123,7 +123,7 @@ class transaction(object):
     def endgroup(self):
         q = self._queue.pop()
         self.entries.extend(q[0])
-        self.backupentries.extend(q[1])
+        self._backupentries.extend(q[1])
 
         offsets = []
         backups = []
@@ -138,12 +138,12 @@ class transaction(object):
         self.file.flush()
 
         d = ''.join(['%s\0%s\n' % (f, b) for f, b in backups])
-        self.backupsfile.write(d)
-        self.backupsfile.flush()
+        self._backupsfile.write(d)
+        self._backupsfile.flush()
 
     @active
     def add(self, file, offset, data=None):
-        if file in self.map or file in self.backupmap:
+        if file in self.map or file in self._backupmap:
             return
         if self._queue:
             self._queue[-1][0].append((file, offset, data))
@@ -167,7 +167,7 @@ class transaction(object):
         * `hardlink`: use a hardlink to quickly create the backup
         """
 
-        if file in self.map or file in self.backupmap:
+        if file in self.map or file in self._backupmap:
             return
         backupfile = "%s.backup.%s" % (self.journal, file)
         if vfs is None:
@@ -184,10 +184,10 @@ class transaction(object):
             self._queue[-1][1].append((file, backupfile))
             return
 
-        self.backupentries.append((file, backupfile))
-        self.backupmap[file] = len(self.backupentries) - 1
-        self.backupsfile.write("%s\0%s\n" % (file, backupfile))
-        self.backupsfile.flush()
+        self._backupentries.append((file, backupfile))
+        self._backupmap[file] = len(self._backupentries) - 1
+        self._backupsfile.write("%s\0%s\n" % (file, backupfile))
+        self._backupsfile.flush()
 
     @active
     def addfilegenerator(self, genid, filenames, genfunc, order=0, vfs=None):
@@ -238,8 +238,8 @@ class transaction(object):
     def find(self, file):
         if file in self.map:
             return self.entries[self.map[file]]
-        if file in self.backupmap:
-            return self.backupentries[self.backupmap[file]]
+        if file in self._backupmap:
+            return self._backupentries[self._backupmap[file]]
         return None
 
     @active
@@ -324,17 +324,17 @@ class transaction(object):
         if self.count != 0:
             return
         self.file.close()
-        self.backupsfile.close()
+        self._backupsfile.close()
         self.entries = []
         if self.after:
             self.after()
         if self.opener.isfile(self.journal):
             self.opener.unlink(self.journal)
-        if self.opener.isfile(self.backupjournal):
-            self.opener.unlink(self.backupjournal)
-            for _f, b in self.backupentries:
+        if self.opener.isfile(self._backupjournal):
+            self.opener.unlink(self._backupjournal)
+            for _f, b in self._backupentries:
                 self.opener.unlink(b)
-        self.backupentries = []
+        self._backupentries = []
         self.journal = None
         # run post close action
         categories = sorted(self._postclosecallback)
@@ -352,24 +352,24 @@ class transaction(object):
         self.count = 0
         self.usages = 0
         self.file.close()
-        self.backupsfile.close()
+        self._backupsfile.close()
 
         if self.onabort is not None:
             self.onabort()
 
         try:
-            if not self.entries and not self.backupentries:
+            if not self.entries and not self._backupentries:
                 if self.journal:
                     self.opener.unlink(self.journal)
-                if self.backupjournal:
-                    self.opener.unlink(self.backupjournal)
+                if self._backupjournal:
+                    self.opener.unlink(self._backupjournal)
                 return
 
             self.report(_("transaction abort!\n"))
 
             try:
                 _playback(self.journal, self.report, self.opener,
-                          self.entries, self.backupentries, False)
+                          self.entries, self._backupentries, False)
                 self.report(_("rollback completed\n"))
             except Exception:
                 self.report(_("rollback failed - please run hg recover\n"))
