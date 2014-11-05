@@ -671,6 +671,21 @@ def revert(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def revparse(ui, repo, *args, **kwargs):
+    cmdoptions = [
+        ('', 'show-cdup', None, ''),
+        ('', 'show-toplevel', None, ''),
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    if opts.get('show_cdup') or opts.get('show_toplevel'):
+        cmd = Command('root')
+        if opts.get('show_cdup'):
+            ui.status("note: hg root prints the root of the repository\n\n")
+        ui.status(cmd, "\n")
+    else:
+        ui.status("note: see hg help revset for how to refer to commits\n")
+
 def rm(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('f', 'force', None, ''),
@@ -847,6 +862,7 @@ gitcommands = {
     'rebase': rebase,
     'reset': reset,
     'revert': revert,
+    'rev-parse': revparse,
     'rm': rm,
     'show': show,
     'stash': stash,
