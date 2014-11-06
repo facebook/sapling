@@ -99,7 +99,7 @@ class convert_git(converter_source):
         if similarity < 0 or similarity > 100:
             raise util.Abort(_('similarity must be between 0 and 100'))
         if similarity > 0:
-            self.simopt = '--find-copies=%d%%' % similarity
+            self.simopt = '-C%d%%' % similarity
             findcopiesharder = ui.configbool('convert', 'git.findcopiesharder',
                                              False)
             if findcopiesharder:
