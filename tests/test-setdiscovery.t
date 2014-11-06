@@ -357,3 +357,52 @@ Test actual protocol when pulling one new head in addition to common heads
   $ cat errors.log
 
   $ cd ..
+
+
+Issue 4438 - test coverage for 3ef893520a85 issues.
+
+  $ mkdir issue4438
+  $ cd issue4438
+#if false
+generate new bundles:
+  $ hg init r1
+  $ for i in `seq 101`; do hg -R r1 up -qr null && hg -R r1 branch -q b$i && hg -R r1 ci -qmb$i; done
+  $ hg clone -q r1 r2
+  $ for i in `seq 10`; do hg -R r1 up -qr null && hg -R r1 branch -q c$i && hg -R r1 ci -qmc$i; done
+  $ hg -R r2 branch -q r2change && hg -R r2 ci -qmr2change
+  $ hg -R r1 bundle -qa $TESTDIR/bundles/issue4438-r1.hg
+  $ hg -R r2 bundle -qa $TESTDIR/bundles/issue4438-r2.hg
+#else
+use existing bundles:
+  $ hg clone -q $TESTDIR/bundles/issue4438-r1.hg r1
+  $ hg clone -q $TESTDIR/bundles/issue4438-r2.hg r2
+#endif
+
+Set iteration order could cause wrong and unstable results - fixed in 73cfaa348650:
+
+  $ hg -R r1 outgoing r2 -T'{rev} '
+  comparing with r2
+  searching for changes
+  101 102 103 104 105 106 107 108 109 110  (no-eol)
+
+The case where all the 'initialsamplesize' samples already were common would
+give 'all remote heads known locally' without checking the remaining heads -
+fixed in 86c35b7ae300:
+
+  $ cat >> $TESTTMP/unrandomsample.py << EOF
+  > import random
+  > def sample(population, k):
+  >     return sorted(population)[:k]
+  > random.sample = sample
+  > EOF
+
+  $ cat >> r1/.hg/hgrc << EOF
+  > [extensions]
+  > unrandomsample = $TESTTMP/unrandomsample.py
+  > EOF
+
+  $ hg -R r1 outgoing r2 -T'{rev} '
+  comparing with r2
+  searching for changes
+  101 102 103 104 105 106 107 108 109 110  (no-eol)
+  $ cd ..
