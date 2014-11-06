@@ -416,22 +416,22 @@ test for --json
   $ cat report.json
   testreport ={
       "test-failure.t": [\{] (re)
-          "csys": "\s*[\d\.]{5}",  (re)
-          "cuser": "\s*[\d\.]{5}",  (re)
-          "result": "failure", 
-          "time": "\s*[\d\.]{5}" (re)
-      }, 
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "result": "failure", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }, ? (re)
       "test-skip.t": {
-          "csys": "\s*[\d\.]{5}",  (re)
-          "cuser": "\s*[\d\.]{5}",  (re)
-          "result": "skip", 
-          "time": "\s*[\d\.]{5}" (re)
-      }, 
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "result": "skip", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }, ? (re)
       "test-success.t": [\{] (re)
-          "csys": "\s*[\d\.]{5}",  (re)
-          "cuser": "\s*[\d\.]{5}",  (re)
-          "result": "success", 
-          "time": "\s*[\d\.]{5}" (re)
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "result": "success", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
       }
   } (no-eol)
 
