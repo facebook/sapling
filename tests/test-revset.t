@@ -438,6 +438,32 @@ Test empty set input
   8
   9
 
+Test '%' operator
+
+  $ log '9%'
+  8
+  9
+  $ log '9%5'
+  2
+  4
+  8
+  9
+  $ log '(7 + 9)%(5 + 2)'
+  4
+  6
+  7
+  8
+  9
+
+Test the order of operations
+
+  $ log '7 + 9%5 + 2'
+  7
+  2
+  4
+  8
+  9
+
 Test explicit numeric revision
   $ log 'rev(-1)'
   $ log 'rev(0)'

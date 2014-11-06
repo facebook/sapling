@@ -116,6 +116,7 @@ elements = {
     "!": (10, ("not", 10)),
     "and": (5, None, ("and", 5)),
     "&": (5, None, ("and", 5)),
+    "%": (5, None, ("only", 5), ("onlypost", 5)),
     "or": (4, None, ("or", 4)),
     "|": (4, None, ("or", 4)),
     "+": (4, None, ("or", 4)),
@@ -152,7 +153,7 @@ def tokenize(program, lookup=None):
         elif c == '#' and program[pos:pos + 2] == '##': # look ahead carefully
             yield ('##', None, pos)
             pos += 1 # skip ahead
-        elif c in "():,-|&+!~^": # handle simple operators
+        elif c in "():,-|&+!~^%": # handle simple operators
             yield (c, None, pos)
         elif (c in '"\'' or c == 'r' and
               program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
@@ -1922,6 +1923,8 @@ methods = {
     "ancestor": ancestorspec,
     "parent": parentspec,
     "parentpost": p1,
+    "only": only,
+    "onlypost": only,
 }
 
 def optimize(x, small):
@@ -1935,6 +1938,9 @@ def optimize(x, small):
     op = x[0]
     if op == 'minus':
         return optimize(('and', x[1], ('not', x[2])), small)
+    elif op == 'only':
+        return optimize(('func', ('symbol', 'only'),
+                         ('list', x[1], x[2])), small)
     elif op == 'dagrangepre':
         return optimize(('func', ('symbol', 'ancestors'), x[1]), small)
     elif op == 'dagrangepost':
