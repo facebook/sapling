@@ -448,7 +448,7 @@ def _pushb2ctx(pushop, bundler):
     b2caps = bundle2.bundle2caps(pushop.remote)
     version = None
     cgversions = b2caps.get('b2x:changegroup')
-    if cgversions is None:
+    if not cgversions:  # 3.1 and 3.2 ship with an empty value
         cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
                                                 pushop.outgoing)
     else:
@@ -1200,7 +1200,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         # build changegroup bundle here.
         version = None
         cgversions = b2caps.get('b2x:changegroup')
-        if cgversions is None:
+        if not cgversions:  # 3.1 and 3.2 ship with an empty value
             cg = changegroup.getchangegroupraw(repo, source, heads=heads,
                                                common=common,
                                                bundlecaps=bundlecaps)
