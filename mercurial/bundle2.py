@@ -871,7 +871,6 @@ class unbundlepart(unpackermixin):
 capabilities = {'HG2Y': (),
                 'b2x:listkeys': (),
                 'b2x:pushkey': (),
-                'b2x:changegroup': (),
                 'digests': tuple(sorted(util.DIGESTS.keys())),
                 'b2x:remote-changegroup': ('http', 'https'),
                }
