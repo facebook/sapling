@@ -24,6 +24,7 @@ setup(
         'reset',
         'smartlog',
         'tweakdefaults',
+        'chistedit',
     ],
     packages=['crecord']
 )

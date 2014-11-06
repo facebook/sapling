@@ -41,6 +41,14 @@ An extension that adds the 'hg amend --rebase' command. When working with a stac
 
 If 'hg amend' is run on a commit in the middle of a stack without using --rebase, the amend succeeds and the old version of the commit is left behind with a marker bookmark on it 'bookmarkname(preamend)'. The user can then run 'hg amend --fixup' to post-humously rebase the children onto the new version of the commit.
 
+chistedit
+==========
+An interactive ncurses interface to histedit.
+
+NOTE: This requires python-curses installed and Mercurial's histedit extension enabled.
+
+This extensions allows you to interactively move around changesets or change the action to perform while keeping track of possible conflicts.
+
 Contributing
 ============
 
