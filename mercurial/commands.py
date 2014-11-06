@@ -2653,22 +2653,13 @@ def debugrevlog(ui, repo, file_=None, **opts):
                  " rawsize totalsize compression heads chainlen\n")
         ts = 0
         heads = set()
-        rindex = r.index
-
-        def chainbaseandlen(rev):
-            clen = 0
-            base = rindex[rev][3]
-            while base != rev:
-                clen += 1
-                rev = base
-                base = rindex[rev][3]
-            return base, clen
 
         for rev in xrange(numrevs):
             dbase = r.deltaparent(rev)
             if dbase == -1:
                 dbase = rev
-            cbase, clen = chainbaseandlen(rev)
+            cbase = r.chainbase(rev)
+            clen = r.chainlen(rev)
             p1, p2 = r.parentrevs(rev)
             rs = r.rawsize(rev)
             ts = ts + rs

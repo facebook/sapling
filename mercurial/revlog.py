@@ -350,6 +350,20 @@ class revlog(object):
             rev = base
             base = index[rev][3]
         return base
+    def chainlen(self, rev):
+        index = self.index
+        generaldelta = self._generaldelta
+        iterrev = rev
+        e = index[iterrev]
+        clen = 0
+        while iterrev != e[3]:
+            clen += 1
+            if generaldelta:
+                iterrev = e[3]
+            else:
+                iterrev -= 1
+            e = index[iterrev]
+        return clen
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
     def rawsize(self, rev):
