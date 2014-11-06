@@ -316,6 +316,9 @@ class localrepository(object):
         chunkcachesize = self.ui.configint('format', 'chunkcachesize')
         if chunkcachesize is not None:
             self.sopener.options['chunkcachesize'] = chunkcachesize
+        maxchainlen = self.ui.configint('revlog', 'maxchainlen')
+        if maxchainlen is not None:
+            self.sopener.options['maxchainlen'] = maxchainlen
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")

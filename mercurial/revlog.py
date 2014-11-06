@@ -204,6 +204,7 @@ class revlog(object):
         self._basecache = None
         self._chunkcache = (0, '')
         self._chunkcachesize = 65536
+        self._maxchainlen = None
         self.index = []
         self._pcache = {}
         self._nodecache = {nullid: nullrev}
@@ -219,6 +220,8 @@ class revlog(object):
                 v = 0
             if 'chunkcachesize' in opts:
                 self._chunkcachesize = opts['chunkcachesize']
+            if 'maxchainlen' in opts:
+                self._maxchainlen = opts['maxchainlen']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -1216,11 +1219,13 @@ class revlog(object):
                 base = rev
             else:
                 base = chainbase
-            return dist, l, data, base, chainbase
+            chainlen = self.chainlen(rev) + 1
+            return dist, l, data, base, chainbase, chainlen
 
         curr = len(self)
         prev = curr - 1
         base = chainbase = curr
+        chainlen = None
         offset = self.end(prev)
         flags = 0
         d = None
@@ -1240,7 +1245,7 @@ class revlog(object):
                     d = builddelta(prev)
             else:
                 d = builddelta(prev)
-            dist, l, data, base, chainbase = d
+            dist, l, data, base, chainbase, chainlen = d
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
@@ -1249,7 +1254,8 @@ class revlog(object):
                                         cachedelta[1])
         else:
             textlen = len(text)
-        if d is None or dist > textlen * 2:
+        if (d is None or dist > textlen * 2 or
+            self._maxchainlen and chainlen > self._maxchainlen):
             text = buildtext()
             data = self.compress(text)
             l = len(data[1]) + len(data[0])
