@@ -238,6 +238,40 @@ def _getbundlemsgs(repo, sender, bundle, **opts):
     msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
     return [(msg, subj, None)]
 
+def _makeintro(repo, sender, patches, **opts):
+    """make an introduction email, asking the user for content if needed
+
+    email is returned as (subject, body, cumulative-diffstat)"""
+    ui = repo.ui
+    _charsets = mail._charsets(ui)
+    tlen = len(str(len(patches)))
+
+    flag = opts.get('flag') or ''
+    if flag:
+        flag = ' ' + ' '.join(flag)
+    prefix = '[PATCH %0*d of %d%s]' % (tlen, 0, len(patches), flag)
+
+    subj = (opts.get('subject') or
+            prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
+    if not subj:
+        return None         # skip intro if the user doesn't bother
+
+    subj = prefix + ' ' + subj
+
+    body = ''
+    if opts.get('diffstat'):
+        # generate a cumulative diffstat of the whole patch series
+        diffstat = patch.diffstat(sum(patches, []))
+        body = '\n' + diffstat
+    else:
+        diffstat = None
+
+    body = _getdescription(repo, body, sender, **opts)
+    msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
+    msg['Subject'] = mail.headencode(ui, subj, _charsets,
+                                     opts.get('test'))
+    return (msg, subj, diffstat)
+
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
@@ -421,7 +455,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
         # build the intro message, or skip it if the user declines
         if introwanted(opts, len(patches)):
-            msg = makeintro(patches)
+            msg = _makeintro(repo, sender, patches, **opts)
             if msg:
                 msgs.append(msg)
 
@@ -439,34 +473,6 @@ def patchbomb(ui, repo, *revs, **opts):
 
         return msgs
 
-    def makeintro(patches):
-        tlen = len(str(len(patches)))
-
-        flag = opts.get('flag') or ''
-        if flag:
-            flag = ' ' + ' '.join(flag)
-        prefix = '[PATCH %0*d of %d%s]' % (tlen, 0, len(patches), flag)
-
-        subj = (opts.get('subject') or
-                prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
-        if not subj:
-            return None         # skip intro if the user doesn't bother
-
-        subj = prefix + ' ' + subj
-
-        body = ''
-        if opts.get('diffstat'):
-            # generate a cumulative diffstat of the whole patch series
-            diffstat = patch.diffstat(sum(patches, []))
-            body = '\n' + diffstat
-        else:
-            diffstat = None
-
-        body = _getdescription(repo, body, sender, **opts)
-        msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
-        msg['Subject'] = mail.headencode(ui, subj, _charsets,
-                                         opts.get('test'))
-        return (msg, subj, diffstat)
 
     sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
