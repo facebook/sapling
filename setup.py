@@ -16,5 +16,6 @@ setup(
         'fbamend',
         'githelp',
         'smartlog',
+        'chistedit',
     ]
 )
