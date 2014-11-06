@@ -20,6 +20,7 @@
   $ hg ci -m "add subrepo"
   $ echo "[web]" >> .hg/hgrc
   $ echo "name = test-archive" >> .hg/hgrc
+  $ echo "archivesubrepos = True" >> .hg/hgrc
   $ cp .hg/hgrc .hg/hgrc-base
   > test_archtype() {
   >     echo "allow_archive = $1" >> .hg/hgrc
@@ -95,6 +96,7 @@ invalid arch type should give 404
   test-archive-1701ef1f1510/bar
   test-archive-1701ef1f1510/baz/bletch
   test-archive-1701ef1f1510/foo
+  test-archive-1701ef1f1510/subrepo/sub
   $ python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - 2>/dev/null
   test-archive-1701ef1f1510/.hg_archival.txt
   test-archive-1701ef1f1510/.hgsub
@@ -102,6 +104,7 @@ invalid arch type should give 404
   test-archive-1701ef1f1510/bar
   test-archive-1701ef1f1510/baz/bletch
   test-archive-1701ef1f1510/foo
+  test-archive-1701ef1f1510/subrepo/sub
   $ python getarchive.py "$TIP" zip > archive.zip
   $ unzip -t archive.zip
   Archive:  archive.zip
@@ -111,6 +114,7 @@ invalid arch type should give 404
       testing: test-archive-1701ef1f1510/bar   OK
       testing: test-archive-1701ef1f1510/baz/bletch   OK
       testing: test-archive-1701ef1f1510/foo   OK
+      testing: test-archive-1701ef1f1510/subrepo/sub   OK
   No errors detected in compressed data of archive.zip.
 
 test that we can download single directories and files
