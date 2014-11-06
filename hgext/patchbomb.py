@@ -272,6 +272,40 @@ def _makeintro(repo, sender, patches, **opts):
                                      opts.get('test'))
     return (msg, subj, diffstat)
 
+def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
+    """return a list of emails from a list of patches
+
+    This involves introduction message creation if necessary.
+
+    This function returns a list of "email" tuples (subject, content, None).
+    """
+    ui = repo.ui
+    _charsets = mail._charsets(ui)
+    msgs = []
+
+    ui.write(_('this patch series consists of %d patches.\n\n')
+             % len(patches))
+
+    # build the intro message, or skip it if the user declines
+    if introwanted(opts, len(patches)):
+        msg = _makeintro(repo, sender, patches, **opts)
+        if msg:
+            msgs.append(msg)
+
+    # are we going to send more than one message?
+    numbered = len(msgs) + len(patches) > 1
+
+    # now generate the actual patch messages
+    name = None
+    for i, p in enumerate(patches):
+        if patchnames:
+            name = patchnames[i]
+        msg = makepatch(ui, repo, p, opts, _charsets, i + 1,
+                        len(patches), numbered, name)
+        msgs.append(msg)
+
+    return msgs
+
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
@@ -447,46 +481,21 @@ def patchbomb(ui, repo, *revs, **opts):
     def genmsgid(id):
         return '<%s.%s@%s>' % (id[:20], int(start_time[0]), socket.getfqdn())
 
-    def getpatchmsgs(patches, patchnames=None):
-        msgs = []
-
-        ui.write(_('this patch series consists of %d patches.\n\n')
-                 % len(patches))
-
-        # build the intro message, or skip it if the user declines
-        if introwanted(opts, len(patches)):
-            msg = _makeintro(repo, sender, patches, **opts)
-            if msg:
-                msgs.append(msg)
-
-        # are we going to send more than one message?
-        numbered = len(msgs) + len(patches) > 1
-
-        # now generate the actual patch messages
-        name = None
-        for i, p in enumerate(patches):
-            if patchnames:
-                name = patchnames[i]
-            msg = makepatch(ui, repo, p, opts, _charsets, i + 1,
-                            len(patches), numbered, name)
-            msgs.append(msg)
-
-        return msgs
-
-
     sender = (opts.get('from') or ui.config('email', 'from') or
               ui.config('patchbomb', 'from') or
               prompt(ui, 'From', ui.username()))
 
     if patches:
-        msgs = getpatchmsgs(patches, opts.get('patchnames'))
+        msgs = _getpatchmsgs(repo, sender, patches, opts.get('patchnames'),
+                             **opts)
     elif bundle:
         bundledata = _getbundle(repo, dest, **opts)
         bundleopts = opts.copy()
         bundleopts.pop('bundle', None)  # already processed
         msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
-        msgs = getpatchmsgs(list(_getpatches(repo, revs, **opts)))
+        _patches = list(_getpatches(repo, revs, **opts))
+        msgs = _getpatchmsgs(repo, sender, _patches, **opts)
 
     showaddrs = []
 
