@@ -369,7 +369,7 @@ class cg1packer(object):
                         linkrev = llr(r)
                         if linkrev in needed:
                             yield filerevlog.node(r), cl.node(linkrev)
-                fnodes[fname] = dict(genfilenodes())
+                return dict(genfilenodes())
             return fnodes.get(fname, {})
 
         for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,
