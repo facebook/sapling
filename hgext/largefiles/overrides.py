@@ -1170,11 +1170,11 @@ def overriderollback(orig, ui, repo, **opts):
 def overridetransplant(orig, ui, repo, *revs, **opts):
     resuming = opts.get('continue')
     repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
+    repo._lfstatuswriters.append(lambda *msg, **opts: None)
     try:
-        repo._istransplanting = True
         result = orig(ui, repo, *revs, **opts)
     finally:
-        repo._istransplanting = False
+        repo._lfstatuswriters.pop()
         repo._lfcommithooks.pop()
     return result
 
@@ -1277,12 +1277,7 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             newstandins = lfutil.getstandinsstate(repo)
             filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
 
-        printmessage = None
-        if getattr(repo, "_istransplanting", False):
-            # suppress status message while automated committing
-            printmessage = False
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
-                                printmessage=printmessage,
                                 normallookup=partial)
 
         return result
