@@ -330,6 +330,14 @@ class cg1packer(object):
             mfs.setdefault(c[0], x)
             return x
 
+        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
+                                reorder=reorder):
+            yield chunk
+        progress(msgbundling, None)
+
+        for f in changedfiles:
+            fnodes[f] = {}
+
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
@@ -344,13 +352,6 @@ class cg1packer(object):
                         fnodes[f].setdefault(n, clnode)
             return clnode
 
-        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
-                                reorder=reorder):
-            yield chunk
-        progress(msgbundling, None)
-
-        for f in changedfiles:
-            fnodes[f] = {}
         mfnodes = self.prune(mf, mfs, commonrevs, source)
         for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
                                 reorder=reorder):
