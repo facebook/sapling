@@ -268,6 +268,7 @@ def _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap):
     mctx = context.memctx(rdst, parents, ctx.description(), dstfiles,
                           getfilectx, ctx.user(), ctx.date(), ctx.extra())
     ret = rdst.commitctx(mctx)
+    lfutil.copyalltostore(rdst, ret)
     rdst.setparents(ret)
     revmap[ctx.node()] = rdst.changelog.tip()
 

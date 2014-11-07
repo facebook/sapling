@@ -204,7 +204,7 @@ def copyalltostore(repo, node):
 def copytostoreabsolute(repo, file, hash):
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
-    elif not getattr(repo, "_isconverting", False):
+    else:
         util.makedirs(os.path.dirname(storepath(repo, hash)))
         dst = util.atomictempfile(storepath(repo, hash),
                                   createmode=repo.store.createmode)
@@ -407,6 +407,9 @@ def markcommitted(orig, ctx, node):
             lfile = splitstandin(f)
             synclfdirstate(repo, lfdirstate, lfile, False)
     lfdirstate.write()
+
+    # As part of committing, copy all of the largefiles into the cache.
+    copyalltostore(repo, node)
 
 def getlfilestoupdate(oldstandins, newstandins):
     changedstandins = set(oldstandins).symmetric_difference(set(newstandins))

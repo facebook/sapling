@@ -611,3 +611,16 @@ the working context)
 #endif
 
   $ cd ..
+
+Test that "hg convert" avoids copying largefiles from the working
+directory into store, because "hg convert" doesn't update largefiles
+in the working directory (removing files under ".cache/largefiles"
+forces "hg convert" to copy corresponding largefiles)
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > convert =
+  > EOF
+
+  $ rm $TESTTMP/.cache/largefiles/6a4f36d4075fbe0f30ec1d26ca44e63c05903671
+  $ hg convert -q repo repo.converted

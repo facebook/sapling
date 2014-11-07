@@ -1226,14 +1226,6 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         err = 0
     return err
 
-def mercurialsinkbefore(orig, sink):
-    sink.repo._isconverting = True
-    orig(sink)
-
-def mercurialsinkafter(orig, sink):
-    sink.repo._isconverting = False
-    orig(sink)
-
 def mergeupdate(orig, repo, node, branchmerge, force, partial,
                 *args, **kwargs):
     wlock = repo.wlock()

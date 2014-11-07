@@ -241,11 +241,8 @@ def reposetup(ui, repo):
             self.lfstatus = True
             return scmutil.status(*result)
 
-        # As part of committing, copy all of the largefiles into the
-        # cache.
         def commitctx(self, ctx, *args, **kwargs):
             node = super(lfilesrepo, self).commitctx(ctx, *args, **kwargs)
-            lfutil.copyalltostore(self, node)
             class lfilesctx(ctx.__class__):
                 def markcommitted(self, node):
                     orig = super(lfilesctx, self).markcommitted
