@@ -411,7 +411,7 @@ def chistedit(ui, repo, *freeargs, **opts):
                 'exactly one common root'))
         root = rr[0].node()
 
-        topmost, _ = repo.dirstate.parents()
+        topmost, empty = repo.dirstate.parents()
         revs = histedit.between(repo, root, topmost, keep)
         if not revs:
             raise util.Abort(_('%s is not an ancestor of working directory') %
