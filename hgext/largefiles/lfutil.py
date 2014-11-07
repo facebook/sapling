@@ -447,18 +447,6 @@ def updatestandinsbymatch(repo, match):
 
     ui = repo.ui
 
-    # Case 0: Automated committing
-    #
-    # While automated committing (like rebase, transplant
-    # and so on), this code path is used to avoid:
-    # (1) updating standins, because standins should
-    #     be already updated at this point
-    # (2) aborting when standins are matched by "match",
-    #     because automated committing may specify them directly
-    #
-    if getattr(repo, "_istransplanting", False):
-        return match
-
     # Case 1: user calls commit with no specific files or
     # include/exclude patterns: refresh and commit all files that
     # are "dirty".

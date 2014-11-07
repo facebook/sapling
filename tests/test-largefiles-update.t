@@ -560,6 +560,20 @@ changed, even if it is aborted by conflict of other.
   $ cat largeX
   largeX
 
+Test that transplant updates standins for manually modified largefiles
+at the 1st commit of resuming.
+
+  $ echo "manually modified before 'hg transplant --continue'" > large1
+  $ hg transplant --continue
+  07d6153b5c04 transplanted as f1bf30eb88cc
+  $ hg diff -c tip .hglf/large1 | grep '^[+-][0-9a-z]'
+  -e5bb990443d6a92aaf7223813720f7566c9dd05b
+  +6a4f36d4075fbe0f30ec1d26ca44e63c05903671
+  $ rm -f large1
+  $ hg update -q -C tip
+  $ cat large1
+  manually modified before 'hg transplant --continue'
+
 Test that "hg status" doesn't show removal of largefiles not managed
 in the target context.
 

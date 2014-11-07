@@ -1168,11 +1168,14 @@ def overriderollback(orig, ui, repo, **opts):
     return result
 
 def overridetransplant(orig, ui, repo, *revs, **opts):
+    resuming = opts.get('continue')
+    repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
     try:
         repo._istransplanting = True
         result = orig(ui, repo, *revs, **opts)
     finally:
         repo._istransplanting = False
+        repo._lfcommithooks.pop()
     return result
 
 def overridecat(orig, ui, repo, file1, *pats, **opts):
