@@ -18,10 +18,10 @@ can cycle through available commands with left/h or right/l.
 The diff for the current commit can be viewed by pressing v. To apply
 the commands press C, which will call histedit.
 
-The current conflict dection is based on a per-file comparision. Reordered
-changesets that touch the sames files are considered a "potential
-conflict".  Please note that Mercurials merge algorithm might still be
-able to merge these files correctly.
+The current conflict deteciton mechanism is based on a per-file
+comparision. Reordered changesets that touch the sames files are
+considered a "potential conflict".  Please note that Mercurial's merge
+algorithm might still be able to merge these files without conflict.
 """
 
 from __future__ import print_function
@@ -411,7 +411,7 @@ def chistedit(ui, repo, *freeargs, **opts):
                 'exactly one common root'))
         root = rr[0].node()
 
-        topmost, _ = repo.dirstate.parents()
+        topmost, empty = repo.dirstate.parents()
         revs = histedit.between(repo, root, topmost, keep)
         if not revs:
             raise util.Abort(_('%s is not an ancestor of working directory') %
