@@ -135,7 +135,7 @@ def onetimeclientsetup(ui):
         return
     clientonetime = True
 
-    changegroup.cg1packer = shallowbundle.shallowbundle
+    changegroup.cg1packer = shallowbundle.shallowcg1packer
     wrapfunction(changegroup, 'addchangegroupfiles', shallowbundle.addchangegroupfiles)
     wrapfunction(changegroup, 'getchangegroup', shallowbundle.getchangegroup)
 

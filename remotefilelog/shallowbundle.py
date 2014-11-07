@@ -53,18 +53,18 @@ def sortnodes(nodes, parentfunc):
 
     return results
 
-class shallowbundle(changegroup.cg1packer):
+class shallowcg1packer(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         if "remotefilelog" in self._repo.requirements:
             fastpathlinkrev = False
 
-        return super(shallowbundle, self).generate(commonrevs, clnodes,
+        return super(shallowcg1packer, self).generate(commonrevs, clnodes,
             fastpathlinkrev, source)
 
     def group(self, nodelist, rlog, lookup, units=None, reorder=None):
         if isinstance(rlog, revlog.revlog):
-            for c in super(shallowbundle, self).group(nodelist, rlog, lookup,
-                                                      units, reorder):
+            for c in super(shallowcg1packer, self).group(nodelist, rlog, lookup,
+                                                         units, reorder):
                 yield c
             return
 
@@ -138,7 +138,7 @@ class shallowbundle(changegroup.cg1packer):
 
                 repo.fileservice.prefetch(prevfiles)
 
-        return super(shallowbundle, self).generatefiles(changedfiles,
+        return super(shallowcg1packer, self).generatefiles(changedfiles,
                      linknodes, commonrevs, source)
 
     def shouldaddfilegroups(self, source):
@@ -162,7 +162,7 @@ class shallowbundle(changegroup.cg1packer):
 
     def prune(self, rlog, missing, commonrevs, source):
         if isinstance(rlog, revlog.revlog):
-            return super(shallowbundle, self).prune(rlog, missing,
+            return super(shallowcg1packer, self).prune(rlog, missing,
                 commonrevs, source)
 
         repo = self._repo
