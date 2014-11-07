@@ -335,9 +335,6 @@ class cg1packer(object):
             yield chunk
         progress(msgbundling, None)
 
-        for f in changedfiles:
-            fnodes[f] = {}
-
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
@@ -349,7 +346,7 @@ class cg1packer(object):
                     if f in changedfiles:
                         # record the first changeset introducing this filelog
                         # version
-                        fnodes[f].setdefault(n, clnode)
+                        fnodes.setdefault(f, {}).setdefault(n, clnode)
             return clnode
 
         mfnodes = self.prune(mf, mfs, commonrevs, source)
