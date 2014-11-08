@@ -270,7 +270,7 @@ class changelog(revlog.revlog):
         self._nodecache = r._nodecache
         self._chunkcache = r._chunkcache
 
-    def _writepending(self):
+    def _writepending(self, tr):
         "create a file containing the unfinalized state for pretxnchangegroup"
         if self._delaybuf:
             # make a temporary copy of the index

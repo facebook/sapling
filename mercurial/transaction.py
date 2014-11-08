@@ -281,6 +281,8 @@ class transaction(object):
     def addpending(self, category, callback):
         """add a callback to be called when the transaction is pending
 
+        The transaction will be given as callback's first argument.
+
         Category is a unique identifier to allow overwriting an old callback
         with a newer callback.
         """
@@ -294,7 +296,7 @@ class transaction(object):
         categories = sorted(self._pendingcallback)
         for cat in categories:
             # remove callback since the data will have been flushed
-            any = self._pendingcallback.pop(cat)()
+            any = self._pendingcallback.pop(cat)(self)
             self._anypending = self._anypending or any
         return self._anypending
 
