@@ -556,11 +556,13 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
             opts['bundlecaps'] = ','.join(bundlecaps)
         return orig(command, **opts)
 
-    def localgetbundle(orig, source, heads=None, common=None, bundlecaps=None):
+    def localgetbundle(orig, source, heads=None, common=None, bundlecaps=None,
+                       **kwargs):
         if not bundlecaps:
-            bundlecaps = []
-        bundlecaps.append('remotefilelog')
-        return orig(source, heads=heads, common=common, bundlecaps=bundlecaps)
+            bundlecaps = set()
+        bundlecaps.add('remotefilelog')
+        return orig(source, heads=heads, common=common, bundlecaps=bundlecaps,
+                    **kwargs)
 
     if hasattr(remote, '_callstream'):
         wrapfunction(remote, '_callstream', remotecallstream)
