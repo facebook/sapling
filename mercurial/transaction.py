@@ -304,6 +304,8 @@ class transaction(object):
     def addfinalize(self, category, callback):
         """add a callback to be called when the transaction is closed
 
+        The transaction will be given as callback's first argument.
+
         Category is a unique identifier to allow overwriting old callbacks with
         newer callbacks.
         """
@@ -325,7 +327,7 @@ class transaction(object):
             self._generatefiles()
             categories = sorted(self._finalizecallback)
             for cat in categories:
-                self._finalizecallback[cat]()
+                self._finalizecallback[cat](self)
             self.onclose()
 
         self.count -= 1
