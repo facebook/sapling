@@ -814,10 +814,9 @@ class ui(object):
 
             editor = self.geteditor()
 
-            util.system("%s \"%s\"" % (editor, name),
+            self.system("%s \"%s\"" % (editor, name),
                         environ=environ,
-                        onerr=util.Abort, errprefix=_("edit failed"),
-                        out=self.fout)
+                        onerr=util.Abort, errprefix=_("edit failed"))
 
             f = open(name)
             t = f.read()
@@ -826,6 +825,13 @@ class ui(object):
             os.unlink(name)
 
         return t
+
+    def system(self, cmd, environ={}, cwd=None, onerr=None, errprefix=None):
+        '''execute shell command with appropriate output stream. command
+        output will be redirected if fout is not stdout.
+        '''
+        return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
+                           errprefix=errprefix, out=self.fout)
 
     def traceback(self, exc=None, force=False):
         '''print exception traceback if traceback printing enabled or forced.
