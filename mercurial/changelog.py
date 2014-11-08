@@ -273,7 +273,11 @@ class changelog(revlog.revlog):
         if self._delaybuf:
             # make a temporary copy of the index
             fp1 = self._realopener(self.indexfile)
-            fp2 = self._realopener(self.indexfile + ".a", "w")
+            pendingfilename = self.indexfile + ".a"
+            # register as a temp file to ensure cleanup on failure
+            tr.registertmp(pendingfilename)
+            # write existing data
+            fp2 = self._realopener(pendingfilename, "w")
             fp2.write(fp1.read())
             # add pending data
             fp2.write("".join(self._delaybuf))

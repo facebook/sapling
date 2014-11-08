@@ -148,6 +148,19 @@ more there after
   $ hg -q tip
   4:539e4b31b6dc
 
+(Check that no 'changelog.i.a' file were left behind)
+
+  $ ls -1 .hg/store/
+  00changelog.i
+  00manifest.i
+  data
+  fncache
+  journal.phaseroots
+  phaseroots
+  undo
+  undo.phaseroots
+
+
 precommit hook can prevent commit
 
   $ echo "precommit.forbid = python \"$TESTDIR/printenv.py\" precommit.forbid 1" >> .hg/hgrc
