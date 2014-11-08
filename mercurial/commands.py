@@ -743,9 +743,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 # update state
                 state['current'] = [node]
                 hbisect.save_state(repo, state)
-                status = util.system(command,
-                                     environ={'HG_NODE': hex(node)},
-                                     out=ui.fout)
+                status = ui.system(command, environ={'HG_NODE': hex(node)})
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
@@ -1573,9 +1571,8 @@ def config(ui, repo, *values, **opts):
             fp.close()
 
         editor = ui.geteditor()
-        util.system("%s \"%s\"" % (editor, f),
-                    onerr=util.Abort, errprefix=_("edit failed"),
-                    out=ui.fout)
+        ui.system("%s \"%s\"" % (editor, f),
+                  onerr=util.Abort, errprefix=_("edit failed"))
         return
 
     for f in scmutil.rcpath():

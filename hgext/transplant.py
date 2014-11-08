@@ -233,13 +233,12 @@ class transplanter(object):
         fp.close()
 
         try:
-            util.system('%s %s %s' % (filter, util.shellquote(headerfile),
-                                   util.shellquote(patchfile)),
-                        environ={'HGUSER': changelog[1],
-                                 'HGREVISION': revlog.hex(node),
-                                 },
-                        onerr=util.Abort, errprefix=_('filter failed'),
-                        out=self.ui.fout)
+            self.ui.system('%s %s %s' % (filter, util.shellquote(headerfile),
+                                         util.shellquote(patchfile)),
+                           environ={'HGUSER': changelog[1],
+                                    'HGREVISION': revlog.hex(node),
+                                    },
+                           onerr=util.Abort, errprefix=_('filter failed'))
             user, date, msg = self.parselog(file(headerfile))[1:4]
         finally:
             os.unlink(headerfile)

@@ -131,7 +131,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
         cwd = repo.root
     else:
         cwd = os.getcwd()
-    r = util.system(cmd, environ=env, cwd=cwd, out=ui.fout)
+    r = ui.system(cmd, environ=env, cwd=cwd)
 
     duration = time.time() - starttime
     ui.log('exthook', 'exthook-%s: %s finished in %0.2f seconds\n',

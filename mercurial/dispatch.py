@@ -402,7 +402,7 @@ class cmdalias(object):
                         return ''
                 cmd = re.sub(r'\$(\d+|\$)', _checkvar, self.definition[1:])
                 cmd = aliasinterpolate(self.name, args, cmd)
-                return util.system(cmd, environ=env, out=ui.fout)
+                return ui.system(cmd, environ=env)
             self.fn = fn
             return
 

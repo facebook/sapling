@@ -35,7 +35,7 @@ vdiff on hovered and selected revisions.
 '''
 
 import os
-from mercurial import cmdutil, commands, util, patch, revlog, scmutil
+from mercurial import cmdutil, commands, patch, revlog, scmutil
 from mercurial.node import nullid, nullrev, short
 from mercurial.i18n import _
 
@@ -349,4 +349,4 @@ def view(ui, repo, *etc, **opts):
     optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
-    util.system(cmd, out=ui.fout)
+    ui.system(cmd)

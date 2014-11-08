@@ -52,7 +52,7 @@ class sshpeer(wireproto.wirepeer):
                 util.shellquote("%s init %s" %
                     (_serverquote(remotecmd), _serverquote(self.path))))
             ui.debug('running %s\n' % cmd)
-            res = util.system(cmd, out=ui.fout)
+            res = ui.system(cmd)
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
