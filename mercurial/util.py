@@ -619,9 +619,8 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
 
-    if command fails and onerr is None, return status.  if ui object,
-    print error message and return status, else raise onerr object as
-    exception.
+    if command fails and onerr is None, return status, else raise onerr
+    object as exception.
 
     if out is specified, it is assumed to be a file-like object that has a
     write() method. stdout and stderr will be redirected to out.'''
@@ -670,10 +669,7 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
                             explainexit(rc)[0])
         if errprefix:
             errmsg = '%s: %s' % (errprefix, errmsg)
-        try:
-            onerr.warn(errmsg + '\n')
-        except AttributeError:
-            raise onerr(errmsg)
+        raise onerr(errmsg)
     return rc
 
 def checksignature(func):
