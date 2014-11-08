@@ -452,8 +452,8 @@ class cg2packer(cg1packer):
     def group(self, nodelist, revlog, lookup, units=None, reorder=None):
         if (revlog._generaldelta and reorder is not True):
             reorder = False
-        return cg1packer.group(self, nodelist, revlog, lookup,
-                               units=units, reorder=reorder)
+        return super(cg2packer, self).group(nodelist, revlog, lookup,
+                                            units=units, reorder=reorder)
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         dp = revlog.deltaparent(rev)
