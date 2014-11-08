@@ -816,7 +816,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                             ', '.join([hex(c[:6]) for c in newheads]))
 
             tr.addpostclose('changegroup-runhooks-%020i' % clstart,
-                            lambda: repo._afterlock(runhooks))
+                            lambda tr: repo._afterlock(runhooks))
 
         tr.close()
 

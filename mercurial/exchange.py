@@ -861,7 +861,7 @@ class pulloperation(object):
             def runhooks():
                 repo.hook('b2x-transactionclose', **hookargs)
             self._tr.addpostclose('b2x-hook-transactionclose',
-                                  lambda: repo._afterlock(runhooks))
+                                  lambda tr: repo._afterlock(runhooks))
             self._tr.close()
 
     def releasetransaction(self):
@@ -1286,7 +1286,7 @@ def unbundle(repo, cg, heads, source, url):
                 def runhooks():
                     repo.hook('b2x-transactionclose', **hookargs)
                 tr.addpostclose('b2x-hook-transactionclose',
-                                lambda: repo._afterlock(runhooks))
+                                lambda tr: repo._afterlock(runhooks))
                 tr.close()
             except Exception, exc:
                 exc.duringunbundle2 = True

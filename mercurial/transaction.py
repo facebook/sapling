@@ -315,6 +315,8 @@ class transaction(object):
     def addpostclose(self, category, callback):
         """add a callback to be called after the transaction is closed
 
+        The transaction will be given as callback's first argument.
+
         Category is a unique identifier to allow overwriting an old callback
         with a newer callback.
         """
@@ -350,7 +352,7 @@ class transaction(object):
         # run post close action
         categories = sorted(self._postclosecallback)
         for cat in categories:
-            self._postclosecallback[cat]()
+            self._postclosecallback[cat](self)
 
     @active
     def abort(self):
