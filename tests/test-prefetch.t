@@ -22,6 +22,8 @@
   streaming all changes
   2 files to transfer, 528 bytes of data
   transferred 528 bytes in 0.0 seconds (*/sec) (glob)
+  searching for changes
+  no changes found
   $ cd shallow
 
   $ hg prefetch -r 0
@@ -68,7 +70,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  adding remote bookmark foo
+  updating bookmark foo
   (run 'hg update' to get a working copy)
   prefetching file contents
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)

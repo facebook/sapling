@@ -17,6 +17,8 @@
   streaming all changes
   2 files to transfer, 227 bytes of data
   transferred 227 bytes in 0.0 seconds (* KB/sec) (glob)
+  searching for changes
+  no changes found
   $ cd shallow
   $ cat .hg/requires
   dotencode
@@ -40,6 +42,8 @@
   streaming all changes
   2 files to transfer, 227 bytes of data
   transferred 227 bytes in 0.0 seconds (* KB/sec) (glob)
+  searching for changes
+  no changes found
   $ cd shallow2
   $ cat .hg/requires
   dotencode

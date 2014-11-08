@@ -20,6 +20,8 @@ Shallow clone from full
   streaming all changes
   2 files to transfer, 473 bytes of data
   transferred 473 bytes in * seconds (* KB/sec) (glob)
+  searching for changes
+  no changes found
   $ cd shallow
   $ cat .hg/requires
   dotencode

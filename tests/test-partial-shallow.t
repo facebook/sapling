@@ -18,6 +18,8 @@
   streaming all changes
   3 files to transfer, 336 bytes of data
   transferred 336 bytes in * seconds (* KB/sec) (glob)
+  searching for changes
+  no changes found
   $ cat >> shallow/.hg/hgrc <<EOF
   > [remotefilelog]
   > cachepath=$PWD/hgcache
