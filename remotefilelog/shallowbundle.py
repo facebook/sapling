@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient, remotefilelog
+import fileserverclient, remotefilelog, shallowutil
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import changegroup, revlog, phases, mdiff, match, bundlerepo
@@ -53,6 +53,33 @@ def sortnodes(nodes, parentfunc):
 
     return results
 
+def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
+    if isinstance(rlog, revlog.revlog):
+        for c in super(cls, self).group(nodelist, rlog, lookup,
+                                        units=units, reorder=reorder):
+            yield c
+        return
+
+    if len(nodelist) == 0:
+        yield self.close()
+        return
+
+    nodelist = sortnodes(nodelist, rlog.parents)
+
+    # add the parent of the first rev
+    p = rlog.parents(nodelist[0])[0]
+    nodelist.insert(0, p)
+
+    # build deltas
+    for i in xrange(len(nodelist) - 1):
+        prev, curr = nodelist[i], nodelist[i + 1]
+        linknode = lookup(curr)
+        for c in self.nodechunk(rlog, curr, prev, linknode):
+            yield c
+
+    yield self.close()
+
+@shallowutil.interposeclass(changegroup, 'cg1packer')
 class shallowcg1packer(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         if "remotefilelog" in self._repo.requirements:
@@ -62,30 +89,8 @@ class shallowcg1packer(changegroup.cg1packer):
             fastpathlinkrev, source)
 
     def group(self, nodelist, rlog, lookup, units=None, reorder=None):
-        if isinstance(rlog, revlog.revlog):
-            for c in super(shallowcg1packer, self).group(nodelist, rlog, lookup,
-                                                         units, reorder):
-                yield c
-            return
-
-        if len(nodelist) == 0:
-            yield self.close()
-            return
-
-        nodelist = sortnodes(nodelist, rlog.parents)
-
-        # add the parent of the first rev
-        p = rlog.parents(nodelist[0])[0]
-        nodelist.insert(0, p)
-
-        # build deltas
-        for i in xrange(len(nodelist) - 1):
-            prev, curr = nodelist[i], nodelist[i + 1]
-            linknode = lookup(curr)
-            for c in self.nodechunk(rlog, curr, prev, linknode):
-                yield c
-
-        yield self.close()
+        return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
+                            units=None, reorder=None)
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         if requirement in self._repo.requirements:
@@ -187,6 +192,20 @@ class shallowcg1packer(changegroup.cg1packer):
         yield changegroup.chunkheader(l)
         yield meta
         yield delta
+
+if util.safehasattr(changegroup, 'cg2packer'):
+    # Mercurial >= 3.3
+    @shallowutil.interposeclass(changegroup, 'cg2packer')
+    class shallowcg2packer(changegroup.cg2packer):
+        def group(self, nodelist, rlog, lookup, units=None, reorder=None):
+            # for revlogs, shallowgroup will be called twice in the same stack
+            # -- once here, once up the inheritance hierarchy in
+            # shallowcg1packer. That's fine though because for revlogs,
+            # shallowgroup doesn't do anything on top of the usual group
+            # function. If that assumption changes this will have to be
+            # revisited.
+            return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
+                                units=units, reorder=reorder)
 
 def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None):
     if not requirement in repo.requirements:
