@@ -5125,62 +5125,12 @@ def remove(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if any warnings encountered.
     """
 
-    ret = 0
     after, force = opts.get('after'), opts.get('force')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
 
     m = scmutil.match(repo[None], pats, opts)
-    s = repo.status(match=m, clean=True)
-    modified, added, deleted, clean = s[0], s[1], s[3], s[6]
-
-    # warn about failure to delete explicit files/dirs
-    wctx = repo[None]
-    for f in m.files():
-        if f in repo.dirstate or f in wctx.dirs():
-            continue
-        if os.path.exists(m.rel(f)):
-            if os.path.isdir(m.rel(f)):
-                ui.warn(_('not removing %s: no tracked files\n') % m.rel(f))
-            else:
-                ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
-        # missing files will generate a warning elsewhere
-        ret = 1
-
-    if force:
-        list = modified + deleted + clean + added
-    elif after:
-        list = deleted
-        for f in modified + added + clean:
-            ui.warn(_('not removing %s: file still exists\n') % m.rel(f))
-            ret = 1
-    else:
-        list = deleted + clean
-        for f in modified:
-            ui.warn(_('not removing %s: file is modified (use -f'
-                      ' to force removal)\n') % m.rel(f))
-            ret = 1
-        for f in added:
-            ui.warn(_('not removing %s: file has been marked for add'
-                      ' (use forget to undo)\n') % m.rel(f))
-            ret = 1
-
-    for f in sorted(list):
-        if ui.verbose or not m.exact(f):
-            ui.status(_('removing %s\n') % m.rel(f))
-
-    wlock = repo.wlock()
-    try:
-        if not after:
-            for f in list:
-                if f in added:
-                    continue # we never unlink added files on remove
-                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
-        repo[None].forget(list)
-    finally:
-        wlock.release()
-
-    return ret
+    return cmdutil.remove(ui, repo, m, after, force)
 
 @command('rename|move|mv',
     [('A', 'after', None, _('record a rename that has already occurred')),
