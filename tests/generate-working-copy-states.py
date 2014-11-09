@@ -2,29 +2,34 @@
 import sys
 import os
 
-# build the combination of possible states
-combination = []
-for base in [None, 'content1']:
-    for parent in set([None, 'content2']) | set([base]):
-        for wcc in set([None, 'content3']) | set([base, parent]):
-            for tracked in ('untracked', 'tracked'):
-                def statestring(content):
-                    return content is None and 'missing' or content
-                filename = "%s_%s_%s-%s" % (statestring(base),
-                                            statestring(parent),
-                                            statestring(wcc),
-                                            tracked)
-                combination.append((filename, base, parent, wcc))
+# Generates pairs of (filename, contents), where 'contents' is a list
+# describing the file's content at each revision (or in the working copy).
+# At each revision, it is either None or the file's actual content. When not
+# None, it may be either new content or the same content as an earlier
+# revisions, so all of (modified,clean,added,removed) can be tested.
+def generatestates(maxchangesets, parentcontents):
+    depth = len(parentcontents)
+    if depth == maxchangesets + 1:
+        for tracked in ('untracked', 'tracked'):
+            filename = "_".join([(content is None and 'missing' or content) for
+                                 content in parentcontents]) + "-" + tracked
+            yield (filename, parentcontents)
+    else:
+        for content in (set([None, 'content' + str(depth + 1)]) |
+                      set(parentcontents)):
+            for combination in generatestates(maxchangesets,
+                                              parentcontents + [content]):
+                yield combination
 
-# make sure we have stable output
-combination.sort()
+# sort to make sure we have stable output
+combinations = sorted(generatestates(2, []))
 
 # retrieve the state we must generate
 target = sys.argv[1]
 
 # compute file content
 content = []
-for filename, base, parent, wcc in combination:
+for filename, [base, parent, wcc] in combinations:
     if target == 'filelist':
         print filename
     elif target == 'base':
