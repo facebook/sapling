@@ -18,7 +18,11 @@
   dir/bar_2
   foo_2
   committed changeset 1:e65414bf35c5
-  $ cd ../..
+  $ cd ..
+  $ hg forget foo
+  $ hg -v addremove
+  adding foo
+  $ cd ..
 
   $ hg init sim
   $ cd sim
@@ -45,4 +49,9 @@
   adding d
   recording removal of a as rename to b (100% similar)
   $ hg commit -mb
+  $ cp b c
+  $ hg forget b
+  $ hg addremove -s 50
+  adding b
+  adding c
   $ cd ..

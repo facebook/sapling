@@ -686,9 +686,9 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     rejected = []
     m.bad = lambda x, y: rejected.append(x)
 
-    added, unknown, deleted, removed = _interestingfiles(repo, m)
+    added, unknown, deleted, removed, forgotten = _interestingfiles(repo, m)
 
-    unknownset = set(unknown)
+    unknownset = set(unknown + forgotten)
     toprint = unknownset.copy()
     toprint.update(deleted)
     for abs in sorted(toprint):
@@ -704,7 +704,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                            similarity)
 
     if not dry_run:
-        _markchanges(repo, unknown, deleted, renames)
+        _markchanges(repo, unknown + forgotten, deleted, renames)
 
     for f in rejected:
         if f in m.files():
@@ -718,10 +718,10 @@ def marktouched(repo, files, similarity=0.0):
     rejected = []
     m.bad = lambda x, y: rejected.append(x)
 
-    added, unknown, deleted, removed = _interestingfiles(repo, m)
+    added, unknown, deleted, removed, forgotten = _interestingfiles(repo, m)
 
     if repo.ui.verbose:
-        unknownset = set(unknown)
+        unknownset = set(unknown + forgotten)
         toprint = unknownset.copy()
         toprint.update(deleted)
         for abs in sorted(toprint):
@@ -734,7 +734,7 @@ def marktouched(repo, files, similarity=0.0):
     renames = _findrenames(repo, m, added + unknown, removed + deleted,
                            similarity)
 
-    _markchanges(repo, unknown, deleted, renames)
+    _markchanges(repo, unknown + forgotten, deleted, renames)
 
     for f in rejected:
         if f in m.files():
@@ -747,7 +747,7 @@ def _interestingfiles(repo, matcher):
 
     This is different from dirstate.status because it doesn't care about
     whether files are modified or clean.'''
-    added, unknown, deleted, removed = [], [], [], []
+    added, unknown, deleted, removed, forgotten = [], [], [], [], []
     audit_path = pathutil.pathauditor(repo.root)
 
     ctx = repo[None]
@@ -760,13 +760,15 @@ def _interestingfiles(repo, matcher):
             unknown.append(abs)
         elif dstate != 'r' and not st:
             deleted.append(abs)
+        elif dstate == 'r' and st:
+            forgotten.append(abs)
         # for finding renames
-        elif dstate == 'r':
+        elif dstate == 'r' and not st:
             removed.append(abs)
         elif dstate == 'a':
             added.append(abs)
 
-    return added, unknown, deleted, removed
+    return added, unknown, deleted, removed, forgotten
 
 def _findrenames(repo, matcher, added, removed, similarity):
     '''Find renames from removed files to added ones.'''
