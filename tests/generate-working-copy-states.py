@@ -1,4 +1,34 @@
-# generate proper file state to test working copy behavior
+# Helper script used for generating history and working copy files and content.
+# The file's name corresponds to its history. The number of changesets can
+# be specified on the command line. With 2 changesets, files with names like
+# content1_content2_content1-untracked are generated. The first two filename
+# segments describe the contents in the two changesets. The third segment
+# ("content1-untracked") describes the state in the working copy, i.e.
+# the file has content "content1" and is untracked (since it was previously
+# tracked, it has been forgotten).
+#
+# This script generates the filenames and their content, but it's up to the
+# caller to tell hg about the state.
+#
+# There are two subcommands:
+#   filelist <numchangesets>
+#   state <numchangesets> (<changeset>|wc)
+#
+# Typical usage:
+#
+# $ python $TESTDIR/generate-working-copy-states.py state 2 1
+# $ hg addremove --similarity 0
+# $ hg commit -m 'first'
+#
+# $ python $TESTDIR/generate-working-copy-states.py state 2 1
+# $ hg addremove --similarity 0
+# $ hg commit -m 'second'
+#
+# $ python $TESTDIR/generate-working-copy-states.py state 2 wc
+# $ hg addremove --similarity 0
+# $ hg forget *_*_*-untracked
+# $ rm *_*_missing-*
+
 import sys
 import os
 
@@ -21,25 +51,27 @@ def generatestates(maxchangesets, parentcontents):
                                               parentcontents + [content]):
                 yield combination
 
-# sort to make sure we have stable output
-combinations = sorted(generatestates(2, []))
-
-# retrieve the state we must generate
+# retrieve the command line arguments
 target = sys.argv[1]
+maxchangesets = int(sys.argv[2])
+if target == 'state':
+    depth = sys.argv[3]
+
+# sort to make sure we have stable output
+combinations = sorted(generatestates(maxchangesets, []))
 
 # compute file content
 content = []
-for filename, [base, parent, wcc] in combinations:
+for filename, states in combinations:
     if target == 'filelist':
         print filename
-    elif target == 'base':
-        content.append((filename, base))
-    elif target == 'parent':
-        content.append((filename, parent))
-    elif target == 'wc':
-        # Make sure there is content so the file gets written and can be
-        # tracked. It will be deleted outside of this script.
-        content.append((filename, wcc or 'TOBEDELETED'))
+    elif target == 'state':
+        if depth == 'wc':
+            # Make sure there is content so the file gets written and can be
+            # tracked. It will be deleted outside of this script.
+            content.append((filename, states[maxchangesets] or 'TOBEDELETED'))
+        else:
+            content.append((filename, states[int(depth) - 1]))
     else:
         print >> sys.stderr, "unknown target:", target
         sys.exit(1)
