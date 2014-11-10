@@ -289,14 +289,17 @@ def has_python243():
 @check("json", "some json module available")
 def has_json():
     try:
-        if sys.version_info < (2, 7):
-            import simplejson as json
-        else:
-            import json
+        import json
         json.dumps
         return True
     except ImportError:
-        return False
+        try:
+            import simplejson as json
+            json.dumps
+            return True
+        except ImportError:
+            pass
+    return False
 
 @check("outer-repo", "outer repo")
 def has_outer_repo():
