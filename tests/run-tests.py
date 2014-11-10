@@ -61,12 +61,12 @@ from xml.dom import minidom
 import unittest
 
 try:
-    if sys.version_info < (2, 7):
-        import simplejson as json
-    else:
-        import json
+    import json
 except ImportError:
-    json = None
+    try:
+        import simplejson as json
+    except ImportError:
+        json = None
 
 processlock = threading.Lock()
 
