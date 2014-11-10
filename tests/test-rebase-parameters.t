@@ -468,3 +468,17 @@ Test --tool parameter:
   [255]
 
   $ cd ..
+
+No common ancestor
+
+  $ hg init separaterepo
+  $ cd separaterepo
+  $ touch a
+  $ hg commit -Aqm a
+  $ hg up -q null
+  $ touch b
+  $ hg commit -Aqm b
+  $ hg rebase -d 0
+  nothing to rebase from d7486e00c6f1 to 3903775176ed
+  [1]
+  $ cd ..
