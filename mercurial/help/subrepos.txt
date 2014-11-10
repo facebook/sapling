@@ -82,8 +82,10 @@ Interaction with Mercurial Commands
     ignored.
 
 :addremove: addremove does not recurse into subrepos unless
-    -S/--subrepos is specified.  Git and Subversion subrepositories
-    will print a warning and continue.
+    -S/--subrepos is specified.  However, if you specify the full
+    path of a directory in a subrepo, addremove will be performed on
+    it even without -S/--subrepos being specified.  Git and
+    Subversion subrepositories will print a warning and continue.
 
 :archive: archive does not recurse in subrepositories unless
     -S/--subrepos is specified.

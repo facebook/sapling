@@ -147,9 +147,18 @@ Test relative path printing + subrepos
   A sub1/foo
   R sub1/sub2/test.txt
   $ hg update -Cq
+  $ touch sub1/sub2/folder/bar
+  $ hg addremove sub1/sub2
+  adding sub1/sub2/folder/bar (glob)
+  $ hg status -S
+  A sub1/sub2/folder/bar
+  ? foo/bar/abc
+  ? sub1/foo
+  $ hg update -Cq
   $ rm sub1/sub2/folder/test.txt
   $ rm sub1/sub2/test.txt
   $ hg ci -ASm "remove test.txt"
+  adding sub1/sub2/folder/bar (glob)
   removing sub1/sub2/folder/test.txt (glob)
   removing sub1/sub2/test.txt (glob)
   adding sub1/foo (glob)
