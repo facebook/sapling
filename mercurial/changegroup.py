@@ -339,6 +339,11 @@ class cg1packer(object):
             mfs.setdefault(c[0], x)
             return x
 
+        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
+                                reorder=reorder):
+            yield chunk
+        progress(msgbundling, None)
+
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
@@ -350,16 +355,9 @@ class cg1packer(object):
                     if f in changedfiles:
                         # record the first changeset introducing this filelog
                         # version
-                        fnodes[f].setdefault(n, clnode)
+                        fnodes.setdefault(f, {}).setdefault(n, clnode)
             return clnode
 
-        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
-                                reorder=reorder):
-            yield chunk
-        progress(msgbundling, None)
-
-        for f in changedfiles:
-            fnodes[f] = {}
         mfnodes = self.prune(mf, mfs, commonrevs, source)
         for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
                                 reorder=reorder):
@@ -377,7 +375,7 @@ class cg1packer(object):
                         linkrev = llr(r)
                         if linkrev in needed:
                             yield filerevlog.node(r), cl.node(linkrev)
-                fnodes[fname] = dict(genfilenodes())
+                return dict(genfilenodes())
             return fnodes.get(fname, {})
 
         for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,

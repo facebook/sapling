@@ -901,7 +901,7 @@ def archive(web, req, tmpl):
 
     ctx = webutil.changectx(web.repo, req)
     pats = []
-    matchfn = None
+    matchfn = scmutil.match(ctx, [])
     file = req.form.get('file', None)
     if file:
         pats = ['path:' + file[0]]

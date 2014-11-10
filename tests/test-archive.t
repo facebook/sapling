@@ -12,8 +12,15 @@
   $ echo bletch>baz/bletch
   $ hg commit -Am 3 -d '1000000000 0'
   adding baz/bletch
+  $ hg init subrepo
+  $ touch subrepo/sub
+  $ hg -q -R subrepo ci -Am "init subrepo"
+  $ echo "subrepo = subrepo" > .hgsub
+  $ hg add .hgsub
+  $ hg ci -m "add subrepo"
   $ echo "[web]" >> .hg/hgrc
   $ echo "name = test-archive" >> .hg/hgrc
+  $ echo "archivesubrepos = True" >> .hg/hgrc
   $ cp .hg/hgrc .hg/hgrc-base
   > test_archtype() {
   >     echo "allow_archive = $1" >> .hg/hgrc
@@ -83,30 +90,39 @@ invalid arch type should give 404
   >     sys.stderr.write(str(e) + '\n')
   > EOF
   $ python getarchive.py "$TIP" gz | gunzip | tar tf - 2>/dev/null
-  test-archive-2c0277f05ed4/.hg_archival.txt
-  test-archive-2c0277f05ed4/bar
-  test-archive-2c0277f05ed4/baz/bletch
-  test-archive-2c0277f05ed4/foo
+  test-archive-1701ef1f1510/.hg_archival.txt
+  test-archive-1701ef1f1510/.hgsub
+  test-archive-1701ef1f1510/.hgsubstate
+  test-archive-1701ef1f1510/bar
+  test-archive-1701ef1f1510/baz/bletch
+  test-archive-1701ef1f1510/foo
+  test-archive-1701ef1f1510/subrepo/sub
   $ python getarchive.py "$TIP" bz2 | bunzip2 | tar tf - 2>/dev/null
-  test-archive-2c0277f05ed4/.hg_archival.txt
-  test-archive-2c0277f05ed4/bar
-  test-archive-2c0277f05ed4/baz/bletch
-  test-archive-2c0277f05ed4/foo
+  test-archive-1701ef1f1510/.hg_archival.txt
+  test-archive-1701ef1f1510/.hgsub
+  test-archive-1701ef1f1510/.hgsubstate
+  test-archive-1701ef1f1510/bar
+  test-archive-1701ef1f1510/baz/bletch
+  test-archive-1701ef1f1510/foo
+  test-archive-1701ef1f1510/subrepo/sub
   $ python getarchive.py "$TIP" zip > archive.zip
   $ unzip -t archive.zip
   Archive:  archive.zip
-      testing: test-archive-2c0277f05ed4/.hg_archival.txt   OK
-      testing: test-archive-2c0277f05ed4/bar   OK
-      testing: test-archive-2c0277f05ed4/baz/bletch   OK
-      testing: test-archive-2c0277f05ed4/foo   OK
+      testing: test-archive-1701ef1f1510/.hg_archival.txt   OK
+      testing: test-archive-1701ef1f1510/.hgsub   OK
+      testing: test-archive-1701ef1f1510/.hgsubstate   OK
+      testing: test-archive-1701ef1f1510/bar   OK
+      testing: test-archive-1701ef1f1510/baz/bletch   OK
+      testing: test-archive-1701ef1f1510/foo   OK
+      testing: test-archive-1701ef1f1510/subrepo/sub   OK
   No errors detected in compressed data of archive.zip.
 
 test that we can download single directories and files
 
   $ python getarchive.py "$TIP" gz baz | gunzip | tar tf - 2>/dev/null
-  test-archive-2c0277f05ed4/baz/bletch
+  test-archive-1701ef1f1510/baz/bletch
   $ python getarchive.py "$TIP" gz foo | gunzip | tar tf - 2>/dev/null
-  test-archive-2c0277f05ed4/foo
+  test-archive-1701ef1f1510/foo
 
 test that we detect file patterns that match no files
 
@@ -123,29 +139,39 @@ test that we reject unsafe patterns
   $ hg archive -t tar test.tar
   $ tar tf test.tar
   test/.hg_archival.txt
+  test/.hgsub
+  test/.hgsubstate
   test/bar
   test/baz/bletch
   test/foo
 
   $ hg archive --debug -t tbz2 -X baz test.tar.bz2
-  archiving: 0/2 files (0.00%)
-  archiving: bar 1/2 files (50.00%)
-  archiving: foo 2/2 files (100.00%)
+  archiving: 0/4 files (0.00%)
+  archiving: .hgsub 1/4 files (25.00%)
+  archiving: .hgsubstate 2/4 files (50.00%)
+  archiving: bar 3/4 files (75.00%)
+  archiving: foo 4/4 files (100.00%)
   $ bunzip2 -dc test.tar.bz2 | tar tf - 2>/dev/null
   test/.hg_archival.txt
+  test/.hgsub
+  test/.hgsubstate
   test/bar
   test/foo
 
   $ hg archive -t tgz -p %b-%h test-%h.tar.gz
   $ gzip -dc test-$QTIP.tar.gz | tar tf - 2>/dev/null
-  test-2c0277f05ed4/.hg_archival.txt
-  test-2c0277f05ed4/bar
-  test-2c0277f05ed4/baz/bletch
-  test-2c0277f05ed4/foo
+  test-1701ef1f1510/.hg_archival.txt
+  test-1701ef1f1510/.hgsub
+  test-1701ef1f1510/.hgsubstate
+  test-1701ef1f1510/bar
+  test-1701ef1f1510/baz/bletch
+  test-1701ef1f1510/foo
 
   $ hg archive autodetected_test.tar
   $ tar tf autodetected_test.tar
   autodetected_test/.hg_archival.txt
+  autodetected_test/.hgsub
+  autodetected_test/.hgsubstate
   autodetected_test/bar
   autodetected_test/baz/bletch
   autodetected_test/foo
@@ -155,6 +181,8 @@ The '-t' should override autodetection
   $ hg archive -t tar autodetect_override_test.zip
   $ tar tf autodetect_override_test.zip
   autodetect_override_test.zip/.hg_archival.txt
+  autodetect_override_test.zip/.hgsub
+  autodetect_override_test.zip/.hgsubstate
   autodetect_override_test.zip/bar
   autodetect_override_test.zip/baz/bletch
   autodetect_override_test.zip/foo
@@ -203,10 +231,12 @@ rename them afterwards.
   No errors detected in compressed data of test.zip.
 
   $ hg archive -t tar - | tar tf - 2>/dev/null
-  test-2c0277f05ed4/.hg_archival.txt
-  test-2c0277f05ed4/bar
-  test-2c0277f05ed4/baz/bletch
-  test-2c0277f05ed4/foo
+  test-1701ef1f1510/.hg_archival.txt
+  test-1701ef1f1510/.hgsub
+  test-1701ef1f1510/.hgsubstate
+  test-1701ef1f1510/bar
+  test-1701ef1f1510/baz/bletch
+  test-1701ef1f1510/foo
 
   $ hg archive -r 0 -t tar rev-%r.tar
   $ [ -f rev-0.tar ]
@@ -216,10 +246,10 @@ test .hg_archival.txt
   $ hg archive ../test-tags
   $ cat ../test-tags/.hg_archival.txt
   repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
-  node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
+  node: 1701ef1f151069b8747038e93b5186bb43a47504
   branch: default
   latesttag: null
-  latesttagdistance: 3
+  latesttagdistance: 4
   $ hg tag -r 2 mytag
   $ hg tag -r 2 anothertag
   $ hg archive -r 2 ../test-lasttag
@@ -250,16 +280,20 @@ enable progress extension:
 
   $ hg archive ../with-progress
   \r (no-eol) (esc)
-  archiving [                                           ] 0/4\r (no-eol) (esc)
-  archiving [                                           ] 0/4\r (no-eol) (esc)
-  archiving [=========>                                 ] 1/4\r (no-eol) (esc)
-  archiving [=========>                                 ] 1/4\r (no-eol) (esc)
-  archiving [====================>                      ] 2/4\r (no-eol) (esc)
-  archiving [====================>                      ] 2/4\r (no-eol) (esc)
-  archiving [===============================>           ] 3/4\r (no-eol) (esc)
-  archiving [===============================>           ] 3/4\r (no-eol) (esc)
-  archiving [==========================================>] 4/4\r (no-eol) (esc)
-  archiving [==========================================>] 4/4\r (no-eol) (esc)
+  archiving [                                           ] 0/6\r (no-eol) (esc)
+  archiving [                                           ] 0/6\r (no-eol) (esc)
+  archiving [======>                                    ] 1/6\r (no-eol) (esc)
+  archiving [======>                                    ] 1/6\r (no-eol) (esc)
+  archiving [=============>                             ] 2/6\r (no-eol) (esc)
+  archiving [=============>                             ] 2/6\r (no-eol) (esc)
+  archiving [====================>                      ] 3/6\r (no-eol) (esc)
+  archiving [====================>                      ] 3/6\r (no-eol) (esc)
+  archiving [===========================>               ] 4/6\r (no-eol) (esc)
+  archiving [===========================>               ] 4/6\r (no-eol) (esc)
+  archiving [==================================>        ] 5/6\r (no-eol) (esc)
+  archiving [==================================>        ] 5/6\r (no-eol) (esc)
+  archiving [==========================================>] 6/6\r (no-eol) (esc)
+  archiving [==========================================>] 6/6\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
 cleanup after progress extension test:
