@@ -126,6 +126,19 @@ Issue683: peculiarity with hg revert of an removed then added file
   M a
   ? a.orig
 
+Forgotten file can be added back (as either clean or modified)
+
+  $ hg forget b
+  $ hg add b
+  $ hg st -A b
+  C b
+  $ hg forget b
+  $ echo modified > b
+  $ hg add b
+  $ hg st -A b
+  M b
+  $ hg revert -qC b
+
   $ hg add c && echo "unexpected addition of missing file"
   c: * (glob)
   [1]

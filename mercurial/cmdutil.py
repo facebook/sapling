@@ -1982,9 +1982,9 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
     abort, warn = scmutil.checkportabilityalert(ui)
     if abort or warn:
         cca = scmutil.casecollisionauditor(ui, abort, repo.dirstate)
-    for f in repo.walk(match):
+    for f in wctx.walk(match):
         exact = match.exact(f)
-        if exact or not explicitonly and f not in repo.dirstate:
+        if exact or not explicitonly and f not in wctx:
             if cca:
                 cca(f)
             names.append(f)
