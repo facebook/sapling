@@ -73,7 +73,7 @@ def restorematchandpatsfn():
     scmutil.matchandpats = getattr(scmutil.matchandpats, 'oldmatchandpats',
             scmutil.matchandpats)
 
-def addlargefiles(ui, repo, *pats, **opts):
+def addlargefiles(ui, repo, matcher, **opts):
     large = opts.pop('large', None)
     lfsize = lfutil.getminsize(
         ui, lfutil.islfilesrepo(repo), opts.pop('lfsize', None))
@@ -85,7 +85,7 @@ def addlargefiles(ui, repo, *pats, **opts):
             lfmatcher = match_.match(repo.root, '', list(lfpats))
 
     lfnames = []
-    m = scmutil.match(repo[None], pats, opts)
+    m = copy.copy(matcher)
     m.bad = lambda x, y: None
     wctx = repo[None]
     for f in repo.walk(m):
@@ -223,7 +223,8 @@ def overrideadd(orig, ui, repo, *pats, **opts):
         if opts.get('large'):
             raise util.Abort(_('--normal cannot be used with --large'))
         return orig(ui, repo, *pats, **opts)
-    bad = addlargefiles(ui, repo, *pats, **opts)
+    matcher = scmutil.match(repo[None], pats, opts)
+    bad = addlargefiles(ui, repo, matcher, **opts)
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
@@ -1083,10 +1084,10 @@ def overridesummary(orig, ui, repo, *pats, **opts):
     finally:
         repo.lfstatus = False
 
-def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
+def scmutiladdremove(orig, repo, matcher, opts={}, dry_run=None,
                      similarity=None):
     if not lfutil.islfilesrepo(repo):
-        return orig(repo, pats, opts, dry_run, similarity)
+        return orig(repo, matcher, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
     unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [],
@@ -1101,14 +1102,12 @@ def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
         removelargefiles(repo.ui, repo, True, *m, **opts)
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
-    addlargefiles(repo.ui, repo, *pats, **opts)
+    addlargefiles(repo.ui, repo, matcher, **opts)
     # Now that we've handled largefiles, hand off to the original addremove
     # function to take care of the rest.  Make sure it doesn't do anything with
-    # largefiles by installing a matcher that will ignore them.
-    installnormalfilesmatchfn(repo[None].manifest())
-    result = orig(repo, pats, opts, dry_run, similarity)
-    restorematchfn()
-    return result
+    # largefiles by passing a matcher that will ignore them.
+    matcher = composenormalfilematcher(matcher, repo[None].manifest())
+    return orig(repo, matcher, opts, dry_run, similarity)
 
 # Calling purge with --all will cause the largefiles to be deleted.
 # Override repo.status to prevent this from happening.

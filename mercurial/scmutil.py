@@ -713,13 +713,13 @@ def matchfiles(repo, files):
     '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files)
 
-def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
+def addremove(repo, matcher, opts={}, dry_run=None, similarity=None):
+    m = matcher
     if dry_run is None:
         dry_run = opts.get('dry_run')
     if similarity is None:
         similarity = float(opts.get('similarity') or 0)
-    # we'd use status here, except handling of symlinks and ignore is tricky
-    m = match(repo[None], pats, opts)
+
     rejected = []
     m.bad = lambda x, y: rejected.append(x)
 

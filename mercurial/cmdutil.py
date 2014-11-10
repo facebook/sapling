@@ -2197,14 +2197,14 @@ def commit(ui, repo, commitfunc, pats, opts):
     if date:
         opts['date'] = util.parsedate(date)
     message = logmessage(ui, opts)
+    matcher = scmutil.match(repo[None], pats, opts)
 
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
     if opts.get('addremove'):
-        scmutil.addremove(repo, pats, opts)
+        scmutil.addremove(repo, matcher, opts)
 
-    return commitfunc(ui, repo, message,
-                      scmutil.match(repo[None], pats, opts), opts)
+    return commitfunc(ui, repo, message, matcher, opts)
 
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
     # amend will reuse the existing user if not specified, but the obsolete
