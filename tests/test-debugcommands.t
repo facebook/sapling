@@ -26,25 +26,25 @@
 
 Test max chain len
   $ cat >> $HGRCPATH << EOF
-  > [revlog]
+  > [format]
   > maxchainlen=4
   > EOF
 
-  $ echo "This test checks if maxchainlen config value is respected also it can serve as basic test for debugrevlog -d <file>.\n" >> a
+  $ printf "This test checks if maxchainlen config value is respected also it can serve as basic test for debugrevlog -d <file>.\n" >> a
   $ hg ci -m a
-  $ echo "b\n" >> a
+  $ printf "b\n" >> a
   $ hg ci -m a
-  $ echo "c\n" >> a
+  $ printf "c\n" >> a
   $ hg ci -m a
-  $ echo "d\n" >> a
+  $ printf "d\n" >> a
   $ hg ci -m a
-  $ echo "e\n" >> a
+  $ printf "e\n" >> a
   $ hg ci -m a
-  $ echo "f\n" >> a
+  $ printf "f\n" >> a
   $ hg ci -m a
-  $ echo 'g\n' >> a
+  $ printf 'g\n' >> a
   $ hg ci -m a
-  $ echo 'h\n' >> a
+  $ printf 'h\n' >> a
   $ hg ci -m a
   $ hg debugrevlog -d a
   # rev p1rev p2rev start   end deltastart base   p1   p2 rawsize totalsize compression heads chainlen

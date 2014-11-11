@@ -316,7 +316,7 @@ class localrepository(object):
         chunkcachesize = self.ui.configint('format', 'chunkcachesize')
         if chunkcachesize is not None:
             self.sopener.options['chunkcachesize'] = chunkcachesize
-        maxchainlen = self.ui.configint('revlog', 'maxchainlen')
+        maxchainlen = self.ui.configint('format', 'maxchainlen')
         if maxchainlen is not None:
             self.sopener.options['maxchainlen'] = maxchainlen
 
