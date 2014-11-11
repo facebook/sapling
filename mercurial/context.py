@@ -96,7 +96,12 @@ class basectx(object):
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
         """build a status with respect to another context"""
-        # load earliest manifest first for caching reasons
+        # Load earliest manifest first for caching reasons. More specifically,
+        # if you have revisions 1000 and 1001, 1001 is probably stored as a
+        # delta against 1000. Thus, if you read 1000 first, we'll reconstruct
+        # 1000 and cache it so that when you read 1001, we just need to apply a
+        # delta to what's in the cache. So that's one full reconstruction + one
+        # delta application.
         if self.rev() is not None and self.rev() < other.rev():
             self.manifest()
         mf1 = other._manifestmatches(match, s)
