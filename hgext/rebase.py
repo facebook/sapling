@@ -274,8 +274,12 @@ def rebase(ui, repo, **opts):
                                 "can't compute rebase set\n"))
                     return 1
                 commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
-                rebaseset = repo.revs('(%d::(%ld) - %d)::',
-                                      commonanc, base, commonanc)
+                if commonanc is not None:
+                    rebaseset = repo.revs('(%d::(%ld) - %d)::',
+                                          commonanc, base, commonanc)
+                else:
+                    rebaseset = []
+
                 if not rebaseset:
                     # transform to list because smartsets are not comparable to
                     # lists. This should be improved to honor laziness of
