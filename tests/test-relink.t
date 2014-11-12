@@ -87,7 +87,7 @@ relink
   pruned down to 2 probably relinkable files
   relinking: data/a.i 1/2 files (50.00%)
   not linkable: data/dummy.i
-  relinked 1 files (1.37 KB reclaimed)
+  relinked 1 files (1.36 KB reclaimed)
   $ cd ..
 
 

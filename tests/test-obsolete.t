@@ -90,8 +90,8 @@ Killing a single changeset with replacement
   # rev p1rev p2rev start   end deltastart base   p1   p2 rawsize totalsize compression heads chainlen
       0    -1    -1     0    59          0    0    0    0      58        58           0     1        0
       1     0    -1    59   118         59   59    0    0      58       116           0     1        0
-      2     1    -1   118   204         59   59   59    0      76       192           0     1        1
-      3     1    -1   204   271        204  204   59    0      66       258           0     2        0
+      2     1    -1   118   193        118  118   59    0      76       192           0     1        0
+      3     1    -1   193   260        193  193   59    0      66       258           0     2        0
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
 
