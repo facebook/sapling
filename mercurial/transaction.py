@@ -225,13 +225,13 @@ class transaction(object):
         self._backupsfile.flush()
 
     @active
-    def registertmp(self, tmpfile):
+    def registertmp(self, tmpfile, location=''):
         """register a temporary transaction file
 
         Such file will be delete when the transaction exit (on both failure and
         success).
         """
-        self._addbackupentry(('', '', tmpfile, False))
+        self._addbackupentry((location, '', tmpfile, False))
 
     @active
     def addfilegenerator(self, genid, filenames, genfunc, order=0,
