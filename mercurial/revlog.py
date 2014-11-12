@@ -1267,7 +1267,7 @@ class revlog(object):
         #   the amount of I/O we need to do.
         # - 'compresseddeltalen' is the sum of the total size of deltas we need
         #   to apply -- bounding it limits the amount of CPU we consume.
-        if (d is None or dist > textlen * 2 or l > textlen or
+        if (d is None or dist > textlen * 4 or l > textlen or
             compresseddeltalen > textlen * 2 or
             (self._maxchainlen and chainlen > self._maxchainlen)):
             text = buildtext()
