@@ -131,10 +131,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
         cwd = repo.root
     else:
         cwd = os.getcwd()
-    if 'HG_URL' in env and env['HG_URL'].startswith('remote:http'):
-        r = util.system(cmd, environ=env, cwd=cwd, out=ui)
-    else:
-        r = util.system(cmd, environ=env, cwd=cwd, out=ui.fout)
+    r = util.system(cmd, environ=env, cwd=cwd, out=ui.fout)
 
     duration = time.time() - starttime
     ui.log('exthook', 'exthook-%s: %s finished in %0.2f seconds\n',
