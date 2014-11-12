@@ -270,11 +270,7 @@ class transaction(object):
             files = []
             try:
                 for name in filenames:
-                    # Some files are already backed up when creating the
-                    # localrepo. Until this is properly fixed we disable the
-                    # backup for them.
-                    if name not in ('phaseroots', 'bookmarks'):
-                        self.addbackup(name, location=location)
+                    self.addbackup(name, location=location)
                     files.append(vfs(name, 'w', atomictemp=True))
                 genfunc(*files)
             finally:
