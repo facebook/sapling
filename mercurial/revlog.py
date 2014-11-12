@@ -1225,8 +1225,10 @@ class revlog(object):
                 base = rev
             else:
                 base = chainbase
-            chainlen = self.chainlen(rev) + 1
-            return dist, l, data, base, chainbase, chainlen
+            chainlen, compresseddeltalen = self._chaininfo(rev)
+            chainlen += 1
+            compresseddeltalen += l
+            return dist, l, data, base, chainbase, chainlen, compresseddeltalen
 
         curr = len(self)
         prev = curr - 1
@@ -1251,7 +1253,7 @@ class revlog(object):
                     d = builddelta(prev)
             else:
                 d = builddelta(prev)
-            dist, l, data, base, chainbase, chainlen = d
+            dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
 
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
@@ -1260,7 +1262,13 @@ class revlog(object):
                                         cachedelta[1])
         else:
             textlen = len(text)
+
+        # - 'dist' is the distance from the base revision -- bounding it limits
+        #   the amount of I/O we need to do.
+        # - 'compresseddeltalen' is the sum of the total size of deltas we need
+        #   to apply -- bounding it limits the amount of CPU we consume.
         if (d is None or dist > textlen * 2 or l > textlen or
+            compresseddeltalen > textlen * 2 or
             (self._maxchainlen and chainlen > self._maxchainlen)):
             text = buildtext()
             data = self.compress(text)
