@@ -1255,7 +1255,7 @@ class revlog(object):
         else:
             textlen = len(text)
         if (d is None or dist > textlen * 2 or
-            self._maxchainlen and chainlen > self._maxchainlen):
+            (self._maxchainlen and chainlen > self._maxchainlen)):
             text = buildtext()
             data = self.compress(text)
             l = len(data[1]) + len(data[0])
