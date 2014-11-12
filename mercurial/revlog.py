@@ -354,19 +354,25 @@ class revlog(object):
             base = index[rev][3]
         return base
     def chainlen(self, rev):
+        return self._chaininfo(rev)[0]
+    def _chaininfo(self, rev):
         index = self.index
         generaldelta = self._generaldelta
         iterrev = rev
         e = index[iterrev]
         clen = 0
+        compresseddeltalen = 0
         while iterrev != e[3]:
             clen += 1
+            compresseddeltalen += e[1]
             if generaldelta:
                 iterrev = e[3]
             else:
                 iterrev -= 1
             e = index[iterrev]
-        return clen
+        # add text length of base since decompressing that also takes work
+        compresseddeltalen += e[1]
+        return clen, compresseddeltalen
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
     def rawsize(self, rev):
