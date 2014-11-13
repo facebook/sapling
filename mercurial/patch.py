@@ -1564,6 +1564,8 @@ def diffopts(ui, opts=None, untrusted=False, section='diff'):
             v = opts.get(key)
             if v:
                 return v
+        if forceplain is not None and ui.plain():
+            return forceplain
         return getter(section, name or key, None, untrusted=untrusted)
 
     return mdiff.diffopts(
