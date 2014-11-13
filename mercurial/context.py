@@ -129,7 +129,8 @@ class basectx(object):
             unknown = [fn for fn in unknown if fn not in mf1]
             ignored = [fn for fn in ignored if fn not in mf1]
 
-        return [modified, added, removed, deleted, unknown, ignored, clean]
+        return scmutil.status(modified, added, removed, deleted, unknown,
+                              ignored, clean)
 
     @propertycache
     def substate(self):
@@ -304,7 +305,6 @@ class basectx(object):
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
 
-        r = scmutil.status(*r)
         if reversed:
             # Reverse added and removed. Clear deleted, unknown and ignored as
             # these make no sense to reverse.
@@ -1419,7 +1419,8 @@ class workingctx(committablectx):
             if fixup and listclean:
                 clean += fixup
 
-        return [modified, added, removed, deleted, unknown, ignored, clean]
+        return scmutil.status(modified, added, removed, deleted, unknown,
+                              ignored, clean)
 
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
@@ -1434,12 +1435,12 @@ class workingctx(committablectx):
         # Filter out symlinks that, in the case of FAT32 and NTFS filesytems,
         # might have accidentally ended up with the entire contents of the file
         # they are susposed to be linking to.
-        s[0] = self._filtersuspectsymlink(s[0])
+        s.modified[:] = self._filtersuspectsymlink(s.modified)
         if other != self._repo['.']:
             s = super(workingctx, self)._buildstatus(other, s, match,
                                                      listignored, listclean,
                                                      listunknown)
-        self._status = scmutil.status(*s)
+        self._status = s
         return s
 
     def _matchstatus(self, other, match):
