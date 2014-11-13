@@ -26,6 +26,7 @@ class diffopts(object):
     git enables the git extended patch format
     nodates removes dates from diff headers
     nobinary ignores binary files
+    noprefix disables the 'a/' and 'b/' prefixes (ignored in plain mode)
     ignorews ignores all whitespace changes in the diff
     ignorewsamount ignores changes in the amount of whitespace
     ignoreblanklines ignores changes whose lines are all blank
@@ -39,6 +40,7 @@ class diffopts(object):
         'git': False,
         'nodates': False,
         'nobinary': False,
+        'noprefix': False,
         'ignorews': False,
         'ignorewsamount': False,
         'ignoreblanklines': False,
