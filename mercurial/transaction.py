@@ -15,7 +15,7 @@ from i18n import _
 import errno
 import error, util
 
-version = 0
+version = 2
 
 def active(func):
     def _active(self, *args, **kwds):
