@@ -45,31 +45,41 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
 
     backupfiles = []
     for l, f, b, c in backupentries:
+        if l not in vfsmap and c:
+            report("couldn't handle %s: unknown cache location %s\n"
+                        % (b, l))
         vfs = vfsmap[l]
-        if f and b:
-            filepath = vfs.join(f)
-            backuppath = vfs.join(b)
-            try:
-                util.copyfile(backuppath, filepath)
-                backupfiles.append(b)
-            except IOError:
-                report(_("failed to recover %s\n") % f)
+        try:
+            if f and b:
+                filepath = vfs.join(f)
+                backuppath = vfs.join(b)
+                try:
+                    util.copyfile(backuppath, filepath)
+                    backupfiles.append(b)
+                except IOError:
+                    report(_("failed to recover %s\n") % f)
+            else:
+                target = f or b
+                try:
+                    vfs.unlink(target)
+                except (IOError, OSError), inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+        except (IOError, OSError, util.Abort), inst:
+            if not c:
                 raise
-        else:
-            target = f or b
-            try:
-                vfs.unlink(target)
-            except (IOError, OSError), inst:
-                if inst.errno != errno.ENOENT:
-                    raise
 
     opener.unlink(journal)
     backuppath = "%s.backupfiles" % journal
     if opener.exists(backuppath):
         opener.unlink(backuppath)
-    for f in backupfiles:
-        if opener.exists(f):
-            opener.unlink(f)
+    try:
+        for f in backupfiles:
+            if opener.exists(f):
+                opener.unlink(f)
+    except (IOError, OSError, util.Abort), inst:
+        # only pure backup file remains, it is sage to ignore any error
+        pass
 
 class transaction(object):
     def __init__(self, report, opener, vfsmap, journal, after=None,
@@ -365,10 +375,21 @@ class transaction(object):
         self.file.close()
         self._backupsfile.close()
         # cleanup temporary files
-        for l, f, b, _c in self._backupentries:
+        for l, f, b, c in self._backupentries:
+            if l not in self._vfsmap and c:
+                self.report("couldn't remote %s: unknown cache location %s\n"
+                            % (b, l))
+                continue
             vfs = self._vfsmap[l]
             if not f and b and vfs.exists(b):
-                vfs.unlink(b)
+                try:
+                    vfs.unlink(b)
+                except (IOError, OSError, util.Abort), inst:
+                    if not c:
+                        raise
+                    # Abort may be raise by read only opener
+                    self.report("couldn't remote %s: %s\n"
+                                % (vfs.join(b), inst))
         self.entries = []
         if self.after:
             self.after()
@@ -376,10 +397,21 @@ class transaction(object):
             self.opener.unlink(self.journal)
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
-            for _l, _f, b, _c in self._backupentries:
+            for _l, _f, b, c in self._backupentries:
+                if l not in self._vfsmap and c:
+                    self.report("couldn't remote %s: unknown cache location"
+                                "%s\n" % (b, l))
+                    continue
                 vfs = self._vfsmap[l]
                 if b and vfs.exists(b):
-                    vfs.unlink(b)
+                    try:
+                        vfs.unlink(b)
+                    except (IOError, OSError, util.Abort), inst:
+                        if not c:
+                            raise
+                        # Abort may be raise by read only opener
+                        self.report("couldn't remote %s: %s\n"
+                                    % (vfs.join(b), inst))
         self._backupentries = []
         self.journal = None
         # run post close action
