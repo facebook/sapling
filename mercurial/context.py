@@ -304,9 +304,12 @@ class basectx(object):
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
 
+        r = scmutil.status(*r)
         if reversed:
-            # reverse added and removed
-            r[1], r[2] = r[2], r[1]
+            # Reverse added and removed. Clear deleted, unknown and ignored as
+            # these make no sense to reverse.
+            r = scmutil.status(r.modified, r.removed, r.added, [], [], [],
+                               r.clean)
 
         if listsubrepos:
             for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
@@ -325,8 +328,7 @@ class basectx(object):
         for l in r:
             l.sort()
 
-        # we return a tuple to signify that this list isn't changing
-        return scmutil.status(*r)
+        return r
 
 
 def makememctx(repo, parents, text, user, date, branch, files, store,
