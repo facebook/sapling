@@ -865,9 +865,16 @@ class localrepository(object):
     def wwritedata(self, filename, data):
         return self._filter(self._decodefilterpats, filename, data)
 
-    def transaction(self, desc, report=None):
+    def currenttransaction(self):
+        """return the current transaction or None if non exists"""
         tr = self._transref and self._transref() or None
         if tr and tr.running():
+            return tr
+        return None
+
+    def transaction(self, desc, report=None):
+        tr = self.currenttransaction()
+        if tr is not None:
             return tr.nest()
 
         # abort here if the journal already exists
