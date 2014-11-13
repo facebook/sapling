@@ -1408,19 +1408,17 @@ class workingctx(committablectx):
             subrepos = sorted(self.substate)
         cmp, s = self._repo.dirstate.status(match, subrepos, listignored,
                                             listclean, listunknown)
-        modified, added, removed, deleted, unknown, ignored, clean = s
 
         # check for any possibly clean files
         if cmp:
             modified2, fixup = self._checklookup(cmp)
-            modified += modified2
+            s.modified.extend(modified2)
 
             # update dirstate for files that are actually clean
             if fixup and listclean:
-                clean += fixup
+                s.clean.extend(fixup)
 
-        return scmutil.status(modified, added, removed, deleted, unknown,
-                              ignored, clean)
+        return s
 
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
