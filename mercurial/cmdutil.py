@@ -2060,8 +2060,16 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
 
     wctx = repo[None]
 
-    if subrepos:
-        for subpath in sorted(wctx.substate):
+    for subpath in sorted(wctx.substate):
+        def matchessubrepo(matcher, subpath):
+            if matcher.exact(subpath):
+                return True
+            for f in matcher.files():
+                if f.startswith(subpath):
+                    return True
+            return False
+
+        if subrepos or matchessubrepo(m, subpath):
             sub = wctx.sub(subpath)
             try:
                 submatch = matchmod.narrowmatcher(subpath, m)
@@ -2080,7 +2088,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
                     return True
             return False
 
-        if f in repo.dirstate or f in wctx.dirs() or (subrepos and insubrepo()):
+        if f in repo.dirstate or f in wctx.dirs() or insubrepo():
             continue
 
         if os.path.exists(m.rel(join(f))):

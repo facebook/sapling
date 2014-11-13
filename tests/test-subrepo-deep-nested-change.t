@@ -120,6 +120,14 @@ Check that deep archiving works
   R sub1/sub2/folder/test.txt
   R sub1/sub2/test.txt
   $ hg update -Cq
+  $ hg remove -I 're:.*.txt' sub1
+  $ hg status -S
+  $ hg remove sub1/sub2/folder/test.txt
+  $ hg remove sub1/.hgsubstate
+  $ hg status -S
+  R sub1/.hgsubstate
+  R sub1/sub2/folder/test.txt
+  $ hg update -Cq
 
   $ hg --config extensions.largefiles=! archive -S ../archive_all
   $ find ../archive_all | sort

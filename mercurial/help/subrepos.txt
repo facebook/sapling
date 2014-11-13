@@ -130,8 +130,10 @@ Interaction with Mercurial Commands
     ignored.
 
 :remove: remove does not recurse into subrepositories unless
-    -S/--subrepos is specified.  Git and Subversion subrepositories
-    are currently silently ignored.
+    -S/--subrepos is specified.  However, if you specify a file or
+    directory path in a subrepo, it will be removed even without
+    -S/--subrepos.  Git and Subversion subrepositories are currently
+    silently ignored.
 
 :update: update restores the subrepos in the state they were
     originally committed in target changeset. If the recorded
