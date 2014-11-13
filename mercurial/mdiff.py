@@ -25,6 +25,7 @@ class diffopts(object):
     showfunc enables diff -p output
     git enables the git extended patch format
     nodates removes dates from diff headers
+    nobinary ignores binary files
     ignorews ignores all whitespace changes in the diff
     ignorewsamount ignores changes in the amount of whitespace
     ignoreblanklines ignores changes whose lines are all blank
