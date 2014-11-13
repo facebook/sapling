@@ -108,7 +108,7 @@ class basectx(object):
         mf2 = self._manifestmatches(match, s)
 
         modified, added, clean = [], [], []
-        deleted, unknown, ignored = s[3], s[4], s[5]
+        deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
         withflags = mf1.withflags() | mf2.withflags()
         for fn, mf2node in mf2.iteritems():
@@ -301,7 +301,7 @@ class basectx(object):
             ctx1, ctx2 = ctx2, ctx1
 
         match = ctx2._matchstatus(ctx1, match)
-        r = [[], [], [], [], [], [], []]
+        r = scmutil.status([], [], [], [], [], [], [])
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
                               listunknown)
 
@@ -1389,11 +1389,10 @@ class workingctx(committablectx):
         need to build a manifest and return what matches.
         """
         mf = self._repo['.']._manifestmatches(match, s)
-        modified, added, removed = s[0:3]
-        for f in modified + added:
+        for f in s.modified + s.added:
             mf[f] = None
             mf.setflag(f, self.flags(f))
-        for f in removed:
+        for f in s.removed:
             if f in mf:
                 del mf[f]
         return mf
