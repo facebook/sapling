@@ -329,12 +329,13 @@ class transaction(object):
     @active
     def close(self):
         '''commit the transaction'''
-        if self.count == 1 and self.onclose is not None:
+        if self.count == 1:
             self._generatefiles()
             categories = sorted(self._finalizecallback)
             for cat in categories:
                 self._finalizecallback[cat](self)
-            self.onclose()
+            if self.onclose is not None:
+                self.onclose()
 
         self.count -= 1
         if self.count != 0:
