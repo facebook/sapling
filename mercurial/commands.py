@@ -141,6 +141,7 @@ diffwsopts = [
     ]
 
 diffopts2 = [
+    ('', 'noprefix', None, _('omit a/ and b/ prefixes from filenames')),
     ('p', 'show-function', None, _('show which function each change is in')),
     ('', 'reverse', None, _('produce a diff that undoes the changes')),
     ] + diffwsopts + [

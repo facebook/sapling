@@ -89,7 +89,7 @@ invalid diff.unified
   abort: diff context lines count must be an integer, not 'foo'
   [255]
 
-noprefix config
+noprefix config and option
 
   $ hg --config diff.noprefix=True diff --nodates
   diff -r cf9f4ba66af2 a
@@ -104,10 +104,36 @@ noprefix config
    a
    a
    c
+  $ hg diff --noprefix --nodates
+  diff -r cf9f4ba66af2 a
+  --- a/a
+  +++ b/a
+  @@ -2,7 +2,7 @@
+   c
+   a
+   a
+  -b
+  +dd
+   a
+   a
+   c
 
-noprefix disabled in plain mode
+noprefix config disabled in plain mode, but option still enabled
 
   $ HGPLAIN=1 hg --config diff.noprefix=True diff --nodates
+  diff -r cf9f4ba66af2 a
+  --- a/a
+  +++ b/a
+  @@ -2,7 +2,7 @@
+   c
+   a
+   a
+  -b
+  +dd
+   a
+   a
+   c
+  $ HGPLAIN=1 hg diff --noprefix --nodates
   diff -r cf9f4ba66af2 a
   --- a/a
   +++ b/a
@@ -215,9 +241,18 @@ Git diff with noprefix
   -a
   +b
 
-noprefix config disabled in plain mode
+noprefix config disabled in plain mode, but option still enabled
 
   $ HGPLAIN=1 hg --config diff.noprefix=True diff --git --nodates
+  diff --git a/f1 b/f 1
+  rename from f1
+  rename to f 1
+  --- a/f1
+  +++ b/f 1	
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+  $ HGPLAIN=1 hg diff --git --noprefix --nodates
   diff --git a/f1 b/f 1
   rename from f1
   rename to f 1

@@ -500,6 +500,7 @@ Test command without options
    -a --text                treat all files as text
    -g --git                 use git extended diff format
       --nodates             omit dates from diff headers
+      --noprefix            omit a/ and b/ prefixes from filenames
    -p --show-function       show which function each change is in
       --reverse             produce a diff that undoes the changes
    -w --ignore-all-space    ignore white space when comparing lines
