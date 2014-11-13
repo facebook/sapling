@@ -547,6 +547,9 @@ related options for the annotate command.
 ``nodates``
     Don't include dates in diff headers.
 
+``noprefix``
+    Omit 'a/' and 'b/' prefixes from filenames. Ignored in plain mode.
+
 ``showfunc``
     Show which function each change is in.
 

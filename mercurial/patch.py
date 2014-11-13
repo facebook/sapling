@@ -1573,6 +1573,7 @@ def diffopts(ui, opts=None, untrusted=False, section='diff'):
         git=get('git'),
         nodates=get('nodates'),
         nobinary=get('nobinary'),
+        noprefix=get('noprefix', forceplain=False),
         showfunc=get('show_function', 'showfunc'),
         ignorews=get('ignore_all_space', 'ignorews'),
         ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
