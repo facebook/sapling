@@ -232,7 +232,7 @@ Git diff, adding space
 Git diff with noprefix
 
   $ hg --config diff.noprefix=True diff --git --nodates
-  diff --git a/f1 b/f 1
+  diff --git f1 f 1
   rename from f1
   rename to f 1
   --- f1
@@ -253,7 +253,7 @@ noprefix config disabled in plain mode, but option still enabled
   -a
   +b
   $ HGPLAIN=1 hg diff --git --noprefix --nodates
-  diff --git a/f1 b/f 1
+  diff --git f1 f 1
   rename from f1
   rename to f 1
   --- f1

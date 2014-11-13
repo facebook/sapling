@@ -1738,9 +1738,15 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         s.update(text)
         return s.hexdigest()
 
+    if opts.noprefix:
+        aprefix = bprefix = ''
+    else:
+        aprefix = 'a/'
+        bprefix = 'b/'
+
     def diffline(a, b, revs):
         if opts.git:
-            line = 'diff --git a/%s b/%s\n' % (a, b)
+            line = 'diff --git %s%s %s%s\n' % (aprefix, a, bprefix, b)
         elif not repo.ui.quiet:
             if revs:
                 revinfo = ' '.join(["-r %s" % rev for rev in revs])
