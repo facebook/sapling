@@ -93,8 +93,8 @@ noprefix config and option
 
   $ hg --config diff.noprefix=True diff --nodates
   diff -r cf9f4ba66af2 a
-  --- a/a
-  +++ b/a
+  --- a
+  +++ a
   @@ -2,7 +2,7 @@
    c
    a
@@ -106,8 +106,8 @@ noprefix config and option
    c
   $ hg diff --noprefix --nodates
   diff -r cf9f4ba66af2 a
-  --- a/a
-  +++ b/a
+  --- a
+  +++ a
   @@ -2,7 +2,7 @@
    c
    a
@@ -135,8 +135,8 @@ noprefix config disabled in plain mode, but option still enabled
    c
   $ HGPLAIN=1 hg diff --noprefix --nodates
   diff -r cf9f4ba66af2 a
-  --- a/a
-  +++ b/a
+  --- a
+  +++ a
   @@ -2,7 +2,7 @@
    c
    a
@@ -235,8 +235,8 @@ Git diff with noprefix
   diff --git a/f1 b/f 1
   rename from f1
   rename to f 1
-  --- a/f1
-  +++ b/f 1	
+  --- f1
+  +++ f 1	
   @@ -1,1 +1,1 @@
   -a
   +b
@@ -256,8 +256,8 @@ noprefix config disabled in plain mode, but option still enabled
   diff --git a/f1 b/f 1
   rename from f1
   rename to f 1
-  --- a/f1
-  +++ b/f 1	
+  --- f1
+  +++ f 1	
   @@ -1,1 +1,1 @@
   -a
   +b
