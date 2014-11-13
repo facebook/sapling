@@ -1559,9 +1559,13 @@ class GitDiffRequired(Exception):
     pass
 
 def diffopts(ui, opts=None, untrusted=False, section='diff'):
-    def get(key, name=None, getter=ui.configbool):
-        return ((opts and opts.get(key)) or
-                getter(section, name or key, None, untrusted=untrusted))
+    def get(key, name=None, getter=ui.configbool, forceplain=None):
+        if opts:
+            v = opts.get(key)
+            if v:
+                return v
+        return getter(section, name or key, None, untrusted=untrusted)
+
     return mdiff.diffopts(
         text=opts and opts.get('text'),
         git=get('git'),
