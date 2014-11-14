@@ -199,6 +199,9 @@ def dagwalker(repo, revs):
     lowestrev = revs.min()
     gpcache = {}
 
+    if repo.ui.configbool('experimental', 'graph-topological', False):
+        revs = list(groupbranchiter(revs, repo.changelog.parentrevs))
+
     for rev in revs:
         ctx = repo[rev]
         parents = sorted(set([p.rev() for p in ctx.parents()
