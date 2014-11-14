@@ -514,11 +514,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             else:
                 # if different: old untracked f may be overwritten and lost
                 if acceptremote:
-                    actions['g'].append((f, (m2.flags(f),),
-                                   "remote recreating"))
+                    actions['g'].append((f, (fl2,), "remote recreating"))
                 else:
-                    actions['dc'].append((f, (m2.flags(f),),
-                                   "prompt deleted/changed"))
+                    actions['dc'].append((f, (fl2,), "prompt deleted/changed"))
 
     for f, m in sorted(aborts):
         if m == "ud":
