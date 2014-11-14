@@ -12,6 +12,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
+import os
 import errno
 import error, util
 
@@ -203,7 +204,10 @@ class transaction(object):
 
         if file in self.map or file in self._backupmap:
             return
-        backupfile = "%s.backup.%s" % (self.journal, file)
+        dirname, filename = os.path.split(file)
+
+        backupfilename = "%s.backup.%s" % (self.journal, filename)
+        backupfile = os.path.join(dirname, backupfilename)
         if vfs is None:
             vfs = self.opener
         if vfs.exists(file):
