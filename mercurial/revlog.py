@@ -270,6 +270,8 @@ class revlog(object):
             self.nodemap = self._nodecache = nodemap
         if not self._chunkcache:
             self._chunkclear()
+        # revnum -> (chain-length, sum-delta-length)
+        self._chaininfocache = {}
 
     def tip(self):
         return self.node(len(self.index) - 2)
@@ -355,7 +357,11 @@ class revlog(object):
         return base
     def chainlen(self, rev):
         return self._chaininfo(rev)[0]
+
     def _chaininfo(self, rev):
+        chaininfocache = self._chaininfocache
+        if rev in chaininfocache:
+            return chaininfocache[rev]
         index = self.index
         generaldelta = self._generaldelta
         iterrev = rev
@@ -369,10 +375,20 @@ class revlog(object):
                 iterrev = e[3]
             else:
                 iterrev -= 1
+            if iterrev in chaininfocache:
+                t = chaininfocache[iterrev]
+                clen += t[0]
+                compresseddeltalen += t[1]
+                break
             e = index[iterrev]
-        # add text length of base since decompressing that also takes work
-        compresseddeltalen += e[1]
-        return clen, compresseddeltalen
+        else:
+            # Add text length of base since decompressing that also takes
+            # work. For cache hits the length is already included.
+            compresseddeltalen += e[1]
+        r = (clen, compresseddeltalen)
+        chaininfocache[rev] = r
+        return r
+
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
     def rawsize(self, rev):
@@ -1453,6 +1469,7 @@ class revlog(object):
 
         # then reset internal state in memory to forget those revisions
         self._cache = None
+        self._chaininfocache = {}
         self._chunkclear()
         for x in xrange(rev, len(self)):
             del self.nodemap[self.node(x)]
