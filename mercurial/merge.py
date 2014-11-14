@@ -527,14 +527,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
 
-    if not util.checkcase(repo.path):
-        # check collision between files only in p2 for clean update
-        if (not branchmerge and
-            (force or not wctx.dirty(missing=True, branch=False))):
-            _checkcollision(repo, m2, None)
-        else:
-            _checkcollision(repo, m1, actions)
-
     return actions, diverge, renamedelete
 
 def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
@@ -1090,6 +1082,14 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         actions, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
             followcopies)
+
+        if not util.checkcase(repo.path):
+            # check collision between files only in p2 for clean update
+            if (not branchmerge and
+                (force or not wc.dirty(missing=True, branch=False))):
+                _checkcollision(repo, p2.manifest(), None)
+            else:
+                _checkcollision(repo, wc.manifest(), actions)
 
         # Prompt and create actions. TODO: Move this towards resolve phase.
         for f, args, msg in sorted(actions['cd']):
