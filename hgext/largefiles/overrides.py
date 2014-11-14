@@ -380,7 +380,7 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
 #
 # The overridden function filters the unknown files by removing any
 # largefiles. This makes the merge proceed and we can then handle this
-# case further in the overridden manifestmerge function below.
+# case further in the overridden calculateupdates function below.
 def overridecheckunknownfile(origfn, repo, wctx, mctx, f):
     if lfutil.standin(repo.dirstate.normalize(f)) in wctx:
         return False
@@ -389,7 +389,7 @@ def overridecheckunknownfile(origfn, repo, wctx, mctx, f):
 # The manifest merge handles conflicts on the manifest level. We want
 # to handle changes in largefile-ness of files at this level too.
 #
-# The strategy is to run the original manifestmerge and then process
+# The strategy is to run the original calculateupdates and then process
 # the action list it outputs. There are two cases we need to deal with:
 #
 # 1. Normal file in p1, largefile in p2. Here the largefile is
