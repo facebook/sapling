@@ -148,13 +148,13 @@ def missingancestors(revs, bases, pfunc):
 
     revsvisit = set(revs)
     basesvisit = set(bases)
-    if not revsvisit:
-        return []
     if not basesvisit:
         basesvisit.add(nullrev)
-    start = max(max(revsvisit), max(basesvisit))
     bothvisit = revsvisit.intersection(basesvisit)
     revsvisit.difference_update(bothvisit)
+    if not revsvisit:
+        return []
+    start = max(max(revsvisit), max(basesvisit))
     # At this point, we hold the invariants that:
     # - revsvisit is the set of nodes we know are an ancestor of at least one
     #   of the nodes in revs
