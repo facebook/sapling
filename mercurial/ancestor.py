@@ -155,20 +155,19 @@ def missingancestors(revs, bases, pfunc):
     start = max(max(revsvisit), max(basesvisit))
     bothvisit = revsvisit.intersection(basesvisit)
     revsvisit.difference_update(bothvisit)
-    basesvisit.difference_update(bothvisit)
     # At this point, we hold the invariants that:
     # - revsvisit is the set of nodes we know are an ancestor of at least one
     #   of the nodes in revs
     # - basesvisit is the same for bases
     # - bothvisit is the set of nodes we know are ancestors of at least one of
-    #   the nodes in revs and one of the nodes in bases
-    # - a node may be in none or one, but not more, of revsvisit, basesvisit
-    #   and bothvisit at any given time
+    #   the nodes in revs and one of the nodes in bases, and that are smaller
+    #   than curr. bothvisit and revsvisit are mutually exclusive, but bothvisit
+    #   is a subset of basesvisit.
     # Now we walk down in reverse topo order, adding parents of nodes already
-    # visited to the sets while maintaining the invariants. When a node is
-    # found in both revsvisit and basesvisit, it is removed from them and
-    # added to bothvisit instead. When revsvisit becomes empty, there are no
-    # more ancestors of revs that aren't also ancestors of bases, so exit.
+    # visited to the sets while maintaining the invariants. When a node is found
+    # in both revsvisit and basesvisit, it is removed from revsvisit and added
+    # to bothvisit. When revsvisit becomes empty, there are no more ancestors of
+    # revs that aren't also ancestors of bases, so exit.
 
     missing = []
     for curr in xrange(start, nullrev, -1):
@@ -177,18 +176,17 @@ def missingancestors(revs, bases, pfunc):
 
         if curr in bothvisit:
             bothvisit.remove(curr)
-            # curr's parents might have made it into revsvisit or basesvisit
-            # through another path
+            # curr's parents might have made it into revsvisit through another
+            # path
             for p in pfunc(curr):
                 revsvisit.discard(p)
-                basesvisit.discard(p)
+                basesvisit.add(p)
                 bothvisit.add(p)
             continue
 
-        # curr will never be in both revsvisit and basesvisit, since if it
-        # were it'd have been pushed to bothvisit
         if curr in revsvisit:
             missing.append(curr)
+            revsvisit.remove(curr)
             thisvisit = revsvisit
             othervisit = basesvisit
         elif curr in basesvisit:
@@ -198,7 +196,6 @@ def missingancestors(revs, bases, pfunc):
             # not an ancestor of revs or bases: ignore
             continue
 
-        thisvisit.remove(curr)
         for p in pfunc(curr):
             if p == nullrev:
                 pass
@@ -206,7 +203,7 @@ def missingancestors(revs, bases, pfunc):
                 # p is implicitly in thisvisit. This means p is or should be
                 # in bothvisit
                 revsvisit.discard(p)
-                basesvisit.discard(p)
+                basesvisit.add(p)
                 bothvisit.add(p)
             else:
                 # visit later
