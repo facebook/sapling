@@ -370,7 +370,7 @@ def genignore(ui, repo, force=False, **opts):
         if 'svn:ignore' not in props:
             continue
         lines = props['svn:ignore'].strip().split('\n')
-        ignorelines += [dir and (dir + '/' + prop) or prop for prop in lines]
+        ignorelines += [dir and (dir + '/' + prop) or prop for prop in lines if prop.strip()]
 
     repo.wopener('.hgignore', 'w').write('\n'.join(ignorelines) + '\n')
 
