@@ -77,7 +77,8 @@ def genlazyancestors(revs, stoprev=0, inclusive=False):
                                   inclusive=inclusive)
 
 def printlazyancestors(s, l):
-    print [n for n in l if n in s]
+    print 'membership: %r' % [n for n in l if n in s]
+    print 'iteration:  %r' % list(s)
 
 def test_lazyancestors():
     # Empty revs
