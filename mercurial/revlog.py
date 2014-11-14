@@ -407,7 +407,7 @@ class revlog(object):
 
         See the documentation for ancestor.lazyancestors for more details."""
 
-        return ancestor.lazyancestors(self, revs, stoprev=stoprev,
+        return ancestor.lazyancestors(self.parentrevs, revs, stoprev=stoprev,
                                       inclusive=inclusive)
 
     def descendants(self, revs):

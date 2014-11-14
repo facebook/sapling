@@ -216,7 +216,7 @@ def missingancestors(revs, bases, pfunc):
     return missing
 
 class lazyancestors(object):
-    def __init__(self, cl, revs, stoprev=0, inclusive=False):
+    def __init__(self, pfunc, revs, stoprev=0, inclusive=False):
         """Create a new object generating ancestors for the given revs. Does
         not generate revs lower than stoprev.
 
@@ -228,7 +228,7 @@ class lazyancestors(object):
         than stoprev will not be generated.
 
         Result does not include the null revision."""
-        self._parentrevs = cl.parentrevs
+        self._parentrevs = pfunc
         self._initrevs = revs
         self._stoprev = stoprev
         self._inclusive = inclusive
