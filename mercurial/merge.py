@@ -304,7 +304,7 @@ def _checkunknownfile(repo, wctx, mctx, f):
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f].cmp(wctx[f]))
 
-def _checkunknown(repo, wctx, mctx):
+def checkunknown(repo, wctx, mctx):
     "check for collisions between unknown files and files in mctx"
 
     error = False

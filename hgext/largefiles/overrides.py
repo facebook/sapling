@@ -372,7 +372,7 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
         wlock.release()
 
 # Before starting the manifest merge, merge.updates will call
-# _checkunknown to check if there are any files in the merged-in
+# checkunknown to check if there are any files in the merged-in
 # changeset that collide with unknown files in the working copy.
 #
 # The largefiles are seen as unknown, so this prevents us from merging
