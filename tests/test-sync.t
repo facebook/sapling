@@ -78,18 +78,17 @@
 
   $ cd ../master
   $ echo '[hooks]' >> $HGRCPATH
-  $ echo 'prechangegroup=$TESTTMP/hook.sh' >> $HGRCPATH
-  $ echo 'sleep 2' > $TESTTMP/hook.sh
+  $ echo 'presyncdb=$TESTTMP/hook.sh' >> $HGRCPATH
+  $ echo 'sleep 1' > $TESTTMP/hook.sh
   $ chmod a+x $TESTTMP/hook.sh
   $ cd ../client
   $ echo a > a
   $ hg commit -qAm a
-  $ hg push -q ssh://user@dummy/master &
-  $ sleep 1
-  $ cd ../master2
-  $ hg --debug log -l 1 --template '{rev} {desc}\n'
-  syncing not needed
-  2 z
-  $ hg --debug log -l 1 --template '{rev} {desc}\n' --forcesync
-  syncing with mysql
+  $ hg push -q ssh://user@dummy/master2
+  $ cd ../master
+  $ hg log -l 1 --template '{rev} {desc}\n' &
+  $ hg log -l 1 --template '{rev} {desc}\n' --forcesync
+  waiting for lock on repository $TESTTMP/master held by * (glob)
+  3 a
+  got lock after ? seconds (glob)
   3 a

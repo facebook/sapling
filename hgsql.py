@@ -122,7 +122,8 @@ def reposetup(ui, repo):
             # Use a noop to force a sync
             def noop():
                 pass
-            executewithsql(repo, noop, initialsync == INITIAL_SYNC_FORCE)
+            waitforlock = (initialsync == INITIAL_SYNC_FORCE)
+            executewithsql(repo, noop, waitforlock=waitforlock)
 
 # Incoming commits are only allowed via push and pull
 def unbundle(orig, *args, **kwargs):
@@ -175,6 +176,12 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     # executewithsql can be executed in a nested scenario (ex: writing
     # bookmarks during a pull), so track whether this call performed
     # the connect.
+
+    waitforlock = sqllock
+    if not waitforlock and 'waitforlock' in kwargs:
+        waitforlock = kwargs['waitforlock']
+        del kwargs['waitforlock']
+
     connected = False
     if not repo.sqlconn:
         repo.sqlconnect()
@@ -189,7 +196,7 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     success = False
     try:
         if connected:
-            repo.syncdb(waitforlock=sqllock)
+            repo.syncdb(waitforlock=waitforlock)
         result = action(*args, **kwargs)
         success = True
     finally:
