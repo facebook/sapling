@@ -524,6 +524,27 @@ check that local configs for the cached repo aren't inherited when -R is used:
   prompt: 5678
 
 
+run commandserver in commandserver, which is silly but should work:
+
+  >>> import cStringIO
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def nested(server):
+  ...     print '%c, %r' % readchannel(server)
+  ...     class nestedserver(object):
+  ...         stdin = cStringIO.StringIO('getencoding\n')
+  ...         stdout = cStringIO.StringIO()
+  ...     runcommand(server, ['serve', '--cmdserver', 'pipe'],
+  ...                output=nestedserver.stdout, input=nestedserver.stdin)
+  ...     nestedserver.stdout.seek(0)
+  ...     print '%c, %r' % readchannel(nestedserver)  # hello
+  ...     print '%c, %r' % readchannel(nestedserver)  # getencoding
+  o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
+  *** runcommand serve --cmdserver pipe
+  o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
+  r, '*' (glob)
+
+
 start without repository:
 
   $ cd ..

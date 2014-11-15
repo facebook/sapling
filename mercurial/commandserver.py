@@ -7,7 +7,7 @@
 
 from i18n import _
 import struct
-import sys, os, errno, traceback, SocketServer
+import os, errno, traceback, SocketServer
 import dispatch, encoding, util
 
 logfile = None
@@ -250,7 +250,7 @@ class server(object):
 
 class pipeservice(object):
     def __init__(self, ui, repo, opts):
-        self.server = server(ui, repo, sys.stdin, sys.stdout)
+        self.server = server(ui, repo, ui.fin, ui.fout)
 
     def init(self):
         pass
