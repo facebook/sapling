@@ -1,4 +1,98 @@
 from mercurial import ancestor, commands, hg, ui, util
+from mercurial.node import nullrev
+import binascii, getopt, math, os, random, sys, time
+
+def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):
+    '''nodes: total number of nodes in the graph
+    rootprob: probability that a new node (not 0) will be a root
+    mergeprob: probability that, excluding a root a node will be a merge
+    prevprob: probability that p1 will be the previous node
+
+    return value is a graph represented as an adjacency list.
+    '''
+    graph = [None] * nodes
+    for i in xrange(nodes):
+        if i == 0 or rng.random() < rootprob:
+            graph[i] = [nullrev]
+        elif i == 1:
+            graph[i] = [0]
+        elif rng.random() < mergeprob:
+            if i == 2 or rng.random() < prevprob:
+                # p1 is prev
+                p1 = i - 1
+            else:
+                p1 = rng.randrange(i - 1)
+            p2 = rng.choice(range(0, p1) + range(p1 + 1, i))
+            graph[i] = [p1, p2]
+        elif rng.random() < prevprob:
+            graph[i] = [i - 1]
+        else:
+            graph[i] = [rng.randrange(i - 1)]
+
+    return graph
+
+def buildancestorsets(graph):
+    ancs = [None] * len(graph)
+    for i in xrange(len(graph)):
+        ancs[i] = set([i])
+        if graph[i] == [nullrev]:
+            continue
+        for p in graph[i]:
+            ancs[i].update(ancs[p])
+    return ancs
+
+def naivemissingancestors(ancs, revs, bases):
+    res = set()
+    for rev in revs:
+        if rev != nullrev:
+            res.update(ancs[rev])
+    for base in bases:
+        if base != nullrev:
+            res.difference_update(ancs[base])
+    return sorted(res)
+
+def test_missingancestors(seed, rng):
+    # empirically observed to take around 1 second
+    graphcount = 100
+    testcount = 100
+    nerrs = [0]
+    # the default mu and sigma give us a nice distribution of mostly
+    # single-digit counts (including 0) with some higher ones
+    def lognormrandom(mu, sigma):
+        return int(math.floor(rng.lognormvariate(mu, sigma)))
+
+    def samplerevs(nodes, mu=1.1, sigma=0.8):
+        count = min(lognormrandom(mu, sigma), len(nodes))
+        return rng.sample(nodes, count)
+
+    def err(seed, graph, bases, revs, output, expected):
+        if nerrs[0] == 0:
+            print >> sys.stderr, 'seed:', hex(seed)[:-1]
+        if gerrs[0] == 0:
+            print >> sys.stderr, 'graph:', graph
+        print >> sys.stderr, '* bases:', bases
+        print >> sys.stderr, '* revs: ', revs
+        print >> sys.stderr, '*  output:  ', output
+        print >> sys.stderr, '*  expected:', expected
+        nerrs[0] += 1
+        gerrs[0] += 1
+
+    for g in xrange(graphcount):
+        graph = buildgraph(rng)
+        ancs = buildancestorsets(graph)
+        gerrs = [0]
+        for _ in xrange(testcount):
+            # start from nullrev to include it as a possibility
+            graphnodes = range(nullrev, len(graph))
+            bases = samplerevs(graphnodes)
+            revs = samplerevs(graphnodes)
+
+            # fast algorithm
+            h = ancestor.missingancestors(revs, bases, graph.__getitem__)
+            # reference slow algorithm
+            r = naivemissingancestors(ancs, revs, bases)
+            if h != r:
+                err(seed, graph, bases, revs, h, r)
 
 # graph is a dict of child->parent adjacency lists for this graph:
 # o  13
@@ -32,43 +126,6 @@ from mercurial import ancestor, commands, hg, ui, util
 graph = {0: [-1], 1: [0], 2: [1], 3: [1], 4: [2], 5: [4], 6: [4],
          7: [4], 8: [-1], 9: [6, 7], 10: [5], 11: [3, 7], 12: [9],
          13: [8]}
-pfunc = graph.get
-
-def runmissingancestors(revs, bases):
-    print "%% ancestors of %s and not of %s" % (revs, bases)
-    print ancestor.missingancestors(revs, bases, pfunc)
-
-def test_missingancestors():
-    # Empty revs
-    runmissingancestors([], [1])
-    runmissingancestors([], [])
-
-    # If bases is empty, it's the same as if it were [nullrev]
-    runmissingancestors([12], [])
-
-    # Trivial case: revs == bases
-    runmissingancestors([0], [0])
-    runmissingancestors([4, 5, 6], [6, 5, 4])
-
-    # With nullrev
-    runmissingancestors([-1], [12])
-    runmissingancestors([12], [-1])
-
-    # 9 is a parent of 12. 7 is a parent of 9, so an ancestor of 12. 6 is an
-    # ancestor of 12 but not of 7.
-    runmissingancestors([12], [9])
-    runmissingancestors([9], [12])
-    runmissingancestors([12, 9], [7])
-    runmissingancestors([7, 6], [12])
-
-    # More complex cases
-    runmissingancestors([10], [11, 12])
-    runmissingancestors([11], [10])
-    runmissingancestors([11], [10, 12])
-    runmissingancestors([12], [10])
-    runmissingancestors([12], [11])
-    runmissingancestors([10, 11, 12], [13])
-    runmissingancestors([13], [10, 11, 12])
 
 def genlazyancestors(revs, stoprev=0, inclusive=False):
     print ("%% lazy ancestor set for %s, stoprev = %s, inclusive = %s" %
@@ -133,7 +190,20 @@ def test_gca():
                     print "  Python returned: %s" % pygcas
 
 def main():
-    test_missingancestors()
+    seed = None
+    opts, args = getopt.getopt(sys.argv[1:], 's:', ['seed='])
+    for o, a in opts:
+        if o in ('-s', '--seed'):
+            seed = long(a, base=0) # accepts base 10 or 16 strings
+
+    if seed is None:
+        try:
+            seed = long(binascii.hexlify(os.urandom(16)), 16)
+        except AttributeError:
+            seed = long(time.time() * 1000)
+
+    rng = random.Random(seed)
+    test_missingancestors(seed, rng)
     test_lazyancestors()
     test_gca()
 
