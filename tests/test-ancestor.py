@@ -45,6 +45,8 @@ class naiveincrementalmissingancestors(object):
     def __init__(self, ancs, bases):
         self.ancs = ancs
         self.bases = set(bases)
+    def addbases(self, newbases):
+        self.bases.update(newbases)
     def missingancestors(self, revs):
         res = set()
         for rev in revs:
@@ -97,6 +99,11 @@ def test_missingancestors(seed, rng):
             naiveinc = naiveincrementalmissingancestors(ancs, bases)
             seq = []
             for _ in xrange(inccount):
+                if rng.random() < 0.2:
+                    newbases = samplerevs(graphnodes)
+                    seq.append(('addbases', newbases))
+                    inc.addbases(newbases)
+                    naiveinc.addbases(newbases)
                 revs = samplerevs(graphnodes)
                 seq.append(('missingancestors', revs))
                 h = inc.missingancestors(revs)

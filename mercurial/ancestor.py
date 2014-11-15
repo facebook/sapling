@@ -150,6 +150,10 @@ class incrementalmissingancestors(object):
         '''whether the common set has any non-trivial bases'''
         return self.bases and self.bases != set([nullrev])
 
+    def addbases(self, newbases):
+        '''grow the ancestor set by adding new bases'''
+        self.bases.update(newbases)
+
     def missingancestors(self, revs):
         '''return all the ancestors of revs that are not ancestors of self.bases
 
