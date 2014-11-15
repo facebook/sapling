@@ -220,10 +220,6 @@ class incrementalmissingancestors(object):
         missing.reverse()
         return missing
 
-def missingancestors(revs, bases, pfunc):
-    inc = incrementalmissingancestors(pfunc, bases)
-    return inc.missingancestors(revs)
-
 class lazyancestors(object):
     def __init__(self, pfunc, revs, stoprev=0, inclusive=False):
         """Create a new object generating ancestors for the given revs. Does
