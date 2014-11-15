@@ -250,13 +250,16 @@ class server(object):
 
 class pipeservice(object):
     def __init__(self, ui, repo, opts):
-        self.server = server(ui, repo, ui.fin, ui.fout)
+        self.ui = ui
+        self.repo = repo
 
     def init(self):
         pass
 
     def run(self):
-        return self.server.serve()
+        ui = self.ui
+        sv = server(ui, self.repo, ui.fin, ui.fout)
+        return sv.serve()
 
 class _requesthandler(SocketServer.StreamRequestHandler):
     def handle(self):
