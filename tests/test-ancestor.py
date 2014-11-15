@@ -88,7 +88,8 @@ def test_missingancestors(seed, rng):
             revs = samplerevs(graphnodes)
 
             # fast algorithm
-            h = ancestor.missingancestors(revs, bases, graph.__getitem__)
+            inc = ancestor.incrementalmissingancestors(graph.__getitem__, bases)
+            h = inc.missingancestors(revs)
             # reference slow algorithm
             r = naivemissingancestors(ancs, revs, bases)
             if h != r:

@@ -134,83 +134,95 @@ def ancestors(pfunc, *orignodes):
         return gca
     return deepest(gca)
 
-def missingancestors(revs, bases, pfunc):
-    """Return all the ancestors of revs that are not ancestors of bases.
+class incrementalmissingancestors(object):
+    '''persistent state used to calculate missing ancestors incrementally
 
-    This may include elements from revs.
+    Although similar in spirit to lazyancestors below, this is a separate class
+    because trying to support contains and missingancestors operations with the
+    same internal data structures adds needless complexity.'''
+    def __init__(self, pfunc, bases):
+        self.bases = set(bases)
+        if not self.bases:
+            self.bases.add(nullrev)
+        self.pfunc = pfunc
 
-    Equivalent to the revset (::revs - ::bases). Revs are returned in
-    revision number order, which is a topological order.
+    def missingancestors(self, revs):
+        '''return all the ancestors of revs that are not ancestors of self.bases
 
-    revs and bases should both be iterables. pfunc must return a list of
-    parent revs for a given revs.
-    """
+        This may include elements from revs.
 
-    revsvisit = set(revs)
-    basesvisit = set(bases)
-    if not basesvisit:
-        basesvisit.add(nullrev)
-    bothvisit = revsvisit.intersection(basesvisit)
-    revsvisit.difference_update(bothvisit)
-    if not revsvisit:
-        return []
-    start = max(max(revsvisit), max(basesvisit))
-    # At this point, we hold the invariants that:
-    # - revsvisit is the set of nodes we know are an ancestor of at least one
-    #   of the nodes in revs
-    # - basesvisit is the same for bases
-    # - bothvisit is the set of nodes we know are ancestors of at least one of
-    #   the nodes in revs and one of the nodes in bases, and that are smaller
-    #   than curr. bothvisit and revsvisit are mutually exclusive, but bothvisit
-    #   is a subset of basesvisit.
-    # Now we walk down in reverse topo order, adding parents of nodes already
-    # visited to the sets while maintaining the invariants. When a node is found
-    # in both revsvisit and basesvisit, it is removed from revsvisit and added
-    # to bothvisit. When revsvisit becomes empty, there are no more ancestors of
-    # revs that aren't also ancestors of bases, so exit.
-
-    missing = []
-    for curr in xrange(start, nullrev, -1):
+        Equivalent to the revset (::revs - ::self.bases). Revs are returned in
+        revision number order, which is a topological order.'''
+        revsvisit = set(revs)
+        basesvisit = self.bases
+        pfunc = self.pfunc
+        bothvisit = revsvisit.intersection(basesvisit)
+        revsvisit.difference_update(bothvisit)
         if not revsvisit:
-            break
+            return []
 
-        if curr in bothvisit:
-            bothvisit.remove(curr)
-            # curr's parents might have made it into revsvisit through another
-            # path
-            for p in pfunc(curr):
-                revsvisit.discard(p)
-                basesvisit.add(p)
-                bothvisit.add(p)
-            continue
+        start = max(max(revsvisit), max(basesvisit))
+        # At this point, we hold the invariants that:
+        # - revsvisit is the set of nodes we know are an ancestor of at least
+        #   one of the nodes in revs
+        # - basesvisit is the same for bases
+        # - bothvisit is the set of nodes we know are ancestors of at least one
+        #   of the nodes in revs and one of the nodes in bases. bothvisit and
+        #   revsvisit are mutually exclusive, but bothvisit is a subset of
+        #   basesvisit.
+        # Now we walk down in reverse topo order, adding parents of nodes
+        # already visited to the sets while maintaining the invariants. When a
+        # node is found in both revsvisit and basesvisit, it is removed from
+        # revsvisit and added to bothvisit. When revsvisit becomes empty, there
+        # are no more ancestors of revs that aren't also ancestors of bases, so
+        # exit.
 
-        if curr in revsvisit:
-            missing.append(curr)
-            revsvisit.remove(curr)
-            thisvisit = revsvisit
-            othervisit = basesvisit
-        elif curr in basesvisit:
-            thisvisit = basesvisit
-            othervisit = revsvisit
-        else:
-            # not an ancestor of revs or bases: ignore
-            continue
+        missing = []
+        for curr in xrange(start, nullrev, -1):
+            if not revsvisit:
+                break
 
-        for p in pfunc(curr):
-            if p == nullrev:
-                pass
-            elif p in othervisit or p in bothvisit:
-                # p is implicitly in thisvisit. This means p is or should be
-                # in bothvisit
-                revsvisit.discard(p)
-                basesvisit.add(p)
-                bothvisit.add(p)
+            if curr in bothvisit:
+                bothvisit.remove(curr)
+                # curr's parents might have made it into revsvisit through
+                # another path
+                for p in pfunc(curr):
+                    revsvisit.discard(p)
+                    basesvisit.add(p)
+                    bothvisit.add(p)
+                continue
+
+            if curr in revsvisit:
+                missing.append(curr)
+                revsvisit.remove(curr)
+                thisvisit = revsvisit
+                othervisit = basesvisit
+            elif curr in basesvisit:
+                thisvisit = basesvisit
+                othervisit = revsvisit
             else:
-                # visit later
-                thisvisit.add(p)
+                # not an ancestor of revs or bases: ignore
+                continue
 
-    missing.reverse()
-    return missing
+            for p in pfunc(curr):
+                if p == nullrev:
+                    pass
+                elif p in othervisit or p in bothvisit:
+                    # p is implicitly in thisvisit. This means p is or should be
+                    # in bothvisit
+                    revsvisit.discard(p)
+                    basesvisit.add(p)
+                    bothvisit.add(p)
+                else:
+                    # visit later
+                    thisvisit.add(p)
+
+        missing.reverse()
+        return missing
+
+def missingancestors(revs, bases, pfunc):
+    inc = incrementalmissingancestors(pfunc, bases)
+    return inc.missingancestors(revs)
 
 class lazyancestors(object):
     def __init__(self, pfunc, revs, stoprev=0, inclusive=False):
