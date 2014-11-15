@@ -178,8 +178,9 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     # the connect.
 
     waitforlock = sqllock
-    if not waitforlock and 'waitforlock' in kwargs:
-        waitforlock = kwargs['waitforlock']
+    if 'waitforlock' in kwargs:
+        if not waitforlock:
+            waitforlock = kwargs['waitforlock']
         del kwargs['waitforlock']
 
     connected = False
