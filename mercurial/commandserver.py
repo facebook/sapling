@@ -7,7 +7,7 @@
 
 from i18n import _
 import struct
-import os, errno, traceback, SocketServer
+import sys, os, errno, traceback, SocketServer
 import dispatch, encoding, util
 
 logfile = None
@@ -248,6 +248,29 @@ class server(object):
 
         return 0
 
+def _protectio(ui):
+    """ duplicates streams and redirect original to null if ui uses stdio """
+    ui.flush()
+    newfiles = []
+    nullfd = os.open(os.devnull, os.O_RDWR)
+    for f, sysf, mode in [(ui.fin, sys.stdin, 'rb'),
+                          (ui.fout, sys.stdout, 'wb')]:
+        if f is sysf:
+            newfd = os.dup(f.fileno())
+            os.dup2(nullfd, f.fileno())
+            f = os.fdopen(newfd, mode)
+        newfiles.append(f)
+    os.close(nullfd)
+    return tuple(newfiles)
+
+def _restoreio(ui, fin, fout):
+    """ restores streams from duplicated ones """
+    ui.flush()
+    for f, uif in [(fin, ui.fin), (fout, ui.fout)]:
+        if f is not uif:
+            os.dup2(f.fileno(), uif.fileno())
+            f.close()
+
 class pipeservice(object):
     def __init__(self, ui, repo, opts):
         self.ui = ui
@@ -258,8 +281,14 @@ class pipeservice(object):
 
     def run(self):
         ui = self.ui
-        sv = server(ui, self.repo, ui.fin, ui.fout)
-        return sv.serve()
+        # redirect stdio to null device so that broken extensions or in-process
+        # hooks will never cause corruption of channel protocol.
+        fin, fout = _protectio(ui)
+        try:
+            sv = server(ui, self.repo, fin, fout)
+            return sv.serve()
+        finally:
+            _restoreio(ui, fin, fout)
 
 class _requesthandler(SocketServer.StreamRequestHandler):
     def handle(self):
