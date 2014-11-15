@@ -10,7 +10,6 @@ import parser, util, error, discovery, hbisect, phases
 import node
 import heapq
 import match as matchmod
-import ancestor as ancestormod
 from i18n import _
 import encoding
 import obsolete as obsmod
@@ -406,7 +405,7 @@ def only(repo, subset, x):
     else:
         exclude = getset(repo, spanset(repo), args[1])
 
-    results = set(ancestormod.missingancestors(include, exclude, cl.parentrevs))
+    results = set(cl.findmissingrevs(common=exclude, heads=include))
     return subset & results
 
 def bisect(repo, subset, x):
