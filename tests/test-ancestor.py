@@ -47,6 +47,11 @@ class naiveincrementalmissingancestors(object):
         self.bases = set(bases)
     def addbases(self, newbases):
         self.bases.update(newbases)
+    def removeancestorsfrom(self, revs):
+        for base in self.bases:
+            if base != nullrev:
+                revs.difference_update(self.ancs[base])
+        revs.discard(nullrev)
     def missingancestors(self, revs):
         res = set()
         for rev in revs:
@@ -98,18 +103,31 @@ def test_missingancestors(seed, rng):
             # reference slow algorithm
             naiveinc = naiveincrementalmissingancestors(ancs, bases)
             seq = []
+            revs = []
             for _ in xrange(inccount):
                 if rng.random() < 0.2:
                     newbases = samplerevs(graphnodes)
                     seq.append(('addbases', newbases))
                     inc.addbases(newbases)
                     naiveinc.addbases(newbases)
-                revs = samplerevs(graphnodes)
-                seq.append(('missingancestors', revs))
-                h = inc.missingancestors(revs)
-                r = naiveinc.missingancestors(revs)
-                if h != r:
-                    err(seed, graph, bases, seq, h, r)
+                if rng.random() < 0.4:
+                    # larger set so that there are more revs to remove from
+                    revs = samplerevs(graphnodes, mu=1.5)
+                    seq.append(('removeancestorsfrom', revs))
+                    hrevs = set(revs)
+                    rrevs = set(revs)
+                    inc.removeancestorsfrom(hrevs)
+                    naiveinc.removeancestorsfrom(rrevs)
+                    if hrevs != rrevs:
+                        err(seed, graph, bases, seq, sorted(hrevs),
+                            sorted(rrevs))
+                else:
+                    revs = samplerevs(graphnodes)
+                    seq.append(('missingancestors', revs))
+                    h = inc.missingancestors(revs)
+                    r = naiveinc.missingancestors(revs)
+                    if h != r:
+                        err(seed, graph, bases, seq, h, r)
 
 # graph is a dict of child->parent adjacency lists for this graph:
 # o  13

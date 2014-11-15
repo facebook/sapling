@@ -154,6 +154,32 @@ class incrementalmissingancestors(object):
         '''grow the ancestor set by adding new bases'''
         self.bases.update(newbases)
 
+    def removeancestorsfrom(self, revs):
+        '''remove all ancestors of bases from the set revs (in place)'''
+        bases = self.bases
+        pfunc = self.pfunc
+        revs.difference_update(bases)
+        # nullrev is always an ancestor
+        revs.discard(nullrev)
+        if not revs:
+            return
+        # anything in revs > start is definitely not an ancestor of bases
+        # revs <= start needs to be investigated
+        start = max(bases)
+        keepcount = sum(1 for r in revs if r > start)
+        if len(revs) == keepcount:
+            # no revs to consider
+            return
+
+        for curr in xrange(start, min(revs) - 1, -1):
+            if curr not in bases:
+                continue
+            revs.discard(curr)
+            bases.update(pfunc(curr))
+            if len(revs) == keepcount:
+                # no more potential revs to discard
+                break
+
     def missingancestors(self, revs):
         '''return all the ancestors of revs that are not ancestors of self.bases
 
