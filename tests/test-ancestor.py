@@ -41,15 +41,19 @@ def buildancestorsets(graph):
             ancs[i].update(ancs[p])
     return ancs
 
-def naivemissingancestors(ancs, revs, bases):
-    res = set()
-    for rev in revs:
-        if rev != nullrev:
-            res.update(ancs[rev])
-    for base in bases:
-        if base != nullrev:
-            res.difference_update(ancs[base])
-    return sorted(res)
+class naiveincrementalmissingancestors(object):
+    def __init__(self, ancs, bases):
+        self.ancs = ancs
+        self.bases = set(bases)
+    def missingancestors(self, revs):
+        res = set()
+        for rev in revs:
+            if rev != nullrev:
+                res.update(self.ancs[rev])
+        for base in self.bases:
+            if base != nullrev:
+                res.difference_update(self.ancs[base])
+        return sorted(res)
 
 def test_missingancestors(seed, rng):
     # empirically observed to take around 1 second
@@ -91,7 +95,8 @@ def test_missingancestors(seed, rng):
             inc = ancestor.incrementalmissingancestors(graph.__getitem__, bases)
             h = inc.missingancestors(revs)
             # reference slow algorithm
-            r = naivemissingancestors(ancs, revs, bases)
+            naiveinc = naiveincrementalmissingancestors(ancs, bases)
+            r = naiveinc.missingancestors(revs)
             if h != r:
                 err(seed, graph, bases, revs, h, r)
 
