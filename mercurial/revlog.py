@@ -530,7 +530,8 @@ class revlog(object):
         if heads is None:
             heads = self.headrevs()
 
-        return ancestor.missingancestors(heads, common, self.parentrevs)
+        inc = self.incrementalmissingrevs(common=common)
+        return inc.missingancestors(heads)
 
     def findmissing(self, common=None, heads=None):
         """Return the ancestors of heads that are not ancestors of common.
@@ -555,8 +556,8 @@ class revlog(object):
         common = [self.rev(n) for n in common]
         heads = [self.rev(n) for n in heads]
 
-        return [self.node(r) for r in
-                ancestor.missingancestors(heads, common, self.parentrevs)]
+        inc = self.incrementalmissingrevs(common=common)
+        return [self.node(r) for r in inc.missingancestors(heads)]
 
     def nodesbetween(self, roots=None, heads=None):
         """Return a topological path from 'roots' to 'heads'.
