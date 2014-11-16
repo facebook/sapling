@@ -1787,7 +1787,7 @@ Cat a standin
   $ hg cat .hglf/sub/large4
   e166e74c7303192238d60af5a9c4ce9bef0b7928
   $ hg cat .hglf/normal3
-  .hglf/normal3: no such file in rev 598410d3eb9a
+  .hglf/normal3: no such file in rev 598410d3eb9a (glob)
   [1]
 
 Test that renaming a largefile results in correct output for status

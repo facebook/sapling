@@ -33,8 +33,8 @@ failing test
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg`
   
-  --- $TESTTMP/test-failure.t (glob)
-  +++ $TESTTMP/test-failure.t.err (glob)
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
   @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
@@ -87,8 +87,8 @@ test for --retest
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --retest
   
-  --- $TESTTMP/test-failure.t (glob)
-  +++ $TESTTMP/test-failure.t.err (glob)
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
   @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
@@ -121,8 +121,8 @@ failed
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg` test-failure.t
   
-  --- $TESTTMP/test-failure.t (glob)
-  +++ $TESTTMP/test-failure.t.err (glob)
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
   @@ -1,4 +1,4 @@
      $ echo babar
   -  rataxes
@@ -274,7 +274,7 @@ Refuse the fix
 Interactive with custom view
 
   $ echo 'n' | $TESTDIR/run-tests.py --with-hg=`which hg` -i --view echo
-  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err
+  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err (glob)
   Accept this change? [n]* (glob)
   ERROR: test-failure.t output changed
   !.
@@ -286,7 +286,7 @@ Interactive with custom view
 View the fix
 
   $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` --view echo
-  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err
+  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err (glob)
   
   ERROR: test-failure.t output changed
   !.

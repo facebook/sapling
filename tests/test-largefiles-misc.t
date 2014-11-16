@@ -482,7 +482,7 @@ check messages when there are files to upload:
   b
   
   $ hg -R clone2 outgoing --large --graph --template "{rev}"
-  comparing with $TESTTMP/issue3651/src
+  comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
   @  1
   

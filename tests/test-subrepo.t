@@ -1324,7 +1324,7 @@ configuration
   $ echo phasecheck4 >>   t/t
   $ hg commit -S -m phasecheck4
   committing subrepository s
-  committing subrepository s/ss
+  committing subrepository s/ss (glob)
   warning: changes are committed in secret phase from subrepository ss
   committing subrepository t
   warning: changes are committed in secret phase from subrepository s

@@ -96,10 +96,10 @@ Issue294: hg remove --after dir fails when dir.* also exists
 
   $ hg files
   b
-  dir.h/foo
+  dir.h/foo (glob)
   t.h
-  t/e.h
-  t/x
+  t/e.h (glob)
+  t/x (glob)
   $ hg files b
   b
 
@@ -130,11 +130,11 @@ Issue294: hg remove --after dir fails when dir.* also exists
   ../t/e.h (glob)
 
   $ hg files
-  ../b
-  ../dir.h/foo
-  ../t.h
-  ../t/e.h
-  ../t/x
+  ../b (glob)
+  ../dir.h/foo (glob)
+  ../t.h (glob)
+  ../t/e.h (glob)
+  ../t/x (glob)
   $ hg files .
   [1]
 

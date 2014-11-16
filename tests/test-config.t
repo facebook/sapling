@@ -7,7 +7,7 @@ Invalid syntax: no value
   > novaluekey
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1: novaluekey
+  hg: parse error at $TESTTMP/.hg/hgrc:1: novaluekey (glob)
   [255]
 
 Invalid syntax: no key
@@ -16,7 +16,7 @@ Invalid syntax: no key
   > =nokeyvalue
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1: =nokeyvalue
+  hg: parse error at $TESTTMP/.hg/hgrc:1: =nokeyvalue (glob)
   [255]
 
 Test hint about invalid syntax from leading white space
@@ -25,7 +25,7 @@ Test hint about invalid syntax from leading white space
   >  key=value
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1:  key=value
+  hg: parse error at $TESTTMP/.hg/hgrc:1:  key=value (glob)
   unexpected leading whitespace
   [255]
 
@@ -34,7 +34,7 @@ Test hint about invalid syntax from leading white space
   > key=value
   > EOF
   $ hg showconfig
-  hg: parse error at $TESTTMP/.hg/hgrc:1:  [section]
+  hg: parse error at $TESTTMP/.hg/hgrc:1:  [section] (glob)
   unexpected leading whitespace
   [255]
 
