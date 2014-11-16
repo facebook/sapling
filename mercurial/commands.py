@@ -5086,7 +5086,7 @@ def recover(ui, repo):
     [('A', 'after', None, _('record delete for missing files')),
     ('f', 'force', None,
      _('remove (and delete) file even if added or modified')),
-    ] + walkopts,
+    ] + subrepoopts + walkopts,
     _('[OPTION]... FILE...'),
     inferrepo=True)
 def remove(ui, repo, *pats, **opts):
@@ -5131,7 +5131,8 @@ def remove(ui, repo, *pats, **opts):
         raise util.Abort(_('no files specified'))
 
     m = scmutil.match(repo[None], pats, opts)
-    return cmdutil.remove(ui, repo, m, after, force)
+    subrepos = opts.get('subrepos')
+    return cmdutil.remove(ui, repo, m, "", after, force, subrepos)
 
 @command('rename|move|mv',
     [('A', 'after', None, _('record a rename that has already occurred')),

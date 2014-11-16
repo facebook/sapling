@@ -501,6 +501,13 @@ class abstractsubrepo(object):
     def forget(self, ui, match, prefix):
         return ([], [])
 
+    def removefiles(self, ui, matcher, prefix, after, force, subrepos):
+        """remove the matched files from the subrepository and the filesystem,
+        possibly by force and/or after the file has been removed from the
+        filesystem.  Return 0 on success, 1 on any warning.
+        """
+        return 1
+
     def revert(self, ui, substate, *pats, **opts):
         ui.warn('%s: reverting %s subrepos is unsupported\n' \
             % (substate[0], substate[2]))
@@ -852,6 +859,12 @@ class hgsubrepo(abstractsubrepo):
     def forget(self, ui, match, prefix):
         return cmdutil.forget(ui, self._repo, match,
                               os.path.join(prefix, self._path), True)
+
+    @annotatesubrepoerror
+    def removefiles(self, ui, matcher, prefix, after, force, subrepos):
+        return cmdutil.remove(ui, self._repo, matcher,
+                              os.path.join(prefix, self._path), after, force,
+                              subrepos)
 
     @annotatesubrepoerror
     def revert(self, ui, substate, *pats, **opts):

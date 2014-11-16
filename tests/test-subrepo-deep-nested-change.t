@@ -110,6 +110,17 @@ Check that deep archiving works
   $ hg ci -Sm "add test.txt"
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)
+
+.. but first take a detour through some deep removal testing
+
+  $ hg remove -S -I 're:.*.txt' sub1
+  removing sub1/sub2/folder/test.txt (glob)
+  removing sub1/sub2/test.txt (glob)
+  $ hg status -S
+  R sub1/sub2/folder/test.txt
+  R sub1/sub2/test.txt
+  $ hg update -Cq
+
   $ hg --config extensions.largefiles=! archive -S ../archive_all
   $ find ../archive_all | sort
   ../archive_all

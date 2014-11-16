@@ -2052,21 +2052,44 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(forget)
     return bad, forgot
 
-def remove(ui, repo, m, after, force):
+def remove(ui, repo, m, prefix, after, force, subrepos):
+    join = lambda f: os.path.join(prefix, f)
     ret = 0
     s = repo.status(match=m, clean=True)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
-    # warn about failure to delete explicit files/dirs
     wctx = repo[None]
+
+    if subrepos:
+        for subpath in sorted(wctx.substate):
+            sub = wctx.sub(subpath)
+            try:
+                submatch = matchmod.narrowmatcher(subpath, m)
+                if sub.removefiles(ui, submatch, prefix, after, force,
+                                   subrepos):
+                    ret = 1
+            except error.LookupError:
+                ui.status(_("skipping missing subrepository: %s\n")
+                               % join(subpath))
+
+    # warn about failure to delete explicit files/dirs
     for f in m.files():
-        if f in repo.dirstate or f in wctx.dirs():
+        def insubrepo():
+            for subpath in wctx.substate:
+                if f.startswith(subpath):
+                    return True
+            return False
+
+        if f in repo.dirstate or f in wctx.dirs() or (subrepos and insubrepo()):
             continue
-        if os.path.exists(m.rel(f)):
-            if os.path.isdir(m.rel(f)):
-                ui.warn(_('not removing %s: no tracked files\n') % m.rel(f))
+
+        if os.path.exists(m.rel(join(f))):
+            if os.path.isdir(m.rel(join(f))):
+                ui.warn(_('not removing %s: no tracked files\n')
+                        % m.rel(join(f)))
             else:
-                ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
+                ui.warn(_('not removing %s: file is untracked\n')
+                        % m.rel(join(f)))
         # missing files will generate a warning elsewhere
         ret = 1
 
@@ -2075,22 +2098,22 @@ def remove(ui, repo, m, after, force):
     elif after:
         list = deleted
         for f in modified + added + clean:
-            ui.warn(_('not removing %s: file still exists\n') % m.rel(f))
+            ui.warn(_('not removing %s: file still exists\n') % m.rel(join(f)))
             ret = 1
     else:
         list = deleted + clean
         for f in modified:
             ui.warn(_('not removing %s: file is modified (use -f'
-                      ' to force removal)\n') % m.rel(f))
+                      ' to force removal)\n') % m.rel(join(f)))
             ret = 1
         for f in added:
             ui.warn(_('not removing %s: file has been marked for add'
-                      ' (use forget to undo)\n') % m.rel(f))
+                      ' (use forget to undo)\n') % m.rel(join(f)))
             ret = 1
 
     for f in sorted(list):
         if ui.verbose or not m.exact(f):
-            ui.status(_('removing %s\n') % m.rel(f))
+            ui.status(_('removing %s\n') % m.rel(join(f)))
 
     wlock = repo.wlock()
     try:

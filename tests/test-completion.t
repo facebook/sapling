@@ -210,7 +210,7 @@ Show all commands + options
   merge: force, rev, preview, tool
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure
-  remove: after, force, include, exclude
+  remove: after, force, subrepos, include, exclude
   serve: accesslog, daemon, daemon-pipefds, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, copies, print0, rev, change, include, exclude, subrepos, template
   summary: remote

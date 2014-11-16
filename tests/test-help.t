@@ -1944,6 +1944,9 @@ Dish up an empty repo; serve it cold.
   <tr><td>-f</td>
   <td>--force</td>
   <td>remove (and delete) file even if added or modified</td></tr>
+  <tr><td>-S</td>
+  <td>--subrepos</td>
+  <td>recurse into subrepositories</td></tr>
   <tr><td>-I</td>
   <td>--include PATTERN [+]</td>
   <td>include names matching the given patterns</td></tr>

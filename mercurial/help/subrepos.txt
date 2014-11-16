@@ -129,6 +129,10 @@ Interaction with Mercurial Commands
     elements. Subversion subrepositories are currently silently
     ignored.
 
+:remove: remove does not recurse into subrepositories unless
+    -S/--subrepos is specified.  Git and Subversion subrepositories
+    are currently silently ignored.
+
 :update: update restores the subrepos in the state they were
     originally committed in target changeset. If the recorded
     changeset is not available in the current subrepository, Mercurial
