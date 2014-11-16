@@ -146,6 +146,10 @@ class incrementalmissingancestors(object):
             self.bases.add(nullrev)
         self.pfunc = pfunc
 
+    def hasbases(self):
+        '''whether the common set has any non-trivial bases'''
+        return self.bases and self.bases != set([nullrev])
+
     def missingancestors(self, revs):
         '''return all the ancestors of revs that are not ancestors of self.bases
 
