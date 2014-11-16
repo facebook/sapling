@@ -40,7 +40,7 @@ nodes that will maximize the number of nodes that will be
 classified with it (since all ancestors or descendants will be marked as well).
 """
 
-from node import nullid
+from node import nullid, nullrev
 from i18n import _
 import random
 import util, dagutil
@@ -177,27 +177,23 @@ def findcommonheads(ui, local, remote,
     # own nodes where I don't know if remote knows them
     undecided = dag.nodeset()
     # own nodes I know we both know
-    common = set()
-    # own nodes I know remote lacks
-    missing = set()
-
     # treat remote heads (and maybe own heads) as a first implicit sample
     # response
-    common.update(dag.ancestorset(srvheads))
-    undecided.difference_update(common)
+    common = cl.incrementalmissingrevs(srvheads)
+    commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
+    common.addbases(commoninsample)
+    undecided = set(common.missingancestors(ownheads))
+    # own nodes I know remote lacks
+    missing = set()
 
     full = False
     while undecided:
 
         if sample:
-            commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
-            common.update(dag.ancestorset(commoninsample, common))
-
             missinginsample = [n for i, n in enumerate(sample) if not yesno[i]]
             missing.update(dag.descendantset(missinginsample, missing))
 
             undecided.difference_update(missing)
-            undecided.difference_update(common)
 
         if not undecided:
             break
@@ -206,7 +202,7 @@ def findcommonheads(ui, local, remote,
             ui.note(_("sampling from both directions\n"))
             sample = _takefullsample(dag, undecided, size=fullsamplesize)
             targetsize = fullsamplesize
-        elif common:
+        elif common.hasbases():
             # use cheapish initial sample
             ui.debug("taking initial sample\n")
             sample = _takefullsample(dag, undecided, size=fullsamplesize)
@@ -228,7 +224,17 @@ def findcommonheads(ui, local, remote,
         yesno = remote.known(dag.externalizeall(sample))
         full = True
 
-    result = dag.headsetofconnecteds(common)
+        if sample:
+            commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
+            common.addbases(commoninsample)
+            common.removeancestorsfrom(undecided)
+
+    # heads(common) == heads(common.bases) since common represents common.bases
+    # and all its ancestors
+    result = dag.headsetofconnecteds(common.bases)
+    # common.bases can include nullrev, but our contract requires us to not
+    # return any heads in that case, so discard that
+    result.discard(nullrev)
     ui.progress(_('searching'), None)
     ui.debug("%d total queries\n" % roundtrips)
 
