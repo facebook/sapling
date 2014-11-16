@@ -2088,7 +2088,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
                     return True
             return False
 
-        if f in repo.dirstate or f in wctx.dirs() or insubrepo():
+        if f in repo.dirstate or f in wctx.dirs() or f == '.' or insubrepo():
             continue
 
         if os.path.exists(m.rel(join(f))):

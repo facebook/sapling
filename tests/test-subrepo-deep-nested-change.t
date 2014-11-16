@@ -113,7 +113,7 @@ Check that deep archiving works
 
 .. but first take a detour through some deep removal testing
 
-  $ hg remove -S -I 're:.*.txt' sub1
+  $ hg remove -S -I 're:.*.txt' .
   removing sub1/sub2/folder/test.txt (glob)
   removing sub1/sub2/test.txt (glob)
   $ hg status -S
