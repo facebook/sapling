@@ -293,7 +293,10 @@ class patchheader(object):
         if self.comments:
             self._delmsg()
         self.message = [message]
-        self.comments += self.message
+        if message:
+            if self.plainmode and self.comments and self.comments[-1]:
+                self.comments.append('')
+            self.comments.append(message)
 
     def updateheader(self, prefixes, new):
         '''Update all references to a field in the patch header.
