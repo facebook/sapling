@@ -132,7 +132,10 @@ def test_gca():
                     print "  C returned:      %s" % cgcas
                     print "  Python returned: %s" % pygcas
 
-if __name__ == '__main__':
+def main():
     test_missingancestors()
     test_lazyancestors()
     test_gca()
+
+if __name__ == '__main__':
+    main()
