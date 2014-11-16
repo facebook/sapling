@@ -58,7 +58,8 @@ class naiveincrementalmissingancestors(object):
 def test_missingancestors(seed, rng):
     # empirically observed to take around 1 second
     graphcount = 100
-    testcount = 100
+    testcount = 10
+    inccount = 10
     nerrs = [0]
     # the default mu and sigma give us a nice distribution of mostly
     # single-digit counts (including 0) with some higher ones
@@ -69,13 +70,13 @@ def test_missingancestors(seed, rng):
         count = min(lognormrandom(mu, sigma), len(nodes))
         return rng.sample(nodes, count)
 
-    def err(seed, graph, bases, revs, output, expected):
+    def err(seed, graph, bases, seq, output, expected):
         if nerrs[0] == 0:
             print >> sys.stderr, 'seed:', hex(seed)[:-1]
         if gerrs[0] == 0:
             print >> sys.stderr, 'graph:', graph
         print >> sys.stderr, '* bases:', bases
-        print >> sys.stderr, '* revs: ', revs
+        print >> sys.stderr, '* seq: ', seq
         print >> sys.stderr, '*  output:  ', output
         print >> sys.stderr, '*  expected:', expected
         nerrs[0] += 1
@@ -89,16 +90,19 @@ def test_missingancestors(seed, rng):
             # start from nullrev to include it as a possibility
             graphnodes = range(nullrev, len(graph))
             bases = samplerevs(graphnodes)
-            revs = samplerevs(graphnodes)
 
             # fast algorithm
             inc = ancestor.incrementalmissingancestors(graph.__getitem__, bases)
-            h = inc.missingancestors(revs)
             # reference slow algorithm
             naiveinc = naiveincrementalmissingancestors(ancs, bases)
-            r = naiveinc.missingancestors(revs)
-            if h != r:
-                err(seed, graph, bases, revs, h, r)
+            seq = []
+            for _ in xrange(inccount):
+                revs = samplerevs(graphnodes)
+                seq.append(('missingancestors', revs))
+                h = inc.missingancestors(revs)
+                r = naiveinc.missingancestors(revs)
+                if h != r:
+                    err(seed, graph, bases, seq, h, r)
 
 # graph is a dict of child->parent adjacency lists for this graph:
 # o  13
