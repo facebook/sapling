@@ -495,6 +495,20 @@ class revlog(object):
         missing.sort()
         return has, [self.node(r) for r in missing]
 
+    def incrementalmissingrevs(self, common=None):
+        """Return an object that can be used to incrementally compute the
+        revision numbers of the ancestors of arbitrary sets that are not
+        ancestors of common. This is an ancestor.incrementalmissingancestors
+        object.
+
+        'common' is a list of revision numbers. If common is not supplied, uses
+        nullrev.
+        """
+        if common is None:
+            common = [nullrev]
+
+        return ancestor.incrementalmissingancestors(self.parentrevs, common)
+
     def findmissingrevs(self, common=None, heads=None):
         """Return the revision numbers of the ancestors of heads that
         are not ancestors of common.
