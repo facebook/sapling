@@ -231,8 +231,6 @@ test conflicting untracked files
 
 test conflicting untracked ignored file
 
-BROKEN: the ignored file gets overwritten by the remote version
-
   $ hg up -qC 0
   $ echo ignored > .hgignore
   $ hg add .hgignore
@@ -246,9 +244,9 @@ BROKEN: the ignored file gets overwritten by the remote version
   $ echo untracked > ignored
   $ hg st
   $ hg up 'desc("add ignored file")'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat ignored
-  ignored
+  ignored: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
 
 test a local add
 

@@ -298,8 +298,7 @@ class mergestate(object):
         return r
 
 def _checkunknownfile(repo, wctx, mctx, f):
-    return (not repo.dirstate._ignore(f)
-        and os.path.isfile(repo.wjoin(f))
+    return (os.path.isfile(repo.wjoin(f))
         and repo.wopener.audit.check(f)
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f].cmp(wctx[f]))
