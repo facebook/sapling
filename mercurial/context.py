@@ -66,8 +66,7 @@ class basectx(object):
         return self.filectx(key)
 
     def __iter__(self):
-        for f in sorted(self._manifest):
-            yield f
+        return iter(self._manifest)
 
     def _manifestmatches(self, match, s):
         """generate a new manifest filtered by the match argument
