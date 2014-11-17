@@ -150,6 +150,10 @@ def inserthgheader(lines, header, value):
     lines.append(header + value)
     return lines
 
+def insertplainheader(lines, header, value):
+    lines.insert(0, '%s: %s' % (header, value))
+    return lines
+
 class patchheader(object):
     def __init__(self, pf, plainmode=False):
         def eatdiff(lines):
@@ -260,7 +264,7 @@ class patchheader(object):
                 inserthgheader(self.comments, '# User ', user)
             except ValueError:
                 if self.plainmode:
-                    self.comments = ['From: ' + user] + self.comments
+                    insertplainheader(self.comments, 'From', user)
                 else:
                     tmp = ['# HG changeset patch', '# User ' + user]
                     self.comments = tmp + self.comments
@@ -272,7 +276,7 @@ class patchheader(object):
                 inserthgheader(self.comments, '# Date ', date)
             except ValueError:
                 if self.plainmode:
-                    self.comments = ['Date: ' + date] + self.comments
+                    insertplainheader(self.comments, 'Date', date)
                 else:
                     tmp = ['# HG changeset patch', '# Date ' + date]
                     self.comments = tmp + self.comments
