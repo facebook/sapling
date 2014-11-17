@@ -250,6 +250,7 @@
   0: [mq]: 1.patch - mary
   ==== qref -u
   From: jane
+  
   Four
   
   diff -r ... 4of

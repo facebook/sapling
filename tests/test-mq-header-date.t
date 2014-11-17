@@ -311,6 +311,7 @@
   0: [mq]: 1.patch - test
   ==== qref -d
   Date: 9 0
+  
   Four
   
   diff -r ... 4
@@ -494,6 +495,7 @@
   ==== qref -u -d
   Date: 15 0
   From: john
+  
   Nine
   
   diff -r ... 9

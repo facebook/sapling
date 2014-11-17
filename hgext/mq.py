@@ -151,6 +151,8 @@ def inserthgheader(lines, header, value):
     return lines
 
 def insertplainheader(lines, header, value):
+    if lines and lines[0] and ':' not in lines[0]:
+        lines.insert(0, '')
     lines.insert(0, '%s: %s' % (header, value))
     return lines
 
