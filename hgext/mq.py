@@ -150,6 +150,12 @@ def inserthgheader(lines, header, value):
     lines.append(header + value)
     return lines
 
+def insertplainheader(lines, header, value):
+    if lines and lines[0] and ':' not in lines[0]:
+        lines.insert(0, '')
+    lines.insert(0, '%s: %s' % (header, value))
+    return lines
+
 class patchheader(object):
     def __init__(self, pf, plainmode=False):
         def eatdiff(lines):
@@ -260,7 +266,7 @@ class patchheader(object):
                 inserthgheader(self.comments, '# User ', user)
             except ValueError:
                 if self.plainmode:
-                    self.comments = ['From: ' + user] + self.comments
+                    insertplainheader(self.comments, 'From', user)
                 else:
                     tmp = ['# HG changeset patch', '# User ' + user]
                     self.comments = tmp + self.comments
@@ -272,7 +278,7 @@ class patchheader(object):
                 inserthgheader(self.comments, '# Date ', date)
             except ValueError:
                 if self.plainmode:
-                    self.comments = ['Date: ' + date] + self.comments
+                    insertplainheader(self.comments, 'Date', date)
                 else:
                     tmp = ['# HG changeset patch', '# Date ' + date]
                     self.comments = tmp + self.comments
@@ -293,7 +299,10 @@ class patchheader(object):
         if self.comments:
             self._delmsg()
         self.message = [message]
-        self.comments += self.message
+        if message:
+            if self.plainmode and self.comments and self.comments[-1]:
+                self.comments.append('')
+            self.comments.append(message)
 
     def updateheader(self, prefixes, new):
         '''Update all references to a field in the patch header.
