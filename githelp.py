@@ -133,15 +133,20 @@ class AndCommand(object):
 def add(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('A', 'all', None, ''),
+        ('p', 'patch', None, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    cmd = Command("add")
-
-    if not opts.get('all'):
-        cmd.extend(args)
+    if (opts.get('patch')):
+        ui.status("note: hg crecord provides a more powerful UI for recording changes\n\n")
+        cmd = Command('record')
     else:
-        ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
+        cmd = Command("add")
+
+        if not opts.get('all'):
+            cmd.extend(args)
+        else:
+            ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
 
     ui.status(cmd, "\n")
 
