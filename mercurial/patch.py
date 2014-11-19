@@ -1561,17 +1561,19 @@ class GitDiffRequired(Exception):
 def diffallopts(ui, opts=None, untrusted=False, section='diff'):
     '''return diffopts with all features supported and parsed'''
     return difffeatureopts(ui, opts=opts, untrusted=untrusted, section=section,
-                           git=True, whitespace=True)
+                           git=True, whitespace=True, formatchanging=True)
 
 diffopts = diffallopts
 
 def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
-                    whitespace=False):
+                    whitespace=False, formatchanging=False):
     '''return diffopts with only opted-in features parsed
 
     Features:
     - git: git-style diffs
     - whitespace: whitespace options like ignoreblanklines and ignorews
+    - formatchanging: options that will likely break or cause correctness issues
+      with most diff parsers
     '''
     def get(key, name=None, getter=ui.configbool, forceplain=None):
         if opts:
@@ -1582,11 +1584,9 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
             return forceplain
         return getter(section, name or key, None, untrusted=untrusted)
 
+    # core options, expected to be understood by every diff parser
     buildopts = {
-        'text': opts and opts.get('text'),
         'nodates': get('nodates'),
-        'nobinary': get('nobinary'),
-        'noprefix': get('noprefix', forceplain=False),
         'showfunc': get('show_function', 'showfunc'),
         'context': get('unified', getter=ui.config),
     }
@@ -1599,6 +1599,10 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                                           'ignorewsamount')
         buildopts['ignoreblanklines'] = get('ignore_blank_lines',
                                             'ignoreblanklines')
+    if formatchanging:
+        buildopts['text'] = opts and opts.get('text')
+        buildopts['nobinary'] = get('nobinary')
+        buildopts['noprefix'] = get('noprefix', forceplain=False)
 
     return mdiff.diffopts(**buildopts)
 
