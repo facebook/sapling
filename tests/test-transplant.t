@@ -230,7 +230,8 @@ test same-parent transplant with --log
   (transplanted from e234d668f844e1b1a765f01db83a32c0c7bfa170)
   1  r2
   0  r1
-remote transplant
+remote transplant, and also test that transplant doesn't break with
+format-breaking diffopts
 
   $ hg clone -r 1 ../t ../remote
   adding changesets
@@ -240,7 +241,7 @@ remote transplant
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../remote
-  $ hg transplant --log -s ../t 2 4
+  $ hg --config diff.noprefix=True transplant --log -s ../t 2 4
   searching for changes
   applying 37a1297eb21b
   37a1297eb21b transplanted to c19cf0ccb069

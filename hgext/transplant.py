@@ -118,7 +118,7 @@ class transplanter(object):
         revs = sorted(revmap)
         p1, p2 = repo.dirstate.parents()
         pulls = []
-        diffopts = patch.diffopts(self.ui, opts)
+        diffopts = patch.difffeatureopts(self.ui, opts)
         diffopts.git = True
 
         lock = wlock = tr = None
