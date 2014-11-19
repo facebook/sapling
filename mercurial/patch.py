@@ -1560,15 +1560,18 @@ class GitDiffRequired(Exception):
 
 def diffallopts(ui, opts=None, untrusted=False, section='diff'):
     '''return diffopts with all features supported and parsed'''
-    return difffeatureopts(ui, opts=opts, untrusted=untrusted, section=section)
+    return difffeatureopts(ui, opts=opts, untrusted=untrusted, section=section,
+                           git=True, whitespace=True)
 
 diffopts = diffallopts
 
-def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False):
+def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
+                    whitespace=False):
     '''return diffopts with only opted-in features parsed
 
     Features:
     - git: git-style diffs
+    - whitespace: whitespace options like ignoreblanklines and ignorews
     '''
     def get(key, name=None, getter=ui.configbool, forceplain=None):
         if opts:
@@ -1585,14 +1588,17 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False):
         'nobinary': get('nobinary'),
         'noprefix': get('noprefix', forceplain=False),
         'showfunc': get('show_function', 'showfunc'),
-        'ignorews': get('ignore_all_space', 'ignorews'),
-        'ignorewsamount': get('ignore_space_change', 'ignorewsamount'),
-        'ignoreblanklines': get('ignore_blank_lines', 'ignoreblanklines'),
         'context': get('unified', getter=ui.config),
     }
 
     if git:
         buildopts['git'] = get('git')
+    if whitespace:
+        buildopts['ignorews'] = get('ignore_all_space', 'ignorews')
+        buildopts['ignorewsamount'] = get('ignore_space_change',
+                                          'ignorewsamount')
+        buildopts['ignoreblanklines'] = get('ignore_blank_lines',
+                                            'ignoreblanklines')
 
     return mdiff.diffopts(**buildopts)
 
