@@ -188,6 +188,15 @@ class abstractvfs(object):
                 raise
         return ""
 
+    def tryreadlines(self, path, mode='rb'):
+        '''gracefully return an empty array for missing files'''
+        try:
+            return self.readlines(path, mode=mode)
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+        return []
+
     def open(self, path, mode="r", text=False, atomictemp=False):
         self.open = self.__call__
         return self.__call__(path, mode, text, atomictemp)
@@ -196,6 +205,13 @@ class abstractvfs(object):
         fp = self(path, 'rb')
         try:
             return fp.read()
+        finally:
+            fp.close()
+
+    def readlines(self, path, mode='rb'):
+        fp = self(path, mode=mode)
+        try:
+            return fp.readlines()
         finally:
             fp.close()
 
