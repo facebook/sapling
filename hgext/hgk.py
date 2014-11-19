@@ -95,8 +95,10 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
             if opts['pretty']:
                 catcommit(ui, repo, node2, "")
             m = scmutil.match(repo[node1], files)
+            diffopts = patch.difffeatureopts(ui)
+            diffopts.git = True
             chunks = patch.diff(repo, node1, node2, match=m,
-                                opts=patch.diffopts(ui, {'git': True}))
+                                opts=diffopts)
             for chunk in chunks:
                 ui.write(chunk)
         else:
