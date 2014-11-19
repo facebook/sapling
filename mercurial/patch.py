@@ -1558,9 +1558,11 @@ def changedfiles(ui, repo, patchpath, strip=1):
 class GitDiffRequired(Exception):
     pass
 
-def diffopts(ui, opts=None, untrusted=False, section='diff'):
+def diffallopts(ui, opts=None, untrusted=False, section='diff'):
     '''return diffopts with all features supported and parsed'''
     return difffeatureopts(ui, opts=opts, untrusted=untrusted, section=section)
+
+diffopts = diffallopts
 
 def difffeatureopts(ui, opts=None, untrusted=False, section='diff'):
     '''return diffopts with only opted-in features parsed'''
