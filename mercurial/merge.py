@@ -488,10 +488,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 # following table:
                 #
                 # force  branchmerge  different  |  action
-                #   n         *           n      |    get
+                #   n         *           n      |   create
                 #   n         *           y      |   abort
-                #   y         n           *      |    get
-                #   y         y           n      |    get
+                #   y         n           *      |   create
+                #   y         y           n      |   create
                 #   y         y           y      |   merge
                 #
                 # Checking whether the files are different is expensive, so we
@@ -501,9 +501,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     if different:
                         aborts.append((f, "ud"))
                     else:
-                        actions[f] = ('g', (fl2,), "remote created")
+                        actions[f] = ('c', (fl2,), "remote created")
                 elif not branchmerge:
-                    actions[f] = ('g', (fl2,), "remote created")
+                    actions[f] = ('c', (fl2,), "remote created")
                 else:
                     different = _checkunknownfile(repo, wctx, p2, f)
                     if different:
@@ -517,7 +517,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     aborts.append((f, 'ud'))
                 else:
                     if acceptremote:
-                        actions[f] = ('g', (fl2,), "remote recreating")
+                        actions[f] = ('c', (fl2,), "remote recreating")
                     else:
                         actions[f] = ('dc', (fl2,), "prompt deleted/changed")
 
@@ -528,6 +528,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     if aborts:
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
+
+    for f, (m, args, msg) in actions.iteritems():
+        if m == 'c':
+            actions[f] = ('g', args, msg)
 
     return actions, diverge, renamedelete
 
