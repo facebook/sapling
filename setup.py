@@ -13,6 +13,7 @@ setup(
     license='',
     py_modules=[
         'backups',
+        'chistedit',
         'fbamend',
         'fbhistedit',
         'githelp',
@@ -23,10 +24,10 @@ setup(
         'rage',
         'reflog',
         'reset',
+        'simplecache',
         'smartlog',
         'sparse',
         'tweakdefaults',
-        'chistedit',
     ],
     packages=['crecord']
 )
