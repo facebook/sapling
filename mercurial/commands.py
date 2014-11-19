@@ -6185,7 +6185,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
             raise util.Abort(_("uncommitted changes"))
         if rev is None:
             rev = repo[repo[None].branch()].rev()
-        mergemod.checkunknown(repo, repo[None], repo[rev])
 
     repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 

@@ -304,18 +304,6 @@ def _checkunknownfile(repo, wctx, mctx, f):
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f].cmp(wctx[f]))
 
-def checkunknown(repo, wctx, mctx):
-    "check for collisions between unknown files and files in mctx"
-
-    error = False
-    for f in mctx:
-        if f not in wctx and _checkunknownfile(repo, wctx, mctx, f):
-            error = True
-            wctx._repo.ui.warn(_("%s: untracked file differs\n") % f)
-    if error:
-        raise util.Abort(_("untracked files in working directory differ "
-                           "from files in requested revision"))
-
 def _forgetremoved(wctx, mctx, branchmerge):
     """
     Forget removed files
