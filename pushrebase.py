@@ -14,16 +14,17 @@ except ImportError:
 
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
-from mercurial import obsolete, pushkey
+from mercurial import obsolete, pushkey, phases
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.bundlerepo import bundlerepository
-from mercurial.node import nullid, hex
+from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 rebaseparttype = 'b2x:rebase'
+
 experimental = 'experimental'
 configonto = 'server-rebase-onto'
 
@@ -104,8 +105,16 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
 
     return bundle2.bundlepart(
         rebaseparttype,
-        mandatoryparams={'onto': onto, 'newhead': repr(newhead)}.items(),
-        advisoryparams={'head': head.node(), 'tail': tail.node()}.items(),
+        mandatoryparams={
+            'onto': onto,
+            'newhead': repr(newhead),
+        }.items(),
+        advisoryparams={
+            'head': head.node(),
+            'tail': tail.node(),
+            'commonheads':
+                json.dumps([hex(n) for n in outgoing.commonheads]),
+        }.items(),
         data = cg
     )
 
@@ -175,12 +184,27 @@ def _checkheads(orig, repo, remote, *args, **kwargs):
         return orig(repo, remote, *args, **kwargs)
     
 def _push(orig, ui, repo, *args, **opts):
-    oldconfig = ui.backupconfig(experimental, configonto)
+    oldonto = ui.backupconfig(experimental, configonto)
+
     ui.setconfig(experimental, configonto, opts.get('onto'), '--onto')
-    # TODO: why does this return nonzero?
+    if ui.config(experimental, configonto):
+        oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
     result = orig(ui, repo, *args, **opts)
-    ui.restoreconfig(oldconfig)
+
+    ui.restoreconfig(oldonto)
+    if oldphasemove:
+        exchange._localphasemove = oldphasemove
     return result
+
+def _phasemove(orig, pushop, nodes, phase=phases.public):
+    """prevent commits from being marked public
+
+    Since these are going to be mutated on the server, they aren't really being
+    published, their successors are.  If we mark these as public now, hg evolve
+    will refuse to fix them for us later."""
+    
+    if phase != phases.public:
+        orig(pushop, nodes, phase)
 
 # TODO: verify that commit hooks fire appropriately
 @exchange.b2partsgenerator(rebaseparttype)
@@ -190,6 +214,10 @@ def partgen(pushop, bundler):
         return
 
     pushop.stepsdone.add('changesets')
+    if not pushop.outgoing.missing:
+        upshop.ui.note(_('no changes to push'))
+        pushop.cgresult = 0
+        return
     
     rebasepart = getrebasepart(
         pushop.repo,
@@ -201,16 +229,20 @@ def partgen(pushop, bundler):
 
     bundler.addpart(rebasepart)
 
-    #TODO reply handler
+    def handlereply(op):
+        # TODO: read result from server?
+        pushop.cgresult = 1
+
+    return handlereply
 
 bundle2.capabilities[rebaseparttype] = ()
 
+# TODO: split this function into smaller pieces
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
     params = part.params
-    # TODO: what's the lifecycle of this transaction?
     op.gettransaction()
 
     bundlefile = None
@@ -301,10 +333,6 @@ def bundle2rebase(op, part):
 
             obsolete.createmarkers(op.repo, markers)
 
-        for k in replacements.keys():
-            replacements[hex(k)] = hex(replacements[k])
-
-        part.resultinfo[rebaseparttype] = replacements
 
     finally:
         try:
@@ -314,7 +342,41 @@ def bundle2rebase(op, part):
             if e.errno != errno.ENOENT:
                 raise
 
-    # TODO: ship changes back to client
+    if (params['commonheads']
+        and op.reply
+        and 'b2x:pushback' in op.reply.capabilities):
+        # TODO: investigate alternatives for determining which commits to send
+        #       (via @pyd: https://phabricator.fb.com/D1689551#inline-12737312 )
+        outgoing = discovery.outgoing(
+            op.repo.changelog,
+            [bin(n) for n in json.loads(params['commonheads'])],
+            [new for old, new in replacements.items() if old != new],
+        )
+
+        if outgoing.missing:
+            cg = changegroup.getlocalchangegroupraw(
+                op.repo,
+                'rebase:reply',
+                outgoing,
+            )
+
+            # TODO: fix version handshake; use newest mutually supported version
+            cgpart = op.reply.newpart('b2x:changegroup', data = cg)
+            cgpart.addparam('version', '01')
+
+            if (obsolete.isenabled(op.repo, obsolete.exchangeopt)
+                and op.repo.obsstore): # TODO: check reply caps
+                exchange.buildobsmarkerspart(
+                    op.reply,
+                    op.repo.obsstore.relevantmarkers(replacements.values())
+                )
+
+    for k in replacements.keys():
+        replacements[hex(k)] = hex(replacements[k])
+
+    # TODO: replace this with op.records
+    part.resultinfo[rebaseparttype] = replacements
+
     return 1
 
 def bundle2pushkey(orig, op, part):

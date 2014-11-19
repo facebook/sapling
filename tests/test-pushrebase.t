@@ -89,7 +89,6 @@ Stack of non-conflicting commits should be accepted
   $ hg push --onto default
   pushing to ssh://user@dummy/server
   searching for changes
-  [1]
 
   $ cd ../server
   $ hg update default
@@ -122,6 +121,9 @@ Stack of non-conflicting commits should be accepted
 Regular commits should go through without changing hash
 
   $ cd ../client
+  $ echo '[experimental]' >> .hg/hgrc
+  $ echo 'bundle2.pushback = True' >> .hg/hgrc
+
   $ echo 'quux' > b
   $ commit 'b => quux'
   $ log -r tip
@@ -131,7 +133,6 @@ Regular commits should go through without changing hash
   $ hg push --onto default
   pushing to ssh://user@dummy/server
   searching for changes
-  [1]
 
   $ cd ../server
   $ hg update default
@@ -218,6 +219,7 @@ Stack with conflict in head should abort
 
 With evolution enabled, should set obsolescence markers
 
+  $ echo "[extensions]" >> $HGRCPATH
   $ echo "rebase =" >> $HGRCPATH
   $ echo "evolve =" >> $HGRCPATH
 
@@ -244,17 +246,16 @@ With evolution enabled, should set obsolescence markers
   $ hg push --onto default
   pushing to ssh://user@dummy/server
   searching for changes
-  [1]
-
-  $ hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 1 changes to 2 files (+1 heads)
   2 new obsolescence markers
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+
+  $ hg pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  no changes found
   working directory parent is obsolete!
 
   $ hg evolve
