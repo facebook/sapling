@@ -500,7 +500,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             if not force and different:
                 aborts.append((f, "ud"))
             else:
-                # if different: old untracked f may be overwritten and lost
                 if acceptremote:
                     actions['g'].append((f, (fl2,), "remote recreating"))
                 else:
