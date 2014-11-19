@@ -566,9 +566,10 @@ class hgsubrepo(abstractsubrepo):
         # sort the files that will be hashed in increasing (likely) file size
         filelist = ('bookmarks', 'store/phaseroots', 'store/00changelog.i')
         yield '# %s\n' % _expandedabspath(remotepath)
+        vfs = self._repo.vfs
         for relname in filelist:
-            absname = os.path.normpath(self._repo.join(relname))
-            yield '%s = %s\n' % (relname, _calcfilehash(absname))
+            filehash = util.sha1(vfs.tryread(relname)).hexdigest()
+            yield '%s = %s\n' % (relname, filehash)
 
     def _getstorehashcachepath(self, remotepath):
         '''get a unique path for the store hash cache'''
