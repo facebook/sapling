@@ -228,8 +228,8 @@ class transaction(object):
     def registertmp(self, tmpfile, location=''):
         """register a temporary transaction file
 
-        Such file will be delete when the transaction exit (on both failure and
-        success).
+        Such files will be deleted when the transaction exits (on both
+        failure and success).
         """
         self._addbackupentry((location, '', tmpfile, False))
 
