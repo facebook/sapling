@@ -34,6 +34,15 @@ def _expandsets(kindpats, ctx):
         other.append((kind, pat))
     return fset, other
 
+def _kindpatsalwaysmatch(kindpats):
+    """"Checks whether the kindspats match everything, as e.g.
+    'relpath:.' does.
+    """
+    for kind, pat in kindpats:
+        if pat != '' or kind not in ['relpath', 'glob']:
+            return False
+    return True
+
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
                  default='glob', exact=False, auditor=None, ctx=None):
@@ -84,10 +93,11 @@ class match(object):
             matchfns.append(self.exact)
         elif patterns:
             kindpats = _normalize(patterns, default, root, cwd, auditor)
-            self._files = _roots(kindpats)
-            self._anypats = self._anypats or _anypats(kindpats)
-            self.patternspat, pm = _buildmatch(ctx, kindpats, '$')
-            matchfns.append(pm)
+            if not _kindpatsalwaysmatch(kindpats):
+                self._files = _roots(kindpats)
+                self._anypats = self._anypats or _anypats(kindpats)
+                self.patternspat, pm = _buildmatch(ctx, kindpats, '$')
+                matchfns.append(pm)
 
         if not matchfns:
             m = util.always

@@ -725,6 +725,8 @@ def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
     def badfn(f, msg):
         ctx.repo().ui.warn("%s: %s\n" % (m.rel(f), msg))
     m.bad = badfn
+    if m.always():
+        pats = []
     return m, pats
 
 def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
