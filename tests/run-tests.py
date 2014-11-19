@@ -721,6 +721,15 @@ class PythonTest(Test):
 
         return result
 
+# This script may want to drop globs from lines matching these patterns on
+# Windows, but check-code.py wants a glob on these lines unconditionally.  Don't
+# warn if that is the case for anything matching these lines.
+checkcodeglobpats = [
+    re.compile(r'^pushing to \$TESTTMP/.*[^)]$'),
+    re.compile(r'^moving \S+/.*[^)]$'),
+    re.compile(r'^pulling from \$TESTTMP/.*[^)]$')
+]
+
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
@@ -977,6 +986,9 @@ class TTest(Test):
         if el + '\n' == l:
             if os.altsep:
                 # matching on "/" is not needed for this line
+                for pat in checkcodeglobpats:
+                    if pat.match(el):
+                        return True
                 return '-glob'
             return True
         i, n = 0, len(el)
