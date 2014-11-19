@@ -3169,7 +3169,7 @@ def export(ui, repo, *changesets, **opts):
         ui.note(_('exporting patch:\n'))
     cmdutil.export(repo, revs, template=opts.get('output'),
                  switch_parent=opts.get('switch_parent'),
-                 opts=patch.diffopts(ui, opts))
+                 opts=patch.diffallopts(ui, opts))
 
 @command('files',
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
