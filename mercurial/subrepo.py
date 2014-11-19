@@ -566,6 +566,10 @@ class hgsubrepo(abstractsubrepo):
         return self._repo.join(os.path.join(
             'cache', 'storehash', _getstorehashcachename(remotepath)))
 
+    @propertycache
+    def _cachestorehashvfs(self):
+        return scmutil.vfs(self._repo.join('cache/storehash'))
+
     def _readstorehashcache(self, remotepath):
         '''read the store hash cache for a given remote repository'''
         cachefile = self._getstorehashcachepath(remotepath)
