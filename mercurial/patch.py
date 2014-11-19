@@ -1568,17 +1568,20 @@ def diffopts(ui, opts=None, untrusted=False, section='diff'):
             return forceplain
         return getter(section, name or key, None, untrusted=untrusted)
 
-    return mdiff.diffopts(
-        text=opts and opts.get('text'),
-        git=get('git'),
-        nodates=get('nodates'),
-        nobinary=get('nobinary'),
-        noprefix=get('noprefix', forceplain=False),
-        showfunc=get('show_function', 'showfunc'),
-        ignorews=get('ignore_all_space', 'ignorews'),
-        ignorewsamount=get('ignore_space_change', 'ignorewsamount'),
-        ignoreblanklines=get('ignore_blank_lines', 'ignoreblanklines'),
-        context=get('unified', getter=ui.config))
+    buildopts = {
+        'text': opts and opts.get('text'),
+        'git': get('git'),
+        'nodates': get('nodates'),
+        'nobinary': get('nobinary'),
+        'noprefix': get('noprefix', forceplain=False),
+        'showfunc': get('show_function', 'showfunc'),
+        'ignorews': get('ignore_all_space', 'ignorews'),
+        'ignorewsamount': get('ignore_space_change', 'ignorewsamount'),
+        'ignoreblanklines': get('ignore_blank_lines', 'ignoreblanklines'),
+        'context': get('unified', getter=ui.config),
+    }
+
+    return mdiff.diffopts(**buildopts)
 
 def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
          losedatafn=None, prefix=''):
