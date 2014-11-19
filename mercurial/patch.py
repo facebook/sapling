@@ -1564,8 +1564,12 @@ def diffallopts(ui, opts=None, untrusted=False, section='diff'):
 
 diffopts = diffallopts
 
-def difffeatureopts(ui, opts=None, untrusted=False, section='diff'):
-    '''return diffopts with only opted-in features parsed'''
+def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False):
+    '''return diffopts with only opted-in features parsed
+
+    Features:
+    - git: git-style diffs
+    '''
     def get(key, name=None, getter=ui.configbool, forceplain=None):
         if opts:
             v = opts.get(key)
@@ -1577,7 +1581,6 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff'):
 
     buildopts = {
         'text': opts and opts.get('text'),
-        'git': get('git'),
         'nodates': get('nodates'),
         'nobinary': get('nobinary'),
         'noprefix': get('noprefix', forceplain=False),
@@ -1587,6 +1590,9 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff'):
         'ignoreblanklines': get('ignore_blank_lines', 'ignoreblanklines'),
         'context': get('unified', getter=ui.config),
     }
+
+    if git:
+        buildopts['git'] = get('git')
 
     return mdiff.diffopts(**buildopts)
 
