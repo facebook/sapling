@@ -401,7 +401,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 m1['.hgsubstate'] += '+'
                 break
 
-    aborts = []
     # Compare manifests
     diff = m1.diff(m2)
 
@@ -488,8 +487,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 # following table:
                 #
                 # force  branchmerge  different  |  action
-                #   n         *           n      |   create
-                #   n         *           y      |   abort
+                #   n         *           *      |   create
                 #   y         n           *      |   create
                 #   y         y           n      |   create
                 #   y         y           y      |   merge
@@ -497,11 +495,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 # Checking whether the files are different is expensive, so we
                 # don't do that when we can avoid it.
                 if not force:
-                    different = _checkunknownfile(repo, wctx, p2, f)
-                    if different:
-                        aborts.append((f, "ud"))
-                    else:
-                        actions[f] = ('c', (fl2,), "remote created")
+                    actions[f] = ('c', (fl2,), "remote created")
                 elif not branchmerge:
                     actions[f] = ('c', (fl2,), "remote created")
                 else:
@@ -512,14 +506,17 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     else:
                         actions[f] = ('g', (fl2,), "remote created")
             elif n2 != ma[f]:
-                different = _checkunknownfile(repo, wctx, p2, f)
-                if not force and different:
-                    aborts.append((f, 'ud'))
+                if acceptremote:
+                    actions[f] = ('c', (fl2,), "remote recreating")
                 else:
-                    if acceptremote:
-                        actions[f] = ('c', (fl2,), "remote recreating")
-                    else:
-                        actions[f] = ('dc', (fl2,), "prompt deleted/changed")
+                    actions[f] = ('dc', (fl2,), "prompt deleted/changed")
+
+    aborts = []
+    if not force:
+        for f, (m, args, msg) in actions.iteritems():
+            if m in ('c', 'dc'):
+                if _checkunknownfile(repo, wctx, p2, f):
+                    aborts.append((f, "ud"))
 
     for f, m in sorted(aborts):
         if m == 'ud':
