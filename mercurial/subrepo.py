@@ -522,10 +522,7 @@ class hgsubrepo(abstractsubrepo):
         self._state = state
         r = ctx._repo
         root = r.wjoin(path)
-        create = False
-        if not os.path.exists(os.path.join(root, '.hg')):
-            create = True
-            util.makedirs(root)
+        create = not os.path.exists(os.path.join(root, '.hg'))
         self._repo = hg.repository(r.baseui, root, create=create)
         for s, k in [('ui', 'commitsubrepos')]:
             v = r.ui.config(s, k)
