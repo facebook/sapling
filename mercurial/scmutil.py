@@ -229,6 +229,13 @@ class abstractvfs(object):
         finally:
             fp.close()
 
+    def writelines(self, path, data, mode='wb', notindexed=False):
+        fp = self(path, mode=mode, notindexed=notindexed)
+        try:
+            return fp.writelines(data)
+        finally:
+            fp.close()
+
     def append(self, path, data):
         fp = self(path, 'ab')
         try:
