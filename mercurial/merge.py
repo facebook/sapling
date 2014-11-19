@@ -516,12 +516,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, p2, f):
-                    aborts.append((f, "ud"))
+                    aborts.append(f)
 
-    for f, m in sorted(aborts):
-        if m == 'ud':
-            repo.ui.warn(_("%s: untracked file differs\n") % f)
-        else: assert False, m
+    for f in sorted(aborts):
+        repo.ui.warn(_("%s: untracked file differs\n") % f)
     if aborts:
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
