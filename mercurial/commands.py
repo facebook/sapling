@@ -316,7 +316,8 @@ def annotate(ui, repo, *pats, **opts):
     m = scmutil.match(ctx, pats, opts)
     m.bad = bad
     follow = not opts.get('no_follow')
-    diffopts = patch.diffopts(ui, opts, section='annotate')
+    diffopts = patch.difffeatureopts(ui, opts, section='annotate',
+                                     whitespace=True)
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         if not opts.get('text') and util.binary(fctx.data()):
