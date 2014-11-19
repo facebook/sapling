@@ -1093,7 +1093,7 @@ class jsonchangeset(changeset_printer):
         if matchfn:
             stat = self.diffopts.get('stat')
             diff = self.diffopts.get('patch')
-            diffopts = patch.diffopts(self.ui, self.diffopts)
+            diffopts = patch.difffeatureopts(self.ui, self.diffopts, git=True)
             node, prev = ctx.node(), ctx.p1().node()
             if stat:
                 self.ui.pushbuffer()

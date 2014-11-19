@@ -525,6 +525,25 @@ Test JSON style:
    }
   ]
 
+honor --git but not format-breaking diffopts
+  $ hg --config diff.noprefix=True log --git -vpr . -Tjson
+  [
+   {
+    "rev": 8,
+    "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [1577872860, 0],
+    "desc": "third",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+    "files": ["fourth", "second", "third"],
+    "diff": "diff --git a/second b/fourth\nrename from second\nrename to fourth\ndiff --git a/third b/third\nnew file mode 100644\n--- /dev/null\n+++ b/third\n@@ -0,0 +1,1 @@\n+third\n"
+   }
+  ]
+
   $ hg log -T json
   [
    {
