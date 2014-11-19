@@ -370,8 +370,8 @@ def rebase(ui, repo, **opts):
             if state[rev] == -1:
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, repo[rev])),
                             _('changesets'), total)
-                p1, p2 = defineparents(repo, rev, target, state,
-                                                        targetancestors)
+                p1, p2, base = defineparents(repo, rev, target, state,
+                                             targetancestors)
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                             keepbranchesf, external, activebookmark)
                 if len(repo.parents()) == 2:
@@ -380,8 +380,8 @@ def rebase(ui, repo, **opts):
                     try:
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                      'rebase')
-                        stats = rebasenode(repo, rev, p1, state, collapsef,
-                                           target)
+                        stats = rebasenode(repo, rev, p1, base, state,
+                                           collapsef, target)
                         if stats and stats[3] > 0:
                             raise error.InterventionRequired(
                                 _('unresolved conflicts (see hg '
@@ -414,8 +414,8 @@ def rebase(ui, repo, **opts):
         ui.note(_('rebase merging completed\n'))
 
         if collapsef and not keepopen:
-            p1, p2 = defineparents(repo, min(state), target,
-                                                        state, targetancestors)
+            p1, p2, _base = defineparents(repo, min(state), target,
+                                          state, targetancestors)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if collapsemsg:
@@ -509,7 +509,8 @@ def externalparent(repo, state, targetancestors):
                       ', '.join(str(p) for p in sorted(parents))))
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
-    '''Commit the changes and store useful information in extra.
+    '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
+    but also store useful information in extra.
     Return node of committed revision.'''
     try:
         repo.dirstate.beginparentchange()
@@ -539,8 +540,8 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         repo.dirstate.invalidate()
         raise
 
-def rebasenode(repo, rev, p1, state, collapse, target):
-    'Rebase a single revision'
+def rebasenode(repo, rev, p1, base, state, collapse, target):
+    'Rebase a single revision rev on top of p1 using base as merge ancestor'
     # Merge phase
     # Update to target and merge it with local
     if repo['.'].rev() != p1:
@@ -550,48 +551,6 @@ def rebasenode(repo, rev, p1, state, collapse, target):
         repo.ui.debug(" already in target\n")
     repo.dirstate.write()
     repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
-    if rev == min(state):
-        # Case (1) initial changeset of a non-detaching rebase.
-        # Let the merge mechanism find the base itself.
-        base = None
-    elif not repo[rev].p2():
-        # Case (2) detaching the node with a single parent, use this parent
-        base = repo[rev].p1().rev()
-    else:
-        # In case of merge, we need to pick the right parent as merge base.
-        #
-        # Imagine we have:
-        # - M: currently rebase revision in this step
-        # - A: one parent of M
-        # - B: second parent of M
-        # - D: destination of this merge step (p1 var)
-        #
-        # If we are rebasing on D, D is the successors of A or B. The right
-        # merge base is the one D succeed to. We pretend it is B for the rest
-        # of this comment
-        #
-        # If we pick B as the base, the merge involves:
-        # - changes from B to M (actual changeset payload)
-        # - changes from B to D (induced by rebase) as D is a rebased
-        #   version of B)
-        # Which exactly represent the rebase operation.
-        #
-        # If we pick the A as the base, the merge involves
-        # - changes from A to M (actual changeset payload)
-        # - changes from A to D (with include changes between unrelated A and B
-        #   plus changes induced by rebase)
-        # Which does not represent anything sensible and creates a lot of
-        # conflicts.
-        for p in repo[rev].parents():
-            if state.get(p.rev()) == p1:
-                base = p.rev()
-                break
-        else: # fallback when base not found
-            base = None
-
-            # Raise because this function is called wrong (see issue 4106)
-            raise AssertionError('no base found to rebase on '
-                                 '(rebasenode called wrong)')
     if base is not None:
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
@@ -660,7 +619,50 @@ def defineparents(repo, rev, target, state, targetancestors):
             p2 = p2n
     repo.ui.debug(" future parents are %d and %d\n" %
                             (repo[p1].rev(), repo[p2].rev()))
-    return p1, p2
+
+    if rev == min(state):
+        # Case (1) initial changeset of a non-detaching rebase.
+        # Let the merge mechanism find the base itself.
+        base = None
+    elif not repo[rev].p2():
+        # Case (2) detaching the node with a single parent, use this parent
+        base = repo[rev].p1().rev()
+    else:
+        # In case of merge, we need to pick the right parent as merge base.
+        #
+        # Imagine we have:
+        # - M: currently rebase revision in this step
+        # - A: one parent of M
+        # - B: second parent of M
+        # - D: destination of this merge step (p1 var)
+        #
+        # If we are rebasing on D, D is the successors of A or B. The right
+        # merge base is the one D succeed to. We pretend it is B for the rest
+        # of this comment
+        #
+        # If we pick B as the base, the merge involves:
+        # - changes from B to M (actual changeset payload)
+        # - changes from B to D (induced by rebase) as D is a rebased
+        #   version of B)
+        # Which exactly represent the rebase operation.
+        #
+        # If we pick the A as the base, the merge involves
+        # - changes from A to M (actual changeset payload)
+        # - changes from A to D (with include changes between unrelated A and B
+        #   plus changes induced by rebase)
+        # Which does not represent anything sensible and creates a lot of
+        # conflicts.
+        for p in repo[rev].parents():
+            if state.get(p.rev()) == p1:
+                base = p.rev()
+                break
+        else: # fallback when base not found
+            base = None
+
+            # Raise because this function is called wrong (see issue 4106)
+            raise AssertionError('no base found to rebase on '
+                                 '(defineparents called wrong)')
+    return p1, p2, base
 
 def isagitpatch(repo, patchname):
     'Return true if the given patch is in git format'
