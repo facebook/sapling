@@ -496,15 +496,19 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 #
                 # Checking whether the files are different is expensive, so we
                 # don't do that when we can avoid it.
-                if force and not branchmerge:
+                if not force:
+                    different = _checkunknownfile(repo, wctx, p2, f)
+                    if different:
+                        aborts.append((f, "ud"))
+                    else:
+                        actions[f] = ('g', (fl2,), "remote created")
+                elif not branchmerge:
                     actions[f] = ('g', (fl2,), "remote created")
                 else:
                     different = _checkunknownfile(repo, wctx, p2, f)
-                    if force and branchmerge and different:
+                    if different:
                         actions[f] = ('m', (f, f, None, False, pa.node()),
                                       "remote differs from untracked local")
-                    elif not force and different:
-                        aborts.append((f, 'ud'))
                     else:
                         actions[f] = ('g', (fl2,), "remote created")
             elif n2 != ma[f]:
