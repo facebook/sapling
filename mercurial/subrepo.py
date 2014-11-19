@@ -561,11 +561,6 @@ class hgsubrepo(abstractsubrepo):
             filehash = util.sha1(vfs.tryread(relname)).hexdigest()
             yield '%s = %s\n' % (relname, filehash)
 
-    def _getstorehashcachepath(self, remotepath):
-        '''get a unique path for the store hash cache'''
-        return self._repo.join(os.path.join(
-            'cache', 'storehash', _getstorehashcachename(remotepath)))
-
     @propertycache
     def _cachestorehashvfs(self):
         return scmutil.vfs(self._repo.join('cache/storehash'))
