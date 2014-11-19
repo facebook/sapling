@@ -166,7 +166,7 @@ def _getpatches(repo, revs, **opts):
                       'uncommitted changes\n'))
         output = cStringIO.StringIO()
         cmdutil.export(repo, [r], fp=output,
-                     opts=patch.diffopts(ui, opts))
+                     opts=patch.difffeatureopts(ui, opts, git=True))
         yield output.getvalue().split('\n')
 def _getbundle(repo, dest, **opts):
     """return a bundle containing changesets missing in "dest"
