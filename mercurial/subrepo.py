@@ -581,18 +581,12 @@ class hgsubrepo(abstractsubrepo):
         Each remote repo requires its own store hash cache, because a subrepo
         store may be "clean" versus a given remote repo, but not versus another
         '''
-        cachefile = self._getstorehashcachepath(remotepath)
+        cachefile = _getstorehashcachename(remotepath)
         lock = self._repo.lock()
         try:
             storehash = list(self._calcstorehash(remotepath))
-            cachedir = os.path.dirname(cachefile)
-            if not os.path.exists(cachedir):
-                util.makedirs(cachedir, notindexed=True)
-            fd = open(cachefile, 'w')
-            try:
-                fd.writelines(storehash)
-            finally:
-                fd.close()
+            vfs = self._cachestorehashvfs
+            vfs.writelines(cachefile, storehash, mode='w', notindexed=True)
         finally:
             lock.release()
 
