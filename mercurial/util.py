@@ -1088,15 +1088,20 @@ def makedirs(name, mode=None, notindexed=False):
     if mode is not None:
         os.chmod(name, mode)
 
-def ensuredirs(name, mode=None):
-    """race-safe recursive directory creation"""
+def ensuredirs(name, mode=None, notindexed=False):
+    """race-safe recursive directory creation
+
+    Newly created directories are marked as "not to be indexed by
+    the content indexing service", if ``notindexed`` is specified
+    for "write" mode access.
+    """
     if os.path.isdir(name):
         return
     parent = os.path.dirname(os.path.abspath(name))
     if parent != name:
-        ensuredirs(parent, mode)
+        ensuredirs(parent, mode, notindexed)
     try:
-        os.mkdir(name)
+        makedir(name, notindexed)
     except OSError, err:
         if err.errno == errno.EEXIST and os.path.isdir(name):
             # someone else seems to have won a directory creation race

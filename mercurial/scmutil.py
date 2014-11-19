@@ -197,9 +197,16 @@ class abstractvfs(object):
                 raise
         return []
 
-    def open(self, path, mode="r", text=False, atomictemp=False):
+    def open(self, path, mode="r", text=False, atomictemp=False,
+             notindexed=False):
+        '''Open ``path`` file, which is relative to vfs root.
+
+        Newly created directories are marked as "not to be indexed by
+        the content indexing service", if ``notindexed`` is specified
+        for "write" mode access.
+        '''
         self.open = self.__call__
-        return self.__call__(path, mode, text, atomictemp)
+        return self.__call__(path, mode, text, atomictemp, notindexed)
 
     def read(self, path):
         fp = self(path, 'rb')
@@ -345,7 +352,14 @@ class vfs(abstractvfs):
             return
         os.chmod(name, self.createmode & 0666)
 
-    def __call__(self, path, mode="r", text=False, atomictemp=False):
+    def __call__(self, path, mode="r", text=False, atomictemp=False,
+                 notindexed=False):
+        '''Open ``path`` file, which is relative to vfs root.
+
+        Newly created directories are marked as "not to be indexed by
+        the content indexing service", if ``notindexed`` is specified
+        for "write" mode access.
+        '''
         if self._audit:
             r = util.checkosfilename(path)
             if r:
@@ -363,7 +377,7 @@ class vfs(abstractvfs):
             # to a directory. Let the posixfile() call below raise IOError.
             if basename:
                 if atomictemp:
-                    util.ensuredirs(dirname, self.createmode)
+                    util.ensuredirs(dirname, self.createmode, notindexed)
                     return util.atomictempfile(f, mode, self.createmode)
                 try:
                     if 'w' in mode:
@@ -381,7 +395,7 @@ class vfs(abstractvfs):
                     if e.errno != errno.ENOENT:
                         raise
                     nlink = 0
-                    util.ensuredirs(dirname, self.createmode)
+                    util.ensuredirs(dirname, self.createmode, notindexed)
                 if nlink > 0:
                     if self._trustnlink is None:
                         self._trustnlink = nlink > 1 or util.checknlink(f)
