@@ -559,9 +559,9 @@ Add to beginning, middle, end
   >   echo $i >> plain
   > done
 
-Record beginning, middle
+Record beginning, middle, and test that format-breaking diffopts are ignored
 
-  $ hg record -d '14 0' -m middle-only plain <<EOF
+  $ hg record --config diff.noprefix=True -d '14 0' -m middle-only plain <<EOF
   > y
   > y
   > y
