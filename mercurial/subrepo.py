@@ -572,15 +572,8 @@ class hgsubrepo(abstractsubrepo):
 
     def _readstorehashcache(self, remotepath):
         '''read the store hash cache for a given remote repository'''
-        cachefile = self._getstorehashcachepath(remotepath)
-        if not os.path.exists(cachefile):
-            return ''
-        fd = open(cachefile, 'r')
-        try:
-            pullstate = fd.readlines()
-        finally:
-            fd.close()
-        return pullstate
+        cachefile = _getstorehashcachename(remotepath)
+        return self._cachestorehashvfs.tryreadlines(cachefile, 'r')
 
     def _cachestorehash(self, remotepath):
         '''cache the current store hash
