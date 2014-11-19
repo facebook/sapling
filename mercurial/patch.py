@@ -1559,6 +1559,11 @@ class GitDiffRequired(Exception):
     pass
 
 def diffopts(ui, opts=None, untrusted=False, section='diff'):
+    '''return diffopts with all features supported and parsed'''
+    return difffeatureopts(ui, opts=opts, untrusted=untrusted, section=section)
+
+def difffeatureopts(ui, opts=None, untrusted=False, section='diff'):
+    '''return diffopts with only opted-in features parsed'''
     def get(key, name=None, getter=ui.configbool, forceplain=None):
         if opts:
             v = opts.get(key)
