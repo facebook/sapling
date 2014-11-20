@@ -1984,7 +1984,7 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
         cca = scmutil.casecollisionauditor(ui, abort, repo.dirstate)
     for f in wctx.walk(match):
         exact = match.exact(f)
-        if exact or not explicitonly and f not in wctx:
+        if exact or not explicitonly and f not in wctx and repo.wvfs.exists(f):
             if cca:
                 cca(f)
             names.append(f)
