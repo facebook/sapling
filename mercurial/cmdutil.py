@@ -2590,13 +2590,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
             m = scmutil.matchfiles(repo, names)
 
-        modified = set(changes[0])
-        added    = set(changes[1])
-        removed  = set(changes[2])
-        _deleted = set(changes[3])
-        unknown  = set(changes[4])
-        unknown.update(changes[5])
-        clean    = set(changes[6])
+        modified = set(changes.modified)
+        added    = set(changes.added)
+        removed  = set(changes.removed)
+        _deleted = set(changes.deleted)
+        unknown  = set(changes.unknown)
+        unknown.update(changes.ignored)
+        clean    = set(changes.clean)
         modadded = set()
 
         # split between files known in target manifest and the others
@@ -2618,9 +2618,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             modified, added, removed = set(), set(), set()
         else:
             changes = repo.status(node1=parent, match=m)
-            dsmodified = set(changes[0])
-            dsadded    = set(changes[1])
-            dsremoved  = set(changes[2])
+            dsmodified = set(changes.modified)
+            dsadded    = set(changes.added)
+            dsremoved  = set(changes.removed)
 
             # only take into account for removes between wc and target
             clean |= dsremoved - removed
