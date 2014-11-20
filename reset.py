@@ -6,7 +6,7 @@ from mercurial.i18n import _
 from mercurial.node import short, hex
 from mercurial import extensions, merge, dicthelpers, scmutil, hg
 from mercurial import cmdutil, obsolete, repair, util, bundlerepo, error
-from mercurial import exchange
+from mercurial import exchange, phases
 import struct, os, glob, binascii
 
 cmdtable = {}
@@ -119,7 +119,17 @@ def _pullbundle(repo, rev):
     if not other:
         raise util.Abort("could not find '%s' in the repo or the backup"
                          " bundles" % rev)
-    exchange.pull(repo, other, heads=[rev])
+    lock = repo.lock()
+    try:
+        oldtip = len(repo)
+        exchange.pull(repo, other, heads=[rev])
+
+        tr = repo.transaction("phase")
+        nodes = (c.node() for c in repo.set('%d:', oldtip))
+        phases.retractboundary(repo, tr, 1, nodes)
+        tr.close()
+    finally:
+        lock.release()
 
     if rev not in repo:
         raise util.Abort("unable to get rev %s from repo" % rev)

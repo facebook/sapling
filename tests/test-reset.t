@@ -41,22 +41,24 @@ Clean reset should overwrite all changes
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-backup.hg
   $ hg diff
 
-Reset should recover from backup bundles
+Reset should recover from backup bundles (with correct phase)
 
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
+  $ hg phase -p b292c1e3311f
   $ hg reset --clean 66ee28d0328c
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  $ hg log -G -T '{node|short} {bookmarks}\n'
-  @  66ee28d0328c foo
+  $ hg log -G -T '{node|short} {bookmarks} {phase}\n'
+  @  66ee28d0328c foo draft
   |
-  o  b292c1e3311f
+  o  b292c1e3311f  public
   
+  $ hg phase -f -d b292c1e3311f
 
 Reset should not strip reachable commits
 
