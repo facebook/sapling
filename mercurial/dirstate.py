@@ -629,6 +629,7 @@ class dirstate(object):
         results = dict.fromkeys(subrepos)
         results['.hg'] = None
 
+        alldirs = None
         for ff in files:
             if normalize:
                 nf = normalize(normpath(ff), False, True)
@@ -657,13 +658,12 @@ class dirstate(object):
                 if nf in dmap: # does it exactly match a missing file?
                     results[nf] = None
                 else: # does it match a missing directory?
-                    prefix = nf + "/"
-                    for fn in dmap:
-                        if fn.startswith(prefix):
-                            if matchedir:
-                                matchedir(nf)
-                            notfoundadd(nf)
-                            break
+                    if alldirs is None:
+                        alldirs = scmutil.dirs(dmap)
+                    if nf in alldirs:
+                        if matchedir:
+                            matchedir(nf)
+                        notfoundadd(nf)
                     else:
                         badfn(ff, inst.strerror)
 
