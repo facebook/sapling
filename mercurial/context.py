@@ -376,10 +376,6 @@ class changectx(basectx):
                 return
             if isinstance(changeid, long):
                 changeid = str(changeid)
-            if changeid == '.':
-                self._node = repo.dirstate.p1()
-                self._rev = repo.changelog.rev(self._node)
-                return
             if changeid == 'null':
                 self._node = nullid
                 self._rev = nullrev
@@ -387,6 +383,12 @@ class changectx(basectx):
             if changeid == 'tip':
                 self._node = repo.changelog.tip()
                 self._rev = repo.changelog.rev(self._node)
+                return
+            if changeid == '.' or changeid == repo.dirstate.p1():
+                # this is a hack to delay/avoid loading obsmarkers
+                # when we know that '.' won't be hidden
+                self._node = repo.dirstate.p1()
+                self._rev = repo.unfiltered().changelog.rev(self._node)
                 return
             if len(changeid) == 20:
                 try:
