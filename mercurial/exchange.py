@@ -104,6 +104,8 @@ class pushoperation(object):
         self.outobsmarkers = set()
         # outgoing bookmarks
         self.outbookmarks = []
+        # transaction manager
+        self.trmanager = None
 
     @util.propertycache
     def futureheads(self):
@@ -204,6 +206,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
     try:
+        if pushop.locallocked:
+            pushop.trmanager = transactionmanager(repo,
+                                                  'push-response',
+                                                  pushop.remote.url())
         pushop.repo.checkpush(pushop)
         lock = None
         unbundle = pushop.remote.capable('unbundle')
@@ -222,7 +228,11 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
         finally:
             if lock is not None:
                 lock.release()
+        if pushop.trmanager:
+            pushop.trmanager.close()
     finally:
+        if pushop.trmanager:
+            pushop.trmanager.release()
         if locallock is not None:
             locallock.release()
 
@@ -693,13 +703,11 @@ def _pushsyncphase(pushop):
 
 def _localphasemove(pushop, nodes, phase=phases.public):
     """move <nodes> to <phase> in the local source repo"""
-    if pushop.locallocked:
-        tr = pushop.repo.transaction('push-phase-sync')
-        try:
-            phases.advanceboundary(pushop.repo, tr, phase, nodes)
-            tr.close()
-        finally:
-            tr.release()
+    if pushop.trmanager:
+        phases.advanceboundary(pushop.repo,
+                               pushop.trmanager.transaction(),
+                               phase,
+                               nodes)
     else:
         # repo is not locked, do not change any phases!
         # Informs the user that phases should have been moved when

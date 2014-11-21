@@ -176,6 +176,9 @@ push
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
   remote: 1 new obsolescence markers
   updating bookmark book_eea1
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  b2x-transactionclose hook: HG_SOURCE=push-response HG_URL=file:$TESTTMP/other
   $ hg -R other log -G
   o    3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> book_eea1 G
   |\
@@ -254,6 +257,9 @@ push over ssh
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
   remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  b2x-transactionclose hook: HG_SOURCE=push-response HG_URL=ssh://user@dummy/other
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
@@ -292,6 +298,9 @@ push over http
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   updating bookmark book_32af
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  b2x-transactionclose hook: HG_SOURCE=push-response HG_URL=http://localhost:$HGPORT2/
   $ cat other-error.log
 
 Check final content.
