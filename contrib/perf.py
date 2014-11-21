@@ -525,3 +525,12 @@ def perfbranchmap(ui, repo, full=False):
         branchmap.read = oldread
         branchmap.branchcache.write = oldwrite
     fm.end()
+
+@command('perfloadmarkers')
+def perfloadmarkers(ui, repo):
+    """benchmark the time to parse the on-disk markers for a repo
+
+    Result is the number of markers in the repo."""
+    timer, fm = gettimer(ui)
+    timer(lambda: len(obsolete.obsstore(repo.sopener)))
+    fm.end()
