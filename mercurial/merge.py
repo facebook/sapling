@@ -18,9 +18,9 @@ _unpack = struct.unpack
 
 def _droponode(data):
     # used for compatibility for v1
-    bits = data.split("\0")
+    bits = data.split('\0')
     bits = bits[:-2] + bits[-1:]
-    return "\0".join(bits)
+    return '\0'.join(bits)
 
 class mergestate(object):
     '''track 3-way merge state of individual files
@@ -45,8 +45,8 @@ class mergestate(object):
     O: the node of the "other" part of the merge (hexified version)
     F: a file to be merged entry
     '''
-    statepathv1 = "merge/state"
-    statepathv2 = "merge/state2"
+    statepathv1 = 'merge/state'
+    statepathv2 = 'merge/state2'
 
     def __init__(self, repo):
         self._repo = repo
@@ -60,7 +60,7 @@ class mergestate(object):
         if node:
             self._local = node
             self._other = other
-        shutil.rmtree(self._repo.join("merge"), True)
+        shutil.rmtree(self._repo.join('merge'), True)
         self._dirty = False
 
     def _read(self):
@@ -78,8 +78,8 @@ class mergestate(object):
                 self._local = bin(record)
             elif rtype == 'O':
                 self._other = bin(record)
-            elif rtype == "F":
-                bits = record.split("\0")
+            elif rtype == 'F':
+                bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
                 raise util.Abort(_('unsupported merge state record: %s')
@@ -121,9 +121,9 @@ class mergestate(object):
                 # if mctx was wrong `mctx[bits[-2]]` may fails.
                 for idx, r in enumerate(v1records):
                     if r[0] == 'F':
-                        bits = r[1].split("\0")
+                        bits = r[1].split('\0')
                         bits.insert(-2, '')
-                        v1records[idx] = (r[0], "\0".join(bits))
+                        v1records[idx] = (r[0], '\0'.join(bits))
                 return v1records
         else:
             return v2records
@@ -191,10 +191,10 @@ class mergestate(object):
         """Write current state on disk (if necessary)"""
         if self._dirty:
             records = []
-            records.append(("L", hex(self._local)))
-            records.append(("O", hex(self._other)))
+            records.append(('L', hex(self._local)))
+            records.append(('O', hex(self._other)))
             for d, v in self._state.iteritems():
-                records.append(("F", "\0".join([d] + v)))
+                records.append(('F', '\0'.join([d] + v)))
             self._writerecords(records)
             self._dirty = False
 
@@ -205,22 +205,22 @@ class mergestate(object):
 
     def _writerecordsv1(self, records):
         """Write current state on disk in a version 1 file"""
-        f = self._repo.opener(self.statepathv1, "w")
+        f = self._repo.opener(self.statepathv1, 'w')
         irecords = iter(records)
         lrecords = irecords.next()
         assert lrecords[0] == 'L'
-        f.write(hex(self._local) + "\n")
+        f.write(hex(self._local) + '\n')
         for rtype, data in irecords:
-            if rtype == "F":
-                f.write("%s\n" % _droponode(data))
+            if rtype == 'F':
+                f.write('%s\n' % _droponode(data))
         f.close()
 
     def _writerecordsv2(self, records):
         """Write current state on disk in a version 2 file"""
-        f = self._repo.opener(self.statepathv2, "w")
+        f = self._repo.opener(self.statepathv2, 'w')
         for key, data in records:
             assert len(key) == 1
-            format = ">sI%is" % len(data)
+            format = '>sI%is' % len(data)
             f.write(_pack(format, key, len(data), data))
         f.close()
 
@@ -234,7 +234,7 @@ class mergestate(object):
         note: also write the local version to the `.hg/merge` directory.
         """
         hash = util.sha1(fcl.path()).hexdigest()
-        self._repo.opener.write("merge/" + hash, fcl.data())
+        self._repo.opener.write('merge/' + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(),
                            fca.path(), hex(fca.filenode()),
                            fco.path(), hex(fco.filenode()),
@@ -284,7 +284,7 @@ class mergestate(object):
             elif flags == fla:
                 flags = flo
         # restore local
-        f = self._repo.opener("merge/" + hash)
+        f = self._repo.opener('merge/' + hash)
         self._repo.wwrite(dfile, f.read(), flags)
         f.close()
         r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca,
@@ -405,7 +405,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         # check whether sub state is modified
         for s in sorted(wctx.substate):
             if wctx.sub(s).dirty():
-                m1['.hgsubstate'] += "+"
+                m1['.hgsubstate'] += '+'
                 break
 
     aborts = []
@@ -454,7 +454,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     actions['r'].append((f, None, "remote delete"))
                 else:
                     actions['cd'].append((f, None, "prompt changed/deleted"))
-            elif n1[20:] == "a": # added, no remote
+            elif n1[20:] == 'a': # added, no remote
                 actions['f'].append((f, None, "remote deleted"))
             else:
                 actions['r'].append((f, None, "other deleted"))
@@ -492,13 +492,13 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     actions['m'].append((f, (f, f, f, False, pa.node()),
                                     "remote differs from untracked local"))
                 elif not force and different:
-                    aborts.append((f, "ud"))
+                    aborts.append((f, 'ud'))
                 else:
                     actions['g'].append((f, (fl2,), "remote created"))
         elif n2 and n2 != ma[f]:
             different = _checkunknownfile(repo, wctx, p2, f)
             if not force and different:
-                aborts.append((f, "ud"))
+                aborts.append((f, 'ud'))
             else:
                 if acceptremote:
                     actions['g'].append((f, (fl2,), "remote recreating"))
@@ -506,7 +506,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     actions['dc'].append((f, (fl2,), "prompt deleted/changed"))
 
     for f, m in sorted(aborts):
-        if m == "ud":
+        if m == 'ud':
             repo.ui.warn(_("%s: untracked file differs\n") % f)
         else: assert False, m
     if aborts:
@@ -785,14 +785,14 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                     actions[m].append(l[0])
                     continue
             # If keep is an option, just do it.
-            if "k" in bids:
+            if 'k' in bids:
                 repo.ui.note(" %s: picking 'keep' action\n" % f)
-                actions['k'].append(bids["k"][0])
+                actions['k'].append(bids['k'][0])
                 continue
             # If there are gets and they all agree [how could they not?], do it.
-            if "g" in bids:
-                ga0 = bids["g"][0]
-                if util.all(a == ga0 for a in bids["g"][1:]):
+            if 'g' in bids:
+                ga0 = bids['g'][0]
+                if util.all(a == ga0 for a in bids['g'][1:]):
                     repo.ui.note(" %s: picking 'get' action\n" % f)
                     actions['g'].append(ga0)
                     continue
@@ -980,8 +980,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             try:
                 node = repo.branchtip(wc.branch())
             except errormod.RepoLookupError:
-                if wc.branch() == "default": # no default branch!
-                    node = repo.lookup("tip") # update to tip
+                if wc.branch() == 'default': # no default branch!
+                    node = repo.lookup('tip') # update to tip
                 else:
                     raise util.Abort(_("branch %s not found") % wc.branch())
 
@@ -1009,14 +1009,14 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
                     # get the max revision for the given successors set,
                     # i.e. the 'tip' of a set
-                    node = repo.revs("max(%ln)", successors).first()
+                    node = repo.revs('max(%ln)', successors).first()
                     pas = [p1]
 
         overwrite = force and not branchmerge
 
         p2 = repo[node]
         if pas[0] is None:
-            if repo.ui.config("merge", "preferancestor", '*') == '*':
+            if repo.ui.config('merge', 'preferancestor', '*') == '*':
                 cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
                 pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
@@ -1084,7 +1084,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             pas = [wc.p1()]
         elif not branchmerge and not wc.dirty(missing=True):
             pass
-        elif pas[0] and repo.ui.configbool("merge", "followcopies", True):
+        elif pas[0] and repo.ui.configbool('merge', 'followcopies', True):
             followcopies = True
 
         ### calculate phase
