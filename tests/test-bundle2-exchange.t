@@ -21,8 +21,8 @@ enable obsolescence
   > publish=False
   > [hooks]
   > changegroup = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" changegroup"
-  > b2x-pretransactionclose.tip = printf 'pre-close-tip:'; hg log -r tip -T '{node|short} {phase} {bookmarks}\n'
-  > b2x-transactionclose.tip = printf 'postclose-tip:'; hg log -r tip -T '{node|short} {phase} {bookmarks}\n'
+  > b2x-pretransactionclose.tip = hg log -r tip -T "pre-close-tip:{node|short} {phase} {bookmarks}\n"
+  > b2x-transactionclose.tip = hg log -r tip -T "postclose-tip:{node|short} {phase} {bookmarks}\n"
   > b2x-transactionclose.env = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
   > EOF
 
