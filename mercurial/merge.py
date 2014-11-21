@@ -522,6 +522,105 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     return actions
 
+def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
+                     acceptremote, followcopies):
+    "Calculate the actions needed to merge mctx into wctx using ancestors"
+
+    if len(ancestors) == 1: # default
+        actions = manifestmerge(repo, wctx, mctx, ancestors[0],
+                                branchmerge, force,
+                                partial, acceptremote, followcopies)
+
+    else: # only when merge.preferancestor=* - the default
+        repo.ui.note(
+            _("note: merging %s and %s using bids from ancestors %s\n") %
+            (wctx, mctx, _(' and ').join(str(anc) for anc in ancestors)))
+
+        # Call for bids
+        fbids = {} # mapping filename to bids (action method to list af actions)
+        for ancestor in ancestors:
+            repo.ui.note(_('\ncalculating bids for ancestor %s\n') % ancestor)
+            actions = manifestmerge(repo, wctx, mctx, ancestor,
+                                    branchmerge, force,
+                                    partial, acceptremote, followcopies)
+            for m, l in sorted(actions.items()):
+                for a in l:
+                    f, args, msg = a
+                    repo.ui.debug(' %s: %s -> %s\n' % (f, msg, m))
+                    if f in fbids:
+                        d = fbids[f]
+                        if m in d:
+                            d[m].append(a)
+                        else:
+                            d[m] = [a]
+                    else:
+                        fbids[f] = {m: [a]}
+
+        # Pick the best bid for each file
+        repo.ui.note(_('\nauction for merging merge bids\n'))
+        actions = dict((m, []) for m in actions.keys())
+        for f, bids in sorted(fbids.items()):
+            # bids is a mapping from action method to list af actions
+            # Consensus?
+            if len(bids) == 1: # all bids are the same kind of method
+                m, l = bids.items()[0]
+                if util.all(a == l[0] for a in l[1:]): # len(bids) is > 1
+                    repo.ui.note(" %s: consensus for %s\n" % (f, m))
+                    actions[m].append(l[0])
+                    continue
+            # If keep is an option, just do it.
+            if 'k' in bids:
+                repo.ui.note(" %s: picking 'keep' action\n" % f)
+                actions['k'].append(bids['k'][0])
+                continue
+            # If there are gets and they all agree [how could they not?], do it.
+            if 'g' in bids:
+                ga0 = bids['g'][0]
+                if util.all(a == ga0 for a in bids['g'][1:]):
+                    repo.ui.note(" %s: picking 'get' action\n" % f)
+                    actions['g'].append(ga0)
+                    continue
+            # TODO: Consider other simple actions such as mode changes
+            # Handle inefficient democrazy.
+            repo.ui.note(_(' %s: multiple bids for merge action:\n') % f)
+            for m, l in sorted(bids.items()):
+                for _f, args, msg in l:
+                    repo.ui.note('  %s -> %s\n' % (msg, m))
+            # Pick random action. TODO: Instead, prompt user when resolving
+            m, l = bids.items()[0]
+            repo.ui.warn(_(' %s: ambiguous merge - picked %s action\n') %
+                         (f, m))
+            actions[m].append(l[0])
+            continue
+        repo.ui.note(_('end of auction\n\n'))
+
+    # Prompt and create actions. TODO: Move this towards resolve phase.
+    for f, args, msg in actions['cd']:
+        if repo.ui.promptchoice(
+            _("local changed %s which remote deleted\n"
+              "use (c)hanged version or (d)elete?"
+              "$$ &Changed $$ &Delete") % f, 0):
+            actions['r'].append((f, None, "prompt delete"))
+        else:
+            actions['a'].append((f, None, "prompt keep"))
+    del actions['cd'][:]
+
+    for f, args, msg in actions['dc']:
+        flags, = args
+        if repo.ui.promptchoice(
+            _("remote changed %s which local deleted\n"
+              "use (c)hanged version or leave (d)eleted?"
+              "$$ &Changed $$ &Deleted") % f, 0) == 0:
+            actions['g'].append((f, (flags,), "prompt recreating"))
+    del actions['dc'][:]
+
+    if wctx.rev() is None:
+        ractions, factions = _forgetremoved(wctx, mctx, branchmerge)
+        actions['r'].extend(ractions)
+        actions['f'].extend(factions)
+
+    return actions
+
 def batchremove(repo, actions):
     """apply removes to the working directory
 
@@ -736,105 +835,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     progress(_updating, None, total=numupdates, unit=_files)
 
     return updated, merged, removed, unresolved
-
-def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
-                     acceptremote, followcopies):
-    "Calculate the actions needed to merge mctx into wctx using ancestors"
-
-    if len(ancestors) == 1: # default
-        actions = manifestmerge(repo, wctx, mctx, ancestors[0],
-                                branchmerge, force,
-                                partial, acceptremote, followcopies)
-
-    else: # only when merge.preferancestor=* - the default
-        repo.ui.note(
-            _("note: merging %s and %s using bids from ancestors %s\n") %
-            (wctx, mctx, _(' and ').join(str(anc) for anc in ancestors)))
-
-        # Call for bids
-        fbids = {} # mapping filename to bids (action method to list af actions)
-        for ancestor in ancestors:
-            repo.ui.note(_('\ncalculating bids for ancestor %s\n') % ancestor)
-            actions = manifestmerge(repo, wctx, mctx, ancestor,
-                                    branchmerge, force,
-                                    partial, acceptremote, followcopies)
-            for m, l in sorted(actions.items()):
-                for a in l:
-                    f, args, msg = a
-                    repo.ui.debug(' %s: %s -> %s\n' % (f, msg, m))
-                    if f in fbids:
-                        d = fbids[f]
-                        if m in d:
-                            d[m].append(a)
-                        else:
-                            d[m] = [a]
-                    else:
-                        fbids[f] = {m: [a]}
-
-        # Pick the best bid for each file
-        repo.ui.note(_('\nauction for merging merge bids\n'))
-        actions = dict((m, []) for m in actions.keys())
-        for f, bids in sorted(fbids.items()):
-            # bids is a mapping from action method to list af actions
-            # Consensus?
-            if len(bids) == 1: # all bids are the same kind of method
-                m, l = bids.items()[0]
-                if util.all(a == l[0] for a in l[1:]): # len(bids) is > 1
-                    repo.ui.note(" %s: consensus for %s\n" % (f, m))
-                    actions[m].append(l[0])
-                    continue
-            # If keep is an option, just do it.
-            if 'k' in bids:
-                repo.ui.note(" %s: picking 'keep' action\n" % f)
-                actions['k'].append(bids['k'][0])
-                continue
-            # If there are gets and they all agree [how could they not?], do it.
-            if 'g' in bids:
-                ga0 = bids['g'][0]
-                if util.all(a == ga0 for a in bids['g'][1:]):
-                    repo.ui.note(" %s: picking 'get' action\n" % f)
-                    actions['g'].append(ga0)
-                    continue
-            # TODO: Consider other simple actions such as mode changes
-            # Handle inefficient democrazy.
-            repo.ui.note(_(' %s: multiple bids for merge action:\n') % f)
-            for m, l in sorted(bids.items()):
-                for _f, args, msg in l:
-                    repo.ui.note('  %s -> %s\n' % (msg, m))
-            # Pick random action. TODO: Instead, prompt user when resolving
-            m, l = bids.items()[0]
-            repo.ui.warn(_(' %s: ambiguous merge - picked %s action\n') %
-                         (f, m))
-            actions[m].append(l[0])
-            continue
-        repo.ui.note(_('end of auction\n\n'))
-
-    # Prompt and create actions. TODO: Move this towards resolve phase.
-    for f, args, msg in actions['cd']:
-        if repo.ui.promptchoice(
-            _("local changed %s which remote deleted\n"
-              "use (c)hanged version or (d)elete?"
-              "$$ &Changed $$ &Delete") % f, 0):
-            actions['r'].append((f, None, "prompt delete"))
-        else:
-            actions['a'].append((f, None, "prompt keep"))
-    del actions['cd'][:]
-
-    for f, args, msg in actions['dc']:
-        flags, = args
-        if repo.ui.promptchoice(
-            _("remote changed %s which local deleted\n"
-              "use (c)hanged version or leave (d)eleted?"
-              "$$ &Changed $$ &Deleted") % f, 0) == 0:
-            actions['g'].append((f, (flags,), "prompt recreating"))
-    del actions['dc'][:]
-
-    if wctx.rev() is None:
-        ractions, factions = _forgetremoved(wctx, mctx, branchmerge)
-        actions['r'].extend(ractions)
-        actions['f'].extend(factions)
-
-    return actions
 
 def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
