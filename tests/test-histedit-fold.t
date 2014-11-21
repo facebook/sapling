@@ -470,7 +470,14 @@ This is an excuse to test hook with histedit temporary commit (issue4422)
   1:199b6bb90248 b
   0:6c795aa153cb a
 
-  $ hg histedit 6c795aa153cb --config hooks.commit="echo commit \$HG_NODE" --commands - 2>&1 << EOF | fixbundle
+Setup the proper environment variable symbol for the platform, to be subbed
+into the hook command.
+#if windows
+  $ NODE="%HG_NODE%"
+#else
+  $ NODE="\$HG_NODE"
+#endif
+  $ hg histedit 6c795aa153cb --config hooks.commit="echo commit $NODE" --commands - 2>&1 << EOF | fixbundle
   > pick 199b6bb90248 b
   > fold a1a953ffb4b0 c
   > pick 6c795aa153cb a
