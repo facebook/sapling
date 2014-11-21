@@ -771,10 +771,8 @@ class pulloperation(object):
         self.explicitbookmarks = bookmarks
         # do we force pull?
         self.force = force
-        # the name the pull transaction
-        self._trname = 'pull\n' + util.hidepassword(remote.url())
-        # hold the transaction once created
-        self._tr = None
+        # transaction manager
+        self.trmanager = None
         # set of common changeset between local and remote before pull
         self.common = None
         # set of pulled head
@@ -807,14 +805,30 @@ class pulloperation(object):
             return self.heads
 
     def gettransaction(self):
-        """get appropriate pull transaction, creating it if needed"""
-        if self._tr is None:
-            self._tr = self.repo.transaction(self._trname)
-            self._tr.hookargs['source'] = 'pull'
-            self._tr.hookargs['url'] = self.remote.url()
+        # deprecated; talk to trmanager directly
+        return self.trmanager.transaction()
+
+class transactionmanager(object):
+    """An object to manages the lifecycle of a transaction
+
+    It creates the transaction on demand and calls the appropriate hooks when
+    closing the transaction."""
+    def __init__(self, repo, source, url):
+        self.repo = repo
+        self.source = source
+        self.url = url
+        self._tr = None
+
+    def transaction(self):
+        """Return an open transaction object, constructing if necessary"""
+        if not self._tr:
+            trname = '%s\n%s' % (self.source, util.hidepassword(self.url))
+            self._tr = self.repo.transaction(trname)
+            self._tr.hookargs['source'] = self.source
+            self._tr.hookargs['url'] = self.url
         return self._tr
 
-    def closetransaction(self):
+    def close(self):
         """close transaction if created"""
         if self._tr is not None:
             repo = self.repo
@@ -828,7 +842,7 @@ class pulloperation(object):
                                   lambda tr: repo._afterlock(runhooks))
             self._tr.close()
 
-    def releasetransaction(self):
+    def release(self):
         """release transaction if created"""
         if self._tr is not None:
             self._tr.release()
@@ -846,6 +860,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
     pullop.remotebookmarks = remote.listkeys('bookmarks')
     lock = pullop.repo.lock()
     try:
+        pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
         _pulldiscovery(pullop)
         if (pullop.repo.ui.configbool('experimental', 'bundle2-exp', False)
             and pullop.remote.capable('bundle2-exp')):
@@ -854,9 +869,9 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
         _pullphase(pullop)
         _pullbookmarks(pullop)
         _pullobsolete(pullop)
-        pullop.closetransaction()
+        pullop.trmanager.close()
     finally:
-        pullop.releasetransaction()
+        pullop.trmanager.release()
         lock.release()
 
     return pullop
