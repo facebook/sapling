@@ -41,23 +41,11 @@ def extsetup(ui):
 
     wrapfunction(discovery, 'checkheads', _checkheads)
 
-    wrapfunction(bundle2.unbundle20, '__init__', unbundlerinit)
-    wrapfunction(bundle2.unbundle20, 'iterparts', unbundleriterparts)
-
     origpushkeyhandler = bundle2.parthandlermapping['b2x:pushkey']
     newpushkeyhandler = lambda *args, **kwargs: \
         bundle2pushkey(origpushkeyhandler, *args, **kwargs)
     newpushkeyhandler.params = origpushkeyhandler.params
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
-
-def unbundlerinit(orig, self, *args, **kwargs):
-    self.partresultinfo = {}
-    return orig(self, *args, **kwargs)
-
-def unbundleriterparts(orig, self):
-    for part in orig(self):
-        part.resultinfo = self.partresultinfo
-        yield part
 
 def getrevsetbounds(repo, revset):
     if not repo.revs(revset):
@@ -374,13 +362,16 @@ def bundle2rebase(op, part):
     for k in replacements.keys():
         replacements[hex(k)] = hex(replacements[k])
 
-    # TODO: replace this with op.records
-    part.resultinfo[rebaseparttype] = replacements
+    op.records.add(rebaseparttype, replacements)
 
     return 1
 
 def bundle2pushkey(orig, op, part):
-    replacements = part.resultinfo.get(rebaseparttype, {})
+    replacements = dict(sum([record.items()
+                             for record
+                             in op.records[rebaseparttype]],
+                            []))
+    
     namespace = pushkey.decode(part.params['namespace'])
     if namespace == 'phases':
         key = pushkey.decode(part.params['key'])
