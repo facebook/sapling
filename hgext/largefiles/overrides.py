@@ -449,10 +449,10 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                 # else, prompt
                 repo.ui.promptchoice(usermsg, 0) == 0
                 ): # pick remote largefile
-                actions['r'].append((lfile, None, msg))
+                actions['r'].append((lfile, None, 'replaced by standin'))
                 newglist.append((standin, (p2.flags(standin),), msg))
             else: # keep local normal file
-                actions['r'].append((standin, None, msg))
+                actions['r'].append((standin, None, 'replaced by non-standin'))
         elif lfutil.standin(f) in p1 and lfutil.standin(f) not in removes:
             # Case 2: largefile in the working copy, normal file in
             # the second parent
@@ -472,16 +472,16 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                 ): # keep local largefile
                 if branchmerge:
                     # largefile can be restored from standin safely
-                    actions['r'].append((lfile, None, msg))
+                    actions['r'].append((lfile, None, 'replaced by standin'))
                 else:
                     # "lfile" should be marked as "removed" without
                     # removal of itself
-                    lfmr.append((lfile, None, msg))
+                    lfmr.append((lfile, None, 'forget non-standin largefile'))
 
                     # linear-merge should treat this largefile as 're-added'
-                    actions['a'].append((standin, None, msg))
+                    actions['a'].append((standin, None, 'keep standin'))
             else: # pick remote normal file
-                actions['r'].append((standin, None, msg))
+                actions['r'].append((standin, None, 'replaced by non-standin'))
                 newglist.append((lfile, (p2.flags(lfile),), msg))
         else:
             newglist.append(action)
