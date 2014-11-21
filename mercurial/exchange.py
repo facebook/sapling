@@ -572,8 +572,12 @@ def _pushbundle2(pushop):
     The only currently supported type of data is changegroup but this will
     evolve in the future."""
     bundler = bundle2.bundle20(pushop.ui, bundle2.bundle2caps(pushop.remote))
+    pushback = (pushop.trmanager
+                and pushop.ui.configbool('experimental', 'bundle2.pushback'))
+
     # create reply capability
-    capsblob = bundle2.encodecaps(bundle2.getrepocaps(pushop.repo))
+    capsblob = bundle2.encodecaps(bundle2.getrepocaps(pushop.repo,
+                                                      allowpushback=pushback))
     bundler.newpart('b2x:replycaps', data=capsblob)
     replyhandlers = []
     for partgenname in b2partsgenorder:
@@ -590,7 +594,10 @@ def _pushbundle2(pushop):
     except error.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
     try:
-        op = bundle2.processbundle(pushop.repo, reply)
+        trgetter = None
+        if pushback:
+            trgetter = pushop.trmanager.transaction
+        op = bundle2.processbundle(pushop.repo, reply, trgetter)
     except error.BundleValueError, exc:
         raise util.Abort('missing support for %s' % exc)
     for rephand in replyhandlers:

@@ -877,7 +877,7 @@ capabilities = {'HG2Y': (),
                 'b2x:remote-changegroup': ('http', 'https'),
                }
 
-def getrepocaps(repo):
+def getrepocaps(repo, allowpushback=False):
     """return the bundle2 capabilities for a given repo
 
     Exists to allow extensions (like evolution) to mutate the capabilities.
@@ -887,6 +887,8 @@ def getrepocaps(repo):
     if obsolete.isenabled(repo, obsolete.exchangeopt):
         supportedformat = tuple('V%i' % v for v in obsolete.formats)
         caps['b2x:obsmarkers'] = supportedformat
+    if allowpushback:
+        caps['b2x:pushback'] = ()
     return caps
 
 def bundle2caps(remote):
