@@ -753,7 +753,8 @@ def annotate(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
     parity = paritygen(web.stripecount)
-    diffopts = patch.diffopts(web.repo.ui, untrusted=True, section='annotate')
+    diffopts = patch.difffeatureopts(web.repo.ui, untrusted=True,
+                                     section='annotate', whitespace=True)
 
     def annotate(**map):
         last = None
