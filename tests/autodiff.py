@@ -10,7 +10,7 @@ command = cmdutil.command(cmdtable)
     [('', 'git', '', 'git upgrade mode (yes/no/auto/warn/abort)')],
     '[OPTION]... [FILE]...')
 def autodiff(ui, repo, *pats, **opts):
-    diffopts = patch.diffopts(ui, opts)
+    diffopts = patch.difffeatureopts(ui, opts)
     git = opts.get('git', 'no')
     brokenfiles = set()
     losedatafn = None
