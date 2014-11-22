@@ -991,7 +991,7 @@ class changeset_printer(object):
         if matchfn:
             stat = self.diffopts.get('stat')
             diff = self.diffopts.get('patch')
-            diffopts = patch.diffopts(self.ui, self.diffopts)
+            diffopts = patch.diffallopts(self.ui, self.diffopts)
             prev = self.repo.changelog.parents(node)[0]
             if stat:
                 diffordiffstat(self.ui, self.repo, diffopts, prev, node,
