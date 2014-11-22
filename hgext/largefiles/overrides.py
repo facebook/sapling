@@ -22,20 +22,23 @@ import basestore
 
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
+def composenormalfilematcher(match, manifest):
+    m = copy.copy(match)
+    notlfile = lambda f: not (lfutil.isstandin(f) or lfutil.standin(f) in
+            manifest)
+    m._files = filter(notlfile, m._files)
+    m._fmap = set(m._files)
+    m._always = False
+    origmatchfn = m.matchfn
+    m.matchfn = lambda f: notlfile(f) and origmatchfn(f)
+    return m
+
 def installnormalfilesmatchfn(manifest):
     '''installmatchfn with a matchfn that ignores all largefiles'''
     def overridematch(ctx, pats=[], opts={}, globbed=False,
             default='relpath'):
         match = oldmatch(ctx, pats, opts, globbed, default)
-        m = copy.copy(match)
-        notlfile = lambda f: not (lfutil.isstandin(f) or lfutil.standin(f) in
-                manifest)
-        m._files = filter(notlfile, m._files)
-        m._fmap = set(m._files)
-        m._always = False
-        origmatchfn = m.matchfn
-        m.matchfn = lambda f: notlfile(f) and origmatchfn(f)
-        return m
+        return composenormalfilematcher(match, manifest)
     oldmatch = installmatchfn(overridematch)
 
 def installmatchfn(f):
