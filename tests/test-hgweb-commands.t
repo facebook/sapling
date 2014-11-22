@@ -1007,8 +1007,8 @@ Logs and changes
   </form>
   
   <div class="navigate">
-  <a href="/search/?rev=base&revcount=5">less</a>
-  <a href="/search/?rev=base&revcount=20">more</a>
+  <a href="/log?rev=base&revcount=5">less</a>
+  <a href="/log?rev=base&revcount=20">more</a>
   </div>
   
   <table class="bigtable">
@@ -1028,8 +1028,8 @@ Logs and changes
   </table>
   
   <div class="navigate">
-  <a href="/search/?rev=base&revcount=5">less</a>
-  <a href="/search/?rev=base&revcount=20">more</a>
+  <a href="/log?rev=base&revcount=5">less</a>
+  <a href="/log?rev=base&revcount=20">more</a>
   </div>
   
   </div>

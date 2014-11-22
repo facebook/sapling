@@ -325,6 +325,7 @@ class cg1packer(object):
         # for progress output
         msgbundling = _('bundling')
 
+        clrevorder = {}
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
         changedfiles = set()
@@ -334,6 +335,7 @@ class cg1packer(object):
         # Returns the linkrev node (identity in the changelog case).
         def lookupcl(x):
             c = cl.read(x)
+            clrevorder[x] = len(clrevorder)
             changedfiles.update(c[3])
             # record the first changeset introducing this manifest version
             mfs.setdefault(c[0], x)
@@ -349,13 +351,16 @@ class cg1packer(object):
         # Returns the linkrev node (collected in lookupcl).
         def lookupmf(x):
             clnode = mfs[x]
-            if not fastpathlinkrev:
+            if not fastpathlinkrev or reorder:
                 mdata = mf.readfast(x)
                 for f, n in mdata.iteritems():
                     if f in changedfiles:
                         # record the first changeset introducing this filelog
                         # version
-                        fnodes.setdefault(f, {}).setdefault(n, clnode)
+                        fclnodes = fnodes.setdefault(f, {})
+                        fclnode = fclnodes.setdefault(n, clnode)
+                        if clrevorder[clnode] < clrevorder[fclnode]:
+                            fclnodes[n] = clnode
             return clnode
 
         mfnodes = self.prune(mf, mfs, commonrevs, source)
@@ -368,7 +373,7 @@ class cg1packer(object):
         needed = set(cl.rev(x) for x in clnodes)
 
         def linknodes(filerevlog, fname):
-            if fastpathlinkrev:
+            if fastpathlinkrev and not reorder:
                 llr = filerevlog.linkrev
                 def genfilenodes():
                     for r in filerevlog:
