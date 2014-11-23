@@ -414,7 +414,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
         if partial and not partial(f):
             continue
-        if n1 and n2:
+        if n1 and n2: # file exists on both local and remote side
             if f not in ma:
                 fa = copy.get(f, None)
                 if fa is not None:
@@ -443,72 +443,76 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                                    "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
-        elif n1 and f in movewithdir: # directory rename, move local
-            f2 = movewithdir[f]
-            actions['dm'].append((f2, (f, fl1),
-                            "remote directory rename - move from " + f))
-        elif n1 and f in copy:
-            f2 = copy[f]
-            actions['m'].append((f, (f, f2, f2, False, pa.node()),
-                            "local copied/moved from " + f2))
-        elif n1 and f in ma: # clean, a different, no remote
-            if n1 != ma[f]:
-                if acceptremote:
-                    actions['r'].append((f, None, "remote delete"))
+        elif n1: # file exists only on local side
+            if f in movewithdir: # directory rename, move local
+                f2 = movewithdir[f]
+                actions['dm'].append((f2, (f, fl1),
+                                "remote directory rename - move from " + f))
+            elif f in copy:
+                f2 = copy[f]
+                actions['m'].append((f, (f, f2, f2, False, pa.node()),
+                                "local copied/moved from " + f2))
+            elif f in ma: # clean, a different, no remote
+                if n1 != ma[f]:
+                    if acceptremote:
+                        actions['r'].append((f, None, "remote delete"))
+                    else:
+                        actions['cd'].append((f, None,
+                                              "prompt changed/deleted"))
+                elif n1[20:] == 'a':
+                    # This extra 'a' is added by working copy manifest to mark
+                    # the file as locally added. We should forget it instead of
+                    # deleting it.
+                    actions['f'].append((f, None, "remote deleted"))
                 else:
-                    actions['cd'].append((f, None, "prompt changed/deleted"))
-            elif n1[20:] == 'a':
-                # This extra 'a' is added by working copy manifest to mark the
-                # file as locally added. We should forget it instead of
-                # deleting it.
-                actions['f'].append((f, None, "remote deleted"))
-            else:
-                actions['r'].append((f, None, "other deleted"))
-        elif n2 and f in movewithdir:
-            f2 = movewithdir[f]
-            actions['dg'].append((f2, (f, fl2),
-                            "local directory rename - get from " + f))
-        elif n2 and f in copy:
-            f2 = copy[f]
-            if f2 in m2:
-                actions['m'].append((f, (f2, f, f2, False, pa.node()),
-                                "remote copied from " + f2))
-            else:
-                actions['m'].append((f, (f2, f, f2, True, pa.node()),
-                                "remote moved from " + f2))
-        elif n2 and f not in ma:
-            # local unknown, remote created: the logic is described by the
-            # following table:
-            #
-            # force  branchmerge  different  |  action
-            #   n         *           n      |    get
-            #   n         *           y      |   abort
-            #   y         n           *      |    get
-            #   y         y           n      |    get
-            #   y         y           y      |   merge
-            #
-            # Checking whether the files are different is expensive, so we
-            # don't do that when we can avoid it.
-            if force and not branchmerge:
-                actions['g'].append((f, (fl2,), "remote created"))
-            else:
+                    actions['r'].append((f, None, "other deleted"))
+        elif n2: # file exists only on remote side
+            if f in movewithdir:
+                f2 = movewithdir[f]
+                actions['dg'].append((f2, (f, fl2),
+                                "local directory rename - get from " + f))
+            elif f in copy:
+                f2 = copy[f]
+                if f2 in m2:
+                    actions['m'].append((f, (f2, f, f2, False, pa.node()),
+                                    "remote copied from " + f2))
+                else:
+                    actions['m'].append((f, (f2, f, f2, True, pa.node()),
+                                    "remote moved from " + f2))
+            elif f not in ma:
+                # local unknown, remote created: the logic is described by the
+                # following table:
+                #
+                # force  branchmerge  different  |  action
+                #   n         *           n      |    get
+                #   n         *           y      |   abort
+                #   y         n           *      |    get
+                #   y         y           n      |    get
+                #   y         y           y      |   merge
+                #
+                # Checking whether the files are different is expensive, so we
+                # don't do that when we can avoid it.
+                if force and not branchmerge:
+                    actions['g'].append((f, (fl2,), "remote created"))
+                else:
+                    different = _checkunknownfile(repo, wctx, p2, f)
+                    if force and branchmerge and different:
+                        actions['m'].append((f, (f, f, None, False, pa.node()),
+                                        "remote differs from untracked local"))
+                    elif not force and different:
+                        aborts.append((f, 'ud'))
+                    else:
+                        actions['g'].append((f, (fl2,), "remote created"))
+            elif n2 != ma[f]:
                 different = _checkunknownfile(repo, wctx, p2, f)
-                if force and branchmerge and different:
-                    actions['m'].append((f, (f, f, None, False, pa.node()),
-                                    "remote differs from untracked local"))
-                elif not force and different:
+                if not force and different:
                     aborts.append((f, 'ud'))
                 else:
-                    actions['g'].append((f, (fl2,), "remote created"))
-        elif n2 and n2 != ma[f]:
-            different = _checkunknownfile(repo, wctx, p2, f)
-            if not force and different:
-                aborts.append((f, 'ud'))
-            else:
-                if acceptremote:
-                    actions['g'].append((f, (fl2,), "remote recreating"))
-                else:
-                    actions['dc'].append((f, (fl2,), "prompt deleted/changed"))
+                    if acceptremote:
+                        actions['g'].append((f, (fl2,), "remote recreating"))
+                    else:
+                        actions['dc'].append((f, (fl2,),
+                                              "prompt deleted/changed"))
 
     for f, m in sorted(aborts):
         if m == 'ud':
