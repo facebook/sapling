@@ -441,10 +441,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 else: # both changed something
                     actions['m'].append((f, (f, f, f, False, pa.node()),
                                    "versions differ"))
-        elif f in copied: # files we'll deal with on m2 side
-            pass
         elif n1: # file exists only on local side
-            if f in movewithdir: # directory rename, move local
+            if f in copied:
+                pass # we'll deal with it on m2 side
+            elif f in movewithdir: # directory rename, move local
                 f2 = movewithdir[f]
                 actions['dm'].append((f2, (f, fl1),
                                 "remote directory rename - move from " + f))
@@ -467,7 +467,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 else:
                     actions['r'].append((f, None, "other deleted"))
         elif n2: # file exists only on remote side
-            if f in movewithdir:
+            if f in copied:
+                pass # we'll deal with it on m1 side
+            elif f in movewithdir:
                 f2 = movewithdir[f]
                 actions['dg'].append((f2, (f, fl2),
                                 "local directory rename - get from " + f))
