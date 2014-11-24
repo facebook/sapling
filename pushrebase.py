@@ -353,11 +353,15 @@ def bundle2rebase(op, part):
             cgpart.addparam('version', '01')
 
             if (obsolete.isenabled(op.repo, obsolete.exchangeopt)
-                and op.repo.obsstore): # TODO: check reply caps
-                exchange.buildobsmarkerspart(
-                    op.reply,
-                    op.repo.obsstore.relevantmarkers(replacements.values())
-                )
+                and op.repo.obsstore):
+                try:
+                    exchange.buildobsmarkerspart(
+                        op.reply,
+                        op.repo.obsstore.relevantmarkers(replacements.values())
+                    )
+                except ValueError, exc:
+                    op.repo.ui.status(_("can't send obsolete markers: %s") %
+                                      exc.message)
 
     for k in replacements.keys():
         replacements[hex(k)] = hex(replacements[k])
