@@ -352,7 +352,7 @@ rebase 'c1' to the branch head 'c2' that is closed
   $ hg ci -qm 'c2 closed' --close
   $ hg up -qr 2
   $ hg tglog
-  o  4: 'c2 closed' c
+  _  4: 'c2 closed' c
   |
   o  3: 'b1' b
   |
@@ -366,7 +366,7 @@ rebase 'c1' to the branch head 'c2' that is closed
   nothing to rebase - working directory parent is also destination
   [1]
   $ hg tglog
-  o  4: 'c2 closed' c
+  _  4: 'c2 closed' c
   |
   o  3: 'b1' b
   |

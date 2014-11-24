@@ -85,9 +85,9 @@ graph converted repo
   $ hg -R t-datesort log -G --template '{rev} "{desc}"\n'
   o    12 "c1"
   |\
-  | o  11 "b2x"
+  | _  11 "b2x"
   | |
-  | | o  10 "a7x"
+  | | _  10 "a7x"
   | | |
   o | |  9 "c0"
   | | |
@@ -136,9 +136,9 @@ graph converted repo
   $ hg -R t-sourcesort log -G --template '{rev} "{desc}"\n'
   o    12 "c1"
   |\
-  | o  11 "b2x"
+  | _  11 "b2x"
   | |
-  | | o  10 "a7x"
+  | | _  10 "a7x"
   | | |
   o | |  9 "c0"
   | | |
@@ -189,11 +189,11 @@ graph converted repo
   |\
   | o  11 "c0"
   | |
-  o |  10 "b2x"
+  _ |  10 "b2x"
   | |
   o |  9 "b1"
   | |
-  | | o  8 "a7x"
+  | | _  8 "a7x"
   | | |
   | | o  7 "a6"
   | | |

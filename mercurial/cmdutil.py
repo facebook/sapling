@@ -1915,6 +1915,8 @@ def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
             char = '@'
         elif ctx.obsolete():
             char = 'x'
+        elif ctx.closesbranch():
+            char = '_'
         copies = None
         if getrenamed and ctx.rev():
             copies = []
