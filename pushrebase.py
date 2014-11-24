@@ -106,57 +106,6 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
         data = cg
     )
 
-@command('debugserverrebase', [
-    ('r', 'rev', 'tip', _('revision to push (includes ancestors)')),
-    ('d', 'dest', 'default', _('server revision to rebase onto')),
-    ('e', 'ssh', None, _('specify ssh command to use')),
-    ('', 'newhead', None, _('allow pushing a new head')),
-    ('', 'remotecmd', 'hg', _('specify hg command to run on the remote side')),
-], _('hg debugserverrebase [options] [server]'))
-def debugserverrebase(ui, repo, server='default', **opts):
-    '''For debugging only: manually issues a server-side rebase request.
-
-    Use 'hg push --onto' if you're not hacking on this extension'''
-    
-    rev = scmutil.revsingle(repo, opts['rev'])
-    dest = opts['dest']
-    if not dest:
-        raise util.Abort(_('destination is required for server-side rebase'))
-    peer = hg.peer(repo, opts, ui.expandpath(server))
-
-    outgoing = discovery.findcommonoutgoing(
-        repo.unfiltered(),
-        peer,
-        onlyheads=[rev.node()],
-        commoninc=discovery.findcommonincoming(repo.unfiltered(), peer),
-    )
-
-    remotecaps = bundle2.bundle2caps(peer)
-    bundler = bundle2.bundle20(ui, remotecaps)
-    bundler.newpart(
-        'b2x:replycaps',
-        data=bundle2.encodecaps(bundle2.getrepocaps(repo)),
-    )
-
-    rebasepart = getrebasepart(repo, peer, outgoing, dest, opts.get('newhead'))
-    bundler.addpart(rebasepart)
-
-    # TODO: check whether the following code (copied from standard push) is
-    # appropriate
-    stream = util.chunkbuffer(bundler.getchunks())
-    try:
-        reply = peer.unbundle(stream, ['force'], 'push')
-    except error.BundleValueError, exc:
-        raise util.Abort('missing support for %s' % exc)
-    try:
-        op = bundle2.processbundle(repo, reply)
-    except error.BundleValueError, exc:
-        raise util.Abort('missing support for %s' % exc)
-    #for rephand in replyhandlers:
-    #    rephand(op)
-
-    raise util.Abort('stop')
-
 def _checkheads(orig, repo, remote, *args, **kwargs):
     onto = repo.ui.config(experimental, configonto)
     if onto: # This is a rebasing push
