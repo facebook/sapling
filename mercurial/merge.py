@@ -350,7 +350,6 @@ def _checkcollision(repo, wmf, actions):
             pmmf.discard(f2)
             pmmf.add(f)
         for f, args, msg in actions['dg']:
-            f2, flags = args
             pmmf.add(f)
         for f, args, msg in actions['m']:
             f1, f2, fa, move, anc = args
