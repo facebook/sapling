@@ -7,7 +7,9 @@ import stat
 
 import dulwich.objects as dulobjs
 from dulwich import diff_tree
+from mercurial import util as hgutil
 
+import compat
 import util
 
 def parse_subrepos(ctx):
@@ -19,6 +21,51 @@ def parse_subrepos(ctx):
         substate = util.parse_hgsubstate(
             ctx['.hgsubstate'].data().splitlines())
     return sub, substate
+
+
+def audit_git_path(ui, path):
+    r"""Check for path components that case-fold to .git.
+
+    >>> class fakeui(object):
+    ...     def configbool(*args):
+    ...         return False
+    ...     def warn(self, s):
+    ...         print s
+    >>> u = fakeui()
+    >>> audit_git_path(u, 'foo/git~100/wat')
+    warning: path 'foo/git~100/wat' contains a potentially dangerous path component.
+    It may not be legal to check out in Git.
+    It may also be rejected by some git server configurations.
+    <BLANKLINE>
+    >>> audit_git_path(u, u'foo/.gi\u200ct'.encode('utf-8'))
+    warning: path 'foo/.gi\xe2\x80\x8ct' contains a potentially dangerous path component.
+    It may not be legal to check out in Git.
+    It may also be rejected by some git server configurations.
+    <BLANKLINE>
+    >>> audit_git_path(u, 'this/is/safe')
+    """
+    dangerous = False
+    for c in path.split(os.path.sep):
+        if compat.hfsignoreclean(c) == '.git':
+            dangerous = True
+            break
+        elif '~' in c:
+            base, tail = c.split('~', 1)
+            if tail.isdigit() and base.upper().startswith('GIT'):
+                dangerous = True
+                break
+    if dangerous:
+        if ui.configbool('git', 'blockdotgit', True):
+            raise hgutil.Abort(
+                ('Refusing to export likely-dangerous path %r' % path),
+                hint=("If you need to continue, read about CVE-2014-9390 and "
+                      "then set '[git] blockdotgit = false' in your hgrc."))
+        ui.warn('warning: path %r contains a potentially dangerous path '
+                'component.\n'
+                'It may not be legal to check out in Git.\n'
+                'It may also be rejected by some git server configurations.\n'
+                % path)
+
 
 class IncrementalChangesetExporter(object):
     """Incrementally export Mercurial changesets to Git trees.
@@ -172,6 +219,7 @@ class IncrementalChangesetExporter(object):
         # corresponding Git blob and its tree entry. We emit the blob
         # immediately and update trees to be aware of its presence.
         for path in set(modified) | set(added):
+            audit_git_path(self._hg.ui, path)
             if path == '.hgsubstate' or path == '.hgsub':
                 continue
 
@@ -380,4 +428,3 @@ class IncrementalChangesetExporter(object):
 
         return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode, blob_id),
                 blob)
-
