@@ -762,7 +762,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.debug(" %s: %s -> m\n" % (f, msg))
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
-        f1, f2, fa, move, anc = args
         if f == '.hgsubstate': # subrepo states need updating
             subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
                              overwrite)
