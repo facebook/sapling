@@ -343,7 +343,7 @@ $4 = expected result
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
    preserving b for resolve of b
    preserving rev for resolve of rev
-   b: both created -> m
+   b: both renamed from a -> m
   updating: b 1/2 files (50.00%)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b

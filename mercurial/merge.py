@@ -416,11 +416,15 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             continue
         if n1 and n2:
             if f not in ma:
-                # Note: f as ancestor is wrong - we can't really make a 3-way
-                # merge without an ancestor file.
-                fa = copy.get(f, f)
-                actions['m'].append((f, (f, f, fa, False, pa.node()),
-                               "both created"))
+                fa = copy.get(f, None)
+                if fa is not None:
+                    actions['m'].append((f, (f, f, fa, False, pa.node()),
+                                   "both renamed from " + fa))
+                else:
+                    # Note: f as ancestor is wrong - we can't really make a
+                    # 3-way merge without an ancestor file.
+                    actions['m'].append((f, (f, f, f, False, pa.node()),
+                                   "both created"))
             else:
                 a = ma[f]
                 fla = ma.flags(f)
