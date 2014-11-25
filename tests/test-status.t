@@ -390,3 +390,49 @@ warning message about such pattern.
 #endif
 
   $ cd ..
+
+Status after move overwriting a file (issue4458)
+=================================================
+
+
+  $ hg init issue4458
+  $ cd issue4458
+  $ echo a > a
+  $ echo b > b
+  $ hg commit -Am base
+  adding a
+  adding b
+
+
+with --force
+
+  $ hg mv b --force a
+  $ hg st --copies
+  M a
+    b
+  R b
+  $ hg revert --all
+  reverting a
+  undeleting b
+  $ rm *.orig
+
+without force
+
+  $ hg rm a
+  $ hg st --copies
+  R a
+  $ hg mv b a
+  $ hg st --copies
+  M a
+    b
+  R b
+
+Other "bug" highlight, the revision status does not report the copy information.
+This is buggy behavior.
+
+  $ hg commit -m 'blah'
+  $ hg st --copies --change .
+  M a
+  R b
+
+  $ cd ..

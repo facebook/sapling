@@ -1337,8 +1337,10 @@ class workingctx(committablectx):
         else:
             wlock = self._repo.wlock()
             try:
-                if self._repo.dirstate[dest] in '?r':
+                if self._repo.dirstate[dest] in '?':
                     self._repo.dirstate.add(dest)
+                elif self._repo.dirstate[dest] in 'r':
+                    self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
             finally:
                 wlock.release()
