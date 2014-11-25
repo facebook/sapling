@@ -204,7 +204,7 @@ def add(ui, repo, *pats, **opts):
     return rejected and 1 or 0
 
 @command('addremove',
-    similarityopts + walkopts + dryrunopts,
+    similarityopts + subrepoopts + walkopts + dryrunopts,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
 def addremove(ui, repo, *pats, **opts):

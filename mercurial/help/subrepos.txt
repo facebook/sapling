@@ -81,6 +81,10 @@ Interaction with Mercurial Commands
     Git and Subversion subrepositories are currently silently
     ignored.
 
+:addremove: addremove does not recurse into subrepos unless
+    -S/--subrepos is specified.  Git and Subversion subrepositories
+    will print a warning and continue.
+
 :archive: archive does not recurse in subrepositories unless
     -S/--subrepos is specified.
 

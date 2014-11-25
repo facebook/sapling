@@ -128,11 +128,32 @@ Check that deep archiving works
   R sub1/.hgsubstate
   R sub1/sub2/folder/test.txt
   $ hg update -Cq
+  $ touch sub1/foo
+  $ hg forget sub1/sub2/folder/test.txt
+  $ rm sub1/sub2/test.txt
+
+Test relative path printing + subrepos
+  $ mkdir -p foo/bar
+  $ cd foo
+  $ touch bar/abc
+  $ hg addremove -S ..
+  adding ../sub1/sub2/folder/test.txt (glob)
+  removing ../sub1/sub2/test.txt (glob)
+  adding ../sub1/foo (glob)
+  adding bar/abc (glob)
+  $ cd ..
+  $ hg status -S
+  A foo/bar/abc
+  A sub1/foo
+  R sub1/sub2/test.txt
+  $ hg update -Cq
   $ rm sub1/sub2/folder/test.txt
   $ rm sub1/sub2/test.txt
   $ hg ci -ASm "remove test.txt"
   removing sub1/sub2/folder/test.txt (glob)
   removing sub1/sub2/test.txt (glob)
+  adding sub1/foo (glob)
+  adding foo/bar/abc
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)
   $ hg rollback -q
