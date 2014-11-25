@@ -72,9 +72,14 @@ def auth_getuserpasswd(self, getkey, params):
                 l = os.read(fd, ERRMAX).split()
                 if l[0] == 'ok':
                     os.write(fd, 'read')
-                    l = os.read(fd, ERRMAX).split()
-                    if l[0] == 'ok':
-                        return l[1:]
+                    status, user, passwd = os.read(fd, ERRMAX).split(None, 2)
+                    if status == 'ok':
+                        if passwd.startswith("'"):
+                            if passwd.endswith("'"):
+                                passwd = passwd[1:-1].replace("''", "'")
+                            else:
+                                raise util.Abort(_('malformed password string'))
+                        return (user, passwd)
             except (OSError, IOError):
                 raise util.Abort(_('factotum not responding'))
         finally:
