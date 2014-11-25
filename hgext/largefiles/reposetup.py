@@ -170,6 +170,7 @@ def reposetup(ui, repo):
                     else:
                         tocheck = unsure + modified + added + clean
                         modified, added, clean = [], [], []
+                        checkexec = self.dirstate._checkexec
 
                         for lfile in tocheck:
                             standin = lfutil.standin(lfile)
@@ -177,7 +178,8 @@ def reposetup(ui, repo):
                                 abslfile = self.wjoin(lfile)
                                 if ((ctx1[standin].data().strip() !=
                                      lfutil.hashfile(abslfile)) or
-                                    (('x' in ctx1.flags(standin)) !=
+                                    (checkexec and
+                                     ('x' in ctx1.flags(standin)) !=
                                      bool(lfutil.getexecutable(abslfile)))):
                                     modified.append(lfile)
                                 elif listclean:
