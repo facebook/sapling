@@ -415,28 +415,29 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         if partial and not partial(f):
             continue
         if n1 and n2:
-            fa = f
-            a = ma.get(f, nullid)
-            if a == nullid:
-                fa = copy.get(f, f)
-                # Note: f as default is wrong - we can't really make a 3-way
-                # merge without an ancestor file.
-            fla = ma.flags(fa)
-            nol = 'l' not in fl1 + fl2 + fla
-            if n2 == a and fl2 == fla:
-                actions['k'].append((f, (), "keep")) # remote unchanged
-            elif n1 == a and fl1 == fla: # local unchanged - use remote
-                if n1 == n2: # optimization: keep local content
+            if True:
+                fa = f
+                a = ma.get(f, nullid)
+                if a == nullid:
+                    fa = copy.get(f, f)
+                    # Note: f as default is wrong - we can't really make a 3-way
+                    # merge without an ancestor file.
+                fla = ma.flags(fa)
+                nol = 'l' not in fl1 + fl2 + fla
+                if n2 == a and fl2 == fla:
+                    actions['k'].append((f, (), "keep")) # remote unchanged
+                elif n1 == a and fl1 == fla: # local unchanged - use remote
+                    if n1 == n2: # optimization: keep local content
+                        actions['e'].append((f, (fl2,), "update permissions"))
+                    else:
+                        actions['g'].append((f, (fl2,), "remote is newer"))
+                elif nol and n2 == a: # remote only changed 'x'
                     actions['e'].append((f, (fl2,), "update permissions"))
-                else:
-                    actions['g'].append((f, (fl2,), "remote is newer"))
-            elif nol and n2 == a: # remote only changed 'x'
-                actions['e'].append((f, (fl2,), "update permissions"))
-            elif nol and n1 == a: # local only changed 'x'
-                actions['g'].append((f, (fl1,), "remote is newer"))
-            else: # both changed something
-                actions['m'].append((f, (f, f, fa, False, pa.node()),
-                               "versions differ"))
+                elif nol and n1 == a: # local only changed 'x'
+                    actions['g'].append((f, (fl1,), "remote is newer"))
+                else: # both changed something
+                    actions['m'].append((f, (f, f, fa, False, pa.node()),
+                                   "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
         elif n1 and f in movewithdir: # directory rename, move local
