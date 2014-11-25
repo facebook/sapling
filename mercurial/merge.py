@@ -421,9 +421,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     actions['m'].append((f, (f, f, fa, False, pa.node()),
                                    "both renamed from " + fa))
                 else:
-                    # Note: f as ancestor is wrong - we can't really make a
-                    # 3-way merge without an ancestor file.
-                    actions['m'].append((f, (f, f, f, False, pa.node()),
+                    actions['m'].append((f, (f, f, None, False, pa.node()),
                                    "both created"))
             else:
                 a = ma[f]
@@ -493,8 +491,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             else:
                 different = _checkunknownfile(repo, wctx, p2, f)
                 if force and branchmerge and different:
-                    # FIXME: This is wrong - f is not in ma ...
-                    actions['m'].append((f, (f, f, f, False, pa.node()),
+                    actions['m'].append((f, (f, f, None, False, pa.node()),
                                     "remote differs from untracked local"))
                 elif not force and different:
                     aborts.append((f, 'ud'))
