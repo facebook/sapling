@@ -376,16 +376,15 @@ class remotefilelog(object):
 
             repo = self.repo
 
-            # If we're starting from a hidden node, allow hidden ancestors.
-            firstlinknode = mapping[node][2]
-            if firstlinknode not in repo and firstlinknode in repo.unfiltered():
-                repo = repo.unfiltered()
-
             # When writing new file revisions, we need a ancestormap
             # that contains only linknodes that are ancestors of the new commit.
             # Otherwise it's possible that a linknode in the ancestormap might
             # be stripped, resulting in a permanently broken map.
             if relativeto:
+                # If we're starting from a hidden node, allow hidden ancestors.
+                if relativeto not in repo and relativeto in repo.unfiltered():
+                    repo = repo.unfiltered()
+
                 p1, p2, linknode, copyfrom = mapping[node]
                 if not linknode in repo:
                     return False
