@@ -70,6 +70,17 @@ class overlaymanifest(object):
 
         addtree(self.tree, '')
 
+    def matches(self, match):
+        '''generate a new manifest filtered by the match argument'''
+        if match.always():
+            return self.copy()
+
+        mf = self.copy()
+        for fn in mf.keys():
+            if not match(fn):
+                del mf[fn]
+        return mf
+
     def iteritems(self):
         self.load()
         return self._map.iteritems()
