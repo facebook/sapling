@@ -188,7 +188,7 @@ create a second head
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@1e71731e6fbb+ other a@83c51d0caff4 ancestor a@c19d34741b0a
-   b: versions differ -> m
+   b: both created -> m
   updating: b 2/2 files (100.00%)
   picked tool 'true' for b (binary False symlink False)
   merging b

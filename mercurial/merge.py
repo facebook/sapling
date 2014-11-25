@@ -415,14 +415,15 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         if partial and not partial(f):
             continue
         if n1 and n2:
-            if True:
-                fa = f
-                a = ma.get(f, nullid)
-                if a == nullid:
-                    fa = copy.get(f, f)
-                    # Note: f as default is wrong - we can't really make a 3-way
-                    # merge without an ancestor file.
-                fla = ma.flags(fa)
+            if f not in ma:
+                # Note: f as ancestor is wrong - we can't really make a 3-way
+                # merge without an ancestor file.
+                fa = copy.get(f, f)
+                actions['m'].append((f, (f, f, fa, False, pa.node()),
+                               "both created"))
+            else:
+                a = ma[f]
+                fla = ma.flags(f)
                 nol = 'l' not in fl1 + fl2 + fla
                 if n2 == a and fl2 == fla:
                     actions['k'].append((f, (), "keep")) # remote unchanged
@@ -436,7 +437,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 elif nol and n1 == a: # local only changed 'x'
                     actions['g'].append((f, (fl1,), "remote is newer"))
                 else: # both changed something
-                    actions['m'].append((f, (f, f, fa, False, pa.node()),
+                    actions['m'].append((f, (f, f, f, False, pa.node()),
                                    "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
