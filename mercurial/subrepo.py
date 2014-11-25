@@ -437,6 +437,10 @@ class abstractsubrepo(object):
     def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
         return []
 
+    def addremove(self, matcher, prefix, opts, dry_run, similarity):
+        self._ui.warn("%s: %s" % (prefix, _("addremove is not supported")))
+        return 1
+
     def cat(self, ui, match, prefix, **opts):
         return 1
 
@@ -618,6 +622,11 @@ class hgsubrepo(abstractsubrepo):
     def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
         return cmdutil.add(ui, self._repo, match, dryrun, listsubrepos,
                            os.path.join(prefix, self._path), explicitonly)
+
+    def addremove(self, m, prefix, opts, dry_run, similarity):
+        return scmutil.addremove(self._repo, m,
+                                 os.path.join(prefix, self._path), opts,
+                                 dry_run, similarity)
 
     @annotatesubrepoerror
     def cat(self, ui, match, prefix, **opts):

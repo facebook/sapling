@@ -713,12 +713,27 @@ def matchfiles(repo, files):
     '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files)
 
-def addremove(repo, matcher, opts={}, dry_run=None, similarity=None):
+def addremove(repo, matcher, prefix, opts={}, dry_run=None, similarity=None):
     m = matcher
     if dry_run is None:
         dry_run = opts.get('dry_run')
     if similarity is None:
         similarity = float(opts.get('similarity') or 0)
+
+    ret = 0
+    join = lambda f: os.path.join(prefix, f)
+
+    wctx = repo[None]
+    for subpath in sorted(wctx.substate):
+        if opts.get('subrepos'):
+            sub = wctx.sub(subpath)
+            try:
+                submatch = matchmod.narrowmatcher(subpath, m)
+                if sub.addremove(submatch, prefix, opts, dry_run, similarity):
+                    ret = 1
+            except error.LookupError:
+                repo.ui.status(_("skipping missing subrepository: %s\n")
+                                 % join(subpath))
 
     rejected = []
     origbad = m.bad
@@ -737,9 +752,9 @@ def addremove(repo, matcher, opts={}, dry_run=None, similarity=None):
     for abs in sorted(toprint):
         if repo.ui.verbose or not m.exact(abs):
             if abs in unknownset:
-                status = _('adding %s\n') % m.uipath(abs)
+                status = _('adding %s\n') % m.uipath(join(abs))
             else:
-                status = _('removing %s\n') % m.uipath(abs)
+                status = _('removing %s\n') % m.uipath(join(abs))
             repo.ui.status(status)
 
     renames = _findrenames(repo, m, added + unknown, removed + deleted,
@@ -751,7 +766,7 @@ def addremove(repo, matcher, opts={}, dry_run=None, similarity=None):
     for f in rejected:
         if f in m.files():
             return 1
-    return 0
+    return ret
 
 def marktouched(repo, files, similarity=0.0):
     '''Assert that files have somehow been operated upon. files are relative to

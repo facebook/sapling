@@ -106,8 +106,8 @@ Check that deep archiving works
   $ hg --config extensions.largefiles=! add sub1/sub2/test.txt
   $ mkdir sub1/sub2/folder
   $ echo 'subfolder' > sub1/sub2/folder/test.txt
-  $ hg --config extensions.largefiles=! add sub1/sub2/folder/test.txt
-  $ hg ci -Sm "add test.txt"
+  $ hg ci -ASm "add test.txt"
+  adding sub1/sub2/folder/test.txt (glob)
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)
 
@@ -128,6 +128,15 @@ Check that deep archiving works
   R sub1/.hgsubstate
   R sub1/sub2/folder/test.txt
   $ hg update -Cq
+  $ rm sub1/sub2/folder/test.txt
+  $ rm sub1/sub2/test.txt
+  $ hg ci -ASm "remove test.txt"
+  removing sub1/sub2/folder/test.txt (glob)
+  removing sub1/sub2/test.txt (glob)
+  committing subrepository sub1
+  committing subrepository sub1/sub2 (glob)
+  $ hg rollback -q
+  $ hg up -Cq
 
   $ hg --config extensions.largefiles=! archive -S ../archive_all
   $ find ../archive_all | sort

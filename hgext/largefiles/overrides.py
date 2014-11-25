@@ -1084,10 +1084,10 @@ def overridesummary(orig, ui, repo, *pats, **opts):
     finally:
         repo.lfstatus = False
 
-def scmutiladdremove(orig, repo, matcher, opts={}, dry_run=None,
+def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
                      similarity=None):
     if not lfutil.islfilesrepo(repo):
-        return orig(repo, matcher, opts, dry_run, similarity)
+        return orig(repo, matcher, prefix, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
     unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [],
@@ -1107,7 +1107,7 @@ def scmutiladdremove(orig, repo, matcher, opts={}, dry_run=None,
     # function to take care of the rest.  Make sure it doesn't do anything with
     # largefiles by passing a matcher that will ignore them.
     matcher = composenormalfilematcher(matcher, repo[None].manifest())
-    return orig(repo, matcher, opts, dry_run, similarity)
+    return orig(repo, matcher, prefix, opts, dry_run, similarity)
 
 # Calling purge with --all will cause the largefiles to be deleted.
 # Override repo.status to prevent this from happening.

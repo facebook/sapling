@@ -94,7 +94,9 @@ Interaction with Mercurial Commands
     -S/--subrepos, or setting "ui.commitsubrepos=True" in a
     configuration file (see :hg:`help config`).  After there are no
     longer any modified subrepositories, it records their state and
-    finally commits it in the parent repository.
+    finally commits it in the parent repository.  The --addremove
+    option also honors the -S/--subrepos option.  However, Git and
+    Subversion subrepositories will print a warning and abort.
 
 :diff: diff does not recurse in subrepos unless -S/--subrepos is
     specified. Changes are displayed as usual, on the subrepositories
