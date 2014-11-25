@@ -608,6 +608,31 @@ the working context)
   $ hg status -A --rev '.^1' large2
   M large2
 
+#else
+
+Test that "hg status" against revisions other than parent ignores exec
+bit correctly on the platform being unaware of it.
+
+  $ hg update -q -C 4
+
+  $ cat > exec-bit.patch <<EOF
+  > # HG changeset patch
+  > # User test
+  > # Date 0 0
+  > #      Thu Jan 01 00:00:00 1970 +0000
+  > # Node ID be1b433a65b12b27b5519d92213e14f7e1769b90
+  > # Parent  07d6153b5c04313efb75deec9ba577de7faeb727
+  > chmod +x large2
+  > 
+  > diff --git a/.hglf/large2 b/.hglf/large2
+  > old mode 100644
+  > new mode 100755
+  > EOF
+  $ hg import --exact --bypass exec-bit.patch
+  applying exec-bit.patch
+  $ hg status -A --rev tip large2
+  C large2
+
 #endif
 
   $ cd ..
