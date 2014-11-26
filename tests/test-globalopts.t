@@ -315,7 +315,7 @@ Testing -h/--help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    outgoing      show changesets not found in the destination
    paths         show aliases for remote repositories
    phase         set or show the current phase name
@@ -396,7 +396,7 @@ Testing -h/--help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    outgoing      show changesets not found in the destination
    paths         show aliases for remote repositories
    phase         set or show the current phase name

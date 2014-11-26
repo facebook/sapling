@@ -68,7 +68,7 @@ typical client does not want echo-back messages, so test without it:
    forget        forget the specified files on the next commit
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
