@@ -601,7 +601,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
         repo.ui.note(_('end of auction\n\n'))
 
     # Prompt and create actions. TODO: Move this towards resolve phase.
-    for f, args, msg in actions['cd']:
+    for f, args, msg in sorted(actions['cd']):
         if f in ancestors[0] and not wctx[f].cmp(ancestors[0][f]):
             # local did change but ended up with same content
             actions['r'].append((f, None, "prompt same"))
@@ -614,7 +614,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             actions['a'].append((f, None, "prompt keep"))
     del actions['cd'][:]
 
-    for f, args, msg in actions['dc']:
+    for f, args, msg in sorted(actions['dc']):
         flags, = args
         if f in ancestors[0] and not mctx[f].cmp(ancestors[0][f]):
             # remote did change but ended up with same content
