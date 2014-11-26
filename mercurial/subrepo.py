@@ -372,6 +372,9 @@ def newcommitphase(ui, ctx):
 
 class abstractsubrepo(object):
 
+    def __init__(self, ui):
+        self._ui = ui
+
     def storeclean(self, path):
         """
         returns true if the repository has not changed since it was last
@@ -508,6 +511,7 @@ class abstractsubrepo(object):
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
+        super(hgsubrepo, self).__init__(ctx._repo.ui)
         self._path = path
         self._state = state
         r = ctx._repo
@@ -878,6 +882,7 @@ class hgsubrepo(abstractsubrepo):
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
+        super(svnsubrepo, self).__init__(ctx._repo.ui)
         self._path = path
         self._state = state
         self._ctx = ctx
@@ -1108,6 +1113,7 @@ class svnsubrepo(abstractsubrepo):
 
 class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
+        super(gitsubrepo, self).__init__(ctx._repo.ui)
         self._state = state
         self._ctx = ctx
         self._path = path
