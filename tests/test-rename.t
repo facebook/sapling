@@ -584,7 +584,8 @@ overwriting with renames (issue1959)
   copy from d1/a
   copy to d1/c
   $ hg update -C
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm d1/c # The file was marked as added, so 'hg update' action  was 'forget'
 
 check illegal path components
 
