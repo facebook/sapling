@@ -457,7 +457,10 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     actions['r'].append((f, None, "remote delete"))
                 else:
                     actions['cd'].append((f, None, "prompt changed/deleted"))
-            elif n1[20:] == 'a': # added, no remote
+            elif n1[20:] == 'a':
+                # This extra 'a' is added by working copy manifest to mark the
+                # file as locally added. We should forget it instead of
+                # deleting it.
                 actions['f'].append((f, None, "remote deleted"))
             else:
                 actions['r'].append((f, None, "other deleted"))

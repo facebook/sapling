@@ -1035,7 +1035,13 @@ class committablectx(basectx):
 
     @propertycache
     def _manifest(self):
-        """generate a manifest corresponding to the values in self._status"""
+        """generate a manifest corresponding to the values in self._status
+
+        This reuse the file nodeid from parent, but we append an extra letter
+        when modified.  Modified files get an extra 'm' while added files get
+        appened an extra 'a'. This is used by manifests merge to see that files
+        are different and by update logic to avoid deleting newly added files.
+        """
 
         man1 = self._parents[0].manifest()
         man = man1.copy()
