@@ -79,4 +79,19 @@
   $ hg addremove -s 50
   adding b
   adding c
+
+  $ rm c
+#if windows
+  $ hg ci -A -m "c" nonexistant
+  nonexistant: The system cannot find the file specified
+  abort: failed to mark all new/missing files as added/removed
+  [255]
+#else
+  $ hg ci -A -m "c" nonexistant
+  nonexistant: No such file or directory
+  abort: failed to mark all new/missing files as added/removed
+  [255]
+#endif
+  $ hg st
+  ! c
   $ cd ..

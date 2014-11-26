@@ -2202,7 +2202,9 @@ def commit(ui, repo, commitfunc, pats, opts):
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
     if opts.get('addremove'):
-        scmutil.addremove(repo, matcher, opts)
+        if scmutil.addremove(repo, matcher, opts) != 0:
+            raise util.Abort(
+                _("failed to mark all new/missing files as added/removed"))
 
     return commitfunc(ui, repo, message, matcher, opts)
 
