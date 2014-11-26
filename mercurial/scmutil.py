@@ -721,9 +721,15 @@ def addremove(repo, matcher, opts={}, dry_run=None, similarity=None):
         similarity = float(opts.get('similarity') or 0)
 
     rejected = []
-    m.bad = lambda x, y: rejected.append(x)
+    origbad = m.bad
+    def badfn(f, msg):
+        if f in m.files():
+            origbad(f, msg)
+        rejected.append(f)
 
+    m.bad = badfn
     added, unknown, deleted, removed, forgotten = _interestingfiles(repo, m)
+    m.bad = origbad
 
     unknownset = set(unknown + forgotten)
     toprint = unknownset.copy()

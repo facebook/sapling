@@ -22,6 +22,16 @@
   $ hg forget foo
   $ hg -v addremove
   adding foo
+  $ hg forget foo
+#if windows
+  $ hg -v addremove nonexistant
+  nonexistant: The system cannot find the file specified
+  [1]
+#else
+  $ hg -v addremove nonexistant
+  nonexistant: No such file or directory
+  [1]
+#endif
   $ cd ..
 
   $ hg init subdir
