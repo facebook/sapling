@@ -377,6 +377,7 @@ def _fm1encodeonemarker(marker):
 formats = {_fm0version: (_fm0readmarkers, _fm0encodeonemarker),
            _fm1version: (_fm1readmarkers, _fm1encodeonemarker)}
 
+@util.nogc
 def _readmarkers(data):
     """Read and enumerate markers from raw data"""
     off = 0
@@ -562,6 +563,7 @@ class obsstore(object):
         version, markers = _readmarkers(data)
         return self.add(transaction, markers)
 
+    @util.nogc
     def _load(self, markers):
         for mark in markers:
             self._all.append(mark)
