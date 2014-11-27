@@ -74,6 +74,7 @@ from i18n import _
 
 _pack = struct.pack
 _unpack = struct.unpack
+_calcsize = struct.calcsize
 
 _SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 
@@ -142,8 +143,8 @@ usingsha256 = 2
 _fm0version = 0
 _fm0fixed   = '>BIB20s'
 _fm0node = '20s'
-_fm0fsize = struct.calcsize(_fm0fixed)
-_fm0fnodesize = struct.calcsize(_fm0node)
+_fm0fsize = _calcsize(_fm0fixed)
+_fm0fnodesize = _calcsize(_fm0node)
 
 def _fm0readmarkers(data, off=0):
     # Loop on markers
@@ -275,12 +276,12 @@ _fm1version = 1
 _fm1fixed = '>IdhHBBB20s'
 _fm1nodesha1 = '20s'
 _fm1nodesha256 = '32s'
-_fm1fsize = struct.calcsize(_fm1fixed)
+_fm1fsize = _calcsize(_fm1fixed)
 _fm1parentnone = 3
 _fm1parentshift = 14
 _fm1parentmask = (_fm1parentnone << _fm1parentshift)
 _fm1metapair = 'BB'
-_fm1metapairsize = struct.calcsize('BB')
+_fm1metapairsize = _calcsize('BB')
 
 def _fm1readmarkers(data, off=0):
     # Loop on markers
@@ -299,7 +300,7 @@ def _fm1readmarkers(data, off=0):
         _fm1node = _fm1nodesha1
         if flags & usingsha256:
             _fm1node = _fm1nodesha256
-        fnodesize = struct.calcsize(_fm1node)
+        fnodesize = _calcsize(_fm1node)
         # read replacement
         sucs = ()
         if numsuc:
@@ -358,7 +359,7 @@ def _fm1encodeonemarker(marker):
     data.extend(sucs)
     if parents is not None:
         data.extend(parents)
-    totalsize = struct.calcsize(format)
+    totalsize = _calcsize(format)
     for key, value in metadata:
         lk = len(key)
         lv = len(value)
