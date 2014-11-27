@@ -156,8 +156,6 @@ def addlargefiles(ui, repo, matcher, **opts):
 
 def removelargefiles(ui, repo, isaddremove, *pats, **opts):
     after = opts.get('after')
-    if not pats and not after:
-        raise util.Abort(_('no files specified'))
     m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
                                 repo[None].manifest())
     try:
