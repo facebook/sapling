@@ -107,7 +107,7 @@ Check that deep archiving works
   $ mkdir sub1/sub2/folder
   $ echo 'subfolder' > sub1/sub2/folder/test.txt
   $ hg ci -ASm "add test.txt"
-  adding sub1/sub2/folder/test.txt (glob)
+  adding sub1/sub2/folder/test.txt
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)
 
@@ -162,10 +162,10 @@ Test relative path printing + subrepos
   $ rm sub1/sub2/folder/test.txt
   $ rm sub1/sub2/test.txt
   $ hg ci -ASm "remove test.txt"
-  adding sub1/sub2/folder/bar (glob)
-  removing sub1/sub2/folder/test.txt (glob)
-  removing sub1/sub2/test.txt (glob)
-  adding sub1/foo (glob)
+  adding sub1/sub2/folder/bar
+  removing sub1/sub2/folder/test.txt
+  removing sub1/sub2/test.txt
+  adding sub1/foo
   adding foo/bar/abc
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)

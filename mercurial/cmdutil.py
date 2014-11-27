@@ -1991,7 +1991,7 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
                 cca(f)
             names.append(f)
             if ui.verbose or not exact:
-                ui.status(_('adding %s\n') % match.rel(join(f)))
+                ui.status(_('adding %s\n') % match.rel(f))
 
     for subpath in sorted(wctx.substate):
         sub = wctx.sub(subpath)
@@ -2042,12 +2042,12 @@ def forget(ui, repo, match, prefix, explicitonly):
                     if repo.wvfs.exists(f):
                         ui.warn(_('not removing %s: '
                                   'file is already untracked\n')
-                                % match.rel(join(f)))
+                                % match.rel(f))
                     bad.append(f)
 
     for f in forget:
         if ui.verbose or not match.exact(f):
-            ui.status(_('removing %s\n') % match.rel(join(f)))
+            ui.status(_('removing %s\n') % match.rel(f))
 
     rejected = wctx.forget(forget, prefix)
     bad.extend(f for f in rejected if f in match.files())
@@ -2095,10 +2095,10 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
         if repo.wvfs.exists(f):
             if repo.wvfs.isdir(f):
                 ui.warn(_('not removing %s: no tracked files\n')
-                        % m.rel(join(f)))
+                        % m.rel(f))
             else:
                 ui.warn(_('not removing %s: file is untracked\n')
-                        % m.rel(join(f)))
+                        % m.rel(f))
         # missing files will generate a warning elsewhere
         ret = 1
 
@@ -2107,22 +2107,22 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
     elif after:
         list = deleted
         for f in modified + added + clean:
-            ui.warn(_('not removing %s: file still exists\n') % m.rel(join(f)))
+            ui.warn(_('not removing %s: file still exists\n') % m.rel(f))
             ret = 1
     else:
         list = deleted + clean
         for f in modified:
             ui.warn(_('not removing %s: file is modified (use -f'
-                      ' to force removal)\n') % m.rel(join(f)))
+                      ' to force removal)\n') % m.rel(f))
             ret = 1
         for f in added:
             ui.warn(_('not removing %s: file has been marked for add'
-                      ' (use forget to undo)\n') % m.rel(join(f)))
+                      ' (use forget to undo)\n') % m.rel(f))
             ret = 1
 
     for f in sorted(list):
         if ui.verbose or not m.exact(f):
-            ui.status(_('removing %s\n') % m.rel(join(f)))
+            ui.status(_('removing %s\n') % m.rel(f))
 
     wlock = repo.wlock()
     try:

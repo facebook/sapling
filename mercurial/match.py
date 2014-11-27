@@ -138,7 +138,7 @@ class match(object):
         '''Convert repo path to a display path.  If patterns or -I/-X were used
         to create this matcher, the display path will be relative to cwd.
         Otherwise it is relative to the root of the repo.'''
-        return (self._pathrestricted and self.rel(f)) or f
+        return (self._pathrestricted and self.rel(f)) or self.abs(f)
 
     def files(self):
         '''Explicitly listed files or patterns or roots:
@@ -186,8 +186,8 @@ class narrowmatcher(match):
     ['b.txt']
     >>> m2.exact('b.txt')
     True
-    >>> m2.rel('b.txt')
-    'b.txt'
+    >>> util.pconvert(m2.rel('b.txt'))
+    'sub/b.txt'
     >>> def bad(f, msg):
     ...     print "%s: %s" % (f, msg)
     >>> m1.bad = bad
@@ -216,6 +216,9 @@ class narrowmatcher(match):
 
     def bad(self, f, msg):
         self._matcher.bad(self._path + "/" + f, msg)
+
+    def rel(self, f):
+        return self._matcher.rel(self._path + "/" + f)
 
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
