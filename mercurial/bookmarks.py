@@ -30,15 +30,7 @@ class bmstore(dict):
         dict.__init__(self)
         self._repo = repo
         try:
-            bkfile = None
-            if 'HG_PENDING' in os.environ:
-                try:
-                    bkfile = repo.vfs('bookmarks.pending')
-                except IOError, inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
-            if bkfile is None:
-                bkfile = repo.vfs('bookmarks')
+            bkfile = self.getbkfile(repo)
             for line in bkfile:
                 line = line.strip()
                 if not line:
@@ -56,6 +48,18 @@ class bmstore(dict):
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
+
+    def getbkfile(self, repo):
+        bkfile = None
+        if 'HG_PENDING' in os.environ:
+            try:
+                bkfile = repo.vfs('bookmarks.pending')
+            except IOError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+        if bkfile is None:
+            bkfile = repo.vfs('bookmarks')
+        return bkfile
 
     def recordchange(self, tr):
         """record that bookmarks have been changed in a transaction
