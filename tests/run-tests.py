@@ -627,6 +627,8 @@ class Test(unittest.TestCase):
             (r':%s\b' % self._startport, ':$HGPORT'),
             (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
             (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
+            (r'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
+             r'\1 (glob)'),
             ]
 
         if os.name == 'nt':
@@ -1025,6 +1027,9 @@ class TTest(Test):
             if el.endswith(" (re)\n"):
                 return TTest.rematch(el[:-6], l)
             if el.endswith(" (glob)\n"):
+                # ignore '(glob)' added to l by 'replacements'
+                if l.endswith(" (glob)\n"):
+                    l = l[:-8] + "\n"
                 return TTest.globmatch(el[:-8], l)
             if os.altsep and l.replace('\\', '/') == el:
                 return '+glob'

@@ -297,24 +297,43 @@ View the fix
 
 Accept the fix
 
-  $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` -i
+  $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
+  $ echo "  saved backup bundle to \$TESTTMP/foo.hg" >> test-failure.t
+  $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
+  $ echo "  saved backup bundle to \$TESTTMP/foo.hg (glob)" >> test-failure.t
+  $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
+  $ echo "  saved backup bundle to \$TESTTMP/*.hg (glob)" >> test-failure.t
+  $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` -i 2>&1 | \
+  >   sed -e 's,(glob)$,&<,g'
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,9 +1,9 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
+  -  saved backup bundle to $TESTTMP/foo.hg
+  +  saved backup bundle to $TESTTMP/foo.hg (glob)<
+     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
+     saved backup bundle to $TESTTMP/foo.hg (glob)<
+     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
   Accept this change? [n] ..
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
-  $ cat test-failure.t
+  $ sed -e 's,(glob)$,&<,g' test-failure.t
     $ echo babar
     babar
   This is a noop statement so that
   this test is still more bytes than success.
+    $ echo 'saved backup bundle to $TESTTMP/foo.hg'
+    saved backup bundle to $TESTTMP/foo.hg (glob)<
+    $ echo 'saved backup bundle to $TESTTMP/foo.hg'
+    saved backup bundle to $TESTTMP/foo.hg (glob)<
+    $ echo 'saved backup bundle to $TESTTMP/foo.hg'
+    saved backup bundle to $TESTTMP/*.hg (glob)<
 
 (reinstall)
   $ mv backup test-failure.t
