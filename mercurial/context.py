@@ -1037,15 +1037,16 @@ class committablectx(basectx):
     def _manifest(self):
         """generate a manifest corresponding to the values in self._status"""
 
-        man = self._parents[0].manifest().copy()
+        man1 = self._parents[0].manifest()
+        man = man1.copy()
         if len(self._parents) > 1:
             man2 = self.p2().manifest()
             def getman(f):
-                if f in man:
-                    return man
+                if f in man1:
+                    return man1
                 return man2
         else:
-            getman = lambda f: man
+            getman = lambda f: man1
 
         copied = self._repo.dirstate.copies()
         ff = self._flagfunc
@@ -1310,8 +1311,10 @@ class workingctx(committablectx):
         else:
             wlock = self._repo.wlock()
             try:
-                if self._repo.dirstate[dest] in '?r':
+                if self._repo.dirstate[dest] in '?':
                     self._repo.dirstate.add(dest)
+                elif self._repo.dirstate[dest] in 'r':
+                    self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
             finally:
                 wlock.release()

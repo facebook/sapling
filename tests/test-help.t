@@ -14,7 +14,7 @@ Short help:
    forget        forget the specified files on the next commit
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -35,7 +35,7 @@ Short help:
    forget        forget the specified files on the next commit
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -78,7 +78,7 @@ Short help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    outgoing      show changesets not found in the destination
    paths         show aliases for remote repositories
    phase         set or show the current phase name
@@ -153,7 +153,7 @@ Short help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    outgoing      show changesets not found in the destination
    paths         show aliases for remote repositories
    phase         set or show the current phase name
@@ -293,7 +293,7 @@ Test short command list with verbose option
    forget        forget the specified files on the next commit
    init          create a new repository in the given directory
    log, history  show revision history of entire repository or files
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove, rm    remove the specified files on the next commit
@@ -600,7 +600,7 @@ Test command without options
    forget        forget the specified files on the next commit
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -695,7 +695,7 @@ Test that default list of commands omits extension commands
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    manifest      output the current or given revision of the project manifest
-   merge         merge working directory with another revision
+   merge         merge another revision into working directory
    outgoing      show changesets not found in the destination
    paths         show aliases for remote repositories
    phase         set or show the current phase name
@@ -1363,7 +1363,7 @@ Dish up an empty repo; serve it cold.
   merge
   </a>
   </td><td>
-  merge working directory with another revision
+  merge another revision into working directory
   </td></tr>
   <tr><td>
   <a href="/help/pull">

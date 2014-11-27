@@ -2615,12 +2615,16 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             dsmodified = modified
             dsadded = added
             dsremoved = removed
+            # store all local modifications, useful later for rename detection
+            localchanges = dsmodified | dsadded
             modified, added, removed = set(), set(), set()
         else:
             changes = repo.status(node1=parent, match=m)
             dsmodified = set(changes.modified)
             dsadded    = set(changes.added)
             dsremoved  = set(changes.removed)
+            # store all local modifications, useful later for rename detection
+            localchanges = dsmodified | dsadded
 
             # only take into account for removes between wc and target
             clean |= dsremoved - removed
@@ -2654,7 +2658,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         # if f is a rename, update `names` to also revert the source
         cwd = repo.getcwd()
-        for f in dsadded:
+        for f in localchanges:
             src = repo.dirstate.copied(f)
             # XXX should we check for rename down to target node?
             if src and src not in names and repo.dirstate[src] == 'r':

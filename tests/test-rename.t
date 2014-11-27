@@ -571,20 +571,30 @@ overwriting with renames (issue1959)
   $ hg rename d1/a d1/c
   $ hg rename d1/b d1/a
   $ hg status -C
-  A d1/a
+  M d1/a
     d1/b
   A d1/c
     d1/a
   R d1/b
   $ hg diff --git
-  diff --git a/d1/b b/d1/a
-  rename from d1/b
-  rename to d1/a
+  diff --git a/d1/a b/d1/a
+  --- a/d1/a
+  +++ b/d1/a
+  @@ -1,1 +1,1 @@
+  -d1/a
+  +d1/b
+  diff --git a/d1/b b/d1/b
+  deleted file mode 100644
+  --- a/d1/b
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -d1/b
   diff --git a/d1/a b/d1/c
   copy from d1/a
   copy to d1/c
   $ hg update -C
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm d1/c # The file was marked as added, so 'hg update' action  was 'forget'
 
 check illegal path components
 

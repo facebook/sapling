@@ -4524,7 +4524,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
      ] + mergetoolopts,
     _('[-P] [-f] [[-r] REV]'))
 def merge(ui, repo, node=None, **opts):
-    """merge working directory with another revision
+    """merge another revision into working directory
 
     The current working directory is updated with all changes made in
     the requested revision since the last common predecessor revision.

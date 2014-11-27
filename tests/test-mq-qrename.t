@@ -76,8 +76,8 @@ Test overlapping renames (issue2388)
   $ hg qrename patchb patchc
   $ hg qrename patcha patchb
   $ hg st --mq
+  M patchb
   M series
-  A patchb
   A patchc
   R patcha
   $ cd ..
