@@ -276,6 +276,8 @@ _fm1version = 1
 _fm1fixed = '>IdhHBBB20s'
 _fm1nodesha1 = '20s'
 _fm1nodesha256 = '32s'
+_fm1nodesha1size = _calcsize(_fm1nodesha1)
+_fm1nodesha256size = _calcsize(_fm1nodesha256)
 _fm1fsize = _calcsize(_fm1fixed)
 _fm1parentnone = 3
 _fm1parentshift = 14
@@ -298,9 +300,10 @@ def _fm1readmarkers(data, off=0):
         # build the date tuple (upgrade tz minutes to seconds)
         date = (seconds, tz * 60)
         _fm1node = _fm1nodesha1
+        fnodesize = _fm1nodesha1size
         if flags & usingsha256:
             _fm1node = _fm1nodesha256
-        fnodesize = _calcsize(_fm1node)
+            fnodesize = _fm1nodesha256size
         # read replacement
         sucs = ()
         if numsuc:
