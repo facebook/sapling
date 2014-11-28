@@ -303,38 +303,34 @@ class patchheader(object):
                                    for c in self.comments))
 
     def setuser(self, user):
-        if not self.updateheader(['From: ', '# User '], user):
-            try:
-                inserthgheader(self.comments, '# User ', user)
-            except ValueError:
-                if self.plainmode:
-                    insertplainheader(self.comments, 'From', user)
-                else:
-                    tmp = ['# HG changeset patch', '# User ' + user]
-                    self.comments = tmp + self.comments
+        try:
+            inserthgheader(self.comments, '# User ', user)
+        except ValueError:
+            if self.plainmode:
+                insertplainheader(self.comments, 'From', user)
+            else:
+                tmp = ['# HG changeset patch', '# User ' + user]
+                self.comments = tmp + self.comments
         self.user = user
 
     def setdate(self, date):
-        if not self.updateheader(['Date: ', '# Date '], date):
-            try:
-                inserthgheader(self.comments, '# Date ', date)
-            except ValueError:
-                if self.plainmode:
-                    insertplainheader(self.comments, 'Date', date)
-                else:
-                    tmp = ['# HG changeset patch', '# Date ' + date]
-                    self.comments = tmp + self.comments
+        try:
+            inserthgheader(self.comments, '# Date ', date)
+        except ValueError:
+            if self.plainmode:
+                insertplainheader(self.comments, 'Date', date)
+            else:
+                tmp = ['# HG changeset patch', '# Date ' + date]
+                self.comments = tmp + self.comments
         self.date = date
 
     def setparent(self, parent):
-        if not (self.updateheader(['# Parent  '], parent) or
-                self.updateheader(['# Parent '], parent)):
-            try:
-                inserthgheader(self.comments, '# Parent  ', parent)
-            except ValueError:
-                if not self.plainmode:
-                    tmp = ['# HG changeset patch', '# Parent  ' + parent]
-                    self.comments = tmp + self.comments
+        try:
+            inserthgheader(self.comments, '# Parent  ', parent)
+        except ValueError:
+            if not self.plainmode:
+                tmp = ['# HG changeset patch', '# Parent  ' + parent]
+                self.comments = tmp + self.comments
         self.parent = parent
 
     def setmessage(self, message):
@@ -345,18 +341,6 @@ class patchheader(object):
             if self.plainmode and self.comments and self.comments[-1]:
                 self.comments.append('')
             self.comments.append(message)
-
-    def updateheader(self, prefixes, new):
-        '''Update all references to a field in the patch header.
-        Return whether the field is present.'''
-        res = False
-        for prefix in prefixes:
-            for i in xrange(len(self.comments)):
-                if self.comments[i].startswith(prefix):
-                    self.comments[i] = prefix + new
-                    res = True
-                    break
-        return res
 
     def __str__(self):
         s = '\n'.join(self.comments).rstrip()
