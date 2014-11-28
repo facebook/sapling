@@ -412,8 +412,8 @@
   1: Three (again) - test
   0: [mq]: 1.patch - test
   ==== qref -d
-  Date: 12 0
   From: jane
+  Date: 12 0
   
   diff -r ... 6
   --- /dev/null
@@ -465,8 +465,8 @@
   1: Three (again) - test
   0: [mq]: 1.patch - test
   ==== qref -u -d
-  Date: 14 0
   From: john
+  Date: 14 0
   
   diff -r ... 8
   --- /dev/null
@@ -495,8 +495,8 @@
   1: Three (again) - test
   0: [mq]: 1.patch - test
   ==== qref -u -d
-  Date: 15 0
   From: john
+  Date: 15 0
   
   Nine
   
