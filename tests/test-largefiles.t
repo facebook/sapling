@@ -491,7 +491,7 @@ Test addremove with -R
   $ echo "testing addremove with patterns" > testaddremove.dat
   $ echo "normaladdremove" > normaladdremove
   $ cd ..
-  $ hg -R a addremove
+  $ hg -R a -v addremove
   removing sub/large4
   adding a/testaddremove.dat as a largefile (glob)
   removing normal3

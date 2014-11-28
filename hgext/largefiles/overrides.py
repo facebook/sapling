@@ -189,21 +189,16 @@ def removelargefiles(ui, repo, isaddremove, *pats, **opts):
         result = warn(added, _('not removing %s: file has been marked for add'
                                ' (use forget to undo)\n')) or result
 
-    for f in sorted(remove):
-        if ui.verbose or not m.exact(f):
-            ui.status(_('removing %s\n') % m.rel(f))
-
     # Need to lock because standin files are deleted then removed from the
     # repository and we could race in-between.
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
-        for f in remove:
-            if not after:
-                # If this is being called by addremove, notify the user that we
-                # are removing the file.
-                if isaddremove:
-                    ui.status(_('removing %s\n') % f)
+        for f in sorted(remove):
+            if isaddremove:
+                ui.status(_('removing %s\n') % f)
+            elif ui.verbose or not m.exact(f):
+                ui.status(_('removing %s\n') % m.rel(f))
 
             if not opts.get('dry_run'):
                 if not after:
