@@ -81,6 +81,7 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         except Exception:
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
+            self._done()
             tb = "".join(traceback.format_exception(*sys.exc_info()))
             self.log_error("Exception happened during processing "
                            "request '%s':\n%s", self.path, tb)

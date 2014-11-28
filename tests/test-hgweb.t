@@ -579,4 +579,30 @@ errors
 
   $ cat errors.log
 
+Uncaught exceptions result in a logged error and canned HTTP response
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg --config extensions.hgweberror=$TESTDIR/hgweberror.py serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ $TESTDIR/get-with-headers.py localhost:$HGPORT 'raiseerror' transfer-encoding content-type
+  500 Internal Server Error
+  transfer-encoding: chunked
+  
+  Internal Server Error (no-eol)
+  [1]
+
+  $ head -1 errors.log
+  .* Exception happened during processing request '/raiseerror': (re)
+
+Uncaught exception after partial content sent
+
+  $ $TESTDIR/get-with-headers.py localhost:$HGPORT 'raiseerror?partialresponse=1' transfer-encoding content-type
+  200 Script output follows
+  transfer-encoding: chunked
+  content-type: text/plain
+  
+  partial content
+  Internal Server Error (no-eol)
+
   $ cd ..
