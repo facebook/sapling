@@ -119,7 +119,10 @@ clone root separately, make different local change
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../tb/s
+  $ hg status --subrepos
   $ echo f > f
+  $ hg status --subrepos
+  ? s/f
   $ git add f
   $ cd ..
 
@@ -422,6 +425,7 @@ Check hg update --clean
   $ hg status -S
   M s/g
   A s/f1
+  ? s/f2
   $ ls s
   f
   f1
@@ -430,6 +434,8 @@ Check hg update --clean
   $ hg update --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -S
+  ? s/f1
+  ? s/f2
   $ ls s
   f
   f1

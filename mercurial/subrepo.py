@@ -1570,6 +1570,15 @@ class gitsubrepo(abstractsubrepo):
                 removed.append(f)
 
         deleted, unknown, ignored, clean = [], [], [], []
+
+        if not rev2:
+            command = ['ls-files', '--others', '--exclude-standard']
+            out = self._gitcommand(command)
+            for line in out.split('\n'):
+                if len(line) == 0:
+                    continue
+                unknown.append(line)
+
         return scmutil.status(modified, added, removed, deleted,
                               unknown, ignored, clean)
 
