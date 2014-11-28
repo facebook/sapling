@@ -113,7 +113,6 @@ HGHEADERS = [
     '# Branch ',
     '# Node ID ',
     '# Parent  ', # can occur twice for merges - but that is not relevant for mq
-    '', # all lines after headers 'has' this prefix - simplifies the algorithm
     ]
 
 def inserthgheader(lines, header, value):
@@ -127,6 +126,9 @@ def inserthgheader(lines, header, value):
     ['# HG changeset patch', '# Date z', '']
     >>> inserthgheader(['# HG changeset patch', '# User y'], '# Date ', 'z')
     ['# HG changeset patch', '# User y', '# Date z']
+    >>> inserthgheader(['# HG changeset patch', '# Date x', '# User y'],
+    ...                '# User ', 'z')
+    ['# HG changeset patch', '# Date x', '# User z']
     >>> inserthgheader(['# HG changeset patch', '# Date y'], '# Date ', 'z')
     ['# HG changeset patch', '# Date z']
     >>> inserthgheader(['# HG changeset patch', '', '# Date y'], '# Date ', 'z')
@@ -136,18 +138,21 @@ def inserthgheader(lines, header, value):
     """
     start = lines.index('# HG changeset patch') + 1
     newindex = HGHEADERS.index(header)
+    bestpos = len(lines)
     for i in range(start, len(lines)):
         line = lines[i]
+        if not line.startswith('# '):
+            bestpos = min(bestpos, i)
+            break
         for lineindex, h in enumerate(HGHEADERS):
             if line.startswith(h):
-                if lineindex < newindex:
-                    break # next line
                 if lineindex == newindex:
                     lines[i] = header + value
-                else:
-                    lines.insert(i, header + value)
-                return lines
-    lines.append(header + value)
+                    return lines
+                if lineindex > newindex:
+                    bestpos = min(bestpos, i)
+                break # next line
+    lines.insert(bestpos, header + value)
     return lines
 
 def insertplainheader(lines, header, value):
