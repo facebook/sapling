@@ -172,6 +172,8 @@ class remotefilelog(object):
         size = int(raw[:index])
         return size
 
+    rawsize = size
+
     def cmp(self, node, text):
         """compare text with a given file revision
 
