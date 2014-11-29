@@ -269,11 +269,13 @@ Add a normal file to the subrepo, then test archiving
   $ mv subrepo/renamed-large.txt subrepo/large.txt
   $ hg -R subrepo add subrepo/normal.txt
 
-  $ hg addremove
+  $ hg addremove subrepo
+  $ hg addremove -S
   adding large.dat as a largefile
   $ rm large.dat
 
-  $ hg addremove
+  $ hg addremove subrepo
+  $ hg addremove -S
   removing large.dat
 
 Lock in subrepo, otherwise the change isn't archived

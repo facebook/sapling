@@ -152,13 +152,12 @@ def addlargefiles(ui, repo, matcher, **opts):
         wlock.release()
     return bad
 
-def removelargefiles(ui, repo, isaddremove, *pats, **opts):
+def removelargefiles(ui, repo, isaddremove, matcher, **opts):
     after = opts.get('after')
-    m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
-                                repo[None].manifest())
+    m = composelargefilematcher(matcher, repo[None].manifest())
     try:
         repo.lfstatus = True
-        s = repo.status(match=m, clean=True)
+        s = repo.status(match=m, clean=not isaddremove)
     finally:
         repo.lfstatus = False
     manifest = repo[None].manifest()
@@ -250,7 +249,8 @@ def overrideremove(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
-    return removelargefiles(ui, repo, False, *pats, **opts) or result
+    matcher = scmutil.match(repo[None], pats, opts)
+    return removelargefiles(ui, repo, False, matcher, **opts) or result
 
 def overridestatusfn(orig, repo, rev2, **opts):
     try:
@@ -1109,8 +1109,16 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
     # we don't remove the standin in the largefiles code, preventing a very
     # confused state later.
     if s.deleted:
-        m = [repo.wjoin(f) for f in s.deleted]
-        removelargefiles(repo.ui, repo, True, *m, **opts)
+        m = copy.copy(matcher)
+
+        # The m._files and m._map attributes are not changed to the deleted list
+        # because that affects the m.exact() test, which in turn governs whether
+        # or not the file name is printed, and how.  Simply limit the original
+        # matches to those in the deleted status list.
+        matchfn = m.matchfn
+        m.matchfn = lambda f: f in s.deleted and matchfn(f)
+
+        removelargefiles(repo.ui, repo, True, m, **opts)
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
     addlargefiles(repo.ui, repo, matcher, **opts)
