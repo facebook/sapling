@@ -7,14 +7,13 @@ combination = []
 for base in [None, 'content1']:
     for parent in set([None, 'content2']) | set([base]):
         for wcc in set([None, 'content3']) | set([base, parent]):
-            for tracked in (False, True):
+            for tracked in ('untracked', 'tracked'):
                 def statestring(content):
                     return content is None and 'missing' or content
-                trackedstring = tracked and 'tracked' or 'untracked'
                 filename = "%s_%s_%s-%s" % (statestring(base),
                                             statestring(parent),
                                             statestring(wcc),
-                                            trackedstring)
+                                            tracked)
                 combination.append((filename, base, parent, wcc))
 
 # make sure we have stable output
