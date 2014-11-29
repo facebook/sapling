@@ -85,7 +85,7 @@ def restorematchandpatsfn():
     scmutil.matchandpats = getattr(scmutil.matchandpats, 'oldmatchandpats',
             scmutil.matchandpats)
 
-def addlargefiles(ui, repo, matcher, **opts):
+def addlargefiles(ui, repo, isaddremove, matcher, **opts):
     large = opts.pop('large', None)
     lfsize = lfutil.getminsize(
         ui, lfutil.islfilesrepo(repo), opts.pop('lfsize', None))
@@ -106,11 +106,17 @@ def addlargefiles(ui, repo, matcher, **opts):
         nfile = f in wctx
         exists = lfile or nfile
 
+        # addremove in core gets fancy with the name, add doesn't
+        if isaddremove:
+            name = m.uipath(f)
+        else:
+            name = m.rel(f)
+
         # Don't warn the user when they attempt to add a normal tracked file.
         # The normal add code will do that for us.
         if exact and exists:
             if lfile:
-                ui.warn(_('%s already a largefile\n') % f)
+                ui.warn(_('%s already a largefile\n') % name)
             continue
 
         if (exact or not exists) and not lfutil.isstandin(f):
@@ -124,7 +130,7 @@ def addlargefiles(ui, repo, matcher, **opts):
             if large or abovemin or (lfmatcher and lfmatcher(f)):
                 lfnames.append(f)
                 if ui.verbose or not exact:
-                    ui.status(_('adding %s as a largefile\n') % m.rel(f))
+                    ui.status(_('adding %s as a largefile\n') % name)
 
     bad = []
 
@@ -241,7 +247,7 @@ def overrideadd(orig, ui, repo, *pats, **opts):
             raise util.Abort(_('--normal cannot be used with --large'))
         return orig(ui, repo, *pats, **opts)
     matcher = scmutil.match(repo[None], pats, opts)
-    bad = addlargefiles(ui, repo, matcher, **opts)
+    bad = addlargefiles(ui, repo, False, matcher, **opts)
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
@@ -1124,7 +1130,7 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
         removelargefiles(repo.ui, repo, True, m, **opts)
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
-    addlargefiles(repo.ui, repo, matcher, **opts)
+    addlargefiles(repo.ui, repo, True, matcher, **opts)
     # Now that we've handled largefiles, hand off to the original addremove
     # function to take care of the rest.  Make sure it doesn't do anything with
     # largefiles by passing a matcher that will ignore them.

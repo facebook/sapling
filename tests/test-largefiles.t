@@ -493,7 +493,7 @@ Test addremove with -R
   $ cd ..
   $ hg -R a -v addremove
   removing sub/large4
-  adding a/testaddremove.dat as a largefile (glob)
+  adding testaddremove.dat as a largefile
   removing normal3
   adding normaladdremove
   $ cd a
@@ -1731,7 +1731,7 @@ coexist.
   $ rm sub2/large7
   $ echo "largeasnormal" > sub2/large7
   $ hg add sub2/large7
-  sub2/large7 already a largefile
+  sub2/large7 already a largefile (glob)
 
 Test that transplanting a largefile change works correctly.
 

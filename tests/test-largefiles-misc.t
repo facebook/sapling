@@ -291,7 +291,7 @@ Add a normal file to the subrepo, then test archiving
   ? subrepo/renamed-large.txt
 
   $ hg -R statusmatch addremove --dry-run -S
-  adding statusmatch/large.dat as a largefile (glob)
+  adding large.dat as a largefile
   removing subrepo/large.txt
   adding subrepo/normal.txt
   adding subrepo/renamed-large.txt
