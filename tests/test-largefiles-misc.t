@@ -257,21 +257,55 @@ Add a normal file to the subrepo, then test archiving
   $ echo 'normal file' > subrepo/normal.txt
   $ touch large.dat
   $ mv subrepo/large.txt subrepo/renamed-large.txt
-  $ hg -R subrepo addremove --dry-run
-  removing large.txt
-  adding normal.txt
-  adding renamed-large.txt
+  $ hg addremove -S --dry-run
+  adding large.dat as a largefile
+  removing subrepo/large.txt
+  adding subrepo/normal.txt
+  adding subrepo/renamed-large.txt
+  adding large.dat
   $ hg status -S
   ! subrepo/large.txt
   ? large.dat
   ? subrepo/normal.txt
   ? subrepo/renamed-large.txt
-  $ mv subrepo/renamed-large.txt subrepo/large.txt
-  $ hg -R subrepo add subrepo/normal.txt
 
+  $ hg addremove --dry-run subrepo
+  removing subrepo/large.txt (glob)
+  adding subrepo/normal.txt (glob)
+  adding subrepo/renamed-large.txt (glob)
+  $ hg status -S
+  ! subrepo/large.txt
+  ? large.dat
+  ? subrepo/normal.txt
+  ? subrepo/renamed-large.txt
+  $ cd ..
+
+  $ hg -R statusmatch addremove --dry-run statusmatch/subrepo
+  removing statusmatch/subrepo/large.txt (glob)
+  adding statusmatch/subrepo/normal.txt (glob)
+  adding statusmatch/subrepo/renamed-large.txt (glob)
+  $ hg -R statusmatch status -S
+  ! subrepo/large.txt
+  ? large.dat
+  ? subrepo/normal.txt
+  ? subrepo/renamed-large.txt
+
+  $ hg -R statusmatch addremove --dry-run -S
+  adding statusmatch/large.dat as a largefile (glob)
+  removing subrepo/large.txt
+  adding subrepo/normal.txt
+  adding subrepo/renamed-large.txt
+  adding large.dat
+  $ cd statusmatch
+
+  $ mv subrepo/renamed-large.txt subrepo/large.txt
   $ hg addremove subrepo
+  adding subrepo/normal.txt (glob)
+  $ hg forget subrepo/normal.txt
+
   $ hg addremove -S
   adding large.dat as a largefile
+  adding subrepo/normal.txt
   $ rm large.dat
 
   $ hg addremove subrepo
@@ -329,6 +363,12 @@ Test update with subrepos.
   0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -S
+
+  $ rm subrepo/large.txt
+  $ hg addremove -S
+  removing subrepo/large.txt
+  $ hg st -S
+  R subrepo/large.txt
 
 Test archiving a revision that references a subrepo that is not yet
 cloned (see test-subrepo-recursion.t):

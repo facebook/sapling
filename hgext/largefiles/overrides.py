@@ -190,10 +190,13 @@ def removelargefiles(ui, repo, isaddremove, matcher, **opts):
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         for f in sorted(remove):
-            if isaddremove:
-                ui.status(_('removing %s\n') % f)
-            elif ui.verbose or not m.exact(f):
-                ui.status(_('removing %s\n') % m.rel(f))
+            if ui.verbose or not m.exact(f):
+                # addremove in core gets fancy with the name, remove doesn't
+                if isaddremove:
+                    name = m.uipath(f)
+                else:
+                    name = m.rel(f)
+                ui.status(_('removing %s\n') % name)
 
             if not opts.get('dry_run'):
                 if not after:
