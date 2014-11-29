@@ -125,6 +125,11 @@ class match(object):
     # by recursive traversal is visited.
     traversedir = None
 
+    def abs(self, f):
+        '''Convert a repo path back to path that is relative to the root of the
+        matcher.'''
+        return f
+
     def rel(self, f):
         '''Convert repo path back to path that is relative to cwd of matcher.'''
         return util.pathto(self._root, self._cwd, f)
@@ -188,6 +193,8 @@ class narrowmatcher(match):
     >>> m1.bad = bad
     >>> m2.bad('x.txt', 'No such file')
     sub/x.txt: No such file
+    >>> m2.abs('c.txt')
+    'sub/c.txt'
     """
 
     def __init__(self, path, matcher):
@@ -203,6 +210,9 @@ class narrowmatcher(match):
         self._anypats = matcher._anypats
         self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
         self._fmap = set(self._files)
+
+    def abs(self, f):
+        return self._matcher.abs(self._path + "/" + f)
 
     def bad(self, f, msg):
         self._matcher.bad(self._path + "/" + f, msg)
