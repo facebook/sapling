@@ -376,9 +376,10 @@ class GitHandler(object):
     ## CHANGESET CONVERSION METHODS
 
     def export_git_objects(self):
-        clnode = self.repo.changelog.node
-        nodes = [clnode(n) for n in self.repo]
-        export = [node for node in nodes if not hex(node) in self._map_hg]
+        repo = self.repo
+        clnode = repo.changelog.node
+        nodes = [clnode(n) for n in repo]
+        export = [repo[node] for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
         if not total:
             return
@@ -391,7 +392,7 @@ class GitHandler(object):
         # and therefore export, is in topological order. By definition,
         # export[0]'s parents must be present in Git, so we start the
         # incremental exporter from there.
-        pctx = self.repo[export[0]].p1()
+        pctx = export[0].p1()
         pnode = pctx.node()
         if pnode == nullid:
             gitcommit = None
@@ -406,15 +407,14 @@ class GitHandler(object):
         exporter = hg2git.IncrementalChangesetExporter(
             self.repo, pctx, self.git.object_store, gitcommit)
 
-        for i, rev in enumerate(export):
+        for i, ctx in enumerate(export):
             self.ui.progress('exporting', i, total=total)
-            ctx = self.repo.changectx(rev)
             state = ctx.extra().get('hg-git', None)
             if state == 'octopus':
                 self.ui.debug("revision %d is a part "
                               "of octopus explosion\n" % ctx.rev())
                 continue
-            self.export_hg_commit(rev, exporter)
+            self.export_hg_commit(ctx.node(), exporter)
         self.ui.progress('exporting', None, total=total)
 
 
