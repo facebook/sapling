@@ -380,6 +380,8 @@ class GitHandler(object):
         clnode = repo.changelog.node
         nodes = [clnode(n) for n in repo]
         export = [repo[node] for node in nodes if not hex(node) in self._map_hg]
+        export = [ctx for ctx in export
+                  if ctx.extra().get('hg-git', None) != 'octopus']
         total = len(export)
         if not total:
             return
@@ -410,10 +412,6 @@ class GitHandler(object):
         for i, ctx in enumerate(export):
             self.ui.progress('exporting', i, total=total)
             state = ctx.extra().get('hg-git', None)
-            if state == 'octopus':
-                self.ui.debug("revision %d is a part "
-                              "of octopus explosion\n" % ctx.rev())
-                continue
             self.export_hg_commit(ctx.node(), exporter)
         self.ui.progress('exporting', None, total=total)
 
