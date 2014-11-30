@@ -256,3 +256,51 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   |/
   o  0: 'common'
   
+rebase of merge of ancestors
+
+  $ hg up -qr 2
+  $ hg merge -qr 3
+  $ echo 'other change while merging future "rebase ancestors"' > other
+  $ hg ci -Aqm 'merge rebase ancestors'
+  $ hg rebase -d 5 -v
+  resolving manifests
+  removing other
+  note: merging f9daf77ffe76+ and 4c5f12f25ebe using bids from ancestors a60552eb93fb and f59da8fc0fcf
+  
+  calculating bids for ancestor a60552eb93fb
+  resolving manifests
+  
+  calculating bids for ancestor f59da8fc0fcf
+  resolving manifests
+  
+  auction for merging merge bids
+   other: consensus for g
+  end of auction
+  
+  getting other
+  other
+  rebase merging completed
+  1 changesets found
+  saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/4c5f12f25ebe-backup.hg (glob)
+  1 changesets found
+  adding branch
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  rebase completed
+  $ hg tglog
+  @  6: 'merge rebase ancestors'
+  |
+  o    5: 'merge p1 1=ancestor p2 3=outside'
+  |\
+  +---o  4: 'merge p1 3=outside p2 1=ancestor'
+  | |/
+  | o  3: 'outside'
+  | |
+  o |  2: 'target'
+  | |
+  o |  1: 'change'
+  |/
+  o  0: 'common'
+  
