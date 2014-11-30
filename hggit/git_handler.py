@@ -378,8 +378,8 @@ class GitHandler(object):
     def export_git_objects(self):
         repo = self.repo
         clnode = repo.changelog.node
-        nodes = [clnode(n) for n in repo]
-        export = [repo[node] for node in nodes if not hex(node) in self._map_hg]
+        nodes = (clnode(n) for n in repo)
+        export = (repo[node] for node in nodes if not hex(node) in self._map_hg)
         export = [ctx for ctx in export
                   if ctx.extra().get('hg-git', None) != 'octopus']
         total = len(export)
