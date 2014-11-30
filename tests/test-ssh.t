@@ -392,9 +392,9 @@ Test hg-ssh in read-only mode:
   remote: Permission denied
   remote: abort: prechangegroup.hg-ssh hook failed
   remote: Permission denied
-  remote: abort: prepushkey.hg-ssh hook failed
-  abort: unexpected response: empty string
-  [255]
+  remote: pushkey-abort: prepushkey.hg-ssh hook failed
+  updating 6c0482d977a3 to public failed!
+  [1]
 
   $ cd ..
 
