@@ -48,6 +48,12 @@ class Abort(Exception):
         Exception.__init__(self, *args)
         self.hint = kw.get('hint')
 
+class HookAbort(Abort):
+    """raised when a validation hook fails, aborting an operation
+
+    Exists to allow more specialized catching."""
+    pass
+
 class ConfigError(Abort):
     """Exception raised when parsing config files"""
 
