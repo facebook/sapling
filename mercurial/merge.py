@@ -968,7 +968,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         pl = wc.parents()
         p1 = pl[0]
         pas = [None]
-        if ancestor:
+        if ancestor is not None:
             pas = [repo[ancestor]]
 
         if node is None:
