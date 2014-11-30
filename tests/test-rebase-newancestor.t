@@ -169,3 +169,90 @@ Grafty cherry picking rebasing:
   |/
   o  0: 'default: create f-default'
   
+  $ cd ..
+
+
+Test order of parents of rebased merged with un-rebased changes as p1.
+
+  $ hg init parentorder
+  $ cd parentorder
+  $ touch f
+  $ hg ci -Aqm common
+  $ touch change
+  $ hg ci -Aqm change
+  $ touch target
+  $ hg ci -Aqm target
+  $ hg up -qr 0
+  $ touch outside
+  $ hg ci -Aqm outside
+  $ hg merge -qr 1
+  $ hg ci -m 'merge p1 3=outside p2 1=ancestor'
+  $ hg par
+  changeset:   4:6990226659be
+  tag:         tip
+  parent:      3:f59da8fc0fcf
+  parent:      1:dd40c13f7a6f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge p1 3=outside p2 1=ancestor
+  
+  $ hg up -qr 1
+  $ hg merge -qr 3
+  $ hg ci -qm 'merge p1 1=ancestor p2 3=outside'
+  $ hg par
+  changeset:   5:a57575f79074
+  tag:         tip
+  parent:      1:dd40c13f7a6f
+  parent:      3:f59da8fc0fcf
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge p1 1=ancestor p2 3=outside
+  
+  $ hg tglog
+  @    5: 'merge p1 1=ancestor p2 3=outside'
+  |\
+  +---o  4: 'merge p1 3=outside p2 1=ancestor'
+  | |/
+  | o  3: 'outside'
+  | |
+  +---o  2: 'target'
+  | |
+  o |  1: 'change'
+  |/
+  o  0: 'common'
+  
+  $ hg rebase -r 4 -d 2
+  saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/6990226659be-backup.hg (glob)
+  $ hg tip
+  changeset:   5:cca50676b1c5
+  tag:         tip
+  parent:      2:a60552eb93fb
+  parent:      3:f59da8fc0fcf
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge p1 3=outside p2 1=ancestor
+  
+  $ hg rebase -r 4 -d 2
+  saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/a57575f79074-backup.hg (glob)
+  $ hg tip
+  changeset:   5:f9daf77ffe76
+  tag:         tip
+  parent:      2:a60552eb93fb
+  parent:      3:f59da8fc0fcf
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge p1 1=ancestor p2 3=outside
+  
+  $ hg tglog
+  @    5: 'merge p1 1=ancestor p2 3=outside'
+  |\
+  +---o  4: 'merge p1 3=outside p2 1=ancestor'
+  | |/
+  | o  3: 'outside'
+  | |
+  o |  2: 'target'
+  | |
+  o |  1: 'change'
+  |/
+  o  0: 'common'
+  
