@@ -12497,6 +12497,9 @@ msgstr "libera o lock do store (PERIGOSO)"
 msgid "free the working state lock (DANGEROUS)"
 msgstr "libera o lock do working state (PERIGOSO)"
 
+msgid "[OPTION]..."
+msgstr "[OPÇÃO]..."
+
 msgid "show or modify state of locks"
 msgstr "mostra ou modifica o estado dos locks"
 
@@ -12721,9 +12724,6 @@ msgstr "não exibe o mtime armazenado"
 
 msgid "sort by saved mtime"
 msgstr "ordena por mtime armazenado"
-
-msgid "[OPTION]..."
-msgstr "[OPÇÃO]..."
 
 msgid "show the contents of the current dirstate"
 msgstr "mostra o conteúdo do dirstate atual"
@@ -14130,8 +14130,8 @@ msgstr "avalia revisões a serem mescladas (a mesclagem não é executada)"
 msgid "[-P] [-f] [[-r] REV]"
 msgstr "[-P] [-f] [[-r] REV]"
 
-msgid "merge working directory with another revision"
-msgstr "mescla o diretório de trabalho com outra revisão"
+msgid "merge another revision into working directory"
+msgstr "mescla uma outra revisão com o diretório de trabalho"
 
 msgid ""
 "    The current working directory is updated with all changes made in\n"
@@ -20039,7 +20039,7 @@ msgstr ""
 
 msgid ""
 "``reportoldssl``\n"
-"    Warn if an SSL certificate is unable to be due to using Python\n"
+"    Warn if an SSL certificate is unable to be used due to using Python\n"
 "    2.5 or earlier. True or False. Default is True."
 msgstr ""
 "``reportoldssl``\n"
