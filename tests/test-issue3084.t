@@ -181,6 +181,9 @@ prepare cases with "normal" ancestor:
   $ echo normal2 > f
   $ hg ci -m "normal2"
   $ hg tag -l "normal2"
+  $ echo normal > f
+  $ hg ci -Aqm "normal-same"
+  $ hg tag -l "normal-same"
   $ hg up -qr "normal-ancestor"
   $ hg rm f
   $ echo large > f
@@ -201,6 +204,9 @@ prepare cases with "large" ancestor:
   $ echo large2 > f
   $ hg ci -m "large2"
   $ hg tag -l "large2"
+  $ echo large > f
+  $ hg ci -Aqm "large-same"
+  $ hg tag -l "large-same"
   $ hg up -qr "large-ancestor"
   $ hg rm f
   $ echo normal > f
@@ -210,6 +216,8 @@ prepare cases with "large" ancestor:
   $ hg log -GT '{tags}'
   @  normal tip
   |
+  | o  large-same
+  | |
   | o  large2
   | |
   | o  large-id
@@ -218,6 +226,8 @@ prepare cases with "large" ancestor:
   
   o  large
   |
+  | o  normal-same
+  | |
   | o  normal2
   | |
   | o  normal-id
@@ -244,6 +254,36 @@ swap
   getting changed largefiles
   0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat f
+  large
+
+Ancestor: normal  Parent: normal-same  Parent: large   result: large
+
+  $ hg up -Cqr normal-same
+  $ hg merge -r large
+  local changed f which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote turned local normal file f into a largefile
+  use (l)argefile or keep (n)ormal file? l
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat f
+  large
+
+swap
+
+  $ hg up -Cqr large
+  $ hg merge -r normal-same
+  remote changed f which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote turned local largefile f into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
   large
@@ -346,6 +386,36 @@ swap
   (branch merge, don't forget to commit)
   $ cat f
   normal
+
+Ancestor: large   Parent: large-same   Parent: normal  result: normal
+
+  $ hg up -Cqr large-same
+  $ hg merge -r normal
+  local changed .hglf/f which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote turned local largefile f into a normal file
+  keep (l)argefile or use (n)ormal file? l
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat f
+  large
+
+swap
+
+  $ hg up -Cqr normal
+  $ hg merge -r large-same
+  remote changed .hglf/f which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote turned local normal file f into a largefile
+  use (l)argefile or keep (n)ormal file? l
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat f
+  large
 
 Ancestor: large   Parent: large2   Parent: normal  result: ?
 (annoying extra prompt ... but it do not do any serious harm)
