@@ -946,7 +946,7 @@ def hgsubrepoarchive(orig, repo, ui, archiver, prefix, match=None):
 # If a largefile is modified, the change is not reflected in its
 # standin until a commit. cmdutil.bailifchanged() raises an exception
 # if the repo has uncommitted changes. Wrap it to also check if
-# largefiles were changed. This is used by bisect and backout.
+# largefiles were changed. This is used by bisect, backout and fetch.
 def overridebailifchanged(orig, repo):
     orig(repo)
     repo.lfstatus = True
@@ -954,15 +954,6 @@ def overridebailifchanged(orig, repo):
     repo.lfstatus = False
     if s.modified or s.added or s.removed or s.deleted:
         raise util.Abort(_('uncommitted changes'))
-
-# Fetch doesn't use cmdutil.bailifchanged so override it to add the check
-def overridefetch(orig, ui, repo, *pats, **opts):
-    repo.lfstatus = True
-    s = repo.status()
-    repo.lfstatus = False
-    if s.modified or s.added or s.removed or s.deleted:
-        raise util.Abort(_('uncommitted changes'))
-    return orig(ui, repo, *pats, **opts)
 
 def overrideforget(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())

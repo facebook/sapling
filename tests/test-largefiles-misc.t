@@ -67,6 +67,11 @@ Test copies and moves from a directory other than root (issue3516)
   dirc/baz/largefile
   dirc/dirb
   dirc/dirb/largefile
+
+  $ hg clone -q . ../fetch
+  $ hg --config extensions.fetch= fetch ../fetch
+  abort: uncommitted changes
+  [255]
   $ hg up -qC
   $ cd ..
 

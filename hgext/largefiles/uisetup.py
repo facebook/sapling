@@ -160,9 +160,6 @@ def uisetup(ui):
 
     # override some extensions' stuff as well
     for name, module in extensions.extensions():
-        if name == 'fetch':
-            extensions.wrapcommand(getattr(module, 'cmdtable'), 'fetch',
-                overrides.overridefetch)
         if name == 'purge':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'purge',
                 overrides.overridepurge)
