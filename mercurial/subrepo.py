@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import copy
 import errno, os, re, shutil, posixpath, sys
 import xml.dom.minidom
 import stat, subprocess, tarfile
@@ -624,6 +625,11 @@ class hgsubrepo(abstractsubrepo):
                            os.path.join(prefix, self._path), explicitonly)
 
     def addremove(self, m, prefix, opts, dry_run, similarity):
+        # In the same way as sub directories are processed, once in a subrepo,
+        # always entry any of its subrepos.  Don't corrupt the options that will
+        # be used to process sibling subrepos however.
+        opts = copy.copy(opts)
+        opts['subrepos'] = True
         return scmutil.addremove(self._repo, m,
                                  os.path.join(prefix, self._path), opts,
                                  dry_run, similarity)
