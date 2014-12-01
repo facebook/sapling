@@ -262,8 +262,6 @@ Ancestor: normal  Parent: normal-same  Parent: large   result: large
 
   $ hg up -Cqr normal-same
   $ hg merge -r large
-  local changed f which remote deleted
-  use (c)hanged version or (d)elete? c
   getting changed largefiles
   1 largefiles updated, 0 removed
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -275,11 +273,9 @@ swap
 
   $ hg up -Cqr large
   $ hg merge -r normal-same
-  remote changed f which local deleted
-  use (c)hanged version or leave (d)eleted? c
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
   large
@@ -387,8 +383,6 @@ Ancestor: large   Parent: large-same   Parent: normal  result: normal
 
   $ hg up -Cqr large-same
   $ hg merge -r normal
-  local changed .hglf/f which remote deleted
-  use (c)hanged version or (d)elete? c
   getting changed largefiles
   0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -400,11 +394,7 @@ swap
 
   $ hg up -Cqr normal
   $ hg merge -r large-same
-  remote changed .hglf/f which local deleted
-  use (c)hanged version or leave (d)eleted? c
-  getting changed largefiles
-  0 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
   normal
