@@ -10,7 +10,7 @@ We use a variant of Mercurial's own contribution
 system. http://mercurial.selenic.com/wiki/ContributingChanges contains
 their full guidelines. Key differences are (by rule number):
 
- 1. For hg-git, I'm not rigied about the "topic: a few words" format
+ 1. For hg-git, I'm not strict about the "topic: a few words" format
     for the first line, but I do insist on a sensible summary as the
     first line of your commit
  2. We don't require use of issueNNN for bug fixes (we have no robot)
