@@ -264,8 +264,6 @@ Ancestor: normal  Parent: normal-same  Parent: large   result: large
   $ hg merge -r large
   local changed f which remote deleted
   use (c)hanged version or (d)elete? c
-  remote turned local normal file f into a largefile
-  use (l)argefile or keep (n)ormal file? l
   getting changed largefiles
   1 largefiles updated, 0 removed
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -279,8 +277,6 @@ swap
   $ hg merge -r normal-same
   remote changed f which local deleted
   use (c)hanged version or leave (d)eleted? c
-  remote turned local largefile f into a normal file
-  keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
   1 largefiles updated, 0 removed
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -393,14 +389,12 @@ Ancestor: large   Parent: large-same   Parent: normal  result: normal
   $ hg merge -r normal
   local changed .hglf/f which remote deleted
   use (c)hanged version or (d)elete? c
-  remote turned local largefile f into a normal file
-  keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
-  large
+  normal
 
 swap
 
@@ -408,14 +402,12 @@ swap
   $ hg merge -r large-same
   remote changed .hglf/f which local deleted
   use (c)hanged version or leave (d)eleted? c
-  remote turned local normal file f into a largefile
-  use (l)argefile or keep (n)ormal file? l
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
-  large
+  normal
 
 Ancestor: large   Parent: large2   Parent: normal  result: ?
 (annoying extra prompt ... but it do not do any serious harm)
