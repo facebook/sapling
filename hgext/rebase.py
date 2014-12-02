@@ -389,7 +389,7 @@ def rebase(ui, repo, **opts):
                     finally:
                         ui.setconfig('ui', 'forcemerge', '', 'rebase')
                 if not collapsef:
-                    merging = repo[p2].rev() != nullrev
+                    merging = p2 != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
                     newnode = concludenode(repo, rev, p1, p2, extrafn=extrafn,
@@ -543,20 +543,20 @@ def rebasenode(repo, rev, p1, state, collapse, target):
     'Rebase a single revision'
     # Merge phase
     # Update to target and merge it with local
-    if repo['.'].rev() != repo[p1].rev():
-        repo.ui.debug(" update to %d:%s\n" % (repo[p1].rev(), repo[p1]))
+    if repo['.'].rev() != p1:
+        repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
         merge.update(repo, p1, False, True, False)
     else:
         repo.ui.debug(" already in target\n")
     repo.dirstate.write()
-    repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
-    if repo[rev].rev() == repo[min(state)].rev():
+    repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
+    if rev == min(state):
         # Case (1) initial changeset of a non-detaching rebase.
         # Let the merge mechanism find the base itself.
         base = None
     elif not repo[rev].p2():
         # Case (2) detaching the node with a single parent, use this parent
-        base = repo[rev].p1().node()
+        base = repo[rev].p1().rev()
     else:
         # In case of merge, we need to pick the right parent as merge base.
         #
@@ -583,8 +583,8 @@ def rebasenode(repo, rev, p1, state, collapse, target):
         # Which does not represent anything sensible and creates a lot of
         # conflicts.
         for p in repo[rev].parents():
-            if state.get(p.rev()) == repo[p1].rev():
-                base = p.node()
+            if state.get(p.rev()) == p1:
+                base = p.rev()
                 break
         else: # fallback when base not found
             base = None
@@ -593,7 +593,7 @@ def rebasenode(repo, rev, p1, state, collapse, target):
             raise AssertionError('no base found to rebase on '
                                  '(rebasenode called wrong)')
     if base is not None:
-        repo.ui.debug("   detach base %d:%s\n" % (repo[base].rev(), repo[base]))
+        repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     stats = merge.update(repo, rev, True, True, False, base, collapse,
@@ -835,7 +835,7 @@ def abort(repo, originalwd, target, state):
     if cleanup:
         # Update away from the rebase if necessary
         if inrebase(repo, originalwd, state):
-            merge.update(repo, repo[originalwd].rev(), False, True, False)
+            merge.update(repo, originalwd, False, True, False)
 
         # Strip from the first rebased revision
         rebased = filter(lambda x: x > -1 and x != target, state.values())
