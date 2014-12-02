@@ -686,6 +686,9 @@ class GitHandler(object):
         (strip_message, hg_renames,
          hg_branch, extra) = git2hg.extract_hg_metadata(
              commit.message, commit.extra)
+        if hg_renames is None:
+            # don't do any rename detection for now
+            hg_renames = {}
 
         gparents = map(self.map_hg_get, commit.parents)
 

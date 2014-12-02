@@ -81,10 +81,21 @@ class GitIncomingResult(object):
 
 def extract_hg_metadata(message, git_extra):
     split = message.split("\n--HG--\n", 1)
-    renames = {}
+    # Renames are explicitly stored in Mercurial but inferred in Git. For
+    # commits that originated in Git we'd like to optionally infer rename
+    # information to store in Mercurial, but for commits that originated in
+    # Mercurial we'd like to disable this. How do we tell whether the commit
+    # originated in Mercurial or in Git? We don't have any firm indicators so we
+    # use a simple heuristic to determine that: if the commit has any extra hg
+    # fields, it definitely originated in Mercurial and we set renames to a
+    # dict. If the commit doesn't, we aren't really sure and we make sure
+    # renames is set to None. Callers can then determine whether to infer rename
+    # information.
+    renames = None
     extra = {}
     branch = None
     if len(split) == 2:
+        renames = {}
         message, meta = split
         lines = meta.split("\n")
         for line in lines:
@@ -107,6 +118,8 @@ def extract_hg_metadata(message, git_extra):
     git_fn = 0
     for field, data in git_extra:
         if field.startswith('HG:'):
+            if renames is None:
+                renames = {}
             command = field[3:]
             if command == 'rename':
                 before, after = data.split(':', 1)
