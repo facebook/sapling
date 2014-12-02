@@ -1334,6 +1334,28 @@ class GitHandler(object):
 
         return files, gitlinks
 
+    @hgutil.propertycache
+    def _rename_detector(self):
+        # disabled by default to avoid surprises
+        similarity = self.ui.configint('git', 'similarity', default=0)
+        if similarity < 0 or similarity > 100:
+            raise util.Abort(_('git.similarity must be between 0 and 100'))
+        if similarity == 0:
+            return None
+
+        # default is borrowed from Git
+        max_files = self.ui.configint('git', 'renamelimit', default=400)
+        if similarity < 0:
+            raise util.Abort(_('git.renamelimit must be non-negative'))
+        if max_files == 0:
+            max_files = None
+
+        find_copies_harder = self.ui.configbool('git', 'findcopiesharder',
+                                                default=False)
+        return diff_tree.RenameDetector(
+            rename_threshold=similarity, max_files=max_files,
+            find_copies_harder=find_copies_harder)
+
     def parse_gitmodules(self, tree_obj):
         """Parse .gitmodules from a git tree specified by tree_obj
 
