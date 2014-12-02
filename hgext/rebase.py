@@ -23,6 +23,7 @@ from mercurial.lock import release
 from mercurial.i18n import _
 import os, errno
 
+revtodo = -1
 nullmerge = -2
 revignored = -3
 
@@ -367,7 +368,7 @@ def rebase(ui, repo, **opts):
         pos = 0
         for rev in sortedstate:
             pos += 1
-            if state[rev] == -1:
+            if state[rev] == revtodo:
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, repo[rev])),
                             _('changesets'), total)
                 p1, p2, base = defineparents(repo, rev, target, state,
@@ -790,7 +791,7 @@ def restorestatus(repo):
         if not collapse:
             seen = set([target])
             for old, new in sorted(state.items()):
-                if new != nullrev and new in seen:
+                if new != revtodo and new in seen:
                     skipped.add(old)
                 seen.add(new)
         repo.ui.debug('computed skipped revs: %s\n' %
@@ -882,7 +883,7 @@ def buildstate(repo, dest, rebaseset, collapse):
                 return None
 
         repo.ui.debug('rebase onto %d starting from %s\n' % (dest, root))
-        state.update(dict.fromkeys(rebaseset, nullrev))
+        state.update(dict.fromkeys(rebaseset, revtodo))
         # Rebase tries to turn <dest> into a parent of <root> while
         # preserving the number of parents of rebased changesets:
         #
