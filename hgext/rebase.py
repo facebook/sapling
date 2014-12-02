@@ -392,17 +392,17 @@ def rebase(ui, repo, **opts):
                     merging = repo[p2].rev() != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
-                    newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn,
-                                          editor=editor)
+                    newnode = concludenode(repo, rev, p1, p2, extrafn=extrafn,
+                                           editor=editor)
                 else:
                     # Skip commit if we are collapsing
                     repo.dirstate.beginparentchange()
                     repo.setparents(repo[p1].node())
                     repo.dirstate.endparentchange()
-                    newrev = None
+                    newnode = None
                 # Update the state
-                if newrev is not None:
-                    state[rev] = repo[newrev].rev()
+                if newnode is not None:
+                    state[rev] = repo[newnode].rev()
                 else:
                     if not collapsef:
                         ui.note(_('no changes, revision %d skipped\n') % rev)
@@ -427,11 +427,11 @@ def rebase(ui, repo, **opts):
                         commitmsg += '\n* %s' % repo[rebased].description()
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
-            newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
-                                  extrafn=extrafn, editor=editor)
+            newnode = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
+                                   extrafn=extrafn, editor=editor)
             for oldrev in state.iterkeys():
                 if state[oldrev] > nullmerge:
-                    state[oldrev] = newrev
+                    state[oldrev] = newnode
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
@@ -459,7 +459,7 @@ def rebase(ui, repo, **opts):
         if not keepf:
             collapsedas = None
             if collapsef:
-                collapsedas = newrev
+                collapsedas = newnode
             clearrebased(ui, repo, state, skipped, collapsedas)
 
         if currentbookmarks:
@@ -505,7 +505,8 @@ def externalparent(repo, state, targetancestors):
                       ', '.join(str(p) for p in sorted(parents))))
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
-    'Commit the changes and store useful information in extra'
+    '''Commit the changes and store useful information in extra.
+    Return node of committed revision.'''
     try:
         repo.dirstate.beginparentchange()
         repo.setparents(repo[p1].node(), repo[p2].node())
@@ -522,13 +523,13 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
             targetphase = max(ctx.phase(), phases.draft)
             repo.ui.setconfig('phases', 'new-commit', targetphase, 'rebase')
             # Commit might fail if unresolved files exist
-            newrev = repo.commit(text=commitmsg, user=ctx.user(),
-                                 date=ctx.date(), extra=extra, editor=editor)
+            newnode = repo.commit(text=commitmsg, user=ctx.user(),
+                                  date=ctx.date(), extra=extra, editor=editor)
         finally:
             repo.ui.restoreconfig(backup)
 
-        repo.dirstate.setbranch(repo[newrev].branch())
-        return newrev
+        repo.dirstate.setbranch(repo[newnode].branch())
+        return newnode
     except util.Abort:
         # Invalidate the previous setparents
         repo.dirstate.invalidate()
