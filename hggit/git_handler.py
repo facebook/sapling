@@ -7,6 +7,7 @@ from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo, check_ref_format
 from dulwich import client
 from dulwich import config as dul_config
+from dulwich import diff_tree
 
 try:
     from mercurial import bookmarks
@@ -1296,10 +1297,12 @@ class GitHandler(object):
         if commit.parents:
             btree = self.git[commit.parents[0]].tree
 
-        changes = self.git.object_store.tree_changes(btree, tree)
+        changes = diff_tree.tree_changes(self.git.object_store, btree, tree)
         files = {}
         gitlinks = {}
-        for (oldfile, newfile), (oldmode, newmode), (oldsha, newsha) in changes:
+        for change in changes:
+            oldfile, oldmode, oldsha = change.old
+            newfile, newmode, newsha = change.new
             # actions are described by the following table ('no' means 'does not
             # exist'):
             #    old        new     |    action
