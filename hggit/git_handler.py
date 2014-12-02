@@ -683,11 +683,13 @@ class GitHandler(object):
     def import_git_commit(self, commit):
         self.ui.debug(_("importing: %s\n") % commit.id)
 
+        detect_renames = False
         (strip_message, hg_renames,
          hg_branch, extra) = git2hg.extract_hg_metadata(
              commit.message, commit.extra)
         if hg_renames is None:
-            # don't do any rename detection for now
+            detect_renames = True
+            # empty dictionary so that code below continues to work
             renames = {}
         else:
             renames = hg_renames
@@ -700,7 +702,7 @@ class GitHandler(object):
                                      'please run hg git-cleanup'))
 
         # get a list of the changed, added, removed files and gitlinks
-        files, gitlinks = self.get_files_changed(commit)
+        files, gitlinks = self.get_files_changed(commit, detect_renames)
 
         git_commit_tree = self.git[commit.tree]
 
@@ -1287,7 +1289,7 @@ class GitHandler(object):
             elif isinstance(obj, Tree):
                 otree = obj
 
-    def get_files_changed(self, commit):
+    def get_files_changed(self, commit, detect_renames):
         tree = commit.tree
         btree = None
 
