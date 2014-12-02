@@ -95,7 +95,7 @@ def uisetup(ui):
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
 
     # Write SQL bookmarks at the same time as local bookmarks
-    wrapfunction(bookmarks.bmstore, '_write', bookmarkwrite)
+    wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
 
 def extsetup(ui):
     if ui.configbool('hgsql', 'enabled'):
@@ -278,7 +278,7 @@ def wraprepo(repo):
 
             def transactionclose(orig):
                 if tr.count == 1:
-                    self.committodb()
+                    self.committodb(tr)
                     del self.pendingrevs[:]
                 return orig()
 
@@ -455,14 +455,14 @@ def wraprepo(repo):
 
             return executewithsql(self, _pushkey, namespace == 'bookmarks')
 
-        def committodb(self):
+        def committodb(self, tr):
             """Commits all pending revisions to the database
             """
             if self.sqlconn == None:
                 raise util.Abort("invalid repo change - only hg push and pull" +
                     " are allowed")
 
-            if not self.pendingrevs:
+            if not self.pendingrevs and not 'bookmark_moved' in tr.hookargs:
                 return
 
             reponame = self.sqlreponame
@@ -470,7 +470,8 @@ def wraprepo(repo):
             maxcommitsize = self.maxcommitsize
             maxrowsize = self.maxrowsize
 
-            self._validatependingrevs()
+            if self.pendingrevs:
+                self._validatependingrevs()
 
             try:
                 datasize = 0
@@ -513,6 +514,17 @@ def wraprepo(repo):
                     cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
                                    VALUES(%s, 'heads', %s)""",
                                    (reponame, hex(head)))
+
+                # Write the bookmarks that are part of this transaction. This
+                # may write them even if nothing has changed, but that's not
+                # a big deal.
+                cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
+                               namespace = 'bookmarks'""", (repo.sqlreponame))
+
+                for k, v in repo._bookmarks.iteritems():
+                    cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
+                                   VALUES(%s, 'bookmarks', %s, %s)""",
+                                   (repo.sqlreponame, k, hex(v)))
 
                 # revision_references has multiple keys (primary key, and a unique index), so
                 # mysql gives a warning when using ON DUPLICATE KEY since it would only update one
@@ -978,10 +990,10 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
     else:
         return _bookmarkcommand()
 
-def bookmarkwrite(orig, self, fp):
+def bookmarkwrite(orig, self):
     repo = self._repo
     if not repo.ui.configbool("hgsql", "enabled") or repo.disablesync:
-        return orig(self, fp)
+        return orig(self)
 
     if not repo.sqlconn:
         raise util.Abort("attempted bookmark write without sql connection")
@@ -998,7 +1010,7 @@ def bookmarkwrite(orig, self, fp):
                            VALUES(%s, 'bookmarks', %s, %s)""",
                            (repo.sqlreponame, k, hex(v)))
         repo.sqlconn.commit()
-        return orig(self, fp)
+        return orig(self)
     except:
         repo.sqlconn.rollback()
         raise
