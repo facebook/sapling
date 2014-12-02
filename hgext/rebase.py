@@ -449,6 +449,9 @@ def rebase(ui, repo, **opts):
         # restore original working directory
         # (we do this before stripping)
         newwd = state.get(originalwd, originalwd)
+        if newwd < 0:
+            # original directory is a parent of rebase set root or ignored
+            newwd = originalwd
         if newwd not in [c.rev() for c in repo[None].parents()]:
             ui.note(_("update back to initial working directory parent\n"))
             hg.updaterepo(repo, newwd, False)

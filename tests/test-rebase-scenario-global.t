@@ -300,8 +300,12 @@ Check rebasing public changeset
 
 Check rebasing mutable changeset
 Source phase greater or equal to destination phase: new changeset get the phase of source:
+  $ hg id -n
+  5
   $ hg rebase -s9 -d0
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2b23e52411f4-backup.hg (glob)
+  $ hg id -n # check we updated back to parent
+  5
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg rebase -s9 -d1
