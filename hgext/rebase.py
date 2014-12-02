@@ -429,9 +429,13 @@ def rebase(ui, repo, **opts):
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             newnode = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
                                    extrafn=extrafn, editor=editor)
+            if newnode is None:
+                newrev = target
+            else:
+                newrev = repo[newnode].rev()
             for oldrev in state.iterkeys():
                 if state[oldrev] > nullmerge:
-                    state[oldrev] = newnode
+                    state[oldrev] = newrev
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)
