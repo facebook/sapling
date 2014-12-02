@@ -24,6 +24,21 @@
   adding foo
   $ cd ..
 
+  $ hg init subdir
+  $ cd subdir
+  $ mkdir dir
+  $ cd dir
+  $ touch a.py
+  $ hg addremove 'glob:*.py'
+  adding a.py
+  $ hg forget a.py
+  $ hg addremove -I 'glob:*.py'
+  adding a.py
+  $ hg forget a.py
+  $ hg addremove
+  adding dir/a.py
+  $ cd ..
+
   $ hg init sim
   $ cd sim
   $ echo a > a
