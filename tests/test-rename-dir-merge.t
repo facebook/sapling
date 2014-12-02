@@ -105,6 +105,41 @@
   $ hg debugrename b/c
   b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88 (glob)
 
+Local directory rename with conflicting file added in remote source directory
+and untracked in local target directory.
+
+BROKEN: the uncommitted file is overwritten; we should abort
+
+  $ hg co -qC 1
+  $ echo local > b/c
+  $ hg merge 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg st -C
+  A b/c
+    a/c
+  ? a/d
+  $ cat b/c
+  baz
+
+Local directory rename with conflicting file added in remote source directory
+and committed in local target directory.
+
+BROKEN: the local file is overwritten; it should be merged
+
+  $ hg co -qC 1
+  $ echo local > b/c
+  $ hg add b/c
+  $ hg commit -qm 'new file in target directory'
+  $ hg merge 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg st -C
+  A b/c
+    a/c
+  ? a/d
+  $ cat b/c
+  baz
 
 Second scenario with two repos:
 
