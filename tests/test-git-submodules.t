@@ -116,45 +116,45 @@ same name has existed at any point historically, so use alpha instead of subrepo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph  | grep -v ': *master'
-  @  changeset:   6:827c0345b7d1
+  @  changeset:   6:b52cbe4c3ffe
   |  tag:         default/master
   |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     remove all subrepos
   |
-  o  changeset:   5:97f89374a0ce
+  o  changeset:   5:87bae50d72cb
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace file with subrepo
   |
-  o  changeset:   4:e233b0858578
+  o  changeset:   4:33729ae46d57
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     replace subrepo with file
   |
-  o  changeset:   3:6264517ddb98
+  o  changeset:   3:4d2f0f4fb53d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add another subrepo
   |
-  o  changeset:   2:914937cccdbe
+  o  changeset:   2:620c9d5e9a98
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     change subrepo commit
   |
-  o  changeset:   1:2f69b1b8a6f8
+  o  changeset:   1:f20b40ad6da1
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add subrepo
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
   $ hg book
-   * master                    6:827c0345b7d1
+   * master                    6:b52cbe4c3ffe
 
 (add subrepo)
   $ hg cat -r 1 .hgsubstate
@@ -162,7 +162,7 @@ same name has existed at any point historically, so use alpha instead of subrepo
   $ hg cat -r 1 .hgsub
   subrepo = [git]../gitsubrepo
   $ hg gverify -r 1
-  verifying rev 2f69b1b8a6f8 against git commit e42b08b3cb7069b4594a4ee1d9cb641ee47b2355
+  verifying rev f20b40ad6da1 against git commit e42b08b3cb7069b4594a4ee1d9cb641ee47b2355
 
 (change subrepo commit)
   $ hg cat -r 2 .hgsubstate
@@ -170,7 +170,7 @@ same name has existed at any point historically, so use alpha instead of subrepo
   $ hg cat -r 2 .hgsub
   subrepo = [git]../gitsubrepo
   $ hg gverify -r 2
-  verifying rev 914937cccdbe against git commit a000567ceefbd9a2ce364e0dea6e298010b02b6d
+  verifying rev 620c9d5e9a98 against git commit a000567ceefbd9a2ce364e0dea6e298010b02b6d
 
 (add another subrepo)
   $ hg cat -r 3 .hgsubstate
@@ -180,7 +180,7 @@ same name has existed at any point historically, so use alpha instead of subrepo
   subrepo = [git]../gitsubrepo
   subrepo2 = [git]../gitsubrepo
   $ hg gverify -r 3
-  verifying rev 6264517ddb98 against git commit 6e219527869fa40eb6ffbdd013cd86d576b26b01
+  verifying rev 4d2f0f4fb53d against git commit 6e219527869fa40eb6ffbdd013cd86d576b26b01
 
 (replace subrepo with file)
   $ hg cat -r 4 .hgsubstate
@@ -194,7 +194,7 @@ same name has existed at any point historically, so use alpha instead of subrepo
   alpha
   subrepo
   $ hg gverify -r 4
-  verifying rev e233b0858578 against git commit f6436a472da00f581d8d257e9bbaf3c358a5e88c
+  verifying rev 33729ae46d57 against git commit f6436a472da00f581d8d257e9bbaf3c358a5e88c
 
 (replace file with subrepo)
   $ hg cat -r 5 .hgsubstate
@@ -209,15 +209,15 @@ same name has existed at any point historically, so use alpha instead of subrepo
   .hgsubstate
   subrepo
   $ hg gverify -r 5
-  verifying rev 97f89374a0ce against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
+  verifying rev 87bae50d72cb against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
 
 (remove all subrepos)
   $ hg cat -r 6 .hgsub .hgsubstate
-  .hgsub: no such file in rev 827c0345b7d1
-  .hgsubstate: no such file in rev 827c0345b7d1
+  .hgsub: no such file in rev b52cbe4c3ffe
+  .hgsubstate: no such file in rev b52cbe4c3ffe
   [1]
   $ hg gverify -r 6
-  verifying rev 827c0345b7d1 against git commit d3c472800f9d11baa6615971a3179fd441869173
+  verifying rev b52cbe4c3ffe against git commit d3c472800f9d11baa6615971a3179fd441869173
 
   $ hg gclear
   clearing out the git cache data

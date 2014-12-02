@@ -95,8 +95,8 @@ bail if the user does not have dulwich
   $ commit -m "append f2"
   $ git push origin
   To $TESTTMP/gitrepo1
-     bbfe79a..d8aef79  branch1 -> branch1
-     288e92b..f8f8de5  branch2 -> branch2
+     5cbc2d4..776fecd  branch1 -> branch1
+     26a4009..e67b2e2  branch2 -> branch2
   $ cd ..
 
   $ cd hgrepo
@@ -105,7 +105,7 @@ bail if the user does not have dulwich
   importing git objects into hg
   (run 'hg heads' to see heads)
   $ hg log --graph
-  o  changeset:   3:0a696ec0f478
+  o  changeset:   3:ae8eb55f7090
   |  bookmark:    branch2_bookmark
   |  tag:         default/branch2
   |  tag:         tip
@@ -114,7 +114,7 @@ bail if the user does not have dulwich
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     append f2
   |
-  | o  changeset:   2:49db35e15e81
+  | o  changeset:   2:8211cade99e4
   | |  bookmark:    branch1_bookmark
   | |  tag:         default/branch1
   | |  parent:      0:40a840c1f8ae

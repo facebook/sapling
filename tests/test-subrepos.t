@@ -83,7 +83,7 @@ there shall be two gitlink entries, with values matching that in .hgsubstate
   160000 commit aabf7cd015089aff0b84596e69aa37b24a3d090a	xyz/subrepo2
 bring working copy to HEAD state (it's not bare repo)
   $ git reset --hard
-  HEAD is now at 4663c49 Update subrepo2 from hg
+  HEAD is now at ae335e3 Update subrepo2 from hg
   $ cd ..
 
 3. Check .hgsub and .hgsubstate from git repository are merged, not overwritten

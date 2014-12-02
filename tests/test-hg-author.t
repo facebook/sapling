@@ -98,49 +98,49 @@ Load commonly used test logic
   updating reference refs/heads/master
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   8:d3c51ce68cfd
+  @  changeset:   8:c5d1976ab12c
   |  tag:         default/master
   |  tag:         tip
   |  user:        test >test@example.com>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
   |
-  o  changeset:   7:b90e988091a2
+  o  changeset:   7:0e2fb4d21667
   |  user:        test < test@example.com >
   |  date:        Mon Jan 01 00:00:17 2007 +0000
   |  summary:     add eta
   |
-  o  changeset:   6:7ede2f971cae
+  o  changeset:   6:faa3aae96199
   |  user:        test
   |  date:        Mon Jan 01 00:00:16 2007 +0000
   |  summary:     add zeta
   |
-  o  changeset:   5:1454a94056ec
+  o  changeset:   5:2cf6ad5a1afc
   |  user:        name <test@example.com
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add epsilon
   |
-  o  changeset:   4:a045fd599678
+  o  changeset:   4:3131b2a71396
   |  user:        name<test@example.com>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     add delta
   |
-  o  changeset:   3:8da3ab8b31d0
+  o  changeset:   3:6b854d65d0d6
   |  user:        <test@example.com>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
-  o  changeset:   2:92d33c0dd6e1
+  o  changeset:   2:46303c652e79
   |  user:        test <test@example.com> (comment)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     modify beta
   |
-  o  changeset:   1:0564f526fb0f
+  o  changeset:   1:47580592d3d6
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -152,98 +152,98 @@ Load commonly used test logic
   importing git objects into hg
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   8:efec0270e295
+  @  changeset:   8:1fbf3aa91221
   |  tag:         default/master
   |  tag:         tip
   |  user:        test ?test@example.com <test ?test@example.com>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     add theta
   |
-  o  changeset:   7:8ab87d5066e4
+  o  changeset:   7:20310508f06d
   |  user:        test <test@example.com>
   |  date:        Mon Jan 01 00:00:17 2007 +0000
   |  summary:     add eta
   |
-  o  changeset:   6:ff226cc916bd
+  o  changeset:   6:e3d81af8a8c1
   |  user:        test
   |  date:        Mon Jan 01 00:00:16 2007 +0000
   |  summary:     add zeta
   |
-  o  changeset:   5:5f1557c62c53
+  o  changeset:   5:78f609fd208f
   |  user:        name <test@example.com>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add epsilon
   |
-  o  changeset:   4:fc51727b28fe
+  o  changeset:   4:42fa61d57718
   |  user:        name <test@example.com>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     add delta
   |
-  o  changeset:   3:8da3ab8b31d0
+  o  changeset:   3:6b854d65d0d6
   |  user:        <test@example.com>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
-  o  changeset:   2:92d33c0dd6e1
+  o  changeset:   2:46303c652e79
   |  user:        test <test@example.com> (comment)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     modify beta
   |
-  o  changeset:   1:0564f526fb0f
+  o  changeset:   1:47580592d3d6
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
   $ git --git-dir=gitrepo/.git log --pretty=medium master
-  commit 1e03e913eca571b86ee06d3c1ddd795dde9ca917
+  commit 2fe60ba69727981e6ede78be70354c3a9e30e21d
   Author: test ?test@example.com <test ?test@example.com>
   Date:   Mon Jan 1 00:00:18 2007 +0000
   
       add theta
   
-  commit 8c878c9764e96e67ed9f62b3f317d156bf71bc52
+  commit 9f2f7cafdbf2e467928db98de8275141001d3081
   Author: test <test@example.com>
   Date:   Mon Jan 1 00:00:17 2007 +0000
   
       add eta
   
-  commit d21e26b48c6136340dd1212bb45ba0e9debb130c
+  commit 172a6f8d8064d73dff7013e395a9fe3cfc3ff807
   Author: test <none@none>
   Date:   Mon Jan 1 00:00:16 2007 +0000
   
       add zeta
   
-  commit ee985f124d2f13ee8ad2a346a6d1b0ada8b0d491
+  commit 71badb8e343a7da391a9b5d98909fbd2ca7d78f2
   Author: name <test@example.com>
   Date:   Mon Jan 1 00:00:15 2007 +0000
   
       add epsilon
   
-  commit d16592507ac83a6a633b90ca255f65e5d024f0bc
+  commit 9a9ae7b7f310d4a1a3e732a747ca26f06934f8d8
   Author: name <test@example.com>
   Date:   Mon Jan 1 00:00:14 2007 +0000
   
       add delta
   
-  commit fee30180efc4943fb916de04fcf6a64b638d9325
+  commit e4149a32e81e380193f59aa8773349201b8ed7f7
   Author:  <test@example.com>
   Date:   Mon Jan 1 00:00:13 2007 +0000
   
       add gamma
   
-  commit 2b9ec6a47b93191986a79eeb771e461c4508c7c4
+  commit fae95aef5889a80103c2fbd5d14ff6eb8c9daf93
   Author: test ext:(%20%28comment%29) <test@example.com>
   Date:   Mon Jan 1 00:00:12 2007 +0000
   
       modify beta
   
-  commit cffa0e8d8ad5f284c69c898c0f3c1e32d078af8a
+  commit 0f378ab6c2c6b5514bd873d3faf8ac4b8095b001
   Author: test <none@none>
   Date:   Mon Jan 1 00:00:11 2007 +0000
   

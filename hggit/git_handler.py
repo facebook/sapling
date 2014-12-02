@@ -620,29 +620,31 @@ class GitHandler(object):
         for i, field, value in git_extraitems:
             git_extra.append((urllib.unquote(field), urllib.unquote(value)))
 
-        renames = []
-        for f in ctx.files():
-            if f not in ctx.manifest():
-                continue
-            rename = ctx.filectx(f).renamed()
-            if rename:
-                renames.append((rename[0], f))
+        if extra.get('hg-git-rename-source', None) != 'git':
+            renames = []
+            for f in ctx.files():
+                if f not in ctx.manifest():
+                    continue
+                rename = ctx.filectx(f).renamed()
+                if rename:
+                    renames.append((rename[0], f))
 
-        if renames:
-            for oldfile, newfile in renames:
-                if extra_in_message:
-                    extra_message += ("rename : " + oldfile + " => " +
-                                      newfile + "\n")
-                else:
-                    spec = '%s:%s' % (urllib.quote(oldfile),
-                                      urllib.quote(newfile))
-                    git_extra.append(('HG:rename', spec))
+            if renames:
+                for oldfile, newfile in renames:
+                    if extra_in_message:
+                        extra_message += ("rename : " + oldfile + " => " +
+                                          newfile + "\n")
+                    else:
+                        spec = '%s:%s' % (urllib.quote(oldfile),
+                                          urllib.quote(newfile))
+                        git_extra.append(('HG:rename', spec))
 
         # hg extra items always go at the end
         extraitems = extra.items()
         extraitems.sort()
         for key, value in extraitems:
-            if key in ('author', 'committer', 'encoding', 'message', 'branch', 'hg-git'):
+            if key in ('author', 'committer', 'encoding', 'message', 'branch',
+                       'hg-git', 'hg-git-rename-source'):
                 continue
             else:
                 if extra_in_message:
@@ -655,6 +657,13 @@ class GitHandler(object):
 
         if extra_message:
             message += "\n--HG--\n" + extra_message
+
+        if (extra.get('hg-git-rename-source', None) != 'git'
+            and not extra_in_message and not git_extra):
+            # We need to store this if no other metadata is stored. This
+            # indicates that when reimporting the commit into Mercurial we'll
+            # know not to detect renames.
+            git_extra.append(('HG:rename-source', 'hg'))
 
         return message, git_extra
 
@@ -690,6 +699,11 @@ class GitHandler(object):
              commit.message, commit.extra)
         if hg_renames is None:
             detect_renames = True
+            # We have to store this unconditionally, even if there are no
+            # renames detected from Git. This is because we export an extra
+            # 'HG:rename-source' Git parameter when this isn't set, which will
+            # break bidirectionality.
+            extra['hg-git-rename-source'] = 'git'
         else:
             renames = hg_renames
 

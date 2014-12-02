@@ -33,29 +33,29 @@ final manifest in git is just beta
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph | grep -v ': *master'
-  @  changeset:   4:ea41a3f0ed10
+  @  changeset:   4:0d3086c3f8c3
   |  tag:         default/master
   |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     remove foo/bar
   |
-  o  changeset:   3:c84537f94bcc
+  o  changeset:   3:b2406125ef5c
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     remove alpha
   |
-  o  changeset:   2:e25450e1354f
+  o  changeset:   2:8b3b2f4b4158
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add foo
   |
-  o  changeset:   1:7bcd915dc873
+  o  changeset:   1:7fe02317c63d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha

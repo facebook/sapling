@@ -76,4 +76,4 @@ expect the same revision ids as above
        origin
   
   $ hg -R hgrepo2 gverify
-  verifying rev eaa21d002113 against git commit efe74cc1e0ede609e3ab5983e61d780a10177ef3
+  verifying rev eaa21d002113 against git commit fb8c9e2afe5418cfff337eeed79fad5dd58826f0

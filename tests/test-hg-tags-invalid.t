@@ -32,26 +32,26 @@ Load commonly used test logic
   adding reference refs/tags/gamm_a
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   3:33a29389ddad
+  @  changeset:   3:0950ab44ea23
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:13 2007 +0000
-  |  summary:     Added tag gamm a for changeset e72bdd9ef5c0
+  |  summary:     Added tag gamm a for changeset 0b27ab2b3df6
   |
-  o  changeset:   2:e72bdd9ef5c0
+  o  changeset:   2:0b27ab2b3df6
   |  tag:         gamm a
   |  user:        test
   |  date:        Mon Jan 01 00:00:12 2007 +0000
-  |  summary:     Added tag bet*a for changeset 432ce25d86bc
+  |  summary:     Added tag bet*a for changeset 491ceeb1b0f1
   |
-  o  changeset:   1:432ce25d86bc
+  o  changeset:   1:491ceeb1b0f1
   |  tag:         bet*a
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     Added tag alph#a for changeset 3442585be8a6
+  |  summary:     Added tag alph#a for changeset ff7a2f2d8d70
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      tag:         alph#a
      tag:         default/not-master
      user:        test <test@example.org>
@@ -71,27 +71,27 @@ git should have only the valid tag alph#a but have full commit log including the
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   3:33a29389ddad
+  @  changeset:   3:0950ab44ea23
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
   |  date:        Mon Jan 01 00:00:13 2007 +0000
-  |  summary:     Added tag gamm a for changeset e72bdd9ef5c0
+  |  summary:     Added tag gamm a for changeset 0b27ab2b3df6
   |
-  o  changeset:   2:e72bdd9ef5c0
+  o  changeset:   2:0b27ab2b3df6
   |  tag:         gamm a
   |  tag:         gamm_a
   |  user:        test
   |  date:        Mon Jan 01 00:00:12 2007 +0000
-  |  summary:     Added tag bet*a for changeset 432ce25d86bc
+  |  summary:     Added tag bet*a for changeset 491ceeb1b0f1
   |
-  o  changeset:   1:432ce25d86bc
+  o  changeset:   1:491ceeb1b0f1
   |  tag:         bet*a
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     Added tag alph#a for changeset 3442585be8a6
+  |  summary:     Added tag alph#a for changeset ff7a2f2d8d70
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      tag:         alph#a
      tag:         default/not-master
      user:        test <test@example.org>
@@ -101,6 +101,6 @@ git should have only the valid tag alph#a but have full commit log including the
 
 the tag should be in .hgtags
   $ cat hgrepo2/.hgtags
-  3442585be8a60c6cd476bbc4e45755339f2a23ef alph#a
-  432ce25d86bc4281747aa42e27b473b992e2b0b9 bet*a
-  e72bdd9ef5c0d6c50022480ee74cd9e48ae74e19 gamm a
+  ff7a2f2d8d7099694ae1e8b03838d40575bebb63 alph#a
+  491ceeb1b0f10d65d956dfcdd3470ac2bc2c96a8 bet*a
+  0b27ab2b3df69c6f7defd7040b93e539136db5be gamm a

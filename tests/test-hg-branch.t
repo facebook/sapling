@@ -38,7 +38,7 @@ Load commonly used test logic
   updating reference refs/heads/master
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
-  @  changeset:   2:05aed681ccb3
+  @  changeset:   2:400db38f4f64
   |  branch:      gamma
   |  tag:         default/master
   |  tag:         tip
@@ -46,12 +46,12 @@ Load commonly used test logic
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     started branch gamma
   |
-  o  changeset:   1:a31e374801c9
+  o  changeset:   1:3baa67317a4d
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     rename alpha to beta
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -63,7 +63,7 @@ Load commonly used test logic
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
-  o  changeset:   2:05aed681ccb3
+  o  changeset:   2:400db38f4f64
   |  branch:      gamma
   |  tag:         default/master
   |  tag:         tip
@@ -71,12 +71,12 @@ Load commonly used test logic
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     started branch gamma
   |
-  @  changeset:   1:a31e374801c9
+  @  changeset:   1:3baa67317a4d
   |  user:        test
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     rename alpha to beta
   |
-  o  changeset:   0:3442585be8a6
+  o  changeset:   0:ff7a2f2d8d70
      tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

@@ -67,40 +67,40 @@ Load commonly used test logic
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph --style compact | sed 's/\[.*\]//g'
-  @    9:7,8   9c1d2aac0643   2007-01-01 00:00 +0000   test
+  @    9:7,8   307506d6ae8a   2007-01-01 00:00 +0000   test
   |\     Merge branches 'branch3' and 'branch4'
   | |
-  | o    8:3,4   c5ea839ce0aa   2007-01-01 00:00 +0000   test
+  | o    8:3,4   2b07220e422e   2007-01-01 00:00 +0000   test
   | |\     Merge branches 'branch3' and 'branch4'
   | | |
-  o | |    7:5,6   fb41ad5568ee   2007-01-01 00:00 +0000   test
+  o | |    7:5,6   ccf2d65d982c   2007-01-01 00:00 +0000   test
   |\ \ \     Merge branches 'branch1' and 'branch2'
   | | | |
-  | o | |    6:1,2   2bd73a80b472   2007-01-01 00:00 +0000   test
+  | o | |    6:1,2   690b40256117   2007-01-01 00:00 +0000   test
   | |\ \ \     Merge branches 'branch1' and 'branch2'
   | | | | |
-  o | | | |  5:0   71cbde26f242   2007-01-01 00:00 +0000   test
+  o | | | |  5:0   e459c0629ca4   2007-01-01 00:00 +0000   test
   | | | | |    add delta
   | | | | |
-  +-------o  4:0   fdf749fb5963   2007-01-01 00:00 +0000   test
+  +-------o  4:0   e857c9a04474   2007-01-01 00:00 +0000   test
   | | | |      add zeta
   | | | |
-  +-----o  3:0   19e973b01564   2007-01-01 00:00 +0000   test
+  +-----o  3:0   0071dec0de0e   2007-01-01 00:00 +0000   test
   | | |      add epsilon
   | | |
-  +---o  2:0   37c124f2d0a0   2007-01-01 00:00 +0000   test
+  +---o  2:0   205a004356ef   2007-01-01 00:00 +0000   test
   | |      add gamma
   | |
-  | o  1   7bcd915dc873   2007-01-01 00:00 +0000   test
+  | o  1   7fe02317c63d   2007-01-01 00:00 +0000   test
   |/     add beta
   |
-  o  0   3442585be8a6   2007-01-01 00:00 +0000   test
+  o  0   ff7a2f2d8d70   2007-01-01 00:00 +0000   test
        add alpha
   
   $ hg gverify -r 9
-  verifying rev 9c1d2aac0643 against git commit b32ff845df61df998206b630e4370a44f9b36845
+  verifying rev 307506d6ae8a against git commit b32ff845df61df998206b630e4370a44f9b36845
   $ hg gverify -r 8
-  abort: no git commit found for rev c5ea839ce0aa
+  abort: no git commit found for rev 2b07220e422e
   (if this is an octopus merge, verify against the last rev)
   [255]
 

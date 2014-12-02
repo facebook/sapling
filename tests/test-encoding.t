@@ -32,10 +32,10 @@ The warning message changed in Git 1.8.0
   $ cd hgrepo
 
   $ HGENCODING=utf-8 hg log --graph --debug | grep -v ': *master' | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
-  @  changeset:   3:c3d3e39fc04f7e2e8cdb95f090415ec1ddc1be70
+  @  changeset:   3:b8a0ac52f339ccd6d5729508bac4aee6e8b489d8
   |  tag:         default/master
   |  tag:         tip
-  |  parent:      2:f8aa41895a3a771a72520ca205a4685b76649fdd
+  |  parent:      2:8bc4d64940260d4a1e70b54c099d3a76c83ff41e
   |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    3:ea49f93388380ead5601c8fcbfa187516e7c2ed8
   |  user:        tést èncödîng <test@example.org>
@@ -44,37 +44,40 @@ The warning message changed in Git 1.8.0
   |  extra:       branch=default
   |  extra:       committer=test <test@example.org> 1167609613 0
   |  extra:       encoding=latin-1
+  |  extra:       hg-git-rename-source=git
   |  description:
-  |  add déltà
+  |  add d\xc3\xa9lt\xc3\xa0 (esc)
   |
   |
-  o  changeset:   2:f8aa41895a3a771a72520ca205a4685b76649fdd
-  |  parent:      1:955b24cf6f8f293741d3f39110c6fe554c292533
-  |  parent:      -1:0000000000000000000000000000000000000000
+  o  changeset:   2:8bc4d64940260d4a1e70b54c099d3a76c83ff41e
+  |  parent:      1:f35a3100b78e57a0f5e4589a438f952a14b26ade
+  |  parent:      1:(9f6268bfc9eb3956c5ab8752d7b983b0ffe57115|955b24cf6f8f293741d3f39110c6fe554c292533) (re)
   |  manifest:    2:f580e7da3673c137370da2b931a1dee83590d7b4
-  |  user:        tést èncödîng <test@example.org>
+  |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  files+:      gamma
   |  extra:       branch=default
   |  extra:       committer=test <test@example.org> 1167609612 0
+  |  extra:       hg-git-rename-source=git
   |  description:
-  |  add gämmâ
+  |  add g\xc3\xa4mm\xc3\xa2 (esc)
   |
   |
-  o  changeset:   1:955b24cf6f8f293741d3f39110c6fe554c292533
-  |  parent:      0:bb7d36568d6188ce0de2392246c43f6f213df954
+  o  changeset:   1:f35a3100b78e57a0f5e4589a438f952a14b26ade
+  |  parent:      0:87cd29b67a9159eec3b5495b0496ef717b2769f5
   |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    1:f0bd6fbafbaebe4bb59c35108428f6fce152431d
-  |  user:        tést èncödîng <test@example.org>
+  |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  files+:      beta
   |  extra:       branch=default
   |  extra:       committer=test <test@example.org> 1167609611 0
+  |  extra:       hg-git-rename-source=git
   |  description:
   |  add beta
   |
   |
-  o  changeset:   0:bb7d36568d6188ce0de2392246c43f6f213df954
+  o  changeset:   0:87cd29b67a9159eec3b5495b0496ef717b2769f5
      parent:      -1:0000000000000000000000000000000000000000
      parent:      -1:0000000000000000000000000000000000000000
      manifest:    0:8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
@@ -82,8 +85,9 @@ The warning message changed in Git 1.8.0
      date:        Mon Jan 01 00:00:10 2007 +0000
      files+:      alpha
      extra:       branch=default
+     extra:       hg-git-rename-source=git
      description:
-     add älphà
+     add \xc3\xa4lph\xc3\xa0 (esc)
   
   
 

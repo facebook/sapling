@@ -32,13 +32,13 @@ Load commonly used test logic
 
   $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  changeset:   1:0564f526fb0f
+  changeset:   1:47580592d3d6
   tag:         beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  changeset:   2:72f56395749d
+  changeset:   2:953796e1cfd8
   tag:         master
   tag:         tip
   user:        test
@@ -47,7 +47,7 @@ Load commonly used test logic
   
   $ hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  changeset:   1:0564f526fb0f
+  changeset:   1:47580592d3d6
   tag:         beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -55,13 +55,13 @@ Load commonly used test logic
   
   $ hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  changeset:   1:0564f526fb0f
+  changeset:   1:47580592d3d6
   tag:         beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  changeset:   2:72f56395749d
+  changeset:   2:953796e1cfd8
   tag:         master
   tag:         tip
   user:        test
@@ -100,13 +100,13 @@ let's pull and try again
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  changeset:   1:0564f526fb0f
+  changeset:   1:47580592d3d6
   tag:         beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  changeset:   2:72f56395749d
+  changeset:   2:953796e1cfd8
   tag:         master
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
@@ -114,7 +114,7 @@ let's pull and try again
   
   $ hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  changeset:   1:0564f526fb0f
+  changeset:   1:47580592d3d6
   tag:         beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -122,13 +122,13 @@ let's pull and try again
   
   $ hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  changeset:   1:0564f526fb0f
+  changeset:   1:47580592d3d6
   tag:         beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  changeset:   2:72f56395749d
+  changeset:   2:953796e1cfd8
   tag:         master
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000

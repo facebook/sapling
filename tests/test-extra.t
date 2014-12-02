@@ -33,17 +33,17 @@ Add a commit with multiple extra fields
   $ hg add d
   $ fn_hg_commitextra --field zzzzzzz=datazzz --field aaaaaaa=dataaaa
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
+  @  3 f01651cfcc9337fbd9700d5018ca637a2911ed28
   |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
   |
-  o  2 dcec77c6ae3cff594c4435e5820bec4ec9e57440 b
-  |  branch=default rebase_source=bb8ddb1031b5d9afd7caa5aa9d24c735222e3636
+  o  2 03f4cf3c429050e2204fb2bda3a0f93329bdf4fd b
+  |  branch=default rebase_source=4c7da7adf18b785726a7421ef0d585bb5762990d
   |
-  o  1 003b36e9c3993ac4319eeebd5f77a1d5306ba706 c
+  o  1 a735dc0cd7cc0ccdbc16cfa4326b19c707c360f4 c
   |  branch=default
   |
-  o  0 ab83abcbf5717f738191aa2d42f52a7100ce06a8 a
-     branch=default
+  o  0 aa9eb6424386df2b0638fe6f480c3767fdd0e6fd a
+     branch=default hg-git-rename-source=git
   
 Make sure legacy extra (in commit message, after '--HG--') doesn't break
   $ hg push -r b1 --config git.debugextrainmessage=1
@@ -67,13 +67,13 @@ Test some nutty filenames
   warning: filename contains '>', which is reserved on Windows: 'c3 => c4'
   $ fn_hg_commit -m 'test filename with arrow 2'
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n" -l 3
-  @  6 f79e341d064ee29dce405f6e7345ae7241fb4d55 test filename with arrow 2
+  @  6 bca4ba69a6844c133b069e227dfa043d41e3c197 test filename with arrow 2
   |  branch=default
   |
-  o  5 fe50d8ec59bf76ee3f975635189d1b2fb88d13c7 test filename with arrow
+  o  5 864caad1f3493032f8d06f44a89dc9f1c039b09f test filename with arrow
   |  branch=default
   |
-  o  4 71a7f7cc00a30dde4a0d5da37f119e51ded1820a
+  o  4 58f855ae26f4930ce857e648d3dd949901cce817
   |  bbbbbbb=databbb branch=default yyyyyyy=datayyy
   |
   $ hg push -r b2 -r b3
@@ -87,7 +87,7 @@ Test some nutty filenames
   $ cd ../gitrepo
   $ git cat-file commit b1
   tree 1b773a2eb70f29397356f8069c285394835ff85a
-  parent 99316cce06b9b5aa9e5a3f4df124939583791dda
+  parent 202f271eb3dcb7b767ce2af6cdad4114df62ff3f
   author test <none@none> 1167609613 +0000
   committer test <none@none> 1167609613 +0000
   
@@ -99,7 +99,7 @@ Test some nutty filenames
 
   $ git cat-file commit b2
   tree 34ad62c6d6ad9464bfe62db5b3d2fa16aaa9fa9e
-  parent ca11864bb2a84c3996929d42cf38bae3d0f7aae0
+  parent 66fe706f6f4f08f0020323e6c49548d41bb00ff6
   author test <none@none> 1167609614 +0000
   committer test <none@none> 1167609614 +0000
   HG:rename c:c2
@@ -111,7 +111,7 @@ Test some nutty filenames
 
   $ git cat-file commit b3
   tree e63df52695f9b06e54b37e7ef60d0c43994de620
-  parent 74a6e4fb2ef9e2c23da1e2b7bdbd88c89ee9bac4
+  parent 6a66c937dea689a8bb2aa053bd91667fe4a7bfe8
   author test <none@none> 1167609616 +0000
   committer test <none@none> 1167609616 +0000
   HG:rename c2%20%3D%3E%20c3:c3%20%3D%3E%20c4
@@ -148,7 +148,7 @@ lets you do that, though.
 
   $ git cat-file commit master
   tree 1b773a2eb70f29397356f8069c285394835ff85a
-  parent ca11864bb2a84c3996929d42cf38bae3d0f7aae0
+  parent 66fe706f6f4f08f0020323e6c49548d41bb00ff6
   author test <test@example.org> 0 +0000
   committer test <test@example.org> 0 +0000
   zzz:zzz data:zzz
@@ -162,27 +162,27 @@ lets you do that, though.
   $ hg clone -q gitrepo hgrepo2
   $ cd hgrepo2
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  7 f79e341d064ee29dce405f6e7345ae7241fb4d55 test filename with arrow 2
+  @  7 e003ec989aaae23b3eb30d4423419fb4dc346089 test filename with arrow 2
   |  branch=default
   |
-  o  6 fe50d8ec59bf76ee3f975635189d1b2fb88d13c7 test filename with arrow
+  o  6 a2e276bd9458cb7dc309230ec8064d544e4f0c68 test filename with arrow
   |  branch=default
   |
-  o  5 71a7f7cc00a30dde4a0d5da37f119e51ded1820a
+  o  5 524e82e66b589f8b56bdd0679ad457a162ba16cd
   |  bbbbbbb=databbb branch=default yyyyyyy=datayyy
   |
-  | o  4 f5fddc070b0648a5cddb98b43bbd527e98f4b4d2 extra commit
+  | o  4 741081daa02c9023c8c5117771f59ef2308a575c extra commit
   |/   GIT0-zzz%3Azzz=data%3Azzz GIT1-aaa%3Aaaa=data%3Aaaa branch=default hgaaa=dataaaa hgzzz=datazzz
   |
-  o  3 f15e01c73845392d86a5ed10fb0753d09bca13d3
+  o  3 73fa4063c4b0f386fd6b59da693617dedb340b02
   |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
   |
-  o  2 dcec77c6ae3cff594c4435e5820bec4ec9e57440 b
-  |  branch=default rebase_source=bb8ddb1031b5d9afd7caa5aa9d24c735222e3636
+  o  2 98337758089f6efd29f48bcaf00d14184ed0771b b
+  |  branch=default rebase_source=4c7da7adf18b785726a7421ef0d585bb5762990d
   |
-  o  1 003b36e9c3993ac4319eeebd5f77a1d5306ba706 c
-  |  branch=default
+  o  1 92a46c8588a7cd504c369259ef631b2c14ef4e91 c
+  |  branch=default hg-git-rename-source=git
   |
-  o  0 ab83abcbf5717f738191aa2d42f52a7100ce06a8 a
-     branch=default
+  o  0 aa9eb6424386df2b0638fe6f480c3767fdd0e6fd a
+     branch=default hg-git-rename-source=git
   

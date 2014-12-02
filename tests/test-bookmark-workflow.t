@@ -79,10 +79,10 @@ Cloning transfers all bookmarks from remote to local
   $ hg clone -q gitremoterepo hggitlocalrepo
   $ cd hggitlocalrepo
   $ hggitstate
-    3 fc2664cac217 55b133e1d558 "add delta" bookmarks: [master]
-    2 d85ced7ae9d6 d338971a96e2 "add gamma" bookmarks: []
-    1 7bcd915dc873 9497a4ee62e1 "add beta" bookmarks: [b1]
-    0 3442585be8a6 7eeab2ea75ec "add alpha" bookmarks: []
+    3 03769a650ded 55b133e1d558 "add delta" bookmarks: [master]
+    2 ca33a262eb46 d338971a96e2 "add gamma" bookmarks: []
+    1 7fe02317c63d 9497a4ee62e1 "add beta" bookmarks: [b1]
+    0 ff7a2f2d8d70 7eeab2ea75ec "add alpha" bookmarks: []
   $ cd ..
 
 No changes
@@ -193,14 +193,14 @@ It only shows "new" bookmarks.  Thus, b1 doesn't show up.
   $ hg bookmark -fr 2 b1
   $ hg bookmark -r 0 b2
   $ hgstate
-    3 fc2664cac217 "add delta" bookmarks: [master]
-    2 d85ced7ae9d6 "add gamma" bookmarks: [b1]
-    1 7bcd915dc873 "add beta" bookmarks: []
-    0 3442585be8a6 "add alpha" bookmarks: [b2]
+    3 03769a650ded "add delta" bookmarks: [master]
+    2 ca33a262eb46 "add gamma" bookmarks: [b1]
+    1 7fe02317c63d "add beta" bookmarks: []
+    0 ff7a2f2d8d70 "add alpha" bookmarks: [b2]
   $ hg incoming -B
   comparing with $TESTTMP/gitremoterepo
   searching for changed bookmarks
-     b3                        fc2664cac217
+     b3                        03769a650ded
      b4                        fcfd2c0262db
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
@@ -212,5 +212,5 @@ It only shows "new" bookmarks.  Thus, b1 doesn't show up.
   $ hg outgoing -B
   comparing with $TESTTMP/gitremoterepo
   searching for changed bookmarks
-     b2                        3442585be8a6
+     b2                        ff7a2f2d8d70
   $ cd ..

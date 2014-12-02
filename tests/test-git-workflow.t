@@ -47,7 +47,7 @@ get things back to hg
   $ hg gimport
   importing git objects into hg
   $ hg log --graph --debug | grep -v ': *master' | grep -v phase:
-  o  changeset:   1:7108ae7bd184226a29b8203619a8253d314643bf
+  o  changeset:   1:9f124f3c1fc29a14f5eb027c24811b0ac9d5ff10
   |  tag:         tip
   |  parent:      0:0221c246a56712c6aa64e5ee382244d8a471b1e2
   |  parent:      -1:0000000000000000000000000000000000000000
@@ -56,6 +56,7 @@ get things back to hg
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  files+:      beta
   |  extra:       branch=default
+  |  extra:       hg-git-rename-source=git
   |  description:
   |  add beta
   |
@@ -74,7 +75,7 @@ get things back to hg
   
 gimport should have updated the bookmarks as well
   $ hg bookmarks
-     master                    1:7108ae7bd184
+     master                    1:9f124f3c1fc2
 
 gimport support for git.mindate
   $ cat >> .hg/hgrc << EOF
@@ -89,7 +90,7 @@ gimport support for git.mindate
   $ hg gimport
   no changes found
   $ hg log --graph
-  o  changeset:   1:7108ae7bd184
+  o  changeset:   1:9f124f3c1fc2
   |  bookmark:    master
   |  tag:         tip
   |  user:        test <test@example.org>
@@ -110,19 +111,19 @@ gimport support for git.mindate
   $ hg gimport
   importing git objects into hg
   $ hg log --graph
-  o  changeset:   3:865f98279824
+  o  changeset:   3:3d10b7289d79
   |  bookmark:    master
   |  tag:         tip
   |  user:        test <test@example.org>
   |  date:        Wed Jan 01 00:00:00 2014 +0000
   |  summary:     newcommit
   |
-  o  changeset:   2:b6cde64c110c
+  o  changeset:   2:befdecd14df5
   |  user:        test <test@example.org>
   |  date:        Sat Mar 01 00:00:00 2014 +0000
   |  summary:     oldcommit
   |
-  o  changeset:   1:7108ae7bd184
+  o  changeset:   1:9f124f3c1fc2
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta

@@ -22,9 +22,9 @@ Load commonly used test logic
   $ hg commit -m 'add gamma'
 
   $ hg log --template "{rev} {node} {node|short} {gitnode} {gitnode|short}\n"
-  2 a9da0c7c9bb7574b0f3139ab65cabac7468d6b8d a9da0c7c9bb7  
-  1 7bcd915dc873c654b822f01b0a39269b2739e86d 7bcd915dc873 9497a4ee62e16ee641860d7677cdb2589ea15554 9497a4ee62e1
-  0 3442585be8a60c6cd476bbc4e45755339f2a23ef 3442585be8a6 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 7eeab2ea75ec
+  2 168eb1ee8b3c04e6723c9330327b0eec1e36577f 168eb1ee8b3c  
+  1 7fe02317c63d9ee324d4b5df7c9296085162da1b 7fe02317c63d 9497a4ee62e16ee641860d7677cdb2589ea15554 9497a4ee62e1
+  0 ff7a2f2d8d7099694ae1e8b03838d40575bebb63 ff7a2f2d8d70 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 7eeab2ea75ec
   $ hg log --template "fromgit {rev}\n" --rev "fromgit()"
   fromgit 0
   fromgit 1

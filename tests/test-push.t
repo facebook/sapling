@@ -38,7 +38,7 @@ Load commonly used test logic
 should have two different branches
   $ cd gitrepo
   $ git branch -v
-    beta       cffa0e8 add beta
+    beta       0f378ab add beta
     master     7eeab2e add alpha
   * not-master 7eeab2e add alpha
 
@@ -77,16 +77,16 @@ which should not implicitly also push the not-master ref.
   $ hg book not-master -r default/not-master --force
 master and default/master should be diferent
   $ hg log -r master | grep -v ': *master'
-  changeset:   2:72f56395749d
+  changeset:   2:953796e1cfd8
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma
   
   $ hg log -r default/master | grep -v 'master@default'
-  changeset:   3:1436150b86c2
+  changeset:   3:25eed24f5e8f
   tag:         default/master
   tag:         tip
-  parent:      0:3442585be8a6
+  parent:      0:ff7a2f2d8d70
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     add delta
@@ -96,7 +96,7 @@ this should also fail
   $ hg push -r master
   pushing to $TESTTMP/gitrepo
   searching for changes
-  abort: pushing refs/heads/master overwrites 72f56395749d
+  abort: pushing refs/heads/master overwrites 953796e1cfd8
   [255]
 
 ... but succeed with -f
@@ -141,7 +141,7 @@ hg-git issue103 -- directories can lose information at hg-git export time
   added 1 commits with 2 trees and 0 blobs
   updating reference refs/heads/master
   $ hg log -r master
-  changeset:   5:fff64abfde07
+  changeset:   5:ba0476ff1899
   bookmark:    master
   tag:         default/master
   tag:         tip
@@ -157,7 +157,7 @@ hg-git issue103 -- directories can lose information at hg-git export time
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-test log -r master
-  changeset:   4:fff64abfde07
+  changeset:   4:ba0476ff1899
   bookmark:    master
   tag:         default/master
   tag:         tip

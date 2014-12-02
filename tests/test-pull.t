@@ -29,7 +29,7 @@ pull a tag
   $ hg -R hgrepo update t_alpha
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo log --graph
-  @  changeset:   0:3442585be8a6
+  @  changeset:   0:ff7a2f2d8d70
      bookmark:    master
      tag:         default/master
      tag:         t_alpha
@@ -57,7 +57,7 @@ pull a branch
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg -R hgrepo log --graph
-  o  changeset:   1:7bcd915dc873
+  o  changeset:   1:7fe02317c63d
   |  bookmark:    beta
   |  tag:         default/beta
   |  tag:         tip
@@ -65,7 +65,7 @@ pull a branch
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  @  changeset:   0:3442585be8a6
+  @  changeset:   0:ff7a2f2d8d70
      bookmark:    epsilon
      bookmark:    master
      tag:         default/epsilon
@@ -91,24 +91,24 @@ pull everything else
   importing git objects into hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo log --graph
-  o  changeset:   3:56cabe48c4b0
+  o  changeset:   3:6f898ad1f3e1
   |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
-  |  parent:      0:3442585be8a6
+  |  parent:      0:ff7a2f2d8d70
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
-  | o  changeset:   2:4d41070bf840
+  | o  changeset:   2:678ebee93e38
   |/   bookmark:    delta
   |    tag:         default/delta
-  |    parent:      0:3442585be8a6
+  |    parent:      0:ff7a2f2d8d70
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:12 2007 +0000
   |    summary:     add delta
   |
-  | o  changeset:   1:7bcd915dc873
+  | o  changeset:   1:7fe02317c63d
   |/   bookmark:    beta
   |    tag:         default/beta
   |    tag:         t_beta
@@ -116,7 +116,7 @@ pull everything else
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
-  @  changeset:   0:3442585be8a6
+  @  changeset:   0:ff7a2f2d8d70
      bookmark:    epsilon
      tag:         default/epsilon
      tag:         t_alpha
@@ -139,31 +139,31 @@ pull the merge
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg -R hgrepo log --graph
-  o    changeset:   4:892d20308ddf
+  o    changeset:   4:a02330f767a4
   |\   bookmark:    master
   | |  tag:         default/master
   | |  tag:         tip
-  | |  parent:      3:56cabe48c4b0
-  | |  parent:      1:7bcd915dc873
+  | |  parent:      3:6f898ad1f3e1
+  | |  parent:      1:7fe02317c63d
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
-  | o  changeset:   3:56cabe48c4b0
-  | |  parent:      0:3442585be8a6
+  | o  changeset:   3:6f898ad1f3e1
+  | |  parent:      0:ff7a2f2d8d70
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
   | |
-  | | o  changeset:   2:4d41070bf840
+  | | o  changeset:   2:678ebee93e38
   | |/   bookmark:    delta
   | |    tag:         default/delta
-  | |    parent:      0:3442585be8a6
+  | |    parent:      0:ff7a2f2d8d70
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
   | |    summary:     add delta
   | |
-  o |  changeset:   1:7bcd915dc873
+  o |  changeset:   1:7fe02317c63d
   |/   bookmark:    beta
   |    tag:         default/beta
   |    tag:         t_beta
@@ -171,7 +171,7 @@ pull the merge
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
-  @  changeset:   0:3442585be8a6
+  @  changeset:   0:ff7a2f2d8d70
      bookmark:    epsilon
      tag:         default/epsilon
      tag:         t_alpha
@@ -201,46 +201,46 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   importing git objects into hg
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo log --graph
-  o  changeset:   6:bdc34645137e
+  o  changeset:   6:a3f95e150b0a
   |  bookmark:    releases/v2
   |  tag:         default/releases/v2
   |  tag:         tip
-  |  parent:      4:892d20308ddf
+  |  parent:      4:a02330f767a4
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add eta
   |
-  | o  changeset:   5:3e35a45c61f9
+  | o  changeset:   5:218b2d0660d3
   |/   bookmark:    releases/v1
   |    tag:         default/releases/v1
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:14 2007 +0000
   |    summary:     add zeta
   |
-  o    changeset:   4:892d20308ddf
+  o    changeset:   4:a02330f767a4
   |\   bookmark:    master
   | |  tag:         default/master
-  | |  parent:      3:56cabe48c4b0
-  | |  parent:      1:7bcd915dc873
+  | |  parent:      3:6f898ad1f3e1
+  | |  parent:      1:7fe02317c63d
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
-  | o  changeset:   3:56cabe48c4b0
-  | |  parent:      0:3442585be8a6
+  | o  changeset:   3:6f898ad1f3e1
+  | |  parent:      0:ff7a2f2d8d70
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
   | |
-  | | o  changeset:   2:4d41070bf840
+  | | o  changeset:   2:678ebee93e38
   | |/   bookmark:    delta
   | |    tag:         default/delta
-  | |    parent:      0:3442585be8a6
+  | |    parent:      0:ff7a2f2d8d70
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
   | |    summary:     add delta
   | |
-  o |  changeset:   1:7bcd915dc873
+  o |  changeset:   1:7fe02317c63d
   |/   bookmark:    beta
   |    tag:         default/beta
   |    tag:         t_beta
@@ -248,7 +248,7 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
-  @  changeset:   0:3442585be8a6
+  @  changeset:   0:ff7a2f2d8d70
      bookmark:    epsilon
      tag:         default/epsilon
      tag:         t_alpha
@@ -284,10 +284,10 @@ also add an annotated tag
   pulling from $TESTTMP/gitrepo
   no changes found
   $ hg -R hgrepo log -r master
-  changeset:   4:892d20308ddf
+  changeset:   4:a02330f767a4
   bookmark:    master
-  parent:      3:56cabe48c4b0
-  parent:      1:7bcd915dc873
+  parent:      3:6f898ad1f3e1
+  parent:      1:7fe02317c63d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     Merge branch 'beta'
@@ -309,7 +309,7 @@ also add an annotated tag
   importing git objects into hg
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R hgrepo heads
-  changeset:   9:c7d0cf1a7601
+  changeset:   9:e103a73f33be
   bookmark:    master
   tag:         default/master
   tag:         tip
@@ -317,33 +317,33 @@ also add an annotated tag
   date:        Wed Jan 01 00:00:00 2014 +0000
   summary:     newcommit
   
-  changeset:   7:d416c428c92d
+  changeset:   7:49713da8f665
   tag:         newtag
   tag:         oldtag
-  parent:      4:892d20308ddf
+  parent:      4:a02330f767a4
   user:        test <test@example.org>
   date:        Sat Mar 01 00:00:00 2014 +0000
   summary:     oldtag
   
-  changeset:   6:bdc34645137e
+  changeset:   6:a3f95e150b0a
   bookmark:    releases/v2
   tag:         default/releases/v2
-  parent:      4:892d20308ddf
+  parent:      4:a02330f767a4
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add eta
   
-  changeset:   5:3e35a45c61f9
+  changeset:   5:218b2d0660d3
   bookmark:    releases/v1
   tag:         default/releases/v1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:14 2007 +0000
   summary:     add zeta
   
-  changeset:   2:4d41070bf840
+  changeset:   2:678ebee93e38
   bookmark:    delta
   tag:         default/delta
-  parent:      0:3442585be8a6
+  parent:      0:ff7a2f2d8d70
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add delta
