@@ -690,8 +690,6 @@ class GitHandler(object):
              commit.message, commit.extra)
         if hg_renames is None:
             detect_renames = True
-            # empty dictionary so that code below continues to work
-            renames = {}
         else:
             renames = hg_renames
 
@@ -703,7 +701,10 @@ class GitHandler(object):
                                      'please run hg git-cleanup'))
 
         # get a list of the changed, added, removed files and gitlinks
-        files, gitlinks = self.get_files_changed(commit, detect_renames)
+        files, gitlinks, git_renames = self.get_files_changed(commit,
+                                                              detect_renames)
+        if detect_renames:
+            renames = git_renames
 
         git_commit_tree = self.git[commit.tree]
 
@@ -1300,6 +1301,10 @@ class GitHandler(object):
         changes = diff_tree.tree_changes(self.git.object_store, btree, tree)
         files = {}
         gitlinks = {}
+        renames = None
+        if detect_renames:
+            renames = {}
+
         for change in changes:
             oldfile, oldmode, oldsha = change.old
             newfile, newmode, newsha = change.new
@@ -1332,7 +1337,7 @@ class GitHandler(object):
                 # old = file
                 files[oldfile] = True, None, None
 
-        return files, gitlinks
+        return files, gitlinks, renames
 
     @hgutil.propertycache
     def _rename_detector(self):
