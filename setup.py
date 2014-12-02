@@ -23,6 +23,7 @@ setup(
         'reflog',
         'reset',
         'smartlog',
+        'sparse',
         'tweakdefaults',
         'chistedit',
     ],
