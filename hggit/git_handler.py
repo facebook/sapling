@@ -1298,12 +1298,16 @@ class GitHandler(object):
         if commit.parents:
             btree = self.git[commit.parents[0]].tree
 
-        changes = diff_tree.tree_changes(self.git.object_store, btree, tree)
         files = {}
         gitlinks = {}
         renames = None
+        rename_detector = None
         if detect_renames:
             renames = {}
+            rename_detector = self._rename_detector
+
+        changes = diff_tree.tree_changes(self.git.object_store, btree, tree,
+                                         rename_detector=rename_detector)
 
         for change in changes:
             oldfile, oldmode, oldsha = change.old
@@ -1322,6 +1326,10 @@ class GitHandler(object):
             if newmode == 0160000:
                 # new = gitlink
                 gitlinks[newfile] = newsha
+                if change.type == diff_tree.CHANGE_RENAME:
+                    # don't record the rename because only file -> file renames
+                    # make sense in Mercurial
+                    gitlinks[oldfile] = None
                 if oldmode is not None and oldmode != 0160000:
                     # file -> gitlink
                     files[oldfile] = True, None, None
@@ -1333,6 +1341,10 @@ class GitHandler(object):
             if newfile is not None:
                 # new = file
                 files[newfile] = False, newmode, newsha
+                if renames is not None and newfile != oldfile:
+                    renames[newfile] = oldfile
+                    if change.type == diff_tree.CHANGE_RENAME:
+                        files[oldfile] = True, None, None
             else:
                 # old = file
                 files[oldfile] = True, None, None
@@ -1357,7 +1369,7 @@ class GitHandler(object):
 
         find_copies_harder = self.ui.configbool('git', 'findcopiesharder',
                                                 default=False)
-        return diff_tree.RenameDetector(
+        return diff_tree.RenameDetector(self.git.object_store,
             rename_threshold=similarity, max_files=max_files,
             find_copies_harder=find_copies_harder)
 
