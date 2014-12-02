@@ -18,7 +18,7 @@ from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
 from mercurial import copies
 from mercurial.commands import templateopts
-from mercurial.node import nullrev
+from mercurial.node import nullrev, nullid, hex
 from mercurial.lock import release
 from mercurial.i18n import _
 import os, errno
@@ -737,8 +737,12 @@ def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
     f.write('%s\n' % (activebookmark or ''))
     for d, v in state.iteritems():
         oldrev = repo[d].hex()
-        if v > nullmerge:
+        if v >= 0:
             newrev = repo[v].hex()
+        elif v == revtodo:
+            # To maintain format compatibility, we have to use nullid.
+            # Please do remove this special case when upgrading the format.
+            newrev = hex(nullid)
         else:
             newrev = v
         f.write("%s:%s\n" % (oldrev, newrev))
@@ -780,6 +784,9 @@ def restorestatus(repo):
                 oldrev, newrev = l.split(':')
                 if newrev in (str(nullmerge), str(revignored)):
                     state[repo[oldrev].rev()] = int(newrev)
+                elif newrev == nullid:
+                    state[repo[oldrev].rev()] = revtodo
+                    # Legacy compat special case
                 else:
                     state[repo[oldrev].rev()] = repo[newrev].rev()
 
