@@ -602,7 +602,10 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
     # Prompt and create actions. TODO: Move this towards resolve phase.
     for f, args, msg in actions['cd']:
-        if repo.ui.promptchoice(
+        if f in ancestors[0] and not wctx[f].cmp(ancestors[0][f]):
+            # local did change but ended up with same content
+            actions['r'].append((f, None, "prompt same"))
+        elif repo.ui.promptchoice(
             _("local changed %s which remote deleted\n"
               "use (c)hanged version or (d)elete?"
               "$$ &Changed $$ &Delete") % f, 0):
@@ -613,7 +616,10 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
     for f, args, msg in actions['dc']:
         flags, = args
-        if repo.ui.promptchoice(
+        if f in ancestors[0] and not mctx[f].cmp(ancestors[0][f]):
+            # remote did change but ended up with same content
+            pass # don't get = keep local deleted
+        elif repo.ui.promptchoice(
             _("remote changed %s which local deleted\n"
               "use (c)hanged version or leave (d)eleted?"
               "$$ &Changed $$ &Deleted") % f, 0) == 0:

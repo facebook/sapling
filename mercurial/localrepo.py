@@ -1767,8 +1767,14 @@ class localrepository(object):
         return ret
 
     def pushkey(self, namespace, key, old, new):
-        self.hook('prepushkey', throw=True, namespace=namespace, key=key,
-                  old=old, new=new)
+        try:
+            self.hook('prepushkey', throw=True, namespace=namespace, key=key,
+                      old=old, new=new)
+        except error.HookAbort, exc:
+            self.ui.write_err(_("pushkey-abort: %s\n") % exc)
+            if exc.hint:
+                self.ui.write_err(_("(%s)\n") % exc.hint)
+            return False
         self.ui.debug('pushing key for "%s:%s"\n' % (namespace, key))
         ret = pushkey.push(self, namespace, key, old, new)
         self.hook('pushkey', namespace=namespace, key=key, old=old, new=new,

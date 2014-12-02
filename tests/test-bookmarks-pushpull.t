@@ -486,4 +486,77 @@ pushing an unchanged bookmark should result in no changes
   no changes found
   [1]
 
-  $ cd ..
+
+Check hook preventing push (issue4455)
+======================================
+
+  $ hg bookmarks
+   * @                         0:55482a6fb4b1
+  $ hg log -G
+  @  0:55482a6fb4b1 initial
+  
+  $ hg init ../issue4455-dest
+  $ hg push ../issue4455-dest # changesets only
+  pushing to ../issue4455-dest
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ cat >> .hg/hgrc << EOF
+  > [paths]
+  > local=../issue4455-dest/
+  > ssh=ssh://user@dummy/issue4455-dest
+  > http=http://localhost:$HGPORT/
+  > [ui]
+  > ssh=python "$TESTDIR/dummyssh"
+  > EOF
+  $ cat >> ../issue4455-dest/.hg/hgrc << EOF
+  > [hooks]
+  > prepushkey=false
+  > [web]
+  > push_ssl = false
+  > allow_push = *
+  > EOF
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg -R ../issue4455-dest serve -p $HGPORT -d --pid-file=../issue4455.pid -E ../issue4455-error.log
+  $ cat ../issue4455.pid >> $DAEMON_PIDS
+
+Local push
+----------
+
+  $ hg push -B @ local
+  pushing to $TESTTMP/issue4455-dest (glob)
+  searching for changes
+  no changes found
+  pushkey-abort: prepushkey hook exited with status 1
+  exporting bookmark @ failed!
+  [1]
+  $ hg -R ../issue4455-dest/ bookmarks
+  no bookmarks set
+
+Using ssh
+---------
+
+  $ hg push -B @ ssh
+  pushing to ssh://user@dummy/issue4455-dest
+  searching for changes
+  no changes found
+  remote: pushkey-abort: prepushkey hook exited with status 1
+  exporting bookmark @ failed!
+  [1]
+  $ hg -R ../issue4455-dest/ bookmarks
+  no bookmarks set
+
+Using http
+----------
+
+  $ hg push -B @ http
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  remote: pushkey-abort: prepushkey hook exited with status 1
+  exporting bookmark @ failed!
+  [1]
+  $ hg -R ../issue4455-dest/ bookmarks
+  no bookmarks set

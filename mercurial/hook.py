@@ -7,7 +7,7 @@
 
 from i18n import _
 import os, sys, time
-import extensions, util, demandimport
+import extensions, util, demandimport, error
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as
@@ -107,7 +107,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                name, funcname, duration)
     if r:
         if throw:
-            raise util.Abort(_('%s hook failed') % hname)
+            raise error.HookAbort(_('%s hook failed') % hname)
         ui.warn(_('warning: %s hook failed\n') % hname)
     return r
 
@@ -139,7 +139,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
     if r:
         desc, r = util.explainexit(r)
         if throw:
-            raise util.Abort(_('%s hook %s') % (name, desc))
+            raise error.HookAbort(_('%s hook %s') % (name, desc))
         ui.warn(_('warning: %s hook %s\n') % (name, desc))
     return r
 

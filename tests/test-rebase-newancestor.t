@@ -127,10 +127,10 @@ Full rebase all the way back from branching point:
   $ hg rebase -r 'only(dev,default)' -d default
   remote changed f-default which local deleted
   use (c)hanged version or leave (d)eleted? c
-  local changed f-default which remote deleted
-  use (c)hanged version or (d)elete? c
   saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1d1a643d390e-backup.hg (glob)
   $ hg tglog
+  o  6: 'dev: merge default'
+  |
   o  5: 'dev: merge default'
   |
   o  4: 'dev: f-dev stuff'
@@ -151,10 +151,10 @@ Grafty cherry picking rebasing:
   $ hg rebase -r 'children(only(dev,default))' -d default
   remote changed f-default which local deleted
   use (c)hanged version or leave (d)eleted? c
-  local changed f-default which remote deleted
-  use (c)hanged version or (d)elete? c
   saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/ec2c14fb2984-backup.hg (glob)
   $ hg tglog
+  o  7: 'dev: merge default'
+  |
   o  6: 'dev: merge default'
   |
   o  5: 'dev: f-dev stuff'

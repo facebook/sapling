@@ -437,10 +437,18 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             msg = _('remote turned local normal file %s into a largefile\n'
                     'use (l)argefile or keep (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
-            if repo.ui.promptchoice(msg, 0) == 0:
+            if (# local has unchanged normal file, pick remote largefile
+                pas and lfile in pas[0] and
+                not pas[0][lfile].cmp(p1[lfile]) or
+                # if remote has unchanged largefile, pick local normal file
+                not (pas and standin in pas[0] and
+                     not pas[0][standin].cmp(p2[standin])) and
+                # else, prompt
+                repo.ui.promptchoice(msg, 0) == 0
+                ): # pick remote largefile
                 actions['r'].append((lfile, None, msg))
                 newglist.append((standin, (p2.flags(standin),), msg))
-            else:
+            else: # keep local normal file
                 actions['r'].append((standin, None, msg))
         elif lfutil.standin(f) in p1 and lfutil.standin(f) not in removes:
             # Case 2: largefile in the working copy, normal file in
@@ -450,7 +458,15 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             msg = _('remote turned local largefile %s into a normal file\n'
                     'keep (l)argefile or use (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
-            if repo.ui.promptchoice(msg, 0) == 0:
+            if (# if remote has unchanged normal file, pick local largefile
+                pas and f in pas[0] and
+                not pas[0][f].cmp(p2[f]) or
+                # if local has unchanged largefile, pick remote normal file
+                not (pas and standin in pas[0] and
+                     not pas[0][standin].cmp(p1[standin])) and
+                # else, prompt
+                repo.ui.promptchoice(msg, 0) == 0
+                ): # keep local largefile
                 if branchmerge:
                     # largefile can be restored from standin safely
                     actions['r'].append((lfile, None, msg))
@@ -461,7 +477,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
                     # linear-merge should treat this largefile as 're-added'
                     actions['a'].append((standin, None, msg))
-            else:
+            else: # pick remote normal file
                 actions['r'].append((standin, None, msg))
                 newglist.append((lfile, (p2.flags(lfile),), msg))
         else:

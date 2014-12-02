@@ -228,8 +228,9 @@ test that prepushkey can prevent incoming keys
   no changes found
   listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   prepushkey.forbid hook: HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000
-  abort: prepushkey hook exited with status 1
-  [255]
+  pushkey-abort: prepushkey hook exited with status 1
+  exporting bookmark baz failed!
+  [1]
   $ cd ../a
 
 test that prelistkeys can prevent listing keys

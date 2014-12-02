@@ -28,3 +28,9 @@ Bogus fast-forward should fail:
   abort: merging with a working directory ancestor has no effect
   [255]
 
+Even with strange revset (issue4465)
+
+  $ hg merge ::.
+  abort: merging with a working directory ancestor has no effect
+  [255]
+

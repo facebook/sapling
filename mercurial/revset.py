@@ -2802,7 +2802,7 @@ class generatorset(abstractsmartset):
                 pass
             return self.first()
         if self:
-            return it.next()
+            return it().next()
         return None
 
     def last(self):
@@ -2816,7 +2816,7 @@ class generatorset(abstractsmartset):
                 pass
             return self.first()
         if self:
-            return it.next()
+            return it().next()
         return None
 
 def spanset(repo, start=None, end=None):
