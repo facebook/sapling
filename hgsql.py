@@ -905,7 +905,6 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
                 fulltexts[node] = fulltext
                 return fulltext
 
-            reorders = 0
             visited = set()
             prevnode = self.node(len(self) - 1)
             for link, chunkdata in chunkdatas:
@@ -919,7 +918,6 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
 
                     chunkdata['delta'] = delta
                     chunkdata['deltabase'] = prevnode
-                    reorders += 1
 
                 prevnode = node
                 visited.add(node)
