@@ -688,7 +688,9 @@ class GitHandler(object):
              commit.message, commit.extra)
         if hg_renames is None:
             # don't do any rename detection for now
-            hg_renames = {}
+            renames = {}
+        else:
+            renames = hg_renames
 
         gparents = map(self.map_hg_get, commit.parents)
 
@@ -814,7 +816,7 @@ class GitHandler(object):
                         data = util.serialize_hgsub(hgsub)
                 else:
                     data = self.git[sha].data
-                    copied_path = hg_renames.get(f)
+                    copied_path = renames.get(f)
                     e = self.convert_git_int_mode(mode)
             else:
                 # it's a converged file
