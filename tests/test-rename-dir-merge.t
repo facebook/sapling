@@ -148,8 +148,6 @@ BROKEN: the local file is overwritten; it should be merged
 Remote directory rename with conflicting file added in remote target directory
 and committed in local source directory.
 
-BROKEN: the remote is ignored; it should be merged
-
   $ hg co -qC 2
   $ rm b/c
   $ hg st -A
@@ -158,19 +156,28 @@ BROKEN: the remote is ignored; it should be merged
   C a/b
   C a/c
   $ hg merge 5
-  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging a/c and b/c to b/c
+  warning: conflicts during merge.
+  merging b/c incomplete! (edit conflicts, then use 'hg resolve --mark')
+  2 files updated, 0 files merged, 2 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ hg st -A
   M b/a
   M b/b
-  A b/c
+  M b/c
     a/c
   R a/a
   R a/b
   R a/c
   ? a/d
+  ? b/c.orig
   $ cat b/c
+  <<<<<<< local: ce36d17b18fb  - test: 2 add a/c
   baz
+  =======
+  target
+  >>>>>>> other: f1c50ca4f127 - test: new file in target directory
 
 Second scenario with two repos:
 
