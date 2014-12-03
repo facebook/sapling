@@ -361,7 +361,7 @@ Resolve conflicted graft
   $ echo b > a
   $ hg ci -m 8
   created new head
-  $ echo a > a
+  $ echo c > a
   $ hg ci -m 9
   $ hg graft 1 --tool internal:fail
   grafting revision 1
@@ -370,6 +370,17 @@ Resolve conflicted graft
   [255]
   $ hg resolve --all
   merging a
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+  $ cat a
+  <<<<<<< local: aaa4406d4f0a - test: 9
+  c
+  =======
+  b
+  >>>>>>> other: 5d205f8b35b6  - bar: 1
+  $ echo b > a
+  $ hg resolve -m a
   (no more unresolved files)
   $ hg graft -c
   grafting revision 1
@@ -378,15 +389,15 @@ Resolve conflicted graft
   # User bar
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 64ecd9071ce83c6e62f538d8ce7709d53f32ebf7
-  # Parent  4bdb9a9d0b84ffee1d30f0dfc7744cade17aa19c
+  # Node ID f67661df0c4804d301f064f332b57e7d5ddaf2be
+  # Parent  aaa4406d4f0ae9befd6e58c82ec63706460cbca6
   1
   
   diff --git a/a b/a
   --- a/a
   +++ b/a
   @@ -1,1 +1,1 @@
-  -a
+  -c
   +b
 
 Resolve conflicted graft with rename
@@ -407,8 +418,8 @@ Resolve conflicted graft with rename
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 2e80e1351d6ed50302fe1e05f8bd1d4d412b6e11
-  # Parent  e5a51ae854a8bbaaf25cc5c6a57ff46042dadbb4
+  # Node ID 9627f653b421c61fc1ea4c4e366745070fa3d2bc
+  # Parent  ee295f490a40b97f3d18dd4c4f1c8936c233b612
   2
   
   diff --git a/a b/b
@@ -537,12 +548,12 @@ Test simple destination
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   17:64ecd9071ce8
+  changeset:   17:f67661df0c48
   user:        bar
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   19:2e80e1351d6e
+  changeset:   19:9627f653b421
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -566,7 +577,7 @@ Test simple destination
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   19:2e80e1351d6e
+  changeset:   19:9627f653b421
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -608,7 +619,7 @@ All copies of a cset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   19:2e80e1351d6e
+  changeset:   19:9627f653b421
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -669,9 +680,8 @@ graft --force after backout
 
 graft --continue after --force
 
-  $ hg backout 30
-  reverting a
-  changeset 31:3b96c18b7a1b backs out changeset 30:8f539994be33
+  $ echo def > a
+  $ hg ci -m 31
   $ hg graft 28 --force --tool internal:fail
   grafting revision 28
   abort: unresolved conflicts, can't continue
@@ -679,6 +689,11 @@ graft --continue after --force
   [255]
   $ hg resolve --all
   merging a
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+  $ echo abc > a
+  $ hg resolve -m a
   (no more unresolved files)
   $ hg graft -c
   grafting revision 28
