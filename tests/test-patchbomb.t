@@ -2663,4 +2663,127 @@ dest#branch URIs:
   +d
   
 
-  $ cd ..
+Test introduction configuration
+=================================
+
+  $ echo '[patchbomb]' >> $HGRCPATH
+
+"auto" setting
+----------------
+
+  $ echo 'intro=auto' >> $HGRCPATH
+
+single rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
+  [1]
+
+single rev + flag
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+
+Multi rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+"never" setting
+-----------------
+
+  $ echo 'intro=never' >> $HGRCPATH
+
+single rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
+  [1]
+
+single rev + flag
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+
+Multi rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
+  [1]
+
+Multi rev + flag
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' --intro | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+"always" setting
+-----------------
+
+  $ echo 'intro=always' >> $HGRCPATH
+
+single rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+single rev + flag
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+
+Multi rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+Multi rev + flag
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' --intro | grep "Write the introductory message for the patch series."
+  Write the introductory message for the patch series.
+
+bad value setting
+-----------------
+
+  $ echo 'intro=mpmwearaclownnose' >> $HGRCPATH
+
+single rev
+
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10'
+  From [test]: test
+  this patch series consists of 1 patches.
+  
+  warning: invalid patchbomb.intro value "mpmwearaclownnose"
+  (should be one of always, never, auto)
+  Cc: 
+  
+  displaying [PATCH] test ...
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Subject: [PATCH] test
+  X-Mercurial-Node: 3b6f1ec9dde933a40a115a7990f8b320477231af
+  X-Mercurial-Series-Index: 1
+  X-Mercurial-Series-Total: 1
+  Message-Id: <3b6f1ec9dde933a40a11*> (glob)
+  X-Mercurial-Series-Id: <3b6f1ec9dde933a40a11.*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Tue, 01 Jan 1980 00:01:00 +0000
+  From: test
+  To: foo
+  
+  # HG changeset patch
+  # User test
+  # Date 5 0
+  #      Thu Jan 01 00:00:05 1970 +0000
+  # Branch test
+  # Node ID 3b6f1ec9dde933a40a115a7990f8b320477231af
+  # Parent  2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
+  dd
+  
+  diff -r 2f9fa9b998c5 -r 3b6f1ec9dde9 d
+  --- a/d	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/d	Thu Jan 01 00:00:05 1970 +0000
+  @@ -1,1 +1,2 @@
+   d
+  +d
+  

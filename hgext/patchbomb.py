@@ -43,6 +43,15 @@ to be a sendmail compatible mailer or fill out the [smtp] section so
 that the patchbomb extension can automatically send patchbombs
 directly from the commandline. See the [email] and [smtp] sections in
 hgrc(5) for details.
+
+You can control the default inclusion of an introduction message with the
+``patchbomb.intro`` configuration option. The configuration is always
+overwritten by command line flags like --intro and --desc::
+
+  [patchbomb]
+  intro=auto   # include introduction message if more than 1 patch (default)
+  intro=never  # never include an introduction message
+  intro=always # always include an introduction message
 '''
 
 import os, errno, socket, tempfile, cStringIO
@@ -66,9 +75,23 @@ def prompt(ui, prompt, default=None, rest=':'):
         prompt += ' [%s]' % default
     return ui.prompt(prompt + rest, default)
 
-def introwanted(opts, number):
+def introwanted(ui, opts, number):
     '''is an introductory message apparently wanted?'''
-    return number > 1 or opts.get('intro') or opts.get('desc')
+    introconfig = ui.config('patchbomb', 'intro', 'auto')
+    if opts.get('intro') or opts.get('desc'):
+        intro = True
+    elif introconfig == 'always':
+        intro = True
+    elif introconfig == 'never':
+        intro = False
+    elif introconfig == 'auto':
+        intro = 1 < number
+    else:
+        ui.write_err(_('warning: invalid patchbomb.intro value "%s"\n')
+                     % introconfig)
+        ui.write_err(_('(should be one of always, never, auto)\n'))
+        intro = 1 < number
+    return intro
 
 def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
               patchname=None):
@@ -287,7 +310,7 @@ def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
              % len(patches))
 
     # build the intro message, or skip it if the user declines
-    if introwanted(opts, len(patches)):
+    if introwanted(ui, opts, len(patches)):
         msg = _makeintro(repo, sender, patches, **opts)
         if msg:
             msgs.append(msg)
@@ -407,7 +430,9 @@ def patchbomb(ui, repo, *revs, **opts):
     for each patchbomb message, so you can verify everything is alright.
 
     In case email sending fails, you will find a backup of your series
-    introductory message in ``.hg/last-email.txt``.
+    introductory message in ``.hg/last-email.txt``. The inclusion the
+    introduction can also be control using the ``patchbomb.intro`` option. (see
+    hg help patchbomb for details)
 
     Examples::
 
