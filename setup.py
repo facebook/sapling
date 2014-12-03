@@ -18,6 +18,7 @@ setup(
         'githelp',
         'gitlookup',
         'gitrevset',
+        'phabdiff',
         'phrevset',
         'rage',
         'reflog',
