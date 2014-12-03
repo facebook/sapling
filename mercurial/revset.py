@@ -384,30 +384,6 @@ def author(repo, subset, x):
     kind, pattern, matcher = _substringmatcher(n)
     return subset.filter(lambda x: matcher(encoding.lower(repo[x].user())))
 
-def only(repo, subset, x):
-    """``only(set, [set])``
-    Changesets that are ancestors of the first set that are not ancestors
-    of any other head in the repo. If a second set is specified, the result
-    is ancestors of the first set that are not ancestors of the second set
-    (i.e. ::<set1> - ::<set2>).
-    """
-    cl = repo.changelog
-    # i18n: "only" is a keyword
-    args = getargs(x, 1, 2, _('only takes one or two arguments'))
-    include = getset(repo, spanset(repo), args[0])
-    if len(args) == 1:
-        if not include:
-            return baseset()
-
-        descendants = set(_revdescendants(repo, include, False))
-        exclude = [rev for rev in cl.headrevs()
-            if not rev in descendants and not rev in include]
-    else:
-        exclude = getset(repo, spanset(repo), args[1])
-
-    results = set(cl.findmissingrevs(common=exclude, heads=include))
-    return subset & results
-
 def bisect(repo, subset, x):
     """``bisect(string)``
     Changesets marked in the specified bisect status:
@@ -1138,6 +1114,30 @@ def obsolete(repo, subset, x):
     obsoletes = obsmod.getrevs(repo, 'obsolete')
     return subset & obsoletes
 
+def only(repo, subset, x):
+    """``only(set, [set])``
+    Changesets that are ancestors of the first set that are not ancestors
+    of any other head in the repo. If a second set is specified, the result
+    is ancestors of the first set that are not ancestors of the second set
+    (i.e. ::<set1> - ::<set2>).
+    """
+    cl = repo.changelog
+    # i18n: "only" is a keyword
+    args = getargs(x, 1, 2, _('only takes one or two arguments'))
+    include = getset(repo, spanset(repo), args[0])
+    if len(args) == 1:
+        if not include:
+            return baseset()
+
+        descendants = set(_revdescendants(repo, include, False))
+        exclude = [rev for rev in cl.headrevs()
+            if not rev in descendants and not rev in include]
+    else:
+        exclude = getset(repo, spanset(repo), args[1])
+
+    results = set(cl.findmissingrevs(common=exclude, heads=include))
+    return subset & results
+
 def origin(repo, subset, x):
     """``origin([set])``
     Changesets that were specified as a source for the grafts, transplants or
@@ -1687,7 +1687,6 @@ symbols = {
     "ancestors": ancestors,
     "_firstancestors": _firstancestors,
     "author": author,
-    "only": only,
     "bisect": bisect,
     "bisected": bisected,
     "bookmark": bookmark,
@@ -1727,6 +1726,7 @@ symbols = {
     "min": minrev,
     "modifies": modifies,
     "obsolete": obsolete,
+    "only": only,
     "origin": origin,
     "outgoing": outgoing,
     "p1": p1,
