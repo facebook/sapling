@@ -3,12 +3,18 @@
 == tests added in 0.7 ==
 
   $ hg init test-symlinks-0.7; cd test-symlinks-0.7;
-  $ touch foo; ln -s foo bar;
+  $ touch foo; ln -s foo bar; ln -s nonexistent baz
 
-import with addremove -- symlink walking should _not_ screwup.
+import with add and addremove -- symlink walking should _not_ screwup.
 
+  $ hg add
+  adding bar
+  adding baz
+  adding foo
+  $ hg forget bar baz foo
   $ hg addremove
   adding bar
+  adding baz
   adding foo
 
 commit -- the symlink should _not_ appear added to dir state
