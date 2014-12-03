@@ -52,6 +52,9 @@ overwritten by command line flags like --intro and --desc::
   intro=auto   # include introduction message if more than 1 patch (default)
   intro=never  # never include an introduction message
   intro=always # always include an introduction message
+
+You can set patchbomb to always ask for confirmation by setting
+``patchbomb.confirm`` to true.
 '''
 
 import os, errno, socket, tempfile, cStringIO
@@ -430,9 +433,10 @@ def patchbomb(ui, repo, *revs, **opts):
     for each patchbomb message, so you can verify everything is alright.
 
     In case email sending fails, you will find a backup of your series
-    introductory message in ``.hg/last-email.txt``. The inclusion the
-    introduction can also be control using the ``patchbomb.intro`` option. (see
-    hg help patchbomb for details)
+    introductory message in ``.hg/last-email.txt``.
+
+    The default behavior of this command can be customized through
+    configuration. (See :hg:`help patchbomb` for details)
 
     Examples::
 
@@ -553,7 +557,10 @@ def patchbomb(ui, repo, *revs, **opts):
     bcc = getaddrs('Bcc') or []
     replyto = getaddrs('Reply-To')
 
-    if opts.get('diffstat') or opts.get('confirm'):
+    confirm = ui.configbool('patchbomb', 'confirm')
+    confirm |= bool(opts.get('diffstat') or opts.get('confirm'))
+
+    if confirm:
         ui.write(_('\nFinal summary:\n\n'), label='patchbomb.finalsummary')
         ui.write(('From: %s\n' % sender), label='patchbomb.from')
         for addr in showaddrs:

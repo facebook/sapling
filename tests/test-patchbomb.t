@@ -86,6 +86,26 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
   abort: patchbomb canceled
   [255]
 
+  $ hg --config ui.interactive=1 --config patchbomb.confirm=true email -n -f quux -t foo -c bar -r tip<<EOF
+  > n
+  > EOF
+  this patch series consists of 1 patches.
+  
+  
+  Final summary:
+  
+  From: quux
+  To: foo
+  Cc: bar
+  Subject: [PATCH] a
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  are you sure you want to send (yn)? n
+  abort: patchbomb canceled
+  [255]
+
+
 Test diff.git is respected
   $ hg --config diff.git=True email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -r tip
   this patch series consists of 1 patches.
