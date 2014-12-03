@@ -168,7 +168,7 @@ Graft out of order, skipping a merge and a duplicate
    e: remote is newer -> g
   getting e
   updating: e 1/1 files (100.00%)
-   b: keep -> k
+   b: remote unchanged -> k
   e
   grafting revision 4
     searching for copies back to rev 1
@@ -179,7 +179,7 @@ Graft out of order, skipping a merge and a duplicate
    d: remote is newer -> g
   getting d
   updating: d 1/2 files (50.00%)
-   b: keep -> k
+   b: remote unchanged -> k
    e: versions differ -> m
   updating: e 2/2 files (100.00%)
   picked tool 'internal:merge' for e (binary False symlink False)

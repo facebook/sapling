@@ -40,7 +40,7 @@ http://mercurial.selenic.com/bts/issue672
    1a: remote created -> g
   getting 1a
   updating: 1a 2/2 files (100.00%)
-   2: keep -> k
+   2: remote unchanged -> k
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

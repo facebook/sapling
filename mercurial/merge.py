@@ -427,7 +427,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 fla = ma.flags(f)
                 nol = 'l' not in fl1 + fl2 + fla
                 if n2 == a and fl2 == fla:
-                    actions['k'].append((f, (), "keep")) # remote unchanged
+                    actions['k'].append((f, (), "remote unchanged"))
                 elif n1 == a and fl1 == fla: # local unchanged - use remote
                     if n1 == n2: # optimization: keep local content
                         actions['e'].append((f, (fl2,), "update permissions"))

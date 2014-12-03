@@ -88,7 +88,7 @@ $4 = expected result
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
    preserving a for resolve of b
    preserving rev for resolve of rev
-   a: keep -> k
+   a: remote unchanged -> k
    b: remote copied from a -> m
   updating: b 1/2 files (50.00%)
   picked tool 'python ../merge' for b (binary False symlink False)
@@ -573,7 +573,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
    preserving b for resolve of b
    preserving rev for resolve of rev
-   a: keep -> k
+   a: remote unchanged -> k
    b: both created -> m
   updating: b 1/2 files (50.00%)
   picked tool 'python ../merge' for b (binary False symlink False)

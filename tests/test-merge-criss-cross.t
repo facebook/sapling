@@ -141,7 +141,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 40663881a6dd, local: 3b08d01b0ab5+, remote: adfe50279922
-   f2: keep -> k
+   f2: remote unchanged -> k
    f1: versions differ -> m
   
   auction for merging merge bids
@@ -152,7 +152,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
    f1: remote is newer -> g
   getting f1
   updating: f1 1/1 files (100.00%)
-   f2: keep -> k
+   f2: remote unchanged -> k
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -176,7 +176,7 @@ The other way around:
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 0f6b37dbe527, local: adfe50279922+, remote: 3b08d01b0ab5
-   f1: keep -> k
+   f1: remote unchanged -> k
    f2: versions differ -> m
   
   calculating bids for ancestor 40663881a6dd
@@ -195,7 +195,7 @@ The other way around:
    f2: remote is newer -> g
   getting f2
   updating: f2 1/1 files (100.00%)
-   f1: keep -> k
+   f1: remote unchanged -> k
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -249,7 +249,7 @@ Verify how the output looks and and how verbose it is:
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 40663881a6dd, local: 3b08d01b0ab5+, remote: adfe50279922
-   f2: keep -> k
+   f2: remote unchanged -> k
    f1: versions differ -> m
   
   auction for merging merge bids
@@ -260,7 +260,7 @@ Verify how the output looks and and how verbose it is:
    f1: remote is newer -> g
   getting f1
   updating: f1 1/1 files (100.00%)
-   f2: keep -> k
+   f2: remote unchanged -> k
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
