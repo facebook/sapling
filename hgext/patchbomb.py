@@ -306,6 +306,22 @@ def _getpatchmsgs(repo, sender, patches, patchnames=None, **opts):
 
     return msgs
 
+def _getoutgoing(repo, dest, revs):
+    '''Return the revisions present locally but not in dest'''
+    ui = repo.ui
+    url = ui.expandpath(dest or 'default-push', dest or 'default')
+    url = hg.parseurl(url)[0]
+    ui.status(_('comparing with %s\n') % util.hidepassword(url))
+
+    revs = [r for r in scmutil.revrange(repo, revs) if r >= 0]
+    if not revs:
+        revs = [len(repo) - 1]
+    revs = repo.revs('outgoing(%s) and ::%ld', dest or '', revs)
+    if not revs:
+        ui.status(_("no changes found\n"))
+        return []
+    return [str(r) for r in revs]
+
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
@@ -430,21 +446,6 @@ def patchbomb(ui, repo, *revs, **opts):
     # internal option used by pbranches
     patches = opts.get('patches')
 
-    def getoutgoing(dest, revs):
-        '''Return the revisions present locally but not in dest'''
-        url = ui.expandpath(dest or 'default-push', dest or 'default')
-        url = hg.parseurl(url)[0]
-        ui.status(_('comparing with %s\n') % util.hidepassword(url))
-
-        revs = [r for r in scmutil.revrange(repo, revs) if r >= 0]
-        if not revs:
-            revs = [len(repo) - 1]
-        revs = repo.revs('outgoing(%s) and ::%ld', dest or '', revs)
-        if not revs:
-            ui.status(_("no changes found\n"))
-            return []
-        return [str(r) for r in revs]
-
     if not (opts.get('test') or mbox):
         # really sending
         mail.validateconfig(ui)
@@ -468,7 +469,7 @@ def patchbomb(ui, repo, *revs, **opts):
         revs = rev
 
     if outgoing:
-        revs = getoutgoing(dest, rev)
+        revs = _getoutgoing(repo, dest, rev)
     if bundle:
         opts['revs'] = revs
 
