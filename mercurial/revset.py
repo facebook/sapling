@@ -1798,6 +1798,7 @@ safesymbols = set([
     "min",
     "modifies",
     "obsolete",
+    "only",
     "origin",
     "outgoing",
     "p1",
