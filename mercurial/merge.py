@@ -475,8 +475,12 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 pass # we'll deal with it on m1 side
             elif f in movewithdir:
                 f2 = movewithdir[f]
-                actions['dg'].append((f2, (f, fl2),
-                                "local directory rename - get from " + f))
+                if f2 in m1:
+                    actions['m'].append((f2, (f2, f, None, False, pa.node()),
+                                   "local directory rename, both created"))
+                else:
+                    actions['dg'].append((f2, (f, fl2),
+                                    "local directory rename - get from " + f))
             elif f in copy:
                 f2 = copy[f]
                 if f2 in m2:

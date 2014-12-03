@@ -127,29 +127,36 @@ BROKEN: the uncommitted file is overwritten; we should abort
 Local directory rename with conflicting file added in remote source directory
 and committed in local target directory.
 
-BROKEN: the local file is overwritten; it should be merged
-
   $ hg co -qC 1
   $ echo target > b/c
   $ hg add b/c
   $ hg commit -qm 'new file in target directory'
   $ hg merge 2
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging b/c and a/c to b/c
+  warning: conflicts during merge.
+  merging b/c incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ hg st -A
-  A b/c
+  M b/c
     a/c
   ? a/d
+  ? b/c.orig
   C b/a
   C b/b
   $ cat b/c
+  <<<<<<< local: f1c50ca4f127 - test: new file in target directory
+  target
+  =======
   baz
+  >>>>>>> other: ce36d17b18fb  - test: 2 add a/c
+  $ rm b/c.orig
 
 Remote directory rename with conflicting file added in remote target directory
 and committed in local source directory.
 
   $ hg co -qC 2
-  $ rm b/c
   $ hg st -A
   ? a/d
   C a/a
