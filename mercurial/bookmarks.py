@@ -79,6 +79,10 @@ class bmstore(dict):
         can be copied back on rollback.
         '''
         repo = self._repo
+        self._writerepo(repo)
+
+    def _writerepo(self, repo):
+        """Factored out for extensibility"""
         if repo._bookmarkcurrent not in self:
             unsetcurrent(repo)
 
