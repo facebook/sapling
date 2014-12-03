@@ -537,6 +537,30 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     return actions, diverge, renamedelete
 
+def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
+    """Resolves false conflicts where the nodeid changed but the content
+       remained the same."""
+
+    cdactions = []
+    for action in actions['cd']:
+        f = action[0]
+        if f in ancestor and not wctx[f].cmp(ancestor[f]):
+            # local did change but ended up with same content
+            actions['r'].append((f, None, "prompt same"))
+        else:
+            cdactions.append(action)
+    actions['cd'] = cdactions
+
+    dcactions = []
+    for action in actions['dc']:
+        f = action[0]
+        if f in ancestor and not mctx[f].cmp(ancestor[f]):
+            # remote did change but ended up with same content
+            pass # don't get = keep local deleted
+        else:
+            dcactions.append(action)
+    actions['dc'] = dcactions
+
 def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                      acceptremote, followcopies):
     "Calculate the actions needed to merge mctx into wctx using ancestors"
@@ -614,12 +638,11 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             continue
         repo.ui.note(_('end of auction\n\n'))
 
+    _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
+
     # Prompt and create actions. TODO: Move this towards resolve phase.
     for f, args, msg in sorted(actions['cd']):
-        if f in ancestors[0] and not wctx[f].cmp(ancestors[0][f]):
-            # local did change but ended up with same content
-            actions['r'].append((f, None, "prompt same"))
-        elif repo.ui.promptchoice(
+        if repo.ui.promptchoice(
             _("local changed %s which remote deleted\n"
               "use (c)hanged version or (d)elete?"
               "$$ &Changed $$ &Delete") % f, 0):
@@ -630,10 +653,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
     for f, args, msg in sorted(actions['dc']):
         flags, = args
-        if f in ancestors[0] and not mctx[f].cmp(ancestors[0][f]):
-            # remote did change but ended up with same content
-            pass # don't get = keep local deleted
-        elif repo.ui.promptchoice(
+        if repo.ui.promptchoice(
             _("remote changed %s which local deleted\n"
               "use (c)hanged version or leave (d)eleted?"
               "$$ &Changed $$ &Deleted") % f, 0) == 0:
