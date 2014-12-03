@@ -111,14 +111,16 @@ and untracked in local target directory.
 BROKEN: the uncommitted file is overwritten; we should abort
 
   $ hg co -qC 1
-  $ echo local > b/c
+  $ echo target > b/c
   $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg st -C
+  $ hg st -A
   A b/c
     a/c
   ? a/d
+  C b/a
+  C b/b
   $ cat b/c
   baz
 
@@ -128,15 +130,44 @@ and committed in local target directory.
 BROKEN: the local file is overwritten; it should be merged
 
   $ hg co -qC 1
-  $ echo local > b/c
+  $ echo target > b/c
   $ hg add b/c
   $ hg commit -qm 'new file in target directory'
   $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg st -C
+  $ hg st -A
   A b/c
     a/c
+  ? a/d
+  C b/a
+  C b/b
+  $ cat b/c
+  baz
+
+Remote directory rename with conflicting file added in remote target directory
+and committed in local source directory.
+
+BROKEN: the remote is ignored; it should be merged
+
+  $ hg co -qC 2
+  $ rm b/c
+  $ hg st -A
+  ? a/d
+  C a/a
+  C a/b
+  C a/c
+  $ hg merge 5
+  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg st -A
+  M b/a
+  M b/b
+  A b/c
+    a/c
+  R a/a
+  R a/b
+  R a/c
   ? a/d
   $ cat b/c
   baz
