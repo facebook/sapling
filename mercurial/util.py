@@ -20,6 +20,7 @@ import errno, shutil, sys, tempfile, traceback
 import re as remod
 import os, time, datetime, calendar, textwrap, signal, collections
 import imp, socket, urllib
+import gc
 
 if os.name == 'nt':
     import windows as platform
@@ -543,6 +544,28 @@ def always(fn):
 
 def never(fn):
     return False
+
+def nogc(func):
+    """disable garbage collector
+
+    Python's garbage collector triggers a GC each time a certain number of
+    container objects (the number being defined by gc.get_threshold()) are
+    allocated even when marked not to be tracked by the collector. Tracking has
+    no effect on when GCs are triggered, only on what objects the GC looks
+    into. As a workaround, disable GC while building complexe (huge)
+    containers.
+
+    This garbage collector issue have been fixed in 2.7.
+    """
+    def wrapper(*args, **kwargs):
+        gcenabled = gc.isenabled()
+        gc.disable()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            if gcenabled:
+                gc.enable()
+    return wrapper
 
 def pathto(root, n1, n2):
     '''return the relative path from one place to another.
