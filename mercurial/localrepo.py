@@ -883,9 +883,6 @@ class localrepository(object):
                 _("abandoned transaction found"),
                 hint=_("run 'hg recover' to clean up transaction"))
 
-        def onclose():
-            self.store.write(self._transref())
-
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
@@ -893,8 +890,8 @@ class localrepository(object):
         tr = transaction.transaction(rp, self.sopener, vfsmap,
                                      "journal",
                                      aftertrans(renames),
-                                     self.store.createmode,
-                                     onclose)
+                                     self.store.createmode)
+        tr.addfinalize('repo.store.write', self.store.write)
         self._transref = weakref.ref(tr)
         return tr
 

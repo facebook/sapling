@@ -210,19 +210,19 @@ Aborting transaction prevents fncache change
 
   $ cat > ../exceptionext.py <<EOF
   > import os
-  > from mercurial import commands, util, transaction
+  > from mercurial import commands, util, localrepo
   > from mercurial.extensions import wrapfunction
   > 
   > def wrapper(orig, self, *args, **kwargs):
-  >     origonclose = self.onclose
-  >     def onclose():
-  >         origonclose()
+  >     tr = orig(self, *args, **kwargs)
+  >     def fail(tr):
   >         raise util.Abort("forced transaction failure")
-  >     self.onclose = onclose
-  >     return orig(self, *args, **kwargs)
+  >     # zzz prefix to ensure it sorted after store.write
+  >     tr.addfinalize('zzz-forcefails', fail)
+  >     return tr
   > 
   > def uisetup(ui):
-  >     wrapfunction(transaction.transaction, 'close', wrapper)
+  >     wrapfunction(localrepo.localrepository, 'transaction', wrapper)
   > 
   > cmdtable = {}
   > 
