@@ -241,22 +241,22 @@ Aborted transactions can be recovered later
 
   $ cat > ../exceptionext.py <<EOF
   > import os
-  > from mercurial import commands, util, transaction
+  > from mercurial import commands, util, transaction, localrepo
   > from mercurial.extensions import wrapfunction
   > 
-  > def closewrapper(orig, self, *args, **kwargs):
-  >     origonclose = self.onclose
-  >     def onclose():
-  >         origonclose()
+  > def trwrapper(orig, self, *args, **kwargs):
+  >     tr = orig(self, *args, **kwargs)
+  >     def fail(tr):
   >         raise util.Abort("forced transaction failure")
-  >     self.onclose = onclose
-  >     return orig(self, *args, **kwargs)
+  >     # zzz prefix to ensure it sorted after store.write
+  >     tr.addfinalize('zzz-forcefails', fail)
+  >     return tr
   > 
   > def abortwrapper(orig, self, *args, **kwargs):
   >     raise util.Abort("forced transaction failure")
   > 
   > def uisetup(ui):
-  >     wrapfunction(transaction.transaction, 'close', closewrapper)
+  >     wrapfunction(localrepo.localrepository, 'transaction', trwrapper)
   >     wrapfunction(transaction.transaction, '_abort', abortwrapper)
   > 
   > cmdtable = {}

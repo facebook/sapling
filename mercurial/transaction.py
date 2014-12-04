@@ -84,7 +84,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
 
 class transaction(object):
     def __init__(self, report, opener, vfsmap, journal, after=None,
-                 createmode=None, onclose=None, onabort=None):
+                 createmode=None, onabort=None):
         """Begin a new transaction
 
         Begins a new transaction that allows rolling back writes in the event of
@@ -92,8 +92,6 @@ class transaction(object):
 
         * `after`: called after the transaction has been committed
         * `createmode`: the mode of the journal file that will be created
-        * `onclose`: called as the transaction is closing, but before it is
-        closed
         * `onabort`: called as the transaction is aborting, but before any files
         have been truncated
         """
@@ -107,7 +105,6 @@ class transaction(object):
         vfsmap[''] = opener  # set default value
         self._vfsmap = vfsmap
         self.after = after
-        self.onclose = onclose
         self.onabort = onabort
         self.entries = []
         self.map = {}
@@ -375,8 +372,6 @@ class transaction(object):
             categories = sorted(self._finalizecallback)
             for cat in categories:
                 self._finalizecallback[cat](self)
-            if self.onclose is not None:
-                self.onclose()
 
         self.count -= 1
         if self.count != 0:
