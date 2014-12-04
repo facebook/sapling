@@ -1978,6 +1978,9 @@ static int index_assign_subscript(indexObject *self, PyObject *item,
 			PyErr_SetString(PyExc_ValueError, "rev out of range");
 		return -1;
 	}
+
+	if (nt_init(self) == -1)
+		return -1;
 	return nt_insert(self, node, (int)rev);
 }
 
