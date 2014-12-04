@@ -817,7 +817,7 @@ def inrebase(repo, originalwd, state):
 
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
-    dstates = [s for s in state.values() if s > nullrev]
+    dstates = [s for s in state.values() if s >= 0]
     immutable = [d for d in dstates if not repo[d].mutable()]
     cleanup = True
     if immutable:
@@ -840,7 +840,7 @@ def abort(repo, originalwd, target, state):
             merge.update(repo, originalwd, False, True, False)
 
         # Strip from the first rebased revision
-        rebased = filter(lambda x: x > -1 and x != target, state.values())
+        rebased = filter(lambda x: x >= 0 and x != target, state.values())
         if rebased:
             strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
             # no backup of rebased cset versions needed
@@ -1019,7 +1019,7 @@ def summaryhook(ui, repo):
         msg = _('rebase: (use "hg rebase --abort" to clear broken state)\n')
         ui.write(msg)
         return
-    numrebased = len([i for i in state.itervalues() if i != -1])
+    numrebased = len([i for i in state.itervalues() if i >= 0])
     # i18n: column positioning for "hg summary"
     ui.write(_('rebase: %s, %s (rebase --continue)\n') %
              (ui.label(_('%d rebased'), 'rebase.rebased') % numrebased,
