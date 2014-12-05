@@ -47,7 +47,8 @@ def extsetup(ui):
     newpushkeyhandler.params = origpushkeyhandler.params
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
-def getrevsetbounds(repo, revset):
+def validaterevset(repo, revset):
+    "Abort if this is a rebasable revset, return None otherwise"
     if not repo.revs(revset):
         raise util.Abort(_('nothing to rebase'))
 
@@ -66,7 +67,16 @@ def getrevsetbounds(repo, revset):
         raise util.Abort(_('cannot rebase divergent changesets'))
     head = repo[heads.first()]
 
-    return head, tail
+    repo.ui.note(_('validated revset %r::%r for rebase\n') %
+                 (head.hex(), tail.hex()))
+
+def revsettail(repo, revset):
+    "Return the root changectx of a revset"
+    tails = repo.revs('%r and ancestor(%r)', revset, revset)
+    tail = tails.first()
+    if tail is None:
+        raise ValueError(_("revset doesn't have a single tail"))
+    return repo[tail]
     
 def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if not outgoing.missing:
@@ -75,15 +85,7 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if rebaseparttype not in bundle2.bundle2caps(peer):
         raise util.Abort(_('no server support for %r') % rebaseparttype)
 
-    head, tail = getrevsetbounds(
-        repo, 
-        revset.formatspec('%ln', outgoing.missing),
-    )
-
-    repo.ui.note(
-        _('asking remote to rebase %r::%r onto %r\n') %
-        (head.hex(), tail.hex(), onto)
-    )
+    validaterevset(repo, revset.formatspec('%ln', outgoing.missing))
 
     cg = changegroup.getlocalchangegroupraw(
         repo,
@@ -98,8 +100,6 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
             'newhead': repr(newhead),
         }.items(),
         advisoryparams={
-            'head': head.node(),
-            'tail': tail.node(),
             'commonheads':
                 json.dumps([hex(n) for n in outgoing.commonheads]),
         }.items(),
@@ -199,19 +199,8 @@ def bundle2rebase(op, part):
             fp.close()
 
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
-        head, tail = getrevsetbounds(bundle, 'bundle()')
-
-        if head.node() != params.get('head', head.node()):
-            raise util.Abort(
-                _('was told to expect head %r but received %r instead'),
-                (head.node(), hex(params['head'])),
-            );
-
-        if tail.node() != params.get('tail', tail.node()):
-            raise util.Abort(
-                _('was told to expect tail %r but received %r instead'),
-                (tail.node(), hex(params['tail'])),
-            );
+        validaterevset(bundle, 'bundle()')
+        tail = revsettail(bundle, 'bundle()')
 
         onto = scmutil.revsingle(op.repo, params['onto'])
         bundleonto = bundle[onto.hex()]
@@ -221,10 +210,9 @@ def bundle2rebase(op, part):
                 raise util.Abort(_('rebase would produce a new head on server'))
 
         if bundleonto.ancestor(tail).hex() != tail.p1().hex():
-            raise util.Abort(
-                _('changegroup not forked from an ancestor of %r') %
-                ((params['onto'], bundleonto.ancestor(tail).hex(), tail.p1().hex()),)
-            )
+            raise util.Abort(_('missing changesets between %r and %r') %
+                             (bundleonto.ancestor(tail).hex(),
+                              tail.p1().hex()))
 
         revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
 
