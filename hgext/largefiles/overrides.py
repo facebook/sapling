@@ -440,15 +440,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             usermsg = _('remote turned local normal file %s into a largefile\n'
                         'use (l)argefile or keep (n)ormal file?'
                         '$$ &Largefile $$ &Normal file') % lfile
-            if (# local has unchanged normal file, pick remote largefile
-                pas and lfile in pas[0] and
-                not pas[0][lfile].cmp(p1[lfile]) or
-                # if remote has unchanged largefile, pick local normal file
-                not (pas and standin in pas[0] and
-                     not pas[0][standin].cmp(p2[standin])) and
-                # else, prompt
-                repo.ui.promptchoice(usermsg, 0) == 0
-                ): # pick remote largefile
+            if repo.ui.promptchoice(usermsg, 0) == 0: # pick remote largefile
                 actions['r'].append((lfile, None, 'replaced by standin'))
                 newglist.append((standin, (p2.flags(standin),), msg))
             else: # keep local normal file
@@ -461,15 +453,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             usermsg = _('remote turned local largefile %s into a normal file\n'
                     'keep (l)argefile or use (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
-            if (# if remote has unchanged normal file, pick local largefile
-                pas and f in pas[0] and
-                not pas[0][f].cmp(p2[f]) or
-                # if local has unchanged largefile, pick remote normal file
-                not (pas and standin in pas[0] and
-                     not pas[0][standin].cmp(p1[standin])) and
-                # else, prompt
-                repo.ui.promptchoice(usermsg, 0) == 0
-                ): # keep local largefile
+            if repo.ui.promptchoice(usermsg, 0) == 0: # keep local largefile
                 if branchmerge:
                     # largefile can be restored from standin safely
                     actions['r'].append((lfile, None, 'replaced by standin'))
