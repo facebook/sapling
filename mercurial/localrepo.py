@@ -891,7 +891,10 @@ class localrepository(object):
                                      "journal",
                                      aftertrans(renames),
                                      self.store.createmode)
-        tr.addfinalize('repo.store.write', self.store.write)
+        # note: writing the fncache only during finalize mean that the file is
+        # outdated when running hooks. As fncache is used for streaming clone,
+        # this is not expected to break anything that happen during the hooks.
+        tr.addfinalize('flush-fncache', self.store.write)
         self._transref = weakref.ref(tr)
         return tr
 
