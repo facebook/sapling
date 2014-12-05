@@ -85,12 +85,16 @@ def extract_hg_metadata(message, git_extra):
     # commits that originated in Git we'd like to optionally infer rename
     # information to store in Mercurial, but for commits that originated in
     # Mercurial we'd like to disable this. How do we tell whether the commit
-    # originated in Mercurial or in Git? We don't have any firm indicators so we
-    # use a simple heuristic to determine that: if the commit has any extra hg
-    # fields, it definitely originated in Mercurial and we set renames to a
-    # dict. If the commit doesn't, we aren't really sure and we make sure
-    # renames is set to None. Callers can then determine whether to infer rename
-    # information.
+    # originated in Mercurial or in Git? We rely on the presence of extra hg-git
+    # fields in the Git commit.
+    # - Commits exported by hg-git versions past 0.7.0 always store at least one
+    #   hg-git field.
+    # - For commits exported by hg-git versions before 0.7.0, this becomes a
+    #   heuristic: if the commit has any extra hg fields, it definitely originated
+    #   in Mercurial. If the commit doesn't, we aren't really sure.
+    # If we think the commit originated in Mercurial, we set renames to a
+    # dict. If we don't, we set renames to None. Callers can then determine
+    # whether to infer rename information.
     renames = None
     extra = {}
     branch = None
