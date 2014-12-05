@@ -24,6 +24,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 rebaseparttype = 'b2x:rebase'
+commonheadsparttype = 'b2x:commonheads'
 
 experimental = 'experimental'
 configonto = 'server-rebase-onto'
@@ -36,6 +37,13 @@ def extsetup(ui):
         exchange.b2partsgenorder.index('changeset'),
         exchange.b2partsgenorder.pop(
             exchange.b2partsgenorder.index(rebaseparttype)
+        ),
+    )
+
+    exchange.b2partsgenorder.insert(
+        0,
+        exchange.b2partsgenorder.pop(
+            exchange.b2partsgenorder.index(commonheadsparttype)
         ),
     )
 
@@ -99,10 +107,6 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
             'onto': onto,
             'newhead': repr(newhead),
         }.items(),
-        advisoryparams={
-            'commonheads':
-                json.dumps([hex(n) for n in outgoing.commonheads]),
-        }.items(),
         data = cg
     )
 
@@ -142,6 +146,20 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
     
     if phase != phases.public:
         orig(pushop, nodes, phase)
+
+#TODO: extract common heads transmission into separate extension
+@exchange.b2partsgenerator(commonheadsparttype)
+def commonheadspartgen(pushop, bundler):
+    bundler.newpart(commonheadsparttype,
+                    data=''.join(pushop.outgoing.commonheads))
+
+@bundle2.parthandler(commonheadsparttype)
+def commonheadshandler(op, inpart):
+    nodeid = inpart.read(20)
+    while len(nodeid) == 20:
+        op.records.add(commonheadsparttype, nodeid)
+        nodeid = inpart.read(20)
+    assert not nodeid # data should split evenly into blocks of 20 bytes
 
 # TODO: verify that commit hooks fire appropriately
 @exchange.b2partsgenerator(rebaseparttype)
@@ -267,14 +285,12 @@ def bundle2rebase(op, part):
             if e.errno != errno.ENOENT:
                 raise
 
-    if (params['commonheads']
+    if (op.records[commonheadsparttype]
         and op.reply
         and 'b2x:pushback' in op.reply.capabilities):
-        # TODO: investigate alternatives for determining which commits to send
-        #       (via @pyd: https://phabricator.fb.com/D1689551#inline-12737312 )
         outgoing = discovery.outgoing(
             op.repo.changelog,
-            [bin(n) for n in json.loads(params['commonheads'])],
+            op.records[commonheadsparttype],
             [new for old, new in replacements.items() if old != new],
         )
 
