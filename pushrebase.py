@@ -102,7 +102,8 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     )
 
     return bundle2.bundlepart(
-        rebaseparttype,
+        rebaseparttype.upper(), # .upper() marks this as a mandatory part:
+                                # the server will abort if there's no handler
         mandatoryparams={
             'onto': onto,
             'newhead': repr(newhead),
