@@ -167,6 +167,37 @@ create a second head
   (commit and merge, or update --clean to discard changes)
   [255]
 
+test conflicting untracked files
+
+  $ hg up -qC 0
+  $ echo untracked > b
+  $ hg st
+  ? b
+  $ hg up 1
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ rm b
+
+test conflicting untracked ignored file
+
+  $ hg up -qC 0
+  $ echo ignored > .hgignore
+  $ hg add .hgignore
+  $ hg ci -m 'add .hgignore'
+  created new head
+  $ echo ignored > ignored
+  $ hg add ignored
+  $ hg ci -m 'add ignored file'
+
+  $ hg up -q 'desc("add .hgignore")'
+  $ echo untracked > ignored
+  $ hg st
+  $ hg up 'desc("add ignored file")'
+  ignored: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+
 test a local add
 
   $ cd ..
