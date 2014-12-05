@@ -228,3 +228,28 @@ git.mindate
 If set, branches where the latest commit's commit time is older than this will
 not be imported. Accepts any date formats that Mercurial does -- see
 `hg help dates` for more.
+
+git.similarity
+--------------
+
+Specify how similar files modified in a Git commit must be to be imported as
+Mercurial renames or copies, as a percentage between "0" (disabled) and "100"
+(files must be identical). For example, "90" means that a delete/add pair will
+be imported as a rename if more than 90% of the file has stayed the same. The
+default is "0" (disabled).
+
+git.renamelimit
+---------------
+
+The number of files to consider when performing the copy/rename detection.
+Detection is disabled if the number of files modified in a commit is above the
+limit. Detection is O(N^2) in the number of files modified, so be sure not to
+set the limit too high. Similar to Git's `diff.renameLimit` config. The default
+is "400", the same as Git.
+
+git.findcopiesharder
+--------------------
+
+Whether to consider unmodified files as copy sources. This is a very expensive
+operation for large projects, so use it with caution. Similar to `git diff`'s
+--find-copies-harder option.
