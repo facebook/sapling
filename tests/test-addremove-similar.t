@@ -91,7 +91,7 @@ Issue1527: repeated addremove causes util.Abort
 no copies found here (since the target isn't in d
 
   $ hg addremove -s80 d
-  removing d/b
+  removing d/b (glob)
 
 copies here
 

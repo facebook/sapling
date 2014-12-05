@@ -730,11 +730,10 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     toprint.update(deleted)
     for abs in sorted(toprint):
         if repo.ui.verbose or not m.exact(abs):
-            rel = m.rel(abs)
             if abs in unknownset:
-                status = _('adding %s\n') % ((m.anypats() and rel) or abs)
+                status = _('adding %s\n') % m.uipath(abs)
             else:
-                status = _('removing %s\n') % ((m.anypats() and rel) or abs)
+                status = _('removing %s\n') % m.uipath(abs)
             repo.ui.status(status)
 
     renames = _findrenames(repo, m, added + unknown, removed + deleted,
