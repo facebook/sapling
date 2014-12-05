@@ -65,6 +65,7 @@ class match(object):
         self._anypats = bool(include or exclude)
         self._ctx = ctx
         self._always = False
+        self._pathrestricted = bool(include or exclude or patterns)
 
         matchfns = []
         if include:
@@ -127,6 +128,12 @@ class match(object):
     def rel(self, f):
         '''Convert repo path back to path that is relative to cwd of matcher.'''
         return util.pathto(self._root, self._cwd, f)
+
+    def uipath(self, f):
+        '''Convert repo path to a display path.  If patterns or -I/-X were used
+        to create this matcher, the display path will be relative to cwd.
+        Otherwise it is relative to the root of the repo.'''
+        return (self._pathrestricted and self.rel(f)) or f
 
     def files(self):
         '''Explicitly listed files or patterns or roots:
@@ -191,6 +198,7 @@ class narrowmatcher(match):
         self._path = path
         self._matcher = matcher
         self._always = matcher._always
+        self._pathrestricted = matcher._pathrestricted
 
         self._files = [f[len(path) + 1:] for f in matcher._files
                        if f.startswith(path + "/")]
