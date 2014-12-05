@@ -103,7 +103,7 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
 
     return bundle2.bundlepart(
         rebaseparttype.upper(), # .upper() marks this as a mandatory part:
-                                # the server will abort if there's no handler
+                                # server will abort if there's no handler
         mandatoryparams={
             'onto': onto,
             'newhead': repr(newhead),
@@ -296,15 +296,21 @@ def bundle2rebase(op, part):
         )
 
         if outgoing.missing:
+            cgversions = set(op.reply.capabilities.get('b2x:changegroup'))
+            if not cgversions:
+                cgversions.add('01')
+            version = max(cgversions & set(changegroup.packermap.keys()))
+            
             cg = changegroup.getlocalchangegroupraw(
                 op.repo,
                 'rebase:reply',
                 outgoing,
+                version = version
             )
 
-            # TODO: fix version handshake; use newest mutually supported version
-            cgpart = op.reply.newpart('b2x:changegroup', data = cg)
-            cgpart.addparam('version', '01')
+            cgpart = op.reply.newpart('B2X:CHANGEGROUP', data = cg)
+            if version != '01':
+                cgpart.addparam('version', version)
 
             if (obsolete.isenabled(op.repo, obsolete.exchangeopt)
                 and op.repo.obsstore):
