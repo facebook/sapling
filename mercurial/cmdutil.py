@@ -1745,6 +1745,9 @@ def _makelogrevset(repo, pats, opts, revs):
             else:
                 slowpath = False
 
+    fpats = ('_patsfollow', '_patsfollowfirst')
+    fnopats = (('_ancestors', '_fancestors'),
+               ('_descendants', '_fdescendants'))
     if slowpath:
         # See walkchangerevs() slow path.
         #
@@ -1763,11 +1766,10 @@ def _makelogrevset(repo, pats, opts, revs):
             matchargs.append('x:' + p)
         matchargs = ','.join(('%r' % p) for p in matchargs)
         opts['_matchfiles'] = matchargs
+        if follow:
+            opts[fnopats[0][followfirst]] = '.'
     else:
         if follow:
-            fpats = ('_patsfollow', '_patsfollowfirst')
-            fnopats = (('_ancestors', '_fancestors'),
-                       ('_descendants', '_fdescendants'))
             if pats:
                 # follow() revset interprets its file argument as a
                 # manifest entry, so use match.files(), not pats.

@@ -1543,3 +1543,24 @@ issue3772: hg log -r :null showing revision 0 as well
   
 
   $ cd ..
+
+hg log -f dir across branches
+
+  $ hg init acrossbranches
+  $ cd acrossbranches
+  $ mkdir d
+  $ echo a > d/a && hg ci -Aqm a
+  $ echo b > d/a && hg ci -Aqm b
+  $ hg up -q 0
+  $ echo b > d/a && hg ci -Aqm c
+  $ hg log -f d -T '{desc}' -G
+  @  c
+  |
+  o  a
+  
+  $ hg log -f d/a -T '{desc}' -G
+  o  b
+  |
+  o  a
+  
+  $ cd ..
