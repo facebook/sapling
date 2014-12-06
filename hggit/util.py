@@ -1,6 +1,7 @@
 """Compatibility functions for old Mercurial versions and other utility
 functions."""
 from dulwich import errors
+from mercurial import util as hgutil
 try:
     from collections import OrderedDict
 except ImportError:
@@ -40,5 +41,5 @@ def transform_notgit(f):
         try:
             return f(*args, **kwargs)
         except errors.NotGitRepository:
-            raise util.Abort('not a git repository')
+            raise hgutil.Abort('not a git repository')
     return inner
