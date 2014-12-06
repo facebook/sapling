@@ -444,7 +444,12 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                 actions['r'].append((lfile, None, 'replaced by standin'))
                 newglist.append((standin, (p2.flags(standin),), msg))
             else: # keep local normal file
-                actions['r'].append((standin, None, 'replaced by non-standin'))
+                if branchmerge:
+                    actions['k'].append((standin, None,
+                                         'replaced by non-standin'))
+                else:
+                    actions['r'].append((standin, None,
+                                         'replaced by non-standin'))
         elif lfutil.standin(f) in p1 and lfutil.standin(f) not in removes:
             # Case 2: largefile in the working copy, normal file in
             # the second parent
