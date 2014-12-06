@@ -116,8 +116,8 @@ Largefile in the working copy, keeping the largefile version:
   remote turned local largefile foo into a normal file
   keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ hg status
@@ -329,8 +329,8 @@ swap
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
   large
@@ -409,8 +409,8 @@ Ancestor: large   Parent: large2   Parent: normal  result: ?
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
-  1 largefiles updated, 0 removed
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
   large2

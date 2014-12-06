@@ -456,7 +456,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             if repo.ui.promptchoice(usermsg, 0) == 0: # keep local largefile
                 if branchmerge:
                     # largefile can be restored from standin safely
-                    actions['r'].append((lfile, None, 'replaced by standin'))
+                    actions['k'].append((lfile, None, 'replaced by standin'))
                 else:
                     # "lfile" should be marked as "removed" without
                     # removal of itself
