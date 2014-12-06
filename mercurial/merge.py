@@ -742,7 +742,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             audit(f)
             util.unlinkpath(repo.wjoin(f))
 
-    numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
+    numupdates = sum(len(l) for m, l in actions.items()
+                     if m not in ('k', 'dr', 'rd'))
 
     if [a for a in actions['r'] if a[0] == '.hgsubstate']:
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
@@ -825,9 +826,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
     # divergent renames
     for f, args, msg in actions['dr']:
-        repo.ui.debug(" %s: %s -> dr\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
         fl, = args
         repo.ui.warn(_("note: possible conflict - %s was renamed "
                        "multiple times to:\n") % f)
@@ -836,9 +834,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
     # rename and delete
     for f, args, msg in actions['rd']:
-        repo.ui.debug(" %s: %s -> rd\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
         fl, = args
         repo.ui.warn(_("note: possible conflict - %s was deleted "
                        "and renamed to:\n") % f)

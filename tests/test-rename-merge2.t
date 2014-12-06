@@ -382,14 +382,12 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    c: remote created -> g
   getting c
-  updating: c 1/3 files (33.33%)
+  updating: c 1/2 files (50.00%)
    rev: versions differ -> m
-  updating: rev 2/3 files (66.67%)
+  updating: rev 2/2 files (100.00%)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@02963e448370+ other rev@fe905ef2c33e ancestor rev@924404dff337
-   a: divergent renames -> dr
-  updating: a 3/3 files (100.00%)
   note: possible conflict - a was renamed multiple times to:
    b
    c
