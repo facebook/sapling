@@ -219,15 +219,25 @@ extensions.wrapfunction(hg, 'peer', peer)
 @util.transform_notgit
 def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
     if isinstance(remote, gitrepo.gitrepo):
+        # transaction manager is present in Mercurial >= 3.3
+        trmanager = getattr(exchange, 'transactionmanager')
         pullop = exchange.pulloperation(repo, remote, heads, force,
                                         bookmarks=bookmarks)
+        if trmanager:
+            pullop.trmanager = trmanager(repo, 'pull', remote.url())
         lock = repo.lock()
         try:
             pullop.cgresult = repo.githandler.fetch(remote.path, heads)
-            pullop.closetransaction()
+            if trmanager:
+                pullop.trmanager.close()
+            else:
+                pullop.closetransaction()
             return pullop
         finally:
-            pullop.releasetransaction()
+            if trmanager:
+                pullop.trmanager.release()
+            else:
+                pullop.releasetransaction()
             lock.release()
     else:
         return orig(repo, remote, heads, force, bookmarks=bookmarks)
