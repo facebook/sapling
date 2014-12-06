@@ -79,7 +79,7 @@ for filename, states in combinations:
 # write actual content
 for filename, data in content:
     if data is not None:
-        f = open(filename, 'w')
+        f = open(filename, 'wb')
         f.write(data + '\n')
         f.close()
     elif os.path.exists(filename):
