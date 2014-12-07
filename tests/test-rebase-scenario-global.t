@@ -60,7 +60,7 @@ D onto H - simple rebase:
   HG: user: Nicolas Dumazet <nicdumz.commits@gmail.com>
   HG: branch 'default'
   HG: added D
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32af7686d403-backup.hg (glob)
 
   $ hg tglog
   o  7: 'D'
@@ -89,7 +89,7 @@ D onto F - intermediate point:
   $ cd a2
 
   $ HGEDITOR=cat hg rebase -s 3 -d 5
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/32af7686d403-backup.hg (glob)
 
   $ hg tglog
   o  7: 'D'
@@ -117,7 +117,7 @@ E onto H - skip of G:
   $ cd a3
 
   $ hg rebase -s 4 -d 7
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/9520eea781bc-backup.hg (glob)
 
   $ hg tglog
   o  6: 'E'
@@ -143,7 +143,7 @@ F onto E - rebase of a branching point (skip G):
   $ cd a4
 
   $ hg rebase -s 5 -d 4
-  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/24b6387c8c8c-backup.hg (glob)
 
   $ hg tglog
   @  6: 'H'
@@ -169,7 +169,7 @@ G onto H - merged revision having a parent in ancestors of target:
   $ cd a5
 
   $ hg rebase -s 6 -d 7
-  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/eea13746799a-backup.hg (glob)
 
   $ hg tglog
   o    7: 'G'
@@ -197,7 +197,7 @@ F onto B - G maintains E as parent:
   $ cd a6
 
   $ hg rebase -s 5 -d 1
-  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/24b6387c8c8c-backup.hg (glob)
 
   $ hg tglog
   @  7: 'H'

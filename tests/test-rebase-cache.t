@@ -105,7 +105,7 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   0: 'A' 
 
   $ hg rebase -s 5 -d 8
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/635859577d0b-backup.hg (glob)
 
   $ hg branches
   branch3                        8:466cdfb14b62
@@ -166,7 +166,7 @@ Rebase head of branch3 (8) onto branch2 (6):
   o  0: 'A'
   
   $ hg rebase -s 8 -d 6
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/4666b71e8e32-backup.hg (glob)
 
   $ hg branches
   branch2                        8:6b4bdc1b5ac0
@@ -230,7 +230,7 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   o  0: 'A'
   
   $ hg rebase -s 7 -d 6
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/653b9feb4616-backup.hg (glob)
 
   $ hg branches
   branch2                        7:6b4bdc1b5ac0
@@ -267,7 +267,7 @@ update the branch cache.
 
   $ hg strip 2
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/0a03079c47fd-backup.hg (glob)
 
   $ hg tglog
   o  3: 'C' branch2
@@ -328,7 +328,7 @@ the same as branches remaining.
 
   $ hg strip 2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/a3/b/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/b/.hg/strip-backup/a5b4b27ed7b4-backup.hg (glob)
 
   $ hg theads
   1: 'branch2' branch2
@@ -373,14 +373,14 @@ Try both orders.
 
   $ hg strip 3 4
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/a3/c/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/c/.hg/strip-backup/67a385d4e6f2-backup.hg (glob)
 
   $ hg theads
   2: 'C' 
 
   $ hg strip 2 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/a3/c/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/c/.hg/strip-backup/6c81ed0049f8-backup.hg (glob)
 
   $ hg theads
   0: 'A' 
@@ -477,4 +477,4 @@ Turn most changeset public
   $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --dest 7 --source 5 -e
   HGEDITFORM=rebase.merge
   HGEDITFORM=rebase.normal
-  saved backup bundle to $TESTTMP/a3/c4/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/c4/.hg/strip-backup/361a99976cc9-backup.hg (glob)

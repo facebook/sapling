@@ -48,7 +48,7 @@ Rebasing D onto H detaching from C:
   
   $ hg phase --force --secret 3
   $ hg rebase -s 3 -d 7
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32af7686d403-backup.hg (glob)
 
   $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   o  7:secret 'D'
@@ -99,7 +99,7 @@ Rebasing C onto H detaching from B:
   o  0: 'A'
   
   $ hg rebase -s 2 -d 7
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/5fddd98957c8-backup.hg (glob)
 
   $ hg tglog
   o  7: 'D'
@@ -151,7 +151,7 @@ Rebasing B onto H using detach (same as not using it):
   o  0: 'A'
   
   $ hg rebase -s 1 -d 7
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/42ccdea3bb16-backup.hg (glob)
 
   $ hg tglog
   o  7: 'D'
@@ -205,7 +205,7 @@ Rebasing C onto H detaching from B and collapsing:
   o  0: 'A'
   
   $ hg rebase --collapse -s 2 -d 7
-  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/5fddd98957c8-backup.hg (glob)
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   o  6:secret 'Collapsed revision
@@ -264,7 +264,7 @@ Rebasing across null as ancestor
   o  0: 'A'
   
   $ hg rebase -s 1 -d tip
-  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/42ccdea3bb16-backup.hg (glob)
 
   $ hg tglog
   o  8: 'D'
@@ -325,7 +325,7 @@ Verify that target is not selected as external rev (issue3085)
   $ hg ci -m "J"
 
   $ hg rebase -s 8 -d 7 --collapse --config ui.merge=internal:other
-  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/9790e768172d-backup.hg (glob)
 
   $ hg tglog
   @  8: 'Collapsed revision

@@ -79,7 +79,7 @@ Conclude rebase:
   $ hg resolve -m common
   (no more unresolved files)
   $ hg rebase --continue
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3163e20567cc-backup.hg (glob)
 
   $ hg tglog
   @  5:secret 'L3'  mybook

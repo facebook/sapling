@@ -75,7 +75,7 @@ Rebasing B onto H and collapsing changesets with different phases:
   HG: added C
   HG: added D
   ====
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-backup.hg (glob)
 
   $ hg tglogp
   @  5:secret 'Collapsed revision
@@ -113,7 +113,7 @@ Rebasing E onto H:
 
   $ hg phase --force --secret 6
   $ hg rebase --source 4 --collapse
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/9520eea781bc-backup.hg (glob)
 
   $ hg tglog
   o  6: 'Collapsed revision
@@ -154,7 +154,7 @@ Rebasing G onto H with custom message:
   > EOF
   $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --source 4 --collapse -m 'custom message' -e
   HGEDITFORM=rebase.collapse
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/9520eea781bc-backup.hg (glob)
 
   $ hg tglog
   o  6: 'custom message'
@@ -261,7 +261,7 @@ Rebase and collapse - more than one external (fail):
 Rebase and collapse - E onto H:
 
   $ hg rebase -s 4 --collapse # root (4) is not a merge
-  saved backup bundle to $TESTTMP/b1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b1/.hg/strip-backup/8a5212ebc852-backup.hg (glob)
 
   $ hg tglog
   o    5: 'Collapsed revision
@@ -410,7 +410,7 @@ Rebase and collapse - E onto I:
 
   $ hg rebase -s 4 --collapse # root (4) is not a merge
   merging E
-  saved backup bundle to $TESTTMP/c1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c1/.hg/strip-backup/8a5212ebc852-backup.hg (glob)
 
   $ hg tglog
   o    5: 'Collapsed revision
@@ -499,7 +499,7 @@ Rebase and collapse - B onto F:
   $ cd d1
 
   $ hg rebase -s 1 --collapse
-  saved backup bundle to $TESTTMP/d1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/d1/.hg/strip-backup/27547f69f254-backup.hg (glob)
 
   $ hg tglog
   o  2: 'Collapsed revision
@@ -583,7 +583,7 @@ Interactions between collapse and keepbranches
   o  0: 'A'
   
   $ hg rebase -s 5 -d 4
-  saved backup bundle to $TESTTMP/e/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/e/.hg/strip-backup/fbfb97b1089a-backup.hg (glob)
   $ hg tglog
   @  4: 'E'
   |
@@ -639,7 +639,7 @@ Rebase, collapse and copies
   merging c and f to f
   merging f and c to c
   merging e and g to g
-  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/6e7340ee38c0-backup.hg (glob)
   $ hg st
   $ hg st --copies --change tip
   A d
@@ -678,7 +678,7 @@ Test collapsing a middle revision in-place
 Test collapsing in place
 
   $ hg rebase --collapse -b . -d 0
-  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/1352765a01d4-backup.hg (glob)
   $ hg st --change tip --copies
   M a
   M c
@@ -737,7 +737,7 @@ Test stripping a revision with another child
 
   $ hg strip 2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/f/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/f/.hg/strip-backup/c5cefa58fd55-backup.hg (glob)
 
   $ hg tglog
   o  1: 'B'
@@ -768,7 +768,7 @@ Test collapsing changes that add then remove a file
   adding b
   $ hg book foo
   $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
-  saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/6d8d9f24eec3-backup.hg (glob)
   $ hg log -G --template "{rev}: '{desc}' {bookmarks}"
   @  1: 'collapsed' foo
   |

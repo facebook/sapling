@@ -53,7 +53,7 @@ Now b has one revision to be pulled from a:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-backup.hg (glob)
 
   $ hg tglog
   @  3: 'L1'

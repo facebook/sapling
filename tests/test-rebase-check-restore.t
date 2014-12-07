@@ -132,7 +132,7 @@ Solve the conflict and go on:
   $ hg resolve -m A
   (no more unresolved files)
   $ hg rebase --continue
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/01e6ebbd8272-backup.hg (glob)
 
   $ hg tglog
   @  5:draft 'F' notdefault

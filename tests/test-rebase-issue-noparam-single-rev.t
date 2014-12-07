@@ -52,7 +52,7 @@ Rebase with no arguments - single revision in source branch:
   $ hg up -q -C 2
 
   $ hg rebase
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/87c180a611f2-backup.hg (glob)
 
   $ hg tglog
   @  4: 'l1'
@@ -110,7 +110,7 @@ Rebase with no arguments - single revision in target branch:
   $ hg up -q -C 3
 
   $ hg rebase
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/87c180a611f2-backup.hg (glob)
 
   $ hg tglog
   @  4: 'l2'

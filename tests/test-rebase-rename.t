@@ -60,7 +60,7 @@ Rename is tracked:
 Rebase the revision containing the rename:
 
   $ hg rebase -s 3 -d 2
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/73a3ee40125d-backup.hg (glob)
 
   $ hg tglog
   @  3: 'rename A'
@@ -150,7 +150,7 @@ Copy is tracked:
 Rebase the revision containing the copy:
 
   $ hg rebase -s 3 -d 2
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/0a8162ff18a8-backup.hg (glob)
 
   $ hg tglog
   @  3: 'copy A'
@@ -233,7 +233,7 @@ Test rebase across repeating renames:
   
 
   $ hg rebase -s 4 -d 3
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/b918d683b091-backup.hg (glob)
 
   $ hg diff --stat -c .
    unrelated.txt |  1 +
@@ -281,7 +281,7 @@ Update back to before we performed copies, and inject an unrelated change.
 
 Rebase the copies on top of the unrelated change.
   $ hg rebase --source 1 --dest 4
-  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/*.hg (glob)
+  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/79d255d24ad2-backup.hg (glob)
   $ hg update 4
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -305,7 +305,7 @@ copy records collapse correctly.
   $ hg rebase -s 2 --dest 5 --collapse
   merging b and c to c
   merging c and d to d
-  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/*.hg (glob)
+  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/68bf06433839-backup.hg (glob)
   $ hg co tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

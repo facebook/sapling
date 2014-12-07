@@ -69,7 +69,7 @@
 Branch name containing a dash (issue3181)
 
   $ hg rebase -b dev-two -d dev-one --keepbranches
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/24b6387c8c8c-backup.hg (glob)
 
   $ hg tglog
   @  9: 'dev-two named branch' dev-two
@@ -93,7 +93,7 @@ Branch name containing a dash (issue3181)
   o  0: 'A'
   
   $ hg rebase -s dev-one -d 0 --keepbranches
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-backup.hg (glob)
 
   $ hg tglog
   @  8: 'dev-two named branch' dev-two
@@ -143,7 +143,7 @@ Branch name containing a dash (issue3181)
   o  0: 'A'
   
   $ hg rebase -b 'max(branch("dev-two"))' -d dev-one --keepbranches
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/77854864208c-backup.hg (glob)
 
   $ hg tglog
   o  9: 'dev-two named branch' dev-two
@@ -167,7 +167,7 @@ Branch name containing a dash (issue3181)
   o  0: 'A'
   
   $ hg rebase -s 'max(branch("dev-one"))' -d 0 --keepbranches
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-backup.hg (glob)
 
   $ hg tglog
   o  8: 'dev-two named branch' dev-two
@@ -192,7 +192,7 @@ Branch name containing a dash (issue3181)
 Rebasing descendant onto ancestor across different named branches
 
   $ hg rebase -s 1 -d 8 --keepbranches
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-backup.hg (glob)
 
   $ hg tglog
   o  8: 'D'
@@ -218,7 +218,7 @@ Rebasing descendant onto ancestor across different named branches
   [255]
 
   $ hg rebase -s 5 -d 4
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32d3b0de7f37-backup.hg (glob)
 
   $ hg tglog
   o  8: 'D'
@@ -248,7 +248,7 @@ Reopen branch by rebase
   $ hg ci -m 'close b' --close
   $ hg rebase -b 8 -d b
   reopening closed branch head ea9de14a36c6
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/86693275b2ef-backup.hg (glob)
 
   $ cd ..
 
