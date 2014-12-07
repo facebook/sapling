@@ -6,6 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import types
 import copy
 import error
 import phases
@@ -310,6 +311,10 @@ class repoview(object):
         return getattr(self._unfilteredrepo, attr)
 
     def __setattr__(self, attr, value):
+        # Allow method replacement on filtered repos, like status() in
+        # largefiles' purge override
+        if type(value) == types.FunctionType:
+            object.__setattr__(self, attr, value)
         return setattr(self._unfilteredrepo, attr, value)
 
     def __delattr__(self, attr):
