@@ -40,7 +40,7 @@ later.
 
 (display all nodes)
 
-  $ hg --config experimental.graph-topological=1 log -G
+  $ hg --config experimental.graph-group-branches=1 log -G
   o  8
   |
   o  3
@@ -62,7 +62,7 @@ later.
 
 (revset skipping nodes)
 
-  $ hg --config experimental.graph-topological=1 log -G --rev 'not (2+6)'
+  $ hg --config experimental.graph-group-branches=1 log -G --rev 'not (2+6)'
   o  8
   |
   o  3
@@ -80,7 +80,7 @@ later.
 
 (begin) from the other branch
 
-  $ hg --config experimental.graph-topological=1 --config experimental.graph-topological.firstbranch=5 log -G
+  $ hg --config experimental.graph-group-branches=1 --config experimental.graph-group-branches.firstbranch=5 log -G
   o  7
   |
   o  6

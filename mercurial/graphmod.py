@@ -227,10 +227,10 @@ def dagwalker(repo, revs):
     lowestrev = revs.min()
     gpcache = {}
 
-    if repo.ui.configbool('experimental', 'graph-topological', False):
+    if repo.ui.configbool('experimental', 'graph-group-branches', False):
         firstbranch = ()
-        firstbranchrevset = repo.ui.config('experimental',
-                                           'graph-topological.firstbranch', '')
+        firstbranchrevset = repo.ui.config(
+            'experimental', 'graph-group-branches.firstbranch', '')
         if firstbranchrevset:
             firstbranch = repo.revs(firstbranchrevset)
         parentrevs = repo.changelog.parentrevs
