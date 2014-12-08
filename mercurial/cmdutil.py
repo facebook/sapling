@@ -1795,7 +1795,7 @@ def _makelogrevset(repo, pats, opts, revs):
                 filematcher = lambda rev: match
 
     expr = []
-    for op, val in opts.iteritems():
+    for op, val in sorted(opts.iteritems()):
         if not val:
             continue
         if op not in opt2revset:

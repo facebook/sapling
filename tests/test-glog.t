@@ -1660,15 +1660,15 @@ Test --follow on a directory
   (group
     (and
       (func
+        ('symbol', 'ancestors')
+        ('symbol', '.'))
+      (func
         ('symbol', '_matchfiles')
         (list
           (list
             ('string', 'r:')
             ('string', 'd:relpath'))
-          ('string', 'p:dir')))
-      (func
-        ('symbol', 'ancestors')
-        ('symbol', '.'))))
+          ('string', 'p:dir')))))
   $ hg up -q tip
 
 Test --follow on file not in parent revision
@@ -1685,15 +1685,15 @@ Test --follow and patterns
   (group
     (and
       (func
+        ('symbol', 'ancestors')
+        ('symbol', '.'))
+      (func
         ('symbol', '_matchfiles')
         (list
           (list
             ('string', 'r:')
             ('string', 'd:relpath'))
-          ('string', 'p:glob:*')))
-      (func
-        ('symbol', 'ancestors')
-        ('symbol', '.'))))
+          ('string', 'p:glob:*')))))
 
 Test --follow on a single rename
 
@@ -1862,15 +1862,15 @@ Test --removed
   (group
     (and
       (func
+        ('symbol', 'ancestors')
+        ('symbol', '.'))
+      (func
         ('symbol', '_matchfiles')
         (list
           (list
             ('string', 'r:')
             ('string', 'd:relpath'))
-          ('string', 'p:a')))
-      (func
-        ('symbol', 'ancestors')
-        ('symbol', '.'))))
+          ('string', 'p:a')))))
 
 Test --patch and --stat with --follow and --follow-first
 
