@@ -171,22 +171,21 @@ def filteriterhunks(meta):
                 yield data
     return filterhunks
 
-if True:
-    class svnbackend(patch.repobackend):
-        def getfile(self, fname):
-            # In Mercurial >= 3.2, if fname is missing, data will be None and we
-            # should return None, None in that case. Earlier versions will raise
-            # an IOError which we let propagate up the stack.
-            f = super(svnbackend, self).getfile(fname)
-            if f is None:
-              return None, None
-            data, flags = f
-            if data is None:
-                return None, None
-            islink, isexec = flags
-            if islink:
-                data = 'link ' + data
-            return data, (islink, isexec)
+class svnbackend(patch.repobackend):
+    def getfile(self, fname):
+        # In Mercurial >= 3.2, if fname is missing, data will be None and we
+        # should return None, None in that case. Earlier versions will raise
+        # an IOError which we let propagate up the stack.
+        f = super(svnbackend, self).getfile(fname)
+        if f is None:
+          return None, None
+        data, flags = f
+        if data is None:
+            return None, None
+        islink, isexec = flags
+        if islink:
+            data = 'link ' + data
+        return data, (islink, isexec)
 
 def patchrepo(ui, meta, parentctx, patchfp):
     store = patch.filestore(util.getfilestoresize(ui))
