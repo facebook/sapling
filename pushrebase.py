@@ -162,7 +162,6 @@ def commonheadshandler(op, inpart):
         nodeid = inpart.read(20)
     assert not nodeid # data should split evenly into blocks of 20 bytes
 
-# TODO: verify that commit hooks fire appropriately
 @exchange.b2partsgenerator(rebaseparttype)
 def partgen(pushop, bundler):
     onto = pushop.ui.config(experimental, configonto)
@@ -199,7 +198,8 @@ def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
     params = part.params
-    op.gettransaction()
+    tr = op.gettransaction()
+    hookargs = dict(tr.hookargs)
 
     bundlefile = None
     fp = None
@@ -243,7 +243,10 @@ def bundle2rebase(op, part):
         if conflicts:
             raise util.Abort(_('conflicting changes in %r') % conflicts)
 
+        op.repo.hook("prechangegroup", **hookargs)
+
         replacements = {}
+        added = []
 
         for rev in revs:
             newrev = context.memctx(
@@ -263,6 +266,7 @@ def bundle2rebase(op, part):
 
             onto = op.repo[newrev]
             replacements[rev.node()] = onto.node()
+            added.append(onto.node())
 
         if obsolete.isenabled(op.repo, obsolete.createmarkersopt):
             markers = [
@@ -285,6 +289,19 @@ def bundle2rebase(op, part):
         except OSError, e:
             if e.errno != errno.ENOENT:
                 raise
+
+    p = lambda: tr.writepending() and op.repo.root or ""
+    op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
+
+    def runhooks():
+        op.repo.hook("changegroup", **hookargs)
+        for n in added:
+            args = hookargs.copy()
+            args['node'] = hex(n)
+            op.repo.hook("incoming", **args)
+
+    tr.addpostclose('serverrebase-cg-hooks',
+                    lambda tr: op.repo._afterlock(runhooks))
 
     if (op.records[commonheadsparttype]
         and op.reply
