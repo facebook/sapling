@@ -476,10 +476,8 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
         else:
             newglist.append(action)
 
-    newglist.sort()
     actions['g'] = newglist
     if lfmr:
-        lfmr.sort()
         actions['lfmr'] = lfmr
 
     return actions, diverge, renamedelete
