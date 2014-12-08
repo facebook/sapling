@@ -624,8 +624,8 @@ def reset(ui, repo, *args, **kwargs):
 
     try:
         revs = repo.revs(commit)
-        parentreset = revs and revs[0] == repo.revs('.^')[0]
-        selfreset = revs and revs[0] == repo.revs('.')[0]
+        parentreset = revs and revs.first() == repo.revs('.^').first()
+        selfreset = revs and revs.first() == repo.revs('.').first()
     except:
         parentreset = False
         selfreset = False
