@@ -375,7 +375,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     acceptremote = accept the incoming changes without prompting
     """
 
-    actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
     copy, movewithdir, diverge, renamedelete = {}, {}, {}, {}
 
     # manifests fetched in order are going to be faster, so prime the caches
@@ -406,6 +405,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     # Compare manifests
     diff = m1.diff(m2)
 
+    actions = {}
     for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
         if partial and not partial(f):
             continue
@@ -413,77 +413,76 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             if f not in ma:
                 fa = copy.get(f, None)
                 if fa is not None:
-                    actions['m'].append((f, (f, f, fa, False, pa.node()),
-                                   "both renamed from " + fa))
+                    actions[f] = ('m', (f, f, fa, False, pa.node()),
+                                  "both renamed from " + fa)
                 else:
-                    actions['m'].append((f, (f, f, None, False, pa.node()),
-                                   "both created"))
+                    actions[f] = ('m', (f, f, None, False, pa.node()),
+                                  "both created")
             else:
                 a = ma[f]
                 fla = ma.flags(f)
                 nol = 'l' not in fl1 + fl2 + fla
                 if n2 == a and fl2 == fla:
-                    actions['k'].append((f, (), "remote unchanged"))
+                    actions[f] = ('k' , (), "remote unchanged")
                 elif n1 == a and fl1 == fla: # local unchanged - use remote
                     if n1 == n2: # optimization: keep local content
-                        actions['e'].append((f, (fl2,), "update permissions"))
+                        actions[f] = ('e', (fl2,), "update permissions")
                     else:
-                        actions['g'].append((f, (fl2,), "remote is newer"))
+                        actions[f] = ('g', (fl2,), "remote is newer")
                 elif nol and n2 == a: # remote only changed 'x'
-                    actions['e'].append((f, (fl2,), "update permissions"))
+                    actions[f] = ('e', (fl2,), "update permissions")
                 elif nol and n1 == a: # local only changed 'x'
-                    actions['g'].append((f, (fl1,), "remote is newer"))
+                    actions[f] = ('g', (fl1,), "remote is newer")
                 else: # both changed something
-                    actions['m'].append((f, (f, f, f, False, pa.node()),
-                                   "versions differ"))
+                    actions[f] = ('m', (f, f, f, False, pa.node()),
+                                   "versions differ")
         elif n1: # file exists only on local side
             if f in copied:
                 pass # we'll deal with it on m2 side
             elif f in movewithdir: # directory rename, move local
                 f2 = movewithdir[f]
                 if f2 in m2:
-                    actions['m'].append((f2, (f, f2, None, True, pa.node()),
-                                   "remote directory rename, both created"))
+                    actions[f2] = ('m', (f, f2, None, True, pa.node()),
+                                   "remote directory rename, both created")
                 else:
-                    actions['dm'].append((f2, (f, fl1),
-                                  "remote directory rename - move from " + f))
+                    actions[f2] = ('dm', (f, fl1),
+                                   "remote directory rename - move from " + f)
             elif f in copy:
                 f2 = copy[f]
-                actions['m'].append((f, (f, f2, f2, False, pa.node()),
-                                "local copied/moved from " + f2))
+                actions[f] = ('m', (f, f2, f2, False, pa.node()),
+                              "local copied/moved from " + f2)
             elif f in ma: # clean, a different, no remote
                 if n1 != ma[f]:
                     if acceptremote:
-                        actions['r'].append((f, None, "remote delete"))
+                        actions[f] = ('r', None, "remote delete")
                     else:
-                        actions['cd'].append((f, None,
-                                              "prompt changed/deleted"))
+                        actions[f] = ('cd', None,  "prompt changed/deleted")
                 elif n1[20:] == 'a':
                     # This extra 'a' is added by working copy manifest to mark
                     # the file as locally added. We should forget it instead of
                     # deleting it.
-                    actions['f'].append((f, None, "remote deleted"))
+                    actions[f] = ('f', None, "remote deleted")
                 else:
-                    actions['r'].append((f, None, "other deleted"))
+                    actions[f] = ('r', None, "other deleted")
         elif n2: # file exists only on remote side
             if f in copied:
                 pass # we'll deal with it on m1 side
             elif f in movewithdir:
                 f2 = movewithdir[f]
                 if f2 in m1:
-                    actions['m'].append((f2, (f2, f, None, False, pa.node()),
-                                   "local directory rename, both created"))
+                    actions[f2] = ('m', (f2, f, None, False, pa.node()),
+                                   "local directory rename, both created")
                 else:
-                    actions['dg'].append((f2, (f, fl2),
-                                    "local directory rename - get from " + f))
+                    actions[f2] = ('dg', (f, fl2),
+                                   "local directory rename - get from " + f)
             elif f in copy:
                 f2 = copy[f]
                 if f2 in m2:
-                    actions['m'].append((f, (f2, f, f2, False, pa.node()),
-                                    "remote copied from " + f2))
+                    actions[f] = ('m', (f2, f, f2, False, pa.node()),
+                                  "remote copied from " + f2)
                 else:
-                    actions['m'].append((f, (f2, f, f2, True, pa.node()),
-                                    "remote moved from " + f2))
+                    actions[f] = ('m', (f2, f, f2, True, pa.node()),
+                                  "remote moved from " + f2)
             elif f not in ma:
                 # local unknown, remote created: the logic is described by the
                 # following table:
@@ -498,26 +497,25 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 # Checking whether the files are different is expensive, so we
                 # don't do that when we can avoid it.
                 if force and not branchmerge:
-                    actions['g'].append((f, (fl2,), "remote created"))
+                    actions[f] = ('g', (fl2,), "remote created")
                 else:
                     different = _checkunknownfile(repo, wctx, p2, f)
                     if force and branchmerge and different:
-                        actions['m'].append((f, (f, f, None, False, pa.node()),
-                                        "remote differs from untracked local"))
+                        actions[f] = ('m', (f, f, None, False, pa.node()),
+                                      "remote differs from untracked local")
                     elif not force and different:
                         aborts.append((f, 'ud'))
                     else:
-                        actions['g'].append((f, (fl2,), "remote created"))
+                        actions[f] = ('g', (fl2,), "remote created")
             elif n2 != ma[f]:
                 different = _checkunknownfile(repo, wctx, p2, f)
                 if not force and different:
                     aborts.append((f, 'ud'))
                 else:
                     if acceptremote:
-                        actions['g'].append((f, (fl2,), "remote recreating"))
+                        actions[f] = ('g', (fl2,), "remote recreating")
                     else:
-                        actions['dc'].append((f, (fl2,),
-                                              "prompt deleted/changed"))
+                        actions[f] = ('dc', (fl2,), "prompt deleted/changed")
 
     for f, m in sorted(aborts):
         if m == 'ud':
@@ -526,6 +524,12 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     if aborts:
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
+
+    # Convert to dictionary-of-lists format
+    actionbyfile = actions
+    actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+    for f, (m, args, msg) in actionbyfile.iteritems():
+        actions[m].append((f, args, msg))
 
     return actions, diverge, renamedelete
 
