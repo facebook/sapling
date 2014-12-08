@@ -24,8 +24,17 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+logopts = [
+    ('', 'all', None, _('shows all commits in the repo')),
+]
+
 def extsetup(ui):
-    wrapcommand(commands.table, 'update', update)
+    entry = wrapcommand(commands.table, 'update', update)
+    options = entry[1]
+    # try to put in alphabetical order
+    options.insert(3, ('n', 'nocheck', None,
+        _('update even with outstanding changes')))
+
     wrapcommand(rebase.cmdtable, 'rebase', _rebase)
 
     entry = wrapcommand(commands.table, 'log', log)
@@ -40,6 +49,13 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
             'you must specify a destination to update to',
             hint="if you're trying to move a bookmark forward, try " +
                  "'hg rebase -d <destination>'")
+
+    # by default, never update when there are local changes
+    if not kwargs['clean'] and not kwargs['nocheck']:
+        kwargs['check'] = True
+
+    if 'nocheck' in kwargs:
+        del kwargs['nocheck']
 
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 
@@ -162,10 +178,6 @@ def _rebase(orig, ui, repo, **opts):
             return result
 
     return orig(ui, repo, **opts)
-
-logopts = [
-    ('', 'all', None, _('shows all commits in the repo')),
-]
 
 def log(orig, ui, repo, *pats, **opts):
     # 'hg log' defaults to -f

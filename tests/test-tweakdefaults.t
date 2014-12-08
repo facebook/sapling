@@ -48,6 +48,20 @@ Log is -f by default
   |/
   o  0 a
   
+
+Dirty update fails by default; allowed with --nocheck
+
+  $ echo x >> a
+  $ hg st
+  M a
+  $ hg update .
+  abort: uncommitted changes
+  [255]
+  $ hg update --nocheck .
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg revert -r . a
+  $ rm *.orig
+
 Log on dir's works
 
   $ hg log -T '{rev} {desc}\n' dir
