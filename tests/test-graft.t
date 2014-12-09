@@ -717,3 +717,4 @@ Empty graft
   $ hg tag -f something
   $ hg graft -qr 27
   $ hg graft -qf 27
+  note: graft of 27:3aaa8b6725f0 "28" created no changes to commit
