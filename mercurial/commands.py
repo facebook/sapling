@@ -3498,8 +3498,9 @@ def graft(ui, repo, *revs, **opts):
             node = repo.commit(text=message, user=user,
                         date=date, extra=extra, editor=editor)
             if node is None:
-                ui.warn(_('note: graft of %s created no changes to commit\n') %
-                        desc)
+                ui.warn(
+                    _('note: graft of %d:%s created no changes to commit\n') %
+                    (ctx.rev(), ctx))
     finally:
         wlock.release()
 
