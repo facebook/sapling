@@ -175,6 +175,21 @@ def partgen(pushop, bundler):
 
 bundle2.capabilities[rebaseparttype] = ()
 
+def _graft(repo, onto, rev):
+    '''duplicate changeset "rev" with parent "onto"'''
+    if rev.p2().node() != nullid:
+        raise util.Abort(_('cannot graft commit with a non-null p2'))
+    return context.memctx(repo,
+                          [onto.node(), nullid],
+                          rev.description(),
+                          rev.files(),
+                          (lambda repo, memctx, path:
+                              context.memfilectx(repo, path,rev[path].data())),
+                          rev.user(),
+                          rev.date(),
+                          rev.extra(),
+                         ).commit()
+
 # TODO: split this function into smaller pieces
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
 def bundle2rebase(op, part):
@@ -232,18 +247,7 @@ def bundle2rebase(op, part):
         added = []
 
         for rev in revs:
-            newrev = context.memctx(op.repo,
-                                    [onto.node(), nullid],
-                                    rev.description(),
-                                    rev.files(),
-                                    (lambda repo, memctx, path:
-                                        context.memfilectx(repo,
-                                                           path,
-                                                           rev[path].data())),
-                                    rev.user(),
-                                    rev.date(),
-                                    rev.extra(),
-                                   ).commit()
+            newrev = _graft(op.repo, onto, rev)
 
             onto = op.repo[newrev]
             replacements[rev.node()] = onto.node()
