@@ -234,6 +234,19 @@ def _graft(repo, onto, rev):
                           rev.extra(),
                          ).commit()
 
+def _buildobsolete(replacements, oldrepo, newrepo):
+    'adds obsolete markers in replacements if enabled in newrepo'
+    if obsolete.isenabled(newrepo, obsolete.createmarkersopt):
+        markers = [(oldrepo[oldrev], (newrepo[newrev],))
+                   for oldrev, newrev in replacements.items()
+                   if newrev != oldrev]
+
+        # TODO: make sure these weren't public originally
+        for old, new in markers:
+            old.mutable = lambda *args: True
+
+        obsolete.createmarkers(newrepo, markers)
+
 # TODO: split this function into smaller pieces
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
 def bundle2rebase(op, part):
@@ -268,18 +281,7 @@ def bundle2rebase(op, part):
             replacements[rev.node()] = onto.node()
             added.append(onto.node())
 
-        if obsolete.isenabled(op.repo, obsolete.createmarkersopt):
-            markers = [(bundle[oldrev], (op.repo[newrev],))
-                       for oldrev, newrev in replacements.items()
-                       if newrev != oldrev]
-
-            # TODO: make sure these weren't public originally
-            for old, new in markers:
-                old.mutable = lambda *args: True
-
-            obsolete.createmarkers(op.repo, markers)
-
-
+        _buildobsolete(replacements, bundle, op.repo)
     finally:
         try:
             if bundlefile:
