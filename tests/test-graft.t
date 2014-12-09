@@ -205,7 +205,7 @@ Abort the graft and try committing:
   $ echo c >> e
   $ hg ci -mtest
 
-  $ hg strip . --config extensions.mq=
+  $ hg strip . --config extensions.strip=
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 
@@ -705,7 +705,7 @@ but do some destructive editing of the repo:
 
   $ hg up -qC 7
   $ hg tag -l -r 13 tmp
-  $ hg --config extensions.mq= strip 2
+  $ hg --config extensions.strip= strip 2
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/5c095ad7e90f-backup.hg (glob)
   $ hg graft tmp
   skipping already grafted revision 8:9db0f28fd374 (2:ef0ef43d49e7 also has unknown origin 5c095ad7e90f)
