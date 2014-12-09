@@ -2201,12 +2201,12 @@ filtered '0' changeset
   $ hg ci -m 'Babar is in the jungle!'
   created new head
   $ hg graft 0::
-  grafting revision 0
-  grafting revision 1
-  grafting revision 2
-  grafting revision 3
-  grafting revision 4
-  grafting revision 5
+  grafting 0:b4e73ffab476 "0"
+  grafting 1:e06180cbfb0c "1"
+  grafting 2:ab4f1438558b "2"
+  grafting 3:ada793dcc118 "3"
+  grafting 4:b60a39a85a01 "4" (secret)
+  grafting 5:aed2d9c1d0e7 "5"
 (turning the initial root secret (filtered))
   $ hg phase --force --secret 0
   $ PATH_INFO=/graph/; export PATH_INFO

@@ -447,7 +447,7 @@ first graft something so there's an additional entry:
   $ hg up 11
   5 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg graft 12
-  grafting revision 12
+  grafting 12:2647734878ef "fork" (tip)
   $ hg ci --amend -m 'graft amend'
   saved backup bundle to $TESTTMP/.hg/strip-backup/bd010aea3f39-amend-backup.hg (glob)
   $ hg log -r . --debug | grep extra

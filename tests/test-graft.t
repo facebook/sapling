@@ -82,7 +82,7 @@ Graft a rename:
   A b
   R a
   $ HGEDITOR=cat hg graft 2 -u foo --edit
-  grafting revision 2
+  grafting 2:5c095ad7e90f "2"
   merging a and b to b
   2
   
@@ -133,16 +133,16 @@ Graft out of order, skipping a merge and a duplicate
   $ hg graft 1 5 4 3 'merge()' 2 -n
   skipping ungraftable merge revision 6
   skipping revision 2 (already grafted to 7)
-  grafting revision 1
-  grafting revision 5
-  grafting revision 4
-  grafting revision 3
+  grafting 1:5d205f8b35b6 "1"
+  grafting 5:97f8bfe72746 "5"
+  grafting 4:9c233e8e184d "4"
+  grafting 3:4c60f11aa304 "3"
 
   $ HGEDITOR=cat hg graft 1 5 4 3 'merge()' 2 --debug
   skipping ungraftable merge revision 6
   scanning for duplicate grafts
   skipping revision 2 (already grafted to 7)
-  grafting revision 1
+  grafting 1:5d205f8b35b6 "1"
     searching for copies back to rev 1
     unmatched files in local:
      b
@@ -160,7 +160,7 @@ Graft out of order, skipping a merge and a duplicate
   my b@ef0ef43d49e7+ other a@5d205f8b35b6 ancestor a@68795b066622
    premerge successful
   b
-  grafting revision 5
+  grafting 5:97f8bfe72746 "5"
     searching for copies back to rev 1
   resolving manifests
    branchmerge: True, force: True, partial: False
@@ -170,7 +170,7 @@ Graft out of order, skipping a merge and a duplicate
   updating: e 1/1 files (100.00%)
    b: remote unchanged -> k
   e
-  grafting revision 4
+  grafting 4:9c233e8e184d "4"
     searching for copies back to rev 1
   resolving manifests
    branchmerge: True, force: True, partial: False
@@ -216,7 +216,7 @@ Graft again:
   skipping revision 2 (already grafted to 7)
   skipping revision 1 (already grafted to 8)
   skipping revision 5 (already grafted to 9)
-  grafting revision 4
+  grafting 4:9c233e8e184d "4"
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -227,7 +227,7 @@ Graft again:
 Continue without resolve should fail:
 
   $ hg graft -c
-  grafting revision 4
+  grafting 4:9c233e8e184d "4"
   abort: unresolved merge conflicts (see hg help resolve)
   [255]
 
@@ -250,8 +250,8 @@ Continue with a revision should fail:
 Continue for real, clobber usernames
 
   $ hg graft -c -U
-  grafting revision 4
-  grafting revision 3
+  grafting 4:9c233e8e184d "4"
+  grafting 3:4c60f11aa304 "3"
 
 Compare with original:
 
@@ -299,7 +299,7 @@ Graft again onto another branch should preserve the original source
   $ hg ci -m 7
   created new head
   $ hg graft 7
-  grafting revision 7
+  grafting 7:ef0ef43d49e7 "2"
 
   $ hg log -r 7 --template '{rev}:{node}\n'
   7:ef0ef43d49e79e81ddafdc7997401ba0041efc82
@@ -350,7 +350,7 @@ Graft with --log
 
   $ hg up -Cq 1
   $ hg graft 3 --log -u foo
-  grafting revision 3
+  grafting 3:4c60f11aa304 "3"
   warning: can't find ancestor for 'c' copied from 'b'!
   $ hg log --template '{rev} {parents} {desc}\n' -r tip
   14 1:5d205f8b35b6  3
@@ -364,7 +364,7 @@ Resolve conflicted graft
   $ echo c > a
   $ hg ci -m 9
   $ hg graft 1 --tool internal:fail
-  grafting revision 1
+  grafting 1:5d205f8b35b6 "1"
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
@@ -383,7 +383,7 @@ Resolve conflicted graft
   $ hg resolve -m a
   (no more unresolved files)
   $ hg graft -c
-  grafting revision 1
+  grafting 1:5d205f8b35b6 "1"
   $ hg export tip --git
   # HG changeset patch
   # User bar
@@ -404,7 +404,7 @@ Resolve conflicted graft with rename
   $ echo c > a
   $ hg ci -m 10
   $ hg graft 2 --tool internal:fail
-  grafting revision 2
+  grafting 2:5c095ad7e90f "2"
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
@@ -412,7 +412,7 @@ Resolve conflicted graft with rename
   merging a and b to b
   (no more unresolved files)
   $ hg graft -c
-  grafting revision 2
+  grafting 2:5c095ad7e90f "2"
   $ hg export tip --git
   # HG changeset patch
   # User test
@@ -644,9 +644,9 @@ graft works on complex revset
   skipping ancestor revision 21
   skipping ancestor revision 22
   skipping revision 2 (already grafted to 22)
-  grafting revision 7
-  grafting revision 13
-  grafting revision 19
+  grafting 7:ef0ef43d49e7 "2"
+  grafting 13:9db0f28fd374 "2"
+  grafting 19:9627f653b421 "2"
   merging b
 
 graft with --force (still doesn't graft merges)
@@ -658,9 +658,9 @@ graft with --force (still doesn't graft merges)
   [255]
   $ hg graft 19 0 6 --force
   skipping ungraftable merge revision 6
-  grafting revision 19
+  grafting 19:9627f653b421 "2"
   merging b
-  grafting revision 0
+  grafting 0:68795b066622 "0"
 
 graft --force after backout
 
@@ -673,7 +673,7 @@ graft --force after backout
   skipping ancestor revision 28
   [255]
   $ hg graft 28 --force
-  grafting revision 28
+  grafting 28:6c56f0f7f033 "28"
   merging a
   $ cat a
   abc
@@ -683,7 +683,7 @@ graft --continue after --force
   $ echo def > a
   $ hg ci -m 31
   $ hg graft 28 --force --tool internal:fail
-  grafting revision 28
+  grafting 28:6c56f0f7f033 "28"
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
@@ -696,7 +696,7 @@ graft --continue after --force
   $ hg resolve -m a
   (no more unresolved files)
   $ hg graft -c
-  grafting revision 28
+  grafting 28:6c56f0f7f033 "28"
   $ cat a
   abc
 

@@ -3446,8 +3446,12 @@ def graft(ui, repo, *revs, **opts):
     wlock = repo.wlock()
     try:
         for pos, ctx in enumerate(repo.set("%ld", revs)):
-
-            ui.status(_('grafting revision %s\n') % ctx.rev())
+            desc = '%d:%s "%s"' % (ctx.rev(), ctx,
+                                   ctx.description().split('\n', 1)[0])
+            names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+            if names:
+                desc += ' (%s)' % ' '.join(names)
+            ui.status(_('grafting %s\n') % desc)
             if opts.get('dry_run'):
                 continue
 

@@ -118,8 +118,8 @@ We make a copy of both the first changeset in the rebased and some other in the
 set.
 
   $ hg graft 42ccdea3bb16 32af7686d403
-  grafting revision 1
-  grafting revision 3
+  grafting 1:42ccdea3bb16 "B"
+  grafting 3:32af7686d403 "D"
   $ hg rebase  -s 42ccdea3bb16 -d .
   $ hg log -G
   o  10:5ae4c968c6ac C
