@@ -175,6 +175,34 @@ def partgen(pushop, bundler):
 
 bundle2.capabilities[rebaseparttype] = ()
 
+def _makebundlefile(part):
+    """constructs a temporary bundle file
+
+    part.data should be an uncompressed v1 changegroup"""
+    
+    fp = None
+    fd, bundlefile = tempfile.mkstemp()
+    try: # guards bundlefile
+        try: # guards fp
+            fp = os.fdopen(fd, 'wb')
+            magic = 'HG10UN'
+            fp.write(magic)
+            data = part.read(resource.getpagesize() - len(magic))
+            while data:
+                fp.write(data)
+                data = part.read(resource.getpagesize())
+        finally:
+            fp.close()
+    except:
+        try:
+            os.unlink(bundlefile)
+        except:
+            # we would rather see the original exception
+            pass
+        raise
+
+    return bundlefile
+
 def _graft(repo, onto, rev):
     '''duplicate changeset "rev" with parent "onto"'''
     if rev.p2().node() != nullid:
@@ -200,20 +228,9 @@ def bundle2rebase(op, part):
     hookargs = dict(tr.hookargs)
 
     bundlefile = None
-    fp = None
 
     try: # guards bundlefile
-        fd, bundlefile = tempfile.mkstemp()
-        try: # guards fp
-            fp = os.fdopen(fd, 'wb')
-            magic = 'HG10UN'
-            fp.write(magic)
-            data = part.read(resource.getpagesize() - len(magic))
-            while data:
-                fp.write(data)
-                data = part.read(resource.getpagesize())
-        finally:
-            fp.close()
+        bundlefile = _makebundlefile(part)
 
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
         validaterevset(bundle, 'bundle()')
