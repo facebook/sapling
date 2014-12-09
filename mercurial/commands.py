@@ -3396,7 +3396,8 @@ def graft(ui, repo, *revs, **opts):
         # don't mutate while iterating, create a copy
         for rev in list(revs):
             if rev in ancestors:
-                ui.warn(_('skipping ancestor revision %s\n') % rev)
+                ui.warn(_('skipping ancestor revision %d:%s\n') %
+                        (rev, repo[rev]))
                 # XXX remove on list is slow
                 revs.remove(rev)
         if not revs:
@@ -3422,23 +3423,25 @@ def graft(ui, repo, *revs, **opts):
                 except error.RepoLookupError:
                     r = None
                 if r in revs:
-                    ui.warn(_('skipping revision %s (already grafted to %s)\n')
-                            % (r, rev))
+                    ui.warn(_('skipping revision %d:%s '
+                              '(already grafted to %d:%s)\n')
+                            % (r, repo[r], rev, ctx))
                     revs.remove(r)
                 elif ids[n] in revs:
                     if r is None:
-                        ui.warn(_('skipping already grafted revision %s '
-                                  '(%s also has unknown origin %s)\n')
-                                % (ids[n], rev, n))
+                        ui.warn(_('skipping already grafted revision %d:%s '
+                                  '(%d:%s also has unknown origin %s)\n')
+                                % (ids[n], repo[ids[n]], rev, ctx, n[:12]))
                     else:
-                        ui.warn(_('skipping already grafted revision %s '
-                                  '(%s also has origin %d)\n')
-                                % (ids[n], rev, r))
+                        ui.warn(_('skipping already grafted revision %d:%s '
+                                  '(%d:%s also has origin %d:%s)\n')
+                                % (ids[n], repo[ids[n]], rev, ctx, r, n[:12]))
                     revs.remove(ids[n])
             elif ctx.hex() in ids:
                 r = ids[ctx.hex()]
-                ui.warn(_('skipping already grafted revision %s '
-                                '(was grafted from %d)\n') % (r, rev))
+                ui.warn(_('skipping already grafted revision %d:%s '
+                          '(was grafted from %d:%s)\n') %
+                        (r, repo[r], rev, ctx))
                 revs.remove(r)
         if not revs:
             return -1
