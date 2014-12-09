@@ -70,14 +70,6 @@ def validaterevset(repo, revset):
     repo.ui.note(_('validated revset %r::%r for rebase\n') %
                  (head.hex(), tail.hex()))
 
-def revsettail(repo, revset):
-    "Return the root changectx of a revset"
-    tails = repo.revs('%r and ancestor(%r)', revset, revset)
-    tail = tails.first()
-    if tail is None:
-        raise ValueError(_("revset doesn't have a single tail"))
-    return repo[tail]
-    
 def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if not outgoing.missing:
         raise util.Abort(_('no commits to rebase'))
@@ -203,6 +195,30 @@ def _makebundlefile(part):
 
     return bundlefile
 
+def _getrevs(bundle, onto):
+    'extracts and validates the revs to be imported'
+    validaterevset(bundle, 'bundle()')
+    revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
+    onto = bundle[onto.hex()]
+
+    if revs:
+        tail = revs[0]
+
+        if onto.ancestor(tail).hex() != tail.p1().hex():
+            raise util.Abort(_('missing changesets between %r and %r') %
+                             (onto.ancestor(tail).hex(),
+                              tail.p1().hex()))
+
+        #TODO: Is there a more efficient way to do this check?
+        files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
+        commonmanifest = tail.p1().manifest().intersectfiles(files)
+        ontomanifest = onto.manifest().intersectfiles(files)
+        conflicts = ontomanifest.diff(commonmanifest).keys()
+        if conflicts:
+            raise util.Abort(_('conflicting changes in %r') % conflicts)
+
+    return revs
+
 def _graft(repo, onto, rev):
     '''duplicate changeset "rev" with parent "onto"'''
     if rev.p2().node() != nullid:
@@ -228,35 +244,17 @@ def bundle2rebase(op, part):
     hookargs = dict(tr.hookargs)
 
     bundlefile = None
+    onto = scmutil.revsingle(op.repo, params['onto'])
+    if not params['newhead']:
+        if not op.repo.revs('%r and head()', params['onto']):
+            raise util.Abort(_('rebase would produce a new head on server'))
 
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
 
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
-        validaterevset(bundle, 'bundle()')
-        tail = revsettail(bundle, 'bundle()')
 
-        onto = scmutil.revsingle(op.repo, params['onto'])
-        bundleonto = bundle[onto.hex()]
-
-        if not params['newhead']:
-            if not op.repo.revs('%r and head()', params['onto']):
-                raise util.Abort(_('rebase would produce a new head on server'))
-
-        if bundleonto.ancestor(tail).hex() != tail.p1().hex():
-            raise util.Abort(_('missing changesets between %r and %r') %
-                             (bundleonto.ancestor(tail).hex(),
-                              tail.p1().hex()))
-
-        revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
-
-        #TODO: Is there a more efficient way to do this check?
-        files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
-        commonmanifest = tail.p1().manifest().intersectfiles(files)
-        ontomanifest = bundleonto.manifest().intersectfiles(files)
-        conflicts = ontomanifest.diff(commonmanifest).keys()
-        if conflicts:
-            raise util.Abort(_('conflicting changes in %r') % conflicts)
+        revs = _getrevs(bundle, onto)
 
         op.repo.hook("prechangegroup", **hookargs)
 
