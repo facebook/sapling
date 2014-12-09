@@ -146,6 +146,7 @@ Test that rewriting leaving instability behind is allowed
 stabilise
 
   $ hg rebase  -r 'unstable()' -d .
+  rebasing 9:c13eb81022ca "f"
   $ hg up tip -q
 
 Test dropping of changeset on the top of the stack

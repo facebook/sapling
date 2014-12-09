@@ -57,6 +57,8 @@ Changes during an interruption - continue:
 Rebasing B onto E:
 
   $ hg rebase -s 1 -d 4
+  rebasing 1:27547f69f254 "B"
+  rebasing 2:965c486023db "C"
   merging A
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -93,6 +95,8 @@ Force this commit onto secret phase
 Resume the rebasing:
 
   $ hg rebase --continue
+  already rebased 1:27547f69f254 "B" as 45396c49d53b
+  rebasing 2:965c486023db "C"
   merging A
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -107,6 +111,8 @@ Solve the conflict and go on:
   (no more unresolved files)
 
   $ hg rebase --continue
+  already rebased 1:27547f69f254 "B" as 45396c49d53b
+  rebasing 2:965c486023db "C"
   warning: new changesets detected on source branch, not stripping
 
   $ hg tglogp
@@ -148,6 +154,8 @@ Changes during an interruption - abort:
 Rebasing B onto E:
 
   $ hg rebase -s 1 -d 4
+  rebasing 1:27547f69f254 "B"
+  rebasing 2:965c486023db "C"
   merging A
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -219,6 +227,8 @@ Changes during an interruption - abort (again):
 Rebasing B onto E:
 
   $ hg rebase -s 1 -d 4
+  rebasing 1:27547f69f254 "B"
+  rebasing 2:965c486023db "C"
   merging A
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')

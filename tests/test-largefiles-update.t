@@ -207,6 +207,8 @@ automated commit like rebase/transplant
   $ hg commit -m '#4'
 
   $ hg rebase -s 1 -d 2 --keep
+  rebasing 1:72518492caa6 "#1"
+  rebasing 4:07d6153b5c04 "#4" (tip)
 #if windows
   $ hg status -A large1
   large1: * (glob)
@@ -495,6 +497,7 @@ it is aborted by conflict.
   $ hg rebase -s 1 -d 3 --keep --config ui.interactive=True <<EOF
   > o
   > EOF
+  rebasing 1:72518492caa6 "#1"
   largefile large1 has a merge conflict
   ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
   keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
@@ -518,6 +521,8 @@ the 1st commit of resuming.
   $ hg rebase --continue --config ui.interactive=True <<EOF
   > c
   > EOF
+  rebasing 1:72518492caa6 "#1"
+  rebasing 4:07d6153b5c04 "#4"
   local changed .hglf/large1 which remote deleted
   use (c)hanged version or (d)elete? c
 

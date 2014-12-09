@@ -50,6 +50,8 @@ already has one local mq patch
   $ hg up -q -C qtip
 
   $ hg rebase
+  rebasing 2:13a46ce44f60 "P0" (p0.patch qbase)
+  rebasing 3:148775c71080 "P1" (p1.patch qtip)
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-backup.hg (glob)
 
   $ hg tglog
@@ -107,6 +109,10 @@ already has one local mq patch
   $ hg up -q qtip
 
   $ HGMERGE=internal:fail hg rebase
+  rebasing 1:b4bffa6e4776 "r1" (1.diff qbase)
+  rebasing 2:c0fd129beb01 "r2" (2.diff)
+  rebasing 3:6ff5b8feed8e "r3" (3.diff)
+  rebasing 4:094320fec554 "r4" (4.diff)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -114,6 +120,12 @@ already has one local mq patch
   (no more unresolved files)
 
   $ hg rebase --continue
+  already rebased 1:b4bffa6e4776 "r1" (1.diff qbase) as 057f55ff8f44
+  already rebased 2:c0fd129beb01 "r2" (2.diff) as 1660ab13ce9a
+  already rebased 3:6ff5b8feed8e "r3" (3.diff) as 1660ab13ce9a
+  rebasing 4:094320fec554 "r4" (4.diff)
+  rebasing 5:681a378595ba "r5" (5.diff)
+  rebasing 6:512a1f24768b "r6" (6.diff qtip)
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-backup.hg (glob)
 
   $ hg tglog

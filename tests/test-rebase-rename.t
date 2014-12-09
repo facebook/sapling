@@ -60,6 +60,7 @@ Rename is tracked:
 Rebase the revision containing the rename:
 
   $ hg rebase -s 3 -d 2
+  rebasing 3:73a3ee40125d "rename A" (tip)
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/73a3ee40125d-backup.hg (glob)
 
   $ hg tglog
@@ -150,6 +151,7 @@ Copy is tracked:
 Rebase the revision containing the copy:
 
   $ hg rebase -s 3 -d 2
+  rebasing 3:0a8162ff18a8 "copy A" (tip)
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/0a8162ff18a8-backup.hg (glob)
 
   $ hg tglog
@@ -233,6 +235,7 @@ Test rebase across repeating renames:
   
 
   $ hg rebase -s 4 -d 3
+  rebasing 4:b918d683b091 "Another unrelated change" (tip)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/b918d683b091-backup.hg (glob)
 
   $ hg diff --stat -c .
@@ -281,6 +284,9 @@ Update back to before we performed copies, and inject an unrelated change.
 
 Rebase the copies on top of the unrelated change.
   $ hg rebase --source 1 --dest 4
+  rebasing 1:79d255d24ad2 "File b created as copy of a and modified"
+  rebasing 2:327f772bc074 "File c created as copy of b and modified"
+  rebasing 3:421b7e82bb85 "File d created as copy of c and modified"
   saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/79d255d24ad2-backup.hg (glob)
   $ hg update 4
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -303,7 +309,10 @@ copy records collapse correctly.
   $ hg ci -m 'unrelated commit is unrelated'
   created new head
   $ hg rebase -s 2 --dest 5 --collapse
+  rebasing 2:68bf06433839 "File b created as copy of a and modified"
+  rebasing 3:af74b229bc02 "File c created as copy of b and modified"
   merging b and c to c
+  rebasing 4:dbb9ba033561 "File d created as copy of c and modified"
   merging c and d to d
   saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/68bf06433839-backup.hg (glob)
   $ hg co tip

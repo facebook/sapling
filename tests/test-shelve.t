@@ -110,6 +110,7 @@ local edits should not prevent a shelved change from applying
   unshelving change 'default-01'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
+  rebasing 4:4702e8911fe0 "changes to '[mq]: second.patch'" (tip)
   merging a/a
 
   $ hg revert --all -q
@@ -202,6 +203,7 @@ force a conflicted merge to occur
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
+  rebasing 5:4702e8911fe0 "changes to '[mq]: second.patch'" (tip)
   merging a/a
   warning: conflicts during merge.
   merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -312,6 +314,7 @@ attempt to continue
   [255]
 
   $ hg unshelve -c
+  rebasing 5:4702e8911fe0 "changes to '[mq]: second.patch'" (tip)
   unshelve of 'default' complete
 
 ensure the repo is as we hope
@@ -382,6 +385,7 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
+  rebasing 6:c5e6910e7601 "changes to 'second'" (tip)
   merging a/a
   $ hg parents -q
   4:33f7f61e6c5e
@@ -461,11 +465,13 @@ shelve should leave dirstate clean (issue4055)
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -d 1 --config extensions.rebase=
+  rebasing 2:323bfa07f744 "xyz" (tip)
   merging x
   saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-backup.hg (glob)
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
+  rebasing 4:b8fefe789ed0 "changes to 'xyz'" (tip)
   $ hg status
   M z
 
@@ -492,6 +498,7 @@ shelve should only unshelve pending changes (issue4068)
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
+  rebasing 3:0cae6656c016 "changes to 'c'" (tip)
   $ hg status
   A d
 
@@ -505,6 +512,7 @@ unshelve should work on an ancestor of the original commit
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
+  rebasing 3:be58f65f55fb "changes to 'b'" (tip)
   $ hg status
   A d
 
@@ -602,6 +610,7 @@ unshelve and conflicts with tracked and untracked files
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
+  rebasing 5:23b29cada8ba "changes to 'commit stuff'" (tip)
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -641,6 +650,7 @@ unshelve and conflicts with tracked and untracked files
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
+  rebasing 5:23b29cada8ba "changes to 'commit stuff'" (tip)
   $ hg st
   M a
   A f
@@ -656,6 +666,7 @@ unshelve and conflicts with tracked and untracked files
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
+  rebasing 5:23b29cada8ba "changes to 'commit stuff'" (tip)
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -697,6 +708,7 @@ Recreate some conflict again
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
+  rebasing 5:4b555fdb4e96 "changes to 'second'" (tip)
   merging a/a
   warning: conflicts during merge.
   merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -711,6 +723,7 @@ is a no-op), works (issue4398)
   $ hg resolve -m a/a
   (no more unresolved files)
   $ hg unshelve -c
+  rebasing 5:4b555fdb4e96 "changes to 'second'" (tip)
   unshelve of 'default' complete
   $ hg diff
   $ hg status

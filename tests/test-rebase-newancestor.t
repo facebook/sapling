@@ -38,7 +38,9 @@
   o  0: 'A'
   
   $ hg rebase -s 1 -d 3
+  rebasing 1:0f4f7cb4f549 "B"
   merging a
+  rebasing 2:30ae917c0e4f "C"
   merging a
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f4f7cb4f549-backup.hg (glob)
 
@@ -125,8 +127,12 @@ wrong.
 Full rebase all the way back from branching point:
 
   $ hg rebase -r 'only(dev,default)' -d default
+  rebasing 1:1d1a643d390e "dev: create branch"
+  rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
+  rebasing 4:4b019212aaf6 "dev: merge default"
   remote changed f-default which local deleted
   use (c)hanged version or leave (d)eleted? c
+  rebasing 6:9455ee510502 "dev: merge default"
   saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1d1a643d390e-backup.hg (glob)
   $ hg tglog
   o  6: 'dev: merge default'
@@ -149,8 +155,11 @@ Grafty cherry picking rebasing:
 
   $ hg phase -fdr0:
   $ hg rebase -r 'children(only(dev,default))' -d default
+  rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
+  rebasing 4:4b019212aaf6 "dev: merge default"
   remote changed f-default which local deleted
   use (c)hanged version or leave (d)eleted? c
+  rebasing 6:9455ee510502 "dev: merge default"
   saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/ec2c14fb2984-backup.hg (glob)
   $ hg tglog
   o  7: 'dev: merge default'
@@ -222,6 +231,7 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   o  0: 'common'
   
   $ hg rebase -r 4 -d 2
+  rebasing 4:6990226659be "merge p1 3=outside p2 1=ancestor"
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/6990226659be-backup.hg (glob)
   $ hg tip
   changeset:   5:cca50676b1c5
@@ -233,6 +243,7 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   summary:     merge p1 3=outside p2 1=ancestor
   
   $ hg rebase -r 4 -d 2
+  rebasing 4:a57575f79074 "merge p1 1=ancestor p2 3=outside"
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/a57575f79074-backup.hg (glob)
   $ hg tip
   changeset:   5:f9daf77ffe76
@@ -263,6 +274,7 @@ rebase of merge of ancestors
   $ echo 'other change while merging future "rebase ancestors"' > other
   $ hg ci -Aqm 'merge rebase ancestors'
   $ hg rebase -d 5 -v
+  rebasing 6:4c5f12f25ebe "merge rebase ancestors" (tip)
   resolving manifests
   removing other
   note: merging f9daf77ffe76+ and 4c5f12f25ebe using bids from ancestors a60552eb93fb and f59da8fc0fcf

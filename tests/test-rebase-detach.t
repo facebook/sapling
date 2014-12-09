@@ -48,6 +48,7 @@ Rebasing D onto H detaching from C:
   
   $ hg phase --force --secret 3
   $ hg rebase -s 3 -d 7
+  rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32af7686d403-backup.hg (glob)
 
   $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
@@ -99,6 +100,8 @@ Rebasing C onto H detaching from B:
   o  0: 'A'
   
   $ hg rebase -s 2 -d 7
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/5fddd98957c8-backup.hg (glob)
 
   $ hg tglog
@@ -151,6 +154,9 @@ Rebasing B onto H using detach (same as not using it):
   o  0: 'A'
   
   $ hg rebase -s 1 -d 7
+  rebasing 1:42ccdea3bb16 "B"
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/42ccdea3bb16-backup.hg (glob)
 
   $ hg tglog
@@ -205,6 +211,8 @@ Rebasing C onto H detaching from B and collapsing:
   o  0: 'A'
   
   $ hg rebase --collapse -s 2 -d 7
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/5fddd98957c8-backup.hg (glob)
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
@@ -264,6 +272,9 @@ Rebasing across null as ancestor
   o  0: 'A'
   
   $ hg rebase -s 1 -d tip
+  rebasing 1:42ccdea3bb16 "B"
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/42ccdea3bb16-backup.hg (glob)
 
   $ hg tglog
@@ -287,6 +298,8 @@ Rebasing across null as ancestor
   
 
   $ hg rebase -d 5 -s 7
+  rebasing 7:13547172c9c0 "C"
+  rebasing 8:4e27a76c371a "D" (tip)
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-backup.hg (glob)
   $ hg tglog
   o  8: 'D'
@@ -325,6 +338,9 @@ Verify that target is not selected as external rev (issue3085)
   $ hg ci -m "J"
 
   $ hg rebase -s 8 -d 7 --collapse --config ui.merge=internal:other
+  rebasing 8:9790e768172d "I"
+  rebasing 9:5d7b11f5fb97 "Merge"
+  rebasing 10:9427d4d5af81 "J" (tip)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/9790e768172d-backup.hg (glob)
 
   $ hg tglog
@@ -368,6 +384,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   adding H
   $ hg phase --force --secret 8
   $ hg rebase -s 8 -d 7 --config ui.merge=internal:fail
+  rebasing 8:6215fafa5447 "H2" (tip)
   merging H
   warning: conflicts during merge.
   merging H incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -376,6 +393,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ hg resolve --all -t internal:local
   (no more unresolved files)
   $ hg rebase -c
+  rebasing 8:6215fafa5447 "H2" (tip)
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   @  7:draft 'H'

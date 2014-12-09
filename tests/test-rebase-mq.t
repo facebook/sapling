@@ -59,6 +59,7 @@ Rebase - same thing, but mq patch is default dest:
 Rebase - generate a conflict:
 
   $ hg rebase -s 2 -d 1
+  rebasing 2:3504f44bffc0 "P0" (f.patch qbase)
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -71,6 +72,8 @@ Fix the 1st conflict:
   $ hg resolve -m f
   (no more unresolved files)
   $ hg rebase -c
+  rebasing 2:3504f44bffc0 "P0" (f.patch qbase)
+  rebasing 3:929394423cd3 "P1" (f2.patch qtip tip)
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -83,6 +86,8 @@ Fix the 2nd conflict:
   $ hg resolve -m f
   (no more unresolved files)
   $ hg rebase -c
+  already rebased 2:3504f44bffc0 "P0" (f.patch qbase) as ebe9914c0d1c
+  rebasing 3:929394423cd3 "P1" (f2.patch qtip)
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/3504f44bffc0-backup.hg (glob)
 
   $ hg tglog
@@ -198,6 +203,8 @@ Adding one git-style patch and one normal:
 Rebase the applied mq patches:
 
   $ hg rebase -s 2 -d 1
+  rebasing 2:0c587ffcb480 "P0 (git)" (f_git.patch qbase)
+  rebasing 3:c7f18665e4bc "P1" (f.patch qtip tip)
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/0c587ffcb480-backup.hg (glob)
 
   $ hg qci -m 'save patch state'

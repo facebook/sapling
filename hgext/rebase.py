@@ -18,7 +18,7 @@ from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
 from mercurial import copies
 from mercurial.commands import templateopts
-from mercurial.node import nullrev, nullid, hex
+from mercurial.node import nullrev, nullid, hex, short
 from mercurial.lock import release
 from mercurial.i18n import _
 import os, errno
@@ -367,9 +367,16 @@ def rebase(ui, repo, **opts):
         total = len(sortedstate)
         pos = 0
         for rev in sortedstate:
+            ctx = repo[rev]
+            desc = '%d:%s "%s"' % (ctx.rev(), ctx,
+                                   ctx.description().split('\n', 1)[0])
+            names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+            if names:
+                desc += ' (%s)' % ' '.join(names)
             pos += 1
             if state[rev] == revtodo:
-                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, repo[rev])),
+                ui.status(_('rebasing %s\n') % desc)
+                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
                             _('changesets'), total)
                 p1, p2, base = defineparents(repo, rev, target, state,
                                              targetancestors)
@@ -410,6 +417,13 @@ def rebase(ui, repo, **opts):
                         ui.debug('next revision set to %s\n' % p1)
                         skipped.add(rev)
                     state[rev] = p1
+            elif state[rev] == nullmerge:
+                pass
+            elif state[rev] == revignored:
+                ui.status(_('not rebasing ignored %s\n') % desc)
+            else:
+                ui.status(_('already rebased %s as %s\n') %
+                          (desc, repo[state[rev]]))
 
         ui.progress(_('rebasing'), None)
         ui.note(_('rebase merging completed\n'))

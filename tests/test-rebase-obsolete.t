@@ -56,6 +56,9 @@ simple rebase
   $ hg up 32af7686d403
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg rebase -d eea13746799a
+  rebasing 1:42ccdea3bb16 "B"
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   $ hg log -G
   @  10:8eeb3c33ad33 D
   |
@@ -121,6 +124,9 @@ set.
   grafting 1:42ccdea3bb16 "B"
   grafting 3:32af7686d403 "D"
   $ hg rebase  -s 42ccdea3bb16 -d .
+  rebasing 1:42ccdea3bb16 "B"
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   $ hg log -G
   o  10:5ae4c968c6ac C
   |
@@ -170,6 +176,7 @@ set.
 More complex case were part of the rebase set were already rebased
 
   $ hg rebase --rev 'desc(D)' --dest 'desc(H)'
+  rebasing 9:08483444fef9 "D"
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
@@ -195,6 +202,9 @@ More complex case were part of the rebase set were already rebased
   o  0:cd010b8cd998 A
   
   $ hg rebase --source 'desc(B)' --dest 'tip'
+  rebasing 8:8877864f1edb "B"
+  rebasing 9:08483444fef9 "D"
+  rebasing 10:5ae4c968c6ac "C"
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
@@ -247,6 +257,9 @@ collapse rebase
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd collapse
   $ hg rebase  -s 42ccdea3bb16 -d eea13746799a --collapse
+  rebasing 1:42ccdea3bb16 "B"
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   $ hg log -G
   o  8:4dc2197e807b Collapsed revision
   |
@@ -299,7 +312,10 @@ not be rebased.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hidden
   $ hg rebase -s 5fddd98957c8 -d eea13746799a
+  rebasing 2:5fddd98957c8 "C"
+  rebasing 3:32af7686d403 "D"
   $ hg rebase -s 42ccdea3bb16 -d 02de42196ebe
+  rebasing 1:42ccdea3bb16 "B"
   $ hg log -G
   o  10:7c6027df6a99 B
   |
@@ -351,6 +367,7 @@ Test that rewriting leaving instability behind is allowed
   $ hg log -r 'children(8)'
   9:cf44d2f5a9f4 D (no-eol)
   $ hg rebase -r 8
+  rebasing 8:e273c5e7d2d2 "C"
   $ hg log -G
   o  11:0d8f238b634c C
   |
@@ -376,6 +393,10 @@ Test multiple root handling
 ------------------------------------
 
   $ hg rebase --dest 4 --rev '7+11+9'
+  rebasing 7:02de42196ebe "H"
+  rebasing 9:cf44d2f5a9f4 "D"
+  not rebasing ignored 10:7c6027df6a99 "B"
+  rebasing 11:0d8f238b634c "C" (tip)
   $ hg log -G
   o  14:1e8370e38cca C
   |
@@ -442,6 +463,10 @@ test on rebase dropping a merge
 (actual test)
 
   $ hg rebase --dest 6 --rev '((desc(H) + desc(D))::) - desc(M)'
+  rebasing 3:32af7686d403 "D"
+  rebasing 7:02de42196ebe "H"
+  not rebasing ignored 8:53a6a128b2b7 "M"
+  rebasing 9:4bde274eefcf "I" (tip)
   $ hg log -G
   @  12:acd174b7ab39 I
   |

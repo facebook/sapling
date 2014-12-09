@@ -1173,6 +1173,7 @@ rebased or not.
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   0 largefiles cached
+  rebasing 8:f574fb32bb45 "modify normal file largefile in repo d"
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
@@ -1230,6 +1231,7 @@ rebased or not.
   added 1 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg rebase
+  rebasing 8:f574fb32bb45 "modify normal file largefile in repo d"
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6

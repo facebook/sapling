@@ -105,6 +105,8 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   0: 'A' 
 
   $ hg rebase -s 5 -d 8
+  rebasing 5:635859577d0b "D"
+  rebasing 6:5097051d331d "E"
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/635859577d0b-backup.hg (glob)
 
   $ hg branches
@@ -166,6 +168,7 @@ Rebase head of branch3 (8) onto branch2 (6):
   o  0: 'A'
   
   $ hg rebase -s 8 -d 6
+  rebasing 8:4666b71e8e32 "F" (tip)
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/4666b71e8e32-backup.hg (glob)
 
   $ hg branches
@@ -230,6 +233,8 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   o  0: 'A'
   
   $ hg rebase -s 7 -d 6
+  rebasing 7:653b9feb4616 "branch3"
+  rebasing 8:4666b71e8e32 "F" (tip)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/653b9feb4616-backup.hg (glob)
 
   $ hg branches
@@ -475,6 +480,8 @@ Turn most changeset public
   > true
   > EOF
   $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --dest 7 --source 5 -e
+  rebasing 5:361a99976cc9 "F"
   HGEDITFORM=rebase.merge
+  rebasing 8:326cfedc031c "I" (tip)
   HGEDITFORM=rebase.normal
   saved backup bundle to $TESTTMP/a3/c4/.hg/strip-backup/361a99976cc9-backup.hg (glob)

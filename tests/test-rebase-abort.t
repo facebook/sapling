@@ -61,6 +61,8 @@
 Conflicting rebase:
 
   $ hg rebase -s 3 -d 2
+  rebasing 3:3163e20567cc "L1"
+  rebasing 4:46f0b057b5c0 "L2" (tip)
   merging common
   warning: conflicts during merge.
   merging common incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -89,6 +91,8 @@ forgotten) by Mercurial earlier than 2.7. This emulates Mercurial
 earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
 
   $ hg rebase -s 3 -d 2
+  rebasing 3:3163e20567cc "L1"
+  rebasing 4:46f0b057b5c0 "L2" (tip)
   merging common
   warning: conflicts during merge.
   merging common incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -157,6 +161,8 @@ Rebase and abort without generating new changesets:
   o  0:public 'A'
   
   $ hg rebase -b 4 -d 2
+  rebasing 3:a6484957d6b9 "B bis"
+  rebasing 4:145842775fec "C1" (tip)
   merging c
   warning: conflicts during merge.
   merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -216,6 +222,7 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   
 
   $ hg rebase -d master -r foo
+  rebasing 3:6c0f977a22d8 "C" (tip foo)
   merging c
   warning: conflicts during merge.
   merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
