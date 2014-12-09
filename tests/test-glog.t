@@ -1658,13 +1658,17 @@ Test --follow on a directory
   $ testlog -f dir
   []
   (group
-    (func
-      ('symbol', '_matchfiles')
-      (list
+    (and
+      (func
+        ('symbol', 'ancestors')
+        ('symbol', '.'))
+      (func
+        ('symbol', '_matchfiles')
         (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
-        ('string', 'p:dir'))))
+          (list
+            ('string', 'r:')
+            ('string', 'd:relpath'))
+          ('string', 'p:dir')))))
   $ hg up -q tip
 
 Test --follow on file not in parent revision
@@ -1679,13 +1683,17 @@ Test --follow and patterns
   $ testlog -f 'glob:*'
   []
   (group
-    (func
-      ('symbol', '_matchfiles')
-      (list
+    (and
+      (func
+        ('symbol', 'ancestors')
+        ('symbol', '.'))
+      (func
+        ('symbol', '_matchfiles')
         (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
-        ('string', 'p:glob:*'))))
+          (list
+            ('string', 'r:')
+            ('string', 'd:relpath'))
+          ('string', 'p:glob:*')))))
 
 Test --follow on a single rename
 
@@ -1852,13 +1860,17 @@ Test --removed
   $ testlog --removed --follow a
   []
   (group
-    (func
-      ('symbol', '_matchfiles')
-      (list
+    (and
+      (func
+        ('symbol', 'ancestors')
+        ('symbol', '.'))
+      (func
+        ('symbol', '_matchfiles')
         (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
-        ('string', 'p:a'))))
+          (list
+            ('string', 'r:')
+            ('string', 'd:relpath'))
+          ('string', 'p:a')))))
 
 Test --patch and --stat with --follow and --follow-first
 
