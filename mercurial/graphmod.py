@@ -25,12 +25,12 @@ import heapq
 CHANGESET = 'C'
 
 def groupbranchiter(revs, parentsfunc, firstbranch=()):
-    """yield revision from heads to roots one (topo) branch after the other.
+    """Yield revisions from heads to roots one (topo) branch at a time.
 
     This function aims to be used by a graph generator that wishes to minimize
-    the amount of parallel branches and their interleaving.
+    the number of parallel branches and their interleaving.
 
-    Example iteration order:
+    Example iteration order (numbers show the "true" order in a changelog):
 
       o  4
       |
@@ -42,49 +42,51 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
       |/
       o  0
 
-    Currently consider every changeset under a merge to be on the same branch
-    using revision number to sort them.
+    Note that the ancestors of merges are understood by the current
+    algorithm to be on the same branch. This means no reordering will
+    occur behind a merge.
     """
 
     ### Quick summary of the algorithm
     #
     # This function is based around a "retention" principle. We keep revisions
     # in memory until we are ready to emit a whole branch that immediately
-    # "merge" into an existing one. This reduce the number of branch "ongoing"
-    # at the same time.
+    # "merges" into an existing one. This reduces the number of parallel
+    # branches with interleaved revisions.
     #
     # During iteration revs are split into two groups:
     # A) revision already emitted
     # B) revision in "retention". They are stored as different subgroups.
     #
-    # for each REV, we do the follow logic:
+    # for each REV, we do the following logic:
     #
-    #   a) if REV is a parent of (A), we will emit it. But before emitting it,
-    #   we'll "free" all the revs from subgroup in (B) that were waiting for
-    #   REV to be available. So we emit all revision of such subgroup before
-    #   emitting REV
+    #   1) if REV is a parent of (A), we will emit it. If there is a
+    #   retention group ((B) above) that is blocked on REV being
+    #   available, we emit all the revisions out of that retention
+    #   group first.
     #
-    #   b) else, we'll search for a subgroup in (B) awaiting for REV to be
+    #   2) else, we'll search for a subgroup in (B) awaiting for REV to be
     #   available, if such subgroup exist, we add REV to it and the subgroup is
     #   now awaiting for REV.parents() to be available.
     #
-    #   c) finally if no such group existed in (B), we create a new subgroup.
+    #   3) finally if no such group existed in (B), we create a new subgroup.
     #
     #
-    # To bootstrap the algorithm, we emit the tipmost revision.
+    # To bootstrap the algorithm, we emit the tipmost revision (which
+    # puts it in group (A) from above).
 
     revs.sort(reverse=True)
 
-    # Set of parents of revision that have been yield. They can be considered
+    # Set of parents of revision that have been emitted. They can be considered
     # unblocked as the graph generator is already aware of them so there is no
-    # need to delay the one that reference them.
+    # need to delay the revisions that reference them.
     #
     # If someone wants to prioritize a branch over the others, pre-filling this
     # set will force all other branches to wait until this branch is ready to be
-    # outputed.
+    # emitted.
     unblocked = set(firstbranch)
 
-    # list of group waiting to be displayed, each group is defined by:
+    # list of groups waiting to be displayed, each group is defined by:
     #
     #   (revs:    lists of revs waiting to be displayed,
     #    blocked: set of that cannot be displayed before those in 'revs')
@@ -93,15 +95,15 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
     # group ('revs') that is not itself contained in the group. The main idea
     # of this algorithm is to delay as much as possible the emission of any
     # revision.  This means waiting for the moment we are about to display
-    # theses parents to display the revs in a group.
+    # these parents to display the revs in a group.
     #
-    # This first implementation is smart until it meet a merge: it will emit
-    # revs as soon as any parents is about to be emitted and can grow an
+    # This first implementation is smart until it encounters a merge: it will
+    # emit revs as soon as any parent is about to be emitted and can grow an
     # arbitrary number of revs in 'blocked'. In practice this mean we properly
-    # retains new branches but give up on any special ordering for ancestors of
-    # merges. The implementation can be improved to handle this better.
+    # retains new branches but gives up on any special ordering for ancestors
+    # of merges. The implementation can be improved to handle this better.
     #
-    # The first subgroup is special. It correspond to all the revision that
+    # The first subgroup is special. It corresponds to all the revision that
     # were already emitted. The 'revs' lists is expected to be empty and the
     # 'blocked' set contains the parents revisions of already emitted revision.
     #
@@ -130,26 +132,34 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
             matching = [i for i, g in enumerate(groups) if rev in g[1]]
 
             if matching:
-                # The main idea is to gather together all sets that await on
-                # the same revision.
+                # The main idea is to gather together all sets that are blocked
+                # on the same revision.
                 #
-                # This merging is done at the time we are about to add this
-                # common awaited to the subgroup for simplicity purpose. Such
-                # merge could happen sooner when we update the "blocked" set of
-                # revision.
+                # Groups are merged when a common blocking ancestor is
+                # observed. For example, given two groups:
+                #
+                # revs [5, 4] waiting for 1
+                # revs [3, 2] waiting for 1
+                #
+                # These two groups will be merged when we process
+                # 1. In theory, we could have merged the groups when
+                # we added 2 to the group it is now in (we could have
+                # noticed the groups were both blocked on 1 then), but
+                # the way it works now makes the algorithm simpler.
                 #
                 # We also always keep the oldest subgroup first. We can
-                # probably improve the behavior by having the longuest set
-                # first. That way, graph algorythms could minimise the length
-                # of parallele lines their draw. This is currently not done.
+                # probably improve the behavior by having the longest set
+                # first. That way, graph algorithms could minimise the length
+                # of parallel lines their drawing. This is currently not done.
                 targetidx = matching.pop(0)
                 trevs, tparents = groups[targetidx]
                 for i in matching:
                     gr = groups[i]
                     trevs.extend(gr[0])
                     tparents |= gr[1]
-                # delete all merged subgroups (but the one we keep) (starting
-                # from the last subgroup for performance and sanity reason)
+                # delete all merged subgroups (except the one we kept)
+                # (starting from the last subgroup for performance and
+                # sanity reasons)
                 for i in reversed(matching):
                     del groups[i]
             else:
@@ -159,11 +169,11 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
 
             gr = groups[targetidx]
 
-            # We now adds the current nodes to this subgroups. This is done
+            # We now add the current nodes to this subgroups. This is done
             # after the subgroup merging because all elements from a subgroup
-            # that relied on this rev must preceed it.
+            # that relied on this rev must precede it.
             #
-            # we also update the <parents> set to includes the parents on the
+            # we also update the <parents> set to include the parents of the
             # new nodes.
             if rev == currentrev: # only display stuff in rev
                 gr[0].append(rev)
@@ -177,15 +187,15 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
 
             # Look for a subgroup to display
             #
-            # When unblocked is empty (if clause), We are not waiting over any
-            # revision during the first iteration (if no priority was given) or
-            # if we outputed a whole disconnected sets of the graph (reached a
-            # root).  In that case we arbitrarily takes the oldest known
-            # subgroup. The heuristique could probably be better.
+            # When unblocked is empty (if clause), we were not waiting for any
+            # revisions during the first iteration (if no priority was given) or
+            # if we emitted a whole disconnected set of the graph (reached a
+            # root).  In that case we arbitrarily take the oldest known
+            # subgroup. The heuristic could probably be better.
             #
-            # Otherwise (elif clause) this mean we have some emitted revision.
-            # if the subgroup awaits on the same revision that the outputed
-            # ones, we can safely output it.
+            # Otherwise (elif clause) if the subgroup is blocked on
+            # a revision we just emitted, we can safely emit it as
+            # well.
             if not unblocked:
                 if len(groups) > 1:  # display other subset
                     targetidx = 1
@@ -206,7 +216,7 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
                     del groups[targetidx]
                 else:
                     gr[0][:] = []
-    # Check if we have some subgroup waiting for revision we are not going to
+    # Check if we have some subgroup waiting for revisions we are not going to
     # iterate over
     for g in groups:
         for r in g[0]:
