@@ -443,7 +443,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                         '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(usermsg, 0) == 0: # pick remote largefile
                 actions['r'].append((lfile, None, 'replaced by standin'))
-                newglist.append((standin, (p2.flags(standin),), msg))
+                newglist.append(action)
             else: # keep local normal file
                 if branchmerge:
                     actions['k'].append((standin, None,
@@ -472,7 +472,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                     actions['a'].append((standin, None, 'keep standin'))
             else: # pick remote normal file
                 actions['r'].append((standin, None, 'replaced by non-standin'))
-                newglist.append((lfile, (p2.flags(lfile),), msg))
+                newglist.append(action)
         else:
             newglist.append(action)
 
