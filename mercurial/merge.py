@@ -824,22 +824,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.wwrite(f, mctx.filectx(f0).data(), flags)
         updated += 1
 
-    # divergent renames
-    for f, args, msg in actions['dr']:
-        fl, = args
-        repo.ui.warn(_("note: possible conflict - %s was renamed "
-                       "multiple times to:\n") % f)
-        for nf in fl:
-            repo.ui.warn(" %s\n" % nf)
-
-    # rename and delete
-    for f, args, msg in actions['rd']:
-        fl, = args
-        repo.ui.warn(_("note: possible conflict - %s was deleted "
-                       "and renamed to:\n") % f)
-        for nf in fl:
-            repo.ui.warn(" %s\n" % nf)
-
     # exec
     for f, args, msg in actions['e']:
         repo.ui.debug(" %s: %s -> e\n" % (f, msg))
@@ -1115,6 +1099,22 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             repo.vfs.write('updatestate', p2.hex())
 
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
+
+        # divergent renames
+        for f, args, msg in actions['dr']:
+            fl, = args
+            repo.ui.warn(_("note: possible conflict - %s was renamed "
+                           "multiple times to:\n") % f)
+            for nf in fl:
+                repo.ui.warn(" %s\n" % nf)
+
+        # rename and delete
+        for f, args, msg in actions['rd']:
+            fl, = args
+            repo.ui.warn(_("note: possible conflict - %s was deleted "
+                           "and renamed to:\n") % f)
+            for nf in fl:
+                repo.ui.warn(" %s\n" % nf)
 
         if not partial:
             repo.dirstate.beginparentchange()
