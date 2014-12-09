@@ -710,3 +710,10 @@ but do some destructive editing of the repo:
   $ hg graft tmp
   skipping already grafted revision 8 (2 also has unknown origin 5c095ad7e90f871700f02dd1fa5012cb4498a2d4)
   [255]
+
+Empty graft
+
+  $ hg up -qr 26
+  $ hg tag -f something
+  $ hg graft -qr 27
+  $ hg graft -qf 27
