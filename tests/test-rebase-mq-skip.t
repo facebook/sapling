@@ -28,12 +28,12 @@ already has one local mq patch
 
   $ hg up -q 0
 
-  $ hg qnew p0.patch
+  $ hg qnew p0.patch -d '1 0'
   $ echo p0 > p0
   $ hg add p0
   $ hg qref -m P0
 
-  $ hg qnew p1.patch
+  $ hg qnew p1.patch -d '2 0'
   $ echo p1 > p1
   $ hg add p1
   $ hg qref -m P1
@@ -50,7 +50,7 @@ already has one local mq patch
   $ hg up -q -C qtip
 
   $ hg rebase
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-backup.hg (glob)
 
   $ hg tglog
   @  3: 'P0' tags: p0.patch qbase qtip tip
@@ -114,7 +114,7 @@ already has one local mq patch
   (no more unresolved files)
 
   $ hg rebase --continue
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-backup.hg (glob)
 
   $ hg tglog
   @  8: 'r5' tags: 5.diff qtip tip
