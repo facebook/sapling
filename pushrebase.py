@@ -33,19 +33,11 @@ def extsetup(ui):
     entry = wrapcommand(commands.table, 'push', _push)
     entry[1].append(('', 'onto', '', _('server revision to rebase onto')))
 
-    exchange.b2partsgenorder.insert(
-        exchange.b2partsgenorder.index('changeset'),
-        exchange.b2partsgenorder.pop(
-            exchange.b2partsgenorder.index(rebaseparttype)
-        ),
-    )
+    partorder = exchange.b2partsgenorder
+    partorder.insert(partorder.index('changeset'),
+                     partorder.pop(partorder.index(rebaseparttype)))
 
-    exchange.b2partsgenorder.insert(
-        0,
-        exchange.b2partsgenorder.pop(
-            exchange.b2partsgenorder.index(commonheadsparttype)
-        ),
-    )
+    partorder.insert(0, partorder.pop(partorder.index(commonheadsparttype)))
 
     wrapfunction(discovery, 'checkheads', _checkheads)
 
@@ -95,21 +87,15 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
 
     validaterevset(repo, revset.formatspec('%ln', outgoing.missing))
 
-    cg = changegroup.getlocalchangegroupraw(
-        repo,
-        'push',
-        outgoing,
-    )
+    cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
 
-    return bundle2.bundlepart(
-        rebaseparttype.upper(), # .upper() marks this as a mandatory part:
-                                # server will abort if there's no handler
-        mandatoryparams={
-            'onto': onto,
-            'newhead': repr(newhead),
-        }.items(),
-        data = cg
-    )
+    # .upper() marks this as a mandatory part: server will abort if there's no
+    #  handler
+    return bundle2.bundlepart(rebaseparttype.upper(),
+                              mandatoryparams={'onto': onto,
+                                               'newhead': repr(newhead),
+                                              }.items(),
+                              data = cg)
 
 def _checkheads(orig, repo, remote, *args, **kwargs):
     onto = repo.ui.config(experimental, configonto)
@@ -148,7 +134,6 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
     if phase != phases.public:
         orig(pushop, nodes, phase)
 
-#TODO: extract common heads transmission into separate extension
 @exchange.b2partsgenerator(commonheadsparttype)
 def commonheadspartgen(pushop, bundler):
     bundler.newpart(commonheadsparttype,
@@ -174,13 +159,11 @@ def partgen(pushop, bundler):
         pushop.cgresult = 0
         return
     
-    rebasepart = getrebasepart(
-        pushop.repo,
-        pushop.remote,
-        pushop.outgoing,
-        onto,
-        pushop.newbranch
-    )
+    rebasepart = getrebasepart(pushop.repo,
+                               pushop.remote,
+                               pushop.outgoing,
+                               onto,
+                               pushop.newbranch)
 
     bundler.addpart(rebasepart)
 
@@ -249,31 +232,27 @@ def bundle2rebase(op, part):
         added = []
 
         for rev in revs:
-            newrev = context.memctx(
-                op.repo,
-                [onto.node(), nullid],
-                rev.description(),
-                rev.files(),
-                lambda repo, memctx, path: context.memfilectx(
-                    repo,
-                    path,
-                    rev[path].data(),
-                ),
-                rev.user(),
-                rev.date(),
-                rev.extra(),
-            ).commit()
+            newrev = context.memctx(op.repo,
+                                    [onto.node(), nullid],
+                                    rev.description(),
+                                    rev.files(),
+                                    (lambda repo, memctx, path:
+                                        context.memfilectx(repo,
+                                                           path,
+                                                           rev[path].data())),
+                                    rev.user(),
+                                    rev.date(),
+                                    rev.extra(),
+                                   ).commit()
 
             onto = op.repo[newrev]
             replacements[rev.node()] = onto.node()
             added.append(onto.node())
 
         if obsolete.isenabled(op.repo, obsolete.createmarkersopt):
-            markers = [
-                (bundle[oldrev], (op.repo[newrev],))
-                for oldrev, newrev in replacements.items()
-                if newrev != oldrev
-            ]
+            markers = [(bundle[oldrev], (op.repo[newrev],))
+                       for oldrev, newrev in replacements.items()
+                       if newrev != oldrev]
 
             # TODO: make sure these weren't public originally
             for old, new in markers:
@@ -306,11 +285,10 @@ def bundle2rebase(op, part):
     if (op.records[commonheadsparttype]
         and op.reply
         and 'b2x:pushback' in op.reply.capabilities):
-        outgoing = discovery.outgoing(
-            op.repo.changelog,
-            op.records[commonheadsparttype],
-            [new for old, new in replacements.items() if old != new],
-        )
+        outgoing = discovery.outgoing(op.repo.changelog,
+                                      op.records[commonheadsparttype],
+                                      [new for old, new in replacements.items()
+                                       if old != new])
 
         if outgoing.missing:
             cgversions = set(op.reply.capabilities.get('b2x:changegroup'))
@@ -318,12 +296,10 @@ def bundle2rebase(op, part):
                 cgversions.add('01')
             version = max(cgversions & set(changegroup.packermap.keys()))
             
-            cg = changegroup.getlocalchangegroupraw(
-                op.repo,
-                'rebase:reply',
-                outgoing,
-                version = version
-            )
+            cg = changegroup.getlocalchangegroupraw(op.repo,
+                                                    'rebase:reply',
+                                                    outgoing,
+                                                    version = version)
 
             cgpart = op.reply.newpart('B2X:CHANGEGROUP', data = cg)
             if version != '01':
