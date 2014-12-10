@@ -426,22 +426,24 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
         return actions, diverge, renamedelete
 
     # Convert to dictionary with filename as key and action as value.
+    lfiles = set()
     actionbyfile = {}
     for m, l in actions.iteritems():
         for f, args, msg in l:
             actionbyfile[f] = m, args, msg
+            splitstandin = f and lfutil.splitstandin(f)
+            if splitstandin in p1:
+                lfiles.add(splitstandin)
+            elif lfutil.standin(f) in p1:
+                lfiles.add(f)
 
-    removes = set(a[0] for a in actions['r'])
-
-    for action in actions['g']:
-        f, args, msg = action
-        splitstandin = f and lfutil.splitstandin(f)
-        if (splitstandin is not None and
-            splitstandin in p1 and splitstandin not in removes):
+    for lfile in lfiles:
+        standin = lfutil.standin(lfile)
+        lm = actionbyfile.get(lfile, (None, None, None))[0]
+        sm = actionbyfile.get(standin, (None, None, None))[0]
+        if sm == 'g' and lm != 'r':
             # Case 1: normal file in the working copy, largefile in
             # the second parent
-            lfile = splitstandin
-            standin = f
             usermsg = _('remote turned local normal file %s into a largefile\n'
                         'use (l)argefile or keep (n)ormal file?'
                         '$$ &Largefile $$ &Normal file') % lfile
@@ -454,11 +456,9 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                 else:
                     actionbyfile[standin] = ('r', None,
                                              'replaced by non-standin')
-        elif lfutil.standin(f) in p1 and lfutil.standin(f) not in removes:
+        elif lm == 'g' and sm != 'r':
             # Case 2: largefile in the working copy, normal file in
             # the second parent
-            standin = lfutil.standin(f)
-            lfile = f
             usermsg = _('remote turned local largefile %s into a normal file\n'
                     'keep (l)argefile or use (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
