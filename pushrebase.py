@@ -160,7 +160,7 @@ def partgen(pushop, bundler):
     bundler.addpart(rebasepart)
 
     def handlereply(op):
-        # TODO: read result from server?
+        # server either succeeds or aborts; no code to read
         pushop.cgresult = 1
 
     return handlereply
@@ -209,7 +209,7 @@ def _getrevs(bundle, onto):
                              (onto.ancestor(tail).hex(),
                               tail.p1().hex()))
 
-        #TODO: Is there a more efficient way to do this check?
+        # Is there a more efficient way to do this check?
         files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
         commonmanifest = tail.p1().manifest().intersectfiles(files)
         ontomanifest = onto.manifest().intersectfiles(files)
@@ -247,7 +247,46 @@ def _buildobsolete(replacements, oldrepo, newrepo):
 
         obsolete.createmarkers(newrepo, markers)
 
-# TODO: split this function into smaller pieces
+def _addpushbackchangegroup(repo, reply, outgoing):
+    '''adds changegroup part to reply containing revs from outgoing.missing'''
+    cgversions = set(reply.capabilities.get('b2x:changegroup'))
+    if not cgversions:
+        cgversions.add('01')
+    version = max(cgversions & set(changegroup.packermap.keys()))
+    
+    cg = changegroup.getlocalchangegroupraw(repo,
+                                            'rebase:reply',
+                                            outgoing,
+                                            version = version)
+
+    cgpart = reply.newpart('B2X:CHANGEGROUP', data = cg)
+    if version != '01':
+        cgpart.addparam('version', version)
+
+def _addpushbackobsolete(repo, reply, newrevs):
+    '''adds obsoletion markers to reply that are relevant to newrevs
+    (if enabled)'''
+    if (obsolete.isenabled(repo, obsolete.exchangeopt) and repo.obsstore):
+        try:
+            markers = repo.obsstore.relevantmarkers(newrevs)
+            exchange.buildobsmarkerspart(reply, markers)
+        except ValueError, exc:
+            repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
+
+def _addpushbackparts(op, replacements):
+    '''adds pushback to reply if supported by the client'''
+    if (op.records[commonheadsparttype]
+        and op.reply
+        and 'b2x:pushback' in op.reply.capabilities):
+        outgoing = discovery.outgoing(op.repo.changelog,
+                                      op.records[commonheadsparttype],
+                                      [new for old, new in replacements.items()
+                                       if old != new])
+
+        if outgoing.missing:
+            _addpushbackchangegroup(op.repo, op.reply, outgoing)
+            _addpushbackobsolete(op.repo, op.reply, replacements.values())
+
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
@@ -264,9 +303,7 @@ def bundle2rebase(op, part):
 
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
-
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
-
         revs = _getrevs(bundle, onto)
 
         op.repo.hook("prechangegroup", **hookargs)
@@ -276,11 +313,9 @@ def bundle2rebase(op, part):
 
         for rev in revs:
             newrev = _graft(op.repo, onto, rev)
-
             onto = op.repo[newrev]
             replacements[rev.node()] = onto.node()
             added.append(onto.node())
-
         _buildobsolete(replacements, bundle, op.repo)
     finally:
         try:
@@ -303,43 +338,10 @@ def bundle2rebase(op, part):
     tr.addpostclose('serverrebase-cg-hooks',
                     lambda tr: op.repo._afterlock(runhooks))
 
-    if (op.records[commonheadsparttype]
-        and op.reply
-        and 'b2x:pushback' in op.reply.capabilities):
-        outgoing = discovery.outgoing(op.repo.changelog,
-                                      op.records[commonheadsparttype],
-                                      [new for old, new in replacements.items()
-                                       if old != new])
-
-        if outgoing.missing:
-            cgversions = set(op.reply.capabilities.get('b2x:changegroup'))
-            if not cgversions:
-                cgversions.add('01')
-            version = max(cgversions & set(changegroup.packermap.keys()))
-            
-            cg = changegroup.getlocalchangegroupraw(op.repo,
-                                                    'rebase:reply',
-                                                    outgoing,
-                                                    version = version)
-
-            cgpart = op.reply.newpart('B2X:CHANGEGROUP', data = cg)
-            if version != '01':
-                cgpart.addparam('version', version)
-
-            if (obsolete.isenabled(op.repo, obsolete.exchangeopt)
-                and op.repo.obsstore):
-                try:
-                    exchange.buildobsmarkerspart(
-                        op.reply,
-                        op.repo.obsstore.relevantmarkers(replacements.values())
-                    )
-                except ValueError, exc:
-                    op.repo.ui.status(_("can't send obsolete markers: %s") %
-                                      exc.message)
+    _addpushbackparts(op, replacements)
 
     for k in replacements.keys():
         replacements[hex(k)] = hex(replacements[k])
-
     op.records.add(rebaseparttype, replacements)
 
     return 1
