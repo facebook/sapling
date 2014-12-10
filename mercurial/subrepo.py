@@ -1135,6 +1135,14 @@ class gitsubrepo(abstractsubrepo):
             self._ui.warn(_('git subrepo requires at least 1.6.0 or later\n'))
 
     @staticmethod
+    def _gitversion(out):
+        m = re.search(r'^git version (\d+)\.(\d+)', out)
+        if m:
+            return (int(m.group(1)), int(m.group(2)))
+
+        return -1
+
+    @staticmethod
     def _checkversion(out):
         '''ensure git version is new enough
 
@@ -1158,13 +1166,12 @@ class gitsubrepo(abstractsubrepo):
         >>> _checkversion('no')
         'unknown'
         '''
-        m = re.search(r'^git version (\d+)\.(\d+)', out)
-        if not m:
-            return 'unknown'
-        version = (int(m.group(1)), int(m.group(2)))
+        version = gitsubrepo._gitversion(out)
         # git 1.4.0 can't work at all, but 1.5.X can in at least some cases,
         # despite the docstring comment.  For now, error on 1.4.0, warn on
         # 1.5.0 but attempt to continue.
+        if version == -1:
+            return 'unknown'
         if version < (1, 5):
             return 'abort'
         elif version < (1, 6):
