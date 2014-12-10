@@ -219,6 +219,10 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   
   $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
   rebase onto 2 starting from e31216eec445
+  ignoring null merge rebase of 3
+  ignoring null merge rebase of 4
+  ignoring null merge rebase of 6
+  ignoring null merge rebase of 8
   rebasing 9:e31216eec445 "more changes to f1"
   rebasing: 9:e31216eec445 5/6 changesets (83.33%)
    future parents are 2 and -1
@@ -243,6 +247,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   getting f1.txt
   updating: f1.txt 1/1 files (100.00%)
   f1.txt
+  rebased as 19c888675e13
   rebasing 10:2f2496ddf49d "merge" (tip)
   rebasing: 10:2f2496ddf49d 6/6 changesets (100.00%)
    future parents are 11 and 7
@@ -258,6 +263,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   getting f1.txt
   updating: f1.txt 1/1 files (100.00%)
   f1.txt
+  rebased as 2a7f09cac94c
   rebase merging completed
   update back to initial working directory parent
   resolving manifests

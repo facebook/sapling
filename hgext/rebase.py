@@ -411,15 +411,16 @@ def rebase(ui, repo, **opts):
                 # Update the state
                 if newnode is not None:
                     state[rev] = repo[newnode].rev()
+                    ui.debug('rebased as %s\n' % short(newnode))
                 else:
                     ui.warn(_('note: rebase of %d:%s created no changes '
                               'to commit\n') % (rev, ctx))
                     if not collapsef:
-                        ui.debug('next revision set to %s\n' % p1)
                         skipped.add(rev)
                     state[rev] = p1
+                    ui.debug('next revision set to %s\n' % p1)
             elif state[rev] == nullmerge:
-                pass
+                ui.debug('ignoring null merge rebase of %s\n' % rev)
             elif state[rev] == revignored:
                 ui.status(_('not rebasing ignored %s\n') % desc)
             else:
