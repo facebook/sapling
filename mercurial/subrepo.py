@@ -1136,9 +1136,13 @@ class gitsubrepo(abstractsubrepo):
 
     @staticmethod
     def _gitversion(out):
+        m = re.search(r'^git version (\d+)\.(\d+)\.(\d+)', out)
+        if m:
+            return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
         m = re.search(r'^git version (\d+)\.(\d+)', out)
         if m:
-            return (int(m.group(1)), int(m.group(2)))
+            return (int(m.group(1)), int(m.group(2)), 0)
 
         return -1
 
@@ -1172,9 +1176,9 @@ class gitsubrepo(abstractsubrepo):
         # 1.5.0 but attempt to continue.
         if version == -1:
             return 'unknown'
-        if version < (1, 5):
+        if version < (1, 5, 0):
             return 'abort'
-        elif version < (1, 6):
+        elif version < (1, 6, 0):
             return 'warning'
         return 'ok'
 
