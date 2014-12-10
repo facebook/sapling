@@ -220,7 +220,10 @@ extensions.wrapfunction(hg, 'peer', peer)
 def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
     if isinstance(remote, gitrepo.gitrepo):
         # transaction manager is present in Mercurial >= 3.3
-        trmanager = getattr(exchange, 'transactionmanager')
+        try:
+            trmanager = getattr(exchange, 'transactionmanager')
+        except AttributeError:
+            trmanager = None
         pullop = exchange.pulloperation(repo, remote, heads, force,
                                         bookmarks=bookmarks)
         if trmanager:
