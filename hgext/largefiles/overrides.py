@@ -425,10 +425,14 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
     if overwrite:
         return actions, diverge, renamedelete
 
+    # Convert to dictionary with filename as key and action as value.
+    actionbyfile = {}
+    for m, l in actions.iteritems():
+        for f, args, msg in l:
+            actionbyfile[f] = m, args, msg
+
     removes = set(a[0] for a in actions['r'])
 
-    newglist = []
-    lfmr = [] # LargeFiles: Mark as Removed
     for action in actions['g']:
         f, args, msg = action
         splitstandin = f and lfutil.splitstandin(f)
@@ -442,15 +446,14 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                         'use (l)argefile or keep (n)ormal file?'
                         '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(usermsg, 0) == 0: # pick remote largefile
-                actions['r'].append((lfile, None, 'replaced by standin'))
-                newglist.append(action)
+                actionbyfile[lfile] = ('r', None, 'replaced by standin')
             else: # keep local normal file
                 if branchmerge:
-                    actions['k'].append((standin, None,
-                                         'replaced by non-standin'))
+                    actionbyfile[standin] = ('k', None,
+                                             'replaced by non-standin')
                 else:
-                    actions['r'].append((standin, None,
-                                         'replaced by non-standin'))
+                    actionbyfile[standin] = ('r', None,
+                                             'replaced by non-standin')
         elif lfutil.standin(f) in p1 and lfutil.standin(f) not in removes:
             # Case 2: largefile in the working copy, normal file in
             # the second parent
@@ -462,23 +465,24 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             if repo.ui.promptchoice(usermsg, 0) == 0: # keep local largefile
                 if branchmerge:
                     # largefile can be restored from standin safely
-                    actions['k'].append((lfile, None, 'replaced by standin'))
+                    actionbyfile[lfile] = ('k', None, 'replaced by standin')
                 else:
                     # "lfile" should be marked as "removed" without
                     # removal of itself
-                    lfmr.append((lfile, None, 'forget non-standin largefile'))
+                    actionbyfile[lfile] = ('lfmr', None,
+                                           'forget non-standin largefile')
 
                     # linear-merge should treat this largefile as 're-added'
-                    actions['a'].append((standin, None, 'keep standin'))
+                    actionbyfile[standin] = ('a', None, 'keep standin')
             else: # pick remote normal file
-                actions['r'].append((standin, None, 'replaced by non-standin'))
-                newglist.append(action)
-        else:
-            newglist.append(action)
+                actionbyfile[standin] = ('r', None, 'replaced by non-standin')
 
-    actions['g'] = newglist
-    if lfmr:
-        actions['lfmr'] = lfmr
+    # Convert back to dictionary-of-lists format
+    for l in actions.itervalues():
+        l[:] = []
+    actions['lfmr'] = []
+    for f, (m, args, msg) in actionbyfile.iteritems():
+        actions[m].append((f, args, msg))
 
     return actions, diverge, renamedelete
 
