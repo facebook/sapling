@@ -337,6 +337,7 @@ removed from the series):
   foo
   $ [ -f .hg/patches/empty-important ]
   $ hg -q rebase -d 2
+  note: rebase of 1:0aaf4c3af7eb created no changes to commit
   $ hg qseries
   guarded
   bar

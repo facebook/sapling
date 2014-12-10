@@ -387,6 +387,7 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   rebasing shelved changes
   rebasing 6:c5e6910e7601 "changes to 'second'" (tip)
   merging a/a
+  note: rebase of 6:c5e6910e7601 created no changes to commit
   $ hg parents -q
   4:33f7f61e6c5e
   $ hg shelve -l
@@ -724,6 +725,7 @@ is a no-op), works (issue4398)
   (no more unresolved files)
   $ hg unshelve -c
   rebasing 5:4b555fdb4e96 "changes to 'second'" (tip)
+  note: rebase of 5:4b555fdb4e96 created no changes to commit
   unshelve of 'default' complete
   $ hg diff
   $ hg status

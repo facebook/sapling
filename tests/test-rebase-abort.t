@@ -162,6 +162,7 @@ Rebase and abort without generating new changesets:
   
   $ hg rebase -b 4 -d 2
   rebasing 3:a6484957d6b9 "B bis"
+  note: rebase of 3:a6484957d6b9 created no changes to commit
   rebasing 4:145842775fec "C1" (tip)
   merging c
   warning: conflicts during merge.

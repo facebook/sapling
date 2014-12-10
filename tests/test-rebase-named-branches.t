@@ -98,6 +98,7 @@ Branch name containing a dash (issue3181)
   
   $ hg rebase -s dev-one -d 0 --keepbranches
   rebasing 5:643fc9128048 "dev-one named branch"
+  note: rebase of 5:643fc9128048 created no changes to commit
   rebasing 6:24de4aff8e28 "F"
   rebasing 7:4b988a958030 "G"
   rebasing 8:31d0e4ba75e6 "H"
@@ -181,6 +182,7 @@ Branch name containing a dash (issue3181)
   
   $ hg rebase -s 'max(branch("dev-one"))' -d 0 --keepbranches
   rebasing 5:643fc9128048 "dev-one named branch"
+  note: rebase of 5:643fc9128048 created no changes to commit
   rebasing 6:05584c618d45 "F"
   rebasing 7:471695f5257d "G"
   rebasing 8:8382a539a2df "H"

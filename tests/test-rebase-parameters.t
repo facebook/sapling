@@ -438,6 +438,7 @@ Test --tool parameter:
 
   $ hg rebase -s 2 -d 1 --tool internal:local
   rebasing 2:e4e3f3546619 "c2b" (tip)
+  note: rebase of 2:e4e3f3546619 created no changes to commit
   saved backup bundle to $TESTTMP/b1/.hg/strip-backup/e4e3f3546619-backup.hg (glob)
 
   $ hg cat c2
@@ -485,6 +486,7 @@ Test --tool parameter:
   $ hg rebase -c --tool internal:fail
   tool option will be ignored
   rebasing 2:e4e3f3546619 "c2b" (tip)
+  note: rebase of 2:e4e3f3546619 created no changes to commit
   saved backup bundle to $TESTTMP/b3/.hg/strip-backup/e4e3f3546619-backup.hg (glob)
 
   $ hg rebase -i

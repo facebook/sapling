@@ -234,6 +234,7 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   
   $ hg rebase -s 7 -d 6
   rebasing 7:653b9feb4616 "branch3"
+  note: rebase of 7:653b9feb4616 created no changes to commit
   rebasing 8:4666b71e8e32 "F" (tip)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/653b9feb4616-backup.hg (glob)
 

@@ -310,10 +310,13 @@ copy records collapse correctly.
   created new head
   $ hg rebase -s 2 --dest 5 --collapse
   rebasing 2:68bf06433839 "File b created as copy of a and modified"
+  note: rebase of 2:68bf06433839 created no changes to commit
   rebasing 3:af74b229bc02 "File c created as copy of b and modified"
   merging b and c to c
+  note: rebase of 3:af74b229bc02 created no changes to commit
   rebasing 4:dbb9ba033561 "File d created as copy of c and modified"
   merging c and d to d
+  note: rebase of 4:dbb9ba033561 created no changes to commit
   saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/68bf06433839-backup.hg (glob)
   $ hg co tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
