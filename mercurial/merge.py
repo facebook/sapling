@@ -375,8 +375,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     acceptremote = accept the incoming changes without prompting
     """
 
-    actions = dict((m, []) for m in 'a f g cd dc r dm dg m dr e rd k'.split())
-    copy, movewithdir = {}, {}
+    actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+    copy, movewithdir, diverge, renamedelete = {}, {}, {}, {}
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in
@@ -385,10 +385,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     if followcopies:
         ret = copies.mergecopies(repo, wctx, p2, pa)
         copy, movewithdir, diverge, renamedelete = ret
-        for of, fl in diverge.iteritems():
-            actions['dr'].append((of, (fl,), "divergent renames"))
-        for of, fl in renamedelete.iteritems():
-            actions['rd'].append((of, (fl,), "rename and delete"))
 
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n"
@@ -539,16 +535,16 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         else:
             _checkcollision(repo, m1, actions)
 
-    return actions
+    return actions, diverge, renamedelete
 
 def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                      acceptremote, followcopies):
     "Calculate the actions needed to merge mctx into wctx using ancestors"
 
     if len(ancestors) == 1: # default
-        actions = manifestmerge(repo, wctx, mctx, ancestors[0],
-                                branchmerge, force,
-                                partial, acceptremote, followcopies)
+        actions, diverge, renamedelete = manifestmerge(
+            repo, wctx, mctx, ancestors[0], branchmerge, force, partial,
+            acceptremote, followcopies)
 
     else: # only when merge.preferancestor=* - the default
         repo.ui.note(
@@ -557,11 +553,16 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
         # Call for bids
         fbids = {} # mapping filename to bids (action method to list af actions)
+        diverge, renamedelete = None, None
         for ancestor in ancestors:
             repo.ui.note(_('\ncalculating bids for ancestor %s\n') % ancestor)
-            actions = manifestmerge(repo, wctx, mctx, ancestor,
-                                    branchmerge, force,
-                                    partial, acceptremote, followcopies)
+            actions, diverge1, renamedelete1 = manifestmerge(
+                repo, wctx, mctx, ancestor, branchmerge, force, partial,
+                acceptremote, followcopies)
+            if diverge is None: # and renamedelete is None.
+                # Arbitrarily pick warnings from first iteration
+                diverge = diverge1
+                renamedelete = renamedelete1
             for m, l in sorted(actions.items()):
                 for a in l:
                     f, args, msg = a
@@ -644,7 +645,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
         actions['r'].extend(ractions)
         actions['f'].extend(factions)
 
-    return actions
+    return actions, diverge, renamedelete
 
 def batchremove(repo, actions):
     """apply removes to the working directory
@@ -742,8 +743,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             audit(f)
             util.unlinkpath(repo.wjoin(f))
 
-    numupdates = sum(len(l) for m, l in actions.items()
-                     if m not in ('k', 'dr', 'rd'))
+    numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
 
     if [a for a in actions['r'] if a[0] == '.hgsubstate']:
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
@@ -1087,8 +1087,9 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             followcopies = True
 
         ### calculate phase
-        actions = calculateupdates(repo, wc, p2, pas, branchmerge, force,
-                                   partial, mergeancestor, followcopies)
+        actions, diverge, renamedelete = calculateupdates(
+            repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
+            followcopies)
 
         ### apply phase
         if not branchmerge: # just jump to the new rev
@@ -1101,16 +1102,14 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
 
         # divergent renames
-        for f, args, msg in actions['dr']:
-            fl, = args
+        for f, fl in sorted(diverge.iteritems()):
             repo.ui.warn(_("note: possible conflict - %s was renamed "
                            "multiple times to:\n") % f)
             for nf in fl:
                 repo.ui.warn(" %s\n" % nf)
 
         # rename and delete
-        for f, args, msg in actions['rd']:
-            fl, = args
+        for f, fl in sorted(renamedelete.iteritems()):
             repo.ui.warn(_("note: possible conflict - %s was deleted "
                            "and renamed to:\n") % f)
             for nf in fl:

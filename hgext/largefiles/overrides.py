@@ -418,11 +418,12 @@ def overridecheckunknownfile(origfn, repo, wctx, mctx, f):
 def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                              partial, acceptremote, followcopies):
     overwrite = force and not branchmerge
-    actions = origfn(repo, p1, p2, pas, branchmerge, force, partial,
-                     acceptremote, followcopies)
+    actions, diverge, renamedelete = origfn(
+        repo, p1, p2, pas, branchmerge, force, partial, acceptremote,
+        followcopies)
 
     if overwrite:
-        return actions
+        return actions, diverge, renamedelete
 
     removes = set(a[0] for a in actions['r'])
 
@@ -481,7 +482,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
         lfmr.sort()
         actions['lfmr'] = lfmr
 
-    return actions
+    return actions, diverge, renamedelete
 
 def mergerecordupdates(orig, repo, actions, branchmerge):
     if 'lfmr' in actions:
