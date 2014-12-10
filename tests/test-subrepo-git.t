@@ -103,6 +103,15 @@ clone root, make local change
   $ echo ggg >> s/g
   $ hg status --subrepos
   M s/g
+  $ hg diff --subrepos
+  diff --git a/s/g b/s/g
+  index 089258f..85341ee 100644
+  --- a/s/g
+  +++ b/s/g
+  @@ -1,2 +1,3 @@
+   g
+   gg
+  +ggg (no-eol)
   $ hg commit --subrepos -m ggg
   committing subrepository s
   $ hg debugsub
@@ -663,5 +672,113 @@ Test that sanitizing is omitted in meta data area:
   $ hg update -q -C af6d2edbb0d3
   checking out detached HEAD in subrepo s
   check out a git branch if you intend to make changes
+
+check differences made by most recent change
+  $ cd s
+  $ cat > foobar << EOF
+  > woopwoop
+  > 
+  > foo
+  > bar
+  > EOF
+  $ git add foobar
+  $ cd ..
+
+  $ hg diff --subrepos
+  diff --git a/s/foobar b/s/foobar
+  new file mode 100644
+  index 0000000..8a5a5e2
+  --- /dev/null
+  +++ b/s/foobar
+  @@ -0,0 +1,4 @@
+  +woopwoop
+  +
+  +foo
+  +bar (no-eol)
+
+  $ hg commit --subrepos -m "Added foobar"
+  committing subrepository s
+  created new head
+
+  $ hg diff -c . --subrepos --nodates
+  diff -r af6d2edbb0d3 -r 255ee8cf690e .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,1 @@
+  -32a343883b74769118bb1d3b4b1fbf9156f4dddc s
+  +fd4dbf828a5b2fcd36b2bcf21ea773820970d129 s
+  diff --git a/s/foobar b/s/foobar
+  new file mode 100644
+  index 0000000..8a5a5e2
+  --- /dev/null
+  +++ b/s/foobar
+  @@ -0,0 +1,4 @@
+  +woopwoop
+  +
+  +foo
+  +bar (no-eol)
+
+check output when only diffing the subrepository
+  $ hg diff -c . --subrepos s
+  diff --git a/s/foobar b/s/foobar
+  new file mode 100644
+  index 0000000..8a5a5e2
+  --- /dev/null
+  +++ b/s/foobar
+  @@ -0,0 +1,4 @@
+  +woopwoop
+  +
+  +foo
+  +bar (no-eol)
+
+check output when diffing something else
+  $ hg diff -c . --subrepos .hgsubstate --nodates
+  diff -r af6d2edbb0d3 -r 255ee8cf690e .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,1 @@
+  -32a343883b74769118bb1d3b4b1fbf9156f4dddc s
+  +fd4dbf828a5b2fcd36b2bcf21ea773820970d129 s
+
+add new changes, including whitespace
+  $ cd s
+  $ cat > foobar << EOF
+  > woop    woop
+  > 
+  > foo
+  > bar
+  > EOF
+  $ echo foo > barfoo
+  $ git add barfoo
+  $ cd ..
+
+  $ hg diff --subrepos --ignore-all-space
+  diff --git a/s/barfoo b/s/barfoo
+  new file mode 100644
+  index 0000000..257cc56
+  --- /dev/null
+  +++ b/s/barfoo
+  @@ -0,0 +1 @@
+  +foo (no-eol)
+  $ hg diff --subrepos s/foobar
+  diff --git a/s/foobar b/s/foobar
+  index 8a5a5e2..bd5812a 100644
+  --- a/s/foobar
+  +++ b/s/foobar
+  @@ -1,4 +1,4 @@
+  -woopwoop
+  +woop    woop
+   
+   foo
+   bar (no-eol)
+
+  $ hg diff --subrepos --stat
+  barfoo | 1 +
+   foobar | 2 +-
+   2 files changed, 2 insertions(+), 1 deletion(-) (no-eol)
+
+ensure adding include/exclude ignores the subrepo
+  $ hg diff --subrepos -I s/foobar
+  $ hg diff --subrepos -X s/foobar
 
   $ cd ..

@@ -1593,6 +1593,48 @@ class gitsubrepo(abstractsubrepo):
         return scmutil.status(modified, added, removed, deleted,
                               unknown, ignored, clean)
 
+    @annotatesubrepoerror
+    def diff(self, ui, diffopts, node2, match, prefix, **opts):
+        node1 = self._state[1]
+        cmd = ['diff']
+        if opts['stat']:
+            cmd.append('--stat')
+        else:
+            # for Git, this also implies '-p'
+            cmd.append('-U%d' % diffopts.context)
+
+        gitprefix = os.path.join(prefix, self._path)
+
+        if diffopts.noprefix:
+            cmd.extend(['--src-prefix=%s/' % gitprefix,
+                        '--dst-prefix=%s/' % gitprefix])
+        else:
+            cmd.extend(['--src-prefix=a/%s/' % gitprefix,
+                        '--dst-prefix=b/%s/' % gitprefix])
+
+        if diffopts.ignorews:
+            cmd.append('--ignore-all-space')
+        if diffopts.ignorewsamount:
+            cmd.append('--ignore-space-change')
+        if self._gitversion(self._gitcommand(['--version'])) >= (1, 8, 4) \
+                and diffopts.ignoreblanklines:
+            cmd.append('--ignore-blank-lines')
+
+        cmd.append(node1)
+        if node2:
+            cmd.append(node2)
+
+        if match.anypats():
+            return #No support for include/exclude yet
+
+        if match.always():
+            ui.write(self._gitcommand(cmd))
+        elif match.files():
+            for f in match.files():
+                ui.write(self._gitcommand(cmd + [f]))
+        elif match(gitprefix): #Subrepo is matched
+            ui.write(self._gitcommand(cmd))
+
     def shortid(self, revid):
         return revid[:7]
 
