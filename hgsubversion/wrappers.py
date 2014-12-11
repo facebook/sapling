@@ -521,13 +521,23 @@ def pull(repo, source, heads=[], force=False):
 def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
     capable = getattr(remote, 'capable', lambda x: False)
     if capable('subversion'):
+        # transaction manager is present in Mercurial >= 3.3
+        try:
+            trmanager = getattr(exchange, 'transactionmanager')
+        except AttributeError:
+            trmanager = None
         pullop = exchange.pulloperation(repo, remote, heads, force,
                                         bookmarks=bookmarks)
+        if trmanager:
+            pullop.trmanager = trmanager(repo, 'pull', remote.url())
         try:
             pullop.cgresult = pull(repo, remote, heads, force)
             return pullop
         finally:
-            pullop.releasetransaction()
+            if trmanager:
+                pullop.trmanager.release()
+            else:
+                pullop.releasetransaction()
     else:
         return orig(repo, remote, heads, force, bookmarks=bookmarks)
 
