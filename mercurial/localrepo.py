@@ -909,6 +909,8 @@ class localrepository(object):
                 _("abandoned transaction found"),
                 hint=_("run 'hg recover' to clean up transaction"))
 
+        self.hook('pretxnopen', throw=True, txnname=desc)
+
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
