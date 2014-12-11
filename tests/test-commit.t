@@ -470,9 +470,15 @@ verify pathauditor blocks evil filepaths
   > r.commitctx(c)
   > EOF
   $ $PYTHON evil-commit.py
+#if windows
+  $ hg co --clean tip
+  abort: path contains illegal component: .h\xe2\x80\x8cg\\hgrc (esc)
+  [255]
+#else
   $ hg co --clean tip
   abort: path contains illegal component: .h\xe2\x80\x8cg/hgrc (esc)
   [255]
+#endif
 
   $ hg rollback -f
   repository tip rolled back to revision 1 (undo commit)
@@ -489,7 +495,7 @@ verify pathauditor blocks evil filepaths
   > EOF
   $ $PYTHON evil-commit.py
   $ hg co --clean tip
-  abort: path contains illegal component: HG~1/hgrc
+  abort: path contains illegal component: HG~1/hgrc (glob)
   [255]
 
   $ hg rollback -f
@@ -507,5 +513,5 @@ verify pathauditor blocks evil filepaths
   > EOF
   $ $PYTHON evil-commit.py
   $ hg co --clean tip
-  abort: path contains illegal component: HG8B6C~2/hgrc
+  abort: path contains illegal component: HG8B6C~2/hgrc (glob)
   [255]

@@ -62,7 +62,7 @@ already has one local mq patch
   note: rebase of 3:148775c71080 created no changes to commit
   rebase merging completed
   updating mq patch p0.patch to 5:9ecc820b1737
-  $TESTTMP/a/.hg/patches/p0.patch
+  $TESTTMP/a/.hg/patches/p0.patch (glob)
   2 changesets found
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-backup.hg (glob)
   2 changesets found
