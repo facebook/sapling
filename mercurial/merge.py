@@ -525,12 +525,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
 
-    # Convert to dictionary-of-lists format
-    actionbyfile = actions
-    actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
-    for f, (m, args, msg) in actionbyfile.iteritems():
-        actions[m].append((f, args, msg))
-
     return actions, diverge, renamedelete
 
 def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
@@ -583,22 +577,21 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                 # Arbitrarily pick warnings from first iteration
                 diverge = diverge1
                 renamedelete = renamedelete1
-            for m, l in sorted(actions.items()):
-                for a in l:
-                    f, args, msg = a
-                    repo.ui.debug(' %s: %s -> %s\n' % (f, msg, m))
-                    if f in fbids:
-                        d = fbids[f]
-                        if m in d:
-                            d[m].append(a)
-                        else:
-                            d[m] = [a]
+            for f, a in sorted(actions.iteritems()):
+                m, args, msg = a
+                repo.ui.debug(' %s: %s -> %s\n' % (f, msg, m))
+                if f in fbids:
+                    d = fbids[f]
+                    if m in d:
+                        d[m].append(a)
                     else:
-                        fbids[f] = {m: [a]}
+                        d[m] = [a]
+                else:
+                    fbids[f] = {m: [a]}
 
         # Pick the best bid for each file
         repo.ui.note(_('\nauction for merging merge bids\n'))
-        actions = dict((m, []) for m in actions.keys())
+        actions = {}
         for f, bids in sorted(fbids.items()):
             # bids is a mapping from action method to list af actions
             # Consensus?
@@ -606,19 +599,19 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                 m, l = bids.items()[0]
                 if util.all(a == l[0] for a in l[1:]): # len(bids) is > 1
                     repo.ui.note(" %s: consensus for %s\n" % (f, m))
-                    actions[m].append(l[0])
+                    actions[f] = l[0]
                     continue
             # If keep is an option, just do it.
             if 'k' in bids:
                 repo.ui.note(" %s: picking 'keep' action\n" % f)
-                actions['k'].append(bids['k'][0])
+                actions[f] = bids['k'][0]
                 continue
             # If there are gets and they all agree [how could they not?], do it.
             if 'g' in bids:
                 ga0 = bids['g'][0]
                 if util.all(a == ga0 for a in bids['g'][1:]):
                     repo.ui.note(" %s: picking 'get' action\n" % f)
-                    actions['g'].append(ga0)
+                    actions[f] = ga0
                     continue
             # TODO: Consider other simple actions such as mode changes
             # Handle inefficient democrazy.
@@ -630,9 +623,15 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             m, l = bids.items()[0]
             repo.ui.warn(_(' %s: ambiguous merge - picked %s action\n') %
                          (f, m))
-            actions[m].append(l[0])
+            actions[f] = l[0]
             continue
         repo.ui.note(_('end of auction\n\n'))
+
+    # Convert to dictionary-of-lists format
+    actionbyfile = actions
+    actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+    for f, (m, args, msg) in actionbyfile.iteritems():
+        actions[m].append((f, args, msg))
 
     _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
 

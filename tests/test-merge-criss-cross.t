@@ -141,8 +141,8 @@ Redo merge with merge.preferancestor="*" to enable bid merge
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 40663881a6dd, local: 3b08d01b0ab5+, remote: adfe50279922
-   f2: remote unchanged -> k
    f1: versions differ -> m
+   f2: remote unchanged -> k
   
   auction for merging merge bids
    f1: picking 'get' action
@@ -184,8 +184,8 @@ The other way around:
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 40663881a6dd, local: adfe50279922+, remote: 3b08d01b0ab5
-   f2: remote is newer -> g
    f1: versions differ -> m
+   f2: remote is newer -> g
   
   auction for merging merge bids
    f1: picking 'keep' action
@@ -249,8 +249,8 @@ Verify how the output looks and and how verbose it is:
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 40663881a6dd, local: 3b08d01b0ab5+, remote: adfe50279922
-   f2: remote unchanged -> k
    f1: versions differ -> m
+   f2: remote unchanged -> k
   
   auction for merging merge bids
    f1: picking 'get' action
