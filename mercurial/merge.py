@@ -621,12 +621,6 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
         fractions = _forgetremoved(wctx, mctx, branchmerge)
         actions.update(fractions)
 
-    # Convert to dictionary-of-lists format
-    actionbyfile = actions
-    actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
-    for f, (m, args, msg) in actionbyfile.iteritems():
-        actions[m].append((f, args, msg))
-
     return actions, diverge, renamedelete
 
 def batchremove(repo, actions):
@@ -1069,9 +1063,15 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             followcopies = True
 
         ### calculate phase
-        actions, diverge, renamedelete = calculateupdates(
+        actionbyfile, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
             followcopies)
+        # Convert to dictionary-of-lists format
+        actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+        for f, (m, args, msg) in actionbyfile.iteritems():
+            if m not in actions:
+                actions[m] = []
+            actions[m].append((f, args, msg))
 
         if not util.checkcase(repo.path):
             # check collision between files only in p2 for clean update

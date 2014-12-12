@@ -435,15 +435,13 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
     # Convert to dictionary with filename as key and action as value.
     lfiles = set()
-    actionbyfile = {}
-    for m, l in actions.iteritems():
-        for f, args, msg in l:
-            actionbyfile[f] = m, args, msg
-            splitstandin = f and lfutil.splitstandin(f)
-            if splitstandin in p1:
-                lfiles.add(splitstandin)
-            elif lfutil.standin(f) in p1:
-                lfiles.add(f)
+    actionbyfile = actions
+    for f in actionbyfile:
+        splitstandin = f and lfutil.splitstandin(f)
+        if splitstandin in p1:
+            lfiles.add(splitstandin)
+        elif lfutil.standin(f) in p1:
+            lfiles.add(f)
 
     for lfile in lfiles:
         standin = lfutil.standin(lfile)
@@ -489,14 +487,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                 actionbyfile[lfile] = ('g', largs, 'replaces standin')
                 actionbyfile[standin] = ('r', None, 'replaced by non-standin')
 
-    # Convert back to dictionary-of-lists format
-    for l in actions.itervalues():
-        l[:] = []
-    actions['lfmr'] = []
-    for f, (m, args, msg) in actionbyfile.iteritems():
-        actions[m].append((f, args, msg))
-
-    return actions, diverge, renamedelete
+    return actionbyfile, diverge, renamedelete
 
 def mergerecordupdates(orig, repo, actions, branchmerge):
     if 'lfmr' in actions:
