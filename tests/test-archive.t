@@ -250,6 +250,7 @@ test .hg_archival.txt
   branch: default
   latesttag: null
   latesttagdistance: 4
+  changessincelatesttag: 4
   $ hg tag -r 2 mytag
   $ hg tag -r 2 anothertag
   $ hg archive -r 2 ../test-lasttag
@@ -322,10 +323,10 @@ old file -- date clamped to 1980
   Archive:  ../old.zip
   \s*Length.* (re)
   *-----* (glob)
-  *147*80*00:00*old/.hg_archival.txt (glob)
+  *172*80*00:00*old/.hg_archival.txt (glob)
   *0*80*00:00*old/old (glob)
   *-----* (glob)
-  \s*147\s+2 files (re)
+  \s*172\s+2 files (re)
 
 show an error when a provided pattern matches no files
 

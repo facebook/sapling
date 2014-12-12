@@ -276,8 +276,11 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
                         'style': '', 'patch': None, 'git': None}
                 cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
                 ltags, dist = repo.ui.popbuffer().split('\n')
-                tags = ''.join('latesttag: %s\n' % t for t in ltags.split(':'))
+                ltags = ltags.split(':')
+                changessince = len(repo.revs('only(.,%s)', ltags[0]))
+                tags = ''.join('latesttag: %s\n' % t for t in ltags)
                 tags += 'latesttagdistance: %s\n' % dist
+                tags += 'changessincelatesttag: %s\n' % changessince
 
             return base + tags
 
