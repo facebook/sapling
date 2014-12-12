@@ -320,8 +320,6 @@ Test a linear merge to a revision containing same-name normal file
   $ hg update -q -C 2
   $ echo 'modified large2 for linear merge' > large2
   $ hg update -q 5
-  local changed .hglf/large2 which remote deleted
-  use (c)hanged version or (d)elete? c
   remote turned local largefile large2 into a normal file
   keep (l)argefile or use (n)ormal file? l
   $ hg debugdirstate --nodates | grep large2
@@ -368,8 +366,6 @@ Test that the internal linear merging works correctly
   adding manifests
   adding file changes
   added 3 changesets with 5 changes to 5 files
-  local changed .hglf/large2 which remote deleted
-  use (c)hanged version or (d)elete? c
   remote turned local largefile large2 into a normal file
   keep (l)argefile or use (n)ormal file? l
   largefile large1 has a merge conflict
@@ -403,8 +399,6 @@ Test that the internal linear merging works correctly
   adding manifests
   adding file changes
   added 3 changesets with 5 changes to 5 files
-  local changed .hglf/large2 which remote deleted
-  use (c)hanged version or (d)elete? c
   remote turned local largefile large2 into a normal file
   keep (l)argefile or use (n)ormal file? l
   largefile large1 has a merge conflict
@@ -451,7 +445,6 @@ Test that the internal linear merging works correctly
   $ hg update --config ui.interactive=True --config debug.dirstate.delaywrite=2 <<EOF
   > m
   > r
-  > c
   > l
   > l
   > EOF
@@ -459,8 +452,6 @@ Test that the internal linear merging works correctly
   (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for sub differ (in checked out version)
   use (l)ocal source (f74e50bd9e55) or (r)emote source (d65e59e952a9)? r
-  local changed .hglf/large2 which remote deleted
-  use (c)hanged version or (d)elete? c
   remote turned local largefile large2 into a normal file
   keep (l)argefile or use (n)ormal file? l
   largefile large1 has a merge conflict

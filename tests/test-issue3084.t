@@ -283,8 +283,6 @@ Ancestor: normal  Parent: normal2  Parent: large   result: ?
 
   $ hg up -Cqr normal2
   $ hg merge -r large
-  local changed f which remote deleted
-  use (c)hanged version or (d)elete? c
   remote turned local normal file f into a largefile
   use (l)argefile or keep (n)ormal file? l
   getting changed largefiles
@@ -295,9 +293,7 @@ Ancestor: normal  Parent: normal2  Parent: large   result: ?
   large
 
   $ hg up -Cqr normal2
-  $ ( echo c; echo n ) | hg merge -r large --config ui.interactive=Yes
-  local changed f which remote deleted
-  use (c)hanged version or (d)elete? c
+  $ echo n | hg merge -r large --config ui.interactive=Yes
   remote turned local normal file f into a largefile
   use (l)argefile or keep (n)ormal file? n
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -305,23 +301,10 @@ Ancestor: normal  Parent: normal2  Parent: large   result: ?
   $ cat f
   normal2
 
-  $ hg up -Cqr normal2
-  $ echo d | hg merge -r large --config ui.interactive=Yes
-  local changed f which remote deleted
-  use (c)hanged version or (d)elete? d
-  getting changed largefiles
-  1 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ cat f
-  large
-
 swap
 
   $ hg up -Cqr large
   $ hg merge -r normal2
-  remote changed f which local deleted
-  use (c)hanged version or leave (d)eleted? c
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
@@ -332,9 +315,7 @@ swap
   large
 
   $ hg up -Cqr large
-  $ ( echo c; echo n ) | hg merge -r normal2 --config ui.interactive=Yes
-  remote changed f which local deleted
-  use (c)hanged version or leave (d)eleted? c
+  $ echo n | hg merge -r normal2 --config ui.interactive=Yes
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? n
   getting changed largefiles
@@ -343,17 +324,6 @@ swap
   (branch merge, don't forget to commit)
   $ cat f
   normal2
-
-  $ hg up -Cqr large
-  $ echo d | hg merge -r normal2 --config ui.interactive=Yes
-  remote changed f which local deleted
-  use (c)hanged version or leave (d)eleted? d
-  getting changed largefiles
-  0 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ cat f
-  large
 
 Ancestor: large   Parent: large-id   Parent: normal  result: normal
 
@@ -400,8 +370,6 @@ Ancestor: large   Parent: large2   Parent: normal  result: ?
 
   $ hg up -Cqr large2
   $ hg merge -r normal
-  local changed .hglf/f which remote deleted
-  use (c)hanged version or (d)elete? c
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? l
   getting changed largefiles
@@ -412,9 +380,9 @@ Ancestor: large   Parent: large2   Parent: normal  result: ?
   large2
 
   $ hg up -Cqr large2
-  $ echo d | hg merge -r normal --config ui.interactive=Yes
-  local changed .hglf/f which remote deleted
-  use (c)hanged version or (d)elete? d
+  $ echo n | hg merge -r normal --config ui.interactive=Yes
+  remote turned local largefile f into a normal file
+  keep (l)argefile or use (n)ormal file? n
   getting changed largefiles
   0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -426,8 +394,6 @@ swap
 
   $ hg up -Cqr normal
   $ hg merge -r large2
-  remote changed .hglf/f which local deleted
-  use (c)hanged version or leave (d)eleted? c
   remote turned local normal file f into a largefile
   use (l)argefile or keep (n)ormal file? l
   getting changed largefiles
@@ -438,9 +404,9 @@ swap
   large2
 
   $ hg up -Cqr normal
-  $ echo d | hg merge -r large2 --config ui.interactive=Yes
-  remote changed .hglf/f which local deleted
-  use (c)hanged version or leave (d)eleted? d
+  $ echo n | hg merge -r large2 --config ui.interactive=Yes
+  remote turned local normal file f into a largefile
+  use (l)argefile or keep (n)ormal file? n
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f

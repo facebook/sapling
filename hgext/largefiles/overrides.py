@@ -440,9 +440,9 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
     for lfile in lfiles:
         standin = lfutil.standin(lfile)
-        lm = actionbyfile.get(lfile, (None, None, None))[0]
-        sm = actionbyfile.get(standin, (None, None, None))[0]
-        if sm == 'g' and lm != 'r':
+        (lm, largs, lmsg) = actionbyfile.get(lfile, (None, None, None))
+        (sm, sargs, smsg) = actionbyfile.get(standin, (None, None, None))
+        if sm in ('g', 'dc') and lm != 'r':
             # Case 1: normal file in the working copy, largefile in
             # the second parent
             usermsg = _('remote turned local normal file %s into a largefile\n'
@@ -450,14 +450,16 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                         '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(usermsg, 0) == 0: # pick remote largefile
                 actionbyfile[lfile] = ('r', None, 'replaced by standin')
+                actionbyfile[standin] = ('g', sargs, 'replaces standin')
             else: # keep local normal file
+                actionbyfile[lfile] = ('k', None, 'replaces standin')
                 if branchmerge:
                     actionbyfile[standin] = ('k', None,
                                              'replaced by non-standin')
                 else:
                     actionbyfile[standin] = ('r', None,
                                              'replaced by non-standin')
-        elif lm == 'g' and sm != 'r':
+        elif lm in ('g', 'dc') and sm != 'r':
             # Case 2: largefile in the working copy, normal file in
             # the second parent
             usermsg = _('remote turned local largefile %s into a normal file\n'
@@ -467,6 +469,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                 if branchmerge:
                     # largefile can be restored from standin safely
                     actionbyfile[lfile] = ('k', None, 'replaced by standin')
+                    actionbyfile[standin] = ('k', None, 'replaces standin')
                 else:
                     # "lfile" should be marked as "removed" without
                     # removal of itself
@@ -476,6 +479,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                     # linear-merge should treat this largefile as 're-added'
                     actionbyfile[standin] = ('a', None, 'keep standin')
             else: # pick remote normal file
+                actionbyfile[lfile] = ('g', largs, 'replaces standin')
                 actionbyfile[standin] = ('r', None, 'replaced by non-standin')
 
     # Convert back to dictionary-of-lists format

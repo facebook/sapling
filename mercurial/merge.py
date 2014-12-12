@@ -640,26 +640,6 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
     _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
 
-    # Prompt and create actions. TODO: Move this towards resolve phase.
-    for f, args, msg in sorted(actions['cd']):
-        if repo.ui.promptchoice(
-            _("local changed %s which remote deleted\n"
-              "use (c)hanged version or (d)elete?"
-              "$$ &Changed $$ &Delete") % f, 0):
-            actions['r'].append((f, None, "prompt delete"))
-        else:
-            actions['a'].append((f, None, "prompt keep"))
-    del actions['cd'][:]
-
-    for f, args, msg in sorted(actions['dc']):
-        flags, = args
-        if repo.ui.promptchoice(
-            _("remote changed %s which local deleted\n"
-              "use (c)hanged version or leave (d)eleted?"
-              "$$ &Changed $$ &Deleted") % f, 0) == 0:
-            actions['g'].append((f, (flags,), "prompt recreating"))
-    del actions['dc'][:]
-
     if wctx.rev() is None:
         ractions, factions = _forgetremoved(wctx, mctx, branchmerge)
         actions['r'].extend(ractions)
@@ -1110,6 +1090,26 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         actions, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
             followcopies)
+
+        # Prompt and create actions. TODO: Move this towards resolve phase.
+        for f, args, msg in sorted(actions['cd']):
+            if repo.ui.promptchoice(
+                _("local changed %s which remote deleted\n"
+                  "use (c)hanged version or (d)elete?"
+                  "$$ &Changed $$ &Delete") % f, 0):
+                actions['r'].append((f, None, "prompt delete"))
+            else:
+                actions['a'].append((f, None, "prompt keep"))
+        del actions['cd'][:]
+
+        for f, args, msg in sorted(actions['dc']):
+            flags, = args
+            if repo.ui.promptchoice(
+                _("remote changed %s which local deleted\n"
+                  "use (c)hanged version or leave (d)eleted?"
+                  "$$ &Changed $$ &Deleted") % f, 0) == 0:
+                actions['g'].append((f, (flags,), "prompt recreating"))
+        del actions['dc'][:]
 
         ### apply phase
         if not branchmerge: # just jump to the new rev
