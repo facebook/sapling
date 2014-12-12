@@ -334,7 +334,7 @@ def _processpart(op, part):
                 raise error.UnsupportedPartError(parttype=key,
                                                params=unknownparams)
         except error.UnsupportedPartError, exc:
-            if key != parttype: # mandatory parts
+            if part.mandatory: # mandatory parts
                 raise
             op.ui.debug('ignoring unsupported advisory part %s\n' % exc)
             return # skip to part processing
@@ -786,6 +786,7 @@ class unbundlepart(unpackermixin):
         self.mandatorykeys = ()
         self._payloadstream = None
         self._readheader()
+        self._mandatory = None
 
     def _fromheader(self, size):
         """return the next <size> byte from the header"""
@@ -818,6 +819,9 @@ class unbundlepart(unpackermixin):
         self.ui.debug('part type: "%s"\n' % self.type)
         self.id = self._unpackheader(_fpartid)[0]
         self.ui.debug('part id: "%s"\n' % self.id)
+        # extract mandatory bit from type
+        self.mandatory = (self.type != self.type.lower())
+        self.type = self.type.lower()
         ## reading parameters
         # param count
         mancount, advcount = self._unpackheader(_fpartparamcount)
