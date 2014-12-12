@@ -239,3 +239,16 @@ Also tests getting logs directly without debugsvnlog.
   converting...
   1 init projA
   0 adddir
+
+Test that a too-new repository format is properly rejected:
+  $ mv svn-empty/format format
+  $ echo 999 > svn-empty/format
+It's important that this command explicitly specify svn, otherwise it
+can have surprising side effects (like falling back to a perforce
+depot that can be seen from the test environment and slurping from that.)
+  $ hg convert --source-type svn svn-empty this-will-fail
+  initializing destination this-will-fail repository
+  file:/*/$TESTTMP/svn-empty does not look like a Subversion repository to libsvn version 1.*.* (glob)
+  abort: svn-empty: missing or unsupported repository
+  [255]
+  $ mv format svn-empty/format

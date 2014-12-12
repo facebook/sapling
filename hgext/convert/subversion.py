@@ -318,8 +318,12 @@ class svn_source(converter_source):
             self.uuid = svn.ra.get_uuid(self.ra)
         except SubversionException:
             ui.traceback()
-            raise NoRepo(_("%s does not look like a Subversion repository")
-                         % self.url)
+            svnversion = '%d.%d.%d' % (svn.core.SVN_VER_MAJOR,
+                                       svn.core.SVN_VER_MINOR,
+                                       svn.core.SVN_VER_MICRO)
+            raise NoRepo(_("%s does not look like a Subversion repository "
+                           "to libsvn version %s")
+                         % (self.url, svnversion))
 
         if rev:
             try:
