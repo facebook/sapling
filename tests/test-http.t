@@ -201,6 +201,15 @@ test http authentication
   no changes found
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+--pull should override server's preferuncompressed
+  $ hg clone --pull http://user:pass@localhost:$HGPORT2/ dest-pull 2>&1
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 5 changes to 5 files
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg id http://user2@localhost:$HGPORT2/
   abort: http authorization required for http://localhost:$HGPORT2/
@@ -257,6 +266,12 @@ test http authentication
   "GET /?cmd=stream_out HTTP/1.1" 200 -
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D5fed3813f7f5e1824344fdc9cf8f63bb662c292d
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
+  "GET /?cmd=capabilities HTTP/1.1" 200 -
+  "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=bookmarks
+  "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D
+  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=0000000000000000000000000000000000000000&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip

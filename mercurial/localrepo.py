@@ -1726,7 +1726,7 @@ class localrepository(object):
         finally:
             lock.release()
 
-    def clone(self, remote, heads=[], stream=False):
+    def clone(self, remote, heads=[], stream=None):
         '''clone remote repository.
 
         keyword arguments:
@@ -1741,7 +1741,7 @@ class localrepository(object):
         # and format flags on "stream" capability, and use
         # uncompressed only if compatible.
 
-        if not stream:
+        if stream is None:
             # if the server explicitly prefers to stream (for fast LANs)
             stream = remote.capable('stream-preferred')
 
