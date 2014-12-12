@@ -319,19 +319,16 @@ def _processpart(op, part):
     The part is guaranteed to have been fully consumed when the function exits
     (even if an exception is raised)."""
     try:
-        parttype = part.type
-        # part key are matched lower case
-        key = parttype.lower()
         try:
-            handler = parthandlermapping.get(key)
+            handler = parthandlermapping.get(part.type)
             if handler is None:
-                raise error.UnsupportedPartError(parttype=key)
-            op.ui.debug('found a handler for part %r\n' % parttype)
+                raise error.UnsupportedPartError(parttype=part.type)
+            op.ui.debug('found a handler for part %r\n' % part.type)
             unknownparams = part.mandatorykeys - handler.params
             if unknownparams:
                 unknownparams = list(unknownparams)
                 unknownparams.sort()
-                raise error.UnsupportedPartError(parttype=key,
+                raise error.UnsupportedPartError(parttype=part.type,
                                                params=unknownparams)
         except error.UnsupportedPartError, exc:
             if part.mandatory: # mandatory parts
