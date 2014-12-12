@@ -284,7 +284,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     dest: URL of destination repository to create (defaults to base
     name of source repository)
 
-    pull: always pull from source repository, even in local case
+    pull: always pull from source repository, even in local case or if the
+    server prefers streaming
 
     stream: stream raw data uncompressed from repository (fast over
     LAN, slow over WAN)
@@ -420,6 +421,11 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 revs = [srcpeer.lookup(r) for r in rev]
                 checkout = revs[0]
             if destpeer.local():
+                if not stream:
+                    if pull:
+                        stream = False
+                    else:
+                        stream = None
                 destpeer.local().clone(srcpeer, heads=revs, stream=stream)
             elif srcrepo:
                 exchange.push(srcrepo, destpeer, revs=revs,
