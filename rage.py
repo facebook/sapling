@@ -4,7 +4,8 @@
 
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, bookmarks, ui, extensions
-from hgext import smartlog, blackbox
+from hgext import blackbox
+import smartlog
 import os, socket, re, time
 
 cmdtable = {}

@@ -4,7 +4,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import short, hex
-from mercurial import extensions, merge, dicthelpers, scmutil, hg
+from mercurial import extensions, merge, scmutil, hg
 from mercurial import cmdutil, obsolete, repair, util, bundlerepo, error
 from mercurial import exchange, phases
 import struct, os, glob, binascii
