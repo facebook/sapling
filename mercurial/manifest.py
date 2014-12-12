@@ -17,6 +17,9 @@ class manifestdict(dict):
             flags = {}
         dict.__init__(self, mapping)
         self._flags = flags
+    def __setitem__(self, k, v):
+        assert v is not None
+        dict.__setitem__(self, k, v)
     def flags(self, f):
         return self._flags.get(f, "")
     def withflags(self):
