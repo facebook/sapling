@@ -531,25 +531,13 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
        remained the same."""
 
-    cdactions = []
-    for action in actions['cd']:
-        f = action[0]
-        if f in ancestor and not wctx[f].cmp(ancestor[f]):
+    for f, (m, args, msg) in actions.items():
+        if m == 'cd' and f in ancestor and not wctx[f].cmp(ancestor[f]):
             # local did change but ended up with same content
-            actions['r'].append((f, None, "prompt same"))
-        else:
-            cdactions.append(action)
-    actions['cd'] = cdactions
-
-    dcactions = []
-    for action in actions['dc']:
-        f = action[0]
-        if f in ancestor and not mctx[f].cmp(ancestor[f]):
+            actions[f] = 'r', None, "prompt same"
+        elif m == 'dc' and f in ancestor and not mctx[f].cmp(ancestor[f]):
             # remote did change but ended up with same content
-            pass # don't get = keep local deleted
-        else:
-            dcactions.append(action)
-    actions['dc'] = dcactions
+            del actions[f] # don't get = keep local deleted
 
 def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                      acceptremote, followcopies):
@@ -627,13 +615,13 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             continue
         repo.ui.note(_('end of auction\n\n'))
 
+    _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
+
     # Convert to dictionary-of-lists format
     actionbyfile = actions
     actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
     for f, (m, args, msg) in actionbyfile.iteritems():
         actions[m].append((f, args, msg))
-
-    _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
 
     if wctx.rev() is None:
         ractions, factions = _forgetremoved(wctx, mctx, branchmerge)
