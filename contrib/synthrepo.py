@@ -323,15 +323,32 @@ def synthesize(ui, repo, descpath, **opts):
     initcount = int(opts['initfiles'])
     if initcount and initdirs:
         pctx = repo[None].parents()[0]
+        dirs = set(pctx.dirs())
         files = {}
+
+        def validpath(path):
+            # Don't pick filenames which are already directory names.
+            if path in dirs:
+                return False
+            # Don't pick directories which were used as file names.
+            while path:
+                if path in files:
+                    return False
+                path = os.path.dirname(path)
+            return True
+
         for i in xrange(0, initcount):
             ui.progress(_synthesizing, i, unit=_files, total=initcount)
 
             path = pickpath()
-            while path in pctx.dirs():
+            while not validpath(path):
                 path = pickpath()
             data = '%s contents\n' % path
             files[path] = context.memfilectx(repo, path, data)
+            dir = os.path.dirname(path)
+            while dir and dir not in dirs:
+                dirs.add(dir)
+                dir = os.path.dirname(dir)
 
         def filectxfn(repo, memctx, path):
             return files[path]
