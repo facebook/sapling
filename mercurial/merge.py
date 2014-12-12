@@ -318,20 +318,20 @@ def _forgetremoved(wctx, mctx, branchmerge):
     as removed.
     """
 
-    ractions = []
-    factions = xactions = []
+    actions = {}
+    m = 'f'
     if branchmerge:
-        xactions = ractions
+        m = 'r'
     for f in wctx.deleted():
         if f not in mctx:
-            xactions.append((f, None, "forget deleted"))
+            actions[f] = m, None, "forget deleted"
 
     if not branchmerge:
         for f in wctx.removed():
             if f not in mctx:
-                factions.append((f, None, "forget removed"))
+                actions[f] = 'f', None, "forget removed"
 
-    return ractions, factions
+    return actions
 
 def _checkcollision(repo, wmf, actions):
     # build provisional merged manifest up
@@ -617,16 +617,15 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
 
     _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
 
+    if wctx.rev() is None:
+        fractions = _forgetremoved(wctx, mctx, branchmerge)
+        actions.update(fractions)
+
     # Convert to dictionary-of-lists format
     actionbyfile = actions
     actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
     for f, (m, args, msg) in actionbyfile.iteritems():
         actions[m].append((f, args, msg))
-
-    if wctx.rev() is None:
-        ractions, factions = _forgetremoved(wctx, mctx, branchmerge)
-        actions['r'].extend(ractions)
-        actions['f'].extend(factions)
 
     return actions, diverge, renamedelete
 
