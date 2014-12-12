@@ -196,9 +196,13 @@ if os.path.isdir('.hg'):
         if hgid.endswith('+'): # propagate the dirty status to the tag
             version += '+'
     else: # no tag found
-        cmd = [sys.executable, 'hg', 'parents', '--template',
-               '{latesttag}+{latesttagdistance}-']
-        version = runhg(cmd, env) + hgid
+        ltagcmd = [sys.executable, 'hg', 'parents', '--template',
+                   '{latesttag}']
+        ltag = runhg(ltagcmd, env)
+        changessincecmd = [sys.executable, 'hg', 'log', '-T', 'x\n', '-r',
+                           "only(.,'%s')" % ltag]
+        changessince = len(runhg(changessincecmd, env).splitlines())
+        version = '%s+%s-%s' % (ltag, changessince, hgid)
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 elif os.path.exists('.hg_archival.txt'):
