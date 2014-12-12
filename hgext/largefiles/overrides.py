@@ -435,8 +435,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
     # Convert to dictionary with filename as key and action as value.
     lfiles = set()
-    actionbyfile = actions
-    for f in actionbyfile:
+    for f in actions:
         splitstandin = f and lfutil.splitstandin(f)
         if splitstandin in p1:
             lfiles.add(splitstandin)
@@ -445,8 +444,8 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
     for lfile in lfiles:
         standin = lfutil.standin(lfile)
-        (lm, largs, lmsg) = actionbyfile.get(lfile, (None, None, None))
-        (sm, sargs, smsg) = actionbyfile.get(standin, (None, None, None))
+        (lm, largs, lmsg) = actions.get(lfile, (None, None, None))
+        (sm, sargs, smsg) = actions.get(standin, (None, None, None))
         if sm in ('g', 'dc') and lm != 'r':
             # Case 1: normal file in the working copy, largefile in
             # the second parent
@@ -454,16 +453,14 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
                         'use (l)argefile or keep (n)ormal file?'
                         '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(usermsg, 0) == 0: # pick remote largefile
-                actionbyfile[lfile] = ('r', None, 'replaced by standin')
-                actionbyfile[standin] = ('g', sargs, 'replaces standin')
+                actions[lfile] = ('r', None, 'replaced by standin')
+                actions[standin] = ('g', sargs, 'replaces standin')
             else: # keep local normal file
-                actionbyfile[lfile] = ('k', None, 'replaces standin')
+                actions[lfile] = ('k', None, 'replaces standin')
                 if branchmerge:
-                    actionbyfile[standin] = ('k', None,
-                                             'replaced by non-standin')
+                    actions[standin] = ('k', None, 'replaced by non-standin')
                 else:
-                    actionbyfile[standin] = ('r', None,
-                                             'replaced by non-standin')
+                    actions[standin] = ('r', None, 'replaced by non-standin')
         elif lm in ('g', 'dc') and sm != 'r':
             # Case 2: largefile in the working copy, normal file in
             # the second parent
@@ -473,21 +470,21 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
             if repo.ui.promptchoice(usermsg, 0) == 0: # keep local largefile
                 if branchmerge:
                     # largefile can be restored from standin safely
-                    actionbyfile[lfile] = ('k', None, 'replaced by standin')
-                    actionbyfile[standin] = ('k', None, 'replaces standin')
+                    actions[lfile] = ('k', None, 'replaced by standin')
+                    actions[standin] = ('k', None, 'replaces standin')
                 else:
                     # "lfile" should be marked as "removed" without
                     # removal of itself
-                    actionbyfile[lfile] = ('lfmr', None,
-                                           'forget non-standin largefile')
+                    actions[lfile] = ('lfmr', None,
+                                      'forget non-standin largefile')
 
                     # linear-merge should treat this largefile as 're-added'
-                    actionbyfile[standin] = ('a', None, 'keep standin')
+                    actions[standin] = ('a', None, 'keep standin')
             else: # pick remote normal file
-                actionbyfile[lfile] = ('g', largs, 'replaces standin')
-                actionbyfile[standin] = ('r', None, 'replaced by non-standin')
+                actions[lfile] = ('g', largs, 'replaces standin')
+                actions[standin] = ('r', None, 'replaced by non-standin')
 
-    return actionbyfile, diverge, renamedelete
+    return actions, diverge, renamedelete
 
 def mergerecordupdates(orig, repo, actions, branchmerge):
     if 'lfmr' in actions:
