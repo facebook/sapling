@@ -24,6 +24,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 rebaseparttype = 'b2x:rebase'
+commonheadsparttype = 'b2x:commonheads'
 
 experimental = 'experimental'
 configonto = 'server-rebase-onto'
@@ -32,12 +33,11 @@ def extsetup(ui):
     entry = wrapcommand(commands.table, 'push', _push)
     entry[1].append(('', 'onto', '', _('server revision to rebase onto')))
 
-    exchange.b2partsgenorder.insert(
-        exchange.b2partsgenorder.index('changeset'),
-        exchange.b2partsgenorder.pop(
-            exchange.b2partsgenorder.index(rebaseparttype)
-        ),
-    )
+    partorder = exchange.b2partsgenorder
+    partorder.insert(partorder.index('changeset'),
+                     partorder.pop(partorder.index(rebaseparttype)))
+
+    partorder.insert(0, partorder.pop(partorder.index(commonheadsparttype)))
 
     wrapfunction(discovery, 'checkheads', _checkheads)
 
@@ -47,7 +47,8 @@ def extsetup(ui):
     newpushkeyhandler.params = origpushkeyhandler.params
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
-def getrevsetbounds(repo, revset):
+def validaterevset(repo, revset):
+    "Abort if this is a rebasable revset, return None otherwise"
     if not repo.revs(revset):
         raise util.Abort(_('nothing to rebase'))
 
@@ -66,8 +67,9 @@ def getrevsetbounds(repo, revset):
         raise util.Abort(_('cannot rebase divergent changesets'))
     head = repo[heads.first()]
 
-    return head, tail
-    
+    repo.ui.note(_('validated revset %r::%r for rebase\n') %
+                 (head.hex(), tail.hex()))
+
 def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if not outgoing.missing:
         raise util.Abort(_('no commits to rebase'))
@@ -75,36 +77,17 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if rebaseparttype not in bundle2.bundle2caps(peer):
         raise util.Abort(_('no server support for %r') % rebaseparttype)
 
-    head, tail = getrevsetbounds(
-        repo, 
-        revset.formatspec('%ln', outgoing.missing),
-    )
+    validaterevset(repo, revset.formatspec('%ln', outgoing.missing))
 
-    repo.ui.note(
-        _('asking remote to rebase %r::%r onto %r\n') %
-        (head.hex(), tail.hex(), onto)
-    )
+    cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
 
-    cg = changegroup.getlocalchangegroupraw(
-        repo,
-        'push',
-        outgoing,
-    )
-
-    return bundle2.bundlepart(
-        rebaseparttype,
-        mandatoryparams={
-            'onto': onto,
-            'newhead': repr(newhead),
-        }.items(),
-        advisoryparams={
-            'head': head.node(),
-            'tail': tail.node(),
-            'commonheads':
-                json.dumps([hex(n) for n in outgoing.commonheads]),
-        }.items(),
-        data = cg
-    )
+    # .upper() marks this as a mandatory part: server will abort if there's no
+    #  handler
+    return bundle2.bundlepart(rebaseparttype.upper(),
+                              mandatoryparams={'onto': onto,
+                                               'newhead': repr(newhead),
+                                              }.items(),
+                              data = cg)
 
 def _checkheads(orig, repo, remote, *args, **kwargs):
     onto = repo.ui.config(experimental, configonto)
@@ -143,7 +126,19 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
     if phase != phases.public:
         orig(pushop, nodes, phase)
 
-# TODO: verify that commit hooks fire appropriately
+@exchange.b2partsgenerator(commonheadsparttype)
+def commonheadspartgen(pushop, bundler):
+    bundler.newpart(commonheadsparttype,
+                    data=''.join(pushop.outgoing.commonheads))
+
+@bundle2.parthandler(commonheadsparttype)
+def commonheadshandler(op, inpart):
+    nodeid = inpart.read(20)
+    while len(nodeid) == 20:
+        op.records.add(commonheadsparttype, nodeid)
+        nodeid = inpart.read(20)
+    assert not nodeid # data should split evenly into blocks of 20 bytes
+
 @exchange.b2partsgenerator(rebaseparttype)
 def partgen(pushop, bundler):
     onto = pushop.ui.config(experimental, configonto)
@@ -156,37 +151,30 @@ def partgen(pushop, bundler):
         pushop.cgresult = 0
         return
     
-    rebasepart = getrebasepart(
-        pushop.repo,
-        pushop.remote,
-        pushop.outgoing,
-        onto,
-        pushop.newbranch
-    )
+    rebasepart = getrebasepart(pushop.repo,
+                               pushop.remote,
+                               pushop.outgoing,
+                               onto,
+                               pushop.newbranch)
 
     bundler.addpart(rebasepart)
 
     def handlereply(op):
-        # TODO: read result from server?
+        # server either succeeds or aborts; no code to read
         pushop.cgresult = 1
 
     return handlereply
 
 bundle2.capabilities[rebaseparttype] = ()
 
-# TODO: split this function into smaller pieces
-@bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
-def bundle2rebase(op, part):
-    '''unbundle a bundle2 containing a changegroup to rebase'''
+def _makebundlefile(part):
+    """constructs a temporary bundle file
 
-    params = part.params
-    op.gettransaction()
-
-    bundlefile = None
+    part.data should be an uncompressed v1 changegroup"""
+    
     fp = None
-
+    fd, bundlefile = tempfile.mkstemp()
     try: # guards bundlefile
-        fd, bundlefile = tempfile.mkstemp()
         try: # guards fp
             fp = os.fdopen(fd, 'wb')
             magic = 'HG10UN'
@@ -197,80 +185,138 @@ def bundle2rebase(op, part):
                 data = part.read(resource.getpagesize())
         finally:
             fp.close()
+    except:
+        try:
+            os.unlink(bundlefile)
+        except:
+            # we would rather see the original exception
+            pass
+        raise
 
-        bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
-        head, tail = getrevsetbounds(bundle, 'bundle()')
+    return bundlefile
 
-        if head.node() != params.get('head', head.node()):
-            raise util.Abort(
-                _('was told to expect head %r but received %r instead'),
-                (head.node(), hex(params['head'])),
-            );
+def _getrevs(bundle, onto):
+    'extracts and validates the revs to be imported'
+    validaterevset(bundle, 'bundle()')
+    revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
+    onto = bundle[onto.hex()]
 
-        if tail.node() != params.get('tail', tail.node()):
-            raise util.Abort(
-                _('was told to expect tail %r but received %r instead'),
-                (tail.node(), hex(params['tail'])),
-            );
+    if revs:
+        tail = revs[0]
 
-        onto = scmutil.revsingle(op.repo, params['onto'])
-        bundleonto = bundle[onto.hex()]
+        if onto.ancestor(tail).hex() != tail.p1().hex():
+            raise util.Abort(_('missing changesets between %r and %r') %
+                             (onto.ancestor(tail).hex(),
+                              tail.p1().hex()))
 
-        if not params['newhead']:
-            if not op.repo.revs('%r and head()', params['onto']):
-                raise util.Abort(_('rebase would produce a new head on server'))
-
-        if bundleonto.ancestor(tail).hex() != tail.p1().hex():
-            raise util.Abort(
-                _('changegroup not forked from an ancestor of %r') %
-                ((params['onto'], bundleonto.ancestor(tail).hex(), tail.p1().hex()),)
-            )
-
-        revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
-
-        #TODO: Is there a more efficient way to do this check?
+        # Is there a more efficient way to do this check?
         files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
         commonmanifest = tail.p1().manifest().intersectfiles(files)
-        ontomanifest = bundleonto.manifest().intersectfiles(files)
+        ontomanifest = onto.manifest().intersectfiles(files)
         conflicts = ontomanifest.diff(commonmanifest).keys()
         if conflicts:
             raise util.Abort(_('conflicting changes in %r') % conflicts)
 
+    return revs
+
+def _graft(repo, onto, rev):
+    '''duplicate changeset "rev" with parent "onto"'''
+    if rev.p2().node() != nullid:
+        raise util.Abort(_('cannot graft commit with a non-null p2'))
+    return context.memctx(repo,
+                          [onto.node(), nullid],
+                          rev.description(),
+                          rev.files(),
+                          (lambda repo, memctx, path:
+                              context.memfilectx(repo, path,rev[path].data())),
+                          rev.user(),
+                          rev.date(),
+                          rev.extra(),
+                         ).commit()
+
+def _buildobsolete(replacements, oldrepo, newrepo):
+    'adds obsolete markers in replacements if enabled in newrepo'
+    if obsolete.isenabled(newrepo, obsolete.createmarkersopt):
+        markers = [(oldrepo[oldrev], (newrepo[newrev],))
+                   for oldrev, newrev in replacements.items()
+                   if newrev != oldrev]
+
+        # TODO: make sure these weren't public originally
+        for old, new in markers:
+            old.mutable = lambda *args: True
+
+        obsolete.createmarkers(newrepo, markers)
+
+def _addpushbackchangegroup(repo, reply, outgoing):
+    '''adds changegroup part to reply containing revs from outgoing.missing'''
+    cgversions = set(reply.capabilities.get('b2x:changegroup'))
+    if not cgversions:
+        cgversions.add('01')
+    version = max(cgversions & set(changegroup.packermap.keys()))
+    
+    cg = changegroup.getlocalchangegroupraw(repo,
+                                            'rebase:reply',
+                                            outgoing,
+                                            version = version)
+
+    cgpart = reply.newpart('B2X:CHANGEGROUP', data = cg)
+    if version != '01':
+        cgpart.addparam('version', version)
+
+def _addpushbackobsolete(repo, reply, newrevs):
+    '''adds obsoletion markers to reply that are relevant to newrevs
+    (if enabled)'''
+    if (obsolete.isenabled(repo, obsolete.exchangeopt) and repo.obsstore):
+        try:
+            markers = repo.obsstore.relevantmarkers(newrevs)
+            exchange.buildobsmarkerspart(reply, markers)
+        except ValueError, exc:
+            repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
+
+def _addpushbackparts(op, replacements):
+    '''adds pushback to reply if supported by the client'''
+    if (op.records[commonheadsparttype]
+        and op.reply
+        and 'b2x:pushback' in op.reply.capabilities):
+        outgoing = discovery.outgoing(op.repo.changelog,
+                                      op.records[commonheadsparttype],
+                                      [new for old, new in replacements.items()
+                                       if old != new])
+
+        if outgoing.missing:
+            _addpushbackchangegroup(op.repo, op.reply, outgoing)
+            _addpushbackobsolete(op.repo, op.reply, replacements.values())
+
+@bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
+def bundle2rebase(op, part):
+    '''unbundle a bundle2 containing a changegroup to rebase'''
+
+    params = part.params
+    tr = op.gettransaction()
+    hookargs = dict(tr.hookargs)
+
+    bundlefile = None
+    onto = scmutil.revsingle(op.repo, params['onto'])
+    if not params['newhead']:
+        if not op.repo.revs('%r and head()', params['onto']):
+            raise util.Abort(_('rebase would produce a new head on server'))
+
+    try: # guards bundlefile
+        bundlefile = _makebundlefile(part)
+        bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+        revs = _getrevs(bundle, onto)
+
+        op.repo.hook("prechangegroup", **hookargs)
+
         replacements = {}
+        added = []
 
         for rev in revs:
-            newrev = context.memctx(
-                op.repo,
-                [onto.node(), nullid],
-                rev.description(),
-                rev.files(),
-                lambda repo, memctx, path: context.memfilectx(
-                    repo,
-                    path,
-                    rev[path].data(),
-                ),
-                rev.user(),
-                rev.date(),
-                rev.extra(),
-            ).commit()
-
+            newrev = _graft(op.repo, onto, rev)
             onto = op.repo[newrev]
             replacements[rev.node()] = onto.node()
-
-        if obsolete.isenabled(op.repo, obsolete.createmarkersopt):
-            markers = [
-                (bundle[oldrev], (op.repo[newrev],))
-                for oldrev, newrev in replacements.items()
-                if newrev != oldrev
-            ]
-
-            # TODO: make sure these weren't public originally
-            for old, new in markers:
-                old.mutable = lambda *args: True
-
-            obsolete.createmarkers(op.repo, markers)
-
-
+            added.append(onto.node())
+        _buildobsolete(replacements, bundle, op.repo)
     finally:
         try:
             if bundlefile:
@@ -279,42 +325,23 @@ def bundle2rebase(op, part):
             if e.errno != errno.ENOENT:
                 raise
 
-    if (params['commonheads']
-        and op.reply
-        and 'b2x:pushback' in op.reply.capabilities):
-        # TODO: investigate alternatives for determining which commits to send
-        #       (via @pyd: https://phabricator.fb.com/D1689551#inline-12737312 )
-        outgoing = discovery.outgoing(
-            op.repo.changelog,
-            [bin(n) for n in json.loads(params['commonheads'])],
-            [new for old, new in replacements.items() if old != new],
-        )
+    p = lambda: tr.writepending() and op.repo.root or ""
+    op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
 
-        if outgoing.missing:
-            cg = changegroup.getlocalchangegroupraw(
-                op.repo,
-                'rebase:reply',
-                outgoing,
-            )
+    def runhooks():
+        op.repo.hook("changegroup", **hookargs)
+        for n in added:
+            args = hookargs.copy()
+            args['node'] = hex(n)
+            op.repo.hook("incoming", **args)
 
-            # TODO: fix version handshake; use newest mutually supported version
-            cgpart = op.reply.newpart('b2x:changegroup', data = cg)
-            cgpart.addparam('version', '01')
+    tr.addpostclose('serverrebase-cg-hooks',
+                    lambda tr: op.repo._afterlock(runhooks))
 
-            if (obsolete.isenabled(op.repo, obsolete.exchangeopt)
-                and op.repo.obsstore):
-                try:
-                    exchange.buildobsmarkerspart(
-                        op.reply,
-                        op.repo.obsstore.relevantmarkers(replacements.values())
-                    )
-                except ValueError, exc:
-                    op.repo.ui.status(_("can't send obsolete markers: %s") %
-                                      exc.message)
+    _addpushbackparts(op, replacements)
 
     for k in replacements.keys():
         replacements[hex(k)] = hex(replacements[k])
-
     op.records.add(rebaseparttype, replacements)
 
     return 1
