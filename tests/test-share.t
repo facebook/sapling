@@ -129,9 +129,9 @@ check that a change does not propagate
   $ cd ..
 
 
-test sharing bookmarks (manually add bookmarks.shared file for now)
+test sharing bookmarks
 
-  $ hg share repo1 repo3 && touch repo3/.hg/bookmarks.shared
+  $ hg share -B repo1 repo3
   updating working directory
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo1
@@ -212,7 +212,7 @@ test pushing bookmarks works
 
 test behavior when sharing a shared repo
 
-  $ hg share repo3 repo5 && touch repo5/.hg/bookmarks.shared
+  $ hg share -B repo3 repo5
   updating working directory
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo5

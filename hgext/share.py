@@ -15,14 +15,15 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 @command('share',
-    [('U', 'noupdate', None, _('do not create a working copy'))],
-    _('[-U] SOURCE [DEST]'),
+    [('U', 'noupdate', None, _('do not create a working copy')),
+     ('B', 'bookmarks', None, _('also share bookmarks'))],
+    _('[-U] [-B] SOURCE [DEST]'),
     norepo=True)
-def share(ui, source, dest=None, noupdate=False):
+def share(ui, source, dest=None, noupdate=False, bookmarks=False):
     """create a new shared repository
 
     Initialize a new repository and working directory that shares its
-    history with another repository.
+    history (and optionally bookmarks) with another repository.
 
     .. note::
 
@@ -36,7 +37,7 @@ def share(ui, source, dest=None, noupdate=False):
        the broken clone to reset it to a changeset that still exists.
     """
 
-    return hg.share(ui, source, dest, not noupdate)
+    return hg.share(ui, source, dest, not noupdate, bookmarks)
 
 @command('unshare', [], '')
 def unshare(ui, repo):

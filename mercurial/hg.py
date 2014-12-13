@@ -158,7 +158,7 @@ def defaultdest(source):
         return ''
     return os.path.basename(os.path.normpath(path))
 
-def share(ui, source, dest=None, update=True):
+def share(ui, source, dest=None, update=True, bookmarks=True):
     '''create a shared repository'''
 
     if not islocal(source):
@@ -224,6 +224,9 @@ def share(ui, source, dest=None, update=True):
             except error.RepoLookupError:
                 continue
         _update(r, uprev)
+
+    if bookmarks:
+        r.opener('bookmarks.shared', 'w').close()
 
 def copystore(ui, srcrepo, destpath):
     '''copy files from store of srcrepo in destpath
