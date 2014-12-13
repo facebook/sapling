@@ -261,6 +261,8 @@ def push(repo, dest, force, revs):
 
                 # Don't trust the pre-rebase repo and context.
                 repo = getlocalpeer(ui, {}, meta.path)
+                meta = repo.svnmeta(svn.uuid, svn.subdir)
+                hashes = meta.revmap.hashes()
                 tip_ctx = repo[tip_ctx.node()]
                 for c in tip_ctx.descendants():
                     rebasesrc = c.extra().get('rebase_source')
@@ -289,10 +291,8 @@ def push(repo, dest, force, revs):
 
             # 5. Pull the latest changesets from subversion, which will
             # include the one we just committed (and possibly others).
-            r = pull(repo, dest, force=force)
+            r = pull(repo, dest, force=force, meta=meta)
             assert not r or r == 0
-            meta = repo.svnmeta(svn.uuid, svn.subdir)
-            hashes = meta.revmap.hashes()
 
             # 6. Move our tip to the latest pulled tip
             for c in tip_ctx.descendants():
@@ -379,7 +379,7 @@ def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
     else:
         return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks)
 
-def pull(repo, source, heads=[], force=False):
+def pull(repo, source, heads=[], force=False, meta=None):
     """pull new revisions from Subversion"""
     assert source.capable('subversion')
     svn_url = source.svnurl
@@ -394,7 +394,8 @@ def pull(repo, source, heads=[], force=False):
             repo.ui.note('fetching stupidly...\n')
 
         svn = source.svn
-        meta = repo.svnmeta(svn.uuid, svn.subdir)
+        if meta is None:
+            meta = repo.svnmeta(svn.uuid, svn.subdir)
 
         stopat_rev = util.parse_revnum(svn, checkout)
 
