@@ -108,21 +108,23 @@
 Local directory rename with conflicting file added in remote source directory
 and untracked in local target directory.
 
-BROKEN: the uncommitted file is overwritten; we should abort
-
   $ hg co -qC 1
   $ echo target > b/c
   $ hg merge 2
+  b/c: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ cat b/c
+  target
+but it should succeed if the content matches
+  $ hg cat -r 2 a/c > b/c
+  $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg st -A
+  $ hg st -C
   A b/c
     a/c
   ? a/d
-  C b/a
-  C b/b
-  $ cat b/c
-  baz
 
 Local directory rename with conflicting file added in remote source directory
 and committed in local target directory.

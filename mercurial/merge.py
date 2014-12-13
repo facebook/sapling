@@ -297,11 +297,13 @@ class mergestate(object):
             self.mark(dfile, 'r')
         return r
 
-def _checkunknownfile(repo, wctx, mctx, f):
+def _checkunknownfile(repo, wctx, mctx, f, f2=None):
+    if f2 is None:
+        f2 = f
     return (os.path.isfile(repo.wjoin(f))
         and repo.wopener.audit.check(f)
         and repo.dirstate.normalize(f) not in repo.dirstate
-        and mctx[f].cmp(wctx[f]))
+        and mctx[f2].cmp(wctx[f]))
 
 def _forgetremoved(wctx, mctx, branchmerge):
     """
@@ -516,6 +518,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, p2, f):
+                    aborts.append(f)
+            elif m == 'dg':
+                if _checkunknownfile(repo, wctx, p2, f, args[0]):
                     aborts.append(f)
 
     for f in sorted(aborts):
