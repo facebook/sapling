@@ -194,6 +194,7 @@ class RevMap(dict):
     def __init__(self, meta):
         dict.__init__(self)
         self.meta = meta
+        self._hashes = None
 
         if os.path.isfile(self.meta.revmap_file):
             self._load()
@@ -201,7 +202,9 @@ class RevMap(dict):
             self._write()
 
     def hashes(self):
-        return dict((v, k) for (k, v) in self.iteritems())
+        if self._hashes is None:
+            self._hashes = dict((v, k) for (k, v) in self.iteritems())
+        return self._hashes
 
     def branchedits(self, branch, rev):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
@@ -256,6 +259,8 @@ class RevMap(dict):
         if revnum < self.meta.firstpulled or not self.meta.firstpulled:
             self.meta.firstpulled = revnum
         dict.__setitem__(self, (revnum, branch), ha)
+        if self._hashes is not None:
+            self._hashes[ha] = (revnum, branch)
 
 
 class FileMap(object):
