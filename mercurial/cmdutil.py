@@ -2182,7 +2182,7 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
         try:
             submatch = matchmod.narrowmatcher(subpath, matcher)
 
-            if not sub.cat(ui, submatch, os.path.join(prefix, sub._path),
+            if not sub.cat(submatch, os.path.join(prefix, sub._path),
                            **opts):
                 err = 0
         except error.RepoLookupError:

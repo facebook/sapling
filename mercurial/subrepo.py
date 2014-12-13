@@ -442,7 +442,7 @@ class abstractsubrepo(object):
         self.ui.warn("%s: %s" % (prefix, _("addremove is not supported")))
         return 1
 
-    def cat(self, ui, match, prefix, **opts):
+    def cat(self, match, prefix, **opts):
         return 1
 
     def status(self, rev2, **opts):
@@ -636,10 +636,10 @@ class hgsubrepo(abstractsubrepo):
                                  dry_run, similarity)
 
     @annotatesubrepoerror
-    def cat(self, ui, match, prefix, **opts):
+    def cat(self, match, prefix, **opts):
         rev = self._state[1]
         ctx = self._repo[rev]
-        return cmdutil.cat(ui, self._repo, ctx, match, prefix, **opts)
+        return cmdutil.cat(self.ui, self._repo, ctx, match, prefix, **opts)
 
     @annotatesubrepoerror
     def status(self, rev2, **opts):
