@@ -374,7 +374,7 @@ def newcommitphase(ui, ctx):
 class abstractsubrepo(object):
 
     def __init__(self, ui):
-        self._ui = ui
+        self.ui = ui
 
     def storeclean(self, path):
         """
@@ -439,7 +439,7 @@ class abstractsubrepo(object):
         return []
 
     def addremove(self, matcher, prefix, opts, dry_run, similarity):
-        self._ui.warn("%s: %s" % (prefix, _("addremove is not supported")))
+        self.ui.warn("%s: %s" % (prefix, _("addremove is not supported")))
         return 1
 
     def cat(self, ui, match, prefix, **opts):
@@ -909,7 +909,7 @@ class svnsubrepo(abstractsubrepo):
     def _svncommand(self, commands, filename='', failok=False):
         cmd = [self._exe]
         extrakw = {}
-        if not self._ui.interactive():
+        if not self.ui.interactive():
             # Making stdin be a pipe should prevent svn from behaving
             # interactively even if we can't pass --non-interactive.
             extrakw['stdin'] = subprocess.PIPE
@@ -939,7 +939,7 @@ class svnsubrepo(abstractsubrepo):
             if p.returncode:
                 raise util.Abort(stderr or 'exited with code %d' % p.returncode)
             if stderr:
-                self._ui.warn(stderr + '\n')
+                self.ui.warn(stderr + '\n')
         return stdout, stderr
 
     @propertycache
@@ -1031,7 +1031,7 @@ class svnsubrepo(abstractsubrepo):
             # seems a better approach.
             raise util.Abort(_('cannot commit missing svn entries'))
         commitinfo, err = self._svncommand(['commit', '-m', text])
-        self._ui.status(commitinfo)
+        self.ui.status(commitinfo)
         newrev = re.search('Committed revision ([0-9]+).', commitinfo)
         if not newrev:
             if not commitinfo.strip():
@@ -1042,16 +1042,16 @@ class svnsubrepo(abstractsubrepo):
                 raise util.Abort(_('failed to commit svn changes'))
             raise util.Abort(commitinfo.splitlines()[-1])
         newrev = newrev.groups()[0]
-        self._ui.status(self._svncommand(['update', '-r', newrev])[0])
+        self.ui.status(self._svncommand(['update', '-r', newrev])[0])
         return newrev
 
     @annotatesubrepoerror
     def remove(self):
         if self.dirty():
-            self._ui.warn(_('not removing repo %s because '
-                            'it has changes.\n') % self._path)
+            self.ui.warn(_('not removing repo %s because '
+                           'it has changes.\n') % self._path)
             return
-        self._ui.note(_('removing subrepo %s\n') % self._path)
+        self.ui.note(_('removing subrepo %s\n') % self._path)
 
         def onerror(function, path, excinfo):
             if function is not os.remove:
@@ -1081,7 +1081,7 @@ class svnsubrepo(abstractsubrepo):
         # update to a directory which has since been deleted and recreated.
         args.append('%s@%s' % (state[0], state[1]))
         status, err = self._svncommand(args, failok=True)
-        _sanitize(self._ui, self._ctx._repo.wjoin(self._path), '.svn')
+        _sanitize(self.ui, self._ctx._repo.wjoin(self._path), '.svn')
         if not re.search('Checked out revision [0-9]+.', status):
             if ('is already a working copy for a different URL' in err
                 and (self._wcchanged()[:2] == (False, False))):
@@ -1090,7 +1090,7 @@ class svnsubrepo(abstractsubrepo):
                 self.get(state, overwrite=False)
                 return
             raise util.Abort((status or err).splitlines()[-1])
-        self._ui.status(status)
+        self.ui.status(status)
 
     @annotatesubrepoerror
     def merge(self, state):
@@ -1099,7 +1099,7 @@ class svnsubrepo(abstractsubrepo):
         wcrev = self._wcrev()
         if new != wcrev:
             dirty = old == wcrev or self._wcchanged()[0]
-            if _updateprompt(self._ui, self, dirty, wcrev, new):
+            if _updateprompt(self.ui, self, dirty, wcrev, new):
                 self.get(state, False)
 
     def push(self, opts):
@@ -1147,11 +1147,11 @@ class gitsubrepo(abstractsubrepo):
             out, err = self._gitnodir(['--version'])
         versionstatus = self._checkversion(out)
         if versionstatus == 'unknown':
-            self._ui.warn(_('cannot retrieve git version\n'))
+            self.ui.warn(_('cannot retrieve git version\n'))
         elif versionstatus == 'abort':
             raise util.Abort(_('git subrepo requires at least 1.6.0 or later'))
         elif versionstatus == 'warning':
-            self._ui.warn(_('git subrepo requires at least 1.6.0 or later\n'))
+            self.ui.warn(_('git subrepo requires at least 1.6.0 or later\n'))
 
     @staticmethod
     def _gitversion(out):
@@ -1214,11 +1214,11 @@ class gitsubrepo(abstractsubrepo):
         The methods tries to call the git command. versions prior to 1.6.0
         are not supported and very probably fail.
         """
-        self._ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
+        self.ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
         # unless ui.quiet is set, print git's stderr,
         # which is mostly progress and useful info
         errpipe = None
-        if self._ui.quiet:
+        if self.ui.quiet:
             errpipe = open(os.devnull, 'w')
         p = subprocess.Popen([self._gitexecutable] + commands, bufsize=-1,
                              cwd=cwd, env=env, close_fds=util.closefds,
@@ -1323,12 +1323,12 @@ class gitsubrepo(abstractsubrepo):
     def _fetch(self, source, revision):
         if self._gitmissing():
             source = self._abssource(source)
-            self._ui.status(_('cloning subrepo %s from %s\n') %
+            self.ui.status(_('cloning subrepo %s from %s\n') %
                             (self._relpath, source))
             self._gitnodir(['clone', source, self._abspath])
         if self._githavelocally(revision):
             return
-        self._ui.status(_('pulling subrepo %s from %s\n') %
+        self.ui.status(_('pulling subrepo %s from %s\n') %
                         (self._relpath, self._gitremote('origin')))
         # try only origin: the originally cloned repo
         self._gitcommand(['fetch'])
@@ -1385,13 +1385,13 @@ class gitsubrepo(abstractsubrepo):
                 self._gitcommand(['reset', 'HEAD'])
                 cmd.append('-f')
             self._gitcommand(cmd + args)
-            _sanitize(self._ui, self._abspath, '.git')
+            _sanitize(self.ui, self._abspath, '.git')
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
-            self._ui.warn(_('checking out detached HEAD in subrepo %s\n') %
+            self.ui.warn(_('checking out detached HEAD in subrepo %s\n') %
                           self._relpath)
-            self._ui.warn(_('check out a git branch if you intend '
+            self.ui.warn(_('check out a git branch if you intend '
                             'to make changes\n'))
             checkout(['-q', revision])
 
@@ -1434,7 +1434,7 @@ class gitsubrepo(abstractsubrepo):
             if tracking[remote] != self._gitcurrentbranch():
                 checkout([tracking[remote]])
             self._gitcommand(['merge', '--ff', remote])
-            _sanitize(self._ui, self._abspath, '.git')
+            _sanitize(self.ui, self._abspath, '.git')
         else:
             # a real merge would be required, just checkout the revision
             rawcheckout()
@@ -1470,12 +1470,12 @@ class gitsubrepo(abstractsubrepo):
                 self.get(state) # fast forward merge
             elif base != self._state[1]:
                 self._gitcommand(['merge', '--no-commit', revision])
-            _sanitize(self._ui, self._abspath, '.git')
+            _sanitize(self.ui, self._abspath, '.git')
 
         if self.dirty():
             if self._gitstate() != revision:
                 dirty = self._gitstate() == self._state[1] or code != 0
-                if _updateprompt(self._ui, self, dirty,
+                if _updateprompt(self.ui, self, dirty,
                                  self._state[1][:7], revision[:7]):
                     mergefunc()
         else:
@@ -1508,16 +1508,16 @@ class gitsubrepo(abstractsubrepo):
         if current:
             # determine if the current branch is even useful
             if not self._gitisancestor(self._state[1], current):
-                self._ui.warn(_('unrelated git branch checked out '
+                self.ui.warn(_('unrelated git branch checked out '
                                 'in subrepo %s\n') % self._relpath)
                 return False
-            self._ui.status(_('pushing branch %s of subrepo %s\n') %
-                            (current.split('/', 2)[2], self._relpath))
+            self.ui.status(_('pushing branch %s of subrepo %s\n') %
+                           (current.split('/', 2)[2], self._relpath))
             ret = self._gitdir(cmd + ['origin', current])
             return ret[1] == 0
         else:
-            self._ui.warn(_('no branch checked out in subrepo %s\n'
-                            'cannot push revision %s\n') %
+            self.ui.warn(_('no branch checked out in subrepo %s\n'
+                           'cannot push revision %s\n') %
                           (self._relpath, self._state[1]))
             return False
 
@@ -1526,12 +1526,12 @@ class gitsubrepo(abstractsubrepo):
         if self._gitmissing():
             return
         if self.dirty():
-            self._ui.warn(_('not removing repo %s because '
-                            'it has changes.\n') % self._relpath)
+            self.ui.warn(_('not removing repo %s because '
+                           'it has changes.\n') % self._relpath)
             return
         # we can't fully delete the repository as it may contain
         # local-only history
-        self._ui.note(_('removing subrepo %s\n') % self._relpath)
+        self.ui.note(_('removing subrepo %s\n') % self._relpath)
         self._gitcommand(['config', 'core.bare', 'true'])
         for f in os.listdir(self._abspath):
             if f == '.git':
