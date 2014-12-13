@@ -901,7 +901,6 @@ class svnsubrepo(abstractsubrepo):
         self._path = path
         self._state = state
         self._ctx = ctx
-        self._ui = ctx._repo.ui
         self._exe = util.findexe('svn')
         if not self._exe:
             raise util.Abort(_("'svn' executable not found for subrepo '%s'")
@@ -1135,7 +1134,6 @@ class gitsubrepo(abstractsubrepo):
         self._relpath = os.path.join(reporelpath(ctx._repo), path)
         self._abspath = ctx._repo.wjoin(path)
         self._subparent = ctx._repo
-        self._ui = ctx._repo.ui
         self._ensuregit()
 
     def _ensuregit(self):
