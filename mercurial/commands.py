@@ -2173,13 +2173,24 @@ def debugindex(ui, repo, file_=None, **opts):
     else:
         basehdr = '  base'
 
+    if ui.debugflag:
+        shortfn = hex
+    else:
+        shortfn = short
+
+    # There might not be anything in r, so have a sane default
+    idlen = 12
+    for i in r:
+        idlen = len(shortfn(r.node(i)))
+        break
+
     if format == 0:
         ui.write("   rev    offset  length " + basehdr + " linkrev"
-                 " nodeid       p1           p2\n")
+                 " %s %s p2\n" % ("nodeid".ljust(idlen), "p1".ljust(idlen)))
     elif format == 1:
         ui.write("   rev flag   offset   length"
                  "     size " + basehdr + "   link     p1     p2"
-                 "       nodeid\n")
+                 " %s\n" % "nodeid".rjust(idlen))
 
     for i in r:
         node = r.node(i)
@@ -2194,12 +2205,12 @@ def debugindex(ui, repo, file_=None, **opts):
                 pp = [nullid, nullid]
             ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
                     i, r.start(i), r.length(i), base, r.linkrev(i),
-                    short(node), short(pp[0]), short(pp[1])))
+                    shortfn(node), shortfn(pp[0]), shortfn(pp[1])))
         elif format == 1:
             pr = r.parentrevs(i)
             ui.write("% 6d %04x % 8d % 8d % 8d % 6d % 6d % 6d % 6d %s\n" % (
                     i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
-                    base, r.linkrev(i), pr[0], pr[1], short(node)))
+                    base, r.linkrev(i), pr[0], pr[1], shortfn(node)))
 
 @command('debugindexdot', [], _('FILE'), optionalrepo=True)
 def debugindexdot(ui, repo, file_):

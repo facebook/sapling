@@ -24,6 +24,21 @@
   full revision size (min/max/avg)     : 44 / 44 / 44
   delta size (min/max/avg)             : 0 / 0 / 0
 
+Test debugindex, with and without the --debug flag
+  $ hg debugindex a
+     rev    offset  length   .... linkrev nodeid       p1           p2 (re)
+       0         0       3   ....       0 b789fdd96dc2 000000000000 000000000000 (re)
+  $ hg --debug debugindex a
+     rev    offset  length   .... linkrev nodeid                                   p1                                       p2 (re)
+       0         0       3   ....       0 b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 (re)
+  $ hg debugindex -f 1 a
+     rev flag   offset   length     size   ....   link     p1     p2       nodeid (re)
+       0 0000        0        3        2   ....      0     -1     -1 b789fdd96dc2 (re)
+  $ hg --debug debugindex -f 1 a
+     rev flag   offset   length     size   ....   link     p1     p2                                   nodeid (re)
+       0 0000        0        3        2   ....      0     -1     -1 b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 (re)
+
+
 Test max chain len
   $ cat >> $HGRCPATH << EOF
   > [format]
