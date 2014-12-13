@@ -6,7 +6,9 @@
 '''share a common history between several working directories'''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, hg, util
+from mercurial import cmdutil, hg, util, extensions, bookmarks
+from mercurial.hg import repository, parseurl
+import errno
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -67,3 +69,61 @@ def unshare(ui, repo):
 
     # update store, spath, sopener and sjoin of repo
     repo.unfiltered().__init__(repo.baseui, repo.root)
+
+def extsetup(ui):
+    extensions.wrapfunction(bookmarks.bmstore, 'getbkfile', getbkfile)
+    extensions.wrapfunction(bookmarks.bmstore, 'recordchange', recordchange)
+    extensions.wrapfunction(bookmarks.bmstore, 'write', write)
+
+def _hassharedbookmarks(repo):
+    """Returns whether this repo has shared bookmarks"""
+    try:
+        repo.vfs.read('bookmarks.shared')
+        return True
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        return False
+
+def _getsrcrepo(repo):
+    """
+    Returns the source repository object for a given shared repository.
+    If repo is not a shared repository, return None.
+    """
+    srcrepo = None
+    try:
+        # strip because some tools write with newline after
+        sharedpath = repo.vfs.read('sharedpath').strip()
+        # the sharedpath always ends in the .hg; we want the path to the repo
+        source = sharedpath.rsplit('/.hg', 1)[0]
+        srcurl, branches = parseurl(source)
+        srcrepo = repository(repo.ui, srcurl)
+    except IOError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+    return srcrepo
+
+def getbkfile(orig, self, repo):
+    if _hassharedbookmarks(repo):
+        srcrepo = _getsrcrepo(repo)
+        if srcrepo is not None:
+            repo = srcrepo
+    return orig(self, repo)
+
+def recordchange(orig, self, tr):
+    # Continue with write to local bookmarks file as usual
+    orig(self, tr)
+
+    if _hassharedbookmarks(self._repo):
+        srcrepo = _getsrcrepo(self._repo)
+        if srcrepo is not None:
+            category = 'share-bookmarks'
+            tr.addpostclose(category, lambda tr: self._writerepo(srcrepo))
+
+def write(orig, self):
+    # First write local bookmarks file in case we ever unshare
+    orig(self)
+    if _hassharedbookmarks(self._repo):
+        srcrepo = _getsrcrepo(self._repo)
+        if srcrepo is not None:
+            self._writerepo(srcrepo)
