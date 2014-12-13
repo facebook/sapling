@@ -890,16 +890,16 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
         for subpath in sorted(ctx.substate):
             sub = ctx.sub(subpath)
             submatch = match_.narrowmatcher(subpath, matchfn)
-            sub.archive(repo.ui, archiver, prefix, submatch)
+            sub.archive(archiver, prefix, submatch)
 
     archiver.done()
 
-def hgsubrepoarchive(orig, repo, ui, archiver, prefix, match=None):
+def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
     repo._get(repo._state + ('hg',))
     rev = repo._state[1]
     ctx = repo._repo[rev]
 
-    lfcommands.cachelfiles(ui, repo._repo, ctx.node())
+    lfcommands.cachelfiles(repo.ui, repo._repo, ctx.node())
 
     def write(name, mode, islink, getdata):
         # At this point, the standin has been replaced with the largefile name,
@@ -937,8 +937,7 @@ def hgsubrepoarchive(orig, repo, ui, archiver, prefix, match=None):
     for subpath in sorted(ctx.substate):
         sub = ctx.sub(subpath)
         submatch = match_.narrowmatcher(subpath, match)
-        sub.archive(ui, archiver, os.path.join(prefix, repo._path) + '/',
-                    submatch)
+        sub.archive(archiver, os.path.join(prefix, repo._path) + '/', submatch)
 
 # If a largefile is modified, the change is not reflected in its
 # standin until a commit. cmdutil.bailifchanged() raises an exception

@@ -469,24 +469,24 @@ class abstractsubrepo(object):
         """return file flags"""
         return ''
 
-    def archive(self, ui, archiver, prefix, match=None):
+    def archive(self, archiver, prefix, match=None):
         if match is not None:
             files = [f for f in self.files() if match(f)]
         else:
             files = self.files()
         total = len(files)
         relpath = subrelpath(self)
-        ui.progress(_('archiving (%s)') % relpath, 0,
-                    unit=_('files'), total=total)
+        self.ui.progress(_('archiving (%s)') % relpath, 0,
+                         unit=_('files'), total=total)
         for i, name in enumerate(files):
             flags = self.fileflags(name)
             mode = 'x' in flags and 0755 or 0644
             symlink = 'l' in flags
             archiver.addfile(os.path.join(prefix, self._path, name),
                              mode, symlink, self.filedata(name))
-            ui.progress(_('archiving (%s)') % relpath, i + 1,
-                        unit=_('files'), total=total)
-        ui.progress(_('archiving (%s)') % relpath, None)
+            self.ui.progress(_('archiving (%s)') % relpath, i + 1,
+                             unit=_('files'), total=total)
+        self.ui.progress(_('archiving (%s)') % relpath, None)
         return total
 
     def walk(self, match):
@@ -670,16 +670,16 @@ class hgsubrepo(abstractsubrepo):
                           % (inst, subrelpath(self)))
 
     @annotatesubrepoerror
-    def archive(self, ui, archiver, prefix, match=None):
+    def archive(self, archiver, prefix, match=None):
         self._get(self._state + ('hg',))
-        total = abstractsubrepo.archive(self, ui, archiver, prefix, match)
+        total = abstractsubrepo.archive(self, archiver, prefix, match)
         rev = self._state[1]
         ctx = self._repo[rev]
         for subpath in ctx.substate:
             s = subrepo(ctx, subpath)
             submatch = matchmod.narrowmatcher(subpath, match)
             total += s.archive(
-                ui, archiver, os.path.join(prefix, self._path), submatch)
+                archiver, os.path.join(prefix, self._path), submatch)
         return total
 
     @annotatesubrepoerror
@@ -1543,7 +1543,7 @@ class gitsubrepo(abstractsubrepo):
             else:
                 os.remove(path)
 
-    def archive(self, ui, archiver, prefix, match=None):
+    def archive(self, archiver, prefix, match=None):
         total = 0
         source, revision = self._state
         if not revision:
@@ -1556,7 +1556,7 @@ class gitsubrepo(abstractsubrepo):
         tarstream = self._gitcommand(['archive', revision], stream=True)
         tar = tarfile.open(fileobj=tarstream, mode='r|')
         relpath = subrelpath(self)
-        ui.progress(_('archiving (%s)') % relpath, 0, unit=_('files'))
+        self.ui.progress(_('archiving (%s)') % relpath, 0, unit=_('files'))
         for i, info in enumerate(tar):
             if info.isdir():
                 continue
@@ -1569,9 +1569,9 @@ class gitsubrepo(abstractsubrepo):
             archiver.addfile(os.path.join(prefix, self._path, info.name),
                              info.mode, info.issym(), data)
             total += 1
-            ui.progress(_('archiving (%s)') % relpath, i + 1,
-                        unit=_('files'))
-        ui.progress(_('archiving (%s)') % relpath, None)
+            self.ui.progress(_('archiving (%s)') % relpath, i + 1,
+                             unit=_('files'))
+        self.ui.progress(_('archiving (%s)') % relpath, None)
         return total
 
 
