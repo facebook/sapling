@@ -527,8 +527,8 @@ class hgsubrepo(abstractsubrepo):
         for s, k in [('ui', 'commitsubrepos')]:
             v = r.ui.config(s, k)
             if v:
-                self._repo.ui.setconfig(s, k, v, 'subrepo')
-        self._repo.ui.setconfig('ui', '_usedassubrepo', 'True', 'subrepo')
+                self.ui.setconfig(s, k, v, 'subrepo')
+        self.ui.setconfig('ui', '_usedassubrepo', 'True', 'subrepo')
         self._initrepo(r, state[0], create)
 
     def storeclean(self, path):
@@ -606,7 +606,7 @@ class hgsubrepo(abstractsubrepo):
             def addpathconfig(key, value):
                 if value:
                     lines.append('%s = %s\n' % (key, value))
-                    self._repo.ui.setconfig('paths', key, value, 'subrepo')
+                    self.ui.setconfig('paths', key, value, 'subrepo')
 
             defpath = _abssource(self._repo, abort=False)
             defpushpath = _abssource(self._repo, True, abort=False)
@@ -649,8 +649,8 @@ class hgsubrepo(abstractsubrepo):
             ctx2 = self._repo[rev2]
             return self._repo.status(ctx1, ctx2, **opts)
         except error.RepoLookupError, inst:
-            self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
-                               % (inst, subrelpath(self)))
+            self.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
+                         % (inst, subrelpath(self)))
             return scmutil.status([], [], [], [], [], [], [])
 
     @annotatesubrepoerror
@@ -666,8 +666,8 @@ class hgsubrepo(abstractsubrepo):
                                    prefix=posixpath.join(prefix, self._path),
                                    listsubrepos=True, **opts)
         except error.RepoLookupError, inst:
-            self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
-                               % (inst, subrelpath(self)))
+            self.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
+                          % (inst, subrelpath(self)))
 
     @annotatesubrepoerror
     def archive(self, ui, archiver, prefix, match=None):
@@ -705,7 +705,7 @@ class hgsubrepo(abstractsubrepo):
         # updated
         if not self.dirty(True):
             return self._repo['.'].hex()
-        self._repo.ui.debug("committing subrepo %s\n" % subrelpath(self))
+        self.ui.debug("committing subrepo %s\n" % subrelpath(self))
         n = self._repo.commit(text, user, date)
         if not n:
             return self._repo['.'].hex() # different version checked out
@@ -719,7 +719,7 @@ class hgsubrepo(abstractsubrepo):
     def remove(self):
         # we can't fully delete the repository as it may contain
         # local-only history
-        self._repo.ui.note(_('removing subrepo %s\n') % subrelpath(self))
+        self.ui.note(_('removing subrepo %s\n') % subrelpath(self))
         hg.clean(self._repo, node.nullid, False)
 
     def _get(self, state):
@@ -730,8 +730,8 @@ class hgsubrepo(abstractsubrepo):
         srcurl = _abssource(self._repo)
         other = hg.peer(self._repo, {}, srcurl)
         if len(self._repo) == 0:
-            self._repo.ui.status(_('cloning subrepo %s from %s\n')
-                                 % (subrelpath(self), srcurl))
+            self.ui.status(_('cloning subrepo %s from %s\n')
+                           % (subrelpath(self), srcurl))
             parentrepo = self._repo._subparent
             shutil.rmtree(self._repo.path)
             other, cloned = hg.clone(self._repo._subparent.baseui, {},
@@ -741,8 +741,8 @@ class hgsubrepo(abstractsubrepo):
             self._initrepo(parentrepo, source, create=True)
             self._cachestorehash(srcurl)
         else:
-            self._repo.ui.status(_('pulling subrepo %s from %s\n')
-                                 % (subrelpath(self), srcurl))
+            self.ui.status(_('pulling subrepo %s from %s\n')
+                           % (subrelpath(self), srcurl))
             cleansub = self.storeclean(srcurl)
             exchange.pull(self._repo, other)
             if cleansub:
@@ -775,18 +775,18 @@ class hgsubrepo(abstractsubrepo):
 
         def mergefunc():
             if anc == cur and dst.branch() == cur.branch():
-                self._repo.ui.debug("updating subrepo %s\n" % subrelpath(self))
+                self.ui.debug("updating subrepo %s\n" % subrelpath(self))
                 hg.update(self._repo, state[1])
             elif anc == dst:
-                self._repo.ui.debug("skipping subrepo %s\n" % subrelpath(self))
+                self.ui.debug("skipping subrepo %s\n" % subrelpath(self))
             else:
-                self._repo.ui.debug("merging subrepo %s\n" % subrelpath(self))
+                self.ui.debug("merging subrepo %s\n" % subrelpath(self))
                 hg.merge(self._repo, state[1], remind=False)
 
         wctx = self._repo[None]
         if self.dirty():
             if anc != dst:
-                if _updateprompt(self._repo.ui, self, wctx.dirty(), cur, dst):
+                if _updateprompt(self.ui, self, wctx.dirty(), cur, dst):
                     mergefunc()
             else:
                 mergefunc()
@@ -809,11 +809,11 @@ class hgsubrepo(abstractsubrepo):
         dsturl = _abssource(self._repo, True)
         if not force:
             if self.storeclean(dsturl):
-                self._repo.ui.status(
+                self.ui.status(
                     _('no changes made to subrepo %s since last push to %s\n')
                     % (subrelpath(self), dsturl))
                 return None
-        self._repo.ui.status(_('pushing subrepo %s to %s\n') %
+        self.ui.status(_('pushing subrepo %s to %s\n') %
             (subrelpath(self), dsturl))
         other = hg.peer(self._repo, {'ssh': ssh}, dsturl)
         res = exchange.push(self._repo, other, force, newbranch=newbranch)
