@@ -2028,7 +2028,7 @@ def forget(ui, repo, match, prefix, explicitonly):
         sub = wctx.sub(subpath)
         try:
             submatch = matchmod.narrowmatcher(subpath, match)
-            subbad, subforgot = sub.forget(ui, submatch, prefix)
+            subbad, subforgot = sub.forget(submatch, prefix)
             bad.extend([subpath + '/' + f for f in subbad])
             forgot.extend([subpath + '/' + f for f in subforgot])
         except error.LookupError:
