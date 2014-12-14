@@ -1,4 +1,5 @@
 from mercurial import util
+import weakref
 
 def tolist(val):
     """
@@ -30,8 +31,9 @@ class namespaces(object):
 
     _names_version = 0
 
-    def __init__(self):
+    def __init__(self, repo):
         self._names = util.sortdict()
+        self._repo = weakref.ref(repo)
 
     def addnamespace(self, namespace, namemap, order=None):
         """
