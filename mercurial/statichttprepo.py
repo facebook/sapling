@@ -70,7 +70,7 @@ def build_opener(ui, authinfo):
         def __init__(self, base):
             self.base = base
 
-        def __call__(self, path, mode="r", atomictemp=None):
+        def __call__(self, path, mode='r', *args, **kw):
             if mode not in ('r', 'rb'):
                 raise IOError('Permission denied')
             f = "/".join((self.base, urllib.quote(path)))
