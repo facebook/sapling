@@ -2801,7 +2801,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             if targetsubs:
                 # Revert the subrepos on the revert list
                 for sub in targetsubs:
-                    ctx.sub(sub).revert(ui, ctx.substate[sub], *pats, **opts)
+                    ctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
     finally:
         wlock.release()
 

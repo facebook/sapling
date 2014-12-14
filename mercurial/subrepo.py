@@ -506,8 +506,8 @@ class abstractsubrepo(object):
         """
         return 1
 
-    def revert(self, ui, substate, *pats, **opts):
-        ui.warn('%s: reverting %s subrepos is unsupported\n' \
+    def revert(self, substate, *pats, **opts):
+        self.ui.warn('%s: reverting %s subrepos is unsupported\n' \
             % (substate[0], substate[2]))
         return []
 
@@ -861,13 +861,13 @@ class hgsubrepo(abstractsubrepo):
                               subrepos)
 
     @annotatesubrepoerror
-    def revert(self, ui, substate, *pats, **opts):
+    def revert(self, substate, *pats, **opts):
         # reverting a subrepo is a 2 step process:
         # 1. if the no_backup is not set, revert all modified
         #    files inside the subrepo
         # 2. update the subrepo to the revision specified in
         #    the corresponding substate dictionary
-        ui.status(_('reverting subrepo %s\n') % substate[0])
+        self.ui.status(_('reverting subrepo %s\n') % substate[0])
         if not opts.get('no_backup'):
             # Revert all files on the subrepo, creating backups
             # Note that this will not recursively revert subrepos
@@ -879,19 +879,19 @@ class hgsubrepo(abstractsubrepo):
             pats = []
             if not opts.get('all'):
                 pats = ['set:modified()']
-            self.filerevert(ui, *pats, **opts)
+            self.filerevert(*pats, **opts)
 
         # Update the repo to the revision specified in the given substate
         self.get(substate, overwrite=True)
 
-    def filerevert(self, ui, *pats, **opts):
+    def filerevert(self, *pats, **opts):
         ctx = self._repo[opts['rev']]
         parents = self._repo.dirstate.parents()
         if opts.get('all'):
             pats = ['set:modified()']
         else:
             pats = []
-        cmdutil.revert(ui, self._repo, ctx, parents, *pats, **opts)
+        cmdutil.revert(self.ui, self._repo, ctx, parents, *pats, **opts)
 
     def shortid(self, revid):
         return revid[:12]
