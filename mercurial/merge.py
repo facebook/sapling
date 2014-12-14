@@ -305,6 +305,40 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f2].cmp(wctx[f]))
 
+def _checkunknownfiles(repo, wctx, mctx, force, actions):
+    """
+    Considers any actions that care about the presence of conflicting unknown
+    files. For some actions, the result is to abort; for others, it is to
+    choose a different action.
+    """
+    aborts = []
+    if not force:
+        for f, (m, args, msg) in actions.iteritems():
+            if m in ('c', 'dc'):
+                if _checkunknownfile(repo, wctx, mctx, f):
+                    aborts.append(f)
+            elif m == 'dg':
+                if _checkunknownfile(repo, wctx, mctx, f, args[0]):
+                    aborts.append(f)
+
+    for f in sorted(aborts):
+        repo.ui.warn(_("%s: untracked file differs\n") % f)
+    if aborts:
+        raise util.Abort(_("untracked files in working directory differ "
+                           "from files in requested revision"))
+
+    for f, (m, args, msg) in actions.iteritems():
+        if m == 'c':
+            actions[f] = ('g', args, msg)
+        elif m == 'cm':
+            fl2, anc = args
+            different = _checkunknownfile(repo, wctx, mctx, f)
+            if different:
+                actions[f] = ('m', (f, f, None, False, anc),
+                              "remote differs from untracked local")
+            else:
+                actions[f] = ('g', (fl2,), "remote created")
+
 def _forgetremoved(wctx, mctx, branchmerge):
     """
     Forget removed files
@@ -509,33 +543,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 else:
                     actions[f] = ('dc', (fl2,), "prompt deleted/changed")
 
-    aborts = []
-    if not force:
-        for f, (m, args, msg) in actions.iteritems():
-            if m in ('c', 'dc'):
-                if _checkunknownfile(repo, wctx, p2, f):
-                    aborts.append(f)
-            elif m == 'dg':
-                if _checkunknownfile(repo, wctx, p2, f, args[0]):
-                    aborts.append(f)
-
-    for f in sorted(aborts):
-        repo.ui.warn(_("%s: untracked file differs\n") % f)
-    if aborts:
-        raise util.Abort(_("untracked files in working directory differ "
-                           "from files in requested revision"))
-
-    for f, (m, args, msg) in actions.iteritems():
-        if m == 'c':
-            actions[f] = ('g', args, msg)
-        elif m == 'cm':
-            fl2, anc = args
-            different = _checkunknownfile(repo, wctx, p2, f)
-            if different:
-                actions[f] = ('m', (f, f, None, False, anc),
-                              "remote differs from untracked local")
-            else:
-                actions[f] = ('g', (fl2,), "remote created")
+    _checkunknownfiles(repo, wctx, p2, force, actions)
 
     return actions, diverge, renamedelete
 
