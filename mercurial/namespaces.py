@@ -1,5 +1,14 @@
 from mercurial import util
 
+def tolist(val):
+    """
+    a convenience method to return an empty list instead of None
+    """
+    if val is None:
+        return []
+    else:
+        return [val]
+
 class namespaces(object):
     """
     provides an interface to register a generic many-to-many mapping between
