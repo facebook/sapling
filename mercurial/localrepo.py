@@ -18,6 +18,7 @@ import tags as tagsmod
 from lock import release
 import weakref, errno, os, time, inspect
 import branchmap, pathutil
+import namespaces
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
@@ -296,6 +297,9 @@ class localrepository(object):
         # - working directory parent change,
         # - bookmark changes
         self.filteredrevcache = {}
+
+        # generic mapping between names and nodes
+        self.names = namespaces.namespaces(self)
 
     def close(self):
         pass

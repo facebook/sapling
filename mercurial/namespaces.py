@@ -35,6 +35,11 @@ class namespaces(object):
         self._names = util.sortdict()
         self._repo = weakref.ref(repo)
 
+        # we need current mercurial named objects (bookmarks, tags, and
+        # branches) to be initialized somewhere, so that place is here
+        self.addnamespace("bookmarks",
+                          lambda repo, name: tolist(repo._bookmarks.get(name)))
+
     @property
     def repo(self):
         return self._repo()

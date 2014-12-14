@@ -8,7 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import changelog, byterange, url, error
+import changelog, byterange, url, error, namespaces
 import localrepo, manifest, util, scmutil, store
 import urllib, urllib2, errno, os
 
@@ -105,6 +105,8 @@ class statichttprepository(localrepo.localrepository):
         self.opener = opener(self.path)
         self.vfs = self.opener
         self._phasedefaults = []
+
+        self.names = namespaces.namespaces(self)
 
         try:
             requirements = scmutil.readrequires(self.opener, self.supported)
