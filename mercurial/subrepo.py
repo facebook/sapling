@@ -523,6 +523,7 @@ class hgsubrepo(abstractsubrepo):
         root = r.wjoin(path)
         create = not r.wvfs.exists('%s/.hg' % path)
         self._repo = hg.repository(r.baseui, root, create=create)
+        self.ui = self._repo.ui
         for s, k in [('ui', 'commitsubrepos')]:
             v = r.ui.config(s, k)
             if v:
