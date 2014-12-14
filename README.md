@@ -49,6 +49,11 @@ NOTE: This requires python-curses installed and Mercurial's histedit extension e
 
 This extensions allows you to interactively move around changesets or change the action to perform while keeping track of possible conflicts.
 
+upgradegeneraldelta
+===================
+
+Upgrades manifests to generaldelta in-place, without needing to reclone.
+
 Contributing
 ============
 
