@@ -784,4 +784,21 @@ ensure adding include/exclude ignores the subrepo
   $ hg diff --subrepos -I s/foobar
   $ hg diff --subrepos -X s/foobar
 
+revert the subrepository
+  $ hg revert --all
+  reverting subrepo ../gitroot (glob)
+  ../gitroot: reverting git subrepos without --no-backup is unsupported (glob)
+
+  $ hg status --subrepos
+  M s/foobar
+  A s/barfoo
+
+  $ hg revert --no-backup --all
+  reverting subrepo ../gitroot (glob)
+  $ hg revert --no-backup s
+  reverting subrepo ../gitroot (glob)
+
+  $ hg status --subrepos
+  ? s/barfoo
+
   $ cd ..
