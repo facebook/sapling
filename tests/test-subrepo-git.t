@@ -778,7 +778,7 @@ the output contains a regex, because git 1.7.10 and 1.7.11
   $ hg diff --subrepos --stat
   \s*barfoo |\s*1 + (re)
   \s*foobar |\s*2 +- (re)
-   2 files changed, 2 insertions(+), 1 deletion(-) (no-eol)
+   2 files changed, 2 insertions\(\+\), 1 deletions?\(-\) \(no-eol\) (re)
 
 ensure adding include/exclude ignores the subrepo
   $ hg diff --subrepos -I s/foobar
