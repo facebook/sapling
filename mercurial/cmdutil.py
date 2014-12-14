@@ -2075,8 +2075,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
             sub = wctx.sub(subpath)
             try:
                 submatch = matchmod.narrowmatcher(subpath, m)
-                if sub.removefiles(ui, submatch, prefix, after, force,
-                                   subrepos):
+                if sub.removefiles(submatch, prefix, after, force, subrepos):
                     ret = 1
             except error.LookupError:
                 ui.status(_("skipping missing subrepository: %s\n")
