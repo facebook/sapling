@@ -50,9 +50,14 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
             hint="if you're trying to move a bookmark forward, try " +
                  "'hg rebase -d <destination>'")
 
-    # by default, never update when there are local changes
+    # By default, never update when there are local changes unless updating to
+    # the current rev. This is useful for, eg, arc feature when the only
+    # thing changing is the bookmark.
     if not kwargs['clean'] and not kwargs['nocheck']:
-        kwargs['check'] = True
+        target = node or rev
+        if target and scmutil.revsingle(repo, target, target).rev() != \
+                repo.revs('.').first():
+            kwargs['check'] = True
 
     if 'nocheck' in kwargs:
         del kwargs['nocheck']

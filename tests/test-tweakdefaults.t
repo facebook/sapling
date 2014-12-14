@@ -49,18 +49,23 @@ Log is -f by default
   o  0 a
   
 
-Dirty update fails by default; allowed with --nocheck
+Dirty update to different rev fails by default
 
   $ echo x >> a
   $ hg st
   M a
-  $ hg update .
+  $ hg update .^
   abort: uncommitted changes
   [255]
-  $ hg update --nocheck .
+
+Dirty update allowed to same rev and with --nocheck and --clean
+
+  $ hg update .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg revert -r . a
-  $ rm *.orig
+  $ hg update --nocheck .^
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg update --clean 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Log on dir's works
 
@@ -76,6 +81,7 @@ Empty rebase fails
   abort: you must specify a destination (-d) for the rebase
   [255]
   $ hg rebase -d 2
+  rebasing 1:7b4cb4e1674c "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-backup.hg
 
 Rebase fast forwards bookmark
