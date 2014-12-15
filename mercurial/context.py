@@ -137,13 +137,17 @@ class basectx(object):
 
         modified, added = [], []
         removed = []
-        clean = set()
+        clean = []
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        d = mf1.diff(mf2)
-        for fn, ((node1, flag1), (node2, flag2)) in d.iteritems():
+        d = mf1.diff(mf2, clean=listclean)
+        for fn, value in d.iteritems():
             if fn in deletedset:
                 continue
+            if value is None:
+                clean.append(fn)
+                continue
+            (node1, flag1), (node2, flag2) = value
             if node1 is None:
                 added.append(fn)
             elif node2 is None:
@@ -157,12 +161,7 @@ class basectx(object):
                 # match the one in mf1.
                 modified.append(fn)
             else:
-                clean.add(fn)
-        if listclean:
-            nondiff = (set(mf1) | set(mf2)) - set(d)
-            clean = list((clean | nondiff) - deletedset)
-        else:
-            clean = []
+                clean.append(fn)
 
         if removed:
             # need to filter files if they are already reported as removed
