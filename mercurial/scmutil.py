@@ -268,6 +268,12 @@ class abstractvfs(object):
         to allow handling of strange encoding if needed."""
         return os.path.join(*paths)
 
+    def split(self, path):
+        """split top-most element of a path (as os.path.split would do)
+
+        This exists to allow handling of strange encoding if needed."""
+        return os.path.split(path)
+
     def lexists(self, path=None):
         return os.path.lexists(self.join(path))
 

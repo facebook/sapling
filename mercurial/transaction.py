@@ -12,7 +12,6 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os
 import errno
 import error, util
 
@@ -198,9 +197,9 @@ class transaction(object):
 
         if file in self.map or file in self._backupmap:
             return
-        dirname, filename = os.path.split(file)
-        backupfilename = "%s.backup.%s" % (self.journal, filename)
         vfs = self._vfsmap[location]
+        dirname, filename = vfs.split(file)
+        backupfilename = "%s.backup.%s" % (self.journal, filename)
         backupfile = vfs.reljoin(dirname, backupfilename)
         if vfs.exists(file):
             filepath = vfs.join(file)
