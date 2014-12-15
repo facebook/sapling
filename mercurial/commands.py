@@ -2352,8 +2352,11 @@ def debugnamecomplete(ui, repo, *args):
     '''complete "names" - tags, open branch names, bookmark names'''
 
     names = set()
-    names.update(t[0] for t in repo.tagslist())
-    names.update(repo._bookmarks.keys())
+    # since we previously only listed open branches, we will handle that
+    # specially (after this for loop)
+    for name, ns in repo.names.iteritems():
+        if name != 'branches':
+            names.update(ns.listnames(repo))
     names.update(tag for (tag, heads, tip, closed)
                  in repo.branchmap().iterbranches() if not closed)
     completions = set()
