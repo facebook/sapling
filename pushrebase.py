@@ -55,6 +55,9 @@ def validaterevset(repo, revset):
     if repo.revs('%r and merge()', revset):
         raise util.Abort(_('cannot rebase merge changesets'))
 
+    if repo.revs('%r and obsolete()', revset):
+        raise util.Abort(_('cannot rebase obsolete changesets'))
+
     tails = repo.revs('%r and ancestor(%r)', revset, revset)
     if not tails:
         raise util.Abort(_('cannot rebase unrelated changesets'))
