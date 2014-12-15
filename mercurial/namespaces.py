@@ -140,3 +140,10 @@ class namespace(object):
         """method that returns a (sorted) list of names in a namespace that
         match a given node"""
         return sorted(self.nodemap(repo, node))
+
+    def nodes(self, repo, name):
+        """method that returns a list of nodes in a namespace that
+        match a given name.
+
+        """
+        return sorted(self.namemap(repo, name))
