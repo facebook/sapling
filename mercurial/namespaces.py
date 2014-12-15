@@ -26,6 +26,8 @@ class namespaces(object):
 
     We'll have a dictionary '_names' where each key is a namespace and
     its value is a dictionary of functions:
+      'templatename': name to use for templating (usually the singular form
+                      of the plural namespace name)
       'namemap': function that takes a name and returns a list of nodes
     """
 
@@ -38,25 +40,27 @@ class namespaces(object):
 
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
-        addns("bookmarks",
+        addns("bookmarks", "bookmark",
               lambda repo, name: tolist(repo._bookmarks.get(name)))
 
-        addns("tags",
+        addns("tags", "tag",
               lambda repo, name: tolist(repo._tagscache.tags.get(name)))
 
-        addns("branches",
+        addns("branches", "branch",
               lambda repo, name: tolist(repo.branchtip(name)))
 
-    def addnamespace(self, namespace, namemap, order=None):
+    def addnamespace(self, namespace, templatename, namemap, order=None):
         """
         register a namespace
 
         namespace: the name to be registered (in plural form)
+        templatename: the name to use for templating
         namemap: function that inputs a node, output name(s)
         order: optional argument to specify the order of namespaces
                (e.g. 'branches' should be listed before 'bookmarks')
         """
-        val = {'namemap': namemap}
+        val = {'templatename': templatename,
+               'namemap': namemap}
         if order is not None:
             self._names.insert(order, namespace, val)
         else:
