@@ -81,17 +81,20 @@ def reposetup(ui, repo):
                                   node=e[7])
         tr.close()
         if not ui.configbool('upgradegeneraldelta', 'dryrun', default=False):
+            manifesti = repo.sjoin('00manifest.i')
+            manifestd = repo.sjoin('00manifest.d')
+            manifestgdi = repo.sjoin('00manifestgd.i')
+            manifestgdd = repo.sjoin('00manifestgd.d')
+            manifestoldi = repo.sjoin('00manifestold.i')
+            manifestoldd = repo.sjoin('00manifestold.d')
             # move the newly created manifests over
             if ui.configbool('upgradegeneraldelta', 'backup', default=True):
-                os.rename(repo.sjoin('00manifest.i'),
-                          repo.sjoin('00manifestold.i'))
-                if os.path.exists('00manifest.d'):
-                    os.rename(repo.sjoin('00manifest.d'),
-                              repo.sjoin('00manifestold.d'))
-            os.rename(repo.sjoin('00manifestgd.i'), repo.sjoin('00manifest.i'))
-            if os.path.exists('00manifestgd.d'):
-                os.rename(repo.sjoin('00manifestgd.d'),
-                          repo.sjoin('00manifest.d'))
+                os.rename(manifesti, manifestoldi)
+                if os.path.exists(manifestd):
+                    os.rename(manifestd, manifestoldd)
+            os.rename(manifestgdi, manifesti)
+            if os.path.exists(manifestgdd):
+                os.rename(manifestgdd, manifestd)
             with repo.opener('requires', 'a+') as f:
                 f.write('generaldelta\n')
         repo.invalidate()
