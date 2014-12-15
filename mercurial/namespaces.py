@@ -17,8 +17,9 @@ class namespaces(object):
     pollution of jamming things into tags or bookmarks (in extension-land) and
     to simplify internal bits of mercurial: log output, tab completion, etc.
 
-    More precisely, we define a list of names (the namespace) and  a mapping of
-    names to nodes. This name mapping returns a list of nodes.
+    More precisely, we define a list of names (the namespace), a mapping of
+    names to nodes, and a mapping from nodes to names. Each mapping
+    returns a list of nodes.
 
     Furthermore, each name mapping will be passed a name to lookup which might
     not be in its domain. In this case, each method should return an empty list
@@ -29,6 +30,7 @@ class namespaces(object):
       'templatename': name to use for templating (usually the singular form
                       of the plural namespace name)
       'namemap': function that takes a name and returns a list of nodes
+      'nodemap': function that takes a node and returns a list of names
     """
 
     _names_version = 0
@@ -41,26 +43,32 @@ class namespaces(object):
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
         addns("bookmarks", "bookmark",
-              lambda repo, name: tolist(repo._bookmarks.get(name)))
+              lambda repo, name: tolist(repo._bookmarks.get(name)),
+              lambda repo, name: repo.nodebookmarks(name))
 
         addns("tags", "tag",
-              lambda repo, name: tolist(repo._tagscache.tags.get(name)))
+              lambda repo, name: tolist(repo._tagscache.tags.get(name)),
+              lambda repo, name: repo.nodetags(name))
 
         addns("branches", "branch",
-              lambda repo, name: tolist(repo.branchtip(name)))
+              lambda repo, name: tolist(repo.branchtip(name)),
+              lambda repo, node: [repo[node].branch()])
 
-    def addnamespace(self, namespace, templatename, namemap, order=None):
+    def addnamespace(self, namespace, templatename, namemap, nodemap,
+                     order=None):
         """
         register a namespace
 
         namespace: the name to be registered (in plural form)
         templatename: the name to use for templating
         namemap: function that inputs a node, output name(s)
+        nodemap: function that inputs a name, output node(s)
         order: optional argument to specify the order of namespaces
                (e.g. 'branches' should be listed before 'bookmarks')
         """
         val = {'templatename': templatename,
-               'namemap': namemap}
+               'namemap': namemap,
+               'nodemap': nodemap}
         if order is not None:
             self._names.insert(order, namespace, val)
         else:
