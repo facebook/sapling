@@ -378,6 +378,14 @@ def showtags(**args):
     """:tags: List of strings. Any tags associated with the changeset."""
     return showlist('tag', args['ctx'].tags(), **args)
 
+def shownames(namespace, **args):
+    """helper method to generate a template keyword for a namespace"""
+    ctx = args['ctx']
+    repo = ctx._repo
+    names = repo.names.names(repo, namespace, ctx.node())
+    return showlist(repo.names.templatename(namespace), names,
+                    plural=namespace, **args)
+
 # keywords are callables like:
 # fn(repo, ctx, templ, cache, revcache, **args)
 # with:
