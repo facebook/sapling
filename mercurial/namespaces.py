@@ -35,6 +35,10 @@ class namespaces(object):
         self._names = util.sortdict()
         self._repo = weakref.ref(repo)
 
+    @property
+    def repo(self):
+        return self._repo()
+
     def addnamespace(self, namespace, namemap, order=None):
         """
         register a namespace
