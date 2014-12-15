@@ -58,13 +58,21 @@ class manifestdict(dict):
                 del mf[fn]
         return mf
 
-    def diff(self, m2):
-        '''Finds changes between the current manifest and m2. The result is
-        returned as a dict with filename as key and values of the form
-        ((n1,fl1),(n2,fl2)), where n1/n2 is the nodeid in the current/other
-        manifest and fl1/fl2 is the flag in the current/other manifest. Where
-        the file does not exist, the nodeid will be None and the flags will be
-        the empty string.'''
+    def diff(self, m2, clean=False):
+        '''Finds changes between the current manifest and m2.
+
+        Args:
+          m2: the manifest to which this manifest should be compared.
+          clean: if true, include files unchanged between these manifests
+                 with a None value in the returned dictionary.
+
+        The result is returned as a dict with filename as key and
+        values of the form ((n1,fl1),(n2,fl2)), where n1/n2 is the
+        nodeid in the current/other manifest and fl1/fl2 is the flag
+        in the current/other manifest. Where the file does not exist,
+        the nodeid will be None and the flags will be the empty
+        string.
+        '''
         diff = {}
 
         for fn, n1 in self.iteritems():
@@ -75,6 +83,8 @@ class manifestdict(dict):
                 fl2 = ''
             if n1 != n2 or fl1 != fl2:
                 diff[fn] = ((n1, fl1), (n2, fl2))
+            elif clean:
+                diff[fn] = None
 
         for fn, n2 in m2.iteritems():
             if fn not in self:
