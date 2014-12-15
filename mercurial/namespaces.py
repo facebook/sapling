@@ -1,6 +1,5 @@
 from i18n import _
 from mercurial import util
-import weakref
 
 def tolist(val):
     """
@@ -32,18 +31,13 @@ class namespaces(object):
 
     _names_version = 0
 
-    def __init__(self, repo):
+    def __init__(self):
         self._names = util.sortdict()
-        self._repo = weakref.ref(repo)
 
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
         self.addnamespace("bookmarks",
                           lambda repo, name: tolist(repo._bookmarks.get(name)))
-
-    @property
-    def repo(self):
-        return self._repo()
 
     def addnamespace(self, namespace, namemap, order=None):
         """
@@ -60,7 +54,7 @@ class namespaces(object):
         else:
             self._names[namespace] = val
 
-    def singlenode(self, name):
+    def singlenode(self, repo, name):
         """
         Return the 'best' node for the given name. Best means the first node
         in the first nonempty list returned by a name-to-nodes mapping function
@@ -69,11 +63,11 @@ class namespaces(object):
         Raises a KeyError if there is no such node.
         """
         for ns, v in self._names.iteritems():
-            n = v['namemap'](self.repo, name)
+            n = v['namemap'](repo, name)
             if n:
                 # return max revision number
                 if len(n) > 1:
-                    cl = self.repo.changelog
+                    cl = repo.changelog
                     maxrev = max(cl.rev(node) for node in n)
                     return cl.node(maxrev)
                 return n[0]

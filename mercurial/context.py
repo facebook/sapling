@@ -409,7 +409,7 @@ class changectx(basectx):
 
             # lookup bookmarks through the name interface
             try:
-                self._node = repo.names.singlenode(changeid)
+                self._node = repo.names.singlenode(repo, changeid)
                 self._rev = repo.changelog.rev(self._node)
                 return
             except KeyError:

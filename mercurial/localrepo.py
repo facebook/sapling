@@ -299,7 +299,7 @@ class localrepository(object):
         self.filteredrevcache = {}
 
         # generic mapping between names and nodes
-        self.names = namespaces.namespaces(self)
+        self.names = namespaces.namespaces()
 
     def close(self):
         pass

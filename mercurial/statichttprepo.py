@@ -106,7 +106,7 @@ class statichttprepository(localrepo.localrepository):
         self.vfs = self.opener
         self._phasedefaults = []
 
-        self.names = namespaces.namespaces(self)
+        self.names = namespaces.namespaces()
 
         try:
             requirements = scmutil.readrequires(self.opener, self.supported)
