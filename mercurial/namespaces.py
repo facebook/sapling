@@ -28,16 +28,19 @@ class namespaces(object):
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
         n = ns("bookmarks", "bookmark",
+               lambda repo: repo._bookmarks.keys(),
                lambda repo, name: tolist(repo._bookmarks.get(name)),
                lambda repo, name: repo.nodebookmarks(name))
         self.addnamespace(n)
 
         n = ns("tags", "tag",
+               lambda repo: [t for t, n in repo.tagslist()],
                lambda repo, name: tolist(repo._tagscache.tags.get(name)),
                lambda repo, name: repo.nodetags(name))
         self.addnamespace(n)
 
         n = ns("branches", "branch",
+               lambda repo: repo.branchmap().keys(),
                lambda repo, name: tolist(repo.branchtip(name)),
                lambda repo, node: [repo[node].branch()])
         self.addnamespace(n)
@@ -104,15 +107,18 @@ class namespace(object):
       'name': the namespace (plural form)
       'templatename': name to use for templating (usually the singular form
                       of the plural namespace name)
+      'listnames': list of all names in the namespace (usually the keys of a
+                   dictionary)
       'namemap': function that takes a name and returns a list of nodes
       'nodemap': function that takes a node and returns a list of names
 
     """
 
-    def __init__(self, name, templatename, namemap, nodemap):
+    def __init__(self, name, templatename, listnames, namemap, nodemap):
         """create a namespace
 
         name: the namespace to be registered (in plural form)
+        listnames: function to list all names
         templatename: the name to use for templating
         namemap: function that inputs a node, output name(s)
         nodemap: function that inputs a name, output node(s)
@@ -120,6 +126,7 @@ class namespace(object):
         """
         self.name = name
         self.templatename = templatename
+        self.listnames = listnames
         self.namemap = namemap
         self.nodemap = nodemap
 
