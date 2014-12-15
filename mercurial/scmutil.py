@@ -261,6 +261,13 @@ class abstractvfs(object):
     def islink(self, path=None):
         return os.path.islink(self.join(path))
 
+    def reljoin(self, *paths):
+        """join various elements of a path together (as os.path.join would do)
+
+        The vfs base is not injected so that path stay relative. This exists
+        to allow handling of strange encoding if needed."""
+        return os.path.join(*paths)
+
     def lexists(self, path=None):
         return os.path.lexists(self.join(path))
 
