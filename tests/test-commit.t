@@ -429,6 +429,67 @@ specific template keywords work well
   abort: empty commit message
   [255]
 
+prove that we can show a diff of an amend using committemplate:
+
+  $ hg init issue4470
+  $ cd issue4470
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset = {desc}\n\n
+  >      HG: {extramsg}
+  >      HG: user: {author}\n{ifeq(p2rev, "-1", "",
+  >     "HG: branch merge\n")
+  >     }HG: branch '{branch}'\n{if(currentbookmark,
+  >     "HG: bookmark '{currentbookmark}'\n")  }{subrepos %
+  >     "HG: subrepo {subrepo}\n"              }
+  >     {splitlines(diff()) % 'HG: {line}\n'}
+  > EOF
+  $ echo a > a
+  $ echo b > b
+  $ hg addr
+  adding a
+  adding b
+  $ hg ci -m 'init'
+  $ hg rm b
+  $ hg ci -m 'rm b'
+  $ hg export .
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 88d0ffa85e7a92ccc7c9cc187f9b17858bd206a7
+  # Parent  9118d25c26b1ca5cab5683b02100e7eb2c0d9471
+  rm b
+  
+  diff -r 9118d25c26b1 -r 88d0ffa85e7a b
+  --- a/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -b
+  $ echo a >> a
+  $ HGEDITOR=cat hg commit --amend
+  rm b
+  
+  
+  HG: Leave message empty to abort commit.
+  HG: user: test
+  HG: branch 'default'
+  
+  HG: diff -r 9118d25c26b1 a
+  HG: --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,1 +1,2 @@
+  HG:  a
+  HG: +a
+  HG: diff -r 9118d25c26b1 b
+  HG: --- a/b	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,1 +0,0 @@
+  HG: -b
+  saved backup bundle to $TESTTMP/*/*-amend-backup.hg (glob)
+  $ cd ..
+
+cleanup
   $ cat >> .hg/hgrc <<EOF
   > # disable customizing for subsequent tests
   > [committemplate]
