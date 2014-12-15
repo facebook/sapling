@@ -135,24 +135,35 @@ class basectx(object):
         mf1 = other._manifestmatches(match, s)
         mf2 = self._manifestmatches(match, s)
 
-        modified, added, clean = [], [], []
+        modified, added = [], []
+        removed = []
+        clean = set()
         deleted, unknown, ignored = s.deleted, s.unknown, s.ignored
         deletedset = set(deleted)
-        withflags = mf1.withflags() | mf2.withflags()
-        for fn, mf2node in mf2.iteritems():
+        d = mf1.diff(mf2)
+        for fn, ((node1, flag1), (node2, flag2)) in d.iteritems():
             if fn in deletedset:
                 continue
-            if fn in mf1:
-                if ((fn in withflags and mf1.flags(fn) != mf2.flags(fn)) or
-                     (mf1[fn] != mf2node and
-                      (mf2node != _newnode or self[fn].cmp(other[fn])))):
-                    modified.append(fn)
-                elif listclean:
-                    clean.append(fn)
-                del mf1[fn]
-            else:
+            if node1 is None:
                 added.append(fn)
-        removed = mf1.keys()
+            elif node2 is None:
+                removed.append(fn)
+            elif node2 != _newnode:
+                # The file was not a new file in mf2, so an entry
+                # from diff is really a difference.
+                modified.append(fn)
+            elif self[fn].cmp(other[fn]):
+                # node2 was newnode, but the working file doesn't
+                # match the one in mf1.
+                modified.append(fn)
+            else:
+                clean.add(fn)
+        if listclean:
+            nondiff = (set(mf1) | set(mf2)) - set(d)
+            clean = list((clean | nondiff) - deletedset)
+        else:
+            clean = []
+
         if removed:
             # need to filter files if they are already reported as removed
             unknown = [fn for fn in unknown if fn not in mf1]
