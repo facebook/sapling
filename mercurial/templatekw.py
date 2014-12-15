@@ -374,10 +374,6 @@ def showsubrepos(**args):
             subrepos.append(sub) # removed in ctx
     return showlist('subrepo', sorted(subrepos), **args)
 
-def showtags(**args):
-    """:tags: List of strings. Any tags associated with the changeset."""
-    return showlist('tag', args['ctx'].tags(), **args)
-
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
     ctx = args['ctx']
@@ -424,7 +420,6 @@ keywords = {
     'phaseidx': showphaseidx,
     'rev': showrev,
     'subrepos': showsubrepos,
-    'tags': showtags,
 }
 
 def _showparents(**args):
