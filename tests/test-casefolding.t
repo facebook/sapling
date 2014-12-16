@@ -200,12 +200,11 @@ case changes.
 We assume anyone running the tests on a case-insensitive volume on OS
 X will be using HFS+. If that's not true, this test will fail.
 
-Bug: some codepoints are to be ignored on HFS+:
-
   $ rm A
   >>> open(u'a\u200c'.encode('utf-8'), 'w').write('unicode is fun')
   $ hg status
   M A
-  ? a\xe2\x80\x8c (esc)
+
 #endif
+
   $ cd ..
