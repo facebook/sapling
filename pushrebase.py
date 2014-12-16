@@ -333,7 +333,9 @@ def bundle2rebase(op, part):
     op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
 
     def runhooks():
-        op.repo.hook("changegroup", **hookargs)
+        args = hookargs.copy()
+        args['node'] = hex(added[0])
+        op.repo.hook("changegroup", **args)
         for n in added:
             args = hookargs.copy()
             args['node'] = hex(n)

@@ -117,7 +117,7 @@ Stack of non-conflicting commits should be accepted
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
   remote: b2x-pretransactionclose hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: outgoing hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=rebase:reply
@@ -185,7 +185,7 @@ Regular commits should go through without changing hash
   remote: pretxnchangegroup hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-pretransactionclose hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=137b1b6ef90327e7addb09edcb005cbe0bee7493 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=137b1b6ef90327e7addb09edcb005cbe0bee7493 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
 
   $ cd ../server
@@ -322,7 +322,7 @@ With evolution enabled, should set obsolescence markers
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
   remote: b2x-pretransactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=2 HG_PENDING=$TESTTMP/server HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=2 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=b423e42e554804d21e786126e84a27565a786628 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=rebase:reply
