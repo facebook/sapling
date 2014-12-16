@@ -14,6 +14,8 @@ from mercurial import namespaces
 from mercurial.node import hex
 from hgext import schemes
 
+_remotenames = {}
+
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
     lock = repo.lock()
@@ -224,7 +226,6 @@ def loadremotenames(repo):
     if not os.path.exists(rfile):
         return
 
-    _remotenames = {}
     f = open(rfile)
     for line in f:
         line = line.strip()
