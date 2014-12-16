@@ -10,14 +10,14 @@ mkcommit()
 {
     echo $1 > $1
     hg add $1
-    hg ci -m "add $1" | grep -v 'created new head'
+    hg ci -m "add $1"
 }
 
 hg init alpha
 cd alpha
 mkcommit a
 mkcommit b
-hg branch stable | grep -v 'permanent and global'
+hg branch stable
 mkcommit c
 cd ..
 hg clone alpha beta | $FILTERPWD
@@ -39,7 +39,7 @@ EOF
 hg pull | $FILTERPWD
 hg pull beta | $FILTERPWD
 hg co -C default
-hg branch default | grep -v 'permanent and global'
+hg branch default
 mkcommit e
 hg merge stable
 hg ci -m 'merging stable'

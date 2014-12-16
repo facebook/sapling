@@ -17,8 +17,9 @@
   $ cd alpha
   $ mkcommit 0
   $ mkcommit 1
-  $ hg branch stable | grep -v 'permanent and global'
+  $ hg branch stable
   marked working directory as branch stable
+  (branches are permanent and global, did you want a bookmark?)
   $ mkcommit 2
   $ cd ..
   $ hg clone alpha beta | $FILTERPWD
@@ -64,8 +65,9 @@
   $ hg co -C default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg branch default | grep -v 'permanent and global'
+  $ hg branch default
   marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
 
   $ mkcommit 4
   $ hg merge stable
