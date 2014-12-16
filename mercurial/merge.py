@@ -501,12 +501,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 elif not branchmerge:
                     actions[f] = ('c', (fl2,), "remote created")
                 else:
-                    different = _checkunknownfile(repo, wctx, p2, f)
-                    if different:
-                        actions[f] = ('m', (f, f, None, False, pa.node()),
-                                      "remote differs from untracked local")
-                    else:
-                        actions[f] = ('g', (fl2,), "remote created")
+                    actions[f] = ('cm', (fl2, pa.node()),
+                                  "remote created, get or merge")
             elif n2 != ma[f]:
                 if acceptremote:
                     actions[f] = ('c', (fl2,), "remote recreating")
@@ -532,6 +528,14 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     for f, (m, args, msg) in actions.iteritems():
         if m == 'c':
             actions[f] = ('g', args, msg)
+        elif m == 'cm':
+            fl2, anc = args
+            different = _checkunknownfile(repo, wctx, p2, f)
+            if different:
+                actions[f] = ('m', (f, f, None, False, anc),
+                              "remote differs from untracked local")
+            else:
+                actions[f] = ('g', (fl2,), "remote created")
 
     return actions, diverge, renamedelete
 
