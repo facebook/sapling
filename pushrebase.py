@@ -111,6 +111,7 @@ def _push(orig, ui, repo, *args, **opts):
 
     ui.setconfig(experimental, configonto, opts.get('onto'), '--onto')
     if ui.config(experimental, configonto):
+        ui.setconfig(experimental, 'bundle2.pushback', True)
         oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
     result = orig(ui, repo, *args, **opts)
 
