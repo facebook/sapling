@@ -15,6 +15,7 @@ from mercurial.node import hex
 from hgext import schemes
 
 _remotenames = {}
+_remotetypes = {}
 
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
@@ -226,6 +227,9 @@ def loadremotenames(repo):
     if not os.path.exists(rfile):
         return
 
+    branches = repo.names['branches'].listnames(repo)
+    bookmarks = repo.names['bookmarks'].listnames(repo)
+
     f = open(rfile)
     for line in f:
         line = line.strip()
@@ -235,8 +239,16 @@ def loadremotenames(repo):
         if hash not in repo:
             continue
         ctx = repo[hash]
+
         if not ctx.extra().get('close'):
             _remotenames[name] = ctx.node()
+
+        # cache the type of the remote name
+        remote, rname = splitremotename(name)
+        if rname in branches:
+            _remotetypes[name] = 'branches'
+        elif rname in bookmarks:
+            _remotetypes[name] = 'bookmarks'
     f.close()
 
     ns = namespaces.namespace
