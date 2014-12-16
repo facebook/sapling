@@ -1,7 +1,11 @@
 import os, errno, stat
 
+import encoding
 import util
 from i18n import _
+
+def _lowerclean(s):
+    return encoding.hfsignoreclean(s.lower())
 
 class pathauditor(object):
     '''ensure that a filesystem path contains no banned components.
@@ -39,11 +43,11 @@ class pathauditor(object):
             raise util.Abort(_("path ends in directory separator: %s") % path)
         parts = util.splitpath(path)
         if (os.path.splitdrive(path)[0]
-            or parts[0].lower() in ('.hg', '.hg.', '')
+            or _lowerclean(parts[0]) in ('.hg', '.hg.', '')
             or os.pardir in parts):
             raise util.Abort(_("path contains illegal component: %s") % path)
-        if '.hg' in path.lower():
-            lparts = [p.lower() for p in parts]
+        if '.hg' in _lowerclean(path):
+            lparts = [_lowerclean(p.lower()) for p in parts]
             for p in '.hg', '.hg.':
                 if p in lparts[1:]:
                     pos = lparts.index(p)
