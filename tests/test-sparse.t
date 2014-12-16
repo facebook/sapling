@@ -5,6 +5,7 @@ test sparse
   $ cat > .hg/hgrc <<EOF
   > [extensions]
   > sparse=$(dirname $TESTDIR)/sparse.py
+  > strip=
   > EOF
 
   $ echo a > show
@@ -145,3 +146,26 @@ Verify merge fails if merging excluded files
   abort: cannot merge because hide is outside the sparse checkout
   [255]
   $ hg up -qC .
+
+Verify strip -k resets dirstate correctly
+
+  $ hg status
+  $ hg sparse
+  [include]
+  
+  [exclude]
+  hide*
+  
+  $ hg log -r . -T '{rev}\n' --stat
+  1
+   hide  |  2 +-
+   hide2 |  1 +
+   show  |  2 +-
+   show2 |  1 +
+   4 files changed, 4 insertions(+), 2 deletions(-)
+  
+  $ hg strip -r . -k
+  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/39278f7c08a9-backup.hg
+  $ hg status
+  M show
+  ? show2

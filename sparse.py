@@ -194,6 +194,15 @@ def _setupdirstate(ui, repo):
 
     replacefilecache(dirstate.dirstate, '_ignore', ignorewrapper)
 
+    # dirstate.rebuild should not add non-matching files
+    def _rebuild(orig, self, parent, allfiles, changedfiles=None):
+        matcher = self.repo.sparsematch()
+        allfiles = allfiles.matches(matcher)
+        if changedfiles:
+            changedfiles = [f for f in changedfiles if matcher(f)]
+        return orig(self, parent, allfiles, changedfiles)
+    extensions.wrapfunction(dirstate.dirstate, 'rebuild', _rebuild)
+
     # Prevent adding files that are outside the sparse checkout
     editfuncs = ['normal', 'add', 'normallookup', 'copy', 'remove', 'merge']
     for func in editfuncs:
