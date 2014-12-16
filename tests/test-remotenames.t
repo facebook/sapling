@@ -23,9 +23,11 @@
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd beta
+  $ hg book babar
   $ mkcommit d
   $ hg co -C stable
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark babar)
   $ hg merge default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -55,6 +57,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  adding remote bookmark babar
   (run 'hg update' to get a working copy)
   $ hg co -C default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -93,6 +96,8 @@ graph shows tags for the branch heads of each path
   | |  summary:     merged
   | |
   | o  changeset:   3:78f83396d79e
+  | |  bookmark:    babar
+  | |  remotename:  beta/babar
   | |  remotename:  beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
@@ -193,6 +198,8 @@ but configured, it'll do the expected thing:
   | |  summary:     merged
   | |
   | o  changeset:   3:78f83396d79e
+  | |  bookmark:    babar
+  | |  remotename:  beta/babar
   | |  remotename:  beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
@@ -214,5 +221,5 @@ Test remotenames revset and keyword
   >   --template '{rev}:{node|short} {remotenames}\n'
   1:7c3bad9141dc alpha/default
   2:95cb4ab9fe1d alpha/stable
-  3:78f83396d79e beta/default
+  3:78f83396d79e beta/babar beta/default
   4:8948da77173b beta/stable
