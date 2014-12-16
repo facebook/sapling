@@ -11,9 +11,7 @@ from mercurial import templatekw
 from mercurial import templater
 from mercurial import exchange
 from mercurial import namespaces
-
 from mercurial.node import hex
-
 from hgext import schemes
 
 def expush(orig, repo, remote, *args, **kwargs):
