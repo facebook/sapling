@@ -65,78 +65,77 @@ def reposetup(ui, repo):
     loadremotenames(repo)
 
     class remotenamesrepo(repo.__class__):
-        # arguably, this needs a better name
-        @util.propertycache
-        def _preferredremotenames(self):
-            """This property is a dictionary of values identical to _remotenames but
-            returning only 'preferred' names per path, e.g. '@' instead of
-            'default'. A table of behavior is given below:
-
-            +---------+---------+---------+
-            |  name1  |  name2  | output  |
-            |         |         |         |
-            +---------+---------+---------+
-            |         | default |         |
-            +---------+---------+---------+
-            |         |    @    |    @    |
-            +---------+---------+---------+
-            | default |    @    |    @    |
-            +---------+---------+---------+
-            |   foo   |    @    |  foo @  |
-            +---------+---------+---------+
-            |   foo   |   bar   | foo bar |
-            +---------+---------+---------+
-
-            """
-            ret = {}
-
-            ns = self.names["remotenames"]
-            remotenames = ns.listnames(self)
-            # iterate over all the paths so we don't clobber path1/@ with
-            # path2/@
-            for path, uri in ui.configitems('paths'):
-
-                inverse = {}
-                for name in remotenames:
-                    if not name.startswith(path):
-                        continue
-                    node = repo.names.singlenode(name)
-                    # nothing to check, so add and move on
-                    if node not in inverse.keys():
-                        inverse[node] = name
-                        continue
-
-                    # get the ref names, remote will always be the same
-                    remote, ref1 = splitremotename(inverse[node])
-                    remote, ref2 = splitremotename(name)
-
-                    # prefer anything over default
-                    if ref2 == 'default':
-                        continue
-                    if ref1 == 'default':
-                        inverse[node] = joinremotename(remote, ref2)
-                        continue
-
-                    # prefer non-empty name to alias (empty) name
-                    if not ref2:
-                        continue
-                    if not ref1:
-                        inverse[node] = joinremotename(remote, ref2)
-                        continue
-
-                    # if we got to this point then both names are non-default /
-                    # non-alias names and we should add ref2 to the return list
-                    # directly (ref1 will be added normally)
-                    if ref1 and ref2 and ref1 != ref2:
-                        ret[joinremotename(remote, ref2)] = node
-
-                ret.update(dict([(name, node) for node, name in
-                                 inverse.iteritems()]))
-
-            return ret
-
+        pass
 
     repo.__class__ = remotenamesrepo
+
+# arguably, this needs a better name
+def _preferredremotenames(repo):
+    """This property is a dictionary of values identical to _remotenames but
+    returning only 'preferred' names per path, e.g. '@' instead of
+    'default'. A table of behavior is given below:
+
+    +---------+---------+---------+
+    |  name1  |  name2  | output  |
+    |         |         |         |
+    +---------+---------+---------+
+    |         | default |         |
+    +---------+---------+---------+
+    |         |    @    |    @    |
+    +---------+---------+---------+
+    | default |    @    |    @    |
+    +---------+---------+---------+
+    |   foo   |    @    |  foo @  |
+    +---------+---------+---------+
+    |   foo   |   bar   | foo bar |
+    +---------+---------+---------+
+
+    """
+    ret = {}
+
+    remotenames = repo.names.allnames(repo, 'remotenames')
+    # iterate over all the paths so we don't clobber path1/@ with
+    # path2/@
+    for path, uri in repo.ui.configitems('paths'):
+
+        inverse = {}
+        for name in remotenames:
+            if not name.startswith(path):
+                continue
+            node = repo.names.singlenode(repo, name)
+            # nothing to check, so add and move on
+            if node not in inverse.keys():
+                inverse[node] = name
+                continue
+
+            # get the ref names, remote will always be the same
+            remote, ref1 = splitremotename(inverse[node])
+            remote, ref2 = splitremotename(name)
+
+            # prefer anything over default
+            if ref2 == 'default':
+                continue
+            if ref1 == 'default':
+                inverse[node] = joinremotename(remote, ref2)
+                continue
+
+            # prefer non-empty name to alias (empty) name
+            if not ref2:
+                continue
+            if not ref1:
+                inverse[node] = joinremotename(remote, ref2)
+                continue
+
+            # if we got to this point then both names are non-default /
+            # non-alias names and we should add ref2 to the return list
+            # directly (ref1 will be added normally)
+            if ref1 and ref2 and ref1 != ref2:
+                ret[joinremotename(remote, ref2)] = node
+
+        ret.update(dict([(name, node) for node, name in
+                         inverse.iteritems()]))
+
+    return ret
 
 def activepath(ui, remote):
     realpath = ''
@@ -331,7 +330,7 @@ def preferredremotenameskw(**args):
     """
     repo, ctx = args['repo'], args['ctx']
     remotenames = sorted([name for name, node in
-                          repo._preferredremotenames.iteritems()
+                          _preferredremotenames(repo).iteritems()
                           if node == ctx.node()])
     if remotenames:
         return templatekw.showlist('remotename', remotenames,
@@ -381,7 +380,7 @@ def remotedistancekw(**args):
     ref = ctx.branch()
 
     distances = ['%s:%d' % (name, calculateremotedistance(repo, ctx, name))
-                 for name in repo._preferredremotenames]
+                 for name in _preferredremotenames(repo)]
     return templatekw.showlist('remotedistance', distances,
                                plural='remotedistances', **args)
 
