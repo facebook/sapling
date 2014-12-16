@@ -80,13 +80,23 @@ Test that patterns from ui.ignore options are read:
 
 empty out testhgignore
   $ echo > .hg/testhgignore
-  $ echo "glob:*.o" > .hgignore
+
+Test relative ignore path (issue4473):
+
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ignore.relative = .hg/testhgignorerel
+  > EOF
+  $ echo "glob:*.o" > .hg/testhgignorerel
+  $ cd dir
   $ hg status
   A dir/b.o
   ? .hgignore
   ? a.c
   ? syntax
 
+  $ cd ..
+  $ echo > .hg/testhgignorerel
   $ echo "syntax: glob" > .hgignore
   $ echo "re:.*\.o" >> .hgignore
   $ hg status

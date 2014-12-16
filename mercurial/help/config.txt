@@ -1338,11 +1338,11 @@ User interface controls.
 
 ``ignore``
     A file to read per-user ignore patterns from. This file should be
-    in the same format as a repository-wide .hgignore file. This
-    option supports hook syntax, so if you want to specify multiple
-    ignore files, you can do so by setting something like
-    ``ignore.other = ~/.hgignore2``. For details of the ignore file
-    format, see the ``hgignore(5)`` man page.
+    in the same format as a repository-wide .hgignore file. Filenames
+    are relative to the repository root. This option supports hook syntax,
+    so if you want to specify multiple ignore files, you can do so by
+    setting something like ``ignore.other = ~/.hgignore2``. For details
+    of the ignore file format, see the ``hgignore(5)`` man page.
 
 ``interactive``
     Allow to prompt the user. True or False. Default is True.
