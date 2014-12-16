@@ -398,7 +398,6 @@ def remotedistancekw(**args):
     return templatekw.showlist('remotedistance', distances,
                                plural='remotedistances', **args)
 
-
 def remotedistance(context, mapping, args):
     """:remotedistance: String of the form <remotepath>:<distance>. Given a remote
     branch calculate the distance from the changeset to the remotepath,
