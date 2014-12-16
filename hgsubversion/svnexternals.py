@@ -120,13 +120,24 @@ def parsedefinition(line):
 class RelativeSourceError(Exception):
     pass
 
+def resolvedots(url):
+    """ Fix references that include .. entries."""
+    orig = url.split('/')
+    fixed = []
+    for item in orig:
+        if item != '..':
+            fixed.append(item)
+        else:
+            fixed.pop()
+    return '/'.join(fixed)
+
 def resolvesource(ui, svnroot, source):
     if re_scheme.search(source):
         return source
     if source.startswith('^/'):
         if svnroot is None:
             raise RelativeSourceError()
-        return svnroot + source[1:]
+        return resolvedots(svnroot + source[1:])
     ui.warn(_('ignoring unsupported non-fully qualified external: %r\n'
               % source))
     return None
