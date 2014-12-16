@@ -1,10 +1,7 @@
 import os
 
-from mercurial import config
-from mercurial import context
 from mercurial import extensions
 from mercurial import hg
-from mercurial import node
 from mercurial import ui
 from mercurial import url
 from mercurial import util
@@ -14,6 +11,8 @@ from mercurial import templatekw
 from mercurial import templater
 from mercurial import exchange
 from mercurial import namespaces
+
+from mercurial.node import hex
 
 from hgext import schemes
 
@@ -141,8 +140,7 @@ def _preferredremotenames(repo):
             if ref1 and ref2 and ref1 != ref2:
                 ret[joinremotename(remote, ref2)] = node
 
-        ret.update(dict([(name, node) for node, name in
-                         inverse.iteritems()]))
+        ret.update(dict((name, n) for n, name in inverse.iteritems()))
 
     return ret
 
@@ -207,10 +205,8 @@ def expandscheme(ui, uri):
             parts = parts[:-1]
         else:
             tail = ''
-        context = dict((str(i+1), v) for i, v in
-                       enumerate(parts))
-        uri = ''.join(scheme.templater.process(
-            scheme.url, context)) + tail
+        ctx = dict((str(i + 1), v) for i, v in enumerate(parts))
+        uri = ''.join(scheme.templater.process(scheme.url, ctx)) + tail
     return uri
 
 def splitremotename(remote):
@@ -266,9 +262,9 @@ def saveremotenames(repo, remote, branches, bookmarks):
         f.write(''.join(olddata))
     for branch, nodes in branches.iteritems():
         for n in nodes:
-            f.write('%s %s/%s\n' % (node.hex(n), remote, branch))
+            f.write('%s %s/%s\n' % (hex(n), remote, branch))
             if remote != 'default' and branch == 'default' and alias_default:
-                f.write('%s %s\n' % (node.hex(n), remote))
+                f.write('%s %s\n' % (hex(n), remote))
     for bookmark, n in bookmarks.iteritems():
         f.write('%s %s/%s\n' % (n, remote, bookmark))
     f.close()
@@ -288,15 +284,13 @@ def upstream_revs(filt, repo, subset, x):
         return revset.baseset([])
 
     tipancestors = repo.revs('::%ln', upstream_tips)
-    def cond(n):
-        return n in tipancestors
-    return revset.filteredset(subset, cond)
+    return revset.filteredset(subset, lambda n: n in tipancestors)
 
 def upstream(repo, subset, x):
     '''``upstream()``
     Select changesets in an upstream repository according to remotenames.
     '''
-    args = revset.getargs(x, 0, 0, "upstream takes no arguments")
+    revset.getargs(x, 0, 0, "upstream takes no arguments")
     upstream_names = [s + '/' for s in
                       repo.ui.configlist('remotenames', 'upstream')]
     if not upstream_names:
@@ -309,14 +303,14 @@ def pushed(repo, subset, x):
     '''``pushed()``
     Select changesets in any remote repository according to remotenames.
     '''
-    args = revset.getargs(x, 0, 0, "pushed takes no arguments")
+    revset.getargs(x, 0, 0, "pushed takes no arguments")
     return upstream_revs(lambda x: True, repo, subset, x)
 
 def remotenamesrevset(repo, subset, x):
     """``remotenames()``
     All remote branches heads.
     """
-    args = revset.getargs(x, 0, 0, "remotenames takes no arguments")
+    revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set()
     cl = repo.changelog
     ns = repo.names["remotenames"]
@@ -375,8 +369,9 @@ def calculateremotedistance(repo, ctx, remote):
             if ctx1.rev() < ctx2.rev():
                 sign = -1
                 ctx1, ctx2 = ctx2, ctx1
-            span = repo.revs('%d::%d - %d' % (ctx2.rev(), ctx1.rev(), ctx2.rev()))
-            return sign*len(span)
+            span = repo.revs('%d::%d - %d'
+                             % (ctx2.rev(), ctx1.rev(), ctx2.rev()))
+            return sign * len(span)
     return 0
 
 def remotedistancekw(**args):
@@ -386,7 +381,6 @@ def remotedistancekw(**args):
 
     """
     repo, ctx = args['repo'], args['ctx']
-    ref = ctx.branch()
 
     distances = ['%s:%d' % (name, calculateremotedistance(repo, ctx, name))
                  for name in _preferredremotenames(repo)]
