@@ -151,7 +151,7 @@ def partgen(pushop, bundler):
 
     pushop.stepsdone.add('changesets')
     if not pushop.outgoing.missing:
-        upshop.ui.note(_('no changes to push'))
+        pushop.ui.note(_('no changes to push'))
         pushop.cgresult = 0
         return
     
