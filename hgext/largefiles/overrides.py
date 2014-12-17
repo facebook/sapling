@@ -1122,6 +1122,9 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
 # Calling purge with --all will cause the largefiles to be deleted.
 # Override repo.status to prevent this from happening.
 def overridepurge(orig, ui, repo, *dirs, **opts):
+    # XXX large file status is buggy when used on repo proxy.
+    # XXX this needs to be investigate.
+    repo = repo.unfiltered()
     oldstatus = repo.status
     def overridestatus(node1='.', node2=None, match=None, ignored=False,
                         clean=False, unknown=False, listsubrepos=False):
