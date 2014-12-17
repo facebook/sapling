@@ -905,6 +905,58 @@ Test that "diff()" in committemplate works correctly for amending
   HG: @@ -0,0 +1,1 @@
   HG: +y
 
+  $ hg rm a
+  $ HGEDITOR=cat hg commit --amend -e -m "expecting diff of a, foo and y"
+  expecting diff of a, foo and y
+  
+  HG: M: 
+  HG: A: foo y
+  HG: R: a
+  HG: diff -r 6de0c1bde1c8 a
+  HG: --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,2 +0,0 @@
+  HG: -a
+  HG: -a
+  HG: diff -r 6de0c1bde1c8 foo
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +foo
+  HG: diff -r 6de0c1bde1c8 y
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +y
+
+  $ hg rm x
+  $ HGEDITOR=cat hg commit --amend -e -m "expecting diff of a, foo, x and y"
+  expecting diff of a, foo, x and y
+  
+  HG: M: 
+  HG: A: foo y
+  HG: R: a x
+  HG: diff -r 6de0c1bde1c8 a
+  HG: --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,2 +0,0 @@
+  HG: -a
+  HG: -a
+  HG: diff -r 6de0c1bde1c8 foo
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +foo
+  HG: diff -r 6de0c1bde1c8 x
+  HG: --- a/x	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,1 +0,0 @@
+  HG: -x
+  HG: diff -r 6de0c1bde1c8 y
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +y
 
 Check for issue4405
 -------------------

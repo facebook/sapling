@@ -1649,6 +1649,10 @@ class memctx(committablectx):
         for f in self._status.added:
             man[f] = revlog.hash(self[f].data(), nullid, nullid)
 
+        for f in self._status.removed:
+            if f in man:
+                del man[f]
+
         return man
 
     @propertycache
