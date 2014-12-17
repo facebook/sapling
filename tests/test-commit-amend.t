@@ -805,7 +805,7 @@ This shouldn't be possible:
   $ hg branch closewithamend
   marked working directory as branch closewithamend
   (branches are permanent and global, did you want a bookmark?)
-  $ touch foo
+  $ echo foo > foo
   $ hg add foo
   $ hg ci -m..
   $ hg ci --amend --close-branch -m 'closing'
@@ -856,6 +856,55 @@ Test that amend with --edit invokes editor forcibly
   HG: added foo
   $ hg parents --template "{desc}\n"
   editor should be invoked
+
+Test that "diff()" in committemplate works correctly for amending
+-----------------------------------------------------------------
+
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset.commit.amend = {desc}\n
+  >     HG: M: {file_mods}
+  >     HG: A: {file_adds}
+  >     HG: R: {file_dels}
+  >     {splitlines(diff()) % 'HG: {line}\n'}
+  > EOF
+
+  $ hg parents --template "M: {file_mods}\nA: {file_adds}\nR: {file_dels}\n"
+  M: 
+  A: foo
+  R: 
+  $ hg status -amr
+  $ HGEDITOR=cat hg commit --amend -e -m "expecting diff of foo"
+  expecting diff of foo
+  
+  HG: M: 
+  HG: A: foo
+  HG: R: 
+  HG: diff -r 6de0c1bde1c8 foo
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +foo
+
+  $ echo y > y
+  $ hg add y
+  $ HGEDITOR=cat hg commit --amend -e -m "expecting diff of foo and y"
+  expecting diff of foo and y
+  
+  HG: M: 
+  HG: A: foo y
+  HG: R: 
+  HG: diff -r 6de0c1bde1c8 foo
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +foo
+  HG: diff -r 6de0c1bde1c8 y
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/y	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +y
+
 
 Check for issue4405
 -------------------

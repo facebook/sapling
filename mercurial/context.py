@@ -1646,6 +1646,9 @@ class memctx(committablectx):
             else:
                 man[f] = revlog.hash(fctx.data(), p1node, p2node)
 
+        for f in self._status.added:
+            man[f] = revlog.hash(self[f].data(), nullid, nullid)
+
         return man
 
     @propertycache
