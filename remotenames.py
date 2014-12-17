@@ -424,7 +424,22 @@ def remotebookmarkskw(**args):
     return templatekw.showlist('remotebookmark', remotebooks,
                                plural='remotebookmarks', **args)
 
+def remotebrancheskw(**args):
+    """:remotebranches: List of strings. List of remote branches associated with
+    the changeset.
+
+    """
+    repo, ctx = args['repo'], args['ctx']
+
+    remotebranches = [name for name in
+                      repo.names['remotenames'].names(repo, ctx.node())
+                      if _remotetypes[name] == 'branches']
+
+    return templatekw.showlist('remotebranch', remotebranches,
+                               plural='remotebranches', **args)
+
 templatekw.keywords['preferredremotenames'] = preferredremotenameskw
 templatekw.keywords['remotedistance'] = remotedistancekw
 templatekw.keywords['remotebookmarks'] = remotebookmarkskw
+templatekw.keywords['remotebranches'] = remotebrancheskw
 templater.funcs['remotedistance'] = remotedistance
