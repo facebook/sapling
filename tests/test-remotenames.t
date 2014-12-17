@@ -10,10 +10,16 @@
   >    hg ci -m "add $1"
   > }
 
+Test that remotenames works on a repo without any names file
+
   $ hg init alpha
   $ cd alpha
   $ mkcommit a
   $ mkcommit b
+  $ hg log -r 'upstream()'
+
+Continue testing
+
   $ hg branch stable
   marked working directory as branch stable
   (branches are permanent and global, did you want a bookmark?)

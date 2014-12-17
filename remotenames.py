@@ -78,6 +78,14 @@ def reposetup(ui, repo):
 
     loadremotenames(repo)
 
+    ns = namespaces.namespace
+    n = ns("remotenames", "remotename",
+           lambda rp: _remotenames.keys(),
+           lambda rp, name: namespaces.tolist(_remotenames.get(name)),
+           lambda rp, node: [name for name, n in _remotenames.iteritems()
+                             if n == node])
+    repo.names.addnamespace(n)
+
 # arguably, this needs a better name
 def _preferredremotenames(repo):
     """This property is a dictionary of values identical to _remotenames but
@@ -250,14 +258,6 @@ def loadremotenames(repo):
         elif rname in bookmarks:
             _remotetypes[name] = 'bookmarks'
     f.close()
-
-    ns = namespaces.namespace
-    n = ns("remotenames", "remotename",
-           lambda rp: _remotenames.keys(),
-           lambda rp, name: namespaces.tolist(_remotenames.get(name)),
-           lambda rp, node: [name for name, n in _remotenames.iteritems()
-                             if n == node])
-    repo.names.addnamespace(n)
 
 def saveremotenames(repo, remote, branches, bookmarks):
     bfile = repo.join('remotenames')
