@@ -364,7 +364,7 @@ Setting up
   >     if reason == 'abort':
   >         bundler.newpart('test:abort')
   >     if reason == 'unknown':
-  >         bundler.newpart('TEST:UNKNOWN')
+  >         bundler.newpart('test:unknown')
   >     if reason == 'race':
   >         # 20 Bytes of crap
   >         bundler.newpart('b2x:check:heads', data='01234567890123456789')

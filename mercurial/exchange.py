@@ -49,7 +49,7 @@ def buildobsmarkerspart(bundler, markers):
         if version is None:
             raise ValueError('bundler do not support common obsmarker format')
         stream = obsolete.encodemarkers(markers, True, version=version)
-        return bundler.newpart('B2X:OBSMARKERS', data=stream)
+        return bundler.newpart('b2x:obsmarkers', data=stream)
     return None
 
 class pushoperation(object):
@@ -454,7 +454,7 @@ def _pushb2ctx(pushop, bundler):
                                      pushop.remote,
                                      pushop.outgoing)
     if not pushop.force:
-        bundler.newpart('B2X:CHECK:HEADS', data=iter(pushop.remoteheads))
+        bundler.newpart('b2x:check:heads', data=iter(pushop.remoteheads))
     b2caps = bundle2.bundle2caps(pushop.remote)
     version = None
     cgversions = b2caps.get('b2x:changegroup')
@@ -469,7 +469,7 @@ def _pushb2ctx(pushop, bundler):
         cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
                                                 pushop.outgoing,
                                                 version=version)
-    cgpart = bundler.newpart('B2X:CHANGEGROUP', data=cg)
+    cgpart = bundler.newpart('b2x:changegroup', data=cg)
     if version is not None:
         cgpart.addparam('version', version)
     def handlereply(op):

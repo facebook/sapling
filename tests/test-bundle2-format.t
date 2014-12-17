@@ -127,9 +127,9 @@ Create an extension to test bundle2 API
   >        # advisory known part with unknown mandatory param
   >        bundler.newpart('test:song', [('randomparam','')], mandatory=False)
   >     if opts['unknown']:
-  >        bundler.newpart('test:UNKNOWN', data='some random content')
+  >        bundler.newpart('test:unknown', data='some random content')
   >     if opts['unknownparams']:
-  >        bundler.newpart('test:SONG', [('randomparams', '')])
+  >        bundler.newpart('test:song', [('randomparams', '')])
   >     if opts['parts']:
   >        bundler.newpart('test:ping', mandatory=False)
   >     if opts['genraise']:

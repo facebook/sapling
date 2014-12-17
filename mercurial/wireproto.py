@@ -837,7 +837,7 @@ def unbundle(repo, proto, heads):
             os.unlink(tempname)
     except error.BundleValueError, exc:
             bundler = bundle2.bundle20(repo.ui)
-            errpart = bundler.newpart('B2X:ERROR:UNSUPPORTEDCONTENT')
+            errpart = bundler.newpart('b2x:error:unsupportedcontent')
             if exc.parttype is not None:
                 errpart.addparam('parttype', exc.parttype)
             if exc.params:
@@ -854,7 +854,7 @@ def unbundle(repo, proto, heads):
             advargs = []
             if inst.hint is not None:
                 advargs.append(('hint', inst.hint))
-            bundler.addpart(bundle2.bundlepart('B2X:ERROR:ABORT',
+            bundler.addpart(bundle2.bundlepart('b2x:error:abort',
                                                manargs, advargs))
             return streamres(bundler.getchunks())
         else:
@@ -863,7 +863,7 @@ def unbundle(repo, proto, heads):
     except error.PushRaced, exc:
         if getattr(exc, 'duringunbundle2', False):
             bundler = bundle2.bundle20(repo.ui)
-            bundler.newpart('B2X:ERROR:PUSHRACED', [('message', str(exc))])
+            bundler.newpart('b2x:error:pushraced', [('message', str(exc))])
             return streamres(bundler.getchunks())
         else:
             return pusherr(str(exc))

@@ -50,13 +50,13 @@ Create an extension to test bundle2 remote-changegroup parts
   >            bundledata = open(file, 'rb').read()
   >            digest = util.digester.preferred(b2caps['digests'])
   >            d = util.digester([digest], bundledata)
-  >            part = newpart('B2X:REMOTE-CHANGEGROUP')
+  >            part = newpart('b2x:remote-changegroup')
   >            part.addparam('url', url)
   >            part.addparam('size', str(len(bundledata)))
   >            part.addparam('digests', digest)
   >            part.addparam('digest:%s' % digest, d[digest])
   >         elif verb == 'raw-remote-changegroup':
-  >            part = newpart('B2X:REMOTE-CHANGEGROUP')
+  >            part = newpart('b2x:remote-changegroup')
   >            for k, v in eval(args).items():
   >                part.addparam(k, str(v))
   >         elif verb == 'changegroup':
@@ -65,7 +65,7 @@ Create an extension to test bundle2 remote-changegroup parts
   >             heads = [repo.lookup(r) for r in repo.revs(heads)]
   >             cg = changegroup.getchangegroup(repo, 'changegroup',
   >                 heads=heads, common=common)
-  >             newpart('B2X:CHANGEGROUP', cg.getchunks())
+  >             newpart('b2x:changegroup', cg.getchunks())
   >         else:
   >             raise Exception('unknown verb')
   > 
@@ -137,7 +137,7 @@ Test a pull with an remote-changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -180,12 +180,12 @@ Test a pull with an remote-changegroup and a following changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  remote: B2X:CHANGEGROUP
+  remote: b2x:changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -228,12 +228,12 @@ Test a pull with a changegroup followed by an remote-changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:CHANGEGROUP
+  remote: b2x:changegroup
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -279,17 +279,17 @@ Test a pull with two remote-changegroups and a changegroup
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
-  remote: B2X:CHANGEGROUP
+  remote: b2x:changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -324,7 +324,7 @@ Hash digest tests
   > EOF
   $ hg clone ssh://user@dummy/repo clone
   requesting all changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -338,7 +338,7 @@ Hash digest tests
   > EOF
   $ hg clone ssh://user@dummy/repo clone
   requesting all changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -354,7 +354,7 @@ Hash digest mismatch throws an error
   > EOF
   $ hg clone ssh://user@dummy/repo clone
   requesting all changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -372,7 +372,7 @@ Multiple hash digests can be given
   > EOF
   $ hg clone ssh://user@dummy/repo clone
   requesting all changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -388,7 +388,7 @@ If either of the multiple hash digests mismatches, an error is thrown
   > EOF
   $ hg clone ssh://user@dummy/repo clone
   requesting all changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -404,7 +404,7 @@ If either of the multiple hash digests mismatches, an error is thrown
   > EOF
   $ hg clone ssh://user@dummy/repo clone
   requesting all changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -433,12 +433,12 @@ Corruption tests
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -467,7 +467,7 @@ No params
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: remote-changegroup: missing "url" param
   [255]
 
@@ -479,7 +479,7 @@ Missing size
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: remote-changegroup: missing "size" param
   [255]
 
@@ -491,7 +491,7 @@ Invalid size
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: remote-changegroup: invalid value for param "size"
   [255]
 
@@ -503,7 +503,7 @@ Size mismatch
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   adding changesets
   adding manifests
   adding file changes
@@ -522,7 +522,7 @@ Unknown digest
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: missing support for b2x:remote-changegroup - digest:foo
   [255]
 
@@ -534,7 +534,7 @@ Missing digest
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: remote-changegroup: missing "digest:sha1" param
   [255]
 
@@ -546,7 +546,7 @@ Not an HTTP url
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: remote-changegroup does not support ssh urls
   [255]
 
@@ -561,7 +561,7 @@ Not a bundle
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: http://localhost:$HGPORT/notbundle.hg: not a Mercurial bundle
   [255]
 
@@ -576,7 +576,7 @@ Not a bundle 1.0
   $ hg pull -R clone ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
   searching for changes
-  remote: B2X:REMOTE-CHANGEGROUP
+  remote: b2x:remote-changegroup
   abort: http://localhost:$HGPORT/notbundle10.hg: not a bundle version 1.0
   [255]
 
