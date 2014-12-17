@@ -1122,8 +1122,15 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
 # Calling purge with --all will cause the largefiles to be deleted.
 # Override repo.status to prevent this from happening.
 def overridepurge(orig, ui, repo, *dirs, **opts):
-    # XXX large file status is buggy when used on repo proxy.
-    # XXX this needs to be investigate.
+    # XXX Monkey patching a repoview will not work. The assigned attribute will
+    # be set on the unfiltered repo, but we will only lookup attributes in the
+    # unfiltered repo if the lookup in the repoview object itself fails. As the
+    # monkey patched method exists on the repoview class the lookup will not
+    # fail. As a result, the original version will shadow the monkey patched
+    # one, defeating the monkey patch.
+    #
+    # As a work around we use an unfiltered repo here. We should do something
+    # cleaner instead.
     repo = repo.unfiltered()
     oldstatus = repo.status
     def overridestatus(node1='.', node2=None, match=None, ignored=False,
