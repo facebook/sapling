@@ -13,10 +13,11 @@ setup(
     license='',
     py_modules=[
         'backups',
+        'chistedit',
         'fbamend',
         'githelp',
         'smartlog',
         'sparse',
-        'chistedit',
+        'upgradegeneraldelta',
     ]
 )
