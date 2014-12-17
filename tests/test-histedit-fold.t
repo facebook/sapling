@@ -172,11 +172,16 @@ check saving last-message.txt
   > EOF
 
   $ rm -f .hg/last-message.txt
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 8e03a72b6f83 --commands - 2>&1 <<EOF | fixbundle
+  $ hg status --rev '8e03a72b6f83^1::c4a9eb7989fc'
+  A c
+  A d
+  A f
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 8e03a72b6f83 --commands - 2>&1 <<EOF
   > pick 8e03a72b6f83 f
   > fold c4a9eb7989fc d
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding d
   allow non-folding commit
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   ==== before editing
@@ -193,13 +198,14 @@ check saving last-message.txt
   HG: --
   HG: user: test
   HG: branch 'default'
-  HG: changed c
-  HG: changed d
-  HG: changed f
+  HG: added c
+  HG: added d
+  HG: added f
   ====
   transaction abort!
   rollback completed
   abort: pretxncommit.abortfolding hook failed
+  [255]
 
   $ cat .hg/last-message.txt
   f

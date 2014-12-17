@@ -1583,8 +1583,7 @@ class memctx(committablectx):
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
         files = sorted(set(files))
-        self._status = scmutil.status(files, [], [], [], [], [], [])
-        self._filectxfn = filectxfn
+        self._files = files
         self.substate = {}
 
         # if store is not callable, wrap it in a function
@@ -1600,6 +1599,10 @@ class memctx(committablectx):
                                   islink=fctx.islink(), isexec=fctx.isexec(),
                                   copied=copied, memctx=memctx)
             self._filectxfn = getfilectx
+        else:
+            # "util.cachefunc" reduces invocation of possibly expensive
+            # "filectxfn" for performance (e.g. converting from another VCS)
+            self._filectxfn = util.cachefunc(filectxfn)
 
         self._extra = extra and extra.copy() or {}
         if self._extra.get('branch', '') == '':
@@ -1645,6 +1648,31 @@ class memctx(committablectx):
 
         return man
 
+    @propertycache
+    def _status(self):
+        """Calculate exact status from ``files`` specified at construction
+        """
+        man1 = self.p1().manifest()
+        p2 = self._parents[1]
+        # "1 < len(self._parents)" can't be used for checking
+        # existence of the 2nd parent, because "memctx._parents" is
+        # explicitly initialized by the list, of which length is 2.
+        if p2.node() != nullid:
+            man2 = p2.manifest()
+            managing = lambda f: f in man1 or f in man2
+        else:
+            managing = lambda f: f in man1
+
+        modified, added, removed = [], [], []
+        for f in self._files:
+            if not managing(f):
+                added.append(f)
+            elif self[f]:
+                modified.append(f)
+            else:
+                removed.append(f)
+
+        return scmutil.status(modified, added, removed, [], [], [], [])
 
 class memfilectx(committablefilectx):
     """memfilectx represents an in-memory file to commit.

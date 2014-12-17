@@ -842,6 +842,8 @@ Test that amend with --edit invokes editor forcibly
   $ hg parents --template "{desc}\n"
   editor should be suppressed
 
+  $ hg status --rev '.^1::.'
+  A foo
   $ HGEDITOR=cat hg commit --amend -m "editor should be invoked" --edit
   editor should be invoked
   
@@ -851,7 +853,7 @@ Test that amend with --edit invokes editor forcibly
   HG: --
   HG: user: test
   HG: branch 'silliness'
-  HG: changed foo
+  HG: added foo
   $ hg parents --template "{desc}\n"
   editor should be invoked
 
