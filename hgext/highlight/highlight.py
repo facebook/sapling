@@ -32,6 +32,11 @@ def pygmentize(field, fctx, style, tmpl):
     if util.binary(text):
         return
 
+    # str.splitlines() != unicode.splitlines() because "reasons"
+    for c in "\x0c\x1c\x1d\x1e":
+        if c in text:
+            text = text.replace(c, '')
+
     # Pygments is best used with Unicode strings:
     # <http://pygments.org/docs/unicode/>
     text = text.decode(encoding.encoding, 'replace')
