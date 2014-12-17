@@ -410,6 +410,21 @@ def remotedistance(context, mapping, args):
 
     return calculateremotedistance(repo, ctx, remote)
 
+def remotebookmarkskw(**args):
+    """:remotebookmarks: List of strings. List of remote bookmarks associated with
+    the changeset.
+
+    """
+    repo, ctx = args['repo'], args['ctx']
+
+    remotebooks = [name for name in
+                   repo.names['remotenames'].names(repo, ctx.node())
+                   if _remotetypes[name] == 'bookmarks']
+
+    return templatekw.showlist('remotebookmark', remotebooks,
+                               plural='remotebookmarks', **args)
+
 templatekw.keywords['preferredremotenames'] = preferredremotenameskw
 templatekw.keywords['remotedistance'] = remotedistancekw
+templatekw.keywords['remotebookmarks'] = remotebookmarkskw
 templater.funcs['remotedistance'] = remotedistance
