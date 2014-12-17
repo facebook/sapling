@@ -28,6 +28,7 @@ setup(
         'smartlog',
         'sparse',
         'tweakdefaults',
+        'upgradegeneraldelta',
     ],
     packages=['crecord']
 )
