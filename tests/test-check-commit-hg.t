@@ -14,7 +14,7 @@ Go back in the hg repo
   $ for node in `hg log --rev 'draft() and ::.' --template '{node|short}\n'`; do
   >    hg export $node | contrib/check-commit > ${TESTTMP}/check-commit.out
   >    if [ $? -ne 0 ]; then
-  >        echo "Revision $node does not comply to commit message rules"
+  >        echo "Revision $node does not comply to rules"
   >        echo '------------------------------------------------------'
   >        cat ${TESTTMP}/check-commit.out
   >        echo
