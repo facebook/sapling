@@ -7,9 +7,9 @@
 
 '''upgrade manifests to generaldelta in-place
 
-Performs an upgrade of this repo's manifest to generaldelta, without needing to
-reclone. This tries to be as safe as possible but is inherently not a completely
-safe operation.
+Performs an upgrade of this repo's manifest to generaldelta on pull, without
+needing to reclone. This tries to be as safe as possible but is inherently not a
+completely safe operation.
 
 Filelogs are not touched -- the manifest is often the revlog that benefits the
 most from generaldelta. New filelogs will be generaldelta, though.
@@ -28,10 +28,14 @@ The following configuration options are available:
 
 '''
 
-from mercurial import revlog, util
+from mercurial import commands, extensions, revlog, util
 import os, struct, weakref
 
-def reposetup(ui, repo):
+def wrappull(orig, ui, repo, *args, **kwargs):
+    _upgrade(ui, repo)
+    orig(ui, repo, *args, **kwargs)
+
+def _upgrade(ui, repo):
     if not util.safehasattr(repo, 'svfs'):
         return
     if not ui.configbool('upgradegeneraldelta', 'upgrade'):
@@ -56,6 +60,7 @@ def reposetup(ui, repo):
     lock = repo.lock()
     tr = repo.transaction('upgradegeneraldelta')
     try:
+        ui.warn('upgrading repository to generaldelta\n')
         trp = weakref.proxy(tr)
 
         newopts = oldopts.copy()
@@ -106,3 +111,6 @@ def reposetup(ui, repo):
             tr.release()
         lock.release()
         repo.svfs.options = oldopts
+
+def extsetup(ui):
+    extensions.wrapcommand(commands.table, 'pull', wrappull)
