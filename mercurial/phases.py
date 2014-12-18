@@ -161,7 +161,7 @@ class phasecache(object):
     def copy(self):
         # Shallow copy meant to ensure isolation in
         # advance/retractboundary(), nothing more.
-        ph = phasecache(None, None, _load=False)
+        ph = self.__class__(None, None, _load=False)
         ph.phaseroots = self.phaseroots[:]
         ph.dirty = self.dirty
         ph.opener = self.opener

@@ -15,7 +15,7 @@ from node import nullid
 from i18n import _
 import os, tempfile, shutil
 import changegroup, util, mdiff, discovery, cmdutil, scmutil, exchange
-import localrepo, changelog, manifest, filelog, revlog, error
+import localrepo, changelog, manifest, filelog, revlog, error, phases
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundle, linkmapper):
@@ -184,6 +184,23 @@ class bundlepeer(localrepo.localpeer):
     def canpush(self):
         return False
 
+class bundlephasecache(phases.phasecache):
+    def __init__(self, *args, **kwargs):
+        super(bundlephasecache, self).__init__(*args, **kwargs)
+        if util.safehasattr(self, 'opener'):
+            self.opener = scmutil.readonlyvfs(self.opener)
+
+    def write(self):
+        raise NotImplementedError
+
+    def _write(self, fp):
+        raise NotImplementedError
+
+    def _updateroots(self, phase, newroots, tr):
+        self.phaseroots[phase] = newroots
+        self.invalidate()
+        self.dirty = True
+
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         self._tempparent = None
@@ -224,6 +241,10 @@ class bundlerepository(localrepo.localrepository):
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
+
+    @localrepo.unfilteredpropertycache
+    def _phasecache(self):
+        return bundlephasecache(self, self._phasedefaults)
 
     @localrepo.unfilteredpropertycache
     def changelog(self):
