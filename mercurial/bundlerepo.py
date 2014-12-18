@@ -242,6 +242,10 @@ class bundlerepository(localrepo.localrepository):
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
 
+        self.firstnewrev = self.changelog.repotiprev + 1
+        phases.retractboundary(self, None, phases.draft,
+                               [ctx.node() for ctx in self[self.firstnewrev:]])
+
     @localrepo.unfilteredpropertycache
     def _phasecache(self):
         return bundlephasecache(self, self._phasedefaults)

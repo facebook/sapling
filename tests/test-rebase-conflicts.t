@@ -143,7 +143,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd issue4041
-  $ hg phase --draft --force 9
   $ hg log -G
   o    changeset:   10:2f2496ddf49d
   |\   branch:      f1
@@ -316,7 +315,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding f1.txt revisions
   files: 1/1 chunks (100.00%)
   added 2 changesets with 2 changes to 1 files
-  removing unknown node e31216eec445 from 1-phase boundary
   invalid branchheads cache (served): tip differs
   rebase completed
   updating the branch cache

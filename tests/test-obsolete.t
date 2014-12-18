@@ -702,7 +702,7 @@ This test issue 3805
   $ hg incoming http://localhost:$HGPORT
   comparing with http://localhost:$HGPORT/
   searching for changes
-  1:3816541e5485 (public) [tip ] A
+  1:3816541e5485 (draft) [tip ] A
   $ hg outgoing http://localhost:$HGPORT
   comparing with http://localhost:$HGPORT/
   searching for changes

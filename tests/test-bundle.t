@@ -268,51 +268,60 @@ Create partial clones
 
 Log -R full.hg in partial
 
-  $ hg -R bundle://../full.hg log
+  $ hg -R bundle://../full.hg log -T phases
   changeset:   8:aa35859c02ea
   tag:         tip
+  phase:       draft
   parent:      3:eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
   changeset:   7:a6a34bfa0076
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
   changeset:   6:7373c1169842
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
   changeset:   5:1bb50a9436a7
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
   changeset:   4:095197eb4973
+  phase:       draft
   parent:      0:f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
   changeset:   3:eebf5a27f8ca
+  phase:       public
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
   
   changeset:   2:e38ba6f5b7e0
+  phase:       public
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
   changeset:   1:34c2bf6b0626
+  phase:       public
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
   changeset:   0:f9ee2f85a263
+  phase:       public
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0

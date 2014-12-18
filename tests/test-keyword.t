@@ -585,10 +585,8 @@ Copy and show added kwfiles
 Commit and show expansion in original and copy
 
   $ hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
-  invalid branchheads cache (served): tip differs
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
-  invalid branchheads cache (served): tip differs
   overwriting c expanding keywords
   committed changeset 2:25736cf2f5cbe41f6be4e6784ef6ecf9f3bbcc7d
   $ cat a c
@@ -757,22 +755,8 @@ Interrupted commit should not change state
 
 Commit with multi-line message and custom expansion
 
-|Note:
-|
-| After the last rollback, the "served" branchheads cache became invalid, but
-| all changesets in the repo were public. For filtering this means:
-|   "immutable" == "served" == ø.
-|
-| As the "served" cache is invalid, we fall back to the "immutable" cache. But
-| no update is needed between "immutable" and "served" and the "served" cache
-| is not updated on disk. The on-disk version therefore stays invalid for some
-| time. This explains why the "served" branchheads cache is detected as
-| invalid here.
-
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
-  invalid branchheads cache (served): tip differs
   a
-  invalid branchheads cache (served): tip differs
   overwriting a expanding keywords
   committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
   $ rm log
