@@ -1165,6 +1165,8 @@ class committablectx(basectx):
         return sorted(self._repo.dirstate.matches(match))
 
     def ancestors(self):
+        for p in self._parents:
+            yield p
         for a in self._repo.changelog.ancestors(
             [p.rev() for p in self._parents]):
             yield changectx(self._repo, a)
