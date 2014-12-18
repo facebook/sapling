@@ -1633,10 +1633,9 @@ class memctx(committablectx):
 
         # keep this simple for now; just worry about p1
         pctx = self._parents[0]
-        pman = pctx.manifest()
         man = pctx.manifest().copy()
 
-        for f, fnode in pman.iteritems():
+        for f in self._status.modified:
             p1node = nullid
             p2node = nullid
             p = pctx[f].parents() # if file isn't in pctx, check p2?
@@ -1644,12 +1643,7 @@ class memctx(committablectx):
                 p1node = p[0].node()
                 if len(p) > 1:
                     p2node = p[1].node()
-            fctx = self[f]
-            if fctx is None:
-                # removed file
-                del man[f]
-            else:
-                man[f] = revlog.hash(fctx.data(), p1node, p2node)
+            man[f] = revlog.hash(self[f].data(), p1node, p2node)
 
         for f in self._status.added:
             man[f] = revlog.hash(self[f].data(), nullid, nullid)
