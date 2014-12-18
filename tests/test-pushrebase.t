@@ -106,13 +106,27 @@ Stack of non-conflicting commits should be accepted
   searching for changes
   preoutgoing hook: HG_SOURCE=push
   outgoing hook: HG_NODE=7585d2e4bf9ab3b58237c20d51ad5ef8778934d0 HG_SOURCE=push
+  prechangegroup hook: HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 1 changes to 2 files (+1 heads)
+  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
   remote: prechangegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: pretxnchangegroup hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: preoutgoing hook: HG_SOURCE=rebase:reply
   remote: b2x-pretransactionclose hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: outgoing hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=rebase:reply
+  b2x-pretransactionclose hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_PHASES_MOVED=1 HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
+  b2x-transactionclose hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PHASES_MOVED=1 HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
+  changegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
+  incoming hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
+  incoming hook: HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
+  incoming hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=push-response HG_URL=ssh://user@dummy/server
 
   $ cd ../server
   $ hg update default
@@ -133,24 +147,20 @@ Stack of non-conflicting commits should be accepted
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=7585d2e4bf9ab3b58237c20d51ad5ef8778934d0 HG_SOURCE=strip
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-backup.hg
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip
+  prechangegroup hook: HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
+  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
+  changegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
+  incoming hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
+  incoming hook: HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
+  incoming hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes
-  prechangegroup hook: HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 2 files
-  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  remote: preoutgoing hook: HG_SOURCE=serve
-  remote: outgoing hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=serve
-  b2x-pretransactionclose hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  b2x-transactionclose hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  changegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  incoming hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  incoming hook: HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  incoming hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=pull HG_URL=ssh://user@dummy/server
-  (run 'hg update' to get a working copy)
+  no changes found
+  b2x-pretransactionclose hook: HG_PENDING=$TESTTMP/client HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=ssh://user@dummy/server
+  b2x-transactionclose hook: HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=ssh://user@dummy/server
   $ hg update default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -175,7 +185,7 @@ Regular commits should go through without changing hash
   remote: pretxnchangegroup hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-pretransactionclose hook: HG_BUNDLE2-EXP=1 HG_PENDING=$TESTTMP/server HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=137b1b6ef90327e7addb09edcb005cbe0bee7493 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=137b1b6ef90327e7addb09edcb005cbe0bee7493 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
 
   $ cd ../server
@@ -312,7 +322,7 @@ With evolution enabled, should set obsolescence markers
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
   remote: b2x-pretransactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=2 HG_PENDING=$TESTTMP/server HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: b2x-transactionclose hook: HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=2 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: incoming hook: HG_BUNDLE2-EXP=1 HG_NODE=b423e42e554804d21e786126e84a27565a786628 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=rebase:reply

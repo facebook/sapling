@@ -28,10 +28,12 @@ The following configuration options are available:
 
 '''
 
-from mercurial import revlog
+from mercurial import revlog, util
 import os, struct, weakref
 
 def reposetup(ui, repo):
+    if not util.safehasattr(repo, 'svfs'):
+        return
     if not ui.configbool('upgradegeneraldelta', 'upgrade'):
         return
 

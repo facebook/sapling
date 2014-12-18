@@ -55,6 +55,9 @@ def validaterevset(repo, revset):
     if repo.revs('%r and merge()', revset):
         raise util.Abort(_('cannot rebase merge changesets'))
 
+    if repo.revs('%r and obsolete()', revset):
+        raise util.Abort(_('cannot rebase obsolete changesets'))
+
     tails = repo.revs('%r and ancestor(%r)', revset, revset)
     if not tails:
         raise util.Abort(_('cannot rebase unrelated changesets'))
@@ -105,15 +108,19 @@ def _checkheads(orig, repo, remote, *args, **kwargs):
     
 def _push(orig, ui, repo, *args, **opts):
     oldonto = ui.backupconfig(experimental, configonto)
+    oldphasemove = None
 
-    ui.setconfig(experimental, configonto, opts.get('onto'), '--onto')
-    if ui.config(experimental, configonto):
-        oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
-    result = orig(ui, repo, *args, **opts)
+    try:
+        ui.setconfig(experimental, configonto, opts.get('onto'), '--onto')
+        if ui.config(experimental, configonto):
+            ui.setconfig(experimental, 'bundle2.pushback', True)
+            oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
+        result = orig(ui, repo, *args, **opts)
+    finally:
+        ui.restoreconfig(oldonto)
+        if oldphasemove:
+            exchange._localphasemove = oldphasemove
 
-    ui.restoreconfig(oldonto)
-    if oldphasemove:
-        exchange._localphasemove = oldphasemove
     return result
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
@@ -147,7 +154,7 @@ def partgen(pushop, bundler):
 
     pushop.stepsdone.add('changesets')
     if not pushop.outgoing.missing:
-        upshop.ui.note(_('no changes to push'))
+        pushop.ui.note(_('no changes to push'))
         pushop.cgresult = 0
         return
     
@@ -329,7 +336,9 @@ def bundle2rebase(op, part):
     op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
 
     def runhooks():
-        op.repo.hook("changegroup", **hookargs)
+        args = hookargs.copy()
+        args['node'] = hex(added[0])
+        op.repo.hook("changegroup", **args)
         for n in added:
             args = hookargs.copy()
             args['node'] = hex(n)
