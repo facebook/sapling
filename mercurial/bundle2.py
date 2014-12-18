@@ -350,7 +350,8 @@ def _processpart(op, part):
             if output is not None:
                 output = op.ui.popbuffer()
         if output:
-            outpart = op.reply.newpart('b2x:output', data=output)
+            outpart = op.reply.newpart('b2x:output', data=output,
+                                       mandatory=False)
             outpart.addparam('in-reply-to', str(part.id), mandatory=False)
     finally:
         # consume the part content to not corrupt the stream.
@@ -588,7 +589,7 @@ class bundlepart(object):
     """
 
     def __init__(self, parttype, mandatoryparams=(), advisoryparams=(),
-                 data=''):
+                 data='', mandatory=True):
         self.id = None
         self.type = parttype
         self._data = data
@@ -605,6 +606,7 @@ class bundlepart(object):
         # - False: currently generated,
         # - True: generation done.
         self._generated = None
+        self.mandatory = mandatory
 
     # methods used to defines the part content
     def __setdata(self, data):
@@ -642,9 +644,13 @@ class bundlepart(object):
             raise RuntimeError('part can only be consumed once')
         self._generated = False
         #### header
+        if self.mandatory:
+            parttype = self.type.upper()
+        else:
+            parttype = self.type.lower()
         ## parttype
-        header = [_pack(_fparttypesize, len(self.type)),
-                  self.type, _pack(_fpartid, self.id),
+        header = [_pack(_fparttypesize, len(parttype)),
+                  parttype, _pack(_fpartid, self.id),
                  ]
         ## parameters
         # count
@@ -681,7 +687,8 @@ class bundlepart(object):
             # backup exception data for later
             exc_info = sys.exc_info()
             msg = 'unexpected error: %s' % exc
-            interpart = bundlepart('b2x:error:abort', [('message', msg)])
+            interpart = bundlepart('b2x:error:abort', [('message', msg)],
+                                   mandatory=False)
             interpart.id = 0
             yield _pack(_fpayloadsize, -1)
             for chunk in interpart.getchunks():
@@ -930,7 +937,7 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
-        part = op.reply.newpart('b2x:reply:changegroup')
+        part = op.reply.newpart('b2x:reply:changegroup', mandatory=False)
         part.addparam('in-reply-to', str(inpart.id), mandatory=False)
         part.addparam('return', '%i' % ret, mandatory=False)
     assert not inpart.read()
