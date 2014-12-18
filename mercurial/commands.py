@@ -425,13 +425,14 @@ def archive(ui, repo, dest, **opts):
 
 @command('backout',
     [('', 'merge', None, _('merge with old dirstate parent after backout')),
+    ('', 'commit', None, _('commit if no conflicts were encountered')),
     ('', 'parent', '',
      _('parent to choose when backing out merge (DEPRECATED)'), _('REV')),
     ('r', 'rev', '', _('revision to backout'), _('REV')),
     ('e', 'edit', False, _('invoke editor on commit messages')),
     ] + mergetoolopts + walkopts + commitopts + commitopts2,
     _('[OPTION]... [-r] REV'))
-def backout(ui, repo, node=None, rev=None, **opts):
+def backout(ui, repo, node=None, rev=None, commit=False, **opts):
     '''reverse effect of earlier changeset
 
     Prepare a new changeset with the effect of REV undone in the
@@ -519,11 +520,12 @@ def backout(ui, repo, node=None, rev=None, **opts):
                 if stats[3]:
                     repo.ui.status(_("use 'hg resolve' to retry unresolved "
                                      "file merges\n"))
-                else:
+                    return 1
+                elif not commit:
                     msg = _("changeset %s backed out, "
                             "don't forget to commit.\n")
                     ui.status(msg % short(node))
-                return stats[3] > 0
+                    return 0
             finally:
                 ui.setconfig('ui', 'forcemerge', '', '')
         else:

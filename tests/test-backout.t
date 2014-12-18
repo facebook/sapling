@@ -43,6 +43,47 @@ specified explicitly)
   commit: (clean)
   update: (current)
 
+commit option
+
+  $ cd ..
+  $ hg init commit
+  $ cd commit
+
+  $ echo tomatoes > a
+  $ hg add a
+  $ hg commit -d '0 0' -m tomatoes
+
+  $ echo chair > b
+  $ hg add b
+  $ hg commit -d '1 0' -m chair
+
+  $ echo grapes >> a
+  $ hg commit -d '2 0' -m grapes
+
+  $ hg backout --commit -d '4 0' 1 --tool=:fail
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  changeset 3:1c2161e97c0a backs out changeset 1:22cb4f70d813
+  $ hg summary
+  parent: 3:1c2161e97c0a tip
+   Backed out changeset 22cb4f70d813
+  branch: default
+  commit: (clean)
+  update: (current)
+
+  $ echo ypples > a
+  $ hg commit -d '5 0' -m ypples
+
+  $ hg backout --commit -d '6 0' 2 --tool=:fail
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg summary
+  parent: 4:ed99997b793d tip
+   ypples
+  branch: default
+  commit: 1 unresolved (clean)
+  update: (current)
+
 file that was removed is recreated
 (this also tests that editor is not invoked if the commit message is
 specified explicitly)
