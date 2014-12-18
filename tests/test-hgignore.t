@@ -64,13 +64,22 @@ Check it does not ignore the current directory '.':
   ? dir/c.o
   ? syntax
 
-  $ echo "glob:**.o" > .hgignore
+Test that patterns from ui.ignore options are read:
+
+  $ echo > .hgignore
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ignore.other = $TESTTMP/.hg/testhgignore
+  > EOF
+  $ echo "glob:**.o" > .hg/testhgignore
   $ hg status
   A dir/b.o
   ? .hgignore
   ? a.c
   ? syntax
 
+empty out testhgignore
+  $ echo > .hg/testhgignore
   $ echo "glob:*.o" > .hgignore
   $ hg status
   A dir/b.o
