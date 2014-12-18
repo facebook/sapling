@@ -17,6 +17,11 @@ import revlog
 
 propertycache = util.propertycache
 
+# Phony node value to stand-in for new files in some uses of
+# manifests. Manifests support 21-byte hashes for nodes which are
+# dirty in the working copy.
+_newnode = '!' * 21
+
 class basectx(object):
     """A basectx object represents the common logic for its children:
     changectx: read-only context that is already present in the repo,
@@ -104,7 +109,7 @@ class basectx(object):
                 if (fn not in deletedset and
                     ((fn in withflags and mf1.flags(fn) != mf2.flags(fn)) or
                      (mf1[fn] != mf2node and
-                      (mf2node or self[fn].cmp(other[fn]))))):
+                      (mf2node != _newnode or self[fn].cmp(other[fn]))))):
                     modified.append(fn)
                 elif listclean:
                     clean.append(fn)
@@ -1382,7 +1387,7 @@ class workingctx(committablectx):
         """
         mf = self._repo['.']._manifestmatches(match, s)
         for f in s.modified + s.added:
-            mf[f] = None
+            mf[f] = _newnode
             mf.setflag(f, self.flags(f))
         for f in s.removed:
             if f in mf:

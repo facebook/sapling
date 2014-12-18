@@ -191,8 +191,15 @@ def removelargefiles(ui, repo, isaddremove, *pats, **opts):
                 # are removing the file.
                 if isaddremove:
                     ui.status(_('removing %s\n') % f)
-                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
-            lfdirstate.remove(f)
+
+            if not opts.get('dry_run'):
+                if not after:
+                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                lfdirstate.remove(f)
+
+        if opts.get('dry_run'):
+            return result
+
         lfdirstate.write()
         remove = [lfutil.standin(f) for f in remove]
         # If this is being called by addremove, let the original addremove

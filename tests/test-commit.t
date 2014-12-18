@@ -518,4 +518,55 @@ commit copy
        0         0       6  .....       0 26d3ca0dfd18 000000000000 000000000000 (re)
        1         6       7  .....       1 d267bddd54f7 26d3ca0dfd18 000000000000 (re)
 
-  $ cd ..
+verify pathauditor blocks evil filepaths
+  $ cat > evil-commit.py <<EOF
+  > from mercurial import ui, hg, context, node
+  > notrc = u".h\u200cg".encode('utf-8') + '/hgrc'
+  > u = ui.ui()
+  > r = hg.repository(u, '.')
+  > def filectxfn(repo, memctx, path):
+  >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
+  > c = context.memctx(r, [r['tip'].node(), node.nullid],
+  >                    'evil', [notrc], filectxfn, 0)
+  > r.commitctx(c)
+  > EOF
+  $ $PYTHON evil-commit.py
+  $ hg co --clean tip
+  abort: path contains illegal component: .h\xe2\x80\x8cg/hgrc (esc)
+  [255]
+
+  $ hg rollback -f
+  repository tip rolled back to revision 1 (undo commit)
+  $ cat > evil-commit.py <<EOF
+  > from mercurial import ui, hg, context, node
+  > notrc = "HG~1/hgrc"
+  > u = ui.ui()
+  > r = hg.repository(u, '.')
+  > def filectxfn(repo, memctx, path):
+  >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
+  > c = context.memctx(r, [r['tip'].node(), node.nullid],
+  >                    'evil', [notrc], filectxfn, 0)
+  > r.commitctx(c)
+  > EOF
+  $ $PYTHON evil-commit.py
+  $ hg co --clean tip
+  abort: path contains illegal component: HG~1/hgrc
+  [255]
+
+  $ hg rollback -f
+  repository tip rolled back to revision 1 (undo commit)
+  $ cat > evil-commit.py <<EOF
+  > from mercurial import ui, hg, context, node
+  > notrc = "HG8B6C~2/hgrc"
+  > u = ui.ui()
+  > r = hg.repository(u, '.')
+  > def filectxfn(repo, memctx, path):
+  >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
+  > c = context.memctx(r, [r['tip'].node(), node.nullid],
+  >                    'evil', [notrc], filectxfn, 0)
+  > r.commitctx(c)
+  > EOF
+  $ $PYTHON evil-commit.py
+  $ hg co --clean tip
+  abort: path contains illegal component: HG8B6C~2/hgrc
+  [255]
