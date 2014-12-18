@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import util, sshpeer, hg, error
+from mercurial import util, sshpeer, hg, error, util
 import os, socket, lz4, time, grp
 
 # Statistics for debugging
@@ -334,8 +334,13 @@ class localcache(object):
         if not os.path.exists(dirpath):
             makedirs(self.cachepath, dirpath, self.uid)
 
-        with open(path, "w") as f:
+        f = None
+        try:
+            f = util.atomictempfile(path, 'w')
             f.write(data)
+        finally:
+            if f:
+                f.close()
 
         stat = os.stat(path)
         if stat.st_uid == self.uid:
