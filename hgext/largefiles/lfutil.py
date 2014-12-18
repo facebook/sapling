@@ -422,7 +422,14 @@ def getlfilestoupdate(oldstandins, newstandins):
 def getlfilestoupload(repo, missing, addfunc):
     for n in missing:
         parents = [p for p in repo.changelog.parents(n) if p != node.nullid]
-        ctx = repo[n]
+
+        oldlfstatus = repo.lfstatus
+        repo.lfstatus = False
+        try:
+            ctx = repo[n]
+        finally:
+            repo.lfstatus = oldlfstatus
+
         files = set(ctx.files())
         if len(parents) == 2:
             mc = ctx.manifest()
