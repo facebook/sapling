@@ -986,7 +986,7 @@ Test omit indicating for help
   > .. container:: verbose
   > 
   >   This paragraph is omitted,
-  >   if :hg:\`help\` is invoked witout \`\`-v\`\` (for extension)
+  >   if :hg:\`help\` is invoked without \`\`-v\`\` (for extension)
   > 
   > This paragraph is never omitted, too (for extension)
   > '''
@@ -997,7 +997,7 @@ Test omit indicating for help
   > .. container:: verbose
   > 
   >   This paragraph is omitted,
-  >   if :hg:\`help\` is invoked witout \`\`-v\`\` (for topic)
+  >   if :hg:\`help\` is invoked without \`\`-v\`\` (for topic)
   > 
   > This paragraph is never omitted, too (for topic)
   > """
@@ -1023,7 +1023,8 @@ Test omit indicating for help
   
   This paragraph is never omitted (for extension)
   
-  This paragraph is omitted, if "hg help" is invoked witout "-v" (for extension)
+  This paragraph is omitted, if "hg help" is invoked without "-v" (for
+  extension)
   
   This paragraph is never omitted, too (for extension)
   
@@ -1043,7 +1044,8 @@ Test omit indicating for help
   
       This paragraph is never omitted (for topic).
   
-      This paragraph is omitted, if "hg help" is invoked witout "-v" (for topic)
+      This paragraph is omitted, if "hg help" is invoked without "-v" (for
+      topic)
   
       This paragraph is never omitted, too (for topic)
 
