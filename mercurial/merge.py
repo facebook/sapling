@@ -543,8 +543,6 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 else:
                     actions[f] = ('dc', (fl2,), "prompt deleted/changed")
 
-    _checkunknownfiles(repo, wctx, p2, force, actions)
-
     return actions, diverge, renamedelete
 
 def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
@@ -567,6 +565,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
         actions, diverge, renamedelete = manifestmerge(
             repo, wctx, mctx, ancestors[0], branchmerge, force, partial,
             acceptremote, followcopies)
+        _checkunknownfiles(repo, wctx, mctx, force, actions)
 
     else: # only when merge.preferancestor=* - the default
         repo.ui.note(
@@ -581,6 +580,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             actions, diverge1, renamedelete1 = manifestmerge(
                 repo, wctx, mctx, ancestor, branchmerge, force, partial,
                 acceptremote, followcopies)
+            _checkunknownfiles(repo, wctx, mctx, force, actions)
             if diverge is None: # and renamedelete is None.
                 # Arbitrarily pick warnings from first iteration
                 diverge = diverge1
