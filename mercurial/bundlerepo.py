@@ -350,6 +350,16 @@ def instance(ui, path, create):
         repopath, bundlename = parentpath, path
     return bundlerepository(ui, repopath, bundlename)
 
+class bundletransactionmanager(object):
+    def transaction(self):
+        return None
+
+    def close(self):
+        raise NotImplementedError
+
+    def release(self):
+        raise NotImplementedError
+
 def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
                      force=False):
     '''obtains a bundle of changes incoming from other
@@ -417,6 +427,14 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
         localrepo = localrepo.unfiltered()
 
     csets = localrepo.changelog.findmissing(common, rheads)
+
+    if bundlerepo:
+        reponodes = [ctx.node() for ctx in bundlerepo[bundlerepo.firstnewrev:]]
+        remotephases = other.listkeys('phases')
+
+        pullop = exchange.pulloperation(bundlerepo, other, heads=reponodes)
+        pullop.trmanager = bundletransactionmanager()
+        exchange._pullapplyphases(pullop, remotephases)
 
     def cleanup():
         if bundlerepo:
