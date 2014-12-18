@@ -46,6 +46,13 @@ class pathauditor(object):
             or _lowerclean(parts[0]) in ('.hg', '.hg.', '')
             or os.pardir in parts):
             raise util.Abort(_("path contains illegal component: %s") % path)
+        # Windows shortname aliases
+        for p in parts:
+            if "~" in p:
+                first, last = p.split("~", 1)
+                if last.isdigit() and first.upper() in ["HG", "HG8B6C"]:
+                    raise util.Abort(_("path contains illegal component: %s")
+                                     % path)
         if '.hg' in _lowerclean(path):
             lparts = [_lowerclean(p.lower()) for p in parts]
             for p in '.hg', '.hg.':
