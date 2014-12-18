@@ -1655,12 +1655,12 @@ class gitsubrepo(abstractsubrepo):
         elif match(gitprefix): #Subrepo is matched
             ui.write(self._gitcommand(cmd))
 
-    def revert(self, ui, substate, *pats, **opts):
-        ui.status(_('reverting subrepo %s\n') % substate[0])
+    def revert(self, substate, *pats, **opts):
+        self.ui.status(_('reverting subrepo %s\n') % substate[0])
         if not opts.get('no_backup'):
-            ui.warn('%s: reverting %s subrepos without '
-                    '--no-backup is unsupported\n'
-                    % (substate[0], substate[2]))
+            self.ui.warn('%s: reverting %s subrepos without '
+                         '--no-backup is unsupported\n'
+                         % (substate[0], substate[2]))
             return []
 
         self.get(substate, overwrite=True)
