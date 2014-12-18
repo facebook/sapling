@@ -454,6 +454,10 @@ class localrepository(object):
     def __getitem__(self, changeid):
         if changeid is None:
             return context.workingctx(self)
+        if isinstance(changeid, slice):
+            return [context.changectx(self, i)
+                    for i in xrange(*changeid.indices(len(self)))
+                    if i not in self.changelog.filteredrevs]
         return context.changectx(self, changeid)
 
     def __contains__(self, changeid):
