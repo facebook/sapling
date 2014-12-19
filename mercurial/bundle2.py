@@ -85,7 +85,7 @@ Binary format is as follow
 
     :typesize: (one byte)
 
-    :parttype: alphanumerical part name
+    :parttype: alphanumerical part name (restricted to ^a-zA-Z0-9_:-])
 
     :partid: A 32bits integer (unique in the bundle) that can be used to refer
              to this part.
@@ -153,6 +153,7 @@ import string
 import obsolete
 import pushkey
 import url
+import re
 
 import changegroup, error
 from i18n import _
@@ -170,6 +171,13 @@ _fpayloadsize = '>i'
 _fpartparamcount = '>BB'
 
 preferedchunksize = 4096
+
+_parttypeforbidden = re.compile('[^a-zA-Z0-9_:-]')
+
+def validateparttype(parttype):
+    """raise ValueError if a parttype contains invalid character"""
+    if _parttypeforbidden.match(parttype):
+        raise ValueError(parttype)
 
 def _makefpartparamsizes(nbparams):
     """return a struct format to read part parameter sizes
@@ -191,6 +199,7 @@ def parthandler(parttype, params=()):
             '''process a part of type "my part".'''
             ...
     """
+    validateparttype(parttype)
     def _decorator(func):
         lparttype = parttype.lower() # enforce lower case matching.
         assert lparttype not in parthandlermapping
@@ -590,6 +599,7 @@ class bundlepart(object):
 
     def __init__(self, parttype, mandatoryparams=(), advisoryparams=(),
                  data='', mandatory=True):
+        validateparttype(parttype)
         self.id = None
         self.type = parttype
         self._data = data
