@@ -332,6 +332,10 @@ def bundle2rebase(op, part):
             if e.errno != errno.ENOENT:
                 raise
 
+    publishing = op.repo.ui.configbool('phases', 'publish', True)
+    if publishing:
+        phases.advanceboundary(op.repo, tr, phases.public, [added[-1]])
+
     p = lambda: tr.writepending() and op.repo.root or ""
     op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
 
