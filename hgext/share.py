@@ -96,7 +96,7 @@ def _getsrcrepo(repo):
         # strip because some tools write with newline after
         sharedpath = repo.vfs.read('sharedpath').strip()
         # the sharedpath always ends in the .hg; we want the path to the repo
-        source = sharedpath.rsplit('/.hg', 1)[0]
+        source = repo.vfs.split(sharedpath)[0]
         srcurl, branches = parseurl(source)
         srcrepo = repository(repo.ui, srcurl)
     except IOError, inst:
