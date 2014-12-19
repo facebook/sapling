@@ -91,18 +91,13 @@ def _getsrcrepo(repo):
     Returns the source repository object for a given shared repository.
     If repo is not a shared repository, return None.
     """
-    srcrepo = None
-    try:
-        # strip because some tools write with newline after
-        sharedpath = repo.vfs.read('sharedpath').strip()
-        # the sharedpath always ends in the .hg; we want the path to the repo
-        source = repo.vfs.split(sharedpath)[0]
-        srcurl, branches = parseurl(source)
-        srcrepo = repository(repo.ui, srcurl)
-    except IOError, inst:
-        if inst.errno != errno.ENOENT:
-            raise
-    return srcrepo
+    if repo.sharedpath == repo.path:
+        return None
+
+    # the sharedpath always ends in the .hg; we want the path to the repo
+    source = repo.vfs.split(repo.sharedpath)[0]
+    srcurl, branches = parseurl(source)
+    return repository(repo.ui, srcurl)
 
 def getbkfile(orig, self, repo):
     if _hassharedbookmarks(repo):
