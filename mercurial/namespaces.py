@@ -39,24 +39,27 @@ class namespaces(object):
     def __init__(self):
         self._names = util.sortdict()
 
-        addns = self.addnamespace
+        # shorten the class name for less indentation
+        ns = namespace
 
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
-        addns("bookmarks", "bookmark",
+        n = ns("bookmarks", "bookmark",
               lambda repo, name: tolist(repo._bookmarks.get(name)),
               lambda repo, name: repo.nodebookmarks(name))
+        self.addnamespace(n)
 
-        addns("tags", "tag",
+        n = ns("tags", "tag",
               lambda repo, name: tolist(repo._tagscache.tags.get(name)),
               lambda repo, name: repo.nodetags(name))
+        self.addnamespace(n)
 
-        addns("branches", "branch",
+        n = ns("branches", "branch",
               lambda repo, name: tolist(repo.branchtip(name)),
               lambda repo, node: [repo[node].branch()])
+        self.addnamespace(n)
 
-    def addnamespace(self, namespace, templatename, namemap, nodemap,
-                     order=None):
+    def addnamespace(self, namespace, order=None):
         """
         register a namespace
 
@@ -67,20 +70,17 @@ class namespaces(object):
         order: optional argument to specify the order of namespaces
                (e.g. 'branches' should be listed before 'bookmarks')
         """
-        val = {'templatename': templatename,
-               'namemap': namemap,
-               'nodemap': nodemap}
         if order is not None:
-            self._names.insert(order, namespace, val)
+            self._names.insert(order, namespace.name, namespace)
         else:
-            self._names[namespace] = val
+            self._names[namespace.name] = namespace
 
         # we only generate a template keyword if one does not already exist
-        if namespace not in templatekw.keywords:
+        if namespace.name not in templatekw.keywords:
             def generatekw(**args):
-                return templatekw.shownames(namespace, **args)
+                return templatekw.shownames(namespace.name, **args)
 
-            templatekw.keywords[namespace] = generatekw
+            templatekw.keywords[namespace.name] = generatekw
 
     def singlenode(self, repo, name):
         """
@@ -91,7 +91,7 @@ class namespaces(object):
         Raises a KeyError if there is no such node.
         """
         for ns, v in self._names.iteritems():
-            n = v['namemap'](repo, name)
+            n = v.namemap(repo, name)
             if n:
                 # return max revision number
                 if len(n) > 1:
@@ -103,12 +103,12 @@ class namespaces(object):
 
     def templatename(self, namespace):
         """method that returns the template name of a namespace"""
-        return self._names[namespace]['templatename']
+        return self._names[namespace].templatename
 
     def names(self, repo, namespace, node):
         """method that returns a (sorted) list of names in a namespace that
         match a given node"""
-        return sorted(self._names[namespace]['nodemap'](repo, node))
+        return sorted(self._names[namespace].nodemap(repo, node))
 
 class namespace(object):
     """provides an interface to a namespace
