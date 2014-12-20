@@ -758,6 +758,12 @@ class localrepository(object):
         # if publishing we can't copy if there is filtered content
         return not self.filtered('visible').changelog.filteredrevs
 
+    def shared(self):
+        '''the type of shared repository (None if not shared)'''
+        if self.sharedpath != self.path:
+            return 'store'
+        return None
+
     def join(self, f, *insidef):
         return os.path.join(self.path, f, *insidef)
 

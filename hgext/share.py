@@ -46,7 +46,7 @@ def unshare(ui, repo):
     Copy the store data to the repo and remove the sharedpath data.
     """
 
-    if repo.sharedpath == repo.path:
+    if not repo.shared():
         raise util.Abort(_("this is not a shared repo"))
 
     destlock = lock = None

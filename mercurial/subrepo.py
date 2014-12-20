@@ -302,7 +302,7 @@ def _abssource(repo, push=False, abort=True):
             return repo.ui.config('paths', 'default-push')
         if repo.ui.config('paths', 'default'):
             return repo.ui.config('paths', 'default')
-        if repo.sharedpath != repo.path:
+        if repo.shared():
             # chop off the .hg component to get the default path form
             return os.path.dirname(repo.sharedpath)
     if abort:
