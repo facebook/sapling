@@ -109,3 +109,41 @@ class namespaces(object):
         """method that returns a (sorted) list of names in a namespace that
         match a given node"""
         return sorted(self._names[namespace]['nodemap'](repo, node))
+
+class namespace(object):
+    """provides an interface to a namespace
+
+    Namespaces are basically generic many-to-many mapping between some
+    (namespaced) names and nodes. The goal here is to control the pollution of
+    jamming things into tags or bookmarks (in extension-land) and to simplify
+    internal bits of mercurial: log output, tab completion, etc.
+
+    More precisely, we define a mapping of names to nodes, and a mapping from
+    nodes to names. Each mapping returns a list.
+
+    Furthermore, each name mapping will be passed a name to lookup which might
+    not be in its domain. In this case, each method should return an empty list
+    and not raise an error.
+
+    This namespace object will define the properties we need:
+      'name': the namespace (plural form)
+      'templatename': name to use for templating (usually the singular form
+                      of the plural namespace name)
+      'namemap': function that takes a name and returns a list of nodes
+      'nodemap': function that takes a node and returns a list of names
+
+    """
+
+    def __init__(self, name, templatename, namemap, nodemap):
+        """create a namespace
+
+        name: the namespace to be registered (in plural form)
+        templatename: the name to use for templating
+        namemap: function that inputs a node, output name(s)
+        nodemap: function that inputs a name, output node(s)
+
+        """
+        self.name = name
+        self.templatename = templatename
+        self.namemap = namemap
+        self.nodemap = nodemap
