@@ -147,3 +147,8 @@ class namespace(object):
         self.templatename = templatename
         self.namemap = namemap
         self.nodemap = nodemap
+
+    def names(self, repo, node):
+        """method that returns a (sorted) list of names in a namespace that
+        match a given node"""
+        return sorted(self.nodemap(repo, node))
