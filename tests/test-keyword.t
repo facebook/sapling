@@ -184,7 +184,7 @@ hg status of kw-ignored binary file starting with '\1\n'
   $ hg status -A --rev 3:4 i
   C i
 
-  $ hg -q strip -n 2
+  $ hg -q strip --no-backup 2
 
 Test hook execution
 
@@ -521,7 +521,7 @@ amend
   $ head -1 a
   expand $Id: a,v 67d8c481a6be 1970/01/01 00:00:15 test $
 
-  $ hg -q strip -n tip
+  $ hg -q strip --no-backup tip
 
 Test patch queue repo
 
@@ -1064,7 +1064,7 @@ conflict: keyword should stay outside conflict zone
 
 resolve to local
 
-  $ HGMERGE=internal:local hg resolve -a
+  $ hg resolve -t internal:local -a
   (no more unresolved files)
   $ hg commit -m localresolve
   $ cat m
