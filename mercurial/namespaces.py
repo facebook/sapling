@@ -89,11 +89,6 @@ class namespaces(object):
         """method that returns the template name of a namespace"""
         return self._names[namespace].templatename
 
-    def names(self, repo, namespace, node):
-        """method that returns a (sorted) list of names in a namespace that
-        match a given node"""
-        return sorted(self._names[namespace].nodemap(repo, node))
-
 class namespace(object):
     """provides an interface to a namespace
 
