@@ -156,7 +156,8 @@ def removelargefiles(ui, repo, isaddremove, *pats, **opts):
     after = opts.get('after')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
-    m = scmutil.match(repo[None], pats, opts)
+    m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
+                                repo[None].manifest())
     try:
         repo.lfstatus = True
         s = repo.status(match=m, clean=True)
