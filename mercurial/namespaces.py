@@ -42,6 +42,10 @@ class namespaces(object):
                lambda repo, node: [repo[node].branch()])
         self.addnamespace(n)
 
+    def __getitem__(self, namespace):
+        """returns the namespace object"""
+        return self._names[namespace]
+
     def addnamespace(self, namespace, order=None):
         """register a namespace
 
