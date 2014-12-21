@@ -85,10 +85,6 @@ class namespaces(object):
                 return n[0]
         raise KeyError(_('no such name: %s') % name)
 
-    def templatename(self, namespace):
-        """method that returns the template name of a namespace"""
-        return self._names[namespace].templatename
-
 class namespace(object):
     """provides an interface to a namespace
 
