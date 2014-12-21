@@ -378,9 +378,9 @@ def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
     ctx = args['ctx']
     repo = ctx._repo
-    names = repo.names.names(repo, namespace, ctx.node())
-    return showlist(repo.names.templatename(namespace), names,
-                    plural=namespace, **args)
+    ns = repo.names[namespace]
+    names = ns.names(repo, ctx.node())
+    return showlist(ns.templatename, names, plural=namespace, **args)
 
 # keywords are callables like:
 # fn(repo, ctx, templ, cache, revcache, **args)
