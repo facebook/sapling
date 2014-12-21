@@ -1008,7 +1008,8 @@ def overrideforget(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
-    m = scmutil.match(repo[None], pats, opts)
+    m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
+                                repo[None].manifest())
 
     try:
         repo.lfstatus = True
