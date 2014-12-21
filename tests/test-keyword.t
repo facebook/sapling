@@ -1062,13 +1062,13 @@ conflict: keyword should stay outside conflict zone
   foo
   >>>>>>> other: 85d2d2d732a5  - test: simplemerge
 
-resolve to local
+resolve to local, m must contain hash of last change (local parent)
 
   $ hg resolve -t internal:local -a
   (no more unresolved files)
   $ hg commit -m localresolve
   $ cat m
-  $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $
+  $Id: m 88a80c8d172e Thu, 01 Jan 1970 00:00:00 +0000 test $
   bar
 
 Test restricted mode with transplant -b
