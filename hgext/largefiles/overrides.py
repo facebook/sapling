@@ -23,6 +23,18 @@ import basestore
 
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
+def composelargefilematcher(match, manifest):
+    '''create a matcher that matches only the largefiles in the original
+    matcher'''
+    m = copy.copy(match)
+    lfile = lambda f: lfutil.standin(f) in manifest
+    m._files = filter(lfile, m._files)
+    m._fmap = set(m._files)
+    m._always = False
+    origmatchfn = m.matchfn
+    m.matchfn = lambda f: lfile(f) and origmatchfn(f)
+    return m
+
 def installnormalfilesmatchfn(manifest):
     '''installmatchfn with a matchfn that ignores all largefiles'''
     def overridematch(ctx, pats=[], opts={}, globbed=False,
