@@ -22,6 +22,18 @@ import basestore
 
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
+def composelargefilematcher(match, manifest):
+    '''create a matcher that matches only the largefiles in the original
+    matcher'''
+    m = copy.copy(match)
+    lfile = lambda f: lfutil.standin(f) in manifest
+    m._files = filter(lfile, m._files)
+    m._fmap = set(m._files)
+    m._always = False
+    origmatchfn = m.matchfn
+    m.matchfn = lambda f: lfile(f) and origmatchfn(f)
+    return m
+
 def composenormalfilematcher(match, manifest):
     m = copy.copy(match)
     notlfile = lambda f: not (lfutil.isstandin(f) or lfutil.standin(f) in
@@ -146,7 +158,8 @@ def removelargefiles(ui, repo, isaddremove, *pats, **opts):
     after = opts.get('after')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
-    m = scmutil.match(repo[None], pats, opts)
+    m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
+                                repo[None].manifest())
     try:
         repo.lfstatus = True
         s = repo.status(match=m, clean=True)
@@ -950,7 +963,8 @@ def overrideforget(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
-    m = scmutil.match(repo[None], pats, opts)
+    m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
+                                repo[None].manifest())
 
     try:
         repo.lfstatus = True

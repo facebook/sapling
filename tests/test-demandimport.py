@@ -1,6 +1,16 @@
 from mercurial import demandimport
 demandimport.enable()
 
+import os
+if os.name != 'nt':
+    try:
+        import distutils.msvc9compiler
+        print ('distutils.msvc9compiler needs to be an immediate '
+               'importerror on non-windows platforms')
+        distutils.msvc9compiler
+    except ImportError:
+        pass
+
 import re
 
 rsub = re.sub

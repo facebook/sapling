@@ -134,3 +134,22 @@ Test permission of files created by push:
   $ cd ..
 
 #endif
+
+Test issue 4053 (remove --after on a deleted, uncommitted file shouldn't say
+it is missing, but a remove on a nonexistant unknown file still should.  Same
+for a forget.)
+
+  $ cd src
+  $ touch x
+  $ hg add x
+  $ mv x y
+  $ hg remove -A x y ENOENT
+  ENOENT: * (glob)
+  not removing y: file is untracked
+  [1]
+  $ hg add y
+  $ mv y z
+  $ hg forget y z ENOENT
+  ENOENT: * (glob)
+  not removing z: file is already untracked
+  [1]

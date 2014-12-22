@@ -164,6 +164,8 @@ ignore = [
     '_ssl', # conditional imports in the stdlib, issue1964
     'rfc822',
     'mimetools',
+    # setuptools 8 expects this module to explode early when not on windows
+    'distutils.msvc9compiler'
     ]
 
 def isenabled():
