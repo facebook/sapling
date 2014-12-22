@@ -1040,7 +1040,7 @@ def branch(ui, repo, label=None, **opts):
     branch.
 
     Unless -f/--force is specified, branch will not let you set a
-    branch name that already exists, even if it's inactive.
+    branch name that already exists.
 
     Use -C/--clean to reset the working directory branch to that of
     the parent of the working directory, negating a previous branch
@@ -1080,7 +1080,8 @@ def branch(ui, repo, label=None, **opts):
         wlock.release()
 
 @command('branches',
-    [('a', 'active', False, _('show only branches that have unmerged heads')),
+    [('a', 'active', False,
+      _('show only branches that have unmerged heads (DEPRECATED)')),
      ('c', 'closed', False, _('show normal and closed branches')),
     ] + formatteropts,
     _('[-ac]'))
@@ -1090,9 +1091,6 @@ def branches(ui, repo, active=False, closed=False, **opts):
     List the repository's named branches, indicating which ones are
     inactive. If -c/--closed is specified, also list branches which have
     been marked closed (see :hg:`commit --close-branch`).
-
-    If -a/--active is specified, only show active branches. A branch
-    is considered active if it contains repository heads.
 
     Use the command :hg:`update` to switch to an existing branch.
 
