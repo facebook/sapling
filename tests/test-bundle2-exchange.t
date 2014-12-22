@@ -24,6 +24,7 @@ enable obsolescence
   > b2x-pretransactionclose.tip = hg log -r tip -T "pre-close-tip:{node|short} {phase} {bookmarks}\n"
   > b2x-transactionclose.tip = hg log -r tip -T "postclose-tip:{node|short} {phase} {bookmarks}\n"
   > b2x-transactionclose.env = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
+  > pushkey= echo pushkey: lock state after \"\$HG_NAMESPACE\"; hg debuglock
   > EOF
 
 The extension requires a repo (currently unused)
@@ -167,6 +168,12 @@ push
   pushing to other
   searching for changes
   pre-close-tip:eea13746799a public book_eea1
+  pushkey: lock state after "phases"
+  lock:  free
+  wlock: free
+  pushkey: lock state after "bookmarks"
+  lock:  free
+  wlock: free
   postclose-tip:eea13746799a public book_eea1
   b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
   changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_SOURCE=push HG_URL=push
@@ -254,6 +261,9 @@ push over ssh
   remote: 1 new obsolescence markers
   updating bookmark book_5fdd
   remote: pre-close-tip:5fddd98957c8 draft book_5fdd
+  remote: pushkey: lock state after "bookmarks"
+  remote: lock:  free
+  remote: wlock: free
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
   remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1

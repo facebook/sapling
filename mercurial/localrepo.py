@@ -1785,8 +1785,10 @@ class localrepository(object):
             return False
         self.ui.debug('pushing key for "%s:%s"\n' % (namespace, key))
         ret = pushkey.push(self, namespace, key, old, new)
-        self.hook('pushkey', namespace=namespace, key=key, old=old, new=new,
-                  ret=ret)
+        def runhook():
+            self.hook('pushkey', namespace=namespace, key=key, old=old, new=new,
+                      ret=ret)
+        self._afterlock(runhook)
         return ret
 
     def listkeys(self, namespace):
