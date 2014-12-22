@@ -371,6 +371,9 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             elif name and not full:
                 rst.append(_('\n(use "hg help %s" to show the full help '
                              'text)\n') % name)
+            elif name and cmds and name in cmds.keys():
+                rst.append(_('\n(use "hg help -v -e %s" to show built-in '
+                             'aliases and global options)\n') % name)
             else:
                 rst.append(_('\n(use "hg help -v%s" to show built-in aliases '
                              'and global options)\n')
