@@ -49,6 +49,12 @@ class namespaces(object):
         """returns the namespace object"""
         return self._names[namespace]
 
+    def __iter__(self):
+        return self._names.__iter__()
+
+    def iteritems(self):
+        return self._names.iteritems()
+
     def addnamespace(self, namespace, order=None):
         """register a namespace
 
