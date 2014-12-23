@@ -1784,6 +1784,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         return line
 
     date1 = util.datestr(ctx1.date())
+    date2 = util.datestr(ctx2.date())
     man1 = ctx1.manifest()
 
     gone = set()
@@ -1878,9 +1879,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     addindexmeta(header, [gitindex(to), gitindex(tn)])
             else:
                 text = mdiff.unidiff(to, date1,
-                                    # ctx2 date may be dynamic
-                                    tn, util.datestr(ctx2.date()),
-                                    join(a), join(b), opts=opts)
+                                     tn, date2,
+                                     join(a), join(b), opts=opts)
             if header and (text or len(header) > 1):
                 yield ''.join(header)
             if text:
