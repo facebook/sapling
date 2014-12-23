@@ -765,7 +765,7 @@ class localrepository(object):
         return None
 
     def join(self, f, *insidef):
-        return os.path.join(self.path, f, *insidef)
+        return self.vfs.join(os.path.join(f, *insidef))
 
     def wjoin(self, f, *insidef):
         return os.path.join(self.root, f, *insidef)
