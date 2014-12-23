@@ -1794,6 +1794,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     if opts.git:
         revs = None
 
+    modifiedset, addedset, removedset = set(modified), set(added), set(removed)
     for f in sorted(modified + added + removed):
         to = None
         tn = None
@@ -1801,11 +1802,11 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         header = []
         if f in man1:
             to = getfilectx(f, ctx1).data()
-        if f not in removed:
+        if f not in removedset:
             tn = getfilectx(f, ctx2).data()
         a, b = f, f
         if opts.git or losedatafn:
-            if f in added or (f in modified and to is None):
+            if f in addedset or (f in modifiedset and to is None):
                 mode = gitmode[ctx2.flags(f)]
                 if f in copy or f in copyto:
                     if opts.git:
@@ -1815,7 +1816,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                             a = copyto[f]
                         omode = gitmode[man1.flags(a)]
                         addmodehdr(header, omode, mode)
-                        if a in removed and a not in gone:
+                        if a in removedset and a not in gone:
                             op = 'rename'
                             gone.add(a)
                         else:
@@ -1841,12 +1842,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 if not opts.git and not tn:
                     # regular diffs cannot represent new empty file
                     losedatafn(f)
-            elif f in removed or (f in modified and tn is None):
+            elif f in removedset or (f in modifiedset and tn is None):
                 if opts.git:
                     # have we already reported a copy above?
-                    if ((f in copy and copy[f] in added
+                    if ((f in copy and copy[f] in addedset
                          and copyto[copy[f]] == f) or
-                        (f in copyto and copyto[f] in added
+                        (f in copyto and copyto[f] in addedset
                          and copy[copyto[f]] == f)):
                         dodiff = False
                     else:
