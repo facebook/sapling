@@ -1564,3 +1564,96 @@ hg log -f dir across branches
   o  a
   
   $ cd ..
+
+hg log -f with linkrev pointing to another branch
+-------------------------------------------------
+
+create history with a filerev whose linkrev points to another branch
+
+  $ hg init branchedlinkrev
+  $ cd branchedlinkrev
+  $ echo 1 > a
+  $ hg commit -Am 'content1'
+  adding a
+  $ echo 2 > a
+  $ hg commit -m 'content2'
+  $ hg up --rev 'desc(content1)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo unrelated > unrelated
+  $ hg commit -Am 'unrelated'
+  adding unrelated
+  created new head
+  $ hg graft -r 'desc(content2)'
+  grafting 1:2294ae80ad84 "content2"
+  $ echo 3 > a
+  $ hg commit -m 'content3'
+  $ hg log -G
+  @  changeset:   4:50b9b36e9c5d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content3
+  |
+  o  changeset:   3:15b2327059e5
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content2
+  |
+  o  changeset:   2:2029acd1168c
+  |  parent:      0:ae0a3c9f9e95
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     unrelated
+  |
+  | o  changeset:   1:2294ae80ad84
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     content2
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+
+log -f on the file should list the graft result.
+
+  $ hg log -Gf a
+  @  changeset:   4:50b9b36e9c5d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content3
+  |
+  o  changeset:   3:15b2327059e5
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content2
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+
+plain log lists the original version
+(XXX we should probably list both)
+
+  $ hg log -G a
+  @  changeset:   4:50b9b36e9c5d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content3
+  |
+  | o  changeset:   1:2294ae80ad84
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     content2
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+  $ cd ..

@@ -22,6 +22,40 @@ propertycache = util.propertycache
 # dirty in the working copy.
 _newnode = '!' * 21
 
+def _adjustlinkrev(repo, path, filelog, fnode, srcrev):
+    """return the first ancestor of <srcrev> introducting <fnode>
+
+    If the linkrev of the file revision does not point to an ancestor of
+    srcrev, we'll walk down the ancestors until we find one introducing this
+    file revision.
+
+    :repo: a localrepository object (used to access changelog and manifest)
+    :path: the file path
+    :fnode: the nodeid of the file revision
+    :filelog: the filelog of this path
+    :srcrev: the changeset revision we search ancestors from
+    """
+    cl = repo.unfiltered().changelog
+    ma = repo.manifest
+    # fetch the linkrev
+    fr = filelog.rev(fnode)
+    lkr = filelog.linkrev(fr)
+    # check if this linkrev is an ancestor of srcrev
+    anc = cl.ancestors([srcrev], lkr)
+    if lkr not in anc:
+        for a in anc:
+            ac = cl.read(a) # get changeset data (we avoid object creation).
+            if path in ac[3]: # checking the 'files' field.
+                # The file has been touched, check if the content is similar
+                # to the one we search for.
+                if fnode == ma.readdelta(ac[0]).get(path):
+                    return a
+        # In theory, we should never get out of that loop without a result. But
+        # if manifest uses a buggy file revision (not children of the one it
+        # replaces) we could. Such a buggy situation will likely result is crash
+        # somewhere else at to some point.
+    return lkr
+
 class basectx(object):
     """A basectx object represents the common logic for its children:
     changectx: read-only context that is already present in the repo,
@@ -739,7 +773,7 @@ class basefilectx(object):
         parents = self._filelog.parents(self._filenode)
         pl = [(_path, node, fl) for node in parents if node != nullid]
 
-        r = self._filelog.renamed(self._filenode)
+        r = fl.renamed(self._filenode)
         if r:
             # - In the simple rename case, both parent are nullid, pl is empty.
             # - In case of merge, only one of the parent is null id and should
@@ -751,7 +785,19 @@ class basefilectx(object):
             # first nullid parent with rename information.
             pl.insert(0, (r[0], r[1], self._repo.file(r[0])))
 
-        return [filectx(self._repo, p, fileid=n, filelog=l) for p, n, l in pl]
+        ret = []
+        for path, fnode, l in pl:
+            if '_changeid' in vars(self) or '_changectx' in vars(self):
+                # If self is associated with a changeset (probably explicitly
+                # fed), ensure the created filectx is associated with a
+                # changeset that is an ancestor of self.changectx.
+                rev = _adjustlinkrev(self._repo, path, l, fnode, self.rev())
+                fctx = filectx(self._repo, path, fileid=fnode, filelog=l,
+                               changeid=rev)
+            else:
+                fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
+            ret.append(fctx)
+        return ret
 
     def p1(self):
         return self.parents()[0]

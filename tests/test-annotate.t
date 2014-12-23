@@ -451,3 +451,63 @@ Annotate with --ignore-blank-lines (similar to no options case)
   1: b  b
 
   $ cd ..
+
+Annotate with linkrev pointing to another branch
+------------------------------------------------
+
+create history with a filerev whose linkrev points to another branch
+
+  $ hg init branchedlinkrev
+  $ cd branchedlinkrev
+  $ echo A > a
+  $ hg commit -Am 'contentA'
+  adding a
+  $ echo B >> a
+  $ hg commit -m 'contentB'
+  $ hg up --rev 'desc(contentA)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo unrelated > unrelated
+  $ hg commit -Am 'unrelated'
+  adding unrelated
+  created new head
+  $ hg graft -r 'desc(contentB)'
+  grafting 1:fd27c222e3e6 "contentB"
+  $ echo C >> a
+  $ hg commit -m 'contentC'
+  $ hg log -G
+  @  changeset:   4:072f1e8df249
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     contentC
+  |
+  o  changeset:   3:ff38df03cc4b
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     contentB
+  |
+  o  changeset:   2:62aaf3f6fc06
+  |  parent:      0:f0932f74827e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     unrelated
+  |
+  | o  changeset:   1:fd27c222e3e6
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     contentB
+  |
+  o  changeset:   0:f0932f74827e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     contentA
+  
+
+Annotate should list ancestor of starting revision only
+
+  $ hg annotate a
+  0: A
+  3: B
+  4: C
+
+  $ cd ..

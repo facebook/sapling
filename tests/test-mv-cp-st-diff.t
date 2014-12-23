@@ -1605,3 +1605,65 @@ test for case where we didn't look sufficiently far back to find rename ancestor
   -
   +f
   $ cd ..
+
+Additional tricky linkrev case
+------------------------------
+
+If the first file revision after the diff base has a linkrev pointing to a
+changeset on another branch with a revision lower that the diff base, we can
+jump past the copy detection limit and fail to detect the rename.
+
+  $ hg init diffstoplinkrev
+  $ cd diffstoplinkrev
+
+  $ touch f
+  $ hg ci -Aqm 'empty f'
+
+Make a simple change
+
+  $ echo change > f
+  $ hg ci -m 'change f'
+
+Make a second branch, we use a named branch to create a simple commit
+that does not touch f.
+
+  $ hg up -qr 'desc(empty)'
+  $ hg branch -q dev
+  $ hg ci -Aqm dev
+
+Graft the initial change, as f was untouched, we reuse the same entry and the
+linkrev point to the older branch.
+
+  $ hg graft -q 'desc(change)'
+
+Make a rename because we want to track renames. It is also important that the
+faulty linkrev is not the "start" commit to ensure the linkrev will be used.
+
+  $ hg mv f renamed
+  $ hg ci -m renamed
+
+  $ hg log -G -T '{rev} {desc}'
+  @  4 renamed
+  |
+  o  3 change f
+  |
+  o  2 dev
+  |
+  | o  1 change f
+  |/
+  o  0 empty f
+  
+
+The copy tracking should still reach rev 2 (branch creation).
+accessing the parent of 4 (renamed) should not jump use to revision 1.
+
+  $ hg diff --git -r 'desc(dev)' -r .
+  diff --git a/f b/renamed
+  rename from f
+  rename to renamed
+  --- a/f
+  +++ b/renamed
+  @@ -0,0 +1,1 @@
+  +change
+
+  $ cd ..
