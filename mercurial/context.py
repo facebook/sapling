@@ -749,7 +749,7 @@ class basefilectx(object):
             # As null id have alway been filtered out in the previous list
             # comprehension, inserting to 0 will always result in "replacing
             # first nullid parent with rename information.
-            pl.insert(0, (r[0], r[1], None))
+            pl.insert(0, (r[0], r[1], self._repo.file(r[0])))
 
         return [filectx(self._repo, p, fileid=n, filelog=l) for p, n, l in pl]
 
