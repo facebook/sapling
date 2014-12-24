@@ -22,7 +22,7 @@ propertycache = util.propertycache
 # dirty in the working copy.
 _newnode = '!' * 21
 
-def _adjustlinkrev(repo, path, filelog, fnode, srcrev):
+def _adjustlinkrev(repo, path, filelog, fnode, srcrev, inclusive=False):
     """return the first ancestor of <srcrev> introducting <fnode>
 
     If the linkrev of the file revision does not point to an ancestor of
@@ -34,6 +34,7 @@ def _adjustlinkrev(repo, path, filelog, fnode, srcrev):
     :fnode: the nodeid of the file revision
     :filelog: the filelog of this path
     :srcrev: the changeset revision we search ancestors from
+    :inclusive: if true, the src revision will also be checked
     """
     cl = repo.unfiltered().changelog
     ma = repo.manifest
@@ -41,7 +42,7 @@ def _adjustlinkrev(repo, path, filelog, fnode, srcrev):
     fr = filelog.rev(fnode)
     lkr = filelog.linkrev(fr)
     # check if this linkrev is an ancestor of srcrev
-    anc = cl.ancestors([srcrev], lkr)
+    anc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
     if lkr not in anc:
         for a in anc:
             ac = cl.read(a) # get changeset data (we avoid object creation).
@@ -766,6 +767,23 @@ class basefilectx(object):
             return self._filelog.cmp(self._filenode, fctx.data())
 
         return True
+
+    def introrev(self):
+        """return the rev of the changeset which introduced this file revision
+
+        This method is different from linkrev because it take into account the
+        changeset the filectx was created from. It ensures the returned
+        revision is one of its ancestors. This prevents bugs from
+        'linkrev-shadowing' when a file revision is used by multiple
+        changesets.
+        """
+        lkr = self.linkrev()
+        attrs = vars(self)
+        noctx = not ('_changeid' in attrs or '_changectx' in attrs)
+        if noctx or self.rev() == lkr:
+            return self.linkrev()
+        return _adjustlinkrev(self._repo, self._path, self._filelog,
+                              self._filenode, self.rev(), inclusive=True)
 
     def parents(self):
         _path = self._path
