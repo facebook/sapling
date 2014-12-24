@@ -877,10 +877,11 @@ class basefilectx(object):
             return pl
 
         # use linkrev to find the first changeset where self appeared
-        if self.rev() != self.linkrev():
-            base = self.filectx(self.filenode())
-        else:
-            base = self
+        base = self
+        introrev = self.introrev()
+        if self.rev() != introrev:
+            base = filectx(self._repo, self._path, filelog=self.filelog(),
+                           fileid=self.filenode(), changeid=introrev)
 
         # This algorithm would prefer to be recursive, but Python is a
         # bit recursion-hostile. Instead we do an iterative

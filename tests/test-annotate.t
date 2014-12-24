@@ -510,4 +510,10 @@ Annotate should list ancestor of starting revision only
   3: B
   4: C
 
+Even when the starting revision is the linkrev-shadowed one:
+
+  $ hg annotate a -r 3
+  0: A
+  3: B
+
   $ cd ..
