@@ -12,7 +12,7 @@ import os
 
 from mercurial import error, manifest, match as match_, util
 from mercurial.i18n import _
-from mercurial import localrepo, scmutil
+from mercurial import scmutil
 
 import lfcommands
 import lfutil
