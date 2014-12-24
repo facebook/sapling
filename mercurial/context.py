@@ -895,7 +895,7 @@ class filectx(basefilectx):
     def _changectx(self):
         try:
             return changectx(self._repo, self._changeid)
-        except error.RepoLookupError:
+        except error.FilteredRepoLookupError:
             # Linkrev may point to any revision in the repository.  When the
             # repository is filtered this may lead to `filectx` trying to build
             # `changectx` for filtered revision. In such case we fallback to
