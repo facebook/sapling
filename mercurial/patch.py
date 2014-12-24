@@ -1807,7 +1807,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         tn = None
         dodiff = True
         header = []
-        if f in man1:
+        if f not in addedset:
             to = getfilectx(f, ctx1).data()
         if f not in removedset:
             tn = getfilectx(f, ctx2).data()
