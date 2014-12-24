@@ -238,12 +238,6 @@ ensure that we have a merge with unresolved conflicts
   diff --git a/b/b b/b.rename/b
   rename from b/b
   rename to b.rename/b
-  diff --git a/b/b b/b/b
-  deleted file mode 100644
-  --- a/b/b
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
-  -b
   diff --git a/c b/c.copy
   copy from c
   copy to c.copy

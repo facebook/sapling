@@ -1796,6 +1796,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         revs = None
 
     modifiedset, addedset, removedset = set(modified), set(added), set(removed)
+    # Fix up modified and added, since merged-in additions appear as
+    # modifications during merges
+    for f in modifiedset.copy():
+        if f not in ctx1:
+            addedset.add(f)
+            modifiedset.remove(f)
     for f in sorted(modified + added + removed):
         to = None
         tn = None
@@ -1807,7 +1813,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             tn = getfilectx(f, ctx2).data()
         a, b = f, f
         if opts.git or losedatafn:
-            if f in addedset or (f in modifiedset and to is None):
+            if f in addedset:
                 mode = gitmode[ctx2.flags(f)]
                 if f in copy or f in copyto:
                     if opts.git:
@@ -1843,7 +1849,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 if not opts.git and not tn:
                     # regular diffs cannot represent new empty file
                     losedatafn(f)
-            elif f in removedset or (f in modifiedset and tn is None):
+            elif f in removedset:
                 if opts.git:
                     # have we already reported a copy above?
                     if ((f in copy and copy[f] in addedset
