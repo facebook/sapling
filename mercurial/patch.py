@@ -1785,7 +1785,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
-    man1 = ctx1.manifest()
 
     gone = set()
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
@@ -1821,7 +1820,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                             a = copy[f]
                         else:
                             a = copyto[f]
-                        omode = gitmode[man1.flags(a)]
+                        omode = gitmode[ctx1.flags(a)]
                         addmodehdr(header, omode, mode)
                         if a in removedset and a not in gone:
                             op = 'rename'
@@ -1859,14 +1858,14 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         dodiff = False
                     else:
                         header.append('deleted file mode %s\n' %
-                                      gitmode[man1.flags(f)])
+                                      gitmode[ctx1.flags(f)])
                         if util.binary(to):
                             dodiff = 'binary'
                 elif not to or util.binary(to):
                     # regular diffs cannot represent empty file deletion
                     losedatafn(f)
             else:
-                oflag = man1.flags(f)
+                oflag = ctx1.flags(f)
                 nflag = ctx2.flags(f)
                 binary = util.binary(to) or util.binary(tn)
                 if opts.git:
