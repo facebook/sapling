@@ -736,14 +736,22 @@ class basefilectx(object):
     def parents(self):
         _path = self._path
         fl = self._filelog
-        pl = [(_path, n, fl) for n in self._filelog.parents(self._filenode)]
+        parents = self._filelog.parents(self._filenode)
+        pl = [(_path, node, fl) for node in parents if node != nullid]
 
         r = self._filelog.renamed(self._filenode)
         if r:
-            pl[0] = (r[0], r[1], None)
+            # - In the simple rename case, both parent are nullid, pl is empty.
+            # - In case of merge, only one of the parent is null id and should
+            # be replaced with the rename information. This parent is -always-
+            # the first one.
+            #
+            # As null id have alway been filtered out in the previous list
+            # comprehension, inserting to 0 will always result in "replacing
+            # first nullid parent with rename information.
+            pl.insert(0, (r[0], r[1], None))
 
-        return [filectx(self._repo, p, fileid=n, filelog=l)
-                for p, n, l in pl if n != nullid]
+        return [filectx(self._repo, p, fileid=n, filelog=l) for p, n, l in pl]
 
     def p1(self):
         return self.parents()[0]
