@@ -76,7 +76,7 @@ from distutils.command.build_py import build_py
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
-from distutils import cygwinccompiler, file_util
+from distutils import file_util
 from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion
@@ -509,19 +509,28 @@ else:
                                 extra_link_args=osutil_ldflags,
                                 depends=common_depends))
 
-# the -mno-cygwin option has been deprecated for years
-Mingw32CCompiler = cygwinccompiler.Mingw32CCompiler
+try:
+    from distutils import cygwinccompiler
 
-class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
-    def __init__(self, *args, **kwargs):
-        Mingw32CCompiler.__init__(self, *args, **kwargs)
-        for i in 'compiler compiler_so linker_exe linker_so'.split():
-            try:
-                getattr(self, i).remove('-mno-cygwin')
-            except ValueError:
-                pass
+    # the -mno-cygwin option has been deprecated for years
+    compiler = cygwinccompiler.Mingw32CCompiler
 
-cygwinccompiler.Mingw32CCompiler = HackedMingw32CCompiler
+    class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
+        def __init__(self, *args, **kwargs):
+            compiler.__init__(self, *args, **kwargs)
+            for i in 'compiler compiler_so linker_exe linker_so'.split():
+                try:
+                    getattr(self, i).remove('-mno-cygwin')
+                except ValueError:
+                    pass
+
+    cygwinccompiler.Mingw32CCompiler = HackedMingw32CCompiler
+except ImportError:
+    # the cygwinccompiler package is not available on some Python
+    # distributions like the ones from the optware project for Synology
+    # DiskStation boxes
+    class HackedMingw32CCompiler(object):
+        pass
 
 packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
                              'help/*.txt',
