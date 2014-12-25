@@ -109,7 +109,7 @@ def snapshot(ui, repo, files, node, tmproot):
                                   os.lstat(dest).st_mtime))
     return dirname, fns_and_mtime
 
-def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
+def dodiff(ui, repo, args, pats, opts):
     '''Do the actual diff:
 
     - copy to a temp structure if diffing 2 internal revisions
@@ -120,7 +120,6 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
 
     revs = opts.get('rev')
     change = opts.get('change')
-    args = ' '.join(map(util.shellquote, diffopts))
     do3way = '$parent2' in args
 
     if revs and change:
@@ -222,8 +221,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
         regex = '\$(parent2|parent1?|child|plabel1|plabel2|clabel|root)'
         if not do3way and not re.search(regex, args):
             args += ' $parent1 $child'
-        args = re.sub(regex, quote, args)
-        cmdline = util.shellquote(diffcmd) + ' ' + args
+        cmdline = re.sub(regex, quote, args)
 
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
         ui.system(cmdline, cwd=tmproot)
@@ -271,7 +269,8 @@ def extdiff(ui, repo, *pats, **opts):
     if not program:
         program = 'diff'
         option = option or ['-Npru']
-    return dodiff(ui, repo, program, option, pats, opts)
+    cmdline = ' '.join(map(util.shellquote, [program] + option))
+    return dodiff(ui, repo, cmdline, pats, opts)
 
 def uisetup(ui):
     for cmd, path in ui.configitems('extdiff'):
@@ -281,29 +280,37 @@ def uisetup(ui):
                 path = util.findexe(cmd)
                 if path is None:
                     path = filemerge.findexternaltool(ui, cmd) or cmd
-            diffopts = shlex.split(ui.config('extdiff', 'opts.' + cmd, ''))
+            diffopts = ui.config('extdiff', 'opts.' + cmd, '')
+            cmdline = util.shellquote(path)
+            if diffopts:
+                cmdline += ' ' + diffopts
         elif cmd.startswith('opts.'):
             continue
         else:
-            # command = path opts
             if path:
-                diffopts = shlex.split(path)
-                path = diffopts.pop(0)
+                # case "cmd = path opts"
+                cmdline = path
+                diffopts = len(shlex.split(cmdline)) > 1
             else:
-                path, diffopts = util.findexe(cmd), []
+                # case "cmd ="
+                path = util.findexe(cmd)
                 if path is None:
                     path = filemerge.findexternaltool(ui, cmd) or cmd
+                cmdline = util.shellquote(path)
+                diffopts = False
         # look for diff arguments in [diff-tools] then [merge-tools]
-        if diffopts == []:
+        if not diffopts:
             args = ui.config('diff-tools', cmd+'.diffargs') or \
                    ui.config('merge-tools', cmd+'.diffargs')
             if args:
-                diffopts = shlex.split(args)
-        def save(cmd, path, diffopts):
+                cmdline += ' ' + args
+        def save(cmdline):
             '''use closure to save diff command to use'''
             def mydiff(ui, repo, *pats, **opts):
-                return dodiff(ui, repo, path, diffopts + opts['option'],
-                              pats, opts)
+                options = ' '.join(map(util.shellquote, opts['option']))
+                if options:
+                    options = ' ' + options
+                return dodiff(ui, repo, cmdline + options, pats, opts)
             doc = _('''\
 use %(path)s to diff repository (or selected files)
 
@@ -325,6 +332,6 @@ use %(path)s to diff repository (or selected files)
             # right encoding) prevents that.
             mydiff.__doc__ = doc.decode(encoding.encoding)
             return mydiff
-        cmdtable[cmd] = (save(cmd, path, diffopts),
+        cmdtable[cmd] = (save(cmdline),
                          cmdtable['extdiff'][1][1:],
                          _('hg %s [OPTION]... [FILE]...') % cmd)

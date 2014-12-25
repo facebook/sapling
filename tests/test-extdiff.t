@@ -94,6 +94,72 @@ Check diff are made from the first parent:
   diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob)
   diff-like tools yield a non-zero exit code
 
+issue4463: usage of command line configuration without additional quoting
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extdiff]
+  > cmd.4463a = echo
+  > opts.4463a = a-naked 'single quoted' "double quoted"
+  > 4463b = echo b-naked 'single quoted' "double quoted"
+  > echo =
+  > EOF
+  $ hg update -q -C 0
+  $ echo a >> a
+#if windows
+  $ hg --debug 4463a | grep '^running'
+  running '"echo" a-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  $ hg --debug 4463b | grep '^running'
+  running 'echo b-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  $ hg --debug echo | grep '^running'
+  running '"*echo*" "*\\a" "*\\a"' in */extdiff.* (glob)
+#else
+  $ hg --debug 4463a | grep '^running'
+  running '\'echo\' a-naked \'single quoted\' "double quoted" \'*/a\' \'$TESTTMP/a/a\'' in */extdiff.* (glob)
+  $ hg --debug 4463b | grep '^running'
+  running 'echo b-naked \'single quoted\' "double quoted" \'*/a\' \'$TESTTMP/a/a\'' in */extdiff.* (glob)
+  $ hg --debug echo | grep '^running'
+  running "'*echo*' '*/a' '$TESTTMP/a/a'" in */extdiff.* (glob)
+#endif
+
+(getting options from other than extdiff section)
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extdiff]
+  > # using diff-tools diffargs
+  > 4463b2 = echo
+  > # using merge-tools diffargs
+  > 4463b3 = echo
+  > # no diffargs
+  > 4463b4 = echo
+  > [diff-tools]
+  > 4463b2.diffargs = b2-naked 'single quoted' "double quoted"
+  > [merge-tools]
+  > 4463b3.diffargs = b3-naked 'single quoted' "double quoted"
+  > EOF
+#if windows
+  $ hg --debug 4463b2 | grep '^running'
+  running 'echo b2-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  $ hg --debug 4463b3 | grep '^running'
+  running 'echo b3-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  $ hg --debug 4463b4 | grep '^running'
+  running 'echo "*\\a" "*\\a"' in */extdiff.* (glob)
+  $ hg --debug 4463b4 --option 'being quoted' | grep '^running'
+  running 'echo "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  $ hg --debug extdiff -p echo --option 'being quoted' | grep '^running'
+  running '"echo" "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+#else
+  $ hg --debug 4463b2 | grep '^running'
+  running 'echo b2-naked \'single quoted\' "double quoted" \'*/a\' \'$TESTTMP/a/a\'' in */extdiff.* (glob)
+  $ hg --debug 4463b3 | grep '^running'
+  running 'echo b3-naked \'single quoted\' "double quoted" \'*/a\' \'$TESTTMP/a/a\'' in */extdiff.* (glob)
+  $ hg --debug 4463b4 | grep '^running'
+  running "echo '*/a' '$TESTTMP/a/a'" in */extdiff.* (glob)
+  $ hg --debug 4463b4 --option 'being quoted' | grep '^running'
+  running "echo 'being quoted' '*/a' '$TESTTMP/a/a'" in */extdiff.* (glob)
+  $ hg --debug extdiff -p echo --option 'being quoted' | grep '^running'
+  running "'echo' 'being quoted' '*/a' '$TESTTMP/a/a'" in */extdiff.* (glob)
+#endif
+
 #if execbit
 
 Test extdiff of multiple files in tmp dir:
@@ -207,7 +273,7 @@ Fallback to merge-tools.tool.executable|regkey
   making snapshot of 2 files from working directory
     a
     b
-  running "'$TESTTMP/a/dir/tool.sh'  'a.*' 'a'" in */extdiff.* (glob)
+  running "'$TESTTMP/a/dir/tool.sh' 'a.*' 'a'" in */extdiff.* (glob)
   ** custom diff **
   cleaning up temp directory
   [1]
