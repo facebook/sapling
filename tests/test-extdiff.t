@@ -107,11 +107,11 @@ issue4463: usage of command line configuration without additional quoting
   $ echo a >> a
 #if windows
   $ hg --debug 4463a | grep '^running'
-  running '"echo" a-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo a-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
   $ hg --debug 4463b | grep '^running'
-  running 'echo b-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
   $ hg --debug echo | grep '^running'
-  running '"*echo*" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running '*echo* *\\a *\\a' in */extdiff.* (glob)
 #else
   $ hg --debug 4463a | grep '^running'
   running '\'echo\' a-naked \'single quoted\' "double quoted" \'*/a\' \'$TESTTMP/a/a\'' in */extdiff.* (glob)
@@ -138,15 +138,15 @@ issue4463: usage of command line configuration without additional quoting
   > EOF
 #if windows
   $ hg --debug 4463b2 | grep '^running'
-  running 'echo b2-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b2-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
   $ hg --debug 4463b3 | grep '^running'
-  running 'echo b3-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b3-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
   $ hg --debug 4463b4 | grep '^running'
-  running 'echo "*\\a" "*\\a"' in */extdiff.* (glob)
-  $ hg --debug 4463b4 --option 'being quoted' | grep '^running'
-  running 'echo "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
-  $ hg --debug extdiff -p echo --option 'being quoted' | grep '^running'
-  running '"echo" "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo *\\a *\\a' in */extdiff.* (glob)
+  $ hg --debug 4463b4 --option b4-naked --option 'being quoted' | grep '^running'
+  running 'echo b4-naked "being quoted" *\\a *\\a' in */extdiff.* (glob)
+  $ hg --debug extdiff -p echo --option echo-naked --option 'being quoted' | grep '^running'
+  running 'echo echo-naked "being quoted" *\\a *\\a' in */extdiff.* (glob)
 #else
   $ hg --debug 4463b2 | grep '^running'
   running 'echo b2-naked \'single quoted\' "double quoted" \'*/a\' \'$TESTTMP/a/a\'' in */extdiff.* (glob)

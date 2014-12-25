@@ -148,10 +148,20 @@ def samestat(s1, s2):
 # backslash before every double quote (being careful with the double
 # quote we've appended to the end)
 _quotere = None
+_needsshellquote = None
 def shellquote(s):
     global _quotere
     if _quotere is None:
         _quotere = re.compile(r'(\\*)("|\\$)')
+    global _needsshellquote
+    if _needsshellquote is None:
+        # ":" and "\\" are also treated as "safe character", because
+        # they are used as a part of path name (and the latter doesn't
+        # work as "escape character", like one on posix) on Windows
+        _needsshellquote = re.compile(r'[^a-zA-Z0-9._:/\\-]').search
+    if not _needsshellquote(s) and not _quotere.search(s):
+        # "s" shouldn't have to be quoted
+        return s
     return '"%s"' % _quotere.sub(r'\1\1\\\2', s)
 
 def quotecommand(cmd):
