@@ -109,7 +109,7 @@ def snapshot(ui, repo, files, node, tmproot):
                                   os.lstat(dest).st_mtime))
     return dirname, fns_and_mtime
 
-def dodiff(ui, repo, args, pats, opts):
+def dodiff(ui, repo, cmdline, pats, opts):
     '''Do the actual diff:
 
     - copy to a temp structure if diffing 2 internal revisions
@@ -120,7 +120,7 @@ def dodiff(ui, repo, args, pats, opts):
 
     revs = opts.get('rev')
     change = opts.get('change')
-    do3way = '$parent2' in args
+    do3way = '$parent2' in cmdline
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
@@ -219,9 +219,9 @@ def dodiff(ui, repo, args, pats, opts):
 
         # Match parent2 first, so 'parent1?' will match both parent1 and parent
         regex = '\$(parent2|parent1?|child|plabel1|plabel2|clabel|root)'
-        if not do3way and not re.search(regex, args):
-            args += ' $parent1 $child'
-        cmdline = re.sub(regex, quote, args)
+        if not do3way and not re.search(regex, cmdline):
+            cmdline += ' $parent1 $child'
+        cmdline = re.sub(regex, quote, cmdline)
 
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
         ui.system(cmdline, cwd=tmproot)
