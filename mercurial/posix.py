@@ -8,7 +8,7 @@
 from i18n import _
 import encoding
 import os, sys, errno, stat, getpass, pwd, grp, socket, tempfile, unicodedata
-import fcntl
+import fcntl, re
 
 posixfile = open
 normpath = os.path.normpath
@@ -315,9 +315,16 @@ if sys.platform == 'cygwin':
     def checklink(path):
         return False
 
+_needsshellquote = None
 def shellquote(s):
     if os.sys.platform == 'OpenVMS':
         return '"%s"' % s
+    global _needsshellquote
+    if _needsshellquote is None:
+        _needsshellquote = re.compile(r'[^a-zA-Z0-9._/-]').search
+    if not _needsshellquote(s):
+        # "s" shouldn't have to be quoted
+        return s
     else:
         return "'%s'" % s.replace("'", "'\\''")
 
