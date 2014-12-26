@@ -971,7 +971,7 @@ def overrideforget(orig, ui, repo, *pats, **opts):
 
     for f in forget:
         if lfutil.standin(f) not in repo.dirstate and not \
-                os.path.isdir(m.rel(lfutil.standin(f))):
+                repo.wvfs.isdir(lfutil.standin(f)):
             ui.warn(_('not removing %s: file is already untracked\n')
                     % m.rel(f))
             result = 1

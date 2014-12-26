@@ -2037,9 +2037,9 @@ def forget(ui, repo, match, prefix, explicitonly):
 
     if not explicitonly:
         for f in match.files():
-            if f not in repo.dirstate and not os.path.isdir(match.rel(join(f))):
+            if f not in repo.dirstate and not repo.wvfs.isdir(f):
                 if f not in forgot:
-                    if os.path.exists(match.rel(join(f))):
+                    if repo.wvfs.exists(f):
                         ui.warn(_('not removing %s: '
                                   'file is already untracked\n')
                                 % match.rel(join(f)))
