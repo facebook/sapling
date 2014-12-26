@@ -2092,8 +2092,8 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
         if f in repo.dirstate or f in wctx.dirs() or f == '.' or insubrepo():
             continue
 
-        if os.path.exists(m.rel(join(f))):
-            if os.path.isdir(m.rel(join(f))):
+        if repo.wvfs.exists(f):
+            if repo.wvfs.isdir(f):
                 ui.warn(_('not removing %s: no tracked files\n')
                         % m.rel(join(f)))
             else:
