@@ -1655,6 +1655,7 @@ class gitsubrepo(abstractsubrepo):
         elif match(gitprefix): #Subrepo is matched
             ui.write(self._gitcommand(cmd))
 
+    @annotatesubrepoerror
     def revert(self, substate, *pats, **opts):
         self.ui.status(_('reverting subrepo %s\n') % substate[0])
         if not opts.get('no_backup'):
