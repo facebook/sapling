@@ -181,22 +181,22 @@ Running In Debug Mode
 ======================
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --debug 2>&1 | grep -v pwd
-  + echo SALT* 0 0 (glob)
-  SALT* 0 0 (glob)
+  + echo *SALT* 0 0 (glob)
+  *SALT* 0 0 (glob)
   + echo babar
   babar
-  + echo SALT* 4 0 (glob)
-  SALT* 4 0 (glob)
-  .+ echo SALT* 0 0 (glob)
-  SALT* 0 0 (glob)
+  + echo *SALT* 4 0 (glob)
+  *SALT* 4 0 (glob)
+  .+ echo *SALT* 0 0 (glob)
+  *SALT* 0 0 (glob)
   + echo babar
   babar
-  + echo SALT* 2 0 (glob)
-  SALT* 2 0 (glob)
+  + echo *SALT* 2 0 (glob)
+  *SALT* 2 0 (glob)
   + echo xyzzy
   xyzzy
-  + echo SALT* 4 0 (glob)
-  SALT* 4 0 (glob)
+  + echo *SALT* 4 0 (glob)
+  *SALT* 4 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 
