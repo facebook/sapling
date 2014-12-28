@@ -1658,10 +1658,14 @@ class gitsubrepo(abstractsubrepo):
     def revert(self, substate, *pats, **opts):
         self.ui.status(_('reverting subrepo %s\n') % substate[0])
         if not opts.get('no_backup'):
-            self.ui.warn('%s: reverting %s subrepos without '
-                         '--no-backup is unsupported\n'
-                         % (substate[0], substate[2]))
-            return []
+            status = self.status(None)
+            names = status.modified
+            for name in names:
+                bakname = "%s.orig" % name
+                self.ui.note(_('saving current version of %s as %s\n') %
+                        (name, bakname))
+                util.rename(os.path.join(self._abspath, name),
+                            os.path.join(self._abspath, bakname))
 
         self.get(substate, overwrite=True)
         return []
