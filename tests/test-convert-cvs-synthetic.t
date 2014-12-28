@@ -14,6 +14,7 @@ create cvs repository with one project
   $ CVS_OPTIONS=-f
   $ export CVS_OPTIONS
   $ cd ..
+  $ rmdir cvsrepo
   $ cvscall()
   > {
   >     cvs -f "$@"

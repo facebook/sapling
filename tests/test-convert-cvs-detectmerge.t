@@ -33,7 +33,6 @@ XXX copied from test-convert-cvs-synthetic
 
 create cvs repository with one project
 
-  $ mkdir cvsrepo
   $ cvscall -q -d "$CVSROOT" init
   $ mkdir cvsrepo/proj
 

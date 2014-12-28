@@ -33,6 +33,7 @@ create cvs repository
   $ CVS_OPTIONS=-f
   $ export CVS_OPTIONS
   $ cd ..
+  $ rmdir cvsrepo
   $ cvscall -q -d "$CVSROOT" init
 
 create source directory
