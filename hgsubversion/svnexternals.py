@@ -390,6 +390,10 @@ class svnsubrepo(subrepo.svnsubrepo):
     def __init__(self, ctx, path, state):
         state = (state[0].split(':', 1)[1], state[1])
         super(svnsubrepo, self).__init__(ctx, path, state)
+        # Mercurial 3.3+ set 'ui' rather than '_ui' -- set that and use 'ui'
+        # everywhere to maintain compatibility across versions
+        if not hgutil.safehasattr(self, 'ui'):
+            self.ui = ctx._repo.ui
 
     def get(self, state, *args, **kwargs):
         # Resolve source first
@@ -398,11 +402,11 @@ class svnsubrepo(subrepo.svnsubrepo):
         try:
             # Getting the root SVN repository URL is expensive.
             # Assume the externals is absolute.
-            source = resolvesource(self._ui, None, source)
+            source = resolvesource(self.ui, None, source)
         except RelativeSourceError:
             svnurl = self._ctx._repo.ui.expandpath('default')
             svnroot = getsvninfo(util.normalize_url(svnurl))[1]
-            source = resolvesource(self._ui, svnroot, source)
+            source = resolvesource(self.ui, svnroot, source)
         # hg 1.9 and higher, append the rev as a peg revision to
         # the source URL, so we cannot add our own. We assume
         # that "-r10 url@2" will be similar to "url@10" most of
