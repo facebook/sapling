@@ -81,6 +81,7 @@
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg rebase -d tip
+  rebasing 1:9abfe7bca547 "a"
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/9abfe7bca547-backup.hg
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
 
