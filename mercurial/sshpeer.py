@@ -20,6 +20,8 @@ class remotelock(object):
             self.release()
 
 def _serverquote(s):
+    if not s:
+        return s
     '''quote a string for the remote shell ... which we assume is sh'''
     if re.match('[a-zA-Z0-9@%_+=:,./-]*$', s):
         return s
@@ -45,7 +47,10 @@ class sshpeer(wireproto.wirepeer):
         sshcmd = self.ui.config("ui", "ssh", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd", "hg")
 
-        args = util.sshargs(sshcmd, self.host, self.user, self.port)
+        args = util.sshargs(sshcmd,
+                            _serverquote(self.host),
+                            _serverquote(self.user),
+                            _serverquote(self.port))
 
         if create:
             cmd = '%s %s %s' % (sshcmd, args,
