@@ -13103,10 +13103,10 @@ msgid "          hg files -0 | xargs -0 grep foo"
 msgstr "          hg files -0 | xargs -0 grep foo"
 
 msgid ""
-"    See :hg:`help pattern` and :hg:`help filesets` for more information\n"
+"    See :hg:`help patterns` and :hg:`help filesets` for more information\n"
 "    on specifying file patterns."
 msgstr ""
-"    Veja :hg:`help pattern` e :hg:`help filesets` para mais\n"
+"    Veja :hg:`help patterns` e :hg:`help filesets` para mais\n"
 "    informações sobre a especificação de padrões de arquivo."
 
 msgid "    Returns 0 if a match is found, 1 otherwise."
@@ -25033,6 +25033,10 @@ msgstr "clone"
 #, python-format
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
 msgstr "transferidos %s em %.1f segundos (%s/s)\n"
+
+#, python-format
+msgid "pushkey-abort: %s\n"
+msgstr "pushkey-abortado: %s\n"
 
 msgid "SMTPS requires Python 2.6 or later"
 msgstr "SMTPS exige Python 2.6 ou posterior"
