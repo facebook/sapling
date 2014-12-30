@@ -1559,7 +1559,7 @@ hg log -f dir across branches
   o  a
   
   $ hg log -f d/a -T '{desc}' -G
-  o  b
+  @  c
   |
   o  a
   
@@ -1650,6 +1650,23 @@ plain log lists the original version
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     content2
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+
+hg log -f from the grafted changeset
+(The bootstrap should properly take the topology in account)
+
+  $ hg up 'desc(content3)^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -Gf a
+  @  changeset:   3:15b2327059e5
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content2
   |
   o  changeset:   0:ae0a3c9f9e95
      user:        test

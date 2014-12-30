@@ -807,7 +807,7 @@ def _follow(repo, subset, x, name, followfirst=False):
             cx = c[x]
             s = set(ctx.rev() for ctx in cx.ancestors(followfirst=followfirst))
             # include the revision responsible for the most recent version
-            s.add(cx.linkrev())
+            s.add(cx.introrev())
         else:
             return baseset()
     else:
