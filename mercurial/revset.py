@@ -792,6 +792,7 @@ def filelog(repo, subset, x):
         backrevref = {}  # final value for: changerev -> filerev
         lowestchild = {} # lowest known filerev child of a filerev
         delayed = []     # filerev with filtered linkrev, for post-processing
+        lowesthead = None # cache for manifest content of all head revisions
         fl = repo.file(f)
         for fr in list(fl):
             lkr = rev = fl.linkrev(fr)
@@ -825,9 +826,24 @@ def filelog(repo, subset, x):
             child = lowestchild.get(fr)
 
             if child is None:
-                # XXX content could be linkrev-shadowed in a head, but lets
-                # ignore this case for now.
-                continue
+                # search for existence of this file revision in a head revision.
+                # There are three possibilities:
+                # - the revision exists in a head and we can find an
+                #   introduction from there,
+                # - the revision does not exist in a head because it has been
+                #   changed since its introduction: we would have found a child
+                #   and be in the other 'else' clause,
+                # - all versions of the revision are hidden.
+                if lowesthead is None:
+                    lowesthead = {}
+                    for h in repo.heads():
+                        fnode = repo[h].manifest()[f]
+                        lowesthead[fl.rev(fnode)] = h
+                headrev = lowesthead.get(fr)
+                if headrev is None:
+                    # content is nowhere unfiltered
+                    continue
+                rev = repo[headrev][f].introrev()
             else:
                 # the lowest known child is a good upper bound
                 childcrev = backrevref[child]

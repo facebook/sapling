@@ -1725,4 +1725,22 @@ Check that log on the file does not drop the file revision.
      summary:     content1
   
 
+Even when a head revision is linkrev-shadowed.
+
+  $ hg log -T '{node}\n' -r 4
+  50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2
+  $ hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2
+  $ hg log -G a
+  @  changeset:   3:15b2327059e5
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content2
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+
   $ cd ..
