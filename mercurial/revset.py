@@ -771,24 +771,89 @@ def filelog(repo, subset, x):
     The pattern without explicit kind like ``glob:`` is expected to be
     relative to the current directory and match against a file exactly
     for efficiency.
+
+    If some linkrev points to revisions filtered by the current repoview, we'll
+    work around it to return a non-filtered value.
     """
 
     # i18n: "filelog" is a keyword
     pat = getstring(x, _("filelog requires a pattern"))
     s = set()
+    cl = repo.changelog
 
     if not matchmod.patkind(pat):
         f = pathutil.canonpath(repo.root, repo.getcwd(), pat)
-        fl = repo.file(f)
-        for fr in fl:
-            s.add(fl.linkrev(fr))
+        files = [f]
     else:
         m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=repo[None])
-        for f in repo[None]:
-            if m(f):
-                fl = repo.file(f)
-                for fr in fl:
-                    s.add(fl.linkrev(fr))
+        files = (f for f in repo[None] if m(f))
+
+    for f in files:
+        backrevref = {}  # final value for: changerev -> filerev
+        lowestchild = {} # lowest known filerev child of a filerev
+        delayed = []     # filerev with filtered linkrev, for post-processing
+        fl = repo.file(f)
+        for fr in list(fl):
+            lkr = rev = fl.linkrev(fr)
+            if rev not in cl:
+                # changerev pointed in linkrev is filtered
+                # record it for post processing.
+                delayed.append((fr, rev))
+                continue
+            for p in fl.parentrevs(fr):
+                if 0 <= p and p not in lowestchild:
+                    lowestchild[p] = fr
+            backrevref[fr] = rev
+            s.add(rev)
+
+        # Post-processing of all filerevs we skipped because they were
+        # filtered. If such filerevs have known and unfiltered children, this
+        # means they have an unfiltered appearance out there. We'll use linkrev
+        # adjustment to find one of these appearances. The lowest known child
+        # will be used as a starting point because it is the best upper-bound we
+        # have.
+        #
+        # This approach will fail when an unfiltered but linkrev-shadowed
+        # appearance exists in a head changeset without unfiltered filerev
+        # children anywhere.
+        while delayed:
+            # must be a descending iteration. To slowly fill lowest child
+            # information that is of potential use by the next item.
+            fr, rev = delayed.pop()
+            lkr = rev
+
+            child = lowestchild.get(fr)
+
+            if child is None:
+                # XXX content could be linkrev-shadowed in a head, but lets
+                # ignore this case for now.
+                continue
+            else:
+                # the lowest known child is a good upper bound
+                childcrev = backrevref[child]
+                # XXX this does not guarantee returning the lowest
+                # introduction of this revision, but this gives a
+                # result which is a good start and will fit in most
+                # cases. We probably need to fix the multiple
+                # introductions case properly (report each
+                # introduction, even for identical file revisions)
+                # once and for all at some point anyway.
+                for p in repo[childcrev][f].parents():
+                    if p.filerev() == fr:
+                        rev = p.rev()
+                        break
+                if rev == lkr:  # no shadowed entry found
+                    # XXX This should never happen unless some manifest points
+                    # to biggish file revisions (like a revision that uses a
+                    # parent that never appears in the manifest ancestors)
+                    continue
+
+            # Fill the data for the next iteration.
+            for p in fl.parentrevs(fr):
+                if 0 <= p and p not in lowestchild:
+                    lowestchild[p] = fr
+            backrevref[fr] = rev
+            s.add(rev)
 
     return subset & s
 

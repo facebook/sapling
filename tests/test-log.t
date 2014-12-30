@@ -1673,4 +1673,56 @@ hg log -f from the grafted changeset
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     content1
   
+
+Test that we use the first non-hidden changeset in that case.
+
+(hide the changeset)
+
+  $ hg log -T '{node}\n' -r 1
+  2294ae80ad8447bc78383182eeac50cb049df623
+  $ hg debugobsolete 2294ae80ad8447bc78383182eeac50cb049df623
+  $ hg log -G
+  o  changeset:   4:50b9b36e9c5d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content3
+  |
+  @  changeset:   3:15b2327059e5
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content2
+  |
+  o  changeset:   2:2029acd1168c
+  |  parent:      0:ae0a3c9f9e95
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     unrelated
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+
+Check that log on the file does not drop the file revision.
+
+  $ hg log -G a
+  o  changeset:   4:50b9b36e9c5d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content3
+  |
+  @  changeset:   3:15b2327059e5
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     content2
+  |
+  o  changeset:   0:ae0a3c9f9e95
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     content1
+  
+
   $ cd ..
