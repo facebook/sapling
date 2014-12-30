@@ -1337,6 +1337,18 @@ class GitHandler(object):
             #  gitlink       no     |  delete gitlink
             #  gitlink      file    |  delete gitlink and record file
             #  gitlink    gitlink   |  record gitlink
+            #
+            # There's an edge case here -- symlink <-> regular file transitions
+            # are returned by dulwich as separate deletes and adds, not
+            # modifications. The order of those results is unspecified and could
+            # be either way round. Handle both cases:
+            # delete first, then add -- delete stored in 'old = file' case, then
+            # overwritten by 'new = file' case.
+            # add first, then delete -- record stored in 'new = file' case, then
+            # membership check fails in 'old = file' case so is not overwritten
+            # there.
+            # This is not an issue for gitlink <-> {symlink, regular file}
+            # transitions because they write to separate dictionaries.
             if newmode == 0160000:
                 # new = gitlink
                 gitlinks[newfile] = newsha
@@ -1361,7 +1373,9 @@ class GitHandler(object):
                         files[oldfile] = True, None, None
             else:
                 # old = file
-                files[oldfile] = True, None, None
+                # the membership check is explained in a comment above
+                if oldfile not in files:
+                    files[oldfile] = True, None, None
 
         return files, gitlinks, renames
 

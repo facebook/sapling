@@ -223,3 +223,59 @@ make sure that only beta is in the manifest
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
+
+test with rename detection enabled
+  $ hg --config git.similarity=100 clone gitrepo hgreporenames | grep -v '^updating'
+  importing git objects into hg
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cd hgreporenames
+  $ hg log --graph | grep -v ': master'
+  @  changeset:   8:0995b8a0a943
+  |  bookmark:    master
+  |  tag:         default/master
+  |  tag:         tip
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:18 2007 +0000
+  |  summary:     remove betalink
+  |
+  o  changeset:   7:a316d3a96c89
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:17 2007 +0000
+  |  summary:     replace file with symlink
+  |
+  o  changeset:   6:1804acb71f3e
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:16 2007 +0000
+  |  summary:     replace symlink with file
+  |
+  o  changeset:   5:e19c85becc87
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:15 2007 +0000
+  |  summary:     add symlink to beta
+  |
+  o  changeset:   4:0d3086c3f8c3
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:14 2007 +0000
+  |  summary:     remove foo/bar
+  |
+  o  changeset:   3:b2406125ef5c
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:13 2007 +0000
+  |  summary:     remove alpha
+  |
+  o  changeset:   2:8b3b2f4b4158
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:12 2007 +0000
+  |  summary:     add foo
+  |
+  o  changeset:   1:7fe02317c63d
+  |  user:        test <test@example.org>
+  |  date:        Mon Jan 01 00:00:11 2007 +0000
+  |  summary:     add beta
+  |
+  o  changeset:   0:ff7a2f2d8d70
+     user:        test <test@example.org>
+     date:        Mon Jan 01 00:00:10 2007 +0000
+     summary:     add alpha
+  
