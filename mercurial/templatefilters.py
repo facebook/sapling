@@ -208,6 +208,8 @@ def json(obj):
         for i in obj:
             out.append(json(i))
         return '[' + ', '.join(out) + ']'
+    elif util.safehasattr(obj, '__call__'):
+        return json(obj())
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
