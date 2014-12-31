@@ -262,7 +262,6 @@ Add a normal file to the subrepo, then test archiving
   removing subrepo/large.txt
   adding subrepo/normal.txt
   adding subrepo/renamed-large.txt
-  adding large.dat
   $ hg status -S
   ! subrepo/large.txt
   ? large.dat
@@ -295,7 +294,6 @@ Add a normal file to the subrepo, then test archiving
   removing subrepo/large.txt
   adding subrepo/normal.txt
   adding subrepo/renamed-large.txt
-  adding large.dat
   $ cd statusmatch
 
   $ mv subrepo/renamed-large.txt subrepo/large.txt

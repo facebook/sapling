@@ -34,10 +34,14 @@ def composelargefilematcher(match, manifest):
     m.matchfn = lambda f: lfile(f) and origmatchfn(f)
     return m
 
-def composenormalfilematcher(match, manifest):
+def composenormalfilematcher(match, manifest, exclude=None):
+    excluded = set()
+    if exclude is not None:
+        excluded.update(exclude)
+
     m = copy.copy(match)
     notlfile = lambda f: not (lfutil.isstandin(f) or lfutil.standin(f) in
-            manifest)
+            manifest or f in excluded)
     m._files = filter(notlfile, m._files)
     m._fmap = set(m._files)
     m._always = False
@@ -1132,11 +1136,11 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
         removelargefiles(repo.ui, repo, True, m, **opts)
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
-    addlargefiles(repo.ui, repo, True, matcher, **opts)
+    added, bad = addlargefiles(repo.ui, repo, True, matcher, **opts)
     # Now that we've handled largefiles, hand off to the original addremove
     # function to take care of the rest.  Make sure it doesn't do anything with
     # largefiles by passing a matcher that will ignore them.
-    matcher = composenormalfilematcher(matcher, repo[None].manifest())
+    matcher = composenormalfilematcher(matcher, repo[None].manifest(), added)
     return orig(repo, matcher, prefix, opts, dry_run, similarity)
 
 # Calling purge with --all will cause the largefiles to be deleted.
