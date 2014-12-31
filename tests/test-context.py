@@ -50,3 +50,42 @@ print ctxb.status(ctxa)
 
 for d in ctxb.diff(ctxa, git=True):
     print d
+
+# test safeness and correctness of "cxt.status()"
+print '= checking context.status():'
+
+# ancestor "wcctx ~ 2"
+actx2 = repo['.']
+
+repo.wwrite('bar-m', 'bar-m\n', '')
+repo.wwrite('bar-r', 'bar-r\n', '')
+repo[None].add(['bar-m', 'bar-r'])
+repo.commit(text='add bar-m, bar-r', date="0 0")
+
+# ancestor "wcctx ~ 1"
+actx1 = repo['.']
+
+repo.wwrite('bar-m', 'bar-m bar-m\n', '')
+repo.wwrite('bar-a', 'bar-a\n', '')
+repo[None].add(['bar-a'])
+repo[None].forget(['bar-r'])
+
+# status at this point:
+#   M bar-m
+#   A bar-a
+#   R bar-r
+#   C foo
+
+from mercurial import scmutil
+
+print '== checking workingctx.status:'
+
+wctx = repo[None]
+print 'wctx._status=%s' % (str(wctx._status))
+
+print actx1.status(other=wctx,
+                   match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
+print 'wctx._status=%s' % (str(wctx._status))
+print actx2.status(other=wctx,
+                   match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
+print 'wctx._status=%s' % (str(wctx._status))

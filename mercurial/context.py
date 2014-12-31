@@ -1444,7 +1444,9 @@ class workingctx(committablectx):
             s = super(workingctx, self)._buildstatus(other, s, match,
                                                      listignored, listclean,
                                                      listunknown)
-        self._status = s
+        elif match.always():
+            # cache for performance
+            self._status = s
         return s
 
     def _matchstatus(self, other, match):

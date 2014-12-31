@@ -11,3 +11,10 @@ diff --git a/foo b/foo
  foo
 +bar
 
+= checking context.status():
+== checking workingctx.status:
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=['bar-m'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-m'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
