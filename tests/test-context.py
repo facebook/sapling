@@ -96,3 +96,25 @@ print actx1.status(other=wctx, listclean=True)
 print 'wctx._status=%s' % (str(wctx._status))
 print actx2.status(other=wctx, listclean=True)
 print 'wctx._status=%s' % (str(wctx._status))
+
+print "== checking workingcommitctx.status:"
+
+wcctx = context.workingcommitctx(repo,
+                                 scmutil.status(['bar-m'],
+                                                ['bar-a'],
+                                                [],
+                                                [], [], [], []),
+                                 text='', date='0 0')
+print 'wcctx._status=%s' % (str(wcctx._status))
+
+print '=== with "always match":'
+actx1.status(other=wcctx)
+print 'wcctx._status=%s' % (str(wcctx._status))
+actx2.status(other=wcctx)
+print 'wcctx._status=%s' % (str(wcctx._status))
+
+print '=== with "always match" and "listclean=True":'
+actx1.status(other=wcctx, listclean=True)
+print 'wcctx._status=%s' % (str(wcctx._status))
+actx2.status(other=wcctx, listclean=True)
+print 'wcctx._status=%s' % (str(wcctx._status))

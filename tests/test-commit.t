@@ -430,6 +430,34 @@ specific template keywords work well
   [255]
 
   $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset = {desc}
+  >     HG: files={files}
+  >     HG:
+  >     {splitlines(diff()) % ''
+  >    }HG:
+  >     HG: files={files}\n
+  > EOF
+  $ hg status -amr
+  M changed
+  A added
+  R removed
+  $ HGEDITOR=cat hg commit -q -e -m "foo bar" changed
+  foo bar
+  HG: files=changed
+  HG:
+  HG:
+  HG: files=changed
+  $ hg status -amr
+  A added
+  R removed
+  $ hg parents --template "M {file_mods}\nA {file_adds}\nR {file_dels}\n"
+  M changed
+  A 
+  R 
+  $ hg rollback -q
+
+  $ cat >> .hg/hgrc <<EOF
   > # disable customizing for subsequent tests
   > [committemplate]
   > changeset =
