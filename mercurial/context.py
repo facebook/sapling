@@ -1646,6 +1646,32 @@ class workingcommitctx(workingctx):
                                        listignored, listclean, listunknown)
         return s
 
+    def _dirstatestatus(self, match=None, ignored=False, clean=False,
+                        unknown=False):
+        """Return matched files only in ``self._status``
+
+        Uncommitted files appear "clean" via this context, even if
+        they aren't actually so in the working directory.
+        """
+        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
+        if clean:
+            clean = [f for f in self._manifest if f not in self._changedset]
+        else:
+            clean = []
+        return scmutil.status([f for f in self._status.modified if match(f)],
+                              [f for f in self._status.added if match(f)],
+                              [f for f in self._status.removed if match(f)],
+                              [], [], [], clean)
+
+    @propertycache
+    def _changedset(self):
+        """Return the set of files changed in this context
+        """
+        changed = set(self._status.modified)
+        changed.update(self._status.added)
+        changed.update(self._status.removed)
+        return changed
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 

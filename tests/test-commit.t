@@ -434,7 +434,7 @@ specific template keywords work well
   > changeset = {desc}
   >     HG: files={files}
   >     HG:
-  >     {splitlines(diff()) % ''
+  >     {splitlines(diff()) % 'HG: {line}\n'
   >    }HG:
   >     HG: files={files}\n
   > EOF
@@ -446,6 +446,11 @@ specific template keywords work well
   foo bar
   HG: files=changed
   HG:
+  HG: --- a/changed	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/changed	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,1 +1,2 @@
+  HG:  changed
+  HG: +changed
   HG:
   HG: files=changed
   $ hg status -amr
@@ -455,6 +460,51 @@ specific template keywords work well
   M changed
   A 
   R 
+  $ hg rollback -q
+
+  $ cat >> .hg/hgrc <<EOF
+  > [committemplate]
+  > changeset = {desc}
+  >     HG: files={files}
+  >     HG:
+  >     {splitlines(diff("changed")) % 'HG: {line}\n'
+  >    }HG:
+  >     HG: files={files}
+  >     HG:
+  >     {splitlines(diff("added")) % 'HG: {line}\n'
+  >    }HG:
+  >     HG: files={files}
+  >     HG:
+  >     {splitlines(diff("removed")) % 'HG: {line}\n'
+  >    }HG:
+  >     HG: files={files}\n
+  > EOF
+  $ HGEDITOR=cat hg commit -q -e -m "foo bar" added removed
+  foo bar
+  HG: files=added removed
+  HG:
+  HG:
+  HG: files=added removed
+  HG:
+  HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ b/added	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -0,0 +1,1 @@
+  HG: +added
+  HG:
+  HG: files=added removed
+  HG:
+  HG: --- a/removed	Thu Jan 01 00:00:00 1970 +0000
+  HG: +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  HG: @@ -1,1 +0,0 @@
+  HG: -removed
+  HG:
+  HG: files=added removed
+  $ hg status -amr
+  M changed
+  $ hg parents --template "M {file_mods}\nA {file_adds}\nR {file_dels}\n"
+  M 
+  A added
+  R removed
   $ hg rollback -q
 
   $ cat >> .hg/hgrc <<EOF
