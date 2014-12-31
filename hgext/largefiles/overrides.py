@@ -114,15 +114,13 @@ def addlargefiles(ui, repo, matcher, **opts):
             continue
 
         if (exact or not exists) and not lfutil.isstandin(f):
-            wfile = repo.wjoin(f)
-
             # In case the file was removed previously, but not committed
             # (issue3507)
-            if not os.path.exists(wfile):
+            if not repo.wvfs.exists(f):
                 continue
 
             abovemin = (lfsize and
-                        os.lstat(wfile).st_size >= lfsize * 1024 * 1024)
+                        repo.wvfs.lstat(f).st_size >= lfsize * 1024 * 1024)
             if large or abovemin or (lfmatcher and lfmatcher(f)):
                 lfnames.append(f)
                 if ui.verbose or not exact:
