@@ -83,9 +83,16 @@ print '== checking workingctx.status:'
 wctx = repo[None]
 print 'wctx._status=%s' % (str(wctx._status))
 
+print '=== with "pattern match":'
 print actx1.status(other=wctx,
                    match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
 print 'wctx._status=%s' % (str(wctx._status))
 print actx2.status(other=wctx,
                    match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
+print 'wctx._status=%s' % (str(wctx._status))
+
+print '=== with "always match" and "listclean=True":'
+print actx1.status(other=wctx, listclean=True)
+print 'wctx._status=%s' % (str(wctx._status))
+print actx2.status(other=wctx, listclean=True)
 print 'wctx._status=%s' % (str(wctx._status))

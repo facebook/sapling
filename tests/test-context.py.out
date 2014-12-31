@@ -14,7 +14,13 @@ diff --git a/foo b/foo
 = checking context.status():
 == checking workingctx.status:
 wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "pattern match":
 <status modified=['bar-m'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
 wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
 <status modified=[], added=['bar-m'], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+=== with "always match" and "listclean=True":
+<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=['foo']>
+wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
+<status modified=[], added=['bar-a', 'bar-m'], removed=[], deleted=[], unknown=[], ignored=[], clean=['foo']>
 wctx._status=<status modified=['bar-m'], added=['bar-a'], removed=['bar-r'], deleted=[], unknown=[], ignored=[], clean=[]>
