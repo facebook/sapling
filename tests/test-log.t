@@ -1031,7 +1031,25 @@ log -b 2
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit on default
   
+#if gettext
 
+Test that all log names are translated (e.g. branches, bookmarks, tags):
+
+  $ hg bookmark babar -r tip
+
+  $ HGENCODING=UTF-8 LANGUAGE=de hg log -r tip
+  \xc3\x84nderung:        3:f5d8de11c2e2 (esc)
+  Zweig:           test
+  Lesezeichen:     babar
+  Marke:           tip
+  Vorg\xc3\xa4nger:       1:d32277701ccb (esc)
+  Nutzer:          test
+  Datum:           Thu Jan 01 00:00:00 1970 +0000
+  Zusammenfassung: commit on test
+  
+  $ hg bookmark -d babar
+
+#endif
 
 log -p --cwd dir (in subdir)
 
