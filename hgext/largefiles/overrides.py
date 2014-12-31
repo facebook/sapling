@@ -260,12 +260,11 @@ def overrideadd(orig, ui, repo, *pats, **opts):
 
     return (result == 1 or bad) and 1 or 0
 
-def overrideremove(orig, ui, repo, *pats, **opts):
-    installnormalfilesmatchfn(repo[None].manifest())
-    result = orig(ui, repo, *pats, **opts)
-    restorematchfn()
-    matcher = scmutil.match(repo[None], pats, opts)
-    return removelargefiles(ui, repo, False, matcher, **opts) or result
+def cmdutilremove(orig, ui, repo, matcher, prefix, after, force, subrepos):
+    normalmatcher = composenormalfilematcher(matcher, repo[None].manifest())
+    result = orig(ui, repo, normalmatcher, prefix, after, force, subrepos)
+    return removelargefiles(ui, repo, False, matcher, after=after,
+                            force=force) or result
 
 def overridestatusfn(orig, repo, rev2, **opts):
     try:

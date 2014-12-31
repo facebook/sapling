@@ -362,6 +362,9 @@ Test update with subrepos.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -S
 
+  $ hg rm -v subrepo/large.txt
+  removing subrepo/large.txt (glob)
+  $ hg revert -R subrepo subrepo/large.txt
   $ rm subrepo/large.txt
   $ hg addremove -S
   removing subrepo/large.txt
