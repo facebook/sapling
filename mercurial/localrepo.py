@@ -1343,7 +1343,8 @@ class localrepository(object):
                     elif f not in self.dirstate:
                         fail(f, _("file not tracked!"))
 
-            cctx = context.workingctx(self, text, user, date, extra, status)
+            cctx = context.workingcommitctx(self, status,
+                                            text, user, date, extra)
 
             if (not force and not extra.get("close") and not merge
                 and not cctx.files()

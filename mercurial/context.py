@@ -1622,6 +1622,18 @@ class workingfilectx(committablefilectx):
         """wraps repo.wwrite"""
         self._repo.wwrite(self._path, data, flags)
 
+class workingcommitctx(workingctx):
+    """A workingcommitctx object makes access to data related to
+    the revision being committed convenient.
+
+    This hides changes in the working directory, if they aren't
+    committed in this context.
+    """
+    def __init__(self, repo, changes,
+                 text="", user=None, date=None, extra=None):
+        super(workingctx, self).__init__(repo, text, user, date, extra,
+                                         changes)
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
