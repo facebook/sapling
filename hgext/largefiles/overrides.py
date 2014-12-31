@@ -90,9 +90,9 @@ def restorematchandpatsfn():
             scmutil.matchandpats)
 
 def addlargefiles(ui, repo, isaddremove, matcher, **opts):
-    large = opts.pop('large', None)
+    large = opts.get('large')
     lfsize = lfutil.getminsize(
-        ui, lfutil.islfilesrepo(repo), opts.pop('lfsize', None))
+        ui, lfutil.islfilesrepo(repo), opts.get('lfsize'))
 
     lfmatcher = None
     if lfutil.islfilesrepo(repo):
@@ -247,7 +247,7 @@ def decodepath(orig, path):
 # matcher which matches only the normal files and runs the original
 # version of add.
 def overrideadd(orig, ui, repo, *pats, **opts):
-    normal = opts.pop('normal')
+    normal = opts.get('normal')
     if normal:
         if opts.get('large'):
             raise util.Abort(_('--normal cannot be used with --large'))
