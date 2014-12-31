@@ -1112,12 +1112,6 @@ class committablectx(basectx):
         return self._status.removed
     def deleted(self):
         return self._status.deleted
-    def unknown(self):
-        return self._status.unknown
-    def ignored(self):
-        return self._status.ignored
-    def clean(self):
-        return self._status.clean
     def branch(self):
         return encoding.tolocal(self._extra['branch'])
     def closesbranch(self):
