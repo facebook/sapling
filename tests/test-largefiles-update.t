@@ -36,9 +36,8 @@ prevents unnecessary hashing of content - also after linear/noop update
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugdirstate --large --nodate
-  n   0         -1 large1
-  n   0         -1 large2
-BAD:            ^^
+  n 644          7 large1
+  n 644         13 large2
 
 Test that "hg merge" updates largefiles from "other" correctly
 
