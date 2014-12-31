@@ -199,7 +199,7 @@ def json(obj):
         return '"%s"' % jsonescape(obj)
     elif util.safehasattr(obj, 'keys'):
         out = []
-        for k, v in obj.iteritems():
+        for k, v in sorted(obj.iteritems()):
             s = '%s: %s' % (json(k), json(v))
             out.append(s)
         return '{' + ', '.join(out) + '}'
