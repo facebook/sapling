@@ -154,9 +154,11 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
             bad += [lfutil.splitstandin(f)
                     for f in repo[None].add(standins)
                     if f in m.files()]
+
+        added = [f for f in lfnames if f not in bad]
     finally:
         wlock.release()
-    return bad
+    return added, bad
 
 def removelargefiles(ui, repo, isaddremove, matcher, **opts):
     after = opts.get('after')
@@ -247,7 +249,7 @@ def overrideadd(orig, ui, repo, *pats, **opts):
             raise util.Abort(_('--normal cannot be used with --large'))
         return orig(ui, repo, *pats, **opts)
     matcher = scmutil.match(repo[None], pats, opts)
-    bad = addlargefiles(ui, repo, False, matcher, **opts)
+    added, bad = addlargefiles(ui, repo, False, matcher, **opts)
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
     restorematchfn()
