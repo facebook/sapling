@@ -121,14 +121,20 @@ class RelativeSourceError(Exception):
     pass
 
 def resolvedots(url):
-    """ Fix references that include .. entries."""
+    """
+    Fix references that include .. entries.
+    Scans a URL for .. type entries and resolves them but will not allow any
+    number of ..s to take us out of domain so http://.. will raise an exception.
+    """
     orig = url.split('/')
     fixed = []
     for item in orig:
         if item != '..':
             fixed.append(item)
-        else:
+        elif len(fixed) > 2:  # Don't allow things to go out of domain
             fixed.pop()
+        else:
+            raise RelativeSourceError()
     return '/'.join(fixed)
 
 def resolvesource(ui, svnroot, source):
