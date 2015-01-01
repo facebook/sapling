@@ -519,19 +519,6 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
 
             lfutil.synclfdirstate(repo, lfdirstate, lfile, normallookup)
 
-        if filelist is not None:
-            # If "local largefile" is chosen at file merging, it is
-            # not listed in "filelist" (= dirstate syncing is
-            # omitted), because the standin file is not changed before and
-            # after merging.
-            # But the status of such files may have to be changed by
-            # merging. For example, locally modified ("M") largefile
-            # has to become re-added("A"), if it is "normal" file in
-            # the target revision of linear-merging.
-            for lfile in lfdirstate:
-                if lfile not in filelist:
-                    lfutil.synclfdirstate(repo, lfdirstate, lfile, True)
-
         lfdirstate.write()
         if lfiles:
             statuswriter(_('%d largefiles updated, %d removed\n') % (updated,

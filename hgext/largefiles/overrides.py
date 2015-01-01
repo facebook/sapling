@@ -496,10 +496,14 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
 
 def mergerecordupdates(orig, repo, actions, branchmerge):
     if 'lfmr' in actions:
-        # this should be executed before 'orig', to execute 'remove'
-        # before all other actions
+        lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
         for lfile, args, msg in actions['lfmr']:
+            # this should be executed before 'orig', to execute 'remove'
+            # before all other actions
             repo.dirstate.remove(lfile)
+            # make sure lfile doesn't get synclfdirstate'd as normal
+            lfdirstate.add(lfile)
+        lfdirstate.write()
 
     return orig(repo, actions, branchmerge)
 

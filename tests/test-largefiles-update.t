@@ -25,6 +25,20 @@ directory (and ".hg/largefiles/dirstate")
   $ hg commit -m '#2'
   created new head
 
+Test that lfdirstate keeps track of last modification of largefiles and
+prevents unnecessary hashing of content - also after linear/noop update
+
+  $ sleep 1
+  $ hg st
+  $ hg debugdirstate --large --nodate
+  n 644          7 large1
+  n 644         13 large2
+  $ hg up
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugdirstate --large --nodate
+  n 644          7 large1
+  n 644         13 large2
+
 Test that "hg merge" updates largefiles from "other" correctly
 
 (getting largefiles from "other" normally)
