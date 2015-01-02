@@ -768,7 +768,7 @@ class localrepository(object):
         return self.vfs.join(os.path.join(f, *insidef))
 
     def wjoin(self, f, *insidef):
-        return os.path.join(self.root, f, *insidef)
+        return self.vfs.reljoin(self.root, f, *insidef)
 
     def file(self, f):
         if f[0] == '/':
