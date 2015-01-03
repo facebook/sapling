@@ -68,18 +68,25 @@ difflineplus = '<span class="plusline"><a class="lineno" href="#{lineid}" id="{l
 difflineminus = '<span class="minusline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'
 difflineat = '<span class="atline"><a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}</span>'
 diffline = '<a class="lineno" href="#{lineid}" id="{lineid}">{linenumber}</a>{line|escape}'
+changesetlink = '<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
 changelogparent = '
   <tr>
     <th class="parent">parent {rev}:</th>
     <td class="parent">
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
+      {changesetlink}
     </td>
   </tr>'
 changesetparent = '
   <tr>
     <th class="parent">parent {rev}:</th>
-    <td class="parent"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+    <td class="parent">{changesetlink}</td>
   </tr>'
+changesetparentdiff = '
+  <tr>
+    <th class="parent">parent {rev}:</th>
+    <td class="parent">{changesetlink} {ifeq(node, basenode, '(current diff)', '({difffrom})')}</td>
+  </tr>'
+difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">diff</a>'
 filerevparent = '
   <tr>
     <td class="metatag">parent:</td>

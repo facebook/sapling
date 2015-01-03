@@ -112,7 +112,11 @@ changelogparent = '
 
 changesetparent = '<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a> '
 
-difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">{node|short}</a> '
+changesetparentdiff = '
+  {changesetparent}
+  {ifeq(node, basenode, '(current diff)', '({difffrom})')}'
+
+difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">diff</a>'
 
 filerevparent = '<a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rename%filerename}{node|short}</a> '
 filerevchild = '<a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a> '

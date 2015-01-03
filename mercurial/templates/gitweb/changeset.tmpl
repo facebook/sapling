@@ -36,7 +36,7 @@ changeset |
 <tr><td></td><td class="date age">{date|rfc822date}</td></tr>
 {branch%changesetbranch}
 <tr><td>changeset {rev}</td><td style="font-family:monospace">{node|short}</td></tr>
-{parent%changesetparent}
+{ifeq(count(parent), '2', parent%changesetparentdiff, parent%changesetparent)}
 {child%changesetchild}
 </table></div>
 

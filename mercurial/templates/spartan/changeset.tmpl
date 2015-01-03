@@ -22,7 +22,7 @@
  <th class="changeset">changeset {rev}:</th>
  <td class="changeset"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
 </tr>
-{parent%changesetparent}
+{ifeq(count(parent), '2', parent%changesetparentdiff, parent%changesetparent)}
 {child%changesetchild}
 {changesettag}
 <tr>

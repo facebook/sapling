@@ -379,7 +379,7 @@ def changeset(web, req, tmpl):
                 diff=diffs,
                 rev=ctx.rev(),
                 node=ctx.hex(),
-                parent=webutil.parents(ctx),
+                parent=tuple(webutil.parents(ctx)),
                 child=webutil.children(ctx),
                 basenode=basectx.hex(),
                 changesettag=showtags,

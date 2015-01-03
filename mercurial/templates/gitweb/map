@@ -127,14 +127,23 @@ changelogparent = '
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
     </td>
   </tr>'
+changesetlink = '<a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
 changesetbranch = '<tr><td>branch</td><td>{name|escape}</td></tr>'
 changesetparent = '
   <tr>
     <td>parent {rev}</td>
     <td style="font-family:monospace">
-      <a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
+      {changesetlink}
     </td>
   </tr>'
+changesetparentdiff = '
+  <tr>
+    <td>parent {rev}</td>
+    <td style="font-family:monospace">
+      {changesetlink} {ifeq(node, basenode, '(current diff)', \'({difffrom})\')}
+    </td>
+  </tr>'
+difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">diff</a>'
 filerevbranch = '<tr><td>branch</td><td>{name|escape}</td></tr>'
 filerevparent = '
   <tr>

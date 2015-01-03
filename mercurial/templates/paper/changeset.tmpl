@@ -51,7 +51,7 @@
  <td class="date age">{date|rfc822date}</td></tr>
 <tr>
  <th class="author">parents</th>
- <td class="author">{parent%changesetparent}</td>
+ <td class="author">{ifeq(count(parent), '2', parent%changesetparentdiff, parent%changesetparent)}</td>
 </tr>
 <tr>
  <th class="author">children</th>

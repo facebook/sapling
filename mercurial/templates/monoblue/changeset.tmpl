@@ -48,7 +48,7 @@
         {branch%changesetbranch}
         <dt>changeset {rev}</dt>
         <dd>{node|short}</dd>
-        {parent%changesetparent}
+        {ifeq(count(parent), '2', parent%changesetparentdiff, parent%changesetparent)}
         {child%changesetchild}
     </dl>
 
