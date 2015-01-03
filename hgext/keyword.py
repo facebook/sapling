@@ -457,12 +457,9 @@ def demo(ui, repo, *args, **opts):
     repo.commit(text=msg)
     ui.status(_('\n\tkeywords expanded\n'))
     ui.write(repo.wread(fn))
-    for root, dirs, files in os.walk(tmpdir, topdown=False):
+    for root, dirs, files in os.walk(tmpdir):
         for f in files:
-            util.unlink(os.path.join(root, f))
-        for d in dirs:
-            os.rmdir(os.path.join(root, d))
-    os.rmdir(tmpdir)
+            util.unlinkpath(repo.vfs.reljoin(root, f))
 
 @command('kwexpand',
     commands.walkopts,
