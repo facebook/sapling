@@ -645,17 +645,19 @@ def defineparents(repo, rev, target, state, targetancestors):
         # Case (2) detaching the node with a single parent, use this parent
         base = repo[rev].p1().rev()
     else:
-        # In case of merge, we need to pick the right parent as merge base.
+        # Assuming there is a p1, this is the case where there also is a p2.
+        # We are thus rebasing a merge and need to pick the right merge base.
         #
         # Imagine we have:
-        # - M: currently rebase revision in this step
+        # - M: current rebase revision in this step
         # - A: one parent of M
-        # - B: second parent of M
+        # - B: other parent of M
         # - D: destination of this merge step (p1 var)
         #
-        # If we are rebasing on D, D is the successors of A or B. The right
-        # merge base is the one D succeed to. We pretend it is B for the rest
-        # of this comment
+        # Consider the case where D is a descendant of A or B and the other is
+        # 'outside'. In this case, the right merge base is the D ancestor.
+        #
+        # An informal proof, assuming A is 'outside' and B is the D ancestor:
         #
         # If we pick B as the base, the merge involves:
         # - changes from B to M (actual changeset payload)
@@ -663,12 +665,20 @@ def defineparents(repo, rev, target, state, targetancestors):
         #   version of B)
         # Which exactly represent the rebase operation.
         #
-        # If we pick the A as the base, the merge involves
+        # If we pick A as the base, the merge involves:
         # - changes from A to M (actual changeset payload)
         # - changes from A to D (with include changes between unrelated A and B
         #   plus changes induced by rebase)
         # Which does not represent anything sensible and creates a lot of
-        # conflicts.
+        # conflicts. A is thus not the right choice - B is.
+        #
+        # Note: The base found in this 'proof' is only correct in the specified
+        # case. This base does not make sense if is not D a descendant of A or B
+        # or if the other is not parent 'outside' (especially not if the other
+        # parent has been rebased). The current implementation does not
+        # make it feasible to consider different cases separately. In these
+        # other cases we currently just leave it to the user to correctly
+        # resolve an impossible merge using a wrong ancestor.
         for p in repo[rev].parents():
             if state.get(p.rev()) == p1:
                 base = p.rev()
