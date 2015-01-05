@@ -206,7 +206,7 @@ class transaction(object):
         if vfs.exists(file):
             filepath = vfs.join(file)
             backuppath = vfs.join(backupfile)
-            util.copyfiles(filepath, backuppath, hardlink=hardlink)
+            util.copyfile(filepath, backuppath, hardlink=hardlink)
         else:
             backupfile = ''
 
