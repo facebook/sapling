@@ -2037,6 +2037,12 @@ class revsetalias(object):
     funcre = re.compile('^([^(]+)\(([^)]+)\)$')
     args = None
 
+    # error message at parsing, or None
+    error = None
+    # whether own `error` information is already shown or not.
+    # this avoids showing same warning multiple times at each `findaliases`.
+    warned = False
+
     def __init__(self, name, value):
         '''Aliases like:
 
@@ -2056,11 +2062,17 @@ class revsetalias(object):
             self.name = name
             self.tree = ('symbol', name)
 
-        self.replacement, pos = parse(value)
-        if pos != len(value):
-            raise error.ParseError(_('invalid token'), pos)
-        # Check for placeholder injection
-        _checkaliasarg(self.replacement, self.args)
+        try:
+            self.replacement, pos = parse(value)
+            if pos != len(value):
+                raise error.ParseError(_('invalid token'), pos)
+            # Check for placeholder injection
+            _checkaliasarg(self.replacement, self.args)
+        except error.ParseError, inst:
+            if len(inst.args) > 1:
+                self.error = _('at %s: %s') % (inst.args[1], inst.args[0])
+            else:
+                self.error = inst.args[0]
 
 def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
@@ -2102,6 +2114,9 @@ def _expandaliases(aliases, tree, expanding, cache):
         return tree
     alias = _getalias(aliases, tree)
     if alias is not None:
+        if alias.error:
+            raise util.Abort(_('failed to parse revset alias "%s": %s') %
+                             (alias.name, alias.error))
         if alias in expanding:
             raise error.ParseError(_('infinite expansion of revset alias "%s" '
                                      'detected') % alias.name)
@@ -2123,13 +2138,22 @@ def _expandaliases(aliases, tree, expanding, cache):
                        for t in tree)
     return result
 
-def findaliases(ui, tree):
+def findaliases(ui, tree, showwarning=None):
     _checkaliasarg(tree)
     aliases = {}
     for k, v in ui.configitems('revsetalias'):
         alias = revsetalias(k, v)
         aliases[alias.name] = alias
-    return _expandaliases(aliases, tree, [], {})
+    tree = _expandaliases(aliases, tree, [], {})
+    if showwarning:
+        # warn about problematic (but not referred) aliases
+        for name, alias in sorted(aliases.iteritems()):
+            if alias.error and not alias.warned:
+                msg = _('failed to parse revset alias "%s": %s'
+                        ) % (name, alias.error)
+                showwarning(_('warning: %s\n') % (msg))
+                alias.warned = True
+    return tree
 
 def parse(spec, lookup=None):
     p = parser.parser(tokenize, elements)
@@ -2145,7 +2169,7 @@ def match(ui, spec, repo=None):
     if (pos != len(spec)):
         raise error.ParseError(_("invalid token"), pos)
     if ui:
-        tree = findaliases(ui, tree)
+        tree = findaliases(ui, tree, showwarning=ui.warn)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
         if util.safehasattr(subset, 'isascending'):

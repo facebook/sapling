@@ -956,11 +956,19 @@ far away.
     (range
       ('symbol', '2')
       ('symbol', '5')))
-  hg: parse error: not a function: _aliasarg
+  abort: failed to parse revset alias "injectparamasstring2": not a function: _aliasarg
   [255]
+  $ hg debugrevspec --debug --config revsetalias.anotherbadone='branch(' "tip"
+  ('symbol', 'tip')
+  warning: failed to parse revset alias "anotherbadone": at 7: not a prefix: end
+  warning: failed to parse revset alias "injectparamasstring2": not a function: _aliasarg
+  9
   >>> data = file('.hg/hgrc', 'rb').read()
   >>> file('.hg/hgrc', 'wb').write(data.replace('_aliasarg', ''))
 
+  $ try 'tip'
+  ('symbol', 'tip')
+  9
   $ try 'd(2:5)'
   (func
     ('symbol', 'd')
