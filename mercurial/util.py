@@ -716,10 +716,16 @@ def checksignature(func):
 
     return check
 
-def copyfile(src, dest):
+def copyfile(src, dest, hardlink=False):
     "copy a file, preserving mode and atime/mtime"
     if os.path.lexists(dest):
         unlink(dest)
+    if hardlink:
+        try:
+            oslink(src, dest)
+            return
+        except (IOError, OSError):
+            pass # fall back to normal copy
     if os.path.islink(src):
         os.symlink(os.readlink(src), dest)
     else:
