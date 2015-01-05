@@ -254,7 +254,7 @@ def stringset(repo, subset, x):
     x = repo[x].rev()
     if x == -1 and len(subset) == len(repo):
         return baseset([-1])
-    if len(subset) == len(repo) or x in subset:
+    if x in subset:
         return baseset([x])
     return baseset()
 

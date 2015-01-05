@@ -255,6 +255,7 @@ verify that large files in subrepos handled properly
 Add a normal file to the subrepo, then test archiving
 
   $ echo 'normal file' > subrepo/normal.txt
+  $ touch large.dat
   $ mv subrepo/large.txt subrepo/renamed-large.txt
   $ hg -R subrepo addremove --dry-run
   removing large.txt
@@ -262,10 +263,18 @@ Add a normal file to the subrepo, then test archiving
   adding renamed-large.txt
   $ hg status -S
   ! subrepo/large.txt
+  ? large.dat
   ? subrepo/normal.txt
   ? subrepo/renamed-large.txt
   $ mv subrepo/renamed-large.txt subrepo/large.txt
   $ hg -R subrepo add subrepo/normal.txt
+
+  $ hg addremove
+  adding large.dat as a largefile
+  $ rm large.dat
+
+  $ hg addremove
+  removing large.dat
 
 Lock in subrepo, otherwise the change isn't archived
 

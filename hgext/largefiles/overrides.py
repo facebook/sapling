@@ -201,12 +201,10 @@ def removelargefiles(ui, repo, isaddremove, *pats, **opts):
             if not opts.get('dry_run'):
                 if not after:
                     util.unlinkpath(repo.wjoin(f), ignoremissing=True)
-                lfdirstate.remove(f)
 
         if opts.get('dry_run'):
             return result
 
-        lfdirstate.write()
         remove = [lfutil.standin(f) for f in remove]
         # If this is being called by addremove, let the original addremove
         # function handle this.
@@ -214,6 +212,12 @@ def removelargefiles(ui, repo, isaddremove, *pats, **opts):
             for f in remove:
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
         repo[None].forget(remove)
+
+        for f in remove:
+            lfutil.synclfdirstate(repo, lfdirstate, lfutil.splitstandin(f),
+                                  False)
+
+        lfdirstate.write()
     finally:
         wlock.release()
 
