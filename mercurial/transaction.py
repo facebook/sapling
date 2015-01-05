@@ -397,7 +397,7 @@ class transaction(object):
             self.opener.unlink(self.journal)
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
-            for _l, _f, b, c in self._backupentries:
+            for l, _f, b, c in self._backupentries:
                 if l not in self._vfsmap and c:
                     self.report("couldn't remote %s: unknown cache location"
                                 "%s\n" % (b, l))
