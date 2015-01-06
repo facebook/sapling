@@ -837,8 +837,9 @@ def filelog(repo, subset, x):
                 if lowesthead is None:
                     lowesthead = {}
                     for h in repo.heads():
-                        fnode = repo[h].manifest()[f]
-                        lowesthead[fl.rev(fnode)] = h
+                        fnode = repo[h].manifest().get(f)
+                        if fnode is not None:
+                            lowesthead[fl.rev(fnode)] = h
                 headrev = lowesthead.get(fr)
                 if headrev is None:
                     # content is nowhere unfiltered

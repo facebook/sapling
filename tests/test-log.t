@@ -1744,3 +1744,59 @@ Even when a head revision is linkrev-shadowed.
   
 
   $ cd ..
+
+Even when the file revision is missing from some head:
+
+  $ hg init issue4490
+  $ cd issue4490
+  $ echo '[experimental]' >> .hg/hgrc
+  $ echo 'evolution=createmarkers' >> .hg/hgrc
+  $ echo a > a
+  $ hg ci -Am0
+  adding a
+  $ echo b > b
+  $ hg ci -Am1
+  adding b
+  $ echo B > b
+  $ hg ci --amend -m 1
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo c > c
+  $ hg ci -Am2
+  adding c
+  created new head
+  $ hg up 'head() and not .'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G
+  o  changeset:   4:db815d6d32e6
+  |  tag:         tip
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     2
+  |
+  | @  changeset:   3:9bc8ce7f9356
+  |/   parent:      0:f7b1eb17ad24
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:f7b1eb17ad24
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+  $ hg log -f -G b
+  @  changeset:   3:9bc8ce7f9356
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     1
+  |
+  $ hg log -G b
+  @  changeset:   3:9bc8ce7f9356
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     1
+  |
