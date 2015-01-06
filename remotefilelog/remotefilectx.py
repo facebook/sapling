@@ -90,6 +90,9 @@ class remotefilectx(context.filectx):
 
         return self._ancestormap
 
+    def introrev(self):
+        return self.linkrev()
+
     def parents(self):
         repo = self._repo
         ancestormap = self.ancestormap()
