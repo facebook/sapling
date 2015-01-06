@@ -86,73 +86,6 @@ def reposetup(ui, repo):
                              if n == node])
     repo.names.addnamespace(n)
 
-# arguably, this needs a better name
-def _preferredremotenames(repo):
-    """This property is a dictionary of values identical to _remotenames but
-    returning only 'preferred' names per path, e.g. '@' instead of
-    'default'. A table of behavior is given below:
-
-    +---------+---------+---------+
-    |  name1  |  name2  | output  |
-    |         |         |         |
-    +---------+---------+---------+
-    |         | default |         |
-    +---------+---------+---------+
-    |         |    @    |    @    |
-    +---------+---------+---------+
-    | default |    @    |    @    |
-    +---------+---------+---------+
-    |   foo   |    @    |  foo @  |
-    +---------+---------+---------+
-    |   foo   |   bar   | foo bar |
-    +---------+---------+---------+
-
-    """
-    ret = {}
-
-    remotenames = repo.names.allnames(repo, 'remotenames')
-    # iterate over all the paths so we don't clobber path1/@ with
-    # path2/@
-    for path, uri in repo.ui.configitems('paths'):
-
-        inverse = {}
-        for name in remotenames:
-            if not name.startswith(path):
-                continue
-            node = repo.names.singlenode(repo, name)
-            # nothing to check, so add and move on
-            if node not in inverse.keys():
-                inverse[node] = name
-                continue
-
-            # get the ref names, remote will always be the same
-            remote, ref1 = splitremotename(inverse[node])
-            remote, ref2 = splitremotename(name)
-
-            # prefer anything over default
-            if ref2 == 'default':
-                continue
-            if ref1 == 'default':
-                inverse[node] = joinremotename(remote, ref2)
-                continue
-
-            # prefer non-empty name to alias (empty) name
-            if not ref2:
-                continue
-            if not ref1:
-                inverse[node] = joinremotename(remote, ref2)
-                continue
-
-            # if we got to this point then both names are non-default /
-            # non-alias names and we should add ref2 to the return list
-            # directly (ref1 will be added normally)
-            if ref1 and ref2 and ref1 != ref2:
-                ret[joinremotename(remote, ref2)] = node
-
-        ret.update(dict((name, n) for n, name in inverse.iteritems()))
-
-    return ret
-
 def activepath(ui, remote):
     realpath = ''
     local = None
@@ -337,19 +270,6 @@ revset.symbols.update({'upstream': upstream,
 # templates
 ###########
 
-def preferredremotenameskw(**args):
-    """:preferredremotenames: List of strings. List of remote bookmarks and
-    branches associated with the changeset where bookmarks are preferred over
-    displaying branches.
-    """
-    repo, ctx = args['repo'], args['ctx']
-    remotenames = sorted([name for name, node in
-                          _preferredremotenames(repo).iteritems()
-                          if node == ctx.node()])
-    if remotenames:
-        return templatekw.showlist('remotename', remotenames,
-                                   plural='remotenames', **args)
-
 def remotebookmarkskw(**args):
     """:remotebookmarks: List of strings. List of remote bookmarks associated with
     the changeset.
@@ -399,7 +319,6 @@ def remotenameskw(**args):
     return templatekw.showlist('remotename', remotenames,
                                plural='remotenames', **args)
 
-templatekw.keywords['preferredremotenames'] = preferredremotenameskw
 templatekw.keywords['remotebookmarks'] = remotebookmarkskw
 templatekw.keywords['remotebranches'] = remotebrancheskw
 templatekw.keywords['remotenames'] = remotenameskw
