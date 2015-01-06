@@ -52,6 +52,9 @@ def validaterevset(repo, revset):
     if not repo.revs(revset):
         raise util.Abort(_('nothing to rebase'))
 
+    if repo.revs('%r and public()', revset):
+        raise util.Abort(_('cannot rebase public changesets'))
+
     if repo.revs('%r and merge()', revset):
         raise util.Abort(_('cannot rebase merge changesets'))
 
@@ -247,10 +250,6 @@ def _buildobsolete(replacements, oldrepo, newrepo):
         markers = [(oldrepo[oldrev], (newrepo[newrev],))
                    for oldrev, newrev in replacements.items()
                    if newrev != oldrev]
-
-        # TODO: make sure these weren't public originally
-        for old, new in markers:
-            old.mutable = lambda *args: True
 
         obsolete.createmarkers(newrepo, markers)
 
