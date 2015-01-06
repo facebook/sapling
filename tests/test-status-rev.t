@@ -153,9 +153,8 @@ BROKEN: missing_content2_content[23]-untracked exist, so should be listed
   R content1_missing_content1-untracked
   R content1_missing_content3-untracked
   R content1_missing_missing-untracked
-BROKEN: content1_*_missing-tracked appear twice; should just be '!'
+BROKEN: content1_content*_missing-tracked appear twice; should just be '!'
   $ hg status -A --rev 0 'glob:*_*_missing-tracked'
-  R content1_missing_missing-tracked
   ! content1_content1_missing-tracked
   ! content1_content2_missing-tracked
   ! content1_missing_missing-tracked

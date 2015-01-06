@@ -156,6 +156,8 @@ class basectx(object):
             # need to filter files if they are already reported as removed
             unknown = [fn for fn in unknown if fn not in mf1]
             ignored = [fn for fn in ignored if fn not in mf1]
+            # if they're deleted, don't report them as removed
+            removed = [fn for fn in removed if fn not in deletedset]
 
         return scmutil.status(modified, added, removed, deleted, unknown,
                               ignored, clean)

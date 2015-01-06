@@ -679,7 +679,6 @@ Setup working directory
   R content1_content2_missing-untracked
   R content1_missing_content1-untracked
   R content1_missing_content3-untracked
-  R content1_missing_missing-tracked
   R content1_missing_missing-untracked
   ! content1_content1_missing-tracked
   ! content1_content2_missing-tracked
