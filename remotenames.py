@@ -8,7 +8,6 @@ from mercurial import util
 from mercurial import repoview
 from mercurial import revset
 from mercurial import templatekw
-from mercurial import templater
 from mercurial import exchange
 from mercurial import error
 from mercurial import namespaces
