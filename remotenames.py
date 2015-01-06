@@ -171,12 +171,24 @@ def loadremotenames(repo):
     branches = repo.names['branches'].listnames(repo)
     bookmarks = repo.names['bookmarks'].listnames(repo)
 
+    alias_default = repo.ui.configbool('remotenames', 'alias.default')
+
     f = open(rfile)
     for line in f:
         line = line.strip()
         if not line:
             continue
         node, name = line.split(' ', 1)
+        remote, rname = splitremotename(name)
+
+        # skip old data that didn't write the name (only wrote the alias)
+        if not rname:
+            continue
+
+        # handle alias_default here
+        if remote != "default" and rname == "default" and alias_default:
+            name = remote
+
         try:
             ctx = repo[node]
         except error.RepoLookupError:
@@ -186,7 +198,6 @@ def loadremotenames(repo):
             _remotenames[name] = ctx.node()
 
         # cache the type of the remote name
-        remote, rname = splitremotename(name)
         if rname in branches:
             _remotetypes[name] = 'branches'
         elif rname in bookmarks:

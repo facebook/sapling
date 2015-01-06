@@ -102,7 +102,6 @@
   
   changeset:   3:5ae9f075bc64
   remotename:  beta
-  remotename:  beta/default
   parent:      1:2b9c7234e035
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
