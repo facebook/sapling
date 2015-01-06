@@ -68,34 +68,19 @@ def replacefilecache(cls, propname, replacement):
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
                              propname))
 
-def _createactionlist():
-    actions = {}
-    actions['a'] = []
-    actions['dg'] = []
-    actions['dm'] = []
-    actions['dr'] = []
-    actions['e'] = []
-    actions['f'] = []
-    actions['g'] = []
-    actions['k'] = []
-    actions['m'] = []
-    actions['r'] = []
-    actions['rd'] = []
-    return actions
-
 def _setupupdates(ui):
     def _calculateupdates(orig, repo, wctx, mctx, pas, branchmerge, force,
                           partial, mergeancestor, followcopies):
         """Filter updates to only lay out files that match the sparse rules.
         """
-        actions = orig(repo, wctx, mctx, pas, branchmerge, force,
-                        partial, mergeancestor, followcopies)
+        actions, diverge, renamedelete = orig(repo, wctx, mctx, pas,
+            branchmerge, force, partial, mergeancestor, followcopies)
 
         if not util.safehasattr(repo, 'sparsematch'):
-            return actions
+            return actions, diverge, renamedelete
 
         files = set()
-        prunedactions = _createactionlist()
+        prunedactions = {}
         oldrevs = [pctx.rev() for pctx in wctx.parents()]
         oldsparsematch = repo.sparsematch(*oldrevs)
 
@@ -105,19 +90,16 @@ def _setupupdates(ui):
         else:
             sparsematch = repo.sparsematch(mctx.rev())
 
-        for type, typeactions in actions.iteritems():
-            pactions = []
-            prunedactions[type] = pactions
-            for action in typeactions:
-                file, args, msg = action
-                files.add(file)
-                if sparsematch(file):
-                    pactions.append(action)
-                elif type == 'm' or (branchmerge and type == 'g'):
-                    raise util.Abort(_("cannot merge because %s is outside " +
-                        "the sparse checkout") % file)
-                else:
-                    prunedactions['r'].append((file, args, msg))
+        for file, action in actions.iteritems():
+            type, args, msg = action
+            files.add(file)
+            if sparsematch(file):
+                prunedactions[file] = action
+            elif type == 'm' or (branchmerge and type == 'g'):
+                raise util.Abort(_("cannot merge because %s is outside " +
+                    "the sparse checkout") % file)
+            else:
+                prunedactions[file] = ('r', args, msg)
 
         # If an active profile changed during the update, refresh the checkout.
         profiles = repo.getactiveprofiles()
@@ -130,11 +112,11 @@ def _setupupdates(ui):
                     new = sparsematch(file)
                     if not old and new:
                         flags = mf.flags(file)
-                        prunedactions['g'].append((file, (flags,), ''))
+                        prunedactions[file] = ('g', (flags,), '')
                     elif old and not new:
-                        prunedactions['r'].append((file, [], ''))
+                        prunedactions[file] = ('r', [], '')
 
-        return prunedactions
+        return prunedactions, diverge, renamedelete
 
     extensions.wrapfunction(mergemod, 'calculateupdates', _calculateupdates)
 
@@ -502,10 +484,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     mf = ctx.manifest()
     files = set(mf)
 
-    actions = _createactionlist()
-    e_actions = actions['e']
-    g_actions = actions['g']
-    r_actions = actions['r']
+    actions = {}
 
     for file in files:
         old = origsparsematch(file)
@@ -515,21 +494,21 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         if (new and not old) or (old and new and not file in dirstate):
             fl = mf.flags(file)
             if repo.wopener.exists(file):
-                e_actions.append((file, (fl,), ''))
+                actions[file] = ('e', (fl,), '')
                 lookup.append(file)
             else:
-                g_actions.append((file, (fl,), ''))
+                actions[file] = ('g', (fl,), '')
                 added.append(file)
         # Drop files that are newly excluded, or that still exist in
         # the dirstate.
         elif (old and not new) or (not old and not new and file in dirstate):
             dropped.append(file)
             if file not in pending:
-                r_actions.append((file, [], ''))
+                actions[file] = ('r', [], '')
 
     # Verify there are no pending changes in newly included files
     abort = False
-    for file, args, msg in e_actions:
+    for file in lookup:
         ui.warn(_("pending changes to '%s'\n") % file)
         abort = not force
     if abort:
@@ -546,7 +525,12 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
                 dropped.append(file)
 
     # Apply changes to disk
-    mergemod.applyupdates(repo, actions, repo[None], repo['.'], False)
+    typeactions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+    for f, (m, args, msg) in actions.iteritems():
+        if m not in typeactions:
+            typeactions[m] = []
+        typeactions[m].append((f, args, msg))
+    mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
 
     # Fix dirstate
     for file in added:
