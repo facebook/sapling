@@ -10,6 +10,7 @@ from mercurial import revset
 from mercurial import templatekw
 from mercurial import templater
 from mercurial import exchange
+from mercurial import error
 from mercurial import namespaces
 from mercurial.node import hex
 from hgext import schemes
@@ -177,9 +178,10 @@ def loadremotenames(repo):
         if not line:
             continue
         node, name = line.split(' ', 1)
-        if node not in repo:
+        try:
+            ctx = repo[node]
+        except error.RepoLookupError:
             continue
-        ctx = repo[node]
 
         if not ctx.extra().get('close'):
             _remotenames[name] = ctx.node()
