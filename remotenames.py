@@ -1,16 +1,16 @@
 import os
 
+from mercurial import error
+from mercurial import exchange
 from mercurial import extensions
 from mercurial import hg
-from mercurial import ui
-from mercurial import url
-from mercurial import util
+from mercurial import namespaces
 from mercurial import repoview
 from mercurial import revset
 from mercurial import templatekw
-from mercurial import exchange
-from mercurial import error
-from mercurial import namespaces
+from mercurial import ui
+from mercurial import url
+from mercurial import util
 from mercurial.node import hex
 from hgext import schemes
 
