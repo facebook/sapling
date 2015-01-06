@@ -176,10 +176,10 @@ def loadremotenames(repo):
         line = line.strip()
         if not line:
             continue
-        hash, name = line.split(' ', 1)
-        if hash not in repo:
+        node, name = line.split(' ', 1)
+        if node not in repo:
             continue
-        ctx = repo[hash]
+        ctx = repo[node]
 
         if not ctx.extra().get('close'):
             _remotenames[name] = ctx.node()
