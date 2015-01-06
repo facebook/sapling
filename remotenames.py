@@ -438,8 +438,30 @@ def remotebrancheskw(**args):
     return templatekw.showlist('remotebranch', remotebranches,
                                plural='remotebranches', **args)
 
+def remotenameskw(**args):
+    """:remotenames: List of strings. List of remote names associated with the
+    changeset. If remotenames.suppressbranches is True then branch names will
+    be hidden if there is a bookmark at the same changeset.
+
+    """
+    repo, ctx = args['repo'], args['ctx']
+
+    remotenames = [name for name in
+                   repo.names['remotenames'].names(repo, ctx.node())
+                   if _remotetypes[name] == 'bookmarks']
+
+    suppress = repo.ui.configbool('remotenames', 'suppressbranches', False)
+    if not remotenames or not suppress:
+        remotenames += [name for name in
+                        repo.names['remotenames'].names(repo, ctx.node())
+                        if _remotetypes[name] == 'branches']
+
+    return templatekw.showlist('remotename', remotenames,
+                               plural='remotenames', **args)
+
 templatekw.keywords['preferredremotenames'] = preferredremotenameskw
 templatekw.keywords['remotedistance'] = remotedistancekw
 templatekw.keywords['remotebookmarks'] = remotebookmarkskw
 templatekw.keywords['remotebranches'] = remotebrancheskw
+templatekw.keywords['remotenames'] = remotenameskw
 templater.funcs['remotedistance'] = remotedistance
