@@ -260,6 +260,10 @@ div.diff pre span {
   font-size: 1.2em;
   padding: 3px 0;
 }
+span.difflineplus { color:#008800; }
+span.difflineminus { color:#cc0000; }
+span.difflineat { color:#990099; }
+
 td.source {
   white-space: pre;
   font-family: monospace;

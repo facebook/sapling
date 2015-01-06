@@ -84,6 +84,9 @@ span.logtags span.bookmarktag {
 	background-color: #afdffa;
 	border-color: #ccecff #46ace6 #46ace6 #ccecff;
 }
+span.difflineplus { color:#008800; }
+span.difflineminus { color:#cc0000; }
+span.difflineat { color:#990099; }
 
 /* Graph */
 div#wrapper {
