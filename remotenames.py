@@ -208,7 +208,6 @@ def saveremotenames(repo, remote, branches, bookmarks):
     bfile = repo.join('remotenames')
     olddata = []
     existed = os.path.exists(bfile)
-    alias_default = repo.ui.configbool('remotenames', 'alias.default')
     if existed:
         f = open(bfile)
         olddata = [l for l in f
@@ -219,8 +218,6 @@ def saveremotenames(repo, remote, branches, bookmarks):
     for branch, nodes in branches.iteritems():
         for n in nodes:
             f.write('%s %s/%s\n' % (hex(n), remote, branch))
-            if remote != 'default' and branch == 'default' and alias_default:
-                f.write('%s %s\n' % (hex(n), remote))
     for bookmark, n in bookmarks.iteritems():
         f.write('%s %s/%s\n' % (n, remote, bookmark))
     f.close()
