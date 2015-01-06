@@ -65,6 +65,7 @@ def uisetup(ui):
 
     wrapcommand(commands.table, 'bookmark', bookmarkcommand)
     wrapfunction(exchange, '_localphasemove', _localphasemove)
+    wrapfunction(exchange, 'push', push)
 
     # Enable SQL for remote commands that write to the repository
     wrapfunction(wireproto, 'unbundle', unbundle)
@@ -136,6 +137,15 @@ def unbundle(orig, *args, **kwargs):
 def pull(orig, *args, **kwargs):
     repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, True, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
+
+def push(orig, *args, **kwargs):
+    repo = args[0]
+    if repo.ui.configbool("hgsql", "enabled"):
+        # A push locks the local repo in order to update phase data, so we need
+        # to take the lock for the local repo during a push.
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
