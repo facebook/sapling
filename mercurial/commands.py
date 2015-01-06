@@ -2840,6 +2840,10 @@ def debugrevspec(ui, repo, expr, **opts):
         newtree = revset.findaliases(ui, tree)
         if newtree != tree:
             ui.note(revset.prettyformat(newtree), "\n")
+        tree = newtree
+        newtree = revset.foldconcat(tree)
+        if newtree != tree:
+            ui.note(revset.prettyformat(newtree), "\n")
         if opts["optimize"]:
             weight, optimizedtree = revset.optimize(newtree, True)
             ui.note("* optimized:\n", revset.prettyformat(optimizedtree), "\n")

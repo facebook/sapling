@@ -1123,6 +1123,54 @@ tests for 'remote()' predicate:
   $ cd ../repo
   $ log 'remote(".a.b.c.", "../remote3")'
 
+tests for concatenation of strings/symbols by "##"
+
+  $ try "278 ## '5f5' ## 1ee ## 'ce5'"
+  (_concat
+    (_concat
+      (_concat
+        ('symbol', '278')
+        ('string', '5f5'))
+      ('symbol', '1ee'))
+    ('string', 'ce5'))
+  ('string', '2785f51eece5')
+  0
+
+  $ echo 'cat4($1, $2, $3, $4) = $1 ## $2 ## $3 ## $4' >> .hg/hgrc
+  $ try "cat4(278, '5f5', 1ee, 'ce5')"
+  (func
+    ('symbol', 'cat4')
+    (list
+      (list
+        (list
+          ('symbol', '278')
+          ('string', '5f5'))
+        ('symbol', '1ee'))
+      ('string', 'ce5')))
+  (_concat
+    (_concat
+      (_concat
+        ('symbol', '278')
+        ('string', '5f5'))
+      ('symbol', '1ee'))
+    ('string', 'ce5'))
+  ('string', '2785f51eece5')
+  0
+
+(check concatenation in alias nesting)
+
+  $ echo 'cat2($1, $2) = $1 ## $2' >> .hg/hgrc
+  $ echo 'cat2x2($1, $2, $3, $4) = cat2($1 ## $2, $3 ## $4)' >> .hg/hgrc
+  $ log "cat2x2(278, '5f5', 1ee, 'ce5')"
+  0
+
+(check operator priority)
+
+  $ echo 'cat2n2($1, $2, $3, $4) = $1 ## $2 or $3 ## $4~2' >> .hg/hgrc
+  $ log "cat2n2(2785f5, 1eece5, 24286f, 4ae135)"
+  0
+  4
+
   $ cd ..
 
 test author/desc/keyword in problematic encoding

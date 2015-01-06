@@ -102,7 +102,8 @@ def _revsbetween(repo, roots, heads):
     return baseset(sorted(reachable))
 
 elements = {
-    "(": (20, ("group", 1, ")"), ("func", 1, ")")),
+    "(": (21, ("group", 1, ")"), ("func", 1, ")")),
+    "##": (20, None, ("_concat", 20)),
     "~": (18, None, ("ancestor", 18)),
     "^": (18, None, ("parent", 18), ("parentpost", 18)),
     "-": (5, ("negate", 19), ("minus", 5)),
@@ -147,6 +148,9 @@ def tokenize(program, lookup=None):
             pos += 1 # skip ahead
         elif c == '.' and program[pos:pos + 2] == '..': # look ahead carefully
             yield ('..', None, pos)
+            pos += 1 # skip ahead
+        elif c == '#' and program[pos:pos + 2] == '##': # look ahead carefully
+            yield ('##', None, pos)
             pos += 1 # skip ahead
         elif c in "():,-|&+!~^": # handle simple operators
             yield (c, None, pos)
@@ -2156,6 +2160,27 @@ def findaliases(ui, tree, showwarning=None):
                 alias.warned = True
     return tree
 
+def foldconcat(tree):
+    """Fold elements to be concatenated by `##`
+    """
+    if not isinstance(tree, tuple) or tree[0] in ('string', 'symbol'):
+        return tree
+    if tree[0] == '_concat':
+        pending = [tree]
+        l = []
+        while pending:
+            e = pending.pop()
+            if e[0] == '_concat':
+                pending.extend(reversed(e[1:]))
+            elif e[0] in ('string', 'symbol'):
+                l.append(e[1])
+            else:
+                msg = _("\"##\" can't concatenate \"%s\" element") % (e[0])
+                raise error.ParseError(msg)
+        return ('string', ''.join(l))
+    else:
+        return tuple(foldconcat(t) for t in tree)
+
 def parse(spec, lookup=None):
     p = parser.parser(tokenize, elements)
     return p.parse(spec, lookup=lookup)
@@ -2171,6 +2196,7 @@ def match(ui, spec, repo=None):
         raise error.ParseError(_("invalid token"), pos)
     if ui:
         tree = findaliases(ui, tree, showwarning=ui.warn)
+    tree = foldconcat(tree)
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset):
         if util.safehasattr(subset, 'isascending'):
