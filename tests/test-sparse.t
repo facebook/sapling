@@ -133,6 +133,7 @@ Verify adding sparseness hides files
 Verify rebase fails if moving excluded files
 
   $ hg rebase -d 1 -r 2 --config extensions.rebase=
+  rebasing 2:b91df4f39e75 "edit hide" (tip)
   abort: cannot merge because hide is outside the sparse checkout
   [255]
 

@@ -145,6 +145,7 @@ Verify stripping refreshes dirstate
 Verify rebase conflicts unions parent profiles too
 
   $ hg rebase -d 1
+  rebasing 2:348a944c437a "edit profile other" (tip)
   merging backend.sparse
   warning: conflicts during merge.
   merging backend.sparse incomplete! (edit conflicts, then use 'hg resolve --mark')
