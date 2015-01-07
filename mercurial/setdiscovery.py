@@ -84,15 +84,11 @@ def _setupsample(dag, nodes, size):
         return always, None, desiredlen
     return always, set(), desiredlen
 
-def _takequicksample(dag, nodes, size, initial):
+def _takequicksample(dag, nodes, size):
     always, sample, desiredlen = _setupsample(dag, nodes, size)
     if sample is None:
         return always
-    if initial:
-        fromset = None
-    else:
-        fromset = nodes
-    _updatesample(dag, fromset, sample, always, quicksamplesize=desiredlen)
+    _updatesample(dag, None, sample, always, quicksamplesize=desiredlen)
     sample.update(always)
     return sample
 
@@ -207,8 +203,7 @@ def findcommonheads(ui, local, remote,
         else:
             # use even cheaper initial sample
             ui.debug("taking quick initial sample\n")
-            sample = _takequicksample(dag, undecided, size=initialsamplesize,
-                                      initial=True)
+            sample = _takequicksample(dag, undecided, size=initialsamplesize)
             targetsize = initialsamplesize
         sample = _limitsample(sample, targetsize)
 
