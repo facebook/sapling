@@ -174,14 +174,13 @@ def findcommonheads(ui, local, remote,
 
     # full blown discovery
 
-    # own nodes where I don't know if remote knows them
-    undecided = dag.nodeset()
     # own nodes I know we both know
     # treat remote heads (and maybe own heads) as a first implicit sample
     # response
     common = cl.incrementalmissingrevs(srvheads)
     commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
     common.addbases(commoninsample)
+    # own nodes where I don't know if remote knows them
     undecided = set(common.missingancestors(ownheads))
     # own nodes I know remote lacks
     missing = set()
