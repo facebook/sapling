@@ -63,8 +63,10 @@ def expull(orig, repo, remote, *args, **kwargs):
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
 
-    if util.safehasattr(repo, '_hackremotenamepush') and \
-       repo._hackremotenamepush:
+    # protect un-hiding changesets behind a config knob
+    unhide = repo.ui.configbool('remotenames', 'unhide')
+    hackpush = util.safehasattr(repo, '_hackremotenamepush')
+    if not unhide or (hackpush and repo._hackremotenamepush):
         return blockers
 
     # add remotenames to blockers
