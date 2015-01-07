@@ -85,15 +85,6 @@ def _updatesample(dag, nodes, sample, quicksamplesize=0):
                 dist.setdefault(p, d + 1)
                 visit.append(p)
 
-def _setupsample(dag, nodes, size):
-    always = dag.headsetofconnecteds(nodes)
-    desiredlen = size - len(always)
-    if desiredlen <= 0:
-        # This could be bad if there are very many heads, all unknown to the
-        # server. We're counting on long request support here.
-        return always, None, desiredlen
-    return always, set(), desiredlen
-
 def _takequicksample(dag, nodes, size):
     """takes a quick sample of size <size>
 
