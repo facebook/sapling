@@ -1658,7 +1658,6 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     if not modified and not added and not removed:
         return []
 
-    revs = None
     hexfunc = repo.ui.debugflag and hex or short
     revs = [hexfunc(node) for node in [ctx1.node(), ctx2.node()] if node]
 
