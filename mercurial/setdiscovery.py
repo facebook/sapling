@@ -46,6 +46,20 @@ import random
 import util, dagutil
 
 def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
+    """update an existing sample to match the expected size
+
+    The sample is updated with nodes exponentially distant from each head of the
+    <nodes> set. (H~1, H~2, H~4, H~8, etc).
+
+    If a target size is specified, the sampling will stop once this size is
+    reached. Otherwise sampling will happen until roots of the <nodes> set are
+    reached.
+
+    :dag: a dag object from dagutil
+    :nodes:  set of nodes we want to discover (if None, assume the whole dag)
+    :sample: a sample to update
+    :always: set of notable nodes that will be part of the sample anyway
+    :quicksamplesize: optional target size of the sample"""
     # if nodes is empty we scan the entire graph
     if nodes:
         heads = dag.headsetofconnecteds(nodes)
