@@ -66,6 +66,8 @@ new directories are setgid
   00600 ./.hg/00changelog.i
   00770 ./.hg/cache/
   00660 ./.hg/cache/branch2-served
+  00660 ./.hg/cache/rbc-names-v1
+  00660 ./.hg/cache/rbc-revs-v1
   00660 ./.hg/dirstate
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
@@ -111,6 +113,8 @@ group can still write everything
   00660 ../push/.hg/00changelog.i
   00770 ../push/.hg/cache/
   00660 ../push/.hg/cache/branch2-base
+  00660 ../push/.hg/cache/rbc-names-v1
+  00660 ../push/.hg/cache/rbc-revs-v1
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/00changelog.i

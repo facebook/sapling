@@ -31,6 +31,8 @@ Trigger branchcache creation:
   default                       10:a7949464abda
   $ ls .hg/cache
   branch2-served
+  rbc-names-v1
+  rbc-revs-v1
 
 Default operation:
 

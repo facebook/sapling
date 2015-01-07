@@ -53,6 +53,7 @@ Convert while testing all possible outputs
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@1
   converting: 0/6 revisions (0.00%)
   committing changelog
+  couldn't read revision branch cache names: * (glob)
   4 hello
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   converting: 1/6 revisions (16.67%)

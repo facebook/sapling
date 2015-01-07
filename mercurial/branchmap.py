@@ -134,6 +134,7 @@ class branchcache(dict):
             self._closednodes = set()
         else:
             self._closednodes = closednodes
+        self._revbranchcache = None
 
     def _hashfiltered(self, repo):
         """build hash of revision filtered in the current cache
@@ -225,6 +226,9 @@ class branchcache(dict):
             repo.ui.debug("couldn't write branch cache: %s\n" % inst)
             # Abort may be raise by read only opener
             pass
+        if self._revbranchcache:
+            self._revbranchcache.write(repo.unfiltered())
+            self._revbranchcache = None
 
     def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be
@@ -235,9 +239,12 @@ class branchcache(dict):
         cl = repo.changelog
         # collect new branch entries
         newbranches = {}
-        getbranchinfo = cl.branchinfo
+        urepo = repo.unfiltered()
+        self._revbranchcache = revbranchcache(urepo)
+        getbranchinfo = self._revbranchcache.branchinfo
+        ucl = urepo.changelog
         for r in revgen:
-            branch, closesbranch = getbranchinfo(r)
+            branch, closesbranch = getbranchinfo(ucl, r)
             newbranches.setdefault(branch, []).append(r)
             if closesbranch:
                 self._closednodes.add(cl.node(r))
@@ -361,7 +368,7 @@ class revbranchcache(object):
             self._rbcrevs.extend('\0' * (len(changelog) * _rbcrecsize -
                                          len(self._rbcrevs)))
             for r in xrange(first, len(changelog)):
-                self._branchinfo(r)
+                self._branchinfo(changelog, r)
 
         # fast path: extract data from cache, use it if node is matching
         reponode = changelog.node(rev)[:_rbcnodelen]
@@ -374,7 +381,7 @@ class revbranchcache(object):
             return self._names[branchidx], close
         # fall back to slow path and make sure it will be written to disk
         self._rbcrevslen = min(self._rbcrevslen, rev)
-        return self._branchinfo(rev)
+        return self._branchinfo(changelog, rev)
 
     def _branchinfo(self, changelog, rev):
         """Retrieve branch info from changelog and update _rbcrevs"""
