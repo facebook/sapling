@@ -249,6 +249,35 @@ def filectx(repo, req):
 
     return fctx
 
+def changelistentry(web, ctx, tmpl):
+    '''Obtain a dictionary to be used for entries in a changelist.
+
+    This function is called when producing items for the "entries" list passed
+    to the "shortlog" and "changelog" templates.
+    '''
+    repo = web.repo
+    rev = ctx.rev()
+    n = ctx.node()
+    showtags = showtag(repo, tmpl, 'changelogtag', n)
+    files = listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
+
+    return {
+        "author": ctx.user(),
+        "parent": parents(ctx, rev - 1),
+        "child": children(ctx, rev + 1),
+        "changelogtag": showtags,
+        "desc": ctx.description(),
+        "extra": ctx.extra(),
+        "date": ctx.date(),
+        "files": files,
+        "rev": rev,
+        "node": hex(n),
+        "tags": nodetagsdict(repo, n),
+        "bookmarks": nodebookmarksdict(repo, n),
+        "inbranch": nodeinbranch(repo, ctx),
+        "branches": nodebranchdict(repo, ctx)
+    }
+
 def listfilediffs(tmpl, files, node, max):
     for f in files[:max]:
         yield tmpl('filedifflink', node=hex(node), file=f)

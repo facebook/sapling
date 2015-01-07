@@ -282,31 +282,14 @@ def changelog(web, req, tmpl, shortlog=False):
         if pos != -1:
             revs = web.repo.changelog.revs(pos, 0)
         curcount = 0
-        for i in revs:
-            ctx = web.repo[i]
-            n = ctx.node()
-            showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
-            files = webutil.listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
-
+        for rev in revs:
             curcount += 1
             if curcount > revcount + 1:
                 break
-            yield {"parity": parity.next(),
-                   "author": ctx.user(),
-                   "parent": webutil.parents(ctx, i - 1),
-                   "child": webutil.children(ctx, i + 1),
-                   "changelogtag": showtags,
-                   "desc": ctx.description(),
-                   "extra": ctx.extra(),
-                   "date": ctx.date(),
-                   "files": files,
-                   "rev": i,
-                   "node": hex(n),
-                   "tags": webutil.nodetagsdict(web.repo, n),
-                   "bookmarks": webutil.nodebookmarksdict(web.repo, n),
-                   "inbranch": webutil.nodeinbranch(web.repo, ctx),
-                   "branches": webutil.nodebranchdict(web.repo, ctx)
-            }
+
+            entry = webutil.changelistentry(web, web.repo[rev], tmpl)
+            entry['parity'] = parity.next()
+            yield entry
 
     revcount = shortlog and web.maxshortchanges or web.maxchanges
     if 'revcount' in req.form:
