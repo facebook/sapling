@@ -1849,7 +1849,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                          and copyto[copy[f]] == f) or
                         (f in copyto and copyto[f] in addedset
                          and copy[copyto[f]] == f)):
-                        dodiff = False
+                        continue
                     else:
                         header.append('deleted file mode %s\n' %
                                       gitmode[ctx1.flags(f)])
@@ -1869,21 +1869,20 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 elif binary or nflag != oflag:
                     losedatafn(f)
 
-        if dodiff:
-            if opts.git or revs:
-                header.insert(0, diffline(join(a), join(b), revs))
-            if dodiff == 'binary' and not opts.nobinary:
-                text = mdiff.b85diff(to, tn)
-                if text and opts.git:
-                    addindexmeta(header, gitindex(to), gitindex(tn))
-            else:
-                text = mdiff.unidiff(to, date1,
-                                     tn, date2,
-                                     join(a), join(b), opts=opts)
-            if header and (text or len(header) > 1):
-                yield ''.join(header)
-            if text:
-                yield text
+        if opts.git or revs:
+            header.insert(0, diffline(join(a), join(b), revs))
+        if dodiff == 'binary' and not opts.nobinary:
+            text = mdiff.b85diff(to, tn)
+            if text and opts.git:
+                addindexmeta(header, gitindex(to), gitindex(tn))
+        else:
+            text = mdiff.unidiff(to, date1,
+                                 tn, date2,
+                                 join(a), join(b), opts=opts)
+        if header and (text or len(header) > 1):
+            yield ''.join(header)
+        if text:
+            yield text
 
 def diffstatsum(stats):
     maxfile, maxtotal, addtotal, removetotal, binary = 0, 0, 0, 0, False
