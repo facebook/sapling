@@ -715,8 +715,8 @@ honor --git but not format-breaking diffopts
     "manifest": "94961b75a2da554b4df6fb599e5bfc7d48de0c64",
     "extra": {"branch": "default"},
     "modified": [],
-    "added": ["second"],
-    "removed": ["fourth", "third"]
+    "added": ["fourth", "third"],
+    "removed": ["second"]
    },
    {
     "rev": 7,
@@ -732,8 +732,8 @@ honor --git but not format-breaking diffopts
     "manifest": "f2dbc354b94e5ec0b4f10680ee0cee816101d0bf",
     "extra": {"branch": "default"},
     "modified": [],
-    "added": [],
-    "removed": ["second"]
+    "added": ["second"],
+    "removed": []
    },
    {
     "rev": 6,
@@ -766,8 +766,8 @@ honor --git but not format-breaking diffopts
     "manifest": "4dc3def4f9b4c6e8de820f6ee74737f91e96a216",
     "extra": {"branch": "default"},
     "modified": [],
-    "added": [],
-    "removed": ["d"]
+    "added": ["d"],
+    "removed": []
    },
    {
     "rev": 4,
@@ -817,8 +817,8 @@ honor --git but not format-breaking diffopts
     "manifest": "6e0e82995c35d0d57a52aca8da4e56139e06b4b1",
     "extra": {"branch": "default"},
     "modified": [],
-    "added": [],
-    "removed": ["c"]
+    "added": ["c"],
+    "removed": []
    },
    {
     "rev": 1,
@@ -834,8 +834,8 @@ honor --git but not format-breaking diffopts
     "manifest": "4e8d705b1e53e3f9375e0e60dc7b525d8211fe55",
     "extra": {"branch": "default"},
     "modified": [],
-    "added": [],
-    "removed": ["b"]
+    "added": ["b"],
+    "removed": []
    },
    {
     "rev": 0,
@@ -851,8 +851,8 @@ honor --git but not format-breaking diffopts
     "manifest": "a0c8bcbbb45c63b90b70ad007bf38961f64f2af0",
     "extra": {"branch": "default"},
     "modified": [],
-    "added": [],
-    "removed": ["a"]
+    "added": ["a"],
+    "removed": []
    }
   ]
 

@@ -1072,7 +1072,7 @@ class jsonchangeset(changeset_printer):
                           ", ".join('"%s": "%s"' % (j(k), j(v))
                                     for k, v in ctx.extra().items()))
 
-            files = ctx.status(ctx.p1())
+            files = ctx.p1().status(ctx)
             self.ui.write(',\n  "modified": [%s]' %
                           ", ".join('"%s"' % j(f) for f in files[0]))
             self.ui.write(',\n  "added": [%s]' %
