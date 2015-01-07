@@ -45,7 +45,7 @@ from i18n import _
 import random
 import util, dagutil
 
-def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
+def _updatesample(dag, nodes, sample, quicksamplesize=0):
     """update an existing sample to match the expected size
 
     The sample is updated with nodes exponentially distant from each head of the
@@ -58,7 +58,6 @@ def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
     :dag: a dag object from dagutil
     :nodes:  set of nodes we want to discover (if None, assume the whole dag)
     :sample: a sample to update
-    :always: set of notable nodes that will be part of the sample anyway
     :quicksamplesize: optional target size of the sample"""
     # if nodes is empty we scan the entire graph
     if nodes:
@@ -77,10 +76,9 @@ def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
         if d > factor:
             factor *= 2
         if d == factor:
-            if curr not in always: # need this check for the early exit below
-                sample.add(curr)
-                if quicksamplesize and (len(sample) >= quicksamplesize):
-                    return
+            sample.add(curr)
+            if quicksamplesize and (len(sample) >= quicksamplesize):
+                return
         seen.add(curr)
         for p in dag.parents(curr):
             if not nodes or p in nodes:
@@ -100,18 +98,17 @@ def _takequicksample(dag, nodes, size):
     always, sample, desiredlen = _setupsample(dag, nodes, size)
     if sample is None:
         return always
-    _updatesample(dag, None, sample, always, quicksamplesize=desiredlen)
-    sample.update(always)
+    sample = always
+    _updatesample(dag, None, sample, quicksamplesize=size)
     return sample
 
 def _takefullsample(dag, nodes, size):
-    sample = always = dag.headsetofconnecteds(nodes)
+    sample = dag.headsetofconnecteds(nodes)
     # update from heads
-    _updatesample(dag, nodes, sample, always)
+    _updatesample(dag, nodes, sample)
     # update from roots
-    _updatesample(dag.inverse(), nodes, sample, always)
+    _updatesample(dag.inverse(), nodes, sample)
     assert sample
-    sample.update(always)
     sample = _limitsample(sample, size)
     if len(sample) < size:
         more = size - len(sample)
