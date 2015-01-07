@@ -136,6 +136,8 @@ class transaction(object):
         self._finalizecallback = {}
         # hold callback for post transaction close
         self._postclosecallback = {}
+        # holds callbacks to call during abort
+        self._abortcallback = {}
 
     def __del__(self):
         if self.journal:
@@ -361,6 +363,17 @@ class transaction(object):
         self._postclosecallback[category] = callback
 
     @active
+    def addabort(self, category, callback):
+        """add a callback to be called when the transaction is aborted.
+
+        The transaction will be given as the first argument to the callback.
+
+        Category is a unique identifier to allow overwriting an old callback
+        with a newer callback.
+        """
+        self._abortcallback[category] = callback
+
+    @active
     def close(self):
         '''commit the transaction'''
         if self.count == 1:
@@ -443,6 +456,8 @@ class transaction(object):
             self.report(_("transaction abort!\n"))
 
             try:
+                for cat in sorted(self._abortcallback):
+                    self._abortcallback[cat](self)
                 _playback(self.journal, self.report, self.opener, self._vfsmap,
                           self.entries, self._backupentries, False)
                 self.report(_("rollback completed\n"))
