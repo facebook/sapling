@@ -74,8 +74,6 @@ def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
                 visit.append(p)
 
 def _setupsample(dag, nodes, size):
-    if len(nodes) <= size:
-        return set(nodes), None, 0
     always = dag.headsetofconnecteds(nodes)
     desiredlen = size - len(always)
     if desiredlen <= 0:
@@ -205,8 +203,11 @@ def findcommonheads(ui, local, remote,
             ui.debug("taking quick initial sample\n")
             samplefunc = _takequicksample
             targetsize = initialsamplesize
-        sample = samplefunc(dag, undecided, targetsize)
-        sample = _limitsample(sample, targetsize)
+        if len(undecided) < targetsize:
+            sample = list(undecided)
+        else:
+            sample = samplefunc(dag, undecided, targetsize)
+            sample = _limitsample(sample, targetsize)
 
         roundtrips += 1
         ui.progress(_('searching'), roundtrips, unit=_('queries'))
