@@ -172,7 +172,11 @@ def decodelist(l, sep=' '):
     return []
 
 def encodelist(l, sep=' '):
-    return sep.join(map(hex, l))
+    try:
+        return sep.join(map(hex, l))
+    except TypeError:
+        print l
+        raise
 
 # batched call argument encoding
 

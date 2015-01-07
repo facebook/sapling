@@ -271,12 +271,11 @@ def _pushdiscovery(pushop):
 @pushdiscovery('changeset')
 def _pushdiscoverychangeset(pushop):
     """discover the changeset that need to be pushed"""
-    unfi = pushop.repo.unfiltered()
     fci = discovery.findcommonincoming
-    commoninc = fci(unfi, pushop.remote, force=pushop.force)
+    commoninc = fci(pushop.repo, pushop.remote, force=pushop.force)
     common, inc, remoteheads = commoninc
     fco = discovery.findcommonoutgoing
-    outgoing = fco(unfi, pushop.remote, onlyheads=pushop.revs,
+    outgoing = fco(pushop.repo, pushop.remote, onlyheads=pushop.revs,
                    commoninc=commoninc, force=pushop.force)
     pushop.outgoing = outgoing
     pushop.remoteheads = remoteheads
@@ -927,11 +926,36 @@ def _pulldiscoverychangegroup(pullop):
 
     Current handle changeset discovery only, will change handle all discovery
     at some point."""
-    tmp = discovery.findcommonincoming(pullop.repo.unfiltered(),
+    tmp = discovery.findcommonincoming(pullop.repo,
                                        pullop.remote,
                                        heads=pullop.heads,
                                        force=pullop.force)
-    pullop.common, pullop.fetch, pullop.rheads = tmp
+    common, fetch, rheads = tmp
+    nm = pullop.repo.unfiltered().changelog.nodemap
+    if fetch and rheads:
+        # If a remote heads in filtered locally, lets drop it from the unknown
+        # remote heads and put in back in common.
+        #
+        # This is a hackish solution to catch most of "common but locally
+        # hidden situation".  We do not performs discovery on unfiltered
+        # repository because it end up doing a pathological amount of round
+        # trip for w huge amount of changeset we do not care about.
+        #
+        # If a set of such "common but filtered" changeset exist on the server
+        # but are not including a remote heads, we'll not be able to detect it,
+        scommon = set(common)
+        filteredrheads = []
+        for n in rheads:
+            if n in nm and n not in scommon:
+                common.append(n)
+            else:
+                filteredrheads.append(n)
+        if not filteredrheads:
+            fetch = []
+        rheads = filteredrheads
+    pullop.common = common
+    pullop.fetch = fetch
+    pullop.rheads = rheads
 
 def _pullbundle2(pullop):
     """pull data using bundle2
