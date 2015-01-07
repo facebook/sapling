@@ -7,7 +7,7 @@ Test exchange of common information using bundle2
 
 enable obsolescence
 
-  $ cat > $TESTDIR/bundle2-pushkey-hook.sh << EOF
+  $ cat > $TESTTMP/bundle2-pushkey-hook.sh << EOF
   > echo pushkey: lock state after \"\$HG_NAMESPACE\"
   > hg debuglock
   > EOF
@@ -29,7 +29,7 @@ enable obsolescence
   > b2x-pretransactionclose.tip = hg log -r tip -T "pre-close-tip:{node|short} {phase} {bookmarks}\n"
   > b2x-transactionclose.tip = hg log -r tip -T "postclose-tip:{node|short} {phase} {bookmarks}\n"
   > b2x-transactionclose.env = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
-  > pushkey= sh "$TESTDIR/bundle2-pushkey-hook.sh"
+  > pushkey= sh "$TESTTMP/bundle2-pushkey-hook.sh"
   > EOF
 
 The extension requires a repo (currently unused)
