@@ -1798,7 +1798,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     for f in sorted(modified + added + removed):
         to = None
         tn = None
-        dodiff = True
+        binarydiff = False
         header = []
         if f not in addedset:
             to = getfilectx(f, ctx1).data()
@@ -1836,7 +1836,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 # forces git mode.
                 if util.binary(tn):
                     if opts.git:
-                        dodiff = 'binary'
+                        binarydiff = True
                     else:
                         losedatafn(f)
                 if not opts.git and not tn:
@@ -1854,7 +1854,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         header.append('deleted file mode %s\n' %
                                       gitmode[ctx1.flags(f)])
                         if util.binary(to):
-                            dodiff = 'binary'
+                            binarydiff = True
                 elif not to or util.binary(to):
                     # regular diffs cannot represent empty file deletion
                     losedatafn(f)
@@ -1865,13 +1865,13 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 if opts.git:
                     addmodehdr(header, gitmode[oflag], gitmode[nflag])
                     if binary:
-                        dodiff = 'binary'
+                        binarydiff = True
                 elif binary or nflag != oflag:
                     losedatafn(f)
 
         if opts.git or revs:
             header.insert(0, diffline(join(a), join(b), revs))
-        if dodiff == 'binary' and not opts.nobinary:
+        if binarydiff and not opts.nobinary:
             text = mdiff.b85diff(to, tn)
             if text and opts.git:
                 addindexmeta(header, gitindex(to), gitindex(tn))
