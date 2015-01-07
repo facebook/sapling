@@ -22,8 +22,6 @@ class manifestdict(dict):
         dict.__setitem__(self, k, v)
     def flags(self, f):
         return self._flags.get(f, "")
-    def withflags(self):
-        return set(self._flags.keys())
     def setflag(self, f, flags):
         """Set the flags (symlink, executable) for path f."""
         self._flags[f] = flags
