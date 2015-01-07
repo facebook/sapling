@@ -326,7 +326,7 @@ One with >200 heads, which used to use up all of the sample:
   query 6; still undecided: 540, sample size is: 200
   sampling from both directions
   searching: 7 queries
-  query 7; still undecided: 44, sample size is: 44
+  query 7; still undecided: 37, sample size is: 37
   7 total queries
   common heads: 3ee37d65064a
 

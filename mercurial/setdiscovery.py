@@ -113,11 +113,11 @@ def _takefullsample(dag, nodes, size):
     # update from roots
     _updatesample(dag.inverse(), nodes, sample, always)
     assert sample
-    sample = _limitsample(sample, desiredlen)
-    if len(sample) < desiredlen:
-        more = desiredlen - len(sample)
-        sample.update(random.sample(list(nodes - sample - always), more))
     sample.update(always)
+    sample = _limitsample(sample, size)
+    if len(sample) < size:
+        more = size - len(sample)
+        sample.update(random.sample(list(nodes - sample), more))
     return sample
 
 def _limitsample(sample, desiredlen):
