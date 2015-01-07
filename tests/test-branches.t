@@ -520,4 +520,79 @@ template output:
    }
   ]
 
+revision branch name caching implementation
+
+cache creation
+  $ rm .hg/cache/rbc-revs-v1
+  $ hg debugrevspec 'branch("re:a ")'
+  7
+  $ [ -f .hg/cache/rbc-revs-v1 ] || echo no file
+  no file
+recovery from invalid cache file
+  $ echo > .hg/cache/rbc-revs-v1
+  $ hg debugrevspec 'branch("re:a ")'
+  7
+cache update NOT fully written from revset
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  68b329da9893e34099c7d8ad5cb9c940  .hg/cache/rbc-revs-v1
+recovery from other corruption - extra trailing data
+  $ echo >> .hg/cache/rbc-revs-v1
+  $ hg debugrevspec 'branch("re:a ")'
+  7
+cache update NOT fully written from revset
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  e1c06d85ae7b8b032bef47e42e4c08f9  .hg/cache/rbc-revs-v1
+lazy update after commit
+  $ hg tag tag
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  d0c0166808ee0a1f0e8894915ad363b6  .hg/cache/rbc-revs-v1
+  $ hg debugrevspec 'branch("re:a ")'
+  7
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  d0c0166808ee0a1f0e8894915ad363b6  .hg/cache/rbc-revs-v1
+update after rollback - cache keeps stripped revs until written for other reasons
+  $ hg up -qr '.^'
+  $ hg rollback -qf
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  d8c2acdc229bf942fde1dfdbe8f9d933  .hg/cache/rbc-revs-v1
+  $ hg debugrevspec 'branch("re:a ")'
+  7
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  d8c2acdc229bf942fde1dfdbe8f9d933  .hg/cache/rbc-revs-v1
+handle history mutations that doesn't change the tip node - this is a problem
+with the cache invalidation scheme used by branchmap
+  $ hg log -r tip+b -T'{rev}:{node|short} {branch}\n'
+  14:f894c25619d3 c
+  13:e23b5505d1ad b
+  $ hg bundle -q --all bu.hg
+  $ hg --config extensions.strip= strip --no-b -qr -1:
+  $ hg up -q tip
+  $ hg branch
+  b
+  $ hg branch -q hacked
+  $ hg ci --amend -qm 'hacked'
+  $ hg pull -q bu.hg -r f894c25619d3
+  $ hg log -r tip+b -T'{rev}:{node|short} {branch}\n'
+  14:f894c25619d3 c
+  12:e3d49c0575d8 b
+  $ hg debugrevspec 'branch("hacked")'
+  13
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  22424d7e106c894336d9d705b0241bc5  .hg/cache/rbc-revs-v1
+cleanup, restore old state
+  $ hg --config extensions.strip= strip --no-b -qr -2:
+  $ hg pull -q bu.hg
+  $ rm bu.hg
+  $ hg up -qr tip
+  $ hg log -r tip -T'{rev}:{node|short}\n'
+  14:f894c25619d3
+the cache file do not go back to the old state - it still contains the
+now unused 'hacked' branch name)
+  $ hg debugrevspec 'branch("re:a ")'
+  7
+  $ "$TESTDIR/md5sum.py" .hg/cache/rbc-revs-v1
+  d8c2acdc229bf942fde1dfdbe8f9d933  .hg/cache/rbc-revs-v1
+  $ cat .hg/cache/rbc-names-v1
+  default\x00a\x00b\x00c\x00a branch name much longer than the default justification used by branches\x00hacked (no-eol) (esc)
+
   $ cd ..
