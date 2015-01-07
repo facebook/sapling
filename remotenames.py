@@ -18,6 +18,9 @@ _remotenames = {}
 _remotetypes = {}
 
 def expush(orig, repo, remote, *args, **kwargs):
+    # hack for pushing that turns off the dynamic blockerhook
+    repo.__setattr__('_hackremotenamepush', True)
+
     res = orig(repo, remote, *args, **kwargs)
     lock = repo.lock()
     try:
@@ -37,6 +40,7 @@ def expush(orig, repo, remote, *args, **kwargs):
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
     finally:
+        repo.__setattr__('_hackremotenamepush', False)
         lock.release()
         return res
 
@@ -58,6 +62,10 @@ def expull(orig, repo, remote, *args, **kwargs):
 
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
+
+    if util.safehasattr(repo, '_hackremotenamepush') and \
+       repo._hackremotenamepush:
+        return blockers
 
     # add remotenames to blockers
     cl = repo.changelog
