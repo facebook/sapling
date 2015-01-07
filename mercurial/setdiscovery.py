@@ -197,13 +197,11 @@ def findcommonheads(ui, local, remote,
         if not undecided:
             break
 
-        if full:
-            ui.note(_("sampling from both directions\n"))
-            sample = _takefullsample(dag, undecided, size=fullsamplesize)
-            targetsize = fullsamplesize
-        elif common.hasbases():
-            # use cheapish initial sample
-            ui.debug("taking initial sample\n")
+        if full or common.hasbases():
+            if full:
+                ui.note(_("sampling from both directions\n"))
+            else:
+                ui.debug("taking initial sample\n")
             sample = _takefullsample(dag, undecided, size=fullsamplesize)
             targetsize = fullsamplesize
         else:
