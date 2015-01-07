@@ -1747,13 +1747,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             header.append('old mode %s\n' % omode)
             header.append('new mode %s\n' % nmode)
 
-    def addindexmeta(meta, revs):
+    def addindexmeta(meta, oindex, nindex):
         if opts.git:
-            i = len(revs)
-            if i==2:
-                meta.append('index %s..%s\n' % tuple(revs))
-            elif i==3:
-                meta.append('index %s,%s..%s\n' % tuple(revs))
+            meta.append('index %s..%s\n' % (oindex, nindex))
 
     def gitindex(text):
         if not text:
@@ -1880,7 +1876,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             if dodiff == 'binary' and not opts.nobinary:
                 text = mdiff.b85diff(to, tn)
                 if text:
-                    addindexmeta(header, [gitindex(to), gitindex(tn)])
+                    addindexmeta(header, gitindex(to), gitindex(tn))
             else:
                 text = mdiff.unidiff(to, date1,
                                      tn, date2,
