@@ -3204,18 +3204,7 @@ class generatorset(abstractsmartset):
             return it().next()
         return None
 
-def spanset(repo, start=None, end=None):
-    """factory function to dispatch between fullreposet and actual spanset
-
-    Feel free to update all spanset call sites and kill this function at some
-    point.
-    """
-    if start is None and end is None:
-        return fullreposet(repo)
-    return _spanset(repo, start, end)
-
-
-class _spanset(abstractsmartset):
+class spanset(abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
 
@@ -3319,7 +3308,7 @@ class _spanset(abstractsmartset):
             return x
         return None
 
-class fullreposet(_spanset):
+class fullreposet(spanset):
     """a set containing all revisions in the repo
 
     This class exists to host special optimization.
