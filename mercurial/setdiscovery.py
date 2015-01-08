@@ -95,6 +95,14 @@ def _setupsample(dag, nodes, size):
     return always, set(), desiredlen
 
 def _takequicksample(dag, nodes, size):
+    """takes a quick sample of size <size>
+
+    It is meant for initial sampling and focuses on querying heads and close
+    ancestors of heads.
+
+    :dag: a dag object
+    :nodes: set of nodes to discover
+    :size: the maximum size of the sample"""
     sample = dag.headsetofconnecteds(nodes)
     if size <= len(sample):
         return _limitsample(sample, size)
