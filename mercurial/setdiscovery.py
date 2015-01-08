@@ -105,10 +105,7 @@ def _takequicksample(dag, nodes, size):
     return sample
 
 def _takefullsample(dag, nodes, size):
-    always = dag.headsetofconnecteds(nodes)
-    if size <= len(always):
-        return always
-    sample = always
+    sample = always = dag.headsetofconnecteds(nodes)
     # update from heads
     _updatesample(dag, nodes, sample, always)
     # update from roots

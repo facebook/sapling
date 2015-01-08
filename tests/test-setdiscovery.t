@@ -317,17 +317,14 @@ One with >200 heads, which used to use up all of the sample:
   query 3; still undecided: 1140, sample size is: 200
   sampling from both directions
   searching: 4 queries
-  query 4; still undecided: 940, sample size is: 200
+  query 4; still undecided: 592, sample size is: 200
   sampling from both directions
   searching: 5 queries
-  query 5; still undecided: 740, sample size is: 200
+  query 5; still undecided: 292, sample size is: 200
   sampling from both directions
   searching: 6 queries
-  query 6; still undecided: 540, sample size is: 200
-  sampling from both directions
-  searching: 7 queries
-  query 7; still undecided: 46, sample size is: 46
-  7 total queries
+  query 6; still undecided: 51, sample size is: 51
+  6 total queries
   common heads: 3ee37d65064a
 
 Test actual protocol when pulling one new head in addition to common heads
