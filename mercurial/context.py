@@ -1495,6 +1495,15 @@ class workingctx(committablectx):
             if fixup and listclean:
                 s.clean.extend(fixup)
 
+        if match.always():
+            # cache for performance
+            if s.unknown or s.ignored or s.clean:
+                # "_status" is cached with list*=False in the normal route
+                self._status = scmutil.status(s.modified, s.added, s.removed,
+                                              s.deleted, [], [], [])
+            else:
+                self._status = s
+
         return s
 
     def _buildstatus(self, other, s, match, listignored, listclean,
@@ -1515,14 +1524,6 @@ class workingctx(committablectx):
             s = super(workingctx, self)._buildstatus(other, s, match,
                                                      listignored, listclean,
                                                      listunknown)
-        elif match.always():
-            # cache for performance
-            if s.unknown or s.ignored or s.clean:
-                # "_status" is cached with list*=False in the normal route
-                self._status = scmutil.status(s.modified, s.added, s.removed,
-                                              s.deleted, [], [], [])
-            else:
-                self._status = s
         return s
 
     def _matchstatus(self, other, match):
