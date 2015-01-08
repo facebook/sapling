@@ -187,6 +187,8 @@ check that various commands work well with filtering
   [255]
   $ hg debugrevspec 'rev(6)'
   $ hg debugrevspec 'rev(4)'
+  $ hg debugrevspec 'null'
+  -1
 
 Check that public changeset are not accounted as obsolete:
 

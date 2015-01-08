@@ -323,8 +323,6 @@ def _getrevsource(repo, r):
 
 def stringset(repo, subset, x):
     x = repo[x].rev()
-    if x == -1 and len(subset) == len(repo):
-        return baseset([-1])
     if x in subset:
         return baseset([x])
     return baseset()
@@ -3312,16 +3310,17 @@ class spanset(abstractsmartset):
 class fullreposet(spanset):
     """a set containing all revisions in the repo
 
-    This class exists to host special optimization.
+    This class exists to host special optimization and magic to handle virtual
+    revisions such as "null".
     """
 
     def __init__(self, repo):
         super(fullreposet, self).__init__(repo)
 
     def __contains__(self, rev):
+        # assumes the given rev is valid
         hidden = self._hiddenrevs
-        return ((self._start <= rev < self._end)
-                and not (hidden and rev in hidden))
+        return not (hidden and rev in hidden)
 
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be

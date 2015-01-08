@@ -478,7 +478,32 @@ Test explicit numeric revision
   [255]
 
 Test null revision
+  $ log '(null)'
+  -1
+  $ log '(null:0)'
+  -1
+  0
+  $ log '(0:null)'
+  0
+  -1
+  $ log 'null::0'
+  -1
+  0
+  $ log 'null:tip - 0:'
+  -1
+  $ log 'null: and null::' | head -1
+  -1
+  $ log 'null: or 0:' | head -2
+  -1
+  0
   $ log 'ancestors(null)'
+  -1
+  $ log 'reverse(null:)' | tail -2
+  0
+  -1
+  $ log 'first(null:)'
+  -1
+  $ log 'min(null:)'
   -1
   $ log 'tip:null and all()' | tail -2
   1
