@@ -349,7 +349,7 @@ def rangeset(repo, subset, x, y):
     return r & subset
 
 def dagrange(repo, subset, x, y):
-    r = spanset(repo)
+    r = fullreposet(repo)
     xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
     return xs & subset
 
@@ -396,7 +396,7 @@ def ancestor(repo, subset, x):
     """
     # i18n: "ancestor" is a keyword
     l = getlist(x)
-    rl = spanset(repo)
+    rl = fullreposet(repo)
     anc = None
 
     # (getset(repo, rl, i) for i in l) generates a list of lists
@@ -412,7 +412,7 @@ def ancestor(repo, subset, x):
     return baseset()
 
 def _ancestors(repo, subset, x, followfirst=False):
-    heads = getset(repo, spanset(repo), x)
+    heads = getset(repo, fullreposet(repo), x)
     if not heads:
         return baseset()
     s = _revancestors(repo, heads, followfirst)
@@ -544,7 +544,7 @@ def branch(repo, subset, x):
         else:
             return subset.filter(lambda r: matcher(getbi(ucl, r)[0]))
 
-    s = getset(repo, spanset(repo), x)
+    s = getset(repo, fullreposet(repo), x)
     b = set()
     for r in s:
         b.add(getbi(ucl, r)[0])
@@ -708,7 +708,7 @@ def desc(repo, subset, x):
     return subset.filter(matches)
 
 def _descendants(repo, subset, x, followfirst=False):
-    roots = getset(repo, spanset(repo), x)
+    roots = getset(repo, fullreposet(repo), x)
     if not roots:
         return baseset()
     s = _revdescendants(repo, roots, followfirst)
@@ -744,9 +744,9 @@ def destination(repo, subset, x):
     is the same as passing all().
     """
     if x is not None:
-        sources = getset(repo, spanset(repo), x)
+        sources = getset(repo, fullreposet(repo), x)
     else:
-        sources = getall(repo, spanset(repo), x)
+        sources = getall(repo, fullreposet(repo), x)
 
     dests = set()
 
@@ -1145,7 +1145,7 @@ def limit(repo, subset, x):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
     ss = subset
-    os = getset(repo, spanset(repo), l[0])
+    os = getset(repo, fullreposet(repo), l[0])
     result = []
     it = iter(os)
     for x in xrange(lim):
@@ -1172,7 +1172,7 @@ def last(repo, subset, x):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
     ss = subset
-    os = getset(repo, spanset(repo), l[0])
+    os = getset(repo, fullreposet(repo), l[0])
     os.reverse()
     result = []
     it = iter(os)
@@ -1189,7 +1189,7 @@ def maxrev(repo, subset, x):
     """``max(set)``
     Changeset with highest revision number in set.
     """
-    os = getset(repo, spanset(repo), x)
+    os = getset(repo, fullreposet(repo), x)
     if os:
         m = os.max()
         if m in subset:
@@ -1226,7 +1226,7 @@ def minrev(repo, subset, x):
     """``min(set)``
     Changeset with lowest revision number in set.
     """
-    os = getset(repo, spanset(repo), x)
+    os = getset(repo, fullreposet(repo), x)
     if os:
         m = os.min()
         if m in subset:
@@ -1321,7 +1321,7 @@ def only(repo, subset, x):
     cl = repo.changelog
     # i18n: "only" is a keyword
     args = getargs(x, 1, 2, _('only takes one or two arguments'))
-    include = getset(repo, spanset(repo), args[0])
+    include = getset(repo, fullreposet(repo), args[0])
     if len(args) == 1:
         if not include:
             return baseset()
@@ -1330,7 +1330,7 @@ def only(repo, subset, x):
         exclude = [rev for rev in cl.headrevs()
             if not rev in descendants and not rev in include]
     else:
-        exclude = getset(repo, spanset(repo), args[1])
+        exclude = getset(repo, fullreposet(repo), args[1])
 
     results = set(cl.findmissingrevs(common=exclude, heads=include))
     return subset & results
@@ -1344,9 +1344,9 @@ def origin(repo, subset, x):
     for the first operation is selected.
     """
     if x is not None:
-        dests = getset(repo, spanset(repo), x)
+        dests = getset(repo, fullreposet(repo), x)
     else:
-        dests = getall(repo, spanset(repo), x)
+        dests = getall(repo, fullreposet(repo), x)
 
     def _firstsrc(rev):
         src = _getrevsource(repo, rev)
@@ -1399,7 +1399,7 @@ def p1(repo, subset, x):
 
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, spanset(repo), x):
+    for r in getset(repo, fullreposet(repo), x):
         ps.add(cl.parentrevs(r)[0])
     ps -= set([node.nullrev])
     return subset & ps
@@ -1420,7 +1420,7 @@ def p2(repo, subset, x):
 
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, spanset(repo), x):
+    for r in getset(repo, fullreposet(repo), x):
         ps.add(cl.parentrevs(r)[1])
     ps -= set([node.nullrev])
     return subset & ps
@@ -1434,7 +1434,7 @@ def parents(repo, subset, x):
     else:
         ps = set()
         cl = repo.changelog
-        for r in getset(repo, spanset(repo), x):
+        for r in getset(repo, fullreposet(repo), x):
             ps.update(cl.parentrevs(r))
     ps -= set([node.nullrev])
     return subset & ps
@@ -1675,7 +1675,7 @@ def roots(repo, subset, x):
     """``roots(set)``
     Changesets in set with no parent changeset in set.
     """
-    s = getset(repo, spanset(repo), x)
+    s = getset(repo, fullreposet(repo), x)
     subset = baseset([r for r in s if r in subset])
     cs = _children(repo, subset, s)
     return subset - cs
@@ -2450,7 +2450,7 @@ def match(ui, spec, repo=None):
     weight, tree = optimize(tree, True)
     def mfunc(repo, subset=None):
         if subset is None:
-            subset = spanset(repo)
+            subset = fullreposet(repo)
         if util.safehasattr(subset, 'isascending'):
             result = getset(repo, subset, tree)
         else:
