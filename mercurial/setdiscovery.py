@@ -105,9 +105,10 @@ def _takequicksample(dag, nodes, size):
     return sample
 
 def _takefullsample(dag, nodes, size):
-    always, sample, desiredlen = _setupsample(dag, nodes, size)
-    if sample is None:
+    always = dag.headsetofconnecteds(nodes)
+    if size <= len(always):
         return always
+    sample = set()
     # update from heads
     _updatesample(dag, nodes, sample, always)
     # update from roots
