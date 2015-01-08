@@ -1647,18 +1647,6 @@ class workingcommitctx(workingctx):
         super(workingctx, self).__init__(repo, text, user, date, extra,
                                          changes)
 
-    def _buildstatus(self, other, s, match,
-                     listignored, listclean, listunknown):
-        """Prevent ``workingctx._buildstatus`` from changing ``self._status``
-        """
-        s = self._dirstatestatus(match, listignored, listclean, listunknown)
-        if other != self._repo['.']:
-            # workingctx._buildstatus doesn't change self._status in this case
-            superself = super(workingcommitctx, self)
-            s = superself._buildstatus(other, s, match,
-                                       listignored, listclean, listunknown)
-        return s
-
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
         """Return matched files only in ``self._status``
