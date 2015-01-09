@@ -437,7 +437,7 @@ def downloadlfiles(ui, repo, rev=None):
     return totalsuccess, totalmissing
 
 def updatelfiles(ui, repo, filelist=None, printmessage=None,
-                 normallookup=False):
+                 normallookup=False, checked=False):
     '''Update largefiles according to standins in the working directory
 
     If ``printmessage`` is other than ``None``, it means "print (or
@@ -465,7 +465,8 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                     util.unlinkpath(absstandin + '.orig')
                 expecthash = lfutil.readstandin(repo, lfile)
                 if (expecthash != '' and
-                    (not os.path.exists(abslfile) or
+                    (checked or
+                     not os.path.exists(abslfile) or
                      expecthash != lfutil.hashfile(abslfile))):
                     if lfile not in repo[None]: # not switched to normal file
                         util.unlinkpath(abslfile, ignoremissing=True)

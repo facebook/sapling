@@ -1324,7 +1324,7 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
 
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
-                                normallookup=partial)
+                                normallookup=partial, checked=linearmerge)
 
         return result
     finally:
