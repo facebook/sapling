@@ -34,11 +34,11 @@ class remotefilectx(context.filectx):
         else:
             return self.linkrev()
 
-    def filectx(self, fileid):
+    def filectx(self, fileid, changeid=None):
         '''opens an arbitrary revision of the file without
         opening a new filelog'''
         return remotefilectx(self._repo, self._path, fileid=fileid,
-                             filelog=self._filelog)
+                             filelog=self._filelog, changeid=changeid)
 
     def linkrev(self):
         if self._fileid == nullid:
