@@ -893,8 +893,7 @@ class basefilectx(object):
         base = self
         introrev = self.introrev()
         if self.rev() != introrev:
-            base = filectx(self._repo, self._path, filelog=self.filelog(),
-                           fileid=self.filenode(), changeid=introrev)
+            base = self.filectx(self.filenode(), changeid=introrev)
 
         # This algorithm would prefer to be recursive, but Python is a
         # bit recursion-hostile. Instead we do an iterative
@@ -1000,11 +999,11 @@ class filectx(basefilectx):
             # considered when solving linkrev issue are on the table.
             return changectx(self._repo.unfiltered(), self._changeid)
 
-    def filectx(self, fileid):
+    def filectx(self, fileid, changeid=None):
         '''opens an arbitrary revision of the file without
         opening a new filelog'''
         return filectx(self._repo, self._path, fileid=fileid,
-                       filelog=self._filelog)
+                       filelog=self._filelog, changeid=changeid)
 
     def data(self):
         try:
