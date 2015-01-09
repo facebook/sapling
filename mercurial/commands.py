@@ -2895,12 +2895,7 @@ def debugstate(ui, repo, nodates=None, datesort=None):
     for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
         if showdate:
             if ent[3] == -1:
-                # Pad or slice to locale representation
-                locale_len = len(time.strftime("%Y-%m-%d %H:%M:%S ",
-                                               time.localtime(0)))
-                timestr = 'unset'
-                timestr = (timestr[:locale_len] +
-                           ' ' * (locale_len - len(timestr)))
+                timestr = 'unset               '
             else:
                 timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
                                         time.localtime(ent[3]))
