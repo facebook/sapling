@@ -90,7 +90,7 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def group(self, nodelist, rlog, lookup, units=None, reorder=None):
         return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
-                            units=None, reorder=None)
+                            units=units, reorder=reorder)
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         if requirement in self._repo.requirements:
