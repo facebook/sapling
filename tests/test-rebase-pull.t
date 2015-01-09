@@ -54,7 +54,7 @@ Now b has one revision to be pulled from a:
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   rebasing 2:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-backup.hg (glob)
 
   $ hg tglog
   @  3: 'L1'
@@ -151,7 +151,7 @@ pull --rebase works when a specific revision is pulled (issue3619)
   adding file changes
   added 2 changesets with 2 changes to 2 files
   rebasing 3:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-backup.hg (glob)
   $ hg tglog
   @  5: 'L1'
   |

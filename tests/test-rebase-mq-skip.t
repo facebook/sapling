@@ -72,7 +72,7 @@ already has one local mq patch
        284 (manifests)
        109  p0
        109  p1
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-5da6ecfb-backup.hg (glob)
   2 changesets found
   uncompressed size of bundle content:
        399 (changelog)
@@ -163,7 +163,7 @@ already has one local mq patch
   rebasing 5:681a378595ba "r5" (5.diff)
   rebasing 6:512a1f24768b "r6" (6.diff qtip)
   note: rebase of 6:512a1f24768b created no changes to commit
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-b9bfb84d-backup.hg (glob)
 
   $ hg tglog
   @  8: 'r5' tags: 5.diff qtip tip

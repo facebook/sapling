@@ -88,7 +88,7 @@ Fix the 2nd conflict:
   $ hg rebase -c
   already rebased 2:3504f44bffc0 "P0" (f.patch qbase) as ebe9914c0d1c
   rebasing 3:929394423cd3 "P1" (f2.patch qtip)
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3504f44bffc0-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3504f44bffc0-30595b40-backup.hg (glob)
 
   $ hg tglog
   @  3: 'P1' tags: f2.patch qtip tip
@@ -205,7 +205,7 @@ Rebase the applied mq patches:
   $ hg rebase -s 2 -d 1
   rebasing 2:0c587ffcb480 "P0 (git)" (f_git.patch qbase)
   rebasing 3:c7f18665e4bc "P1" (f.patch qtip tip)
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/0c587ffcb480-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/0c587ffcb480-0ea5695f-backup.hg (glob)
 
   $ hg qci -m 'save patch state'
 

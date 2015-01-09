@@ -462,7 +462,7 @@ Strip adds, removes, modifies with --keep
   $ echo b > b
   $ echo d > d
   $ hg strip --keep tip
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/57e364c8a475-4cfed93c-backup.hg (glob)
   $ hg status
   M b
   ! bar
@@ -547,3 +547,25 @@ Make sure no one adds back a -b option:
   
   (use "hg strip -h" to show more help)
   [255]
+
+  $ cd ..
+
+Verify bundles don't get overwritten:
+
+  $ hg init doublebundle
+  $ cd doublebundle
+  $ touch a
+  $ hg commit -Aqm a
+  $ touch b
+  $ hg commit -Aqm b
+  $ hg strip -r 0
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/doublebundle/.hg/strip-backup/3903775176ed-e68910bd-backup.hg (glob)
+  $ ls .hg/strip-backup
+  3903775176ed-e68910bd-backup.hg
+  $ hg pull -q -r 3903775176ed .hg/strip-backup/3903775176ed-e68910bd-backup.hg
+  $ hg strip -r 0
+  saved backup bundle to $TESTTMP/doublebundle/.hg/strip-backup/3903775176ed-54390173-backup.hg (glob)
+  $ ls .hg/strip-backup
+  3903775176ed-54390173-backup.hg
+  3903775176ed-e68910bd-backup.hg

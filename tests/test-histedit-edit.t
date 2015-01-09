@@ -170,7 +170,7 @@ check histedit_source
   HG: branch 'default'
   HG: added f
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-c28d9c86-backup.hg (glob)
 
   $ hg status
 
@@ -342,4 +342,4 @@ rollback should not work after a histedit
   [1]
   $ HGEDITOR=true hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-backup.hg (glob)

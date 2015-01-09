@@ -387,7 +387,7 @@ dropped revision.
   HG: changed file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-backup.hg (glob)
+  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-3d69522c-backup.hg (glob)
   $ hg logt -G
   @  1:10c647b2cdd5 +4
   |

@@ -801,7 +801,7 @@ strip with local changes, should complain
 
   $ hg strip -f tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/770eb8fce608-0ddcae0f-backup.hg (glob)
   $ cd ..
 
 

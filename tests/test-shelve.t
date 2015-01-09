@@ -462,7 +462,7 @@ shelve should leave dirstate clean (issue4055)
   $ hg rebase -d 1 --config extensions.rebase=
   rebasing 2:323bfa07f744 "xyz" (tip)
   merging x
-  saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-backup.hg (glob)
+  saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-78114325-backup.hg (glob)
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes

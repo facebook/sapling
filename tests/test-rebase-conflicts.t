@@ -86,7 +86,7 @@ Conclude rebase:
   already rebased 3:3163e20567cc "L1" as 3e046f2ecedb
   rebasing 4:46f0b057b5c0 "L2"
   rebasing 5:8029388f38dc "L3" (mybook)
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3163e20567cc-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3163e20567cc-5ca4656e-backup.hg (glob)
 
   $ hg tglog
   @  5:secret 'L3'  mybook
@@ -292,7 +292,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   bundling: 2/3 manifests (66.67%)
   bundling: 3/3 manifests (100.00%)
   bundling: f1.txt 1/1 files (100.00%)
-  saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-backup.hg (glob)
+  saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)
   3 changesets found
   list of changesets:
   4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
