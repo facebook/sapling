@@ -169,6 +169,9 @@ class fileserverclient(object):
                     # outputs
                     self.ui.verbose = False
 
+                    if not fallbackpath:
+                        raise util.Abort("no remotefilelog server configured - "
+                            "is your .hg/hgrc trusted?")
                     remote = hg.peer(self.ui, {}, fallbackpath)
                     remote._callstream("getfiles")
                 finally:
