@@ -76,10 +76,16 @@ class remotefilelog(object):
         # ancestor => node + p1 + p2 + linknode + copypath + \0
 
         raw = self._read(hex(node))
-        index = raw.index('\0')
-        size = int(raw[:index])
-
+        index, size = self._parsesize(raw)
         return raw[(index + 1):(index + 1 + size)]
+
+    def _parsesize(self, raw):
+        try:
+            index = raw.index('\0')
+            size = int(raw[:index])
+        except ValueError:
+            raise Exception("corrupt cache data for '%s'" % (self.filename))
+        return index, size
 
     def add(self, text, meta, transaction, linknode, p1=None, p2=None):
         hashtext = text
@@ -150,8 +156,7 @@ class remotefilelog(object):
 
     def renamed(self, node):
         raw = self._read(hex(node))
-        index = raw.index('\0')
-        size = int(raw[:index])
+        index, size = self._parsesize(raw)
 
         offset = index + 1 + size
         p1 = raw[(offset + 20):(offset + 40)]
@@ -168,8 +173,7 @@ class remotefilelog(object):
         """return the size of a given revision"""
 
         raw = self._read(hex(node))
-        index = raw.index('\0')
-        size = int(raw[:index])
+        index, size = self._parsesize(raw)
         return size
 
     rawsize = size
@@ -215,8 +219,7 @@ class remotefilelog(object):
 
     def linknode(self, node):
         raw = self._read(hex(node))
-        index = raw.index('\0')
-        size = int(raw[:index])
+        index, size = self._parsesize(raw)
         offset = index + 1 + size + 60
         return raw[offset:(offset + 20)]
 
@@ -245,8 +248,7 @@ class remotefilelog(object):
 
         raw = self._read(hex(node))
 
-        index = raw.index('\0')
-        size = int(raw[:index])
+        index, size = self._parsesize(raw)
         data = raw[(index + 1):(index + 1 + size)]
 
         mapping = self.ancestormap(node)
@@ -355,8 +357,7 @@ class remotefilelog(object):
         raise error.LookupError(node, self.filename, _('no valid file history'))
 
     def _ancestormap(self, node, raw, relativeto, fromserver=False):
-        index = raw.index('\0')
-        size = int(raw[:index])
+        index, size = self._parsesize(raw)
         start = index + 1 + size
 
         mapping = {}
