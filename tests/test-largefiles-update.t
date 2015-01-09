@@ -31,13 +31,13 @@ prevents unnecessary hashing of content - also after linear/noop update
   $ sleep 1
   $ hg st
   $ hg debugdirstate --large --nodate
-  n 644          7 large1
-  n 644         13 large2
+  n 644          7 set                 large1
+  n 644         13 set                 large2
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugdirstate --large --nodate
-  n 644          7 large1
-  n 644         13 large2
+  n 644          7 set                 large1
+  n 644         13 set                 large2
 
 Test that "hg merge" updates largefiles from "other" correctly
 
@@ -337,8 +337,8 @@ Test a linear merge to a revision containing same-name normal file
   remote turned local largefile large2 into a normal file
   keep (l)argefile or use (n)ormal file? l
   $ hg debugdirstate --nodates | grep large2
-  a   0         -1 .hglf/large2
-  r   0          0 large2
+  a   0         -1 unset               .hglf/large2
+  r   0          0 set                 large2
   $ hg status -A large2
   A large2
   $ cat large2
@@ -353,8 +353,8 @@ Test a linear merge to a revision containing same-name normal file
   remote turned local largefile large3 into a normal file
   keep (l)argefile or use (n)ormal file? l
   $ hg debugdirstate --nodates | grep large3
-  a   0         -1 .hglf/large3
-  r   0          0 large3
+  a   0         -1 unset               .hglf/large3
+  r   0          0 set                 large3
   $ hg status -A large3
   A large3
   $ cat large3

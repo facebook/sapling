@@ -2887,18 +2887,18 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 def debugstate(ui, repo, nodates=None, datesort=None):
     """show the contents of the current dirstate"""
     timestr = ""
-    showdate = not nodates
     if datesort:
         keyfunc = lambda x: (x[1][3], x[0]) # sort by mtime, then by filename
     else:
         keyfunc = None # sort by filename
     for file_, ent in sorted(repo.dirstate._map.iteritems(), key=keyfunc):
-        if showdate:
-            if ent[3] == -1:
-                timestr = 'unset               '
-            else:
-                timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
-                                        time.localtime(ent[3]))
+        if ent[3] == -1:
+            timestr = 'unset               '
+        elif nodates:
+            timestr = 'set                 '
+        else:
+            timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
+                                    time.localtime(ent[3]))
         if ent[1] & 020000:
             mode = 'lnk'
         else:
