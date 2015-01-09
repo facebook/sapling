@@ -768,6 +768,22 @@ test transplanting a patch turning into a no-op
   searching for changes
   applying 7a7d57e15850
   skipping emptied changeset 7a7d57e15850
+
+Test empty result in --continue
+
+  $ hg transplant -s ../binarysource 1
+  searching for changes
+  applying 645035761929
+  file b already exists
+  1 out of 1 hunks FAILED -- saving rejects to file b.rej
+  patch failed to apply
+  abort: fix up the merge and run hg transplant --continue
+  [255]
+  $ hg status
+  ? b.rej
+  $ hg transplant --continue
+  645035761929 skipped due to empty diff
+
   $ cd ..
 
 Explicitly kill daemons to let the test exit on Windows
