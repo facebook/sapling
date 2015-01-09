@@ -306,6 +306,7 @@ class localcache(object):
         self.ui = repo.ui
         self.repo = repo
         self.cachepath = self.ui.config("remotefilelog", "cachepath")
+        self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
         if self.cachepath:
             self.cachepath = util.expandpath(self.cachepath)
         self.uid = os.getuid()
@@ -326,7 +327,12 @@ class localcache(object):
 
     def __contains__(self, key):
         path = os.path.join(self.cachepath, key)
-        return os.path.exists(path)
+        exists = os.path.exists(path)
+        if exists and self._validatecachelog and not self._validatekey(path,
+            'contains'):
+            return False
+
+        return exists
 
     def write(self, key, data):
         path = os.path.join(self.cachepath, key)
@@ -342,6 +348,10 @@ class localcache(object):
             if f:
                 f.close()
 
+        if self._validatecachelog:
+            if not self._validatekey(path, 'write'):
+                raise util.Abort(_("local cache write was corrupted %s") % path)
+
         stat = os.stat(path)
         if stat.st_uid == self.uid:
             os.chmod(path, 0o0664)
@@ -355,11 +365,42 @@ class localcache(object):
             # we should never have empty files
             if not result:
                 os.remove(path)
-                raise KeyError("empty local cache file")
+                raise KeyError("empty local cache file %s" % path)
+
+            if self._validatecachelog and not self._validatedata(result):
+                with open(self._validatecachelog, 'a+') as f:
+                    f.write("corrupt %s during read\n" % path)
+                raise KeyError("corrupt local cache file %s" % path)
 
             return result
         except IOError:
             raise KeyError("key not in local cache")
+
+    def _validatekey(self, path, action):
+        with open(path, 'r') as f:
+            data = f.read()
+
+        if self._validatedata(data):
+            return True
+
+        with open(self._validatecachelog, 'a+') as f:
+            f.write("corrupt %s during %s\n" % (path, action))
+
+        os.rename(path, path + ".corrupt")
+        return False
+
+    def _validatedata(self, data):
+        try:
+            if len(data) > 0:
+                size = data.split('\0', 1)[0]
+                size = int(size)
+                if size < len(data):
+                    # The data looks to be well formed.
+                    return True
+        except ValueError:
+            pass
+
+        return False
 
     def markrepo(self):
         repospath = os.path.join(self.cachepath, "repos")
