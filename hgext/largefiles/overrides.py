@@ -1295,8 +1295,21 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             unsure, s = lfdirstate.status(match_.always(repo.root,
                                                         repo.getcwd()),
                                           [], False, False, False)
-            for lfile in unsure + s.modified + s.added:
+            pctx = repo['.']
+            for lfile in unsure + s.modified:
+                lfileabs = repo.wvfs.join(lfile)
+                if not os.path.exists(lfileabs):
+                    continue
+                lfhash = lfutil.hashrepofile(repo, lfile)
+                standin = lfutil.standin(lfile)
+                lfutil.writestandin(repo, standin, lfhash,
+                                    lfutil.getexecutable(lfileabs))
+                if (standin in pctx and
+                    lfhash == lfutil.readstandin(repo, lfile, '.')):
+                    lfdirstate.normal(lfile)
+            for lfile in s.added:
                 lfutil.updatestandin(repo, lfutil.standin(lfile))
+            lfdirstate.write()
 
         if linearmerge:
             # Only call updatelfiles on the standins that have changed

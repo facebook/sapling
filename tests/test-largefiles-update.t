@@ -25,6 +25,39 @@ directory (and ".hg/largefiles/dirstate")
   $ hg commit -m '#2'
   created new head
 
+Test that update also updates the lfdirstate of 'unsure' largefiles after
+hashing them:
+
+The previous operations will usually have left us with largefiles with a mtime
+within the same second as the dirstate was written.
+The lfdirstate entries will thus have been written with an invalidated/unset
+mtime to make sure further changes within the same second is detected.
+We will however occasionally be "lucky" and get a tick between writing
+largefiles and writing dirstate so we get valid lfdirstate timestamps. The
+following verification is thus disabled but can be verified manually.
+
+#if false
+  $ hg debugdirstate --large --nodate
+  n 644          7 unset               large1
+  n 644         13 unset               large2
+#endif
+
+Wait to make sure we get a tick so the mtime of the largefiles become valid.
+
+  $ sleep 1
+
+A linear merge will update standins before performing the actual merge. It will
+do a lfdirstate status walk and find 'unset'/'unsure' files, hash them, and
+update the corresponding standins.
+Verify that it actually marks the clean files as clean in lfdirstate so
+we don't have to hash them again next time we update.
+
+  $ hg up
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugdirstate --large --nodate
+  n 644          7 set                 large1
+  n 644         13 set                 large2
+
 Test that lfdirstate keeps track of last modification of largefiles and
 prevents unnecessary hashing of content - also after linear/noop update
 
