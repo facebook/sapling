@@ -239,6 +239,14 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
         pos += 1
     yield ('end', None, pos)
 
+def parseerrordetail(inst):
+    """Compose error message from specified ParseError object
+    """
+    if len(inst.args) > 1:
+        return _('at %s: %s') % (inst.args[1], inst.args[0])
+    else:
+        return inst.args[0]
+
 # helpers
 
 def getstring(x, err):
@@ -2146,10 +2154,7 @@ class revsetalias(object):
             # Check for placeholder injection
             _checkaliasarg(self.replacement, self.args)
         except error.ParseError, inst:
-            if len(inst.args) > 1:
-                self.error = _('at %s: %s') % (inst.args[1], inst.args[0])
-            else:
-                self.error = inst.args[0]
+            self.error = parseerrordetail(inst)
 
 def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
