@@ -2234,11 +2234,6 @@ def _parsealiasdecl(decl):
         return (decl, None, None, parseerrordetail(inst))
 
 class revsetalias(object):
-    funcre = re.compile('^([^(]+)\(([^)]+)\)$')
-    args = None
-
-    # error message at parsing, or None
-    error = None
     # whether own `error` information is already shown or not.
     # this avoids showing same warning multiple times at each `findaliases`.
     warned = False
@@ -2249,18 +2244,17 @@ class revsetalias(object):
         h = heads(default)
         b($1) = ancestors($1) - ancestors(default)
         '''
-        m = self.funcre.search(name)
-        if m:
-            self.name = m.group(1)
-            self.tree = ('func', ('symbol', m.group(1)))
-            self.args = [x.strip() for x in m.group(2).split(',')]
+        self.name, self.tree, self.args, self.error = _parsealiasdecl(name)
+        if self.error:
+            self.error = _('failed to parse the declaration of revset alias'
+                           ' "%s": %s') % (self.name, self.error)
+            return
+
+        if self.args:
             for arg in self.args:
                 # _aliasarg() is an unknown symbol only used separate
                 # alias argument placeholders from regular strings.
                 value = value.replace(arg, '_aliasarg(%r)' % (arg,))
-        else:
-            self.name = name
-            self.tree = ('symbol', name)
 
         try:
             self.replacement, pos = parse(value)

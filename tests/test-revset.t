@@ -998,6 +998,12 @@ far away.
   $ try 'tip'
   ('symbol', 'tip')
   9
+
+  $ hg debugrevspec --debug --config revsetalias.'bad name'='tip' "tip"
+  ('symbol', 'tip')
+  warning: failed to parse the declaration of revset alias "bad name": at 4: invalid token
+  9
+
   $ try 'd(2:5)'
   (func
     ('symbol', 'd')
