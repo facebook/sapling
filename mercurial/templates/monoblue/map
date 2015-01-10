@@ -129,7 +129,7 @@ changesetparent = '
   <dd>{changesetlink}</dd>'
 changesetparentdiff = '
   <dt>parent {rev}</dt>
-  <dd>{changesetlink} {ifeq(node, basenode, '(current diff)', \'({difffrom})\')}</dd>'
+  <dd>{changesetlink} {ifeq(node, basenode, '(current diff)', '({difffrom})')}</dd>'
 difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">diff</a>'
 filerevbranch = '<dt>branch</dt><dd>{name|escape}</dd>'
 filerevparent = '

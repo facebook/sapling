@@ -140,7 +140,7 @@ changesetparentdiff = '
   <tr>
     <td>parent {rev}</td>
     <td style="font-family:monospace">
-      {changesetlink} {ifeq(node, basenode, '(current diff)', \'({difffrom})\')}
+      {changesetlink} {ifeq(node, basenode, '(current diff)', '({difffrom})')}
     </td>
   </tr>'
 difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">diff</a>'
