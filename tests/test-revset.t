@@ -465,7 +465,9 @@ Test the order of operations
   9
 
 Test explicit numeric revision
+  $ log 'rev(-2)'
   $ log 'rev(-1)'
+  -1
   $ log 'rev(0)'
   0
   $ log 'rev(9)'
