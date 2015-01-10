@@ -726,7 +726,7 @@ Logs and changes
   <ul>
    <li><a href="/help">help</a></li>
   </ul>
-  <p>
+  <p></p>
   <div class="atom-logo">
   <a href="/atom-log" title="subscribe to atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed">
@@ -894,7 +894,7 @@ Logs and changes
       <a id="diffstatexpand" href="javascript:toggleDiffstat()"/>[<tt>+</tt>]</a>
       <div id="diffstatdetails" style="display:none;">
         <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
-        <p>
+        <p></p>
         <table class="stripes2">  <tr>
       <td class="diffstat-file"><a href="#l1.1">da/foo</a></td>
       <td class="diffstat-total" align="right">1</td>
