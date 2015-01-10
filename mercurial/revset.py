@@ -267,6 +267,40 @@ def getargs(x, min, max, err):
         raise error.ParseError(err)
     return l
 
+def isvalidsymbol(tree):
+    """Examine whether specified ``tree`` is valid ``symbol`` or not
+    """
+    return tree[0] == 'symbol' and len(tree) > 1
+
+def getsymbol(tree):
+    """Get symbol name from valid ``symbol`` in ``tree``
+
+    This assumes that ``tree`` is already examined by ``isvalidsymbol``.
+    """
+    return tree[1]
+
+def isvalidfunc(tree):
+    """Examine whether specified ``tree`` is valid ``func`` or not
+    """
+    return tree[0] == 'func' and len(tree) > 1 and isvalidsymbol(tree[1])
+
+def getfuncname(tree):
+    """Get function name from valid ``func`` in ``tree``
+
+    This assumes that ``tree`` is already examined by ``isvalidfunc``.
+    """
+    return getsymbol(tree[1])
+
+def getfuncargs(tree):
+    """Get list of function arguments from valid ``func`` in ``tree``
+
+    This assumes that ``tree`` is already examined by ``isvalidfunc``.
+    """
+    if len(tree) > 2:
+        return getlist(tree[2])
+    else:
+        return []
+
 def getset(repo, subset, x):
     if not x:
         raise error.ParseError(_("missing argument"))
@@ -2117,6 +2151,87 @@ def _checkaliasarg(tree, known=None):
             raise error.ParseError(_("not a function: %s") % '_aliasarg')
         for t in tree:
             _checkaliasarg(t, known)
+
+# the set of valid characters for the initial letter of symbols in
+# alias declarations and definitions
+_aliassyminitletters = set(c for c in [chr(i) for i in xrange(256)]
+                           if c.isalnum() or c in '._@$' or ord(c) > 127)
+
+def _tokenizealias(program, lookup=None):
+    """Parse alias declaration/definition into a stream of tokens
+
+    This allows symbol names to use also ``$`` as an initial letter
+    (for backward compatibility), and callers of this function should
+    examine whether ``$`` is used also for unexpected symbols or not.
+    """
+    return tokenize(program, lookup=lookup,
+                    syminitletters=_aliassyminitletters)
+
+def _parsealiasdecl(decl):
+    """Parse alias declaration ``decl``
+
+    This returns ``(name, tree, args, errorstr)`` tuple:
+
+    - ``name``: of declared alias (may be ``decl`` itself at error)
+    - ``tree``: parse result (or ``None`` at error)
+    - ``args``: list of alias argument names (or None for symbol declaration)
+    - ``errorstr``: detail about detected error (or None)
+
+    >>> _parsealiasdecl('foo')
+    ('foo', ('symbol', 'foo'), None, None)
+    >>> _parsealiasdecl('$foo')
+    ('$foo', None, None, "'$' not for alias arguments")
+    >>> _parsealiasdecl('foo::bar')
+    ('foo::bar', None, None, 'invalid format')
+    >>> _parsealiasdecl('foo bar')
+    ('foo bar', None, None, 'at 4: invalid token')
+    >>> _parsealiasdecl('foo()')
+    ('foo', ('func', ('symbol', 'foo')), [], None)
+    >>> _parsealiasdecl('$foo()')
+    ('$foo()', None, None, "'$' not for alias arguments")
+    >>> _parsealiasdecl('foo($1, $2)')
+    ('foo', ('func', ('symbol', 'foo')), ['$1', '$2'], None)
+    >>> _parsealiasdecl('foo(bar_bar, baz.baz)')
+    ('foo', ('func', ('symbol', 'foo')), ['bar_bar', 'baz.baz'], None)
+    >>> _parsealiasdecl('foo($1, $2, nested($1, $2))')
+    ('foo($1, $2, nested($1, $2))', None, None, 'invalid argument list')
+    >>> _parsealiasdecl('foo(bar($1, $2))')
+    ('foo(bar($1, $2))', None, None, 'invalid argument list')
+    >>> _parsealiasdecl('foo("string")')
+    ('foo("string")', None, None, 'invalid argument list')
+    >>> _parsealiasdecl('foo($1, $2')
+    ('foo($1, $2', None, None, 'at 10: unexpected token: end')
+    >>> _parsealiasdecl('foo("string')
+    ('foo("string', None, None, 'at 5: unterminated string')
+    """
+    p = parser.parser(_tokenizealias, elements)
+    try:
+        tree, pos = p.parse(decl)
+        if (pos != len(decl)):
+            raise error.ParseError(_('invalid token'), pos)
+
+        if isvalidsymbol(tree):
+            # "name = ...." style
+            name = getsymbol(tree)
+            if name.startswith('$'):
+                return (decl, None, None, _("'$' not for alias arguments"))
+            return (name, ('symbol', name), None, None)
+
+        if isvalidfunc(tree):
+            # "name(arg, ....) = ...." style
+            name = getfuncname(tree)
+            if name.startswith('$'):
+                return (decl, None, None, _("'$' not for alias arguments"))
+            args = []
+            for arg in getfuncargs(tree):
+                if not isvalidsymbol(arg):
+                    return (decl, None, None, _("invalid argument list"))
+                args.append(getsymbol(arg))
+            return (name, ('func', ('symbol', name)), args, None)
+
+        return (decl, None, None, _("invalid format"))
+    except error.ParseError, inst:
+        return (decl, None, None, parseerrordetail(inst))
 
 class revsetalias(object):
     funcre = re.compile('^([^(]+)\(([^)]+)\)$')
