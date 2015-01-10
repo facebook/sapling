@@ -315,14 +315,14 @@ class localrepository(object):
 
     def _applyrequirements(self, requirements):
         self.requirements = requirements
-        self.sopener.options = dict((r, 1) for r in requirements
+        self.svfs.options = dict((r, 1) for r in requirements
                                            if r in self.openerreqs)
         chunkcachesize = self.ui.configint('format', 'chunkcachesize')
         if chunkcachesize is not None:
-            self.sopener.options['chunkcachesize'] = chunkcachesize
+            self.svfs.options['chunkcachesize'] = chunkcachesize
         maxchainlen = self.ui.configint('format', 'maxchainlen')
         if maxchainlen is not None:
-            self.sopener.options['maxchainlen'] = maxchainlen
+            self.svfs.options['maxchainlen'] = maxchainlen
 
     def _writerequirements(self):
         reqfile = self.vfs("requires", "w")
@@ -414,7 +414,7 @@ class localrepository(object):
         if defaultformat is not None:
             kwargs['defaultformat'] = defaultformat
         readonly = not obsolete.isenabled(self, obsolete.createmarkersopt)
-        store = obsolete.obsstore(self.sopener, readonly=readonly,
+        store = obsolete.obsstore(self.svfs, readonly=readonly,
                                   **kwargs)
         if store and readonly:
             # message is rare enough to not be translated
@@ -424,7 +424,7 @@ class localrepository(object):
 
     @storecache('00changelog.i')
     def changelog(self):
-        c = changelog.changelog(self.sopener)
+        c = changelog.changelog(self.svfs)
         if 'HG_PENDING' in os.environ:
             p = os.environ['HG_PENDING']
             if p.startswith(self.root):
@@ -433,7 +433,7 @@ class localrepository(object):
 
     @storecache('00manifest.i')
     def manifest(self):
-        return manifest.manifest(self.sopener)
+        return manifest.manifest(self.svfs)
 
     @repofilecache('dirstate')
     def dirstate(self):
@@ -782,7 +782,7 @@ class localrepository(object):
     def file(self, f):
         if f[0] == '/':
             f = f[1:]
-        return filelog.filelog(self.sopener, f)
+        return filelog.filelog(self.svfs, f)
 
     def changectx(self, changeid):
         return self[changeid]
@@ -910,7 +910,7 @@ class localrepository(object):
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
         vfsmap = {'plain': self.vfs} # root of .hg/
-        tr = transaction.transaction(rp, self.sopener, vfsmap,
+        tr = transaction.transaction(rp, self.svfs, vfsmap,
                                      "journal",
                                      aftertrans(renames),
                                      self.store.createmode)
@@ -941,17 +941,17 @@ class localrepository(object):
                           "%d\n%s\n" % (len(self), desc))
         self.vfs.write("journal.bookmarks",
                           self.vfs.tryread("bookmarks"))
-        self.sopener.write("journal.phaseroots",
-                           self.sopener.tryread("phaseroots"))
+        self.svfs.write("journal.phaseroots",
+                           self.svfs.tryread("phaseroots"))
 
     def recover(self):
         lock = self.lock()
         try:
             if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
-                vfsmap = {'': self.sopener,
+                vfsmap = {'': self.svfs,
                           'plain': self.vfs,}
-                transaction.rollback(self.sopener, vfsmap, "journal",
+                transaction.rollback(self.svfs, vfsmap, "journal",
                                      self.ui.warn)
                 self.invalidate()
                 return True
@@ -1008,7 +1008,7 @@ class localrepository(object):
         parents = self.dirstate.parents()
         self.destroying()
         vfsmap = {'plain': self.vfs}
-        transaction.rollback(self.sopener, vfsmap, 'undo', ui.warn)
+        transaction.rollback(self.svfs, vfsmap, 'undo', ui.warn)
         if self.vfs.exists('undo.bookmarks'):
             self.vfs.rename('undo.bookmarks', 'bookmarks')
         if self.svfs.exists('undo.phaseroots'):
@@ -1693,7 +1693,7 @@ class localrepository(object):
                         self.ui.debug('adding %s (%s)\n' %
                                       (name, util.bytecount(size)))
                     # for backwards compat, name was partially encoded
-                    ofp = self.sopener(store.decodedir(name), 'w')
+                    ofp = self.svfs(store.decodedir(name), 'w')
                     for chunk in util.filechunkiter(fp, limit=size):
                         handled_bytes += len(chunk)
                         self.ui.progress(_('clone'), handled_bytes,
