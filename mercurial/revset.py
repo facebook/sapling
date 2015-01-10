@@ -129,15 +129,39 @@ elements = {
 
 keywords = set(['and', 'or', 'not'])
 
-def tokenize(program, lookup=None):
+# default set of valid characters for the initial letter of symbols
+_syminitletters = set(c for c in [chr(i) for i in xrange(256)]
+                      if c.isalnum() or c in '._@' or ord(c) > 127)
+
+# default set of valid characters for non-initial letters of symbols
+_symletters = set(c for c in  [chr(i) for i in xrange(256)]
+                  if c.isalnum() or c in '-._/@' or ord(c) > 127)
+
+def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     '''
     Parse a revset statement into a stream of tokens
+
+    ``syminitletters`` is the set of valid characters for the initial
+    letter of symbols.
+
+    By default, character ``c`` is recognized as valid for initial
+    letter of symbols, if ``c.isalnum() or c in '._@' or ord(c) > 127``.
+
+    ``symletters`` is the set of valid characters for non-initial
+    letters of symbols.
+
+    By default, character ``c`` is recognized as valid for non-initial
+    letters of symbols, if ``c.isalnum() or c in '-._/@' or ord(c) > 127``.
 
     Check that @ is a valid unquoted token character (issue3686):
     >>> list(tokenize("@::"))
     [('symbol', '@', 0), ('::', None, 1), ('end', None, 3)]
 
     '''
+    if syminitletters is None:
+        syminitletters = _syminitletters
+    if symletters is None:
+        symletters = _symletters
 
     pos, l = 0, len(program)
     while pos < l:
@@ -177,12 +201,12 @@ def tokenize(program, lookup=None):
             else:
                 raise error.ParseError(_("unterminated string"), s)
         # gather up a symbol/keyword
-        elif c.isalnum() or c in '._@' or ord(c) > 127:
+        elif c in syminitletters:
             s = pos
             pos += 1
             while pos < l: # find end of symbol
                 d = program[pos]
-                if not (d.isalnum() or d in "-._/@" or ord(d) > 127):
+                if d not in symletters:
                     break
                 if d == '.' and program[pos - 1] == '.': # special case for ..
                     pos -= 1
