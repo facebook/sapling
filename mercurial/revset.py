@@ -2154,7 +2154,8 @@ class revsetalias(object):
             # Check for placeholder injection
             _checkaliasarg(self.replacement, self.args)
         except error.ParseError, inst:
-            self.error = parseerrordetail(inst)
+            self.error = _('failed to parse the definition of revset alias'
+                           ' "%s": %s') % (self.name, parseerrordetail(inst))
 
 def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
@@ -2197,8 +2198,7 @@ def _expandaliases(aliases, tree, expanding, cache):
     alias = _getalias(aliases, tree)
     if alias is not None:
         if alias.error:
-            raise util.Abort(_('failed to parse revset alias "%s": %s') %
-                             (alias.name, alias.error))
+            raise util.Abort(alias.error)
         if alias in expanding:
             raise error.ParseError(_('infinite expansion of revset alias "%s" '
                                      'detected') % alias.name)
@@ -2231,9 +2231,7 @@ def findaliases(ui, tree, showwarning=None):
         # warn about problematic (but not referred) aliases
         for name, alias in sorted(aliases.iteritems()):
             if alias.error and not alias.warned:
-                msg = _('failed to parse revset alias "%s": %s'
-                        ) % (name, alias.error)
-                showwarning(_('warning: %s\n') % (msg))
+                showwarning(_('warning: %s\n') % (alias.error))
                 alias.warned = True
     return tree
 
