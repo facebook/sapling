@@ -3318,6 +3318,11 @@ class fullreposet(spanset):
     def __init__(self, repo):
         super(fullreposet, self).__init__(repo)
 
+    def __contains__(self, rev):
+        hidden = self._hiddenrevs
+        return ((self._start <= rev < self._end)
+                and not (hidden and rev in hidden))
+
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be
         in self. Therefore `self & other = other`.
