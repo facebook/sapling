@@ -3102,10 +3102,7 @@ class fullreposet(_spanset):
             # object.
             other = baseset(other - self._hiddenrevs)
 
-        if self.isascending():
-            other.sort()
-        else:
-            other.sort(reverse)
+        other.sort(reverse=self.isdescending())
         return other
 
 # tell hggettext to extract docstrings from these functions:
