@@ -78,7 +78,8 @@ revision
   </tr>
   <tr>
    <th class="date">date</th>
-   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td></tr>
+   <td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+  </tr>
   <tr>
    <th class="author">parents</th>
    <td class="author"><a href="/rev/cb9a9f314b8b">cb9a9f314b8b</a> </td>
