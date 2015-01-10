@@ -407,6 +407,9 @@ class revbranchcache(object):
             try:
                 if self._rbcnamescount != 0:
                     f = repo.vfs.open(_rbcnames, 'ab')
+                    # The position after open(x, 'a') is implementation defined-
+                    # see issue3543.  SEEK_END was added in 2.5
+                    f.seek(0, 2) #os.SEEK_END
                     if f.tell() == self._rbcsnameslen:
                         f.write('\0')
                     else:
@@ -431,6 +434,9 @@ class revbranchcache(object):
                                    len(self._rbcrevs) // _rbcrecsize)
             try:
                 f = repo.vfs.open(_rbcrevs, 'ab')
+                # The position after open(x, 'a') is implementation defined-
+                # see issue3543.  SEEK_END was added in 2.5
+                f.seek(0, 2) #os.SEEK_END
                 if f.tell() != start:
                     f.seek(start)
                     f.truncate()
