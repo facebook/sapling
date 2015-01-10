@@ -746,7 +746,7 @@ def destination(repo, subset, x):
     if x is not None:
         sources = getset(repo, fullreposet(repo), x)
     else:
-        sources = getall(repo, fullreposet(repo), x)
+        sources = fullreposet(repo)
 
     dests = set()
 
@@ -1347,7 +1347,7 @@ def origin(repo, subset, x):
     if x is not None:
         dests = getset(repo, fullreposet(repo), x)
     else:
-        dests = getall(repo, fullreposet(repo), x)
+        dests = fullreposet(repo)
 
     def _firstsrc(rev):
         src = _getrevsource(repo, rev)
