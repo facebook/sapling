@@ -2365,4 +2365,14 @@ issue3772
      date:        Thu Jan 01 00:00:00 1970 +0000
   
 
+should not draw line down to null due to the magic of fullreposet
+
+  $ hg log -G -r 'all()' | tail -6
+  |
+  o  changeset:   0:f8035bb17114
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+
   $ cd ..

@@ -994,7 +994,7 @@ def getall(repo, subset, x):
     """
     # i18n: "all" is a keyword
     getargs(x, 0, 0, _("all takes no arguments"))
-    return subset
+    return subset & spanset(repo)  # drop "null" if any
 
 def grep(repo, subset, x):
     """``grep(regex)``

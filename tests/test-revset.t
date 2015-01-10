@@ -480,6 +480,9 @@ Test explicit numeric revision
 Test null revision
   $ log 'ancestors(null)'
   -1
+  $ log 'tip:null and all()' | tail -2
+  1
+  0
 
   $ log 'outgoing()'
   8
