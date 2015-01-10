@@ -130,14 +130,14 @@ class statichttprepository(localrepo.localrepository):
         # setup store
         self.store = store.store(requirements, self.path, opener)
         self.spath = self.store.path
-        self.sopener = self.store.opener
-        self.svfs = self.sopener
+        self.svfs = self.store.opener
+        self.sopener = self.svfs
         self.sjoin = self.store.join
         self._filecache = {}
         self.requirements = requirements
 
-        self.manifest = manifest.manifest(self.sopener)
-        self.changelog = changelog.changelog(self.sopener)
+        self.manifest = manifest.manifest(self.svfs)
+        self.changelog = changelog.changelog(self.svfs)
         self._tags = None
         self.nodetagscache = None
         self._branchcaches = {}

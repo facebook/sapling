@@ -782,7 +782,7 @@ def stream(repo, proto):
                       (len(entries), total_bytes))
         yield '%d %d\n' % (len(entries), total_bytes)
 
-        sopener = repo.sopener
+        sopener = repo.svfs
         oldaudit = sopener.mustaudit
         debugflag = repo.ui.debugflag
         sopener.mustaudit = False

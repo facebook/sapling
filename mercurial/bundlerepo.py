@@ -254,7 +254,7 @@ class bundlerepository(localrepo.localrepository):
     def changelog(self):
         # consume the header if it exists
         self.bundle.changelogheader()
-        c = bundlechangelog(self.sopener, self.bundle)
+        c = bundlechangelog(self.svfs, self.bundle)
         self.manstart = self.bundle.tell()
         return c
 
@@ -263,7 +263,7 @@ class bundlerepository(localrepo.localrepository):
         self.bundle.seek(self.manstart)
         # consume the header if it exists
         self.bundle.manifestheader()
-        m = bundlemanifest(self.sopener, self.bundle, self.changelog.rev)
+        m = bundlemanifest(self.svfs, self.bundle, self.changelog.rev)
         self.filestart = self.bundle.tell()
         return m
 
@@ -296,10 +296,10 @@ class bundlerepository(localrepo.localrepository):
 
         if f in self.bundlefilespos:
             self.bundle.seek(self.bundlefilespos[f])
-            return bundlefilelog(self.sopener, f, self.bundle,
+            return bundlefilelog(self.svfs, f, self.bundle,
                                  self.changelog.rev, self)
         else:
-            return filelog.filelog(self.sopener, f)
+            return filelog.filelog(self.svfs, f)
 
     def close(self):
         """Close assigned bundle file immediately."""

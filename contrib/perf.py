@@ -129,8 +129,8 @@ def perftags(ui, repo):
     import mercurial.manifest
     timer, fm = gettimer(ui)
     def t():
-        repo.changelog = mercurial.changelog.changelog(repo.sopener)
-        repo.manifest = mercurial.manifest.manifest(repo.sopener)
+        repo.changelog = mercurial.changelog.changelog(repo.svfs)
+        repo.manifest = mercurial.manifest.manifest(repo.svfs)
         repo._tags = None
         return len(repo.tags())
     timer(t)
@@ -269,7 +269,7 @@ def perfindex(ui, repo):
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo["tip"].node()
     def d():
-        cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
+        cl = mercurial.revlog.revlog(repo.svfs, "00changelog.i")
         cl.rev(n)
     timer(d)
     fm.end()
@@ -312,7 +312,7 @@ def perfnodelookup(ui, repo, rev):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo[rev].node()
-    cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
+    cl = mercurial.revlog.revlog(repo.svfs, "00changelog.i")
     def d():
         cl.rev(n)
         clearcaches(cl)
@@ -537,5 +537,5 @@ def perfloadmarkers(ui, repo):
 
     Result is the number of markers in the repo."""
     timer, fm = gettimer(ui)
-    timer(lambda: len(obsolete.obsstore(repo.sopener)))
+    timer(lambda: len(obsolete.obsstore(repo.svfs)))
     fm.end()

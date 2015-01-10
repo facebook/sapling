@@ -133,7 +133,7 @@ def _readroots(repo, phasedefaults=None):
                 if inst.errno != errno.ENOENT:
                     raise
         if f is None:
-            f = repo.sopener('phaseroots')
+            f = repo.svfs('phaseroots')
         try:
             for line in f:
                 phase, nh = line.split()
@@ -156,7 +156,7 @@ class phasecache(object):
             self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
             self._phaserevs = None
             self.filterunknown(repo)
-            self.opener = repo.sopener
+            self.opener = repo.svfs
 
     def copy(self):
         # Shallow copy meant to ensure isolation in

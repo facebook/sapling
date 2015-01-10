@@ -591,7 +591,7 @@ def reposetup(ui, repo):
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]
-            return kwfilelog(self.sopener, kwt, f)
+            return kwfilelog(self.svfs, kwt, f)
 
         def wread(self, filename):
             data = super(kwrepo, self).wread(filename)

@@ -178,7 +178,7 @@ class unionrepository(localrepo.localrepository):
 
     @localrepo.unfilteredpropertycache
     def changelog(self):
-        return unionchangelog(self.sopener, self.repo2.sopener)
+        return unionchangelog(self.svfs, self.repo2.svfs)
 
     def _clrev(self, rev2):
         """map from repo2 changelog rev to temporary rev in self.changelog"""
@@ -187,14 +187,14 @@ class unionrepository(localrepo.localrepository):
 
     @localrepo.unfilteredpropertycache
     def manifest(self):
-        return unionmanifest(self.sopener, self.repo2.sopener,
+        return unionmanifest(self.svfs, self.repo2.svfs,
                              self._clrev)
 
     def url(self):
         return self._url
 
     def file(self, f):
-        return unionfilelog(self.sopener, f, self.repo2.sopener,
+        return unionfilelog(self.svfs, f, self.repo2.svfs,
                             self._clrev, self)
 
     def close(self):
