@@ -159,7 +159,8 @@ tip - two revisions
   <p></p>
   <div class="atom-logo">
   <a href="/atom-log/01de2d66a28d/a" title="subscribe to atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed"></a>
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
   </div>
   </div>
   
@@ -268,7 +269,8 @@ second version - two revisions
   <p></p>
   <div class="atom-logo">
   <a href="/atom-log/01de2d66a28d/a" title="subscribe to atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed"></a>
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
   </div>
   </div>
   
@@ -377,7 +379,8 @@ first deleted - one revision
   <p></p>
   <div class="atom-logo">
   <a href="/atom-log/5ed941583260/a" title="subscribe to atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed"></a>
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
   </div>
   </div>
   
@@ -481,7 +484,8 @@ first version - one revision
   <p></p>
   <div class="atom-logo">
   <a href="/atom-log/5ed941583260/a" title="subscribe to atom feed">
-  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed"></a>
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
+  </a>
   </div>
   </div>
   
