@@ -1780,7 +1780,9 @@ Test --follow-first
   (group
     (func
       ('symbol', '_firstancestors')
-      ('symbol', '6')))
+      (func
+        ('symbol', 'rev')
+        ('symbol', '6'))))
 
 Cannot compare with log --follow-first FILE as it never worked
 
@@ -2187,7 +2189,9 @@ Test --follow and forward --rev
   (group
     (func
       ('symbol', 'descendants')
-      ('symbol', '6')))
+      (func
+        ('symbol', 'rev')
+        ('symbol', '6'))))
   --- log.nodes	* (glob)
   +++ glog.nodes	* (glob)
   @@ -1,3 +1,3 @@
@@ -2203,7 +2207,9 @@ Test --follow-first and forward --rev
   (group
     (func
       ('symbol', '_firstdescendants')
-      ('symbol', '6')))
+      (func
+        ('symbol', 'rev')
+        ('symbol', '6'))))
   --- log.nodes	* (glob)
   +++ glog.nodes	* (glob)
   @@ -1,3 +1,3 @@
@@ -2219,7 +2225,9 @@ Test --follow and backward --rev
   (group
     (func
       ('symbol', 'ancestors')
-      ('symbol', '6')))
+      (func
+        ('symbol', 'rev')
+        ('symbol', '6'))))
 
 Test --follow-first and backward --rev
 
@@ -2228,7 +2236,9 @@ Test --follow-first and backward --rev
   (group
     (func
       ('symbol', '_firstancestors')
-      ('symbol', '6')))
+      (func
+        ('symbol', 'rev')
+        ('symbol', '6'))))
 
 Test subdir
 

@@ -1781,7 +1781,8 @@ def _makelogrevset(repo, pats, opts, revs):
                 # manifest entry, so use match.files(), not pats.
                 opts[fpats[followfirst]] = list(match.files())
             else:
-                opts[fnopats[followdescendants][followfirst]] = str(startrev)
+                op = fnopats[followdescendants][followfirst]
+                opts[op] = 'rev(%d)' % startrev
         else:
             opts['_patslog'] = list(pats)
 
