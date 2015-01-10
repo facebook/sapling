@@ -93,7 +93,7 @@ annotateline = '
   <tr class="parity{parity}">
     <td class="linenr">
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
-	 title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
+         title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
     <td class="lineno">
       <a href="#{lineid}" id="{lineid}">{linenumber}</a>
