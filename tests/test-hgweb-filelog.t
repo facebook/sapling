@@ -643,7 +643,7 @@ should show base link, use spartan because it shows it
     <th class="firstline"><a href="/rev/b7682196df1c?style=spartan">change c</a></th>
    </tr>
    <tr>
-    <th class="revision">revision 1:</td>
+    <th class="revision">revision 1:</th>
     <td class="node">
      <a href="/file/b7682196df1c/c?style=spartan">b7682196df1c</a>
      <a href="/diff/b7682196df1c/c?style=spartan">(diff)</a>
@@ -668,7 +668,7 @@ should show base link, use spartan because it shows it
     <th class="firstline"><a href="/rev/1a6696706df2?style=spartan">mv b</a></th>
    </tr>
    <tr>
-    <th class="revision">revision 0:</td>
+    <th class="revision">revision 0:</th>
     <td class="node">
      <a href="/file/1a6696706df2/c?style=spartan">1a6696706df2</a>
      <a href="/diff/1a6696706df2/c?style=spartan">(diff)</a>
