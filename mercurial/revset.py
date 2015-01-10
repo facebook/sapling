@@ -2203,6 +2203,8 @@ def _parsealiasdecl(decl):
     ('foo($1, $2', None, None, 'at 10: unexpected token: end')
     >>> _parsealiasdecl('foo("string')
     ('foo("string', None, None, 'at 5: unterminated string')
+    >>> _parsealiasdecl('foo($1, $2, $1)')
+    ('foo', None, None, 'argument names collide with each other')
     """
     p = parser.parser(_tokenizealias, elements)
     try:
@@ -2227,6 +2229,9 @@ def _parsealiasdecl(decl):
                 if not isvalidsymbol(arg):
                     return (decl, None, None, _("invalid argument list"))
                 args.append(getsymbol(arg))
+            if len(args) != len(set(args)):
+                return (name, None, None,
+                        _("argument names collide with each other"))
             return (name, ('func', ('symbol', name)), args, None)
 
         return (decl, None, None, _("invalid format"))
