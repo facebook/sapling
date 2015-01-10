@@ -325,7 +325,7 @@ class localrepository(object):
             self.sopener.options['maxchainlen'] = maxchainlen
 
     def _writerequirements(self):
-        reqfile = self.opener("requires", "w")
+        reqfile = self.vfs("requires", "w")
         for r in sorted(self.requirements):
             reqfile.write("%s\n" % r)
         reqfile.close()
@@ -449,7 +449,7 @@ class localrepository(object):
                                    " working parent %s!\n") % short(node))
                 return nullid
 
-        return dirstate.dirstate(self.opener, self.ui, self.root, validate)
+        return dirstate.dirstate(self.vfs, self.ui, self.root, validate)
 
     def __getitem__(self, changeid):
         if changeid is None:
@@ -531,9 +531,9 @@ class localrepository(object):
         prevtags = ''
         if local:
             try:
-                fp = self.opener('localtags', 'r+')
+                fp = self.vfs('localtags', 'r+')
             except IOError:
-                fp = self.opener('localtags', 'a')
+                fp = self.vfs('localtags', 'a')
             else:
                 prevtags = fp.read()
 
@@ -909,7 +909,7 @@ class localrepository(object):
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
-        vfsmap = {'plain': self.opener} # root of .hg/
+        vfsmap = {'plain': self.vfs} # root of .hg/
         tr = transaction.transaction(rp, self.sopener, vfsmap,
                                      "journal",
                                      aftertrans(renames),
@@ -933,14 +933,14 @@ class localrepository(object):
         return [(vfs, undoname(x)) for vfs, x in self._journalfiles()]
 
     def _writejournal(self, desc):
-        self.opener.write("journal.dirstate",
-                          self.opener.tryread("dirstate"))
-        self.opener.write("journal.branch",
+        self.vfs.write("journal.dirstate",
+                          self.vfs.tryread("dirstate"))
+        self.vfs.write("journal.branch",
                           encoding.fromlocal(self.dirstate.branch()))
-        self.opener.write("journal.desc",
+        self.vfs.write("journal.desc",
                           "%d\n%s\n" % (len(self), desc))
-        self.opener.write("journal.bookmarks",
-                          self.opener.tryread("bookmarks"))
+        self.vfs.write("journal.bookmarks",
+                          self.vfs.tryread("bookmarks"))
         self.sopener.write("journal.phaseroots",
                            self.sopener.tryread("phaseroots"))
 
@@ -950,7 +950,7 @@ class localrepository(object):
             if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
                 vfsmap = {'': self.sopener,
-                          'plain': self.opener,}
+                          'plain': self.vfs,}
                 transaction.rollback(self.sopener, vfsmap, "journal",
                                      self.ui.warn)
                 self.invalidate()
@@ -978,7 +978,7 @@ class localrepository(object):
     def _rollback(self, dryrun, force):
         ui = self.ui
         try:
-            args = self.opener.read('undo.desc').splitlines()
+            args = self.vfs.read('undo.desc').splitlines()
             (oldlen, desc, detail) = (int(args[0]), args[1], None)
             if len(args) >= 3:
                 detail = args[2]
@@ -1007,7 +1007,7 @@ class localrepository(object):
 
         parents = self.dirstate.parents()
         self.destroying()
-        vfsmap = {'plain': self.opener}
+        vfsmap = {'plain': self.vfs}
         transaction.rollback(self.sopener, vfsmap, 'undo', ui.warn)
         if self.vfs.exists('undo.bookmarks'):
             self.vfs.rename('undo.bookmarks', 'bookmarks')
@@ -1020,7 +1020,7 @@ class localrepository(object):
         if parentgone:
             self.vfs.rename('undo.dirstate', 'dirstate')
             try:
-                branch = self.opener.read('undo.branch')
+                branch = self.vfs.read('undo.branch')
                 self.dirstate.setbranch(encoding.tolocal(branch))
             except IOError:
                 ui.warn(_('named branch could not be reset: '
@@ -1822,7 +1822,7 @@ class localrepository(object):
         return "%s %s %s %s %s" % (one, two, three, four, five)
 
     def savecommitmessage(self, text):
-        fp = self.opener('last-message.txt', 'wb')
+        fp = self.vfs('last-message.txt', 'wb')
         try:
             fp.write(text)
         finally:
