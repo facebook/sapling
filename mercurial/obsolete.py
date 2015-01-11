@@ -320,9 +320,8 @@ def _fm1readmarkers(data, off=0):
                 parents = _unpack(_fm1nodesha1 * numpar, data[o2:o3])
 
         # read metadata
-        metaformat = '>' + (_fm1metapair * nummeta)
         off = o3 + _fm1metapairsize * nummeta
-        metapairsize = _unpack(metaformat, data[o3:off])
+        metapairsize = _unpack('>' + (_fm1metapair * nummeta), data[o3:off])
         metadata = []
         for idx in xrange(0, len(metapairsize), 2):
             o1 = off + metapairsize[idx]
