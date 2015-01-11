@@ -286,42 +286,54 @@ _fm1metapair = 'BB'
 _fm1metapairsize = _calcsize('BB')
 
 def _fm1readmarkers(data, off=0):
+    # make some global constants local for performance
+    noneflag = _fm1parentnone
+    sha2flag = usingsha256
+    sha1size = _fm1nodesha1size
+    sha2size = _fm1nodesha256size
+    sha1fmt = _fm1nodesha1
+    sha2fmt = _fm1nodesha256
+    metasize = _fm1metapairsize
+    metafmt = _fm1metapair
+    fsize = _fm1fsize
+    unpack = _unpack
+
     # Loop on markers
     stop = len(data) - _fm1fsize
     ufixed = util.unpacker(_fm1fixed)
     while off <= stop:
         # read fixed part
-        o1 = off + _fm1fsize
+        o1 = off + fsize
         t, secs, tz, flags, numsuc, numpar, nummeta, prec = ufixed(data[off:o1])
 
-        if flags & usingsha256:
+        if flags & sha2flag:
             # read 0 or more successors
-            o2 = o1 + _fm1nodesha256size * numsuc
-            sucs = _unpack(_fm1nodesha256 * numsuc, data[o1:o2])
+            o2 = o1 + sha2size * numsuc
+            sucs = unpack(sha2fmt * numsuc, data[o1:o2])
 
             # read parents
-            if numpar == _fm1parentnone:
+            if numpar == noneflag:
                 o3 = o2
                 parents = None
             else:
-                o3 = o2 + _fm1nodesha256size * numpar
-                parents = _unpack(_fm1nodesha256 * numpar, data[o2:o3])
+                o3 = o2 + sha2size * numpar
+                parents = unpack(sha2fmt * numpar, data[o2:o3])
         else:
             # read 0 or more successors
-            o2 = o1 + _fm1nodesha1size * numsuc
-            sucs = _unpack(_fm1nodesha1 * numsuc, data[o1:o2])
+            o2 = o1 + sha1size * numsuc
+            sucs = unpack(sha1fmt * numsuc, data[o1:o2])
 
             # read parents
-            if numpar == _fm1parentnone:
+            if numpar == noneflag:
                 o3 = o2
                 parents = None
             else:
-                o3 = o2 + _fm1nodesha1size * numpar
-                parents = _unpack(_fm1nodesha1 * numpar, data[o2:o3])
+                o3 = o2 + sha1size * numpar
+                parents = unpack(sha1fmt * numpar, data[o2:o3])
 
         # read metadata
-        off = o3 + _fm1metapairsize * nummeta
-        metapairsize = _unpack('>' + (_fm1metapair * nummeta), data[o3:off])
+        off = o3 + metasize * nummeta
+        metapairsize = unpack('>' + (metafmt * nummeta), data[o3:off])
         metadata = []
         for idx in xrange(0, len(metapairsize), 2):
             o1 = off + metapairsize[idx]
