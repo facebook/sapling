@@ -294,8 +294,6 @@ def _fm1readmarkers(data, off=0):
         off += _fm1fsize
         ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
 
-        # build the date tuple (upgrade tz minutes to seconds)
-        date = (seconds, tz * 60)
         _fm1node = _fm1nodesha1
         fnodesize = _fm1nodesha1size
         if flags & usingsha256:
@@ -328,7 +326,7 @@ def _fm1readmarkers(data, off=0):
             off += sk + sv
         metadata = tuple(metadata)
 
-        yield (prec, sucs, flags, metadata, date, parents)
+        yield (prec, sucs, flags, metadata, (seconds, tz * 60), parents)
 
 def _fm1encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
