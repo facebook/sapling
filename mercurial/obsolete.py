@@ -293,6 +293,7 @@ def _fm1readmarkers(data, off=0):
         fixeddata = _unpack(_fm1fixed, data[off:off + _fm1fsize])
         off += _fm1fsize
         ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
+
         # build the date tuple (upgrade tz minutes to seconds)
         date = (seconds, tz * 60)
         _fm1node = _fm1nodesha1
@@ -300,12 +301,14 @@ def _fm1readmarkers(data, off=0):
         if flags & usingsha256:
             _fm1node = _fm1nodesha256
             fnodesize = _fm1nodesha256size
+
         # read replacement
         sucs = ()
         if numsuc:
             s = (fnodesize * numsuc)
             sucs = _unpack(_fm1node * numsuc, data[off:off + s])
             off += s
+
         # read parents
         if numpar == _fm1parentnone:
             parents = None
@@ -315,6 +318,7 @@ def _fm1readmarkers(data, off=0):
             s = (fnodesize * numpar)
             parents = _unpack(_fm1node * numpar, data[off:off + s])
             off += s
+
         # read metadata
         metaformat = '>' + (_fm1metapair * nummeta)
         s = _fm1metapairsize * nummeta
