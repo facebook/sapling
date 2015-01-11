@@ -226,7 +226,9 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
         _update(r, uprev)
 
     if bookmarks:
-        r.vfs('bookmarks.shared', 'w').close()
+        fp = r.vfs('shared', 'w')
+        fp.write('bookmarks\n')
+        fp.close()
 
 def copystore(ui, srcrepo, destpath):
     '''copy files from store of srcrepo in destpath

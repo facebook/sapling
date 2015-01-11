@@ -79,12 +79,12 @@ def extsetup(ui):
 def _hassharedbookmarks(repo):
     """Returns whether this repo has shared bookmarks"""
     try:
-        repo.vfs.read('bookmarks.shared')
-        return True
+        shared = repo.vfs.read('shared').splitlines()
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
         return False
+    return 'bookmarks' in shared
 
 def _getsrcrepo(repo):
     """
