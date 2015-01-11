@@ -19,7 +19,7 @@ import error, osutil, encoding
 import errno, shutil, sys, tempfile, traceback
 import re as remod
 import os, time, datetime, calendar, textwrap, signal, collections
-import imp, socket, urllib
+import imp, socket, urllib, struct
 import gc
 
 if os.name == 'nt':
@@ -228,6 +228,15 @@ except NameError:
 
 import subprocess
 closefds = os.name == 'posix'
+
+def unpacker(fmt):
+    """create a struct unpacker for the specified format"""
+    try:
+        # 2.5+
+        return struct.Struct(fmt).unpack
+    except NameError:
+        # 2.4
+        return lambda buf: struct.unpack(fmt)
 
 def popen2(cmd, env=None, newlines=False):
     # Setting bufsize to -1 lets the system decide the buffer size.
