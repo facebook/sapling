@@ -324,9 +324,8 @@ def _fm1readmarkers(data, off=0):
             sv = metapairsize[idx + 1]
             metadata.append((data[off:off + sk], data[off + sk:off + sk + sv]))
             off += sk + sv
-        metadata = tuple(metadata)
 
-        yield (prec, sucs, flags, metadata, (seconds, tz * 60), parents)
+        yield (prec, sucs, flags, tuple(metadata), (seconds, tz * 60), parents)
 
 def _fm1encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
