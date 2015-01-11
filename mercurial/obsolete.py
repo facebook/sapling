@@ -290,9 +290,8 @@ def _fm1readmarkers(data, off=0):
     l = len(data)
     while off + _fm1fsize <= l:
         # read fixed part
-        cur = data[off:off + _fm1fsize]
+        fixeddata = _unpack(_fm1fixed, data[off:off + _fm1fsize])
         off += _fm1fsize
-        fixeddata = _unpack(_fm1fixed, cur)
         ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
         # extract the number of parents information
         if numpar == _fm1parentnone:
@@ -308,8 +307,7 @@ def _fm1readmarkers(data, off=0):
         sucs = ()
         if numsuc:
             s = (fnodesize * numsuc)
-            cur = data[off:off + s]
-            sucs = _unpack(_fm1node * numsuc, cur)
+            sucs = _unpack(_fm1node * numsuc, data[off:off + s])
             off += s
         # read parents
         if numpar is None:
@@ -318,8 +316,7 @@ def _fm1readmarkers(data, off=0):
             parents = ()
         elif numpar:  # neither None nor zero
             s = (fnodesize * numpar)
-            cur = data[off:off + s]
-            parents = _unpack(_fm1node * numpar, cur)
+            parents = _unpack(_fm1node * numpar, data[off:off + s])
             off += s
         # read metadata
         metaformat = '>' + (_fm1metapair * nummeta)
@@ -330,11 +327,7 @@ def _fm1readmarkers(data, off=0):
         for idx in xrange(0, len(metapairsize), 2):
             sk = metapairsize[idx]
             sv = metapairsize[idx + 1]
-            key = data[off:off + sk]
-            value = data[off + sk:off + sk + sv]
-            assert len(key) == sk
-            assert len(value) == sv
-            metadata.append((key, value))
+            metadata.append((data[off:off + sk], data[off + sk:off + sk + sv]))
             off += sk + sv
         metadata = tuple(metadata)
 
