@@ -302,12 +302,10 @@ def _fm1readmarkers(data, off=0):
             _fm1node = _fm1nodesha256
             fnodesize = _fm1nodesha256size
 
-        # read replacement
-        sucs = ()
-        if numsuc:
-            s = (fnodesize * numsuc)
-            sucs = _unpack(_fm1node * numsuc, data[off:off + s])
-            off += s
+        # read 0 or more successors
+        s = (fnodesize * numsuc)
+        sucs = _unpack(_fm1node * numsuc, data[off:off + s])
+        off += s
 
         # read parents
         if numpar == _fm1parentnone:
