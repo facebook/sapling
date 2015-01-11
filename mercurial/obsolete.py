@@ -291,8 +291,8 @@ def _fm1readmarkers(data, off=0):
     ufixed = util.unpacker(_fm1fixed)
     while off + _fm1fsize <= l:
         # read fixed part
-        fixeddata = ufixed(data[off:off + _fm1fsize])
-        off += _fm1fsize
+        o1 = off + _fm1fsize
+        fixeddata = ufixed(data[off:o1])
         ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
 
         _fm1node = _fm1nodesha1
@@ -302,29 +302,27 @@ def _fm1readmarkers(data, off=0):
             fnodesize = _fm1nodesha256size
 
         # read 0 or more successors
-        s = (fnodesize * numsuc)
-        sucs = _unpack(_fm1node * numsuc, data[off:off + s])
-        off += s
+        o2 = o1 + fnodesize * numsuc
+        sucs = _unpack(_fm1node * numsuc, data[o1:o2])
 
         # read parents
         if numpar == _fm1parentnone:
+            o3 = o2
             parents = None
         else:
-            s = (fnodesize * numpar)
-            parents = _unpack(_fm1node * numpar, data[off:off + s])
-            off += s
+            o3 = o2 + fnodesize * numpar
+            parents = _unpack(_fm1node * numpar, data[o2:o3])
 
         # read metadata
         metaformat = '>' + (_fm1metapair * nummeta)
-        s = _fm1metapairsize * nummeta
-        metapairsize = _unpack(metaformat, data[off:off + s])
-        off += s
+        off = o3 + _fm1metapairsize * nummeta
+        metapairsize = _unpack(metaformat, data[o3:off])
         metadata = []
         for idx in xrange(0, len(metapairsize), 2):
-            sk = metapairsize[idx]
-            sv = metapairsize[idx + 1]
-            metadata.append((data[off:off + sk], data[off + sk:off + sk + sv]))
-            off += sk + sv
+            o1 = off + metapairsize[idx]
+            o2 = o1 + metapairsize[idx + 1]
+            metadata.append((data[off:o1], data[o1:o2]))
+            off = o2
 
         yield (prec, sucs, flags, tuple(metadata), (seconds, tz * 60), parents)
 
