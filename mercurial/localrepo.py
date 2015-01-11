@@ -820,7 +820,7 @@ class localrepository(object):
         return self.dirstate.pathto(f, cwd)
 
     def wfile(self, f, mode='r'):
-        return self.wopener(f, mode)
+        return self.wvfs(f, mode)
 
     def _link(self, f):
         return self.wvfs.islink(f)
@@ -873,15 +873,15 @@ class localrepository(object):
         if self._link(filename):
             data = self.wvfs.readlink(filename)
         else:
-            data = self.wopener.read(filename)
+            data = self.wvfs.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
 
     def wwrite(self, filename, data, flags):
         data = self._filter(self._decodefilterpats, filename, data)
         if 'l' in flags:
-            self.wopener.symlink(data, filename)
+            self.wvfs.symlink(data, filename)
         else:
-            self.wopener.write(filename, data)
+            self.wvfs.write(filename, data)
             if 'x' in flags:
                 self.wvfs.setflags(filename, False, True)
 
