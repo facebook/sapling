@@ -288,9 +288,10 @@ _fm1metapairsize = _calcsize('BB')
 def _fm1readmarkers(data, off=0):
     # Loop on markers
     l = len(data)
+    ufixed = util.unpacker(_fm1fixed)
     while off + _fm1fsize <= l:
         # read fixed part
-        fixeddata = _unpack(_fm1fixed, data[off:off + _fm1fsize])
+        fixeddata = ufixed(data[off:off + _fm1fsize])
         off += _fm1fsize
         ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
 
