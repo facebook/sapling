@@ -14,6 +14,10 @@ def gettimer(ui, opts=None):
 
     This functions exist to gather the creation of formatter in a single
     place instead of duplicating it in all performance command."""
+
+    # enforce an idle period before execution to counteract power management
+    time.sleep(ui.configint("perf", "presleep", 1))
+
     if opts is None:
         opts = {}
     # redirect all to stderr
