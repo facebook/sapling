@@ -294,23 +294,30 @@ def _fm1readmarkers(data, off=0):
         o1 = off + _fm1fsize
         t, secs, tz, flags, numsuc, numpar, nummeta, prec = ufixed(data[off:o1])
 
-        _fm1node = _fm1nodesha1
-        fnodesize = _fm1nodesha1size
         if flags & usingsha256:
-            _fm1node = _fm1nodesha256
-            fnodesize = _fm1nodesha256size
+            # read 0 or more successors
+            o2 = o1 + _fm1nodesha256size * numsuc
+            sucs = _unpack(_fm1nodesha256 * numsuc, data[o1:o2])
 
-        # read 0 or more successors
-        o2 = o1 + fnodesize * numsuc
-        sucs = _unpack(_fm1node * numsuc, data[o1:o2])
-
-        # read parents
-        if numpar == _fm1parentnone:
-            o3 = o2
-            parents = None
+            # read parents
+            if numpar == _fm1parentnone:
+                o3 = o2
+                parents = None
+            else:
+                o3 = o2 + _fm1nodesha256size * numpar
+                parents = _unpack(_fm1nodesha256 * numpar, data[o2:o3])
         else:
-            o3 = o2 + fnodesize * numpar
-            parents = _unpack(_fm1node * numpar, data[o2:o3])
+            # read 0 or more successors
+            o2 = o1 + _fm1nodesha1size * numsuc
+            sucs = _unpack(_fm1nodesha1 * numsuc, data[o1:o2])
+
+            # read parents
+            if numpar == _fm1parentnone:
+                o3 = o2
+                parents = None
+            else:
+                o3 = o2 + _fm1nodesha1size * numpar
+                parents = _unpack(_fm1nodesha1 * numpar, data[o2:o3])
 
         # read metadata
         metaformat = '>' + (_fm1metapair * nummeta)
