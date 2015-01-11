@@ -292,8 +292,7 @@ def _fm1readmarkers(data, off=0):
     while off <= stop:
         # read fixed part
         o1 = off + _fm1fsize
-        fixeddata = ufixed(data[off:o1])
-        ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
+        t, secs, tz, flags, numsuc, numpar, nummeta, prec = ufixed(data[off:o1])
 
         _fm1node = _fm1nodesha1
         fnodesize = _fm1nodesha1size
@@ -324,7 +323,7 @@ def _fm1readmarkers(data, off=0):
             metadata.append((data[off:o1], data[o1:o2]))
             off = o2
 
-        yield (prec, sucs, flags, tuple(metadata), (seconds, tz * 60), parents)
+        yield (prec, sucs, flags, tuple(metadata), (secs, tz * 60), parents)
 
 def _fm1encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
