@@ -301,7 +301,7 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
     return (os.path.isfile(repo.wjoin(f))
-        and repo.wopener.audit.check(f)
+        and repo.wvfs.audit.check(f)
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f2].cmp(wctx[f]))
 
@@ -651,7 +651,7 @@ def batchremove(repo, actions):
     verbose = repo.ui.verbose
     unlink = util.unlinkpath
     wjoin = repo.wjoin
-    audit = repo.wopener.audit
+    audit = repo.wvfs.audit
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
@@ -727,7 +727,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if f1 != f and move:
             moves.append(f1)
 
-    audit = repo.wopener.audit
+    audit = repo.wvfs.audit
     _updating = _('updating')
     _files = _('files')
     progress = repo.ui.progress

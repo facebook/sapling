@@ -282,7 +282,7 @@ class kwtemplater(object):
                 data, found = _shrinktext(data, re_kw.subn)
             if found:
                 self.ui.note(msg % f)
-                fp = self.repo.wopener(f, "wb", atomictemp=True)
+                fp = self.repo.wvfs(f, "wb", atomictemp=True)
                 fp.write(data)
                 fp.close()
                 if kwcmd:
@@ -440,7 +440,7 @@ def demo(ui, repo, *args, **opts):
     demoitems('keywordset', ui.configitems('keywordset'))
     demoitems('keywordmaps', kwmaps.iteritems())
     keywords = '$' + '$\n$'.join(sorted(kwmaps.keys())) + '$\n'
-    repo.wopener.write(fn, keywords)
+    repo.wvfs.write(fn, keywords)
     repo[None].add([fn])
     ui.note(_('\nkeywords written to %s:\n') % fn)
     ui.note(keywords)

@@ -2306,7 +2306,7 @@ def qinit(ui, repo, create):
     q.savedirty()
     if r:
         if not os.path.exists(r.wjoin('.hgignore')):
-            fp = r.wopener('.hgignore', 'w')
+            fp = r.wvfs('.hgignore', 'w')
             fp.write('^\\.hg\n')
             fp.write('^\\.mq\n')
             fp.write('syntax: glob\n')
@@ -2314,7 +2314,7 @@ def qinit(ui, repo, create):
             fp.write('guards\n')
             fp.close()
         if not os.path.exists(r.wjoin('series')):
-            r.wopener('series', 'w').close()
+            r.wvfs('series', 'w').close()
         r[None].add(['.hgignore', 'series'])
         commands.add(ui, r)
     return 0
