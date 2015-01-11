@@ -308,25 +308,39 @@ def _fm1readmarkers(data, off=0):
 
         if flags & sha2flag:
             # read 0 or more successors
-            o2 = o1 + sha2size * numsuc
-            sucs = unpack(sha2fmt * numsuc, data[o1:o2])
+            if numsuc == 1:
+                o2 = o1 + sha2size
+                sucs = (data[o1:o2],)
+            else:
+                o2 = o1 + sha2size * numsuc
+                sucs = unpack(sha2fmt * numsuc, data[o1:o2])
 
             # read parents
             if numpar == noneflag:
                 o3 = o2
                 parents = None
+            elif numpar == 1:
+                o3 = o2 + sha2size
+                parents = (data[o2:o3],)
             else:
                 o3 = o2 + sha2size * numpar
                 parents = unpack(sha2fmt * numpar, data[o2:o3])
         else:
             # read 0 or more successors
-            o2 = o1 + sha1size * numsuc
-            sucs = unpack(sha1fmt * numsuc, data[o1:o2])
+            if numsuc == 1:
+                o2 = o1 + sha1size
+                sucs = (data[o1:o2],)
+            else:
+                o2 = o1 + sha1size * numsuc
+                sucs = unpack(sha1fmt * numsuc, data[o1:o2])
 
             # read parents
             if numpar == noneflag:
                 o3 = o2
                 parents = None
+            elif numpar == 1:
+                o3 = o2 + sha1size
+                parents = (data[o2:o3],)
             else:
                 o3 = o2 + sha1size * numpar
                 parents = unpack(sha1fmt * numpar, data[o2:o3])
