@@ -310,9 +310,7 @@ def _fm1readmarkers(data, off=0):
         # read parents
         if numpar == _fm1parentnone:
             parents = None
-        elif numpar == 0:
-            parents = ()
-        elif numpar:  # neither None nor zero
+        else:
             s = (fnodesize * numpar)
             parents = _unpack(_fm1node * numpar, data[off:off + s])
             off += s
