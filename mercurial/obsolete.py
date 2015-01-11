@@ -293,9 +293,6 @@ def _fm1readmarkers(data, off=0):
         fixeddata = _unpack(_fm1fixed, data[off:off + _fm1fsize])
         off += _fm1fsize
         ttsize, seconds, tz, flags, numsuc, numpar, nummeta, prec = fixeddata
-        # extract the number of parents information
-        if numpar == _fm1parentnone:
-            numpar = None
         # build the date tuple (upgrade tz minutes to seconds)
         date = (seconds, tz * 60)
         _fm1node = _fm1nodesha1
@@ -310,7 +307,7 @@ def _fm1readmarkers(data, off=0):
             sucs = _unpack(_fm1node * numsuc, data[off:off + s])
             off += s
         # read parents
-        if numpar is None:
+        if numpar == _fm1parentnone:
             parents = None
         elif numpar == 0:
             parents = ()
