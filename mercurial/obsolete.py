@@ -307,6 +307,8 @@ def _fm1readmarkers(data, off=0):
         t, secs, tz, flags, numsuc, numpar, nummeta, prec = ufixed(data[off:o1])
 
         if flags & sha2flag:
+            # FIXME: prec was read as a SHA1, needs to be amended
+
             # read 0 or more successors
             if numsuc == 1:
                 o2 = o1 + sha2size
