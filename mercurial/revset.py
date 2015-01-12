@@ -810,7 +810,7 @@ def filelog(repo, subset, x):
                 # changerev pointed in linkrev is filtered
                 # record it for post processing.
                 delayed.append((fr, rev))
-                continue
+                continue
             for p in fl.parentrevs(fr):
                 if 0 <= p and p not in lowestchild:
                     lowestchild[p] = fr
