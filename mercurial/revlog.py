@@ -1179,7 +1179,7 @@ class revlog(object):
         ifh = self.opener(self.indexfile, "a+")
         try:
             return self._addrevision(node, text, transaction, link, p1, p2,
-                                     cachedelta, ifh, dfh)
+                                     REVIDX_DEFAULT_FLAGS, cachedelta, ifh, dfh)
         finally:
             if dfh:
                 dfh.close()
@@ -1214,7 +1214,7 @@ class revlog(object):
             return ('u', text)
         return ("", bin)
 
-    def _addrevision(self, node, text, transaction, link, p1, p2,
+    def _addrevision(self, node, text, transaction, link, p1, p2, flags,
                      cachedelta, ifh, dfh):
         """internal function to add revisions to the log
 
@@ -1268,7 +1268,6 @@ class revlog(object):
         base = chainbase = curr
         chainlen = None
         offset = self.end(prev)
-        flags = 0
         d = None
         if self._basecache is None:
             self._basecache = (prev, self.chainbase(prev))
@@ -1399,7 +1398,8 @@ class revlog(object):
 
                 baserev = self.rev(deltabase)
                 chain = self._addrevision(node, None, transaction, link,
-                                          p1, p2, (baserev, delta), ifh, dfh)
+                                          p1, p2, REVIDX_DEFAULT_FLAGS,
+                                          (baserev, delta), ifh, dfh)
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
                     # reopen the index
