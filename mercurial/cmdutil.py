@@ -2057,7 +2057,7 @@ def forget(ui, repo, match, prefix, explicitonly):
 
     rejected = wctx.forget(forget, prefix)
     bad.extend(f for f in rejected if f in match.files())
-    forgot.extend(forget)
+    forgot.extend(f for f in forget if f not in rejected)
     return bad, forgot
 
 def remove(ui, repo, m, prefix, after, force, subrepos):
