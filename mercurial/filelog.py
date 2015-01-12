@@ -85,7 +85,7 @@ class filelog(revlog.revlog):
             return False
 
         # censored files compare against the empty file
-        if self._iscensored(node):
+        if self._iscensored(self.rev(node)):
             return text != ''
 
         # renaming a file produces a different hash, even if the data
@@ -107,10 +107,6 @@ class filelog(revlog.revlog):
     def _file(self, f):
         return filelog(self.opener, f)
 
-    def _iscensored(self, revornode):
+    def _iscensored(self, rev):
         """Check if a file revision is censored."""
-        try:
-            self.revision(revornode)
-            return False
-        except error.CensoredNodeError:
-            return True
+        return self.flags(rev) & revlog.REVIDX_ISCENSORED
