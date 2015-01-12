@@ -1235,8 +1235,12 @@ class revlog(object):
             btext[0] = mdiff.patch(basetext, cachedelta[1])
             try:
                 self.checkhash(btext[0], p1, p2, node)
+                if flags & REVIDX_ISCENSORED:
+                    raise RevlogError(_('node %s is not censored') % node)
             except CensoredNodeError:
-                pass # always import a censor tombstone.
+                # must pass the censored index flag to add censored revisions
+                if not flags & REVIDX_ISCENSORED:
+                    raise
             return btext[0]
 
         def builddelta(rev):
