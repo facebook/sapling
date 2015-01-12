@@ -34,8 +34,7 @@ def uisetup(ui):
     entry = extensions.wrapfunction(scmutil, 'addremove',
                                     overrides.scmutiladdremove)
     extensions.wrapfunction(cmdutil, 'remove', overrides.cmdutilremove)
-    entry = extensions.wrapcommand(commands.table, 'forget',
-                                   overrides.overrideforget)
+    extensions.wrapfunction(cmdutil, 'forget', overrides.cmdutilforget)
 
     # Subrepos call status function
     entry = extensions.wrapcommand(commands.table, 'status',

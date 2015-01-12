@@ -972,12 +972,10 @@ def overridebailifchanged(orig, repo):
     if s.modified or s.added or s.removed or s.deleted:
         raise util.Abort(_('uncommitted changes'))
 
-def overrideforget(orig, ui, repo, *pats, **opts):
-    installnormalfilesmatchfn(repo[None].manifest())
-    result = orig(ui, repo, *pats, **opts)
-    restorematchfn()
-    m = composelargefilematcher(scmutil.match(repo[None], pats, opts),
-                                repo[None].manifest())
+def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
+    normalmatcher = composenormalfilematcher(match, repo[None].manifest())
+    bad, forgot = orig(ui, repo, normalmatcher, prefix, explicitonly)
+    m = composelargefilematcher(match, repo[None].manifest())
 
     try:
         repo.lfstatus = True
@@ -992,7 +990,7 @@ def overrideforget(orig, ui, repo, *pats, **opts):
                 repo.wvfs.isdir(lfutil.standin(f)):
             ui.warn(_('not removing %s: file is already untracked\n')
                     % m.rel(f))
-            result = 1
+            bad.append(f)
 
     for f in forget:
         if ui.verbose or not m.exact(f):
@@ -1012,11 +1010,13 @@ def overrideforget(orig, ui, repo, *pats, **opts):
         standins = [lfutil.standin(f) for f in forget]
         for f in standins:
             util.unlinkpath(repo.wjoin(f), ignoremissing=True)
-        repo[None].forget(standins)
+        rejected = repo[None].forget(standins)
     finally:
         wlock.release()
 
-    return result
+    bad.extend(f for f in rejected if f in m.files())
+    forgot.extend(f for f in forget if f not in rejected)
+    return bad, forgot
 
 def _getoutgoings(repo, other, missing, addfunc):
     """get pairs of filename and largefile hash in outgoing revisions

@@ -323,4 +323,25 @@ Find an exact match to a standin (should archive nothing)
   $ hg --config extensions.largefiles= archive -S -I 'sub/sub2/.hglf/large.bin' ../archive_lf
   $ find ../archive_lf 2> /dev/null | sort
 
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > largefiles=
+  > EOF
+
+Test forget through a deep subrepo with the largefiles extension, both a
+largefile and a normal file.  Then a largefile that hasn't been committed yet.
+  $ touch sub1/sub2/untracked.txt
+  $ hg forget sub1/sub2/large.bin sub1/sub2/test.txt sub1/sub2/untracked.txt
+  not removing sub1/sub2/untracked.txt: file is already untracked (glob)
+  [1]
+  $ hg add -v --large -R sub1/sub2 sub1/sub2/untracked.txt
+  adding sub1/sub2/untracked.txt as a largefile (glob)
+  $ hg forget -v sub1/sub2/untracked.txt
+  removing sub1/sub2/untracked.txt (glob)
+  $ hg status -S
+  R sub1/sub2/large.bin
+  R sub1/sub2/test.txt
+  ? foo/bar/abc
+  ? sub1/sub2/untracked.txt
+
   $ cd ..
