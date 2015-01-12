@@ -799,7 +799,7 @@ def filelog(repo, subset, x):
         files = (f for f in repo[None] if m(f))
 
     for f in files:
-        backrevref = {}  # final value for: changerev -> filerev
+        backrevref = {}  # final value for: filerev -> changerev
         lowestchild = {} # lowest known filerev child of a filerev
         delayed = []     # filerev with filtered linkrev, for post-processing
         lowesthead = None # cache for manifest content of all head revisions
