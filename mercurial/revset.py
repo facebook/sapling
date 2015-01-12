@@ -805,7 +805,7 @@ def filelog(repo, subset, x):
         lowesthead = None # cache for manifest content of all head revisions
         fl = repo.file(f)
         for fr in list(fl):
-            lkr = rev = fl.linkrev(fr)
+            rev = fl.linkrev(fr)
             if rev not in cl:
                 # changerev pointed in linkrev is filtered
                 # record it for post processing.
