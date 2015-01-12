@@ -29,6 +29,7 @@ setup(
         'sparse',
         'tweakdefaults',
         'upgradegeneraldelta',
+        'writecg2',
     ],
     packages=['crecord']
 )
