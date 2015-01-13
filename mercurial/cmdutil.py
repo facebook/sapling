@@ -1979,7 +1979,7 @@ def graphrevs(repo, nodes, opts):
         nodes = nodes[:limit]
     return graphmod.nodes(repo, nodes)
 
-def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
+def add(ui, repo, match, prefix, explicitonly, **opts):
     join = lambda f: os.path.join(prefix, f)
     bad = []
     oldbad = match.bad
@@ -2003,17 +2003,15 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
         sub = wctx.sub(subpath)
         try:
             submatch = matchmod.narrowmatcher(subpath, match)
-            if listsubrepos:
-                bad.extend(sub.add(ui, submatch, dryrun, listsubrepos, prefix,
-                                   False))
+            if opts.get('subrepos'):
+                bad.extend(sub.add(ui, submatch, prefix, False, **opts))
             else:
-                bad.extend(sub.add(ui, submatch, dryrun, listsubrepos, prefix,
-                                   True))
+                bad.extend(sub.add(ui, submatch, prefix, True, **opts))
         except error.LookupError:
             ui.status(_("skipping missing subrepository: %s\n")
                            % join(subpath))
 
-    if not dryrun:
+    if not opts.get('dry_run'):
         rejected = wctx.add(names, prefix)
         bad.extend(f for f in rejected if f in match.files())
     return bad

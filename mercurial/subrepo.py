@@ -621,9 +621,10 @@ class hgsubrepo(abstractsubrepo):
                 fp.close()
 
     @annotatesubrepoerror
-    def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
-        return cmdutil.add(ui, self._repo, match, dryrun, listsubrepos,
-                           os.path.join(prefix, self._path), explicitonly)
+    def add(self, ui, match, prefix, explicitonly, **opts):
+        return cmdutil.add(ui, self._repo, match,
+                           os.path.join(prefix, self._path), explicitonly,
+                           **opts)
 
     def addremove(self, m, prefix, opts, dry_run, similarity):
         # In the same way as sub directories are processed, once in a subrepo,
