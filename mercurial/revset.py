@@ -1177,6 +1177,42 @@ def modifies(repo, subset, x):
     pat = getstring(x, _("modifies requires a pattern"))
     return checkstatus(repo, subset, pat, 0)
 
+def named(repo, subset, x):
+    """``named(namespace)``
+    The changesets in a given namespace.
+
+    If `namespace` starts with `re:`, the remainder of the string is treated as
+    a regular expression. To match a namespace that actually starts with `re:`,
+    use the prefix `literal:`.
+    """
+    # i18n: "named" is a keyword
+    args = getargs(x, 1, 1, _('named requires a namespace argument'))
+
+    ns = getstring(args[0],
+                   # i18n: "named" is a keyword
+                   _('the argument to named must be a string'))
+    kind, pattern, matcher = _stringmatcher(ns)
+    namespaces = set()
+    if kind == 'literal':
+        if pattern not in repo.names:
+            raise util.Abort(_("namespace '%s' does not exist") % ns)
+        namespaces.add(repo.names[pattern])
+    else:
+        for name, ns in repo.names.iteritems():
+            if matcher(name):
+                namespaces.add(ns)
+        if not namespaces:
+            raise util.Abort(_("no namespace exists that match '%s'")
+                             % pattern)
+
+    names = set()
+    for ns in namespaces:
+        for name in ns.listnames(repo):
+            names.update(ns.nodes(repo, name))
+
+    names -= set([node.nullrev])
+    return subset & names
+
 def node_(repo, subset, x):
     """``id(string)``
     Revision non-ambiguously specified by the given hex string prefix.
@@ -1817,6 +1853,7 @@ symbols = {
     "merge": merge,
     "min": minrev,
     "modifies": modifies,
+    "named": named,
     "obsolete": obsolete,
     "only": only,
     "origin": origin,
