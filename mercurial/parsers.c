@@ -71,7 +71,7 @@ static inline int hexdigit(const char *p, Py_ssize_t off)
 /*
  * Turn a hex-encoded string into binary.
  */
-static PyObject *unhexlify(const char *str, int len)
+PyObject *unhexlify(const char *str, int len)
 {
 	PyObject *ret;
 	char *d;
@@ -2318,6 +2318,7 @@ static PyMethodDef methods[] = {
 };
 
 void dirs_module_init(PyObject *mod);
+void manifest_module_init(PyObject *mod);
 
 static void module_init(PyObject *mod)
 {
@@ -2332,6 +2333,7 @@ static void module_init(PyObject *mod)
 	PyModule_AddStringConstant(mod, "versionerrortext", versionerrortext);
 
 	dirs_module_init(mod);
+	manifest_module_init(mod);
 
 	indexType.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&indexType) < 0 ||

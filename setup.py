@@ -493,6 +493,7 @@ extmodules = [
     Extension('mercurial.mpatch', ['mercurial/mpatch.c'],
               depends=common_depends),
     Extension('mercurial.parsers', ['mercurial/dirs.c',
+                                    'mercurial/manifest.c',
                                     'mercurial/parsers.c',
                                     'mercurial/pathencode.c'],
               depends=common_depends),
