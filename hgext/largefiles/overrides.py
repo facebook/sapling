@@ -243,10 +243,8 @@ def decodepath(orig, path):
 # -- Wrappers: modify existing commands --------------------------------
 
 def overrideadd(orig, ui, repo, *pats, **opts):
-    normal = opts.get('normal')
-    if normal:
-        if opts.get('large'):
-            raise util.Abort(_('--normal cannot be used with --large'))
+    if opts.get('normal') and opts.get('large'):
+        raise util.Abort(_('--normal cannot be used with --large'))
     return orig(ui, repo, *pats, **opts)
 
 def cmdutiladd(orig, ui, repo, matcher, prefix, explicitonly, **opts):
