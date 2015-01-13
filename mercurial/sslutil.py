@@ -15,16 +15,40 @@ try:
     import ssl
     CERT_REQUIRED = ssl.CERT_REQUIRED
     PROTOCOL_TLSv1 = ssl.PROTOCOL_TLSv1
-    def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
-                cert_reqs=ssl.CERT_NONE, ca_certs=None):
-        sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
-                                    cert_reqs=cert_reqs, ca_certs=ca_certs,
-                                    ssl_version=ssl_version)
-        # check if wrap_socket failed silently because socket had been closed
-        # - see http://bugs.python.org/issue13721
-        if not sslsocket.cipher():
-            raise util.Abort(_('ssl connection failed'))
-        return sslsocket
+    try:
+        ssl_context = ssl.SSLContext
+
+        def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
+                            cert_reqs=ssl.CERT_NONE, ca_certs=None,
+                            serverhostname=None):
+            sslcontext = ssl.SSLContext(ssl_version)
+            if certfile is not None:
+                sslcontext.load_cert_chain(certfile, keyfile)
+            sslcontext.verify_mode = cert_reqs
+            if ca_certs is not None:
+                sslcontext.load_verify_locations(cafile=ca_certs)
+
+            sslsocket = sslcontext.wrap_socket(sock,
+                                               server_hostname=serverhostname)
+            # check if wrap_socket failed silently because socket had been
+            # closed
+            # - see http://bugs.python.org/issue13721
+            if not sslsocket.cipher():
+                raise util.Abort(_('ssl connection failed'))
+            return sslsocket
+    except AttributeError:
+        def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
+                            cert_reqs=ssl.CERT_NONE, ca_certs=None,
+                            serverhostname=None):
+            sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
+                                        cert_reqs=cert_reqs, ca_certs=ca_certs,
+                                        ssl_version=ssl_version)
+            # check if wrap_socket failed silently because socket had been
+            # closed
+            # - see http://bugs.python.org/issue13721
+            if not sslsocket.cipher():
+                raise util.Abort(_('ssl connection failed'))
+            return sslsocket
 except ImportError:
     CERT_REQUIRED = 2
 
@@ -33,7 +57,8 @@ except ImportError:
     import socket, httplib
 
     def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
-                        cert_reqs=CERT_REQUIRED, ca_certs=None):
+                        cert_reqs=CERT_REQUIRED, ca_certs=None,
+                        serverhostname=None):
         if not util.safehasattr(socket, 'ssl'):
             raise util.Abort(_('Python SSL support not found'))
         if ca_certs:

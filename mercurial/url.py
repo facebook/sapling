@@ -185,7 +185,8 @@ class httpconnection(keepalive.HTTPConnection):
             self.sock.connect((self.host, self.port))
             if _generic_proxytunnel(self):
                 # we do not support client X.509 certificates
-                self.sock = sslutil.ssl_wrap_socket(self.sock, None, None)
+                self.sock = sslutil.ssl_wrap_socket(self.sock, None, None,
+                                                    serverhostname=self.host)
         else:
             keepalive.HTTPConnection.connect(self)
 
@@ -341,7 +342,7 @@ if has_https:
                 _generic_proxytunnel(self)
                 host = self.realhostport.rsplit(':', 1)[0]
             self.sock = sslutil.ssl_wrap_socket(
-                self.sock, self.key_file, self.cert_file,
+                self.sock, self.key_file, self.cert_file, serverhostname=host,
                 **sslutil.sslkwargs(self.ui, host))
             sslutil.validator(self.ui, host)(self.sock)
 
