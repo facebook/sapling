@@ -121,7 +121,7 @@ Apple's OpenSSL. This trick do not work with plain OpenSSL.
   $ DISABLEOSXDUMMYCERT=
 #if osx
   $ hg clone https://localhost:$HGPORT/ copy-pull
-  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  abort: error: *certificate verify failed* (glob)
   [255]
 
   $ DISABLEOSXDUMMYCERT="--config=web.cacerts="
@@ -205,7 +205,7 @@ cacert mismatch
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
-  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  abort: error: *certificate verify failed* (glob)
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem --insecure
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
@@ -218,7 +218,7 @@ Test server cert which isn't valid yet
   $ hg -R test serve -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem
   $ cat hg1.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-not-yet.pem https://localhost:$HGPORT1/
-  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  abort: error: *certificate verify failed* (glob)
   [255]
 
 Test server cert which no longer is valid
@@ -226,7 +226,7 @@ Test server cert which no longer is valid
   $ hg -R test serve -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
   $ cat hg2.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
-  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  abort: error: *certificate verify failed* (glob)
   [255]
 
 Fingerprints
@@ -286,8 +286,8 @@ Test https with cacert and fingerprint through proxy
 Test https with cert problems through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-other.pem
-  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  abort: error: *certificate verify failed* (glob)
   [255]
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
-  abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
+  abort: error: *certificate verify failed* (glob)
   [255]
