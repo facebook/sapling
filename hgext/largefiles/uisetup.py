@@ -33,6 +33,7 @@ def uisetup(ui):
     # and in the process of handling commit -A (issue3542)
     entry = extensions.wrapfunction(scmutil, 'addremove',
                                     overrides.scmutiladdremove)
+    extensions.wrapfunction(cmdutil, 'add', overrides.cmdutiladd)
     extensions.wrapfunction(cmdutil, 'remove', overrides.cmdutilremove)
     extensions.wrapfunction(cmdutil, 'forget', overrides.cmdutilforget)
 

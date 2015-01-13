@@ -214,7 +214,7 @@ verify that large files in subrepos handled properly
   A .hgsub
   ? .hgsubstate
   $ echo "rev 1" > subrepo/large.txt
-  $ hg -R subrepo add --large subrepo/large.txt
+  $ hg add --large subrepo/large.txt
   $ hg sum
   parent: 1:8ee150ea2e9c tip
    add subrepo

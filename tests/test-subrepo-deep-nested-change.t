@@ -326,19 +326,27 @@ Find an exact match to a standin (should archive nothing)
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles=
+  > [largefiles]
+  > patterns=glob:**.dat
   > EOF
 
 Test forget through a deep subrepo with the largefiles extension, both a
 largefile and a normal file.  Then a largefile that hasn't been committed yet.
   $ touch sub1/sub2/untracked.txt
+  $ touch sub1/sub2/large.dat
   $ hg forget sub1/sub2/large.bin sub1/sub2/test.txt sub1/sub2/untracked.txt
   not removing sub1/sub2/untracked.txt: file is already untracked (glob)
   [1]
-  $ hg add -v --large -R sub1/sub2 sub1/sub2/untracked.txt
+  $ hg add --large --dry-run -v sub1/sub2/untracked.txt
   adding sub1/sub2/untracked.txt as a largefile (glob)
+  $ hg add --large -v sub1/sub2/untracked.txt
+  adding sub1/sub2/untracked.txt as a largefile (glob)
+  $ hg add --normal -v sub1/sub2/large.dat
+  adding sub1/sub2/large.dat (glob)
   $ hg forget -v sub1/sub2/untracked.txt
   removing sub1/sub2/untracked.txt (glob)
   $ hg status -S
+  A sub1/sub2/large.dat
   R sub1/sub2/large.bin
   R sub1/sub2/test.txt
   ? foo/bar/abc

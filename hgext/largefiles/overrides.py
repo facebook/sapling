@@ -242,23 +242,25 @@ def decodepath(orig, path):
 
 # -- Wrappers: modify existing commands --------------------------------
 
-# Add works by going through the files that the user wanted to add and
-# checking if they should be added as largefiles. Then it makes a new
-# matcher which matches only the normal files and runs the original
-# version of add.
 def overrideadd(orig, ui, repo, *pats, **opts):
     normal = opts.get('normal')
     if normal:
         if opts.get('large'):
             raise util.Abort(_('--normal cannot be used with --large'))
-        return orig(ui, repo, *pats, **opts)
-    matcher = scmutil.match(repo[None], pats, opts)
-    added, bad = addlargefiles(ui, repo, False, matcher, **opts)
-    installnormalfilesmatchfn(repo[None].manifest())
-    result = orig(ui, repo, *pats, **opts)
-    restorematchfn()
+    return orig(ui, repo, *pats, **opts)
 
-    return (result == 1 or bad) and 1 or 0
+def cmdutiladd(orig, ui, repo, matcher, prefix, explicitonly, **opts):
+    # The --normal flag short circuits this override
+    if opts.get('normal'):
+        return orig(ui, repo, matcher, prefix, explicitonly, **opts)
+
+    ladded, lbad = addlargefiles(ui, repo, False, matcher, **opts)
+    normalmatcher = composenormalfilematcher(matcher, repo[None].manifest(),
+                                             ladded)
+    bad = orig(ui, repo, normalmatcher, prefix, explicitonly, **opts)
+
+    bad.extend(f for f in lbad)
+    return bad
 
 def cmdutilremove(orig, ui, repo, matcher, prefix, after, force, subrepos):
     normalmatcher = composenormalfilematcher(matcher, repo[None].manifest())
