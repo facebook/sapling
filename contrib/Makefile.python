@@ -44,7 +44,7 @@ PYTHON_SRCDIR=Python-$(PYTHONVER)
 PYTHON_SRCFILE=$(PYTHON_SRCDIR).tgz
 
 $(PREFIX)/bin/python:
-	[ -f $(PYTHON_SRCFILE) ] || wget http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || [ -f $(PYTHON_SRCFILE) ]
+	[ -f $(PYTHON_SRCFILE) ] || wget http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || curl -OL http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || [ -f $(PYTHON_SRCFILE) ]
 	rm -rf $(PYTHON_SRCDIR)
 	tar xf $(PYTHON_SRCFILE)
 	# Ubuntu disables SSLv2 the hard way, disable it on old Pythons too
