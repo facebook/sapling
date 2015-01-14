@@ -544,7 +544,7 @@ class dirstate(object):
         # enough 'delaywrite' prevents 'pack_dirstate' from dropping
         # timestamp of each entries in dirstate, because of 'now > mtime'
         delaywrite = self._ui.configint('debug', 'dirstate.delaywrite', 0)
-        if delaywrite:
+        if delaywrite > 0:
             import time # to avoid useless import
             time.sleep(delaywrite)
 
