@@ -431,8 +431,7 @@ class revbranchcache(object):
 
         start = self._rbcrevslen * _rbcrecsize
         if start != len(self._rbcrevs):
-            self._rbcrevslen = min(len(repo.changelog),
-                                   len(self._rbcrevs) // _rbcrecsize)
+            revs = min(len(repo.changelog), len(self._rbcrevs) // _rbcrecsize)
             try:
                 f = repo.vfs.open(_rbcrevs, 'ab')
                 # The position after open(x, 'a') is implementation defined-
@@ -442,10 +441,11 @@ class revbranchcache(object):
                     repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
                     f.seek(start)
                     f.truncate()
-                end = self._rbcrevslen * _rbcrecsize
+                end = revs * _rbcrecsize
                 f.write(self._rbcrevs[start:end])
                 f.close()
             except (IOError, OSError, util.Abort), inst:
                 repo.ui.debug("couldn't write revision branch cache: %s\n" %
                               inst)
                 return
+            self._rbcrevslen = revs
