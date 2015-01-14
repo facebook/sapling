@@ -244,13 +244,15 @@ def saveremotenames(repo, remote, branches, bookmarks):
     # only update the given 'remote', so iterate over old data and re-save it
     for node, nametype, oldremote, rname in olddata:
         if oldremote != remote:
-            f.write('%s %s\n' % (node, joinremotename(oldremote, rname)))
+            n = joinremotename(oldremote, rname)
+            f.write('%s %s %s\n' % (node, nametype, n))
 
     for branch, nodes in branches.iteritems():
         for n in nodes:
-            f.write('%s %s\n' % (hex(n), joinremotename(remote, branch)))
+            rname = joinremotename(remote, branch)
+            f.write('%s branches %s\n' % (hex(n), rname))
     for bookmark, n in bookmarks.iteritems():
-        f.write('%s %s\n' % (n, joinremotename(remote, bookmark)))
+        f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
     f.close()
 
 #########
