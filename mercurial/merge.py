@@ -1060,8 +1060,7 @@ def batchremove(repo, actions):
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    unlink = util.unlinkpath
-    wjoin = repo.wjoin
+    unlinkpath = repo.wvfs.unlinkpath
     audit = repo.wvfs.audit
     try:
         cwd = pycompat.getcwd()
@@ -1076,7 +1075,7 @@ def batchremove(repo, actions):
             repo.ui.note(_("removing %s\n") % f)
         audit(f)
         try:
-            unlink(wjoin(f), ignoremissing=True)
+            unlinkpath(f, ignoremissing=True)
         except OSError as inst:
             repo.ui.warn(_("update failed to remove %s: %s!\n") %
                          (f, inst.strerror))
