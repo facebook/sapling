@@ -93,7 +93,7 @@
   
   changeset:   4:a43aa1e4a27c
   branch:      stable
-  remotename:  beta/stable
+  branch:      beta/stable
   parent:      2:5b35a0d5bd4d
   parent:      3:5ae9f075bc64
   user:        test
@@ -101,7 +101,7 @@
   summary:     merged
   
   changeset:   3:5ae9f075bc64
-  remotename:  beta
+  branch:      beta
   parent:      1:2b9c7234e035
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -109,13 +109,13 @@
   
   changeset:   2:5b35a0d5bd4d
   branch:      stable
-  remotename:  default/stable
+  branch:      default/stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
   changeset:   1:2b9c7234e035
-  remotename:  default/default
+  branch:      default/default
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1

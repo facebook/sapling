@@ -94,7 +94,7 @@ graph shows tags for the branch heads of each path
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  | |  remotename:  beta/stable
+  | |  branch:      beta/stable
   | |  parent:      2:95cb4ab9fe1d
   | |  parent:      3:78f83396d79e
   | |  user:        test
@@ -103,8 +103,8 @@ graph shows tags for the branch heads of each path
   | |
   | o  changeset:   3:78f83396d79e
   | |  bookmark:    babar
-  | |  remotename:  beta/babar
-  | |  remotename:  beta/default
+  | |  bookmark:    beta/babar
+  | |  branch:      beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -112,13 +112,13 @@ graph shows tags for the branch heads of each path
   | |
   o |  changeset:   2:95cb4ab9fe1d
   |/   branch:      stable
-  |    remotename:  alpha/stable
+  |    branch:      alpha/stable
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     add c
   |
   o  changeset:   1:7c3bad9141dc
-  |  remotename:  alpha/default
+  |  branch:      alpha/default
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add b
@@ -196,7 +196,7 @@ but configured, it'll do the expected thing:
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  | |  remotename:  beta/stable
+  | |  branch:      beta/stable
   | |  parent:      2:95cb4ab9fe1d
   | |  parent:      3:78f83396d79e
   | |  user:        test
@@ -205,8 +205,8 @@ but configured, it'll do the expected thing:
   | |
   | o  changeset:   3:78f83396d79e
   | |  bookmark:    babar
-  | |  remotename:  beta/babar
-  | |  remotename:  beta/default
+  | |  bookmark:    beta/babar
+  | |  branch:      beta/default
   | |  parent:      1:7c3bad9141dc
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -215,7 +215,7 @@ but configured, it'll do the expected thing:
   $ hg log --limit 2 --graph -r 'heads(upstream())'
   o  changeset:   2:95cb4ab9fe1d
   |  branch:      stable
-  |  remotename:  alpha/stable
+  |  branch:      alpha/stable
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add c

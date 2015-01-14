@@ -14,8 +14,10 @@ from mercurial import util
 from mercurial.node import hex
 from hgext import schemes
 
-_remotenames = {}
-_remotetypes = {}
+_remotenames = {
+    "bookmarks": {},
+    "branches": {},
+}
 
 def expush(orig, repo, remote, *args, **kwargs):
     # hack for pushing that turns off the dynamic blockerhook
@@ -64,18 +66,21 @@ def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
 
     # protect un-hiding changesets behind a config knob
-    noname = 'remotenames' not in repo.names
     nohide = not repo.ui.configbool('remotenames', 'unhide')
     hackpush = util.safehasattr(repo, '_hackremotenamepush')
-    if noname or nohide or (hackpush and repo._hackremotenamepush):
+    if nohide or (hackpush and repo._hackremotenamepush):
         return blockers
 
-    # add remotenames to blockers
+    # add remotenames to blockers by looping over all names in our own cache
     cl = repo.changelog
-    ns = repo.names["remotenames"]
-    for name in ns.listnames(repo):
-        blockers.update(cl.rev(node) for node in
-                        ns.nodes(repo, name))
+    for remotename in _remotenames.keys():
+        rname = 'remote' + remotename
+        try:
+            ns = repo.names[rname]
+        except KeyError:
+            continue
+        for name in ns.listnames(repo):
+            blockers.update(cl.rev(node) for node in ns.nodes(repo, name))
 
     return blockers
 
@@ -89,13 +94,25 @@ def reposetup(ui, repo):
 
     loadremotenames(repo)
 
-    ns = namespaces.namespace
-    n = ns("remotenames", "remotename",
-           lambda rp: _remotenames.keys(),
-           lambda rp, name: namespaces.tolist(_remotenames.get(name)),
-           lambda rp, node: [name for name, n in _remotenames.iteritems()
-                             if n == node])
-    repo.names.addnamespace(n)
+    # cache this so we don't iterate over new values
+    items = list(repo.names.iteritems())
+    for nsname, ns in items:
+        d = _remotenames.get(nsname)
+        if not d:
+            continue
+
+        rname = 'remote' + nsname
+        rtmpl = 'remote' + ns.templatename
+        names = lambda rp, d=d: d.keys()
+        namemap = lambda rp, name, d=d: namespaces.tolist(d.get(name))
+        nodemap = lambda rp, node, d=d: [name for name, n in
+                                         d.iteritems() if n == node]
+
+        n = namespaces.namespace(rname, templatename=rtmpl,
+                                 logname=ns.templatename, colorname=rtmpl,
+                                 listnames=names, namemap=namemap,
+                                 nodemap=nodemap)
+        repo.names.addnamespace(n)
 
 def activepath(ui, remote):
     realpath = ''
@@ -189,6 +206,9 @@ def readremotenames(repo):
         line = line.strip()
         if not line:
             continue
+        nametype = None
+        remote, rname = None, None
+
         node, name = line.split(' ', 1)
 
         # check for nametype being written into the file format
@@ -231,8 +251,7 @@ def loadremotenames(repo):
 
         # only mark as remote if the head changeset isn't marked closed
         if not ctx.extra().get('close'):
-            _remotenames[name] = ctx.node()
-            _remotetypes[name] = nametype
+            _remotenames[nametype][name] = ctx.node()
 
 def saveremotenames(repo, remote, branches, bookmarks):
     # read in all data first before opening file to write
@@ -261,10 +280,15 @@ def saveremotenames(repo, remote, branches, bookmarks):
 
 def upstream_revs(filt, repo, subset, x):
     upstream_tips = set()
-    ns = repo.names["remotenames"]
-    for name in ns.listnames(repo):
-        if filt(name):
-            upstream_tips.update(ns.nodes(repo, name))
+    for remotename in _remotenames.keys():
+        rname = 'remote' + remotename
+        try:
+            ns = repo.names[rname]
+        except KeyError:
+            continue
+        for name in ns.listnames(repo):
+            if filt(name):
+                upstream_tips.update(ns.nodes(repo, name))
 
     if not upstream_tips:
         return revset.baseset([])
@@ -299,9 +323,15 @@ def remotenamesrevset(repo, subset, x):
     revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set()
     cl = repo.changelog
-    ns = repo.names["remotenames"]
-    for name in ns.listnames(repo):
-        remoterevs.update(ns.nodes(repo, name))
+    for remotename in _remotenames.keys():
+        rname = 'remote' + remotename
+        try:
+            ns = repo.names[rname]
+        except KeyError:
+            continue
+        for name in ns.listnames(repo):
+            remoterevs.update(ns.nodes(repo, name))
+
     return revset.baseset(sorted(cl.rev(n) for n in remoterevs))
 
 revset.symbols.update({'upstream': upstream,
@@ -312,34 +342,6 @@ revset.symbols.update({'upstream': upstream,
 # templates
 ###########
 
-def remotebookmarkskw(**args):
-    """:remotebookmarks: List of strings. List of remote bookmarks associated with
-    the changeset.
-
-    """
-    repo, ctx = args['repo'], args['ctx']
-
-    remotebooks = [name for name in
-                   repo.names['remotenames'].names(repo, ctx.node())
-                   if _remotetypes[name] == 'bookmarks']
-
-    return templatekw.showlist('remotebookmark', remotebooks,
-                               plural='remotebookmarks', **args)
-
-def remotebrancheskw(**args):
-    """:remotebranches: List of strings. List of remote branches associated with
-    the changeset.
-
-    """
-    repo, ctx = args['repo'], args['ctx']
-
-    remotebranches = [name for name in
-                      repo.names['remotenames'].names(repo, ctx.node())
-                      if _remotetypes[name] == 'branches']
-
-    return templatekw.showlist('remotebranch', remotebranches,
-                               plural='remotebranches', **args)
-
 def remotenameskw(**args):
     """:remotenames: List of strings. List of remote names associated with the
     changeset. If remotenames.suppressbranches is True then branch names will
@@ -348,19 +350,13 @@ def remotenameskw(**args):
     """
     repo, ctx = args['repo'], args['ctx']
 
-    remotenames = [name for name in
-                   repo.names['remotenames'].names(repo, ctx.node())
-                   if _remotetypes[name] == 'bookmarks']
+    remotenames = repo.names['remotebookmarks'].names(repo, ctx.node())
 
     suppress = repo.ui.configbool('remotenames', 'suppressbranches', False)
     if not remotenames or not suppress:
-        remotenames += [name for name in
-                        repo.names['remotenames'].names(repo, ctx.node())
-                        if _remotetypes[name] == 'branches']
+        remotenames += repo.names['remotebranches'].names(repo, ctx.node())
 
     return templatekw.showlist('remotename', remotenames,
                                plural='remotenames', **args)
 
-templatekw.keywords['remotebookmarks'] = remotebookmarkskw
-templatekw.keywords['remotebranches'] = remotebrancheskw
 templatekw.keywords['remotenames'] = remotenameskw
