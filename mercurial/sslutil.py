@@ -20,7 +20,17 @@ try:
 
         def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=ssl.CERT_NONE,
                             ca_certs=None, serverhostname=None):
-            sslcontext = ssl.SSLContext(PROTOCOL_TLSv1)
+            # Allow any version of SSL starting with TLSv1 and
+            # up. Note that specifying TLSv1 here prohibits use of
+            # newer standards (like TLSv1_2), so this is the right way
+            # to do this. Note that in the future it'd be better to
+            # support using ssl.create_default_context(), which sets
+            # up a bunch of things in smart ways (strong ciphers,
+            # protocol versions, etc) and is upgraded by Python
+            # maintainers for us, but that breaks too many things to
+            # do it in a hurry.
+            sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            sslcontext.options &= ssl.OP_NO_SSLv2 & ssl.OP_NO_SSLv3
             if certfile is not None:
                 sslcontext.load_cert_chain(certfile, keyfile)
             sslcontext.verify_mode = cert_reqs
