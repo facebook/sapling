@@ -550,6 +550,7 @@ revision branch cache is created when building the branch head cache
 recovery from invalid cache revs file with trailing data
   $ echo >> .hg/cache/rbc-revs-v1
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
+  truncating cache/rbc-revs-v1 to 120
   5
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120
@@ -559,6 +560,7 @@ recovery from invalid cache file with partial last record
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=119
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
+  truncating cache/rbc-revs-v1 to 112
   5
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120
@@ -580,6 +582,7 @@ recovery from invalid cache file with some bad records
   $ hg log -r 'branch(.)' -T '{rev} '
   3 4 8 9 10 11 12 13  (no-eol)
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
+  truncating cache/rbc-revs-v1 to 8
   5
   $ f --size --hexdump --bytes=16 .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120

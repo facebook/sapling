@@ -414,6 +414,7 @@ class revbranchcache(object):
                         f.write('\0')
                     else:
                         f.close()
+                        repo.ui.debug("%s changed - rewriting it\n" % _rbcnames)
                         self._rbcnamescount = 0
                         self._rbcrevslen = 0
                 if self._rbcnamescount == 0:
@@ -438,6 +439,7 @@ class revbranchcache(object):
                 # see issue3543.  SEEK_END was added in 2.5
                 f.seek(0, 2) #os.SEEK_END
                 if f.tell() != start:
+                    repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
                     f.seek(start)
                     f.truncate()
                 end = self._rbcrevslen * _rbcrecsize
