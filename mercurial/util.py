@@ -234,7 +234,7 @@ def unpacker(fmt):
     try:
         # 2.5+
         return struct.Struct(fmt).unpack
-    except NameError:
+    except AttributeError:
         # 2.4
         return lambda buf: struct.unpack(fmt)
 
