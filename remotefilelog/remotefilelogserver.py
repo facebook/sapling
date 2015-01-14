@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import wireproto, changegroup, match, util, changelog
+from mercurial import wireproto, changegroup, match, util, changelog, context
 from mercurial.extensions import wrapfunction
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
@@ -146,6 +146,15 @@ def onetimesetup(ui):
         return caps
     wrapfunction(wireproto, 'capabilities', capabilities)
 
+    wrapfunction(context, '_adjustlinkrev', adjustlinkrev)
+
+def adjustlinkrev(orig, repo, path, filelog, fnode, *args, **kwargs):
+    # When generating file blobs, taking the real path is too slow on large
+    # repos, so force it to just return the linkrev directly.
+    if util.safehasattr(repo, 'forcelinkrev') and repo.forcelinkrev:
+        return filelog.linkrev(filelog.rev(fnode))
+    return orig(repo, path, filelog, fnode, *args, **kwargs)
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
@@ -256,28 +265,34 @@ def incominghook(ui, repo, node, source, url, **kwargs):
 
 def createfileblob(filectx):
     text = filectx.data()
+    repo = filectx._repo
 
     ancestors = [filectx]
-    ancestors.extend([f for f in filectx.ancestors()])
 
-    ancestortext = ""
-    for ancestorctx in ancestors:
-        parents = ancestorctx.parents()
-        p1 = nullid
-        p2 = nullid
-        if len(parents) > 0:
-            p1 = parents[0].filenode()
-        if len(parents) > 1:
-            p2 = parents[1].filenode()
+    try:
+        repo.forcelinkrev = True
+        ancestors.extend([f for f in filectx.ancestors()])
 
-        copyname = ""
-        rename = ancestorctx.renamed()
-        if rename:
-            copyname = rename[0]
-        linknode = ancestorctx.node()
-        ancestortext += "%s%s%s%s%s\0" % (
-            ancestorctx.filenode(), p1, p2, linknode,
-            copyname)
+        ancestortext = ""
+        for ancestorctx in ancestors:
+            parents = ancestorctx.parents()
+            p1 = nullid
+            p2 = nullid
+            if len(parents) > 0:
+                p1 = parents[0].filenode()
+            if len(parents) > 1:
+                p2 = parents[1].filenode()
+
+            copyname = ""
+            rename = ancestorctx.renamed()
+            if rename:
+                copyname = rename[0]
+            linknode = ancestorctx.node()
+            ancestortext += "%s%s%s%s%s\0" % (
+                ancestorctx.filenode(), p1, p2, linknode,
+                copyname)
+    finally:
+        repo.forcelinkrev = False
 
     return "%d\0%s%s" % (len(text), text, ancestortext)
 
