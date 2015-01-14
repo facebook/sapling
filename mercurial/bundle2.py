@@ -852,6 +852,22 @@ class unbundlepart(unpackermixin):
         self.params.update(dict(self.advisoryparams))
         self.mandatorykeys = frozenset(p[0] for p in mandatoryparams)
 
+    def _payloadchunks(self):
+        payloadsize = self._unpack(_fpayloadsize)[0]
+        self.ui.debug('payload chunk size: %i\n' % payloadsize)
+        while payloadsize:
+            if payloadsize == flaginterrupt:
+                # interruption detection, the handler will now read a
+                # single part and process it.
+                interrupthandler(self.ui, self._fp)()
+            elif payloadsize < 0:
+                msg = 'negative payload chunk size: %i' %  payloadsize
+                raise error.BundleValueError(msg)
+            else:
+                yield self._readexact(payloadsize)
+            payloadsize = self._unpack(_fpayloadsize)[0]
+            self.ui.debug('payload chunk size: %i\n' % payloadsize)
+
     def _readheader(self):
         """read the header and setup the object"""
         typesize = self._unpackheader(_fparttypesize)[0]
@@ -883,22 +899,7 @@ class unbundlepart(unpackermixin):
             advparams.append((self._fromheader(key), self._fromheader(value)))
         self._initparams(manparams, advparams)
         ## part payload
-        def payloadchunks():
-            payloadsize = self._unpack(_fpayloadsize)[0]
-            self.ui.debug('payload chunk size: %i\n' % payloadsize)
-            while payloadsize:
-                if payloadsize == flaginterrupt:
-                    # interruption detection, the handler will now read a
-                    # single part and process it.
-                    interrupthandler(self.ui, self._fp)()
-                elif payloadsize < 0:
-                    msg = 'negative payload chunk size: %i' %  payloadsize
-                    raise error.BundleValueError(msg)
-                else:
-                    yield self._readexact(payloadsize)
-                payloadsize = self._unpack(_fpayloadsize)[0]
-                self.ui.debug('payload chunk size: %i\n' % payloadsize)
-        self._payloadstream = util.chunkbuffer(payloadchunks())
+        self._payloadstream = util.chunkbuffer(self._payloadchunks())
         # we read the data, tell it
         self._initialized = True
 
