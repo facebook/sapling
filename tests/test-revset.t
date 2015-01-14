@@ -522,6 +522,9 @@ Test explicit numeric revision
   2
   1
   0
+  $ log 'reverse(all()) & filelog(b)'
+  4
+  1
   $ log 'rev(5)'
   5
   $ log 'sort(limit(reverse(all()), 3))'

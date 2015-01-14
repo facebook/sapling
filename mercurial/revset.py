@@ -3055,10 +3055,10 @@ class _spanset(abstractsmartset):
             return abs(self._end - self._start) - count
 
     def isascending(self):
-        return self._start <= self._end
+        return self._ascending
 
     def isdescending(self):
-        return self._start >= self._end
+        return not self._ascending
 
     def first(self):
         if self._ascending:
