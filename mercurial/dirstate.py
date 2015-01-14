@@ -882,9 +882,9 @@ class dirstate(object):
                 elif time != mtime and time != mtime & _rangemask:
                     ladd(fn)
                 elif mtime == lastnormaltime:
-                    # fn may have been changed in the same timeslot without
-                    # changing its size. This can happen if we quickly do
-                    # multiple commits in a single transaction.
+                    # fn may have just been marked as normal and it may have
+                    # changed in the same second without changing its size.
+                    # This can happen if we quickly do multiple commits.
                     # Force lookup, so we don't miss such a racy file change.
                     ladd(fn)
                 elif listclean:
