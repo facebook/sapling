@@ -145,6 +145,7 @@ future, dropping the stream may become an option for channel we do not care to
 preserve.
 """
 
+import errno
 import sys
 import util
 import struct
@@ -484,6 +485,8 @@ class unpackermixin(object):
 
     def __init__(self, fp):
         self._fp = fp
+        self._seekable = (util.safehasattr(fp, 'seek') and
+                          util.safehasattr(fp, 'tell'))
 
     def _unpack(self, format):
         """unpack this struct format from the stream"""
@@ -494,6 +497,29 @@ class unpackermixin(object):
         """read exactly <size> bytes from the stream"""
         return changegroup.readexactly(self._fp, size)
 
+    def seek(self, offset, whence):
+        """move the underlying file pointer"""
+        if self._seekable:
+            return self._fp.seek(offset, whence)
+        else:
+            raise NotImplementedError(_('File pointer is not seekable'))
+
+    def tell(self):
+        """return the file offset, or None if file is not seekable"""
+        if self._seekable:
+            try:
+                return self._fp.tell()
+            except IOError, e:
+                if e.errno == errno.ESPIPE:
+                    self._seekable = False
+                else:
+                    raise
+        return None
+
+    def close(self):
+        """close underlying file"""
+        if util.safehasattr(self._fp, 'close'):
+            return self._fp.close()
 
 class unbundle20(unpackermixin):
     """interpret a bundle2 stream
