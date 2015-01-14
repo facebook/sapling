@@ -35,6 +35,9 @@ commands.status(u, repo)
 def symlink_failure(src, dst):
     raise OSError(1, "Operation not permitted")
 os.symlink = symlink_failure
+def islink_failure(path):
+    return False
+os.path.islink = islink_failure
 
 # dereference links as if a Samba server has exported this to a
 # Windows client

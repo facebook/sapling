@@ -220,6 +220,10 @@ def checklink(path):
     # file already exists
     while True:
         cachedir = os.path.join(path, '.hg', 'cache')
+        checklink = os.path.join(cachedir, 'checklink')
+        # try fast path, read only
+        if os.path.islink(checklink):
+            return True
         if os.path.isdir(cachedir):
             checkdir = cachedir
         else:
@@ -231,7 +235,13 @@ def checklink(path):
                                              prefix='hg-checklink-')
             try:
                 os.symlink(os.path.basename(fd.name), name)
-                os.unlink(name)
+                if cachedir is None:
+                    os.unlink(name)
+                else:
+                    try:
+                        os.rename(name, checklink)
+                    except OSError:
+                        os.unlink(name)
                 return True
             except OSError as inst:
                 # link creation might race, try again
