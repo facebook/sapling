@@ -224,7 +224,7 @@ class abstractvfs(object):
         return util.unlink(self.join(path))
 
     def unlinkpath(self, path=None, ignoremissing=False):
-        return util.unlinkpath(self.join(path), ignoremissing)
+        return util.unlinkpath(self.join(path), ignoremissing=ignoremissing)
 
     def utime(self, path=None, t=None):
         return os.utime(self.join(path), t)

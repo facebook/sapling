@@ -223,7 +223,7 @@ def removelargefiles(ui, repo, isaddremove, matcher, **opts):
 
             if not opts.get('dry_run'):
                 if not after:
-                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                    repo.wvfs.unlinkpath(f, ignoremissing=True)
 
         if opts.get('dry_run'):
             return result
@@ -233,7 +233,7 @@ def removelargefiles(ui, repo, isaddremove, matcher, **opts):
         # function handle this.
         if not isaddremove:
             for f in remove:
-                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                repo.wvfs.unlinkpath(f, ignoremissing=True)
         repo[None].forget(remove)
 
         for f in remove:
@@ -694,7 +694,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 
                     # The file is gone, but this deletes any empty parent
                     # directories as a side-effect.
-                    util.unlinkpath(repo.wjoin(srclfile), True)
+                    repo.wvfs.unlinkpath(srclfile, ignoremissing=True)
                     lfdirstate.remove(srclfile)
                 else:
                     util.copyfile(repo.wjoin(srclfile),
@@ -1096,7 +1096,7 @@ def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
         lfdirstate.write()
         standins = [lfutil.standin(f) for f in forget]
         for f in standins:
-            util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+            repo.wvfs.unlinkpath(f, ignoremissing=True)
         rejected = repo[None].forget(standins)
 
     bad.extend(f for f in rejected if f in m.files())

@@ -1190,7 +1190,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
             audit(f)
-            util.unlinkpath(repo.wjoin(f))
+            repo.wvfs.unlinkpath(f)
 
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
 
@@ -1247,7 +1247,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.note(_("moving %s to %s\n") % (f0, f))
         audit(f)
         repo.wwrite(f, wctx.filectx(f0).data(), flags)
-        util.unlinkpath(repo.wjoin(f0))
+        repo.wvfs.unlinkpath(f0)
         updated += 1
 
     # local directory rename, get

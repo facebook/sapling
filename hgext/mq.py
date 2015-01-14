@@ -1479,7 +1479,7 @@ class queue(object):
                 # created while patching
                 for f in all_files:
                     if f not in repo.dirstate:
-                        util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                        repo.wvfs.unlinkpath(f, ignoremissing=True)
                 self.ui.warn(_('done\n'))
                 raise
 
@@ -1582,7 +1582,7 @@ class queue(object):
                 self.backup(repo, tobackup)
                 repo.dirstate.beginparentchange()
                 for f in a:
-                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                    repo.wvfs.unlinkpath(f, ignoremissing=True)
                     repo.dirstate.drop(f)
                 for f in m + r:
                     fctx = ctx[f]

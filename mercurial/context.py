@@ -1770,7 +1770,7 @@ class workingfilectx(committablefilectx):
 
     def remove(self, ignoremissing=False):
         """wraps unlink for a repo's working directory"""
-        util.unlinkpath(self._repo.wjoin(self._path), ignoremissing)
+        self._repo.wvfs.unlinkpath(self._path, ignoremissing=ignoremissing)
 
     def write(self, data, flags):
         """wraps repo.wwrite"""
