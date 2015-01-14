@@ -1644,7 +1644,8 @@ class TestRunner(object):
         os.environ["BINDIR"] = self._bindir
         os.environ["PYTHON"] = PYTHON
 
-        path = [self._bindir] + os.environ["PATH"].split(os.pathsep)
+        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
         os.environ["PATH"] = os.pathsep.join(path)
@@ -1653,8 +1654,7 @@ class TestRunner(object):
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
-        pypath = [self._pythondir, self._testdir,
-                  os.path.abspath(os.path.dirname(__file__))]
+        pypath = [self._pythondir, self._testdir, runtestdir]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
