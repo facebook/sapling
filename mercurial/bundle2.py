@@ -828,6 +828,7 @@ class unbundlepart(unpackermixin):
         self._readheader()
         self._mandatory = None
         self._chunkindex = [] #(payload, file) position tuples for chunk starts
+        self._pos = 0
 
     def _fromheader(self, size):
         """return the next <size> byte from the header"""
@@ -930,7 +931,11 @@ class unbundlepart(unpackermixin):
             data = self._payloadstream.read(size)
         if size is None or len(data) < size:
             self.consumed = True
+        self._pos += len(data)
         return data
+
+    def tell(self):
+        return self._pos
 
 capabilities = {'HG2Y': (),
                 'b2x:listkeys': (),
