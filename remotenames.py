@@ -173,19 +173,19 @@ def joinremotename(remote, ref):
         remote += '/' + ref
     return remote
 
-def loadremotenames(repo):
+def readremotenames(repo):
     rfile = repo.join('remotenames')
     # exit early if there is nothing to do
     if not os.path.exists(rfile):
         return
 
+    # needed to heuristically determine if a file is in the old format
     branches = repo.names['branches'].listnames(repo)
     bookmarks = repo.names['bookmarks'].listnames(repo)
 
-    alias_default = repo.ui.configbool('remotenames', 'alias.default')
-
     f = open(rfile)
     for line in f:
+        nametype = None
         line = line.strip()
         if not line:
             continue
@@ -196,24 +196,36 @@ def loadremotenames(repo):
         if not rname:
             continue
 
+        if nametype is None:
+            if rname in branches:
+                nametype = 'branches'
+            elif rname in bookmarks:
+                nametype = 'bookmarks'
+
+        yield node, nametype, remote, rname
+
+    f.close()
+
+def loadremotenames(repo):
+    alias_default = repo.ui.configbool('remotenames', 'alias.default')
+
+    for node, nametype, remote, rname in readremotenames(repo):
         # handle alias_default here
         if remote != "default" and rname == "default" and alias_default:
             name = remote
+        else:
+            name = joinremotename(remote, rname)
 
+        # if the node doesn't exist, skip it
         try:
             ctx = repo[node]
         except error.RepoLookupError:
             continue
 
+        # only mark as remote if the head changeset isn't marked closed
         if not ctx.extra().get('close'):
             _remotenames[name] = ctx.node()
-
-        # cache the type of the remote name
-        if rname in branches:
-            _remotetypes[name] = 'branches'
-        elif rname in bookmarks:
-            _remotetypes[name] = 'bookmarks'
-    f.close()
+            _remotetypes[name] = nametype
 
 def saveremotenames(repo, remote, branches, bookmarks):
     bfile = repo.join('remotenames')
