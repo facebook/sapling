@@ -827,6 +827,7 @@ class unbundlepart(unpackermixin):
         self._payloadstream = None
         self._readheader()
         self._mandatory = None
+        self._chunkindex = [] #(payload, file) position tuples for chunk starts
 
     def _fromheader(self, size):
         """return the next <size> byte from the header"""
@@ -852,7 +853,17 @@ class unbundlepart(unpackermixin):
         self.params.update(dict(self.advisoryparams))
         self.mandatorykeys = frozenset(p[0] for p in mandatoryparams)
 
-    def _payloadchunks(self):
+    def _payloadchunks(self, chunknum=0):
+        '''seek to specified chunk and start yielding data'''
+        if len(self._chunkindex) == 0:
+            assert chunknum == 0, 'Must start with chunk 0'
+            self._chunkindex.append((0, super(unbundlepart, self).tell()))
+        else:
+            assert chunknum < len(self._chunkindex), \
+                   'Unknown chunk %d' % chunknum
+            super(unbundlepart, self).seek(self._chunkindex[chunknum][1])
+
+        pos = self._chunkindex[chunknum][0]
         payloadsize = self._unpack(_fpayloadsize)[0]
         self.ui.debug('payload chunk size: %i\n' % payloadsize)
         while payloadsize:
@@ -864,7 +875,13 @@ class unbundlepart(unpackermixin):
                 msg = 'negative payload chunk size: %i' %  payloadsize
                 raise error.BundleValueError(msg)
             else:
-                yield self._readexact(payloadsize)
+                result = self._readexact(payloadsize)
+                chunknum += 1
+                pos += payloadsize
+                if chunknum == len(self._chunkindex):
+                    self._chunkindex.append((pos,
+                                             super(unbundlepart, self).tell()))
+                yield result
             payloadsize = self._unpack(_fpayloadsize)[0]
             self.ui.debug('payload chunk size: %i\n' % payloadsize)
 
