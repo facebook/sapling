@@ -161,18 +161,55 @@ def checkexec(path):
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
         cachedir = os.path.join(path, '.hg', 'cache')
-        if not os.path.isdir(cachedir):
-            cachedir = path
-        fh, fn = tempfile.mkstemp(dir=cachedir, prefix='hg-checkexec-')
+        if os.path.isdir(cachedir):
+            checkisexec = os.path.join(cachedir, 'checkisexec')
+            checknoexec = os.path.join(cachedir, 'checknoexec')
+
+            try:
+                m = os.stat(checkisexec).st_mode
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+                # checkisexec does not exist - fall through ...
+            else:
+                # checkisexec exists, check if it actually is exec
+                if m & EXECFLAGS != 0:
+                    # ensure checkisexec exists, check it isn't exec
+                    try:
+                        m = os.stat(checknoexec).st_mode
+                    except OSError as e:
+                        if e.errno != errno.ENOENT:
+                            raise
+                        file(checknoexec, 'w').close() # might fail
+                        m = os.stat(checknoexec).st_mode
+                    if m & EXECFLAGS == 0:
+                        # check-exec is exec and check-no-exec is not exec
+                        return True
+                    # checknoexec exists but is exec - delete it
+                    os.unlink(checknoexec)
+                # checkisexec exists but is not exec - delete it
+                os.unlink(checkisexec)
+
+            # check using one file, leave it as checkisexec
+            checkdir = cachedir
+        else:
+            # check directly in path and don't leave checkisexec behind
+            checkdir = path
+            checkisexec = None
+        fh, fn = tempfile.mkstemp(dir=checkdir, prefix='hg-checkexec-')
         try:
             os.close(fh)
             m = os.stat(fn).st_mode
-            if m & EXECFLAGS:
-                return False
-            os.chmod(fn, m & 0o777 | EXECFLAGS)
-            return os.stat(fn).st_mode & EXECFLAGS
+            if m & EXECFLAGS == 0:
+                os.chmod(fn, m & 0o777 | EXECFLAGS)
+                if os.stat(fn).st_mode & EXECFLAGS != 0:
+                    if checkisexec is not None:
+                        os.rename(fn, checkisexec)
+                        fn = None
+                    return True
         finally:
-            os.unlink(fn)
+            if fn is not None:
+                os.unlink(fn)
     except (IOError, OSError):
         # we don't care, the user probably won't be able to commit anyway
         return False
