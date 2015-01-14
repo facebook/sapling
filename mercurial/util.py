@@ -2841,9 +2841,9 @@ class hooks(object):
             results.append(hook(*args))
         return results
 
-def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
+def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s', depth=0):
     '''Yields lines for a nicely formatted stacktrace.
-    Skips the 'skip' last entries.
+    Skips the 'skip' last entries, then return the last 'depth' entries.
     Each file+linenumber is formatted according to fileline.
     Each line is formatted according to line.
     If line is None, it yields:
@@ -2854,7 +2854,8 @@ def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
     Not be used in production code but very convenient while developing.
     '''
     entries = [(fileline % (fn, ln), func)
-        for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]]
+        for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]
+        ][-depth:]
     if entries:
         fnmax = max(len(entry[0]) for entry in entries)
         for fnln, func in entries:
@@ -2863,16 +2864,18 @@ def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
             else:
                 yield line % (fnmax, fnln, func)
 
-def debugstacktrace(msg='stacktrace', skip=0, f=stderr, otherf=stdout):
+def debugstacktrace(msg='stacktrace', skip=0,
+                    f=stderr, otherf=stdout, depth=0):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
-    Skips the 'skip' last entries. By default it will flush stdout first.
+    Skips the 'skip' entries closest to the call, then show 'depth' entries.
+    By default it will flush stdout first.
     It can be used everywhere and intentionally does not require an ui object.
     Not be used in production code but very convenient while developing.
     '''
     if otherf:
         otherf.flush()
     f.write('%s at:\n' % msg.rstrip())
-    for line in getstackframes(skip + 1):
+    for line in getstackframes(skip + 1, depth=depth):
         f.write(line)
     f.flush()
 

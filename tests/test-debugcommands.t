@@ -122,7 +122,7 @@ Test internal debugstacktrace command
   >     dst('hello from g\\n', skip=1)
   >     h()
   > def h():
-  >     dst('hi ...\\nfrom h hidden in g', 1)
+  >     dst('hi ...\\nfrom h hidden in g', 1, depth=2)
   > f()
   > EOF
   $ python debugstacktrace.py
@@ -134,6 +134,5 @@ Test internal debugstacktrace command
    debugstacktrace.py:4  in f
   hi ...
   from h hidden in g at:
-   debugstacktrace.py:10 in * (glob)
-   debugstacktrace.py:4  in f
-   debugstacktrace.py:7  in g
+   debugstacktrace.py:4 in f
+   debugstacktrace.py:7 in g
