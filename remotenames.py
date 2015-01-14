@@ -228,16 +228,17 @@ def loadremotenames(repo):
             _remotetypes[name] = nametype
 
 def saveremotenames(repo, remote, branches, bookmarks):
+    # read in all data first before opening file to write
+    olddata = set(readremotenames(repo))
+
     bfile = repo.join('remotenames')
-    olddata = []
-    existed = os.path.exists(bfile)
-    if existed:
-        f = open(bfile)
-        olddata = [l for l in f
-                   if not l.split(' ', 1)[1].startswith(remote)]
     f = open(bfile, 'w')
-    if existed:
-        f.write(''.join(olddata))
+
+    # only update the given 'remote', so iterate over old data and re-save it
+    for node, nametype, oldremote, rname in olddata:
+        if oldremote != remote:
+            f.write('%s %s\n' % (node, joinremotename(oldremote, rname)))
+
     for branch, nodes in branches.iteritems():
         for n in nodes:
             f.write('%s %s/%s\n' % (hex(n), remote, branch))
