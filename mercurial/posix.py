@@ -166,16 +166,16 @@ def checkexec(path):
         fh, fn = tempfile.mkstemp(dir=cachedir, prefix='hg-checkexec-')
         try:
             os.close(fh)
-            m = os.stat(fn).st_mode & 0o777
-            new_file_has_exec = m & EXECFLAGS
-            os.chmod(fn, m ^ EXECFLAGS)
-            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0o777) == m)
+            m = os.stat(fn).st_mode
+            if m & EXECFLAGS:
+                return False
+            os.chmod(fn, m & 0o777 | EXECFLAGS)
+            return os.stat(fn).st_mode & EXECFLAGS
         finally:
             os.unlink(fn)
     except (IOError, OSError):
         # we don't care, the user probably won't be able to commit anyway
         return False
-    return not (new_file_has_exec or exec_flags_cannot_flip)
 
 def checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
