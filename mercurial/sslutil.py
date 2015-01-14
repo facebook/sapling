@@ -14,7 +14,6 @@ try:
     # avoid using deprecated/broken FakeSocket in python 2.6
     import ssl
     CERT_REQUIRED = ssl.CERT_REQUIRED
-    PROTOCOL_TLSv1 = ssl.PROTOCOL_TLSv1
     try:
         ssl_context = ssl.SSLContext
 
@@ -50,7 +49,7 @@ try:
                             ca_certs=None, serverhostname=None):
             sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
                                         cert_reqs=cert_reqs, ca_certs=ca_certs,
-                                        ssl_version=PROTOCOL_TLSv1)
+                                        ssl_version=ssl.PROTOCOL_TLSv1)
             # check if wrap_socket failed silently because socket had been
             # closed
             # - see http://bugs.python.org/issue13721
@@ -59,8 +58,6 @@ try:
             return sslsocket
 except ImportError:
     CERT_REQUIRED = 2
-
-    PROTOCOL_TLSv1 = 3
 
     import socket, httplib
 
