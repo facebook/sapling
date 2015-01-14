@@ -500,6 +500,20 @@ def merge(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def mergebase(ui, repo, *args, **kwargs):
+    cmdoptions = []
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    if len(args) != 2:
+        args = ['A', 'B']
+
+    cmd = Command("log -T '{node}\\n' -r 'ancestor(%s,%s)'"
+                  % (args[0], args[1]))
+
+    ui.status('NOTE: ancestors() is part of the revset language.\n',
+              "Learn more about revsets with 'hg help revsets'\n\n")
+    ui.status(cmd, "\n")
+
 def mv(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('f', 'force', None, ''),
@@ -856,6 +870,7 @@ gitcommands = {
     'log': log,
     'ls-files': lsfiles,
     'merge': merge,
+    'merge-base': mergebase,
     'mv': mv,
     'pull': pull,
     'push': push,
