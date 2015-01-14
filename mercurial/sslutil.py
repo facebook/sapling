@@ -18,10 +18,9 @@ try:
     try:
         ssl_context = ssl.SSLContext
 
-        def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
-                            cert_reqs=ssl.CERT_NONE, ca_certs=None,
-                            serverhostname=None):
-            sslcontext = ssl.SSLContext(ssl_version)
+        def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=ssl.CERT_NONE,
+                            ca_certs=None, serverhostname=None):
+            sslcontext = ssl.SSLContext(PROTOCOL_TLSv1)
             if certfile is not None:
                 sslcontext.load_cert_chain(certfile, keyfile)
             sslcontext.verify_mode = cert_reqs
@@ -37,12 +36,11 @@ try:
                 raise util.Abort(_('ssl connection failed'))
             return sslsocket
     except AttributeError:
-        def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
-                            cert_reqs=ssl.CERT_NONE, ca_certs=None,
-                            serverhostname=None):
+        def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=ssl.CERT_NONE,
+                            ca_certs=None, serverhostname=None):
             sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
                                         cert_reqs=cert_reqs, ca_certs=ca_certs,
-                                        ssl_version=ssl_version)
+                                        ssl_version=PROTOCOL_TLSv1)
             # check if wrap_socket failed silently because socket had been
             # closed
             # - see http://bugs.python.org/issue13721
@@ -56,9 +54,8 @@ except ImportError:
 
     import socket, httplib
 
-    def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
-                        cert_reqs=CERT_REQUIRED, ca_certs=None,
-                        serverhostname=None):
+    def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=CERT_REQUIRED,
+                        ca_certs=None, serverhostname=None):
         if not util.safehasattr(socket, 'ssl'):
             raise util.Abort(_('Python SSL support not found'))
         if ca_certs:
@@ -126,8 +123,7 @@ def _plainapplepython():
             exe.startswith('/system/library/frameworks/python.framework/'))
 
 def sslkwargs(ui, host):
-    kws = {'ssl_version': PROTOCOL_TLSv1,
-           }
+    kws = {}
     hostfingerprint = ui.config('hostfingerprints', host)
     if hostfingerprint:
         return kws
