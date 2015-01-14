@@ -190,12 +190,19 @@ def readremotenames(repo):
         if not line:
             continue
         node, name = line.split(' ', 1)
+
+        # check for nametype being written into the file format
+        if ' ' in name:
+            nametype, name = name.split(' ', 1)
+
         remote, rname = splitremotename(name)
 
         # skip old data that didn't write the name (only wrote the alias)
         if not rname:
             continue
 
+        # old format didn't save the nametype, so check for the name in
+        # branches and bookmarks
         if nametype is None:
             if rname in branches:
                 nametype = 'branches'
