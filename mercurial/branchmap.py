@@ -316,8 +316,6 @@ class revbranchcache(object):
             self._rbcsnameslen = len(bndata) # for verification before writing
             self._names = [encoding.tolocal(bn) for bn in bndata.split('\0')]
         except (IOError, OSError), inst:
-            repo.ui.debug("couldn't read revision branch cache names: %s\n" %
-                          inst)
             if readonly:
                 # don't try to use cache - fall back to the slow path
                 self.branchinfo = self._branchinfo
