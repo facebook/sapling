@@ -1386,7 +1386,10 @@ class revlog(object):
             transaction.add(self.indexfile, isize, r)
             transaction.add(self.datafile, end)
             dfh = self.opener(self.datafile, "a")
-
+        def flush():
+            if dfh:
+                dfh.flush()
+            ifh.flush()
         try:
             # loop through our set of deltas
             chain = None
@@ -1430,9 +1433,13 @@ class revlog(object):
                         raise error.CensoredBaseError(self.indexfile,
                                                       self.node(baserev))
 
+                flags = REVIDX_DEFAULT_FLAGS
+                if self._peek_iscensored(baserev, delta, flush):
+                    flags |= REVIDX_ISCENSORED
+
                 chain = self._addrevision(node, None, transaction, link,
-                                          p1, p2, REVIDX_DEFAULT_FLAGS,
-                                          (baserev, delta), ifh, dfh)
+                                          p1, p2, flags, (baserev, delta),
+                                          ifh, dfh)
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
                     # reopen the index
@@ -1448,6 +1455,10 @@ class revlog(object):
 
     def iscensored(self, rev):
         """Check if a file revision is censored."""
+        return False
+
+    def _peek_iscensored(self, baserev, delta, flush):
+        """Quickly check if a delta produces a censored revision."""
         return False
 
     def getstrippoint(self, minlink):
