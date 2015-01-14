@@ -241,9 +241,9 @@ def saveremotenames(repo, remote, branches, bookmarks):
 
     for branch, nodes in branches.iteritems():
         for n in nodes:
-            f.write('%s %s/%s\n' % (hex(n), remote, branch))
+            f.write('%s %s\n' % (hex(n), joinremotename(remote, branch)))
     for bookmark, n in bookmarks.iteritems():
-        f.write('%s %s/%s\n' % (n, remote, bookmark))
+        f.write('%s %s\n' % (n, joinremotename(remote, bookmark)))
     f.close()
 
 #########
