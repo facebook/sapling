@@ -1842,3 +1842,62 @@ Even when the file revision is missing from some head:
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     1
   |
+  $ cd ..
+
+Check proper report when the manifest changes but not the file issue4499
+------------------------------------------------------------------------
+
+  $ hg init issue4499
+  $ cd issue4499
+  $ for f in A B C D F E G H I J K L M N O P Q R S T U; do
+  >     echo 1 > $f;
+  >     hg add $f;
+  > done
+  $ hg commit -m 'A1B1C1'
+  $ echo 2 > A
+  $ echo 2 > B
+  $ echo 2 > C
+  $ hg commit -m 'A2B2C2'
+  $ hg up 0
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 3 > A
+  $ echo 2 > B
+  $ echo 2 > C
+  $ hg commit -m 'A3B2C2'
+  created new head
+
+  $ hg log -G
+  @  changeset:   2:fe5fc3d0eb17
+  |  tag:         tip
+  |  parent:      0:abf4f0e38563
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A3B2C2
+  |
+  | o  changeset:   1:07dcc6b312c0
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     A2B2C2
+  |
+  o  changeset:   0:abf4f0e38563
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A1B1C1
+  
+
+Log -f on B should reports current changesets
+
+  $ hg log -fG B
+  @  changeset:   2:fe5fc3d0eb17
+  |  tag:         tip
+  |  parent:      0:abf4f0e38563
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A3B2C2
+  |
+  o  changeset:   0:abf4f0e38563
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A1B1C1
+  
+  $ cd ..

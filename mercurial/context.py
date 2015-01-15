@@ -49,7 +49,7 @@ def _adjustlinkrev(repo, path, filelog, fnode, srcrev, inclusive=False):
             if path in ac[3]: # checking the 'files' field.
                 # The file has been touched, check if the content is similar
                 # to the one we search for.
-                if fnode == ma.readdelta(ac[0]).get(path):
+                if fnode == ma.readfast(ac[0]).get(path):
                     return a
         # In theory, we should never get out of that loop without a result. But
         # if manifest uses a buggy file revision (not children of the one it
