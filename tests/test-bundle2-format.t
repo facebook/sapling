@@ -755,6 +755,13 @@ Support for changegroup
   \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02H (esc)
   \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
 
+  $ hg debugbundle ../rev.hg2
+  Stream params: {}
+  b2x:changegroup -- '{}'
+      32af7686d403cf45b5d95f2d70cebea587ac806a
+      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
+      eea13746799a9e0bfd88f29d3c2e9dc9389f524f
+      02de42196ebee42ef284b6780a87cdc96e8eaab6
   $ hg unbundle2 < ../rev.hg2
   adding changesets
   adding manifests

@@ -21,7 +21,7 @@ import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod, copies
 import random
 import setdiscovery, treediscovery, dagutil, pvec, localrepo
-import phases, obsolete, exchange
+import phases, obsolete, exchange, bundle2
 import ui as uimod
 
 table = {}
@@ -1816,6 +1816,8 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     f = hg.openpath(ui, bundlepath)
     try:
         gen = exchange.readbundle(ui, f, bundlepath)
+        if isinstance(gen, bundle2.unbundle20):
+            return _debugbundle2(ui, gen, all=all, **opts)
         if all:
             ui.write(("format: id, p1, p2, cset, delta base, len(delta)\n"))
 
@@ -1848,6 +1850,8 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                 fname = chunkdata['filename']
                 showchunks(fname)
         else:
+            if isinstance(gen, bundle2.unbundle20):
+                raise util.Abort(_('use debugbundle2 for this file'))
             chunkdata = gen.changelogheader()
             chain = None
             while True:
@@ -1859,6 +1863,26 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                 chain = node
     finally:
         f.close()
+
+def _debugbundle2(ui, gen, **opts):
+    """lists the contents of a bundle2"""
+    if not isinstance(gen, bundle2.unbundle20):
+        raise util.Abort(_('not a bundle2 file'))
+    ui.write(('Stream params: %s\n' % repr(gen.params)))
+    for part in gen.iterparts():
+        ui.write('%s -- %r\n' % (part.type, repr(part.params)))
+        if part.type == 'b2x:changegroup':
+            version = part.params.get('version', '01')
+            cg = changegroup.packermap[version][1](part, 'UN')
+            chunkdata = cg.changelogheader()
+            chain = None
+            while True:
+                chunkdata = cg.deltachunk(chain)
+                if not chunkdata:
+                    break
+                node = chunkdata['node']
+                ui.write("    %s\n" % hex(node))
+                chain = node
 
 @command('debugcheckstate', [], '')
 def debugcheckstate(ui, repo):
