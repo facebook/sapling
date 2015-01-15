@@ -1571,8 +1571,9 @@ Check that adding an arbitrary name shows up in log automatically
   >     namemap = lambda r, name: foo.get(name)
   >     nodemap = lambda r, node: [name for name, n in foo.iteritems()
   >                                if n == node]
-  >     ns = namespace("bars", templatename="bar", listnames=names,
-  >                    namemap=namemap, nodemap=nodemap)
+  >     ns = namespace("bars", templatename="bar", logname="barlog",
+  >                    colorname="barcolor", listnames=names, namemap=namemap,
+  >                    nodemap=nodemap)
   > 
   >     repo.names.addnamespace(ns)
   > EOF
@@ -1580,11 +1581,24 @@ Check that adding an arbitrary name shows up in log automatically
   $ hg --config extensions.names=../names.py log -r 0
   changeset:   0:65624cd9070a
   tag:         tip
-  bar:         foo
+  barlog:      foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a bunch of weird directories
   
+  $ hg --config extensions.names=../names.py \
+  >  --config extensions.color= --config color.log.barcolor=red \
+  >  --color=always log -r 0
+  \x1b[0;33mchangeset:   0:65624cd9070a\x1b[0m (esc)
+  tag:         tip
+  \x1b[0;31mbarlog:      foo\x1b[0m (esc)
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a bunch of weird directories
+  
+  $ hg --config extensions.names=../names.py log -r 0 --template '{bars}\n'
+  foo
+
   $ cd ..
 
 hg log -f dir across branches

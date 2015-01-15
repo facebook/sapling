@@ -920,8 +920,8 @@ class changeset_printer(object):
             # should be the same
             for name in ns.names(self.repo, changenode):
                 # i18n: column positioning for "hg log"
-                tname = _(("%s:" % ns.templatename).ljust(13) + "%s\n") % name
-                self.ui.write("%s" % tname, label='log.%s' % ns.templatename)
+                name = _(("%s:" % ns.logname).ljust(13) + "%s\n") % name
+                self.ui.write("%s" % name, label='log.%s' % ns.colorname)
         if self.ui.debugflag:
             # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
