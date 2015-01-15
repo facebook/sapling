@@ -79,7 +79,7 @@ bundletypes = {
 # hgweb uses this list to communicate its preferred type
 bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
 
-def writebundle(cg, filename, bundletype, vfs=None):
+def writebundle(ui, cg, filename, bundletype, vfs=None):
     """Write a bundle file and return its filename.
 
     Existing files will not be overwritten.

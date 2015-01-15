@@ -31,7 +31,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
         bundletype = "HG10BZ"
     else:
         bundletype = "HG10UN"
-    return changegroup.writebundle(cg, name, bundletype, vfs)
+    return changegroup.writebundle(repo.ui, cg, name, bundletype, vfs)
 
 def _collectfiles(repo, striprev):
     """find out the filelogs affected by the strip"""

@@ -1217,7 +1217,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1
 
-    changegroup.writebundle(cg, fname, bundletype)
+    changegroup.writebundle(ui, cg, fname, bundletype)
 
 @command('cat',
     [('o', 'output', '',
@@ -2165,7 +2165,7 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     bundletype = btypes.get(bundletype)
     if bundletype not in changegroup.bundletypes:
         raise util.Abort(_('unknown bundle type specified with --type'))
-    changegroup.writebundle(bundle, bundlepath, bundletype)
+    changegroup.writebundle(ui, bundle, bundlepath, bundletype)
 
 @command('debugignore', [], '')
 def debugignore(ui, repo, *values, **opts):

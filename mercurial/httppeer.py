@@ -193,7 +193,7 @@ class httppeer(wireproto.wirepeer):
                 type = x
                 break
 
-        tempname = changegroup.writebundle(cg, None, type)
+        tempname = changegroup.writebundle(self.ui, cg, None, type)
         fp = httpconnection.httpsendfile(self.ui, tempname, "rb")
         headers = {'Content-Type': 'application/mercurial-0.1'}
 
