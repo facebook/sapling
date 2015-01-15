@@ -71,6 +71,7 @@ bundletypes = {
     "": ("", nocompress), # only when using unbundle on ssh and old http servers
                           # since the unification ssh accepts a header but there
                           # is no capability signaling it.
+    "HG2Y": (), # special-cased below
     "HG10UN": ("HG10UN", nocompress),
     "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor()),
     "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
@@ -101,9 +102,20 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
             fh = os.fdopen(fd, "wb")
         cleanup = filename
 
-        header, compressor = bundletypes[bundletype]
-        fh.write(header)
-        z = compressor()
+        if bundletype == "HG2Y":
+            import bundle2
+            bundle = bundle2.bundle20(ui)
+            part = bundle.newpart('b2x:changegroup', data=cg.getchunks())
+            part.addparam('version', cg.version)
+            z = nocompress()
+            chunkiter = bundle.getchunks()
+        else:
+            if cg.version != '01':
+                raise util.Abort(_('Bundle1 only supports v1 changegroups\n'))
+            header, compressor = bundletypes[bundletype]
+            fh.write(header)
+            z = compressor()
+            chunkiter = cg.getchunks()
 
         # parse the changegroup data, otherwise we will block
         # in case of sshrepo because we don't know the end of the stream
@@ -111,7 +123,7 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
         # an empty chunkgroup is the end of the changegroup
         # a changegroup has at least 2 chunkgroups (changelog and manifest).
         # after that, an empty chunkgroup is the end of the changegroup
-        for chunk in cg.getchunks():
+        for chunk in chunkiter:
             fh.write(z.compress(chunk))
         fh.write(z.flush())
         cleanup = None
@@ -146,6 +158,7 @@ def decompressor(fh, alg):
 class cg1unpacker(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
+    version = '01'
     def __init__(self, fh, alg):
         self._stream = decompressor(fh, alg)
         self._type = alg
@@ -238,6 +251,7 @@ class cg1unpacker(object):
 class cg2unpacker(cg1unpacker):
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
+    version = '02'
 
     def _deltaheader(self, headertuple, prevnode):
         node, p1, p2, deltabase, cs = headertuple
@@ -257,6 +271,7 @@ class headerlessfixup(object):
 
 class cg1packer(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
+    version = '01'
     def __init__(self, repo, bundlecaps=None):
         """Given a source repo, construct a bundler.
 
@@ -484,7 +499,7 @@ class cg1packer(object):
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
 
 class cg2packer(cg1packer):
-
+    version = '02'
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
 
     def group(self, nodelist, revlog, lookup, units=None, reorder=None):
