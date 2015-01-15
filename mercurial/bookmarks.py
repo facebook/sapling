@@ -115,7 +115,7 @@ def readcurrent(repo):
     '''
     mark = None
     try:
-        file = repo.opener('bookmarks.current')
+        file = repo.vfs('bookmarks.current')
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
@@ -144,7 +144,7 @@ def setcurrent(repo, mark):
 
     wlock = repo.wlock()
     try:
-        file = repo.opener('bookmarks.current', 'w', atomictemp=True)
+        file = repo.vfs('bookmarks.current', 'w', atomictemp=True)
         file.write(encoding.fromlocal(mark))
         file.close()
     finally:

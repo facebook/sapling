@@ -319,7 +319,7 @@ def reposetup(ui, repo):
                             # longer match a file it matched before
                             self.dirstate.normallookup(f)
                     # Create or touch the cache to update mtime
-                    self.opener("eol.cache", "w").close()
+                    self.vfs("eol.cache", "w").close()
                     wlock.release()
                 except error.LockUnavailable:
                     # If we cannot lock the repository and clear the

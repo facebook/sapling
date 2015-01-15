@@ -234,7 +234,7 @@ def _getdescription(repo, defaultbody, sender, **opts):
                    'patch series.\n\n'))
         body = ui.edit(defaultbody, sender)
         # Save series description in case sendmail fails
-        msgfile = repo.opener('last-email.txt', 'wb')
+        msgfile = repo.vfs('last-email.txt', 'wb')
         msgfile.write(body)
         msgfile.close()
     return body

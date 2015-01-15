@@ -411,7 +411,7 @@ def demo(ui, repo, *args, **opts):
         if args:
             # simulate hgrc parsing
             rcmaps = ['[keywordmaps]\n'] + [a + '\n' for a in args]
-            fp = repo.opener('hgrc', 'w')
+            fp = repo.vfs('hgrc', 'w')
             fp.writelines(rcmaps)
             fp.close()
             ui.readconfig(repo.join('hgrc'))

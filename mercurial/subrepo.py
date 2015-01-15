@@ -614,7 +614,7 @@ class hgsubrepo(abstractsubrepo):
             if defpath != defpushpath:
                 addpathconfig('default-push', defpushpath)
 
-            fp = self._repo.opener("hgrc", "w", text=True)
+            fp = self._repo.vfs("hgrc", "w", text=True)
             try:
                 fp.write(''.join(lines))
             finally:

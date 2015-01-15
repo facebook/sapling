@@ -138,7 +138,7 @@ class mergestate(object):
         """
         records = []
         try:
-            f = self._repo.opener(self.statepathv1)
+            f = self._repo.vfs(self.statepathv1)
             for i, l in enumerate(f):
                 if i == 0:
                     records.append(('L', l[:-1]))
@@ -157,7 +157,7 @@ class mergestate(object):
         """
         records = []
         try:
-            f = self._repo.opener(self.statepathv2)
+            f = self._repo.vfs(self.statepathv2)
             data = f.read()
             off = 0
             end = len(data)
@@ -184,8 +184,8 @@ class mergestate(object):
         # Check local variables before looking at filesystem for performance
         # reasons.
         return bool(self._local) or bool(self._state) or \
-               self._repo.opener.exists(self.statepathv1) or \
-               self._repo.opener.exists(self.statepathv2)
+               self._repo.vfs.exists(self.statepathv1) or \
+               self._repo.vfs.exists(self.statepathv2)
 
     def commit(self):
         """Write current state on disk (if necessary)"""
@@ -205,7 +205,7 @@ class mergestate(object):
 
     def _writerecordsv1(self, records):
         """Write current state on disk in a version 1 file"""
-        f = self._repo.opener(self.statepathv1, 'w')
+        f = self._repo.vfs(self.statepathv1, 'w')
         irecords = iter(records)
         lrecords = irecords.next()
         assert lrecords[0] == 'L'
@@ -217,7 +217,7 @@ class mergestate(object):
 
     def _writerecordsv2(self, records):
         """Write current state on disk in a version 2 file"""
-        f = self._repo.opener(self.statepathv2, 'w')
+        f = self._repo.vfs(self.statepathv2, 'w')
         for key, data in records:
             assert len(key) == 1
             format = '>sI%is' % len(data)
@@ -234,7 +234,7 @@ class mergestate(object):
         note: also write the local version to the `.hg/merge` directory.
         """
         hash = util.sha1(fcl.path()).hexdigest()
-        self._repo.opener.write('merge/' + hash, fcl.data())
+        self._repo.vfs.write('merge/' + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(),
                            fca.path(), hex(fca.filenode()),
                            fco.path(), hex(fco.filenode()),
@@ -284,7 +284,7 @@ class mergestate(object):
             elif flags == fla:
                 flags = flo
         # restore local
-        f = self._repo.opener('merge/' + hash)
+        f = self._repo.vfs('merge/' + hash)
         self._repo.wwrite(dfile, f.read(), flags)
         f.close()
         r = filemerge.filemerge(self._repo, self._local, lfile, fcd, fco, fca,

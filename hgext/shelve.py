@@ -95,7 +95,7 @@ class shelvedstate(object):
 
     @classmethod
     def load(cls, repo):
-        fp = repo.opener(cls._filename)
+        fp = repo.vfs(cls._filename)
         try:
             version = int(fp.readline().strip())
 
@@ -121,7 +121,7 @@ class shelvedstate(object):
 
     @classmethod
     def save(cls, repo, name, originalwctx, pendingctx, stripnodes):
-        fp = repo.opener(cls._filename, 'wb')
+        fp = repo.vfs(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
         fp.write('%s\n' % name)
         fp.write('%s\n' % hex(originalwctx.node()))

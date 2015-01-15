@@ -21,7 +21,7 @@ def _filename(repo):
 
 def read(repo):
     try:
-        f = repo.opener(_filename(repo))
+        f = repo.vfs(_filename(repo))
         lines = f.read().split('\n')
         f.close()
     except (IOError, OSError):
@@ -203,7 +203,7 @@ class branchcache(dict):
 
     def write(self, repo):
         try:
-            f = repo.opener(_filename(repo), "w", atomictemp=True)
+            f = repo.vfs(_filename(repo), "w", atomictemp=True)
             cachekey = [hex(self.tipnode), str(self.tiprev)]
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))

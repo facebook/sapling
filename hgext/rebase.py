@@ -754,7 +754,7 @@ def updatebookmarks(repo, targetnode, nstate, originalbookmarks):
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                 external, activebookmark):
     'Store the current status to allow recovery'
-    f = repo.opener("rebasestate", "w")
+    f = repo.vfs("rebasestate", "w")
     f.write(repo[originalwd].hex() + '\n')
     f.write(repo[target].hex() + '\n')
     f.write(repo[external].hex() + '\n')
@@ -789,7 +789,7 @@ def restorestatus(repo):
         external = nullrev
         activebookmark = None
         state = {}
-        f = repo.opener("rebasestate")
+        f = repo.vfs("rebasestate")
         for i, l in enumerate(f.read().splitlines()):
             if i == 0:
                 originalwd = repo[l].rev()

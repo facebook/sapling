@@ -136,7 +136,7 @@ def bisect(changelog, state):
 def load_state(repo):
     state = {'current': [], 'good': [], 'bad': [], 'skip': []}
     if os.path.exists(repo.join("bisect.state")):
-        for l in repo.opener("bisect.state"):
+        for l in repo.vfs("bisect.state"):
             kind, node = l[:-1].split()
             node = repo.lookup(node)
             if kind not in state:
@@ -146,7 +146,7 @@ def load_state(repo):
 
 
 def save_state(repo, state):
-    f = repo.opener("bisect.state", "w", atomictemp=True)
+    f = repo.vfs("bisect.state", "w", atomictemp=True)
     wlock = repo.wlock()
     try:
         for kind in sorted(state):

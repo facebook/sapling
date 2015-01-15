@@ -1803,7 +1803,7 @@ def debugbuilddag(ui, repo, text=None,
         tr.close()
 
         if tags:
-            repo.opener.write("localtags", "".join(tags))
+            repo.vfs.write("localtags", "".join(tags))
     finally:
         ui.progress(_('building'), None)
         release(tr, lock)
@@ -3377,7 +3377,7 @@ def graft(ui, repo, *revs, **opts):
             raise util.Abort(_("can't specify --continue and revisions"))
         # read in unfinished revisions
         try:
-            nodes = repo.opener.read('graftstate').splitlines()
+            nodes = repo.vfs.read('graftstate').splitlines()
             revs = [repo[node].rev() for node in nodes]
         except IOError, inst:
             if inst.errno != errno.ENOENT:
@@ -3506,7 +3506,7 @@ def graft(ui, repo, *revs, **opts):
                 if stats and stats[3] > 0:
                     # write out state for --continue
                     nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                    repo.opener.write('graftstate', ''.join(nodelines))
+                    repo.vfs.write('graftstate', ''.join(nodelines))
                     raise util.Abort(
                         _("unresolved conflicts, can't continue"),
                         hint=_('use hg resolve and hg graft --continue'))

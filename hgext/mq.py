@@ -3215,7 +3215,7 @@ def qqueue(ui, repo, name=None, **opts):
 
     def _noqueues():
         try:
-            fh = repo.opener(_allqueues, 'r')
+            fh = repo.vfs(_allqueues, 'r')
             fh.close()
         except IOError:
             return True
@@ -3226,7 +3226,7 @@ def qqueue(ui, repo, name=None, **opts):
         current = _getcurrent()
 
         try:
-            fh = repo.opener(_allqueues, 'r')
+            fh = repo.vfs(_allqueues, 'r')
             queues = [queue.strip() for queue in fh if queue.strip()]
             fh.close()
             if current not in queues:
@@ -3243,13 +3243,13 @@ def qqueue(ui, repo, name=None, **opts):
         _setactivenocheck(name)
 
     def _setactivenocheck(name):
-        fh = repo.opener(_activequeue, 'w')
+        fh = repo.vfs(_activequeue, 'w')
         if name != 'patches':
             fh.write(name)
         fh.close()
 
     def _addqueue(name):
-        fh = repo.opener(_allqueues, 'a')
+        fh = repo.vfs(_allqueues, 'a')
         fh.write('%s\n' % (name,))
         fh.close()
 
@@ -3274,7 +3274,7 @@ def qqueue(ui, repo, name=None, **opts):
         if name == current:
             raise util.Abort(_('cannot delete currently active queue'))
 
-        fh = repo.opener('patches.queues.new', 'w')
+        fh = repo.vfs('patches.queues.new', 'w')
         for queue in existing:
             if queue == name:
                 continue
@@ -3322,7 +3322,7 @@ def qqueue(ui, repo, name=None, **opts):
             raise util.Abort(_('non-queue directory "%s" already exists') %
                     newdir)
 
-        fh = repo.opener('patches.queues.new', 'w')
+        fh = repo.vfs('patches.queues.new', 'w')
         for queue in existing:
             if queue == current:
                 fh.write('%s\n' % (name,))

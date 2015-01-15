@@ -109,7 +109,7 @@ class statichttprepository(localrepo.localrepository):
         self.names = namespaces.namespaces()
 
         try:
-            requirements = scmutil.readrequires(self.opener, self.supported)
+            requirements = scmutil.readrequires(self.vfs, self.supported)
         except IOError, inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -117,7 +117,7 @@ class statichttprepository(localrepo.localrepository):
 
             # check if it is a non-empty old-style repository
             try:
-                fp = self.opener("00changelog.i")
+                fp = self.vfs("00changelog.i")
                 fp.read(1)
                 fp.close()
             except IOError, inst:

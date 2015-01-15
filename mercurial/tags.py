@@ -62,7 +62,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo.  Update alltags and tagtypes.'''
     try:
-        data = repo.opener.read("localtags")
+        data = repo.vfs.read("localtags")
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
@@ -193,7 +193,7 @@ def _readtagcache(ui, repo):
     set, caller is responsible for reading tag info from each head.'''
 
     try:
-        cachefile = repo.opener('cache/tags', 'r')
+        cachefile = repo.vfs('cache/tags', 'r')
         # force reading the file for static-http
         cachelines = iter(cachefile)
     except IOError:
@@ -303,7 +303,7 @@ def _readtagcache(ui, repo):
 def _writetagcache(ui, repo, heads, tagfnode, cachetags):
 
     try:
-        cachefile = repo.opener('cache/tags', 'w', atomictemp=True)
+        cachefile = repo.vfs('cache/tags', 'w', atomictemp=True)
     except (OSError, IOError):
         return
 

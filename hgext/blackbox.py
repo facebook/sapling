@@ -112,7 +112,7 @@ def wrapui(ui):
                 lastblackbox = blackbox
 
         def setrepo(self, repo):
-            self._bbopener = repo.opener
+            self._bbopener = repo.vfs
 
     ui.__class__ = blackboxui
 
@@ -141,7 +141,7 @@ def blackbox(ui, repo, *revs, **opts):
         return
 
     limit = opts.get('limit')
-    blackbox = repo.opener('blackbox.log', 'r')
+    blackbox = repo.vfs('blackbox.log', 'r')
     lines = blackbox.read().split('\n')
 
     count = 0

@@ -193,7 +193,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
 
     requirements = ''
     try:
-        requirements = srcrepo.opener.read('requires')
+        requirements = srcrepo.vfs.read('requires')
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
@@ -206,7 +206,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
 
     default = srcrepo.ui.config('paths', 'default')
     if default:
-        fp = r.opener("hgrc", "w", text=True)
+        fp = r.vfs("hgrc", "w", text=True)
         fp.write("[paths]\n")
         fp.write("default = %s\n" % default)
         fp.close()
@@ -226,7 +226,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
         _update(r, uprev)
 
     if bookmarks:
-        r.opener('bookmarks.shared', 'w').close()
+        r.vfs('bookmarks.shared', 'w').close()
 
 def copystore(ui, srcrepo, destpath):
     '''copy files from store of srcrepo in destpath
@@ -441,7 +441,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
         destrepo = destpeer.local()
         if destrepo:
             template = uimod.samplehgrcs['cloned']
-            fp = destrepo.opener("hgrc", "w", text=True)
+            fp = destrepo.vfs("hgrc", "w", text=True)
             u = util.url(abspath)
             u.passwd = None
             defaulturl = str(u)
