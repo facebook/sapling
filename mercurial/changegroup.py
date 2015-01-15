@@ -546,11 +546,11 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
-def getsubset(repo, outgoing, bundler, source, fastpath=False):
+def getsubset(repo, outgoing, bundler, source, fastpath=False, version='01'):
     gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return cg1unpacker(util.chunkbuffer(gengroup), 'UN')
+    return packermap[version][1](util.chunkbuffer(gengroup), 'UN')
 
-def changegroupsubset(repo, roots, heads, source):
+def changegroupsubset(repo, roots, heads, source, version='01'):
     """Compute a changegroup consisting of all the nodes that are
     descendants of any of the roots and ancestors of any of the heads.
     Return a chunkbuffer object whose read() method will return
@@ -572,8 +572,8 @@ def changegroupsubset(repo, roots, heads, source):
     for n in roots:
         discbases.extend([p for p in cl.parents(n) if p != nullid])
     outgoing = discovery.outgoing(cl, discbases, heads)
-    bundler = cg1packer(repo)
-    return getsubset(repo, outgoing, bundler, source)
+    bundler = packermap[version][0](repo)
+    return getsubset(repo, outgoing, bundler, source, version=version)
 
 def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
                            version='01'):
