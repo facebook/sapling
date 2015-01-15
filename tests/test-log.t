@@ -1567,12 +1567,13 @@ Check that adding an arbitrary name shows up in log automatically
   > 
   > def reposetup(ui, repo):
   >     foo = {'foo': repo[0].node()}
-  >     ns = namespace("bars", "bar",
-  >                    lambda r: foo.keys(),
-  >                    lambda r, name: foo.get(name),
-  >                    lambda r, node: [name for name, n
-  >                                     in foo.iteritems()
-  >                                     if n == node])
+  >     names = lambda r: foo.keys()
+  >     namemap = lambda r, name: foo.get(name)
+  >     nodemap = lambda r, node: [name for name, n in foo.iteritems()
+  >                                if n == node]
+  >     ns = namespace("bars", templatename="bar", listnames=names,
+  >                    namemap=namemap, nodemap=nodemap)
+  > 
   >     repo.names.addnamespace(ns)
   > EOF
 

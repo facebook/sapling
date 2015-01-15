@@ -22,27 +22,27 @@ class namespaces(object):
     def __init__(self):
         self._names = util.sortdict()
 
-        # shorten the class name for less indentation
-        ns = namespace
-
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
-        n = ns("bookmarks", "bookmark",
-               lambda repo: repo._bookmarks.keys(),
-               lambda repo, name: tolist(repo._bookmarks.get(name)),
-               lambda repo, name: repo.nodebookmarks(name))
+        bmknames = lambda repo: repo._bookmarks.keys()
+        bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
+        bmknodemap = lambda repo, name: repo.nodebookmarks(name)
+        n = namespace("bookmarks", templatename="bookmark", listnames=bmknames,
+                      namemap=bmknamemap, nodemap=bmknodemap)
         self.addnamespace(n)
 
-        n = ns("tags", "tag",
-               lambda repo: [t for t, n in repo.tagslist()],
-               lambda repo, name: tolist(repo._tagscache.tags.get(name)),
-               lambda repo, name: repo.nodetags(name))
+        tagnames = lambda repo: [t for t, n in repo.tagslist()]
+        tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
+        tagnodemap = lambda repo, name: repo.nodetags(name)
+        n = namespace("tags", templatename="tag", listnames=tagnames,
+                      namemap=tagnamemap, nodemap=tagnodemap)
         self.addnamespace(n)
 
-        n = ns("branches", "branch",
-               lambda repo: repo.branchmap().keys(),
-               lambda repo, name: tolist(repo.branchtip(name, True)),
-               lambda repo, node: [repo[node].branch()])
+        bnames = lambda repo: repo.branchmap().keys()
+        bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
+        bnodemap = lambda repo, node: [repo[node].branch()]
+        n = namespace("branches", templatename="branch", listnames=bnames,
+                      namemap=bnamemap, nodemap=bnodemap)
         self.addnamespace(n)
 
     def __getitem__(self, namespace):
