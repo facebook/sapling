@@ -762,13 +762,11 @@ Support for changegroup
       9520eea781bcca16c1e15acc0ba14335a0e8e5ba
       eea13746799a9e0bfd88f29d3c2e9dc9389f524f
       02de42196ebee42ef284b6780a87cdc96e8eaab6
-  $ hg unbundle2 < ../rev.hg2
+  $ hg unbundle ../rev.hg2
   adding changesets
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
-  0 unread bytes
-  addchangegroup return: 1
 
 with reply
 

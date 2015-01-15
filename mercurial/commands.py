@@ -6142,8 +6142,20 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         for fname in fnames:
             f = hg.openpath(ui, fname)
             gen = exchange.readbundle(ui, f, fname)
-            modheads = changegroup.addchangegroup(repo, gen, 'unbundle',
-                                                  'bundle:' + fname)
+            if isinstance(gen, bundle2.unbundle20):
+                tr = repo.transaction('unbundle')
+                try:
+                    op = bundle2.processbundle(repo, gen, lambda: tr)
+                    tr.close()
+                finally:
+                    if tr:
+                        tr.release()
+                changes = [r.get('result', 0)
+                           for r in op.records['changegroup']]
+                modheads = changegroup.combineresults(changes)
+            else:
+                modheads = changegroup.addchangegroup(repo, gen, 'unbundle',
+                                                      'bundle:' + fname)
     finally:
         lock.release()
 
