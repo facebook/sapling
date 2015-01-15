@@ -120,14 +120,16 @@ class namespace(object):
 
     """
 
-    def __init__(self, name, templatename=None, logname=None, listnames=None,
-                 namemap=None, nodemap=None):
+    def __init__(self, name, templatename=None, logname=None, colorname=None,
+                 listnames=None, namemap=None, nodemap=None):
         """create a namespace
 
         name: the namespace to be registered (in plural form)
         templatename: the name to use for templating
         logname: the name to use for log output; if not specified templatename
                  is used
+        colorname: the name to use for colored log output; if not specified
+                   logname is used
         listnames: function to list all names
         namemap: function that inputs a node, output name(s)
         nodemap: function that inputs a name, output node(s)
@@ -136,6 +138,7 @@ class namespace(object):
         self.name = name
         self.templatename = templatename
         self.logname = logname
+        self.colorname = colorname
         self.listnames = listnames
         self.namemap = namemap
         self.nodemap = nodemap
@@ -143,6 +146,10 @@ class namespace(object):
         # if logname is not specified, use the template name as backup
         if self.logname is None:
             self.logname = self.templatename
+
+        # if colorname is not specified, just use the logname as a backup
+        if self.colorname is None:
+            self.colorname = self.logname
 
     def names(self, repo, node):
         """method that returns a (sorted) list of names in a namespace that
