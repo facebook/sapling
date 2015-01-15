@@ -641,39 +641,13 @@ def reset(ui, repo, *args, **kwargs):
     commit = convert(args[0] if len(args) > 0 else '.')
     hard = opts.get('hard')
 
-    try:
-        revs = repo.revs(commit)
-        parentreset = revs and revs.first() == repo.revs('.^').first()
-        selfreset = revs and revs.first() == repo.revs('.').first()
-    except:
-        parentreset = False
-        selfreset = False
+    if opts.get('mixed'):
+        ui.status('NOTE: There is no staging area (index) in mercurial, so --mixed has no meaning\n\n')
 
-    # Case 1: undo a commit
-    if parentreset:
-        if hard:
-            ui.status("note: hg strip will delete the commit entirely.\n\n")
-
-            cmd = Command('strip')
-            cmd['-r'] = '.'
-        else:
-            ui.status("note: hg strip -k will delete the commit, but keep the " +
-                "changes in your working copy.\n\n")
-            cmd = Command('strip')
-            cmd['-k'] = None
-            cmd['-r'] = '.'
-    # Case 2: clearing pending changes
-    elif hard and selfreset:
-        cmd = Command('revert')
-        cmd['--all'] = None
-    # Case 3: move a bookmark
-    else:
-        upcmd = Command('update')
-        upcmd.append(commit)
-        bookcmd = Command('bookmark')
-        bookcmd['-f'] = None
-        bookcmd.append('<bookmarkname>')
-        cmd = upcmd & bookcmd
+    cmd = Command('reset')
+    if hard:
+        cmd.append('--clean')
+    cmd.append(commit)
 
     ui.status(cmd, "\n")
 
