@@ -120,12 +120,13 @@ class namespace(object):
 
     """
 
-    def __init__(self, name, templatename, listnames, namemap, nodemap):
+    def __init__(self, name, templatename=None, listnames=None, namemap=None,
+                 nodemap=None):
         """create a namespace
 
         name: the namespace to be registered (in plural form)
-        listnames: function to list all names
         templatename: the name to use for templating
+        listnames: function to list all names
         namemap: function that inputs a node, output name(s)
         nodemap: function that inputs a name, output node(s)
 
