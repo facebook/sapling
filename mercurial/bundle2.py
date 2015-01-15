@@ -886,6 +886,15 @@ class unbundlepart(unpackermixin):
             payloadsize = self._unpack(_fpayloadsize)[0]
             self.ui.debug('payload chunk size: %i\n' % payloadsize)
 
+    def _findchunk(self, pos):
+        '''for a given payload position, return a chunk number and offset'''
+        for chunk, (ppos, fpos) in enumerate(self._chunkindex):
+            if ppos == pos:
+                return chunk, 0
+            elif ppos > pos:
+                return chunk - 1, pos - self._chunkindex[chunk - 1][0]
+        raise ValueError('Unknown chunk')
+
     def _readheader(self):
         """read the header and setup the object"""
         typesize = self._unpackheader(_fparttypesize)[0]
@@ -936,6 +945,31 @@ class unbundlepart(unpackermixin):
 
     def tell(self):
         return self._pos
+
+    def seek(self, offset, whence=0):
+        if whence == 0:
+            newpos = offset
+        elif whence == 1:
+            newpos = self._pos + offset
+        elif whence == 2:
+            if not self.consumed:
+                self.read()
+            newpos = self._chunkindex[-1][0] - offset
+        else:
+            raise ValueError('Unknown whence value: %r' % (whence,))
+
+        if newpos > self._chunkindex[-1][0] and not self.consumed:
+            self.read()
+        if not 0 <= newpos <= self._chunkindex[-1][0]:
+            raise ValueError('Offset out of range')
+
+        if self._pos != newpos:
+            chunk, internaloffset = self._findchunk(newpos)
+            self._payloadstream = util.chunkbuffer(self._payloadchunks(chunk))
+            adjust = self.read(internaloffset)
+            if len(adjust) != internaloffset:
+                raise util.Abort(_('Seek failed\n'))
+            self._pos = newpos
 
 capabilities = {'HG2Y': (),
                 'b2x:listkeys': (),
