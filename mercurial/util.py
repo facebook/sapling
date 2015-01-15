@@ -236,7 +236,7 @@ def unpacker(fmt):
         return struct.Struct(fmt).unpack
     except AttributeError:
         # 2.4
-        return lambda buf: struct.unpack(fmt)
+        return lambda buf: struct.unpack(fmt, buf)
 
 def popen2(cmd, env=None, newlines=False):
     # Setting bufsize to -1 lets the system decide the buffer size.
