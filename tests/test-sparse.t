@@ -170,3 +170,10 @@ Verify strip -k resets dirstate correctly
   $ hg status
   M show
   ? show2
+
+Verify rebase succeeds if all changed files are in sparse checkout
+
+  $ hg commit -Aqm "add show2"
+  $ hg rebase -d 1 --config extensions.rebase=
+  rebasing 2:bdde55290160 "add show2" (tip)
+  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/bdde55290160-backup.hg

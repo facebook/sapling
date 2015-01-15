@@ -95,10 +95,10 @@ def _setupupdates(ui):
             files.add(file)
             if sparsematch(file):
                 prunedactions[file] = action
-            elif type == 'm' or (branchmerge and type == 'g'):
+            elif type == 'm' or (branchmerge and type != 'k'):
                 raise util.Abort(_("cannot merge because %s is outside " +
                     "the sparse checkout") % file)
-            else:
+            elif file in wctx:
                 prunedactions[file] = ('r', args, msg)
 
         # If an active profile changed during the update, refresh the checkout.
