@@ -123,12 +123,19 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'branches', branches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
 
-def bookmarks(orig, ui, repo, *args, **opts):
+def outputname(cmd, orig, ui, repo, *args, **opts):
     orig(ui, repo, *args, **opts)
-    if opts.get('all') and 'remotebookmarks' in repo.names:
-        fm = ui.formatter('bookmarks', opts)
-        label = 'log.remotebookmark'
-        ns = repo.names['remotebookmarks']
+
+    # exit early if namespace doesn't even exist
+    namespace = 'remote' + cmd
+    if namespace not in repo.names:
+        return
+
+    ns = repo.names['remote' + cmd]
+    label = 'log.' + ns.colorname
+    fm = ui.formatter(cmd, opts)
+
+    if opts.get('all'):
 
         # create a sorted by descending rev list
         revs = set()
@@ -140,40 +147,26 @@ def bookmarks(orig, ui, repo, *args, **opts):
             n = repo[r].node()
             for name in ns.names(repo, n):
                 fm.startitem()
-                if not ui.quiet:
-                    fm.plain('   ')
-                fm.write('remotebookmark', '%s', name, label=label)
-                padsize = max(25 - encoding.colwidth(name), 0)
+                padsize = max(31 - len(str(r)) - encoding.colwidth(name), 0)
+
+                # bookmarks have a slightly different padding
+                if cmd == 'bookmarks':
+                    if not ui.quiet:
+                        fm.plain('   ')
+                    padsize = max(25 - encoding.colwidth(name), 0)
+
+                fm.write(ns.colorname, '%s', name, label=label)
                 fmt = ' ' * padsize + ' %d:%s'
                 fm.condwrite(not ui.quiet, 'rev node', fmt, r,
                              fm.hexfunc(n), label=label)
                 fm.plain('\n')
         fm.end()
+
+def bookmarks(orig, ui, repo, *args, **opts):
+    outputname('bookmarks', orig, ui, repo, *args, **opts)
 
 def branches(orig, ui, repo, *args, **opts):
-    orig(ui, repo, *args, **opts)
-    if opts.get('all') and 'remotebranches' in repo.names:
-        fm = ui.formatter('branches', opts)
-        label = 'log.remotebranch'
-        ns = repo.names['remotebranches']
-
-        # create a sorted by descending rev list
-        revs = set()
-        for name in ns.listnames(repo):
-            n = ns.nodes(repo, name)[0]
-            revs.add(repo.changelog.rev(n))
-
-        for r in sorted(revs, reverse=True):
-            n = repo[r].node()
-            for name in ns.names(repo, n):
-                fm.startitem()
-                fm.write('remotebranch', '%s', name, label=label)
-                padsize = max(31 - len(str(r)) - encoding.colwidth(name), 0)
-                fmt = ' ' * padsize + ' %d:%s'
-                fm.condwrite(not ui.quiet, 'rev node', fmt, r,
-                             fm.hexfunc(n), label=label)
-                fm.plain('\n')
-        fm.end()
+    outputname('branches', orig, ui, repo, *args, **opts)
 
 def activepath(ui, remote):
     realpath = ''
