@@ -1754,9 +1754,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         bprefix = 'b/'
 
     def diffline(a, b, revs):
-        if opts.git:
-            line = 'diff --git %s%s %s%s\n' % (aprefix, a, bprefix, b)
-        elif not repo.ui.quiet:
+        if not repo.ui.quiet:
             if revs:
                 revinfo = ' '.join(["-r %s" % rev for rev in revs])
                 line = 'diff %s %s\n' % (revinfo, a)
@@ -1847,9 +1845,11 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         path1 = posixpath.join(prefix, f1)
         path2 = posixpath.join(prefix, f2)
         header = []
-        if opts.git or revs:
+        if revs:
             header.append(diffline(path1, path2, revs))
-        if opts.git:
+        elif opts.git:
+            header.append('diff --git %s%s %s%s\n' %
+                          (aprefix, path1, bprefix, path2))
             if content1 is None: # added
                 header.append('new file mode %s\n' % gitmode[flag2])
             elif content2 is None: # removed
