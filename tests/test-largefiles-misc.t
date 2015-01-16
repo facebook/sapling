@@ -590,6 +590,8 @@ check messages when there are files to upload:
   all remote heads known locally
   1:1acbe71ce432
   2:6095d0695d70
+  finding outgoing largefiles: 0/2 revision (0.00%)
+  finding outgoing largefiles: 1/2 revision (50.00%)
   largefiles to upload (1 entities):
   b
       89e6c98d92887913cadf06b2adb97f26cde4849b
@@ -645,6 +647,11 @@ check messages when there are files to upload:
   3:7983dce246cc
   4:233f12ada4ae
   5:036794ea641c
+  finding outgoing largefiles: 0/5 revision (0.00%)
+  finding outgoing largefiles: 1/5 revision (20.00%)
+  finding outgoing largefiles: 2/5 revision (40.00%)
+  finding outgoing largefiles: 3/5 revision (60.00%)
+  finding outgoing largefiles: 4/5 revision (80.00%)
   largefiles to upload (3 entities):
   b
       13f9ed0898e315bf59dc2973fec52037b6f441a2
@@ -690,6 +697,10 @@ and #5 refer it.
   3:7983dce246cc
   4:233f12ada4ae
   5:036794ea641c
+  finding outgoing largefiles: 0/4 revision (0.00%)
+  finding outgoing largefiles: 1/4 revision (25.00%)
+  finding outgoing largefiles: 2/4 revision (50.00%)
+  finding outgoing largefiles: 3/4 revision (75.00%)
   largefiles to upload (2 entities):
   b
       13f9ed0898e315bf59dc2973fec52037b6f441a2
