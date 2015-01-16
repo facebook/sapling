@@ -1739,9 +1739,6 @@ def diffui(*args, **kw):
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
 
-    def addindexmeta(meta, index1, index2):
-        meta.append('index %s..%s\n' % (index1, index2))
-
     def gitindex(text):
         if not text:
             text = ""
@@ -1869,7 +1866,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if binarydiff and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
             if text and opts.git:
-                addindexmeta(header, gitindex(content1), gitindex(content2))
+                header.append('index %s..%s\n' %
+                              (gitindex(content1), gitindex(content2)))
         else:
             text = mdiff.unidiff(content1, date1,
                                  content2, date2,
