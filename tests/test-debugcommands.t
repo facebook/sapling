@@ -129,8 +129,7 @@ Test internal debugstacktrace command
   stacktrace at:
    debugstacktrace.py:10 in * (glob)
    debugstacktrace.py:3  in f
-  hello from g
-   at:
+  hello from g at:
    debugstacktrace.py:10 in * (glob)
    debugstacktrace.py:4  in f
   hi ...

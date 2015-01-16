@@ -2871,7 +2871,7 @@ def debugstacktrace(msg='stacktrace', skip=0, f=stderr, otherf=stdout):
     '''
     if otherf:
         otherf.flush()
-    f.write('%s at:\n' % msg)
+    f.write('%s at:\n' % msg.rstrip())
     for line in getstackframes(skip + 1):
         f.write(line)
     f.flush()
