@@ -1739,9 +1739,6 @@ def diffui(*args, **kw):
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
 
-    def join(f):
-        return posixpath.join(prefix, f)
-
     def addmodehdr(header, mode1, mode2):
         if mode1 != mode2:
             header.append('old mode %s\n' % mode1)
@@ -1855,6 +1852,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 elif binary or flag2 != flag1:
                     losedatafn(f)
 
+        path1 = posixpath.join(prefix, f1)
+        path2 = posixpath.join(prefix, f2)
         header = []
         if opts.git:
             if content1 is None: # added
@@ -1864,11 +1863,11 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             else:  # modified/copied/renamed
                 addmodehdr(header, gitmode[flag1], gitmode[flag2])
                 if op is not None:
-                    header.append('%s from %s\n' % (op, join(f1)))
-                    header.append('%s to %s\n' % (op, join(f2)))
+                    header.append('%s from %s\n' % (op, path1))
+                    header.append('%s to %s\n' % (op, path2))
 
         if opts.git or revs:
-            header.insert(0, diffline(join(f1), join(f2), revs))
+            header.insert(0, diffline(path1, path2, revs))
         if binarydiff and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
             if text and opts.git:
@@ -1876,7 +1875,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         else:
             text = mdiff.unidiff(content1, date1,
                                  content2, date2,
-                                 join(f1), join(f2), opts=opts)
+                                 path1, path2, opts=opts)
         if header and (text or len(header) > 1):
             yield ''.join(header)
         if text:
