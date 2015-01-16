@@ -1753,13 +1753,13 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         aprefix = 'a/'
         bprefix = 'b/'
 
-    def diffline(a, b, revs):
+    def diffline(f, revs):
         if not repo.ui.quiet:
             if revs:
                 revinfo = ' '.join(["-r %s" % rev for rev in revs])
-                line = 'diff %s %s\n' % (revinfo, a)
+                line = 'diff %s %s\n' % (revinfo, f)
             else:
-                line = 'diff %s\n' % a
+                line = 'diff %s\n' % f
         else:
             line = ''
         return line
@@ -1846,7 +1846,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         path2 = posixpath.join(prefix, f2)
         header = []
         if revs:
-            header.append(diffline(path1, path2, revs))
+            header.append(diffline(path1, revs))
         elif opts.git:
             header.append('diff --git %s%s %s%s\n' %
                           (aprefix, path1, bprefix, path2))
