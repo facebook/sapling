@@ -1754,12 +1754,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         bprefix = 'b/'
 
     def diffline(f, revs):
-        if not repo.ui.quiet:
-            revinfo = ' '.join(["-r %s" % rev for rev in revs])
-            line = 'diff %s %s\n' % (revinfo, f)
-        else:
-            line = ''
-        return line
+        revinfo = ' '.join(["-r %s" % rev for rev in revs])
+        return 'diff %s %s\n' % (revinfo, f)
 
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
@@ -1854,7 +1850,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 if op is not None:
                     header.append('%s from %s\n' % (op, path1))
                     header.append('%s to %s\n' % (op, path2))
-        elif revs:
+        elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
         if binarydiff and not opts.nobinary:
