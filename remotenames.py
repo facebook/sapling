@@ -119,12 +119,15 @@ def reposetup(ui, repo):
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'bookmarks', bookmarks)
     entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
+    entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
 
     entry = extensions.wrapcommand(commands.table, 'branches', branches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
+    entry[1].append(('', 'remote', None, 'show only remote branches'))
 
 def outputname(cmd, orig, ui, repo, *args, **opts):
-    orig(ui, repo, *args, **opts)
+    if not opts.get('remote'):
+        orig(ui, repo, *args, **opts)
 
     # exit early if namespace doesn't even exist
     namespace = 'remote' + cmd
@@ -135,7 +138,7 @@ def outputname(cmd, orig, ui, repo, *args, **opts):
     label = 'log.' + ns.colorname
     fm = ui.formatter(cmd, opts)
 
-    if opts.get('all'):
+    if opts.get('all') or opts.get('remote'):
 
         # create a sorted by descending rev list
         revs = set()
