@@ -867,6 +867,7 @@ Broken disabled extension and command:
   >     """throws an exception"""
   >     raise Bogon()
   > EOF
+
 No declared supported version, extension complains:
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension throw
@@ -876,6 +877,7 @@ No declared supported version, extension complains:
   ** Python * (glob)
   ** Mercurial Distributed SCM * (glob)
   ** Extensions loaded: throw
+
 empty declaration of supported version, extension complains:
   $ echo "testedwith = ''" >> throw.py
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
@@ -886,6 +888,7 @@ empty declaration of supported version, extension complains:
   ** Python * (glob)
   ** Mercurial Distributed SCM (*) (glob)
   ** Extensions loaded: throw
+
 If the extension specifies a buglink, show that:
   $ echo 'buglink = "http://example.com/bts"' >> throw.py
   $ rm -f throw.pyc throw.pyo
@@ -897,6 +900,7 @@ If the extension specifies a buglink, show that:
   ** Python * (glob)
   ** Mercurial Distributed SCM (*) (glob)
   ** Extensions loaded: throw
+
 If the extensions declare outdated versions, accuse the older extension first:
   $ echo "from mercurial import util" >> older.py
   $ echo "util.version = lambda:'2.2'" >> older.py
@@ -912,6 +916,7 @@ If the extensions declare outdated versions, accuse the older extension first:
   ** Python * (glob)
   ** Mercurial Distributed SCM (version 2.2)
   ** Extensions loaded: throw, older
+
 One extension only tested with older, one only with newer versions:
   $ echo "util.version = lambda:'2.1.0'" >> older.py
   $ rm -f older.pyc older.pyo
@@ -924,6 +929,7 @@ One extension only tested with older, one only with newer versions:
   ** Python * (glob)
   ** Mercurial Distributed SCM (version 2.1.0)
   ** Extensions loaded: throw, older
+
 Older extension is tested with current version, the other only with newer:
   $ echo "util.version = lambda:'1.9.3'" >> older.py
   $ rm -f older.pyc older.pyo
