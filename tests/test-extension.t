@@ -918,7 +918,7 @@ If the extensions declare outdated versions, accuse the older extension first:
   ** Extensions loaded: throw, older
 
 One extension only tested with older, one only with newer versions:
-  $ echo "util.version = lambda:'2.1.0'" >> older.py
+  $ echo "util.version = lambda:'2.1'" >> older.py
   $ rm -f older.pyc older.pyo
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
@@ -927,7 +927,7 @@ One extension only tested with older, one only with newer versions:
   ** Please disable older and try your action again.
   ** If that fixes the bug please report it to the extension author.
   ** Python * (glob)
-  ** Mercurial Distributed SCM (version 2.1.0)
+  ** Mercurial Distributed SCM (version 2.1)
   ** Extensions loaded: throw, older
 
 Older extension is tested with current version, the other only with newer:
