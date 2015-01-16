@@ -229,39 +229,42 @@ class progbar(object):
 
     def progress(self, topic, pos, item='', unit='', total=None):
         now = time.time()
-        if pos is None:
-            self.starttimes.pop(topic, None)
-            self.startvals.pop(topic, None)
-            self.topicstates.pop(topic, None)
-            # reset the progress bar if this is the outermost topic
-            if self.topics and self.topics[0] == topic and self.printed:
-                self.complete()
-                self.resetstate()
-            # truncate the list of topics assuming all topics within
-            # this one are also closed
-            if topic in self.topics:
-                self.topics = self.topics[:self.topics.index(topic)]
-                # reset the last topic to the one we just unwound to,
-                # so that higher-level topics will be stickier than
-                # lower-level topics
-                if self.topics:
-                    self.lasttopic = self.topics[-1]
-                else:
-                    self.lasttopic = None
-        else:
-            if topic not in self.topics:
-                self.starttimes[topic] = now
-                self.startvals[topic] = pos
-                self.topics.append(topic)
-            self.topicstates[topic] = pos, item, unit, total
-            if now - self.lastprint >= self.refresh and self.topics:
-                if (self.lasttopic is None # first time we printed
-                    # not a topic change
-                    or topic == self.lasttopic
-                    # it's been long enough we should print anyway
-                    or now - self.lastprint >= self.changedelay):
-                    self.lastprint = now
-                    self.show(now, topic, *self.topicstates[topic])
+        try:
+            if pos is None:
+                self.starttimes.pop(topic, None)
+                self.startvals.pop(topic, None)
+                self.topicstates.pop(topic, None)
+                # reset the progress bar if this is the outermost topic
+                if self.topics and self.topics[0] == topic and self.printed:
+                    self.complete()
+                    self.resetstate()
+                # truncate the list of topics assuming all topics within
+                # this one are also closed
+                if topic in self.topics:
+                    self.topics = self.topics[:self.topics.index(topic)]
+                    # reset the last topic to the one we just unwound to,
+                    # so that higher-level topics will be stickier than
+                    # lower-level topics
+                    if self.topics:
+                        self.lasttopic = self.topics[-1]
+                    else:
+                        self.lasttopic = None
+            else:
+                if topic not in self.topics:
+                    self.starttimes[topic] = now
+                    self.startvals[topic] = pos
+                    self.topics.append(topic)
+                self.topicstates[topic] = pos, item, unit, total
+                if now - self.lastprint >= self.refresh and self.topics:
+                    if (self.lasttopic is None # first time we printed
+                        # not a topic change
+                        or topic == self.lasttopic
+                        # it's been long enough we should print anyway
+                        or now - self.lastprint >= self.changedelay):
+                        self.lastprint = now
+                        self.show(now, topic, *self.topicstates[topic])
+        finally:
+            pass
 
 _singleton = None
 
