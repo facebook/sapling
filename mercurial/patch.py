@@ -1777,7 +1777,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         content1 = None
         content2 = None
         binarydiff = False
-        op = None
+        copyop = None
         if f not in addedset:
             content1 = getfilectx(f, ctx1).data()
         if f not in removedset:
@@ -1791,10 +1791,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         f1 = copy[f]
                         flag1 = ctx1.flags(f1)
                         if f1 in removedset and f1 not in gone:
-                            op = 'rename'
+                            copyop = 'rename'
                             gone.add(f1)
                         else:
-                            op = 'copy'
+                            copyop = 'copy'
                         content1 = getfilectx(f1, ctx1).data()
                     else:
                         losedatafn(f)
@@ -1847,9 +1847,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 if mode1 != mode2:
                     header.append('old mode %s' % mode1)
                     header.append('new mode %s' % mode2)
-                if op is not None:
-                    header.append('%s from %s' % (op, path1))
-                    header.append('%s to %s' % (op, path2))
+                if copyop is not None:
+                    header.append('%s from %s' % (copyop, path1))
+                    header.append('%s to %s' % (copyop, path2))
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
