@@ -135,6 +135,13 @@ make sure we can list remote bookmarks with --all
      babar                     3:78f83396d79e
      beta/babar                3:78f83396d79e
 
+  $ hg branches --all
+  default                        6:ce61ec32ee23
+  stable                         4:8948da77173b (inactive)
+  beta/stable                    4:8948da77173b
+  beta/default                   3:78f83396d79e
+  alpha/stable                   2:95cb4ab9fe1d
+  alpha/default                  1:7c3bad9141dc
 
 make sure bogus revisions in .hg/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \

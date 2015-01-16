@@ -120,6 +120,9 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'bookmarks', bookmarks)
     entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
 
+    entry = extensions.wrapcommand(commands.table, 'branches', branches)
+    entry[1].append(('a', 'all', None, 'show both remote and local branches'))
+
 def bookmarks(orig, ui, repo, *args, **opts):
     orig(ui, repo, *args, **opts)
     if opts.get('all') and 'remotebookmarks' in repo.names:
@@ -141,6 +144,31 @@ def bookmarks(orig, ui, repo, *args, **opts):
                     fm.plain('   ')
                 fm.write('remotebookmark', '%s', name, label=label)
                 padsize = max(25 - encoding.colwidth(name), 0)
+                fmt = ' ' * padsize + ' %d:%s'
+                fm.condwrite(not ui.quiet, 'rev node', fmt, r,
+                             fm.hexfunc(n), label=label)
+                fm.plain('\n')
+        fm.end()
+
+def branches(orig, ui, repo, *args, **opts):
+    orig(ui, repo, *args, **opts)
+    if opts.get('all') and 'remotebranches' in repo.names:
+        fm = ui.formatter('branches', opts)
+        label = 'log.remotebranch'
+        ns = repo.names['remotebranches']
+
+        # create a sorted by descending rev list
+        revs = set()
+        for name in ns.listnames(repo):
+            n = ns.nodes(repo, name)[0]
+            revs.add(repo.changelog.rev(n))
+
+        for r in sorted(revs, reverse=True):
+            n = repo[r].node()
+            for name in ns.names(repo, n):
+                fm.startitem()
+                fm.write('remotebranch', '%s', name, label=label)
+                padsize = max(31 - len(str(r)) - encoding.colwidth(name), 0)
                 fmt = ' ' * padsize + ' %d:%s'
                 fm.condwrite(not ui.quiet, 'rev node', fmt, r,
                              fm.hexfunc(n), label=label)
