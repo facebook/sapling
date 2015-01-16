@@ -1755,11 +1755,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
     def diffline(f, revs):
         if not repo.ui.quiet:
-            if revs:
-                revinfo = ' '.join(["-r %s" % rev for rev in revs])
-                line = 'diff %s %s\n' % (revinfo, f)
-            else:
-                line = 'diff %s\n' % f
+            revinfo = ' '.join(["-r %s" % rev for rev in revs])
+            line = 'diff %s %s\n' % (revinfo, f)
         else:
             line = ''
         return line
