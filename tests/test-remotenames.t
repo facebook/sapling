@@ -129,6 +129,13 @@ graph shows tags for the branch heads of each path
      summary:     add a
   
 
+make sure we can list remote bookmarks with --all
+
+  $ hg bookmarks --all
+     babar                     3:78f83396d79e
+     beta/babar                3:78f83396d79e
+
+
 make sure bogus revisions in .hg/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
   > .hg/remotenames

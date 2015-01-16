@@ -1,5 +1,7 @@
 import os
 
+from mercurial import commands
+from mercurial import encoding
 from mercurial import error
 from mercurial import exchange
 from mercurial import extensions
@@ -113,6 +115,37 @@ def reposetup(ui, repo):
                                  listnames=names, namemap=namemap,
                                  nodemap=nodemap)
         repo.names.addnamespace(n)
+
+def extsetup(ui):
+    entry = extensions.wrapcommand(commands.table, 'bookmarks', bookmarks)
+    entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
+
+def bookmarks(orig, ui, repo, *args, **opts):
+    orig(ui, repo, *args, **opts)
+    if opts.get('all') and 'remotebookmarks' in repo.names:
+        fm = ui.formatter('bookmarks', opts)
+        label = 'log.remotebookmark'
+        ns = repo.names['remotebookmarks']
+
+        # create a sorted by descending rev list
+        revs = set()
+        for name in ns.listnames(repo):
+            n = ns.nodes(repo, name)[0]
+            revs.add(repo.changelog.rev(n))
+
+        for r in sorted(revs, reverse=True):
+            n = repo[r].node()
+            for name in ns.names(repo, n):
+                fm.startitem()
+                if not ui.quiet:
+                    fm.plain('   ')
+                fm.write('remotebookmark', '%s', name, label=label)
+                padsize = max(25 - encoding.colwidth(name), 0)
+                fmt = ' ' * padsize + ' %d:%s'
+                fm.condwrite(not ui.quiet, 'rev node', fmt, r,
+                             fm.hexfunc(n), label=label)
+                fm.plain('\n')
+        fm.end()
 
 def activepath(ui, remote):
     realpath = ''
