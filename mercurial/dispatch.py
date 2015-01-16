@@ -283,12 +283,19 @@ def _runcatch(req):
                 # We found an untested extension. It's likely the culprit.
                 worst = name, 'unknown', report
                 break
-            if compare not in testedwith.split() and testedwith != 'internal':
-                tested = [tuplever(v) for v in testedwith.split()]
-                lower = [t for t in tested if t < ct]
-                nearest = max(lower or tested)
-                if worst[0] is None or nearest < worst[1]:
-                    worst = name, nearest, report
+
+            # Never blame on extensions bundled with Mercurial.
+            if testedwith == 'internal':
+                continue
+
+            tested = [tuplever(t) for t in testedwith.split()]
+            if ct in tested:
+                continue
+
+            lower = [t for t in tested if t < ct]
+            nearest = max(lower or tested)
+            if worst[0] is None or nearest < worst[1]:
+                worst = name, nearest, report
         if worst[0] is not None:
             name, testedwith, report = worst
             if not isinstance(testedwith, str):
@@ -315,7 +322,10 @@ def _runcatch(req):
 
 def tuplever(v):
     try:
-        return tuple([int(i) for i in v.split('.')])
+        # Assertion: tuplever is only used for extension compatibility
+        # checking. Otherwise, the discarding of extra version fields is
+        # incorrect.
+        return tuple([int(i) for i in v.split('.')[0:2]])
     except ValueError:
         return tuple()
 

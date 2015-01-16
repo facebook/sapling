@@ -858,7 +858,7 @@ Broken disabled extension and command:
   [255]
 
   $ cat > throw.py <<EOF
-  > from mercurial import cmdutil, commands
+  > from mercurial import cmdutil, commands, util
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
   > class Bogon(Exception): pass
@@ -910,7 +910,7 @@ If the extensions declare outdated versions, accuse the older extension first:
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension older
-  ** which supports versions 1.9.3 of Mercurial.
+  ** which supports versions 1.9 of Mercurial.
   ** Please disable older and try your action again.
   ** If that fixes the bug please report it to the extension author.
   ** Python * (glob)
@@ -923,7 +923,7 @@ One extension only tested with older, one only with newer versions:
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension older
-  ** which supports versions 1.9.3 of Mercurial.
+  ** which supports versions 1.9 of Mercurial.
   ** Please disable older and try your action again.
   ** If that fixes the bug please report it to the extension author.
   ** Python * (glob)
@@ -936,7 +936,7 @@ Older extension is tested with current version, the other only with newer:
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension throw
-  ** which supports versions 2.1.1 of Mercurial.
+  ** which supports versions 2.1 of Mercurial.
   ** Please disable throw and try your action again.
   ** If that fixes the bug please report it to http://example.com/bts
   ** Python * (glob)
@@ -946,6 +946,17 @@ Older extension is tested with current version, the other only with newer:
 Declare the version as supporting this hg version, show regular bts link:
   $ hgver=`$PYTHON -c 'from mercurial import util; print util.version().split("+")[0]'`
   $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
+  $ rm -f throw.pyc throw.pyo
+  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
+  ** unknown exception encountered, please report by visiting
+  ** http://mercurial.selenic.com/wiki/BugTracker
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: throw
+
+Patch version is ignored during compatibility check
+  $ echo "testedwith = '3.2'" >> throw.py
+  $ echo "util.version = lambda:'3.2.2'" >> throw.py
   $ rm -f throw.pyc throw.pyo
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** unknown exception encountered, please report by visiting
