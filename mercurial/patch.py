@@ -1850,6 +1850,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         path1 = posixpath.join(prefix, f1)
         path2 = posixpath.join(prefix, f2)
         header = []
+        if opts.git or revs:
+            header.append(diffline(path1, path2, revs))
         if opts.git:
             if content1 is None: # added
                 header.append('new file mode %s\n' % gitmode[flag2])
@@ -1864,8 +1866,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     header.append('%s from %s\n' % (op, path1))
                     header.append('%s to %s\n' % (op, path2))
 
-        if opts.git or revs:
-            header.insert(0, diffline(path1, path2, revs))
         if binarydiff and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
             if text and opts.git:
