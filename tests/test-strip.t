@@ -187,6 +187,30 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
+  $ hg up -C 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg parents
+  changeset:   4:264128213d29
+  tag:         tip
+  parent:      1:ef3a871183d7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+  $ hg --config experimental.bundle2-exp=True --config experimental.strip-bundle2-version=02 --traceback strip 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/264128213d29-0b39d6bf-backup.hg (glob)
+  $ hg parents
+  changeset:   1:ef3a871183d7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+  $ hg debugbundle .hg/strip-backup/*
+  Stream params: {}
+  b2x:changegroup -- "{'version': '02'}"
+      264128213d290d868c54642d13aeaa3675551a78
+  $ restore
 
   $ hg up -C 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

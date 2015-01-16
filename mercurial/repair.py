@@ -6,14 +6,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import changegroup, exchange, util
+from mercurial import changegroup, exchange, util, bundle2
 from mercurial.node import short, hex
 from mercurial.i18n import _
 import errno
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
-    cg = changegroup.changegroupsubset(repo, bases, heads, 'strip')
+    usebundle2 = (repo.ui.config('experimental', 'bundle2-exp') and
+                  repo.ui.config('experimental', 'strip-bundle2-version'))
+    if usebundle2:
+        cgversion = repo.ui.config('experimental', 'strip-bundle2-version')
+    else:
+        cgversion = '01'
+
+    cg = changegroup.changegroupsubset(repo, bases, heads, 'strip',
+                                       version=cgversion)
     backupdir = "strip-backup"
     vfs = repo.vfs
     if not vfs.isdir(backupdir):
@@ -27,7 +35,9 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
     totalhash = util.sha1(''.join(allhashes)).hexdigest()
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
 
-    if compress:
+    if usebundle2:
+        bundletype = "HG2Y"
+    elif compress:
         bundletype = "HG10BZ"
     else:
         bundletype = "HG10UN"
@@ -163,8 +173,17 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             if not repo.ui.verbose:
                 # silence internal shuffling chatter
                 repo.ui.pushbuffer()
-            changegroup.addchangegroup(repo, gen, 'strip',
-                                       'bundle:' + vfs.join(chgrpfile), True)
+            if isinstance(gen, bundle2.unbundle20):
+                tr = repo.transaction('strip')
+                try:
+                    bundle2.processbundle(repo, gen, lambda: tr)
+                    tr.close()
+                finally:
+                    tr.release()
+            else:
+                changegroup.addchangegroup(repo, gen, 'strip',
+                                           'bundle:' + vfs.join(chgrpfile),
+                                           True)
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()
