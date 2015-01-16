@@ -82,7 +82,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
         pass
 
 class transaction(object):
-    def __init__(self, report, opener, vfsmap, journal, after=None,
+    def __init__(self, report, opener, vfsmap, journalname, after=None,
                  createmode=None):
         """Begin a new transaction
 
@@ -104,7 +104,7 @@ class transaction(object):
         self.after = after
         self.entries = []
         self.map = {}
-        self.journal = journal
+        self.journal = journalname
         self._queue = []
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
@@ -118,7 +118,7 @@ class transaction(object):
         # (cache is currently unused)
         self._backupentries = []
         self._backupmap = {}
-        self._backupjournal = "%s.backupfiles" % journal
+        self._backupjournal = "%s.backupfiles" % self.journal
         self._backupsfile = opener.open(self._backupjournal, 'w')
         self._backupsfile.write('%d\n' % version)
 
