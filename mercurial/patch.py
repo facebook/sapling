@@ -1755,7 +1755,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
     def diffline(f, revs):
         revinfo = ' '.join(["-r %s" % rev for rev in revs])
-        return 'diff %s %s\n' % (revinfo, f)
+        return 'diff %s %s' % (revinfo, f)
 
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
@@ -1836,34 +1836,34 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         path2 = posixpath.join(prefix, f2)
         header = []
         if opts.git:
-            header.append('diff --git %s%s %s%s\n' %
+            header.append('diff --git %s%s %s%s' %
                           (aprefix, path1, bprefix, path2))
             if content1 is None: # added
-                header.append('new file mode %s\n' % gitmode[flag2])
+                header.append('new file mode %s' % gitmode[flag2])
             elif content2 is None: # removed
-                header.append('deleted file mode %s\n' % gitmode[flag1])
+                header.append('deleted file mode %s' % gitmode[flag1])
             else:  # modified/copied/renamed
                 mode1, mode2 = gitmode[flag1], gitmode[flag2]
                 if mode1 != mode2:
-                    header.append('old mode %s\n' % mode1)
-                    header.append('new mode %s\n' % mode2)
+                    header.append('old mode %s' % mode1)
+                    header.append('new mode %s' % mode2)
                 if op is not None:
-                    header.append('%s from %s\n' % (op, path1))
-                    header.append('%s to %s\n' % (op, path2))
+                    header.append('%s from %s' % (op, path1))
+                    header.append('%s to %s' % (op, path2))
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
         if binarydiff and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
             if text and opts.git:
-                header.append('index %s..%s\n' %
+                header.append('index %s..%s' %
                               (gitindex(content1), gitindex(content2)))
         else:
             text = mdiff.unidiff(content1, date1,
                                  content2, date2,
                                  path1, path2, opts=opts)
         if header and (text or len(header) > 1):
-            yield ''.join(header)
+            yield '\n'.join(header) + '\n'
         if text:
             yield text
 
