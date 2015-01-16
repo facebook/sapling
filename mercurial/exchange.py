@@ -992,22 +992,8 @@ def _pullbundle2(pullop):
         raise util.Abort('missing support for %s' % exc)
 
     if pullop.fetch:
-        changedheads = 0
-        pullop.cgresult = 1
-        for cg in op.records['changegroup']:
-            ret = cg['return']
-            # If any changegroup result is 0, return 0
-            if ret == 0:
-                pullop.cgresult = 0
-                break
-            if ret < -1:
-                changedheads += ret + 1
-            elif ret > 1:
-                changedheads += ret - 1
-        if changedheads > 0:
-            pullop.cgresult = 1 + changedheads
-        elif changedheads < 0:
-            pullop.cgresult = -1 + changedheads
+        results = [cg['return'] for cg in op.records['changegroup']]
+        pullop.cgresult = changegroup.combineresults(results)
 
     # processing phases change
     for namespace, value in op.records['listkeys']:

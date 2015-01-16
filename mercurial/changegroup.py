@@ -42,6 +42,25 @@ def closechunk():
     """return a changegroup chunk header (string) for a zero-length chunk"""
     return struct.pack(">l", 0)
 
+def combineresults(results):
+    """logic to combine 0 or more addchangegroup results into one"""
+    changedheads = 0
+    result = 1
+    for ret in results:
+        # If any changegroup result is 0, return 0
+        if ret == 0:
+            result = 0
+            break
+        if ret < -1:
+            changedheads += ret + 1
+        elif ret > 1:
+            changedheads += ret - 1
+    if changedheads > 0:
+        result = 1 + changedheads
+    elif changedheads < 0:
+        result = -1 + changedheads
+    return result
+
 class nocompress(object):
     def compress(self, x):
         return x
