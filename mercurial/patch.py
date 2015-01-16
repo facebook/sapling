@@ -1739,11 +1739,6 @@ def diffui(*args, **kw):
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
 
-    def addmodehdr(header, mode1, mode2):
-        if mode1 != mode2:
-            header.append('old mode %s\n' % mode1)
-            header.append('new mode %s\n' % mode2)
-
     def addindexmeta(meta, index1, index2):
         meta.append('index %s..%s\n' % (index1, index2))
 
@@ -1861,7 +1856,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             elif content2 is None: # removed
                 header.append('deleted file mode %s\n' % gitmode[flag1])
             else:  # modified/copied/renamed
-                addmodehdr(header, gitmode[flag1], gitmode[flag2])
+                mode1, mode2 = gitmode[flag1], gitmode[flag2]
+                if mode1 != mode2:
+                    header.append('old mode %s\n' % mode1)
+                    header.append('new mode %s\n' % mode2)
                 if op is not None:
                     header.append('%s from %s\n' % (op, path1))
                     header.append('%s to %s\n' % (op, path2))
