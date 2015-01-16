@@ -116,18 +116,25 @@ Test internal debugstacktrace command
   $ cat > debugstacktrace.py << EOF
   > from mercurial.util import debugstacktrace, dst, sys
   > def f():
-  >     dst('hello world')
+  >     debugstacktrace(f=sys.stdout)
+  >     g()
   > def g():
-  >     f()
-  >     debugstacktrace(skip=-5, f=sys.stdout)
-  > g()
+  >     dst('hello from g\\n', skip=1)
+  >     h()
+  > def h():
+  >     dst('hi ...\\nfrom h hidden in g', 1)
+  > f()
   > EOF
   $ python debugstacktrace.py
-  hello world at:
-   debugstacktrace.py:7 in * (glob)
-   debugstacktrace.py:5 in g
-   debugstacktrace.py:3 in f
   stacktrace at:
-   debugstacktrace.py:7 *in * (glob)
-   debugstacktrace.py:6 *in g (glob)
-   */util.py:* in debugstacktrace (glob)
+   debugstacktrace.py:10 in * (glob)
+   debugstacktrace.py:3  in f
+  hello from g
+   at:
+   debugstacktrace.py:10 in * (glob)
+   debugstacktrace.py:4  in f
+  hi ...
+  from h hidden in g at:
+   debugstacktrace.py:10 in * (glob)
+   debugstacktrace.py:4  in f
+   debugstacktrace.py:7  in g
