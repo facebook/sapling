@@ -382,3 +382,79 @@ should also work if a commit message is missing
   $ hg histedit 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
+
+  $ cd ..
+
+
+Test to make sure folding renames doesn't cause bogus conflicts (issue4251):
+  $ hg init issue4251
+  $ cd issue4251
+
+  $ mkdir initial-dir
+  $ echo foo > initial-dir/initial-file
+  $ hg add initial-dir/initial-file
+  $ hg commit -m "initial commit"
+
+Move the file to a new directory, and in the same commit, change its content:
+  $ mkdir another-dir
+  $ hg mv initial-dir/initial-file another-dir/
+  $ echo changed > another-dir/initial-file
+  $ hg commit -m "moved and changed"
+
+Rename the file:
+  $ hg mv another-dir/initial-file another-dir/renamed-file
+  $ hg commit -m "renamed"
+
+Now, let's try to fold the second commit into the first:
+  $ cat > editor.sh <<EOF
+  > #!/bin/sh
+  > cat > \$1 <<ENDOF
+  > pick b0f4233702ca 0 initial commit
+  > fold 5e8704a8f2d2 1 moved and changed
+  > pick 40e7299e8fa7 2 renamed
+  > ENDOF
+  > EOF
+  $ chmod +x editor.sh
+
+  $ HGEDITOR=./editor.sh hg histedit 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding another-dir/initial-file
+  removing initial-dir/initial-file
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg --config diff.git=yes export 0
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID fffadc26f8f85623ce60b028a3f1ccc3730f8530
+  # Parent  0000000000000000000000000000000000000000
+  pick b0f4233702ca 0 initial commit
+  fold 5e8704a8f2d2 1 moved and changed
+  pick 40e7299e8fa7 2 renamed
+  
+  diff --git a/another-dir/initial-file b/another-dir/initial-file
+  new file mode 100644
+  --- /dev/null
+  +++ b/another-dir/initial-file
+  @@ -0,0 +1,1 @@
+  +changed
+
+  $ hg --config diff.git=yes export 1
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 9b730d82b00af8a2766facebfa47cc124405a118
+  # Parent  fffadc26f8f85623ce60b028a3f1ccc3730f8530
+  renamed
+  
+  diff --git a/another-dir/initial-file b/another-dir/renamed-file
+  rename from another-dir/initial-file
+  rename to another-dir/renamed-file
+
+  $ cd ..
