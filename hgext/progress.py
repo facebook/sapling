@@ -228,6 +228,17 @@ class progbar(object):
             return _('%d %s/sec') % (delta / elapsed, unit)
         return ''
 
+    def _oktoprint(self, now):
+        '''Check if conditions are met to print - e.g. changedelay elapsed'''
+        if (self.lasttopic is None # first time we printed
+            # not a topic change
+            or self.curtopic == self.lasttopic
+            # it's been long enough we should print anyway
+            or now - self.lastprint >= self.changedelay):
+            return True
+        else:
+            return False
+
     def progress(self, topic, pos, item='', unit='', total=None):
         now = time.time()
         try:
@@ -258,11 +269,7 @@ class progbar(object):
                 self.topicstates[topic] = pos, item, unit, total
                 self.curtopic = topic
                 if now - self.lastprint >= self.refresh and self.topics:
-                    if (self.lasttopic is None # first time we printed
-                        # not a topic change
-                        or topic == self.lasttopic
-                        # it's been long enough we should print anyway
-                        or now - self.lastprint >= self.changedelay):
+                    if self._oktoprint(now):
                         self.lastprint = now
                         self.show(now, topic, *self.topicstates[topic])
         finally:
