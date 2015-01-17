@@ -407,10 +407,12 @@ def remotenameskw(**args):
     """
     repo, ctx = args['repo'], args['ctx']
 
-    remotenames = repo.names['remotebookmarks'].names(repo, ctx.node())
+    remotenames = []
+    if 'remotebookmarks' in repo.names:
+        remotenames = repo.names['remotebookmarks'].names(repo, ctx.node())
 
     suppress = repo.ui.configbool('remotenames', 'suppressbranches', False)
-    if not remotenames or not suppress:
+    if (not remotenames or not suppress) and 'remotebranches' in repo.names:
         remotenames += repo.names['remotebranches'].names(repo, ctx.node())
 
     return templatekw.showlist('remotename', remotenames,

@@ -17,6 +17,8 @@ Test that remotenames works on a repo without any names file
   $ mkcommit a
   $ mkcommit b
   $ hg log -r 'upstream()'
+  $ hg log -r . -T '{remotenames} {remotebranches} {remotebookmarks}\n'
+    
 
 Continue testing
 
