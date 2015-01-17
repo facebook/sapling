@@ -1007,7 +1007,7 @@ class localrepository(object):
 
         parents = self.dirstate.parents()
         self.destroying()
-        vfsmap = {'plain': self.vfs}
+        vfsmap = {'plain': self.vfs, '': self.svfs}
         transaction.rollback(self.svfs, vfsmap, 'undo', ui.warn)
         if self.vfs.exists('undo.bookmarks'):
             self.vfs.rename('undo.bookmarks', 'bookmarks')
