@@ -56,11 +56,13 @@ Tests of the file helper tool
   <<< no trailing newline
 #endif
 
+#if unix-permissions
   $ ln bar baz
   $ f bar -n baz -l --hexdump -t --sha1 --lines=9 -B 20
   bar: file, links=2, newer than baz, sha1=612ca68d0305c821750a
   0000: 31 0a 32 0a 33 0a 34 0a 35 0a 36 0a 37 0a 38 0a |1.2.3.4.5.6.7.8.|
   0010: 39 0a                                           |9.|
+#endif
 
 #if unix-permissions symlink
   $ ln -s yadda l
