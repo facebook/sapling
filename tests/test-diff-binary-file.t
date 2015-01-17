@@ -9,6 +9,9 @@
 
   $ hg revert -r 0 binfile.bin
   $ hg ci -m 'revert binfile.bin'
+  $ hg cp binfile.bin nonbinfile
+  $ echo text > nonbinfile
+  $ hg ci -m 'make non-binary copy of binary file'
 
   $ hg diff --nodates -r 0 -r 1
   diff -r 48b371597640 -r acea2ab458c8 binfile.bin
@@ -40,5 +43,15 @@
   $ hg diff --config diff.nobinary=True --git -r 0 -r 1
   diff --git a/binfile.bin b/binfile.bin
   Binary file binfile.bin has changed
+
+  $ hg diff --git -r 2 -r 3
+  diff --git a/binfile.bin b/nonbinfile
+  copy from binfile.bin
+  copy to nonbinfile
+  index 37ba3d1c6f17137d9c5f5776fa040caf5fe73ff9..8e27be7d6154a1f68ea9160ef0e18691d20560dc
+  GIT binary patch
+  literal 5
+  Mc$_OqttjCF00uV!&;S4c
+  
 
   $ cd ..
