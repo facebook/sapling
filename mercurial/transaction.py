@@ -82,8 +82,8 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
         pass
 
 class transaction(object):
-    def __init__(self, report, opener, vfsmap, journalname, after=None,
-                 createmode=None):
+    def __init__(self, report, opener, vfsmap, journalname, undoname=None,
+                 after=None, createmode=None):
         """Begin a new transaction
 
         Begins a new transaction that allows rolling back writes in the event of
@@ -105,6 +105,7 @@ class transaction(object):
         self.entries = []
         self.map = {}
         self.journal = journalname
+        self.undoname = undoname
         self._queue = []
         # a dict of arguments to be passed to hooks
         self.hookargs = {}

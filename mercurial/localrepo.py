@@ -912,6 +912,7 @@ class localrepository(object):
         vfsmap = {'plain': self.vfs} # root of .hg/
         tr = transaction.transaction(rp, self.svfs, vfsmap,
                                      "journal",
+                                     "undo",
                                      aftertrans(renames),
                                      self.store.createmode)
         # note: writing the fncache only during finalize mean that the file is
