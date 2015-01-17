@@ -69,7 +69,7 @@ Tests of the file helper tool
   ./bar: file, size=21, mode=755, md5=3b03, sha1=612c
   ./baz: file, size=21, mode=755, md5=3b03, sha1=612c
   ./foo: file, size=4, mode=644, md5=d3b0, sha1=f1d2
-  ./l: link, size=5, mode=777, md5=2faa, sha1=af93
+  ./l: link, size=5, md5=2faa, sha1=af93
 #endif
 
   $ f --quiet bar -DL 3

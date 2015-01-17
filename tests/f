@@ -63,7 +63,7 @@ def visit(opts, filenames, outfile):
             stat = os.lstat(f)
             if opts.size and not isdir:
                 facts.append('size=%s' % stat.st_size)
-            if opts.mode:
+            if opts.mode and not islink:
                 facts.append('mode=%o' % (stat.st_mode & 0777))
             if opts.links:
                 facts.append('links=%s' % stat.st_nlink)
