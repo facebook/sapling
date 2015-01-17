@@ -1348,7 +1348,7 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
             filelist.extend(s.deleted + s.removed)
 
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
-                                normallookup=partial, checked=True)
+                                normallookup=partial)
 
         return result
     finally:
