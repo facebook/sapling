@@ -414,9 +414,8 @@ Now, let's try to fold the second commit into the first:
   > pick 40e7299e8fa7 2 renamed
   > ENDOF
   > EOF
-  $ chmod +x editor.sh
 
-  $ HGEDITOR=./editor.sh hg histedit 0
+  $ HGEDITOR="sh ./editor.sh" hg histedit 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding another-dir/initial-file
   removing initial-dir/initial-file
