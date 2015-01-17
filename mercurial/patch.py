@@ -1807,12 +1807,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if opts.git or losedatafn:
             if f in addedset:
                 mode = gitmode[ctx2.flags(f)]
-                if f in copy or f in copyto:
+                if f in copy:
                     if opts.git:
-                        if f in copy:
-                            a = copy[f]
-                        else:
-                            a = copyto[f]
+                        a = copy[f]
                         omode = gitmode[ctx1.flags(a)]
                         addmodehdr(header, omode, mode)
                         if a in removedset and a not in gone:
@@ -1841,10 +1838,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             elif f in removedset:
                 if opts.git:
                     # have we already reported a copy above?
-                    if ((f in copy and copy[f] in addedset
-                         and copyto[copy[f]] == f) or
-                        (f in copyto and copyto[f] in addedset
-                         and copy[copyto[f]] == f)):
+                    if (f in copyto and copyto[f] in addedset
+                        and copy[copyto[f]] == f):
                         continue
                     else:
                         header.append('deleted file mode %s\n' %
