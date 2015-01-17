@@ -37,6 +37,7 @@ characters.
 
 import sys
 import time
+import threading
 
 from mercurial.i18n import _
 testedwith = 'internal'
@@ -90,6 +91,7 @@ def fmtremaining(seconds):
 class progbar(object):
     def __init__(self, ui):
         self.ui = ui
+        self._refreshlock = threading.Lock()
         self.resetstate()
 
     def resetstate(self):
@@ -241,6 +243,7 @@ class progbar(object):
 
     def progress(self, topic, pos, item='', unit='', total=None):
         now = time.time()
+        self._refreshlock.acquire()
         try:
             if pos is None:
                 self.starttimes.pop(topic, None)
@@ -273,7 +276,7 @@ class progbar(object):
                         self.lastprint = now
                         self.show(now, topic, *self.topicstates[topic])
         finally:
-            pass
+            self._refreshlock.release()
 
 _singleton = None
 
