@@ -2797,7 +2797,9 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
     # need all matching names in dirstate and manifest of target rev,
     # so have to walk both. do not print errors if files exist in one
-    # but not other.
+    # but not other. in both cases, filesets should be evaluated against
+    # workingctx to get consistent result (issue4497). this means 'set:**'
+    # cannot be used to select missing files from target rev.
 
     # `names` is a mapping for all elements in working copy and target revision
     # The mapping is in the form:
