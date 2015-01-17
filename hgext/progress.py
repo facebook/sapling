@@ -100,6 +100,7 @@ class progbar(object):
         self.printed = False
         self.lastprint = time.time() + float(self.ui.config(
             'progress', 'delay', default=3))
+        self.curtopic = None
         self.lasttopic = None
         self.indetcount = 0
         self.refresh = float(self.ui.config(
@@ -255,6 +256,7 @@ class progbar(object):
                     self.startvals[topic] = pos
                     self.topics.append(topic)
                 self.topicstates[topic] = pos, item, unit, total
+                self.curtopic = topic
                 if now - self.lastprint >= self.refresh and self.topics:
                     if (self.lasttopic is None # first time we printed
                         # not a topic change
