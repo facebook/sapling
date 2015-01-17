@@ -72,7 +72,6 @@ class match(object):
         self._cwd = cwd
         self._files = [] # exact files and roots of patterns
         self._anypats = bool(include or exclude)
-        self._ctx = ctx
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
 
