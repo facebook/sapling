@@ -1,8 +1,11 @@
+#require test-repo
+
 This code uses the ast module, which was new in 2.6, so we'll skip
 this test on anything earlier.
   $ $PYTHON -c 'import sys ; assert sys.version_info >= (2, 6)' || exit 80
 
   $ import_checker="$TESTDIR"/../contrib/import-checker.py
+
 Run the doctests from the import checker, and make sure
 it's working correctly.
   $ TERM=dumb
@@ -10,11 +13,6 @@ it's working correctly.
   $ python -m doctest $import_checker
 
   $ cd "$TESTDIR"/..
-  $ if hg identify -q > /dev/null 2>&1; then :
-  > else
-  >     echo "skipped: not a Mercurial working dir" >&2
-  >     exit 80
-  > fi
 
 There are a handful of cases here that require renaming a module so it
 doesn't overlap with a stdlib module name. There are also some cycles
