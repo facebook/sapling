@@ -65,7 +65,7 @@ Tests of the file helper tool
 #if unix-permissions symlink
   $ ln -s yadda l
   $ f . --recurse -MStmsB4
-  .: directory with 4 files, size=*, mode=755 (glob)
+  .: directory with 4 files, mode=755
   ./bar: file, size=21, mode=755, md5=3b03, sha1=612c
   ./baz: file, size=21, mode=755, md5=3b03, sha1=612c
   ./foo: file, size=4, mode=644, md5=d3b0, sha1=f1d2
