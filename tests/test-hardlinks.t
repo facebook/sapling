@@ -50,6 +50,8 @@ Prepare repo r1:
   1 r1/.hg/store/fncache
   1 r1/.hg/store/phaseroots
   1 r1/.hg/store/undo
+  1 r1/.hg/store/undo.backup.fncache
+  1 r1/.hg/store/undo.backupfiles
   1 r1/.hg/store/undo.phaseroots
 
 
@@ -80,6 +82,8 @@ Repos r1 and r2 should now contain hardlinked files:
   2 r1/.hg/store/fncache
   1 r1/.hg/store/phaseroots
   1 r1/.hg/store/undo
+  1 r1/.hg/store/undo.backup.fncache
+  1 r1/.hg/store/undo.backupfiles
   1 r1/.hg/store/undo.phaseroots
 
   $ nlinksdir r2/.hg/store
@@ -99,6 +103,7 @@ Repo r3 should not be hardlinked:
   1 r3/.hg/store/fncache
   1 r3/.hg/store/phaseroots
   1 r3/.hg/store/undo
+  1 r3/.hg/store/undo.backupfiles
   1 r3/.hg/store/undo.phaseroots
 
 
@@ -124,6 +129,9 @@ Create a non-inlined filelog in r3:
   1 r3/.hg/store/fncache
   1 r3/.hg/store/phaseroots
   1 r3/.hg/store/undo
+  1 r3/.hg/store/undo.backup.fncache
+  1 r3/.hg/store/undo.backup.phaseroots
+  1 r3/.hg/store/undo.backupfiles
   1 r3/.hg/store/undo.phaseroots
 
 Push to repo r1 should break up most hardlinks in r2:
@@ -151,7 +159,7 @@ Push to repo r1 should break up most hardlinks in r2:
   1 r2/.hg/store/00manifest.i
   1 r2/.hg/store/data/d1/f2.i
   2 r2/.hg/store/data/f1.i
-  1 r2/.hg/store/fncache
+  2 r2/.hg/store/fncache
 
   $ hg -R r2 verify
   checking changesets
@@ -176,7 +184,7 @@ Committing a change to f1 in r1 must break up hardlink f1.i in r2:
   1 r2/.hg/store/00manifest.i
   1 r2/.hg/store/data/d1/f2.i
   1 r2/.hg/store/data/f1.i
-  1 r2/.hg/store/fncache
+  2 r2/.hg/store/fncache
 
 
   $ cd r3
@@ -210,6 +218,9 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/store/fncache
   2 r4/.hg/store/phaseroots
   2 r4/.hg/store/undo
+  2 r4/.hg/store/undo.backup.fncache
+  2 r4/.hg/store/undo.backup.phaseroots
+  2 r4/.hg/store/undo.backupfiles
   2 r4/.hg/store/undo.phaseroots
   2 r4/.hg/undo.bookmarks
   2 r4/.hg/undo.branch
@@ -242,6 +253,9 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   2 r4/.hg/store/fncache
   2 r4/.hg/store/phaseroots
   2 r4/.hg/store/undo
+  2 r4/.hg/store/undo.backup.fncache
+  2 r4/.hg/store/undo.backup.phaseroots
+  2 r4/.hg/store/undo.backupfiles
   2 r4/.hg/store/undo.phaseroots
   2 r4/.hg/undo.bookmarks
   2 r4/.hg/undo.branch

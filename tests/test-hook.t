@@ -158,6 +158,8 @@ more there after
   journal.phaseroots
   phaseroots
   undo
+  undo.backup.fncache
+  undo.backupfiles
   undo.phaseroots
 
 

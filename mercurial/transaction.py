@@ -405,6 +405,7 @@ class transaction(object):
                     self.report("couldn't remote %s: %s\n"
                                 % (vfs.join(b), inst))
         self.entries = []
+        self._writeundo()
         if self.after:
             self.after()
         if self.opener.isfile(self.journal):
@@ -439,6 +440,32 @@ class transaction(object):
         transaction is not explicitly committed before going out of
         scope)'''
         self._abort()
+
+    def _writeundo(self):
+        """write transaction data for possible future undo call"""
+        if self.undoname is None:
+            return
+        undobackupfile = self.opener.open("%s.backupfiles" % self.undoname, 'w')
+        undobackupfile.write('%d\n' % version)
+        for l, f, b, c in self._backupentries:
+            if not f:  # temporary file
+                continue
+            if not b:
+                u = ''
+            else:
+                if l not in self._vfsmap and c:
+                    self.report("couldn't remote %s: unknown cache location"
+                                "%s\n" % (b, l))
+                    continue
+                vfs = self._vfsmap[l]
+                base, name = vfs.split(b)
+                assert name.startswith(self.journal), name
+                uname = name.replace(self.journal, self.undoname, 1)
+                u = vfs.reljoin(base, uname)
+                util.copyfile(vfs.join(b), vfs.join(u), hardlink=True)
+            undobackupfile.write("%s\0%s\0%s\0%d\n" % (l, f, u, c))
+        undobackupfile.close()
+
 
     def _abort(self):
         self.count = 0

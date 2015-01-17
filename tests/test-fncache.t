@@ -81,6 +81,7 @@ Non store repo:
   .hg/phaseroots
   .hg/requires
   .hg/undo
+  .hg/undo.backupfiles
   .hg/undo.bookmarks
   .hg/undo.branch
   .hg/undo.desc
@@ -114,6 +115,7 @@ Non fncache repo:
   .hg/store/data/tst.d.hg/_foo.i
   .hg/store/phaseroots
   .hg/store/undo
+  .hg/store/undo.backupfiles
   .hg/store/undo.phaseroots
   .hg/undo.bookmarks
   .hg/undo.branch
