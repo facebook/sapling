@@ -3,7 +3,7 @@ Tests of the file helper tool
   $ f -h
   ?sage: f [options] [filenames] (glob)
   
-  Options:
+  ?ptions: (glob)
     -h, --help            show this help message and exit
     -t, --type            show file type (file or directory)
     -m, --mode            show file mode
