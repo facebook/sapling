@@ -263,7 +263,7 @@ class ui(object):
                 (util.timer() - starttime) * 1000
 
     def formatter(self, topic, opts):
-        return formatter.formatter(self, topic, opts)
+        return formatter.formatter(self, self, topic, opts)
 
     def _trusted(self, fp, f):
         st = util.fstat(fp)
