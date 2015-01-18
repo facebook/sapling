@@ -351,5 +351,30 @@ largefile and a normal file.  Then a largefile that hasn't been committed yet.
   R sub1/sub2/test.txt
   ? foo/bar/abc
   ? sub1/sub2/untracked.txt
+  $ hg add sub1/sub2
+  $ hg ci -Sqm 'forget testing'
+
+Test issue4330: commit a directory where only normal files have changed
+  $ touch foo/bar/large.dat
+  $ hg add --large foo/bar/large.dat
+  $ hg ci -m 'add foo/bar/large.dat'
+  $ touch a.txt
+  $ touch a.dat
+  $ hg add -v foo/bar/abc a.txt a.dat
+  adding a.dat as a largefile
+  adding a.txt
+  adding foo/bar/abc (glob)
+  $ hg ci -m 'dir commit with only normal file deltas' foo/bar
+  $ hg status
+  A a.dat
+  A a.txt
+
+Test a directory commit with a changed largefile and a changed normal file
+  $ echo changed > foo/bar/large.dat
+  $ echo changed > foo/bar/abc
+  $ hg ci -m 'dir commit with normal and lf file deltas' foo
+  $ hg status
+  A a.dat
+  A a.txt
 
   $ cd ..

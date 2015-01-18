@@ -326,7 +326,12 @@ def reposetup(ui, repo):
                         if self.dirstate.normalize(lf).startswith(d):
                             actualfiles.append(lf)
                             if not matcheddir:
-                                actualfiles.append(lfutil.standin(f))
+                                # There may still be normal files in the dir, so
+                                # make sure a directory is in the list, which
+                                # forces status to walk and call the match
+                                # function on the matcher.  Windows does NOT
+                                # require this.
+                                actualfiles.append('.')
                                 matcheddir = True
                 # Nothing in dir, so readd it
                 # and let commit reject it
