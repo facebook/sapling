@@ -51,7 +51,7 @@ print ctxb.status(ctxa)
 for d in ctxb.diff(ctxa, git=True):
     print d
 
-# test safeness and correctness of "cxt.status()"
+# test safeness and correctness of "ctx.status()"
 print '= checking context.status():'
 
 # ancestor "wcctx ~ 2"

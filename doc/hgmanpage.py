@@ -427,7 +427,7 @@ class Translator(nodes.NodeVisitor):
         pass
 
     def visit_block_quote(self, node):
-        # BUG/HACK: indent alway uses the _last_ indention,
+        # BUG/HACK: indent always uses the _last_ indention,
         # thus we need two of them.
         self.indent(BLOCKQOUTE_INDENT)
         self.indent(0)

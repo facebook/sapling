@@ -142,7 +142,7 @@ class namespace(object):
                  is used
         colorname: the name to use for colored log output; if not specified
                    logname is used
-        logfmt: the format to use for (l10n-ed) log output; if not specified
+        logfmt: the format to use for (i18n-ed) log output; if not specified
                 it is composed from logname
         listnames: function to list all names
         namemap: function that inputs a node, output name(s)

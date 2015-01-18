@@ -110,22 +110,22 @@ def logmessage(ui, opts):
                              (logfile, inst.strerror))
     return message
 
-def mergeeditform(ctxorbool, baseform):
-    """build appropriate editform from ctxorbool and baseform
+def mergeeditform(ctxorbool, baseformname):
+    """return appropriate editform name (referencing a committemplate)
 
-    'ctxorbool' is one of a ctx to be committed, or a bool whether
+    'ctxorbool' is either a ctx to be committed, or a bool indicating whether
     merging is committed.
 
-    This returns editform 'baseform' with '.merge' if merging is
-    committed, or one with '.normal' suffix otherwise.
+    This returns baseformname with '.merge' appended if it is a merge,
+    otherwise '.normal' is appended.
     """
     if isinstance(ctxorbool, bool):
         if ctxorbool:
-            return baseform + ".merge"
+            return baseformname + ".merge"
     elif 1 < len(ctxorbool.parents()):
-        return baseform + ".merge"
+        return baseformname + ".merge"
 
-    return baseform + ".normal"
+    return baseformname + ".normal"
 
 def getcommiteditor(edit=False, finishdesc=None, extramsg=None,
                     editform='', **opts):
@@ -2600,9 +2600,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         deladded = _deleted - smf
         deleted = _deleted - deladded
 
-        # We need to account for the state of file in the dirstate.
-        #
-        # Even, when we revert against something else than parent. This will
+        # We need to account for the state of the file in the dirstate,
+        # even when we revert against something else than parent. This will
         # slightly alter the behavior of revert (doing back up or not, delete
         # or just forget etc).
         if parent == node:

@@ -122,7 +122,7 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
             heappush(pendingheap, -currentrev)
             pendingset.add(currentrev)
         # iterates on pending rev until after the current rev have been
-        # processeed.
+        # processed.
         rev = None
         while rev != currentrev:
             rev = -heappop(pendingheap)

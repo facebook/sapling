@@ -136,7 +136,7 @@ Test permission of files created by push:
 #endif
 
 Test issue 4053 (remove --after on a deleted, uncommitted file shouldn't say
-it is missing, but a remove on a nonexistant unknown file still should.  Same
+it is missing, but a remove on a nonexistent unknown file still should.  Same
 for a forget.)
 
   $ cd src

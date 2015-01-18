@@ -1659,7 +1659,7 @@ hg log -f dir across branches
   |
   o  a
   
-Ensure that largefiles doesn't intefere with following a normal file
+Ensure that largefiles doesn't interfere with following a normal file
   $ hg  --config extensions.largefiles= log -f d -T '{desc}' -G
   @  c
   |

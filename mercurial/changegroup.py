@@ -111,7 +111,8 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
             chunkiter = bundle.getchunks()
         else:
             if cg.version != '01':
-                raise util.Abort(_('Bundle1 only supports v1 changegroups\n'))
+                raise util.Abort(_('old bundle types only supports v1 '
+                                   'changegroups'))
             header, compressor = bundletypes[bundletype]
             fh.write(header)
             z = compressor()

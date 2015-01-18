@@ -754,7 +754,7 @@ class basefilectx(object):
         return True
 
     def _adjustlinkrev(self, path, filelog, fnode, srcrev, inclusive=False):
-        """return the first ancestor of <srcrev> introducting <fnode>
+        """return the first ancestor of <srcrev> introducing <fnode>
 
         If the linkrev of the file revision does not point to an ancestor of
         srcrev, we'll walk down the ancestors until we find one introducing
@@ -826,7 +826,7 @@ class basefilectx(object):
             # be replaced with the rename information. This parent is -always-
             # the first one.
             #
-            # As null id have alway been filtered out in the previous list
+            # As null id have always been filtered out in the previous list
             # comprehension, inserting to 0 will always result in "replacing
             # first nullid parent with rename information.
             pl.insert(0, (r[0], r[1], self._repo.file(r[0])))

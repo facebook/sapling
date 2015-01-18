@@ -456,5 +456,5 @@ def validdest(repo, old, new):
     elif repo.obsstore:
         return new.node() in obsolete.foreground(repo, [old.node()])
     else:
-        # still an independent clause as it is lazyer (and therefore faster)
+        # still an independent clause as it is lazier (and therefore faster)
         return old.descendant(new)
