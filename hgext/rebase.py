@@ -198,7 +198,7 @@ def rebase(ui, repo, **opts):
 
         if opts.get('interactive'):
             msg = _("interactive history editing is supported by the "
-                    "'histedit' extension (see 'hg help histedit')")
+                    "'histedit' extension (see \"hg help histedit\")")
             raise util.Abort(msg)
 
         if collapsemsg and not collapsef:
@@ -327,7 +327,7 @@ def rebase(ui, repo, **opts):
             if not keepf and not repo[root].mutable():
                 raise util.Abort(_("can't rebase immutable changeset %s")
                                  % repo[root],
-                                 hint=_('see hg help phases for details'))
+                                 hint=_('see "hg help phases" for details'))
 
             originalwd, target, state = result
             if collapsef:
@@ -858,7 +858,7 @@ def abort(repo, originalwd, target, state):
     if immutable:
         repo.ui.warn(_("warning: can't clean up immutable changesets %s\n")
                      % ', '.join(str(repo[r]) for r in immutable),
-                     hint=_('see hg help phases for details'))
+                     hint=_('see "hg help phases" for details'))
         cleanup = False
 
     descendants = set()

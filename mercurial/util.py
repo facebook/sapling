@@ -1463,7 +1463,7 @@ def matchdate(date):
         except ValueError:
             raise Abort(_("invalid day spec: %s") % date[1:])
         if days < 0:
-            raise Abort(_("%s must be nonnegative (see 'hg help dates')")
+            raise Abort(_('%s must be nonnegative (see "hg help dates")')
                 % date[1:])
         when = makedate()[0] - days * 3600 * 24
         return lambda x: x >= when

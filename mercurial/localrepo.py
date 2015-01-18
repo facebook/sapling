@@ -1367,8 +1367,8 @@ class localrepository(object):
             ms = mergemod.mergestate(self)
             for f in status.modified:
                 if f in ms and ms[f] == 'u':
-                    raise util.Abort(_("unresolved merge conflicts "
-                                       "(see hg help resolve)"))
+                    raise util.Abort(_('unresolved merge conflicts '
+                                       '(see "hg help resolve")'))
 
             if editor:
                 cctx._text = editor(self, cctx, subs)
