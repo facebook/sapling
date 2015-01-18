@@ -85,7 +85,7 @@ Binary format is as follow
 
     :typesize: (one byte)
 
-    :parttype: alphanumerical part name (restricted to ^a-zA-Z0-9_:-])
+    :parttype: alphanumerical part name (restricted to [a-zA-Z0-9_:-]*)
 
     :partid: A 32bits integer (unique in the bundle) that can be used to refer
              to this part.
@@ -176,7 +176,7 @@ _parttypeforbidden = re.compile('[^a-zA-Z0-9_:-]')
 
 def validateparttype(parttype):
     """raise ValueError if a parttype contains invalid character"""
-    if _parttypeforbidden.match(parttype):
+    if _parttypeforbidden.search(parttype):
         raise ValueError(parttype)
 
 def _makefpartparamsizes(nbparams):
