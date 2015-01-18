@@ -417,8 +417,8 @@ Now, let's try to fold the second commit into the first:
 
   $ HGEDITOR="sh ./editor.sh" hg histedit 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding another-dir/initial-file
-  removing initial-dir/initial-file
+  adding another-dir/initial-file (glob)
+  removing initial-dir/initial-file (glob)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
