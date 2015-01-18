@@ -261,24 +261,26 @@ class plainformatter(baseformatter):
         pass
 
 class debugformatter(baseformatter):
-    def __init__(self, ui, topic, opts):
+    def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
-        self._ui.write("%s = [\n" % self._topic)
+        self._out = out
+        self._out.write("%s = [\n" % self._topic)
     def _showitem(self):
-        self._ui.write("    " + repr(self._item) + ",\n")
+        self._out.write("    " + repr(self._item) + ",\n")
     def end(self):
         baseformatter.end(self)
-        self._ui.write("]\n")
+        self._out.write("]\n")
 
 class pickleformatter(baseformatter):
-    def __init__(self, ui, topic, opts):
+    def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
+        self._out = out
         self._data = []
     def _showitem(self):
         self._data.append(self._item)
     def end(self):
         baseformatter.end(self)
-        self._ui.write(pickle.dumps(self._data))
+        self._out.write(pickle.dumps(self._data))
 
 def _jsonifyobj(v):
     if isinstance(v, dict):
@@ -299,28 +301,29 @@ def _jsonifyobj(v):
         return '"%s"' % encoding.jsonescape(v)
 
 class jsonformatter(baseformatter):
-    def __init__(self, ui, topic, opts):
+    def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _nullconverter)
-        self._ui.write("[")
+        self._out = out
+        self._out.write("[")
         self._ui._first = True
     def _showitem(self):
         if self._ui._first:
             self._ui._first = False
         else:
-            self._ui.write(",")
+            self._out.write(",")
 
-        self._ui.write("\n {\n")
+        self._out.write("\n {\n")
         first = True
         for k, v in sorted(self._item.items()):
             if first:
                 first = False
             else:
-                self._ui.write(",\n")
-            self._ui.write('  "%s": %s' % (k, _jsonifyobj(v)))
-        self._ui.write("\n }")
+                self._out.write(",\n")
+            self._out.write('  "%s": %s' % (k, _jsonifyobj(v)))
+        self._out.write("\n }")
     def end(self):
         baseformatter.end(self)
-        self._ui.write("\n]\n")
+        self._out.write("\n]\n")
 
 class _templateconverter(object):
     '''convert non-primitive data types to be processed by templater'''
@@ -346,8 +349,9 @@ class _templateconverter(object):
                                   lambda d: fmt % d[name])
 
 class templateformatter(baseformatter):
-    def __init__(self, ui, topic, opts):
+    def __init__(self, ui, out, topic, opts):
         baseformatter.__init__(self, ui, topic, opts, _templateconverter)
+        self._out = out
         self._topic = topic
         self._t = gettemplater(ui, topic, opts.get('template', ''),
                                cache=templatekw.defaulttempl)
@@ -371,7 +375,7 @@ class templateformatter(baseformatter):
         else:
             props = self._item
         g = self._t(self._topic, ui=self._ui, cache=self._cache, **props)
-        self._ui.write(templater.stringify(g))
+        self._out.write(templater.stringify(g))
 
 def lookuptemplate(ui, topic, tmpl):
     # looks like a literal template?
@@ -423,17 +427,17 @@ def maketemplater(ui, topic, tmpl, cache=None):
 def formatter(ui, topic, opts):
     template = opts.get("template", "")
     if template == "json":
-        return jsonformatter(ui, topic, opts)
+        return jsonformatter(ui, ui, topic, opts)
     elif template == "pickle":
-        return pickleformatter(ui, topic, opts)
+        return pickleformatter(ui, ui, topic, opts)
     elif template == "debug":
-        return debugformatter(ui, topic, opts)
+        return debugformatter(ui, ui, topic, opts)
     elif template != "":
-        return templateformatter(ui, topic, opts)
+        return templateformatter(ui, ui, topic, opts)
     # developer config: ui.formatdebug
     elif ui.configbool('ui', 'formatdebug'):
-        return debugformatter(ui, topic, opts)
+        return debugformatter(ui, ui, topic, opts)
     # deprecated config: ui.formatjson
     elif ui.configbool('ui', 'formatjson'):
-        return jsonformatter(ui, topic, opts)
+        return jsonformatter(ui, ui, topic, opts)
     return plainformatter(ui, topic, opts)
