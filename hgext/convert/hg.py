@@ -467,7 +467,7 @@ class mercurial_source(converter_source):
     def lookuprev(self, rev):
         try:
             return hex(self.repo.lookup(rev))
-        except error.RepoError:
+        except (error.RepoError, error.LookupError):
             return None
 
     def getbookmarks(self):
