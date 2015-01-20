@@ -1206,14 +1206,14 @@ class localrepository(object):
                         crev = manifest2[cfname]
                         newfparent = fparent1
 
-            # find source in nearest ancestor if we've lost track
-            if not crev:
-                self.ui.debug(" %s: searching for copy revision for %s\n" %
-                              (fname, cfname))
-                for ancestor in self[None].ancestors():
-                    if cfname in ancestor:
-                        crev = ancestor[cfname].filenode()
-                        break
+            # Here, we used to search backwards through history to try to find
+            # where the file copy came from if the source of a copy was not in
+            # the parent diretory. However, this doesn't actually make sense to
+            # do (what does a copy from something not in your working copy even
+            # mean?) and it causes bugs (eg, issue4476). Instead, we will warn
+            # the user that copy information was dropped, so if they didn't
+            # expect this outcome it can be fixed, but this is the correct
+            # behavior in this circumstance.
 
             if crev:
                 self.ui.debug(" %s: copy %s:%s\n" % (fname, cfname, hex(crev)))

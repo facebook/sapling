@@ -606,6 +606,7 @@ Transplants of grafts can find a destination...
   
 ... grafts of grafts unfortunately can't
   $ hg graft -q 13
+  warning: can't find ancestor for 'b' copied from 'a'!
   $ hg log -r 'destination(13)'
 All copies of a cset
   $ hg log -r 'origin(13) or destination(origin(13))'
@@ -636,7 +637,7 @@ All copies of a cset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   22:1313d0a825e2
+  changeset:   22:e95864da75a0
   branch:      dev
   tag:         tip
   user:        foo
@@ -648,24 +649,28 @@ graft works on complex revset
 
   $ hg graft 'origin(13) or destination(origin(13))'
   skipping ancestor revision 21:7e61b508e709
-  skipping ancestor revision 22:1313d0a825e2
-  skipping revision 2:5c095ad7e90f (already grafted to 22:1313d0a825e2)
+  skipping ancestor revision 22:e95864da75a0
+  skipping revision 2:5c095ad7e90f (already grafted to 22:e95864da75a0)
   grafting 7:ef0ef43d49e7 "2"
+  warning: can't find ancestor for 'b' copied from 'a'!
   grafting 13:9db0f28fd374 "2"
+  warning: can't find ancestor for 'b' copied from 'a'!
   grafting 19:9627f653b421 "2"
   merging b
+  warning: can't find ancestor for 'b' copied from 'a'!
 
 graft with --force (still doesn't graft merges)
 
   $ hg graft 19 0 6
   skipping ungraftable merge revision 6
   skipping ancestor revision 0:68795b066622
-  skipping already grafted revision 19:9627f653b421 (22:1313d0a825e2 also has origin 2:5c095ad7e90f)
+  skipping already grafted revision 19:9627f653b421 (22:e95864da75a0 also has origin 2:5c095ad7e90f)
   [255]
   $ hg graft 19 0 6 --force
   skipping ungraftable merge revision 6
   grafting 19:9627f653b421 "2"
   merging b
+  warning: can't find ancestor for 'b' copied from 'a'!
   grafting 0:68795b066622 "0"
 
 graft --force after backout
@@ -674,12 +679,12 @@ graft --force after backout
   $ hg ci -m 28
   $ hg backout 28
   reverting a
-  changeset 29:484c03b8dfa4 backs out changeset 28:6c56f0f7f033
+  changeset 29:8389853bba65 backs out changeset 28:cd42a33e1848
   $ hg graft 28
-  skipping ancestor revision 28:6c56f0f7f033
+  skipping ancestor revision 28:cd42a33e1848
   [255]
   $ hg graft 28 --force
-  grafting 28:6c56f0f7f033 "28"
+  grafting 28:cd42a33e1848 "28"
   merging a
   $ cat a
   abc
@@ -689,7 +694,7 @@ graft --continue after --force
   $ echo def > a
   $ hg ci -m 31
   $ hg graft 28 --force --tool internal:fail
-  grafting 28:6c56f0f7f033 "28"
+  grafting 28:cd42a33e1848 "28"
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
@@ -702,7 +707,7 @@ graft --continue after --force
   $ hg resolve -m a
   (no more unresolved files)
   $ hg graft -c
-  grafting 28:6c56f0f7f033 "28"
+  grafting 28:cd42a33e1848 "28"
   $ cat a
   abc
 
@@ -723,5 +728,5 @@ Empty graft
   $ hg tag -f something
   $ hg graft -qr 27
   $ hg graft -f 27
-  grafting 27:3aaa8b6725f0 "28"
-  note: graft of 27:3aaa8b6725f0 created no changes to commit
+  grafting 27:3d35c4c79e5a "28"
+  note: graft of 27:3d35c4c79e5a created no changes to commit
