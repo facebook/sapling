@@ -297,7 +297,7 @@ class monotone_source(converter_source, commandline):
         extra = {}
         certs = self.mtngetcerts(rev)
         if certs.get('suspend') == certs["branch"]:
-            extra['close'] = '1'
+            extra['close'] = 1
         return commit(
             author=certs["author"],
             date=util.datestr(util.strdate(certs["date"], "%Y-%m-%dT%H:%M:%S")),
