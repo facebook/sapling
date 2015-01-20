@@ -146,7 +146,7 @@ _fm0node = '20s'
 _fm0fsize = _calcsize(_fm0fixed)
 _fm0fnodesize = _calcsize(_fm0node)
 
-def _fm0readmarkers(data, off=0):
+def _fm0readmarkers(data, off):
     # Loop on markers
     l = len(data)
     while off + _fm0fsize <= l:
@@ -285,7 +285,7 @@ _fm1parentmask = (_fm1parentnone << _fm1parentshift)
 _fm1metapair = 'BB'
 _fm1metapairsize = _calcsize('BB')
 
-def _fm1readmarkers(data, off=0):
+def _fm1readmarkers(data, off):
     # make some global constants local for performance
     noneflag = _fm1parentnone
     sha2flag = usingsha256
