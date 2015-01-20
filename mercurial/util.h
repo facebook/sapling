@@ -172,6 +172,22 @@ static inline uint32_t getbe32(const char *c)
 		(d[3]));
 }
 
+static inline int16_t getbeint16(const char *c)
+{
+	const unsigned char *d = (const unsigned char *)c;
+
+	return ((d[0] << 8) |
+		(d[1]));
+}
+
+static inline uint16_t getbeuint16(const char *c)
+{
+	const unsigned char *d = (const unsigned char *)c;
+
+	return ((d[0] << 8) |
+		(d[1]));
+}
+
 static inline void putbe32(uint32_t x, char *c)
 {
 	c[0] = (x >> 24) & 0xff;
