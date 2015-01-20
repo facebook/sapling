@@ -68,7 +68,7 @@ comment associated with each format for details.
 
 """
 import struct
-import util, base85, node
+import util, base85, node, parsers
 import phases
 from i18n import _
 
@@ -301,6 +301,15 @@ def _fm1readmarkers(data, off):
     # Loop on markers
     stop = len(data) - _fm1fsize
     ufixed = util.unpacker(_fm1fixed)
+
+    fast = getattr(parsers, 'fm1readmarker', None)
+    if fast is not None:
+        while off <= stop:
+            ret = fast(data, off)
+            yield ret[1:]
+            off += ret[0]
+        return
+
     while off <= stop:
         # read fixed part
         o1 = off + fsize
