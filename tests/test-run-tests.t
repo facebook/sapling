@@ -3,7 +3,7 @@ This file tests the behavior of run-tests.py itself.
 Smoke test
 ============
 
-  $ $TESTDIR/run-tests.py
+  $ $TESTDIR/run-tests.py $HGTEST_RUN_TESTS_PURE
   
   # Ran 0 tests, 0 skipped, 0 warned, 0 failed.
 

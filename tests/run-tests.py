@@ -1664,6 +1664,9 @@ class TestRunner(object):
             pypath.append(oldpypath)
         os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
+        if self.options.pure:
+            os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
+
         self._coveragefile = os.path.join(self._testdir, '.coverage')
 
         vlog("# Using TESTDIR", self._testdir)
