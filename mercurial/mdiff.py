@@ -367,6 +367,9 @@ def get_matching_blocks(a, b):
 def trivialdiffheader(length):
     return struct.pack(">lll", 0, 0, length)
 
+def replacediffheader(oldlen, newlen):
+    return struct.pack(">lll", 0, oldlen, newlen)
+
 patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
