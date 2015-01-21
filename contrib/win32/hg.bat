@@ -15,3 +15,5 @@ if exist "%~dp0..\python.exe" (
     python "%~dp0hg" %*
 )
 endlocal
+
+exit /b %ERRORLEVEL%
