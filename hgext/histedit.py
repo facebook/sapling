@@ -142,6 +142,13 @@ If you run ``hg histedit --outgoing`` on the clone then it is the same
 as running ``hg histedit 836302820282``. If you need plan to push to a
 repository that Mercurial does not detect to be related to the source
 repo, you can add a ``--force`` option.
+
+Histedit rule lines are truncated to 80 characters by default. You
+can customise this behaviour by setting a different length in your
+configuration file:
+
+[histedit]
+linelen = 120      # truncate rule lines at 120 characters
 """
 
 try:
@@ -843,7 +850,9 @@ def makedesc(repo, action, rev):
         summary = ctx.description().splitlines()[0]
     line = '%s %s %d %s' % (action, ctx, ctx.rev(), summary)
     # trim to 80 columns so it's not stupidly wide in my editor
-    return util.ellipsis(line, 80)
+    maxlen = repo.ui.configint('histedit', 'linelen', default=80)
+    maxlen = max(maxlen, 22) # avoid truncating hash
+    return util.ellipsis(line, maxlen)
 
 def ruleeditor(repo, ui, rules, editcomment=""):
     """open an editor to edit rules
