@@ -395,7 +395,10 @@ commit hook on tag used to be run without write lock - issue3344
   $ hg -R repo-tag commit -A -m "test"
   adding test
   $ hg init repo-tag-target
-  $ hg -R repo-tag --config hooks.commit="\"hg\" push \"`pwd`/repo-tag-target\"" tag tag
+  $ cat > "$TESTTMP/issue3344.sh" <<EOF
+  > hg push "$TESTTMP/repo-tag-target"
+  > EOF
+  $ hg -R repo-tag --config hooks.commit="sh ../issue3344.sh" tag tag
   pushing to $TESTTMP/repo-tag-target (glob)
   searching for changes
   adding changesets
