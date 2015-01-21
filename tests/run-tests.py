@@ -786,7 +786,7 @@ class TTest(Test):
         tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (self._shell, tdir, ' '.join(reqs)),
-                      self._testtmp, 0)
+                      self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
