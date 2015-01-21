@@ -1261,8 +1261,14 @@ class revlog(object):
                 delta = cachedelta[1]
             else:
                 t = buildtext()
-                ptext = self.revision(self.node(rev))
-                delta = mdiff.textdiff(ptext, t)
+                if self.iscensored(rev):
+                    # deltas based on a censored revision must replace the
+                    # full content in one patch, so delta works everywhere
+                    header = mdiff.replacediffheader(self.rawsize(rev), len(t))
+                    delta = header + t
+                else:
+                    ptext = self.revision(self.node(rev))
+                    delta = mdiff.textdiff(ptext, t)
             data = self.compress(delta)
             l = len(data[1]) + len(data[0])
             if basecache[0] == rev:
