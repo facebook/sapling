@@ -197,6 +197,16 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
+  $ hg --config experimental.bundle2-exp=True --config experimental.strip-bundle2-version=INVALID strip 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  unknown strip-bundle2-version value 'INVALID'; should be one of ['01', '02']
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/264128213d29-0b39d6bf-backup.hg (glob)
+  $ hg debugbundle .hg/strip-backup/*
+  264128213d290d868c54642d13aeaa3675551a78
+  $ restore
+
+  $ hg up -C 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --config experimental.bundle2-exp=True --config experimental.strip-bundle2-version=02 --traceback strip 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/264128213d29-0b39d6bf-backup.hg (glob)
