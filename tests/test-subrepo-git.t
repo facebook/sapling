@@ -787,7 +787,7 @@ ensure adding include/exclude ignores the subrepo
 
 revert the subrepository
   $ hg revert --all
-  reverting subrepo ../gitroot (glob)
+  reverting subrepo ../gitroot
 
   $ hg status --subrepos
   ? s/barfoo
@@ -796,7 +796,7 @@ revert the subrepository
   $ mv s/foobar.orig s/foobar
 
   $ hg revert --no-backup s
-  reverting subrepo ../gitroot (glob)
+  reverting subrepo ../gitroot
 
   $ hg status --subrepos
   ? s/barfoo
