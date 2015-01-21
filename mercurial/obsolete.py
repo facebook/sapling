@@ -470,6 +470,25 @@ class marker(object):
         """The flags field of the marker"""
         return self._data[2]
 
+@util.nogc
+def _addsuccessors(successors, markers):
+    for mark in markers:
+        successors.setdefault(mark[0], set()).add(mark)
+
+@util.nogc
+def _addprecursors(precursors, markers):
+    for mark in markers:
+        for suc in mark[1]:
+            precursors.setdefault(suc, set()).add(mark)
+
+@util.nogc
+def _addchildren(children, markers):
+    for mark in markers:
+        parents = mark[5]
+        if parents is not None:
+            for p in parents:
+                children.setdefault(p, set()).add(mark)
+
 def _checkinvalidmarkers(obsstore):
     """search for marker with invalid data and raise error if needed
 
@@ -604,18 +623,12 @@ class obsstore(object):
         version, markers = _readmarkers(data)
         return self.add(transaction, markers)
 
-    @util.nogc
     def _load(self, markers):
-        for mark in markers:
-            self._all.append(mark)
-            pre, sucs = mark[:2]
-            self.successors.setdefault(pre, set()).add(mark)
-            for suc in sucs:
-                self.precursors.setdefault(suc, set()).add(mark)
-            parents = mark[5]
-            if parents is not None:
-                for p in parents:
-                    self.children.setdefault(p, set()).add(mark)
+        markers = list(markers) # to allow repeated iteration
+        self._all.extend(markers)
+        _addsuccessors(self.successors, markers)
+        _addprecursors(self.precursors, markers)
+        _addchildren(self.children, markers)
         _checkinvalidmarkers(self)
 
     def relevantmarkers(self, nodes):
