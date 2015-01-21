@@ -72,13 +72,16 @@ Test log
    content1_content2_content3-tracked |  1 +
    3 files changed, 3 insertions(+), 0 deletions(-)
   
-BROKEN: rev 0 affects content1_missing_content*-tracked
-
   $ hg log -T '{rev}\n' --stat 'set:added()'
   1
    content1_missing_content1-tracked |  1 -
    content1_missing_content3-tracked |  1 -
    2 files changed, 0 insertions(+), 2 deletions(-)
+  
+  0
+   content1_missing_content1-tracked |  1 +
+   content1_missing_content3-tracked |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
   
   $ hg log -T '{rev}\n' --stat 'set:removed()'
   1
@@ -100,22 +103,37 @@ BROKEN: rev 0 affects content1_missing_content*-tracked
    content1_content2_content3-untracked |  1 +
    content1_content2_missing-untracked  |  1 +
    7 files changed, 7 insertions(+), 0 deletions(-)
-
-BROKEN: rev 0 affects content1_content1_missing-tracked,
-content1_content2_missing-tracked and content1_missing_missing-tracked.
-rev 1 affects content1_content2_missing-tracked,
-content1_missing_missing-tracked and missing_content2_missing-tracked
-
+  
   $ hg log -T '{rev}\n' --stat 'set:deleted()'
-
-BROKEN: rev 0 and 1 affect content1_missing_content*-untracked
-
+  1
+   content1_content2_missing-tracked |  2 +-
+   content1_missing_missing-tracked  |  1 -
+   missing_content2_missing-tracked  |  1 +
+   3 files changed, 2 insertions(+), 2 deletions(-)
+  
+  0
+   content1_content1_missing-tracked |  1 +
+   content1_content2_missing-tracked |  1 +
+   content1_missing_missing-tracked  |  1 +
+   3 files changed, 3 insertions(+), 0 deletions(-)
+  
   $ hg log -T '{rev}\n' --stat 'set:unknown()'
-
-BROKEN: rev 1 affects content1_content2_content2-tracked and
-missing_content2_content2-tracked
-
+  1
+   content1_missing_content1-untracked |  1 -
+   content1_missing_content3-untracked |  1 -
+   2 files changed, 0 insertions(+), 2 deletions(-)
+  
+  0
+   content1_missing_content1-untracked |  1 +
+   content1_missing_content3-untracked |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+  
   $ hg log -T '{rev}\n' --stat 'set:clean()'
+  1
+   content1_content2_content2-tracked |  2 +-
+   missing_content2_content2-tracked  |  1 +
+   2 files changed, 2 insertions(+), 1 deletions(-)
+  
   0
    content1_content1_content1-tracked |  1 +
    content1_content2_content2-tracked |  1 +

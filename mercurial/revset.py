@@ -1048,7 +1048,8 @@ def _matchfiles(repo, subset, x):
                 # i18n: "_matchfiles" is a keyword
                 raise error.ParseError(_('_matchfiles expected at most one '
                                          'revision'))
-            rev = value
+            if value != '': # empty means working directory; leave rev as None
+                rev = value
         elif prefix == 'd:':
             if default is not None:
                 # i18n: "_matchfiles" is a keyword
