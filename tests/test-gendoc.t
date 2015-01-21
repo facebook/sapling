@@ -1,4 +1,5 @@
 #require docutils
+#require gettext
 
 Test document extraction
 
