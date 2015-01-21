@@ -159,7 +159,7 @@ utestpats = [
      winglobmsg),
     (r'^  pulling from \$TESTTMP/.*[^)]$', winglobmsg,
      '\$TESTTMP/unix-repo$'), # in test-issue1802.t which skipped on windows
-    (r'^  reverting .*/.*[^)]$', winglobmsg),
+    (r'^  reverting (?!subrepo ).*/.*[^)]$', winglobmsg),
     (r'^  cloning subrepo \S+/.*[^)]$', winglobmsg),
     (r'^  pushing to \$TESTTMP/.*[^)]$', winglobmsg),
     (r'^  pushing subrepo \S+/\S+ to.*[^)]$', winglobmsg),
