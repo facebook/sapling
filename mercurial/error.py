@@ -138,11 +138,15 @@ class ReadOnlyPartError(RuntimeError):
     pass
 
 class CensoredNodeError(RevlogError):
-    """error raised when content verification fails on a censored node"""
+    """error raised when content verification fails on a censored node
 
-    def __init__(self, filename, node):
+    Also contains the tombstone data substituted for the uncensored data.
+    """
+
+    def __init__(self, filename, node, tombstone):
         from node import short
         RevlogError.__init__(self, '%s:%s' % (filename, short(node)))
+        self.tombstone = tombstone
 
 class CensoredBaseError(RevlogError):
     """error raised when a delta is rejected because its base is censored

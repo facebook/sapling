@@ -101,7 +101,7 @@ class filelog(revlog.revlog):
             super(filelog, self).checkhash(text, p1, p2, node, rev=rev)
         except error.RevlogError:
             if _censoredtext(text):
-                raise error.CensoredNodeError(self.indexfile, node)
+                raise error.CensoredNodeError(self.indexfile, node, text)
             raise
 
     def iscensored(self, rev):

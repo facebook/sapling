@@ -482,7 +482,17 @@ class cg1packer(object):
         base = self.deltaparent(revlog, rev, p1, p2, prev)
 
         prefix = ''
-        if base == nullrev:
+        if revlog.iscensored(base) or revlog.iscensored(rev):
+            try:
+                delta = revlog.revision(node)
+            except error.CensoredNodeError, e:
+                delta = e.tombstone
+            if base == nullrev:
+                prefix = mdiff.trivialdiffheader(len(delta))
+            else:
+                baselen = revlog.rawsize(base)
+                prefix = mdiff.replacediffheader(baselen, len(delta))
+        elif base == nullrev:
             delta = revlog.revision(node)
             prefix = mdiff.trivialdiffheader(len(delta))
         else:
