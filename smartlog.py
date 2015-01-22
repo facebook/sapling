@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import extensions, util, cmdutil, graphmod, templatekw, scmutil
-from mercurial import bookmarks, commands, error
+from mercurial import bookmarks, commands, error, revset
 from mercurial.extensions import wrapfunction
 from hgext import pager
 from mercurial.node import hex, nullrev
@@ -19,6 +19,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 enabled = False
+hiddenchanges = 0
 
 def uisetup(ui):
     # Hide output for fake nodes
@@ -57,6 +58,9 @@ def uisetup(ui):
                     if '.' in nodeline:
                         interline[2 * start] = "."
     wrapfunction(graphmod, '_drawedges', drawedges)
+
+    revset.symbols['smartlog'] = smartlogrevset
+    revset.safesymbols.add('smartlog')
 
 # copied from graphmod or cmdutil or somewhere...
 def grandparent(cl, lowestrev, roots, head):
@@ -209,6 +213,116 @@ def getdag(repo, revs, master):
     # Sort the actual results based on their position in the 'order'
     return sorted(results, key=lambda x: order.index(x[0]) , reverse=True)
 
+def smartlogrevset(repo, subset, x):
+    """``smartlog([scope, [master]])``
+    Revisions included by default in the smartlog extension
+    """
+
+    args = revset.getargs(x, 0, 2, _('smartlog takes up to 2 arguments'))
+    if len(args) > 0:
+        scope = revset.getstring(args[0],
+                                 _('scope must be either "all" or "recent"'))
+        if scope not in ('all', 'recent'):
+            raise util.Abort(_('scope must be either "all" or "recent"'))
+    else:
+        scope = 'recent'
+    if len(args) > 1:
+        master = revset.getstring(args[1], _('master must be a string'))
+    else:
+        master = ''
+
+    revs = set()
+    heads = set()
+
+    rev = repo.changelog.rev
+    branchinfo = repo.changelog.branchinfo
+    ancestor = repo.changelog.ancestor
+    node = repo.changelog.node
+    parentrevs = repo.changelog.parentrevs
+
+    books = bookmarks.bmstore(repo)
+    for b in books:
+        heads.add(rev(books[b]))
+
+    heads.update(repo.revs('.'))
+
+    global hiddenchanges
+    allheads = set(repo.revs('head() & branch(.)'))
+    if scope == 'all':
+        heads.update(allheads)
+    else:
+        recent = set(repo.revs('head() & date(-14) & branch(.)'))
+        hiddenchanges += len(allheads - heads) - len(recent - heads)
+        heads.update(recent)
+
+    branches = set()
+    for head in heads:
+        branches.add(branchinfo(head)[0])
+
+    # from options
+    if not master:
+        if '@' in books:
+            master = '@'
+        elif 'master' in books:
+            master = 'master'
+        elif 'trunk' in books:
+            master = 'trunk'
+        else:
+            master = 'tip'
+
+    try:
+        master = repo.revs(master).first()
+    except error.RepoLookupError:
+        master = repo.revs('tip').first()
+
+    masterbranch = branchinfo(master)[0]
+
+    for branch in branches:
+        if branch != masterbranch:
+            try:
+                branchmaster = repo.revs(
+                    'first(reverse(branch("%s")) & public())' % branch).first()
+            except:
+                branchmaster = repo.revs('tip').first()
+        else:
+            branchmaster = master
+
+        # Find ancestors of heads that are not in master
+        # Don't use revsets, they are too slow
+        for head in heads:
+            if branchinfo(head)[0] != branch:
+                continue
+            anc = rev(ancestor(node(head), node(branchmaster)))
+            queue = [head]
+            while queue:
+                current = queue.pop(0)
+                if not current in revs:
+                    revs.add(current)
+                    if current != anc:
+                        parents = parentrevs(current)
+                        for p in parents:
+                            if p > anc:
+                                queue.append(p)
+
+        # add context: master, current commit, and the common ancestor
+        revs.add(branchmaster)
+
+        # get common branch ancestor
+        if branch != masterbranch:
+            anc = None
+            for r in revs:
+                if branchinfo(r)[0] != branch:
+                    continue
+                if anc is None:
+                    anc = r
+                else:
+                    anc = rev(ancestor(node(anc), node(r)))
+            if anc:
+                revs.add(anc)
+
+    return subset & revs
+
+
 @command('^smartlog|slog', [
     ('', 'template', '', _('display with template'), _('TEMPLATE')),
     ('', 'master', '', _('master bookmark'), ''),
@@ -232,7 +346,6 @@ Excludes:
     '''
     master = opts.get('master')
     revs = set()
-    heads = set()
 
     rev = repo.changelog.rev
     branchinfo = repo.changelog.branchinfo
@@ -240,87 +353,15 @@ Excludes:
     node = repo.changelog.node
     parentrevs = repo.changelog.parentrevs
 
+    global hiddenchanges
     hiddenchanges = 0
 
     if not opts.get('rev'):
-        # Find all bookmarks and recent heads
-        books = bookmarks.bmstore(repo)
-        for b in books:
-            heads.add(rev(books[b]))
-
-        heads.update(repo.revs('.'))
-
-        allheads = set(repo.revs('head() & branch(.)'))
         if opts.get('all'):
-            heads.update(allheads)
+            scope = 'all'
         else:
-            recent = set(repo.revs('head() & date(-14) & branch(.)'))
-            hiddenchanges = len(allheads - heads) - len(recent - heads)
-            heads.update(recent)
-
-        branches = set()
-        for head in heads:
-            branches.add(branchinfo(head)[0])
-
-        if not master:
-            if '@' in books:
-                master = '@'
-            elif 'master' in books:
-                master = 'master'
-            elif 'trunk' in books:
-                master = 'trunk'
-            else:
-                master = 'tip'
-
-        try:
-            master = repo.revs(master).first()
-        except error.RepoLookupError:
-            master = repo.revs('tip').first()
-
-        masterbranch = branchinfo(master)[0]
-
-        for branch in branches:
-            if branch != masterbranch:
-                try:
-                    branchmaster = repo.revs(
-                        'first(reverse(branch("%s")) & public())' % branch).first()
-                except:
-                    branchmaster = repo.revs('tip').first()
-            else:
-                branchmaster = master
-
-            # Find ancestors of heads that are not in master
-            # Don't use revsets, they are too slow
-            for head in heads:
-                if branchinfo(head)[0] != branch:
-                    continue
-                anc = rev(ancestor(node(head), node(branchmaster)))
-                queue = [head]
-                while queue:
-                    current = queue.pop(0)
-                    if not current in revs:
-                        revs.add(current)
-                        if current != anc:
-                            parents = parentrevs(current)
-                            for p in parents:
-                                if p > anc:
-                                    queue.append(p)
-
-            # add context: master, current commit, and the common ancestor
-            revs.add(branchmaster)
-
-            # get common branch ancestor
-            if branch != masterbranch:
-                anc = None
-                for r in revs:
-                    if branchinfo(r)[0] != branch:
-                        continue
-                    if anc is None:
-                        anc = r
-                    else:
-                        anc = rev(ancestor(node(anc), node(r)))
-                if anc:
-                    revs.add(anc)
+            scope = 'recent'
+        revs.update(repo.revs('smartlog(%s, %s)', scope, master))
     else:
         for r in opts.get('rev'):
             revs.update(repo.revs(r))
