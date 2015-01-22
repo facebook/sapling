@@ -509,6 +509,7 @@ actiontable = {'p': pick,
     [('', 'commands', '',
       _('Read history edits from the specified file.')),
      ('c', 'continue', False, _('continue an edit already in progress')),
+     ('', 'edit-plan', False, _('edit remaining actions list')),
      ('k', 'keep', False,
       _("don't strip old nodes after edit is complete")),
      ('', 'abort', False, _('abort an edit in progress')),
@@ -558,6 +559,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     # basic argument incompatibility processing
     outg = opts.get('outgoing')
     cont = opts.get('continue')
+    editplan = opts.get('edit_plan')
     abort = opts.get('abort')
     force = opts.get('force')
     rules = opts.get('commands', '')
@@ -566,13 +568,18 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     if force and not outg:
         raise util.Abort(_('--force only allowed with --outgoing'))
     if cont:
-        if util.any((outg, abort, revs, freeargs, rules)):
+        if util.any((outg, abort, revs, freeargs, rules, editplan)):
             raise util.Abort(_('no arguments allowed with --continue'))
         goal = 'continue'
     elif abort:
-        if util.any((outg, revs, freeargs, rules)):
+        if util.any((outg, revs, freeargs, rules, editplan)):
             raise util.Abort(_('no arguments allowed with --abort'))
         goal = 'abort'
+    elif editplan:
+        if util.any((outg, revs, freeargs)):
+            raise util.Abort(_('only --commands argument allowed with'
+                               '--edit-plan'))
+        goal = 'edit-plan'
     else:
         if os.path.exists(os.path.join(repo.path, 'histedit-state')):
             raise util.Abort(_('history edit already in progress, try '
@@ -601,6 +608,25 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     if goal == 'continue':
         state.read()
         state = bootstrapcontinue(ui, state, opts)
+    elif goal == 'edit-plan':
+        state = histeditstate(repo)
+        state.read()
+        if not rules:
+            comment = editcomment % (state.parentctx, node.short(state.topmost))
+            rules = ruleeditor(repo, ui, state.rules, comment)
+        else:
+            if rules == '-':
+                f = sys.stdin
+            else:
+                f = open(rules)
+            rules = f.read()
+            f.close()
+        rules = [l for l in (r.strip() for r in rules.splitlines())
+                 if l and not l.startswith('#')]
+        rules = verifyrules(rules, repo, [repo[c] for [_a, c] in state.rules])
+        state.rules = rules
+        state.write()
+        return
     elif goal == 'abort':
         state.read()
         mapping, tmpnodes, leafs, _ntm = processreplacement(state)
@@ -642,9 +668,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
         ctxs = [repo[r] for r in revs]
         if not rules:
-            rules = ruleeditor(repo, ui, [['pick', c] for c in ctxs],
-                               editcomment=editcomment % (node.short(root),
-                                                          node.short(topmost)))
+            comment = editcomment % (node.short(root), node.short(topmost))
+            rules = ruleeditor(repo, ui, [['pick', c] for c in ctxs], comment)
         else:
             if rules == '-':
                 f = sys.stdin

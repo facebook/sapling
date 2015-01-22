@@ -10,7 +10,7 @@
   > {
   >     hg init r
   >     cd r
-  >     for x in a b c d e f ; do
+  >     for x in a b c d e f g; do
   >         echo $x > $x
   >         hg add $x
   >         hg ci -m $x
@@ -21,8 +21,13 @@
 
 log before edit
   $ hg log --graph
-  @  changeset:   5:652413bf663e
+  @  changeset:   6:3c6a8ed2ebe8
   |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     g
+  |
+  o  changeset:   5:652413bf663e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -59,10 +64,18 @@ edit the history
   > pick 055a42cdd887 d
   > edit e860deea161a e
   > pick 652413bf663e f
+  > pick 3c6a8ed2ebe8 g
   > EOF
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
+
+edit the plan
+  $ hg histedit --edit-plan --commands - 2>&1 << EOF
+  > edit e860deea161a e
+  > pick 652413bf663e f
+  > drop 3c6a8ed2ebe8 g
+  > EOF
 
 Go at a random point and try to continue
 
