@@ -104,9 +104,6 @@ class filelog(revlog.revlog):
                 raise error.CensoredNodeError(self.indexfile, node)
             raise
 
-    def _file(self, f):
-        return filelog(self.opener, f)
-
     def _iscensored(self, rev):
         """Check if a file revision is censored."""
         return self.flags(rev) & revlog.REVIDX_ISCENSORED

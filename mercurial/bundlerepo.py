@@ -177,9 +177,6 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
     def baserevision(self, nodeorrev):
         return filelog.filelog.revision(self, nodeorrev)
 
-    def _file(self, f):
-        self._repo.file(f)
-
 class bundlepeer(localrepo.localpeer):
     def canpush(self):
         return False

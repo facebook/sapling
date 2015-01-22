@@ -160,9 +160,6 @@ class unionfilelog(unionrevlog, filelog.filelog):
     def baserevdiff(self, rev1, rev2):
         return filelog.filelog.revdiff(self, rev1, rev2)
 
-    def _file(self, f):
-        self._repo.file(f)
-
 class unionpeer(localrepo.localpeer):
     def canpush(self):
         return False
