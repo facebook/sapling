@@ -805,17 +805,18 @@ def between(repo, old, new, keep):
             raise util.Abort(_('cannot edit immutable changeset: %s') % root)
     return [c.node() for c in ctxs]
 
-def makedesc(c):
-    """build a initial action line for a ctx `c`
+def makedesc(repo, action, rev):
+    """build a initial action line for a ctx
 
     line are in the form:
 
-      pick <hash> <rev> <summary>
+      <action> <hash> <rev> <summary>
     """
+    ctx = repo[rev]
     summary = ''
-    if c.description():
-        summary = c.description().splitlines()[0]
-    line = 'pick %s %d %s' % (c, c.rev(), summary)
+    if ctx.description():
+        summary = ctx.description().splitlines()[0]
+    line = '%s %s %d %s' % (action, ctx, ctx.rev(), summary)
     # trim to 80 columns so it's not stupidly wide in my editor
     return util.ellipsis(line, 80)
 
@@ -824,7 +825,7 @@ def ruleeditor(repo, ui, rules, editcomment=""):
 
     rules are in the format [ [act, ctx], ...] like in state.rules
     """
-    rules = '\n'.join([makedesc(repo[rev]) for [act, rev] in rules])
+    rules = '\n'.join([makedesc(repo, act, rev) for [act, rev] in rules])
     rules += '\n\n'
     rules += editcomment
     rules = ui.edit(rules, ui.username())
