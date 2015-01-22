@@ -56,7 +56,6 @@ Basic test
   |    a2
   |
 
-
 With commit info
   $ echo "hello" >c2 && hg ci --amend
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-amend-backup.hg
@@ -80,4 +79,46 @@ With commit info
   |    a2
   |
 
+As a revset
+  $ hg log -G -T compact -r 'smartlog()'
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  | |    b
+  | |
 
+Specific revs
+  $ hg smartlog -T compact -r 2 -r 4
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  .
+  .
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact -r 'smartlog()' -r 0
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  .
+  .
+  |
+  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
+       a1
+  
