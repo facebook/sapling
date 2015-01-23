@@ -410,7 +410,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	PyObject *packobj = NULL;
 	PyObject *map, *copymap, *pl, *mtime_unset = NULL;
 	Py_ssize_t nbytes, pos, l;
-	PyObject *k, *v, *pn;
+	PyObject *k, *v = NULL, *pn;
 	char *p, *s;
 	double now;
 
@@ -527,6 +527,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 bail:
 	Py_XDECREF(mtime_unset);
 	Py_XDECREF(packobj);
+	Py_XDECREF(v);
 	return NULL;
 }
 
