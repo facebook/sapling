@@ -1796,7 +1796,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         else:
                             copyop = 'copy'
                         content1 = getfilectx(f1, ctx1).data()
-                binary = util.binary(content1) or util.binary(content2)
             elif f in removedset:
                 if opts.git:
                     # have we already reported a copy above?
@@ -1805,13 +1804,11 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         continue
                     else:
                         flag1 = ctx1.flags(f)
-                        binary = util.binary(content1)
-                else:
-                    binary = util.binary(content1)
             else:
                 flag1 = ctx1.flags(f)
                 flag2 = ctx2.flags(f)
-                binary = util.binary(content1) or util.binary(content2)
+
+            binary = util.binary(content1) or util.binary(content2)
 
         if losedatafn and not opts.git:
             if (binary or
