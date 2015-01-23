@@ -115,6 +115,7 @@ static PyObject *asciilower(PyObject *self, PyObject *args)
 				"ascii", str, len, i, (i + 1),
 				"unexpected code byte");
 			PyErr_SetObject(PyExc_UnicodeDecodeError, err);
+			Py_XDECREF(err);
 			goto quit;
 		}
 		newstr[i] = lowertable[(unsigned char)c];
