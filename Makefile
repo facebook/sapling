@@ -140,6 +140,7 @@ osx:
 	   (echo "Missing bdist_mpkg (easy_install bdist_mpkg)"; false)
 	rm -rf dist/mercurial-*.mpkg
 	python -m bdist_mpkg.script_bdist_mpkg setup.py --
+	python contrib/fixpax.py dist/mercurial-*.mpkg/Contents/Packages/*.pkg/Contents/Archive.pax.gz
 	mkdir -p packages/osx
 	N=`cd dist && echo mercurial-*.mpkg | sed 's,\.mpkg$$,,'` && hdiutil create -srcfolder dist/$$N.mpkg/ -scrub -volname "$$N" -ov packages/osx/$$N.dmg
 	rm -rf dist/mercurial-*.mpkg
