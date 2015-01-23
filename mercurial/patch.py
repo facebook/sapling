@@ -1796,17 +1796,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         else:
                             copyop = 'copy'
                         content1 = getfilectx(f1, ctx1).data()
-                    else:
-                        losedatafn(f)
-                else:
-                    if not opts.git and flag2:
-                        losedatafn(f)
                 binary = util.binary(content1) or util.binary(content2)
-                if not opts.git and binary:
-                    losedatafn(f)
-                if not opts.git and not content2:
-                    # regular diffs cannot represent new empty file
-                    losedatafn(f)
             elif f in removedset:
                 if opts.git:
                     # have we already reported a copy above?
@@ -1818,15 +1808,25 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         binary = util.binary(content1)
                 else:
                     binary = util.binary(content1)
-                    if not content1 or binary:
-                        # regular diffs cannot represent empty file deletion
-                        losedatafn(f)
             else:
                 flag1 = ctx1.flags(f)
                 flag2 = ctx2.flags(f)
                 binary = util.binary(content1) or util.binary(content2)
-                if not opts.git and (binary or flag2 != flag1):
-                    losedatafn(f)
+
+        if losedatafn and not opts.git:
+            if (binary or
+                # copy/rename
+                f in copy or
+                # empty file creation
+                (content1 is None and not content2) or
+                # empty file deletion
+                (not content1 and content2 is None) or
+                # create with flags
+                (content1 is None and flag2) or
+                # change flags
+                (content1 is not None and content2 is not None and
+                 flag1 != flag2)):
+                losedatafn(f)
 
         path1 = posixpath.join(prefix, f1)
         path2 = posixpath.join(prefix, f2)
