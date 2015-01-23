@@ -1736,6 +1736,44 @@ def diffui(*args, **kw):
     '''like diff(), but yields 2-tuples of (output, label) for ui.write()'''
     return difflabel(diff, *args, **kw)
 
+def _filepairs(ctx1, modified, added, removed, copy, opts):
+    '''generates tuples (f1, f2, copyop), where f1 is the name of the file
+    before and f2 is the the name after. For added files, f1 will be None,
+    and for removed files, f2 will be None. copyop may be set to None, 'copy'
+    or 'rename' (the latter two only if opts.git is set).'''
+    gone = set()
+
+    copyto = dict([(v, k) for k, v in copy.items()])
+
+    addedset, removedset = set(added), set(removed)
+    # Fix up  added, since merged-in additions appear as
+    # modifications during merges
+    for f in modified:
+        if f not in ctx1:
+            addedset.add(f)
+
+    for f in sorted(modified + added + removed):
+        copyop = None
+        f1, f2 = f, f
+        if f in addedset:
+            f1 = None
+            if f in copy:
+                if opts.git:
+                    f1 = copy[f]
+                    if f1 in removedset and f1 not in gone:
+                        copyop = 'rename'
+                        gone.add(f1)
+                    else:
+                        copyop = 'copy'
+        elif f in removedset:
+            f2 = None
+            if opts.git:
+                # have we already reported a copy above?
+                if (f in copyto and copyto[f] in addedset
+                    and copy[copyto[f]] == f):
+                    continue
+        yield f1, f2, copyop
+
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
 
@@ -1760,38 +1798,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
 
-    gone = set()
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
 
-    copyto = dict([(v, k) for k, v in copy.items()])
-
-    addedset, removedset = set(added), set(removed)
-    # Fix up  added, since merged-in additions appear as
-    # modifications during merges
-    for f in modified:
-        if f not in ctx1:
-            addedset.add(f)
-    for f in sorted(modified + added + removed):
-        copyop = None
-        f1, f2 = f, f
-        if f in addedset:
-            f1 = None
-            if f in copy:
-                if opts.git:
-                    f1 = copy[f]
-                    if f1 in removedset and f1 not in gone:
-                        copyop = 'rename'
-                        gone.add(f1)
-                    else:
-                        copyop = 'copy'
-        elif f in removedset:
-            f2 = None
-            if opts.git:
-                # have we already reported a copy above?
-                if (f in copyto and copyto[f] in addedset
-                    and copy[copyto[f]] == f):
-                    continue
-
+    for f1, f2, copyop in _filepairs(
+            ctx1, modified, added, removed, copy, opts):
         content1 = None
         content2 = None
         if f1:
@@ -1811,7 +1821,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if losedatafn and not opts.git:
             if (binary or
                 # copy/rename
-                f in copy or
+                f2 in copy or
                 # empty file creation
                 (not f1 and not content2) or
                 # empty file deletion
@@ -1820,7 +1830,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 (not f1 and flag2) or
                 # change flags
                 (f1 and f2 and flag1 != flag2)):
-                losedatafn(f)
+                losedatafn(f2 or f1)
 
         path1 = posixpath.join(prefix, f1 or f2)
         path2 = posixpath.join(prefix, f2 or f1)
