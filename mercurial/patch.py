@@ -1772,13 +1772,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if f not in ctx1:
             addedset.add(f)
     for f in sorted(modified + added + removed):
-        content1 = None
-        content2 = None
         copyop = None
-        if f not in addedset:
-            content1 = getfilectx(f, ctx1).data()
-        if f not in removedset:
-            content2 = getfilectx(f, ctx2).data()
         f1, f2 = f, f
         if f in addedset:
             f1 = None
@@ -1790,7 +1784,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         gone.add(f1)
                     else:
                         copyop = 'copy'
-                    content1 = getfilectx(f1, ctx1).data()
         elif f in removedset:
             f2 = None
             if opts.git:
@@ -1799,6 +1792,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     and copy[copyto[f]] == f):
                     continue
 
+        content1 = None
+        content2 = None
+        if f1:
+            content1 = getfilectx(f1, ctx1).data()
+        if f2:
+            content2 = getfilectx(f2, ctx2).data()
         flag1 = None
         flag2 = None
         binary = False
