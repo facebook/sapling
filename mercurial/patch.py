@@ -1795,10 +1795,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if f not in ctx1:
             addedset.add(f)
     for f in sorted(modified + added + removed):
+        flag1 = None
+        flag2 = None
         content1 = None
         content2 = None
         binarydiff = False
-        header = []
+        op = None
         if f not in addedset:
             content1 = getfilectx(f, ctx1).data()
         if f not in removedset:
@@ -1806,26 +1808,21 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         f1, f2 = f, f
         if opts.git or losedatafn:
             if f in addedset:
-                mode2 = gitmode[ctx2.flags(f)]
+                flag2 = ctx2.flags(f)
                 if f in copy:
                     if opts.git:
                         f1 = copy[f]
-                        mode1 = gitmode[ctx1.flags(f1)]
-                        addmodehdr(header, mode1, mode2)
+                        flag1 = ctx1.flags(f1)
                         if f1 in removedset and f1 not in gone:
                             op = 'rename'
                             gone.add(f1)
                         else:
                             op = 'copy'
-                        header.append('%s from %s\n' % (op, join(f1)))
-                        header.append('%s to %s\n' % (op, join(f)))
                         content1 = getfilectx(f1, ctx1).data()
                     else:
                         losedatafn(f)
                 else:
-                    if opts.git:
-                        header.append('new file mode %s\n' % mode2)
-                    elif ctx2.flags(f):
+                    if not opts.git and flag2:
                         losedatafn(f)
                 if util.binary(content1) or util.binary(content2):
                     if opts.git:
@@ -1842,8 +1839,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         and copy[copyto[f]] == f):
                         continue
                     else:
-                        header.append('deleted file mode %s\n' %
-                                      gitmode[ctx1.flags(f)])
+                        flag1 = ctx1.flags(f)
                         if util.binary(content1):
                             binarydiff = True
                 elif not content1 or util.binary(content1):
@@ -1854,11 +1850,22 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 flag2 = ctx2.flags(f)
                 binary = util.binary(content1) or util.binary(content2)
                 if opts.git:
-                    addmodehdr(header, gitmode[flag1], gitmode[flag2])
                     if binary:
                         binarydiff = True
                 elif binary or flag2 != flag1:
                     losedatafn(f)
+
+        header = []
+        if opts.git:
+            if content1 is None: # added
+                header.append('new file mode %s\n' % gitmode[flag2])
+            elif content2 is None: # removed
+                header.append('deleted file mode %s\n' % gitmode[flag1])
+            else:  # modified/copied/renamed
+                addmodehdr(header, gitmode[flag1], gitmode[flag2])
+                if op is not None:
+                    header.append('%s from %s\n' % (op, join(f1)))
+                    header.append('%s to %s\n' % (op, join(f2)))
 
         if opts.git or revs:
             header.insert(0, diffline(join(f1), join(f2), revs))
