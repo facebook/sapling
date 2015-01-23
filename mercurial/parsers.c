@@ -1262,6 +1262,7 @@ static PyObject *raise_revlog_error(void)
 			goto classfail;
 		}
 		Py_INCREF(errclass);
+		Py_DECREF(mod);
 	}
 
 	errobj = PyObject_CallFunction(errclass, NULL);
