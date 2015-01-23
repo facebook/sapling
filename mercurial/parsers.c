@@ -2267,8 +2267,16 @@ static void module_init(PyObject *mod)
 
 static int check_python_version(void)
 {
-	PyObject *sys = PyImport_ImportModule("sys");
-	long hexversion = PyInt_AsLong(PyObject_GetAttrString(sys, "hexversion"));
+	PyObject *sys = PyImport_ImportModule("sys"), *ver;
+	long hexversion;
+	if (!sys)
+		return -1;
+	ver = PyObject_GetAttrString(sys, "hexversion");
+	Py_DECREF(sys);
+	if (!ver)
+		return -1;
+	hexversion = PyInt_AsLong(ver);
+	Py_DECREF(ver);
 	/* sys.hexversion is a 32-bit number by default, so the -1 case
 	 * should only occur in unusual circumstances (e.g. if sys.hexversion
 	 * is manually set to an invalid value). */
