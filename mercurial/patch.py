@@ -1776,7 +1776,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         flag2 = None
         content1 = None
         content2 = None
-        binarydiff = False
+        binary = False
         copyop = None
         if f not in addedset:
             content1 = getfilectx(f, ctx1).data()
@@ -1801,11 +1801,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 else:
                     if not opts.git and flag2:
                         losedatafn(f)
-                if util.binary(content1) or util.binary(content2):
-                    if opts.git:
-                        binarydiff = True
-                    else:
-                        losedatafn(f)
+                binary = util.binary(content1) or util.binary(content2)
+                if not opts.git and binary:
+                    losedatafn(f)
                 if not opts.git and not content2:
                     # regular diffs cannot represent new empty file
                     losedatafn(f)
@@ -1817,19 +1815,17 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         continue
                     else:
                         flag1 = ctx1.flags(f)
-                        if util.binary(content1):
-                            binarydiff = True
-                elif not content1 or util.binary(content1):
-                    # regular diffs cannot represent empty file deletion
-                    losedatafn(f)
+                        binary = util.binary(content1)
+                else:
+                    binary = util.binary(content1)
+                    if not content1 or binary:
+                        # regular diffs cannot represent empty file deletion
+                        losedatafn(f)
             else:
                 flag1 = ctx1.flags(f)
                 flag2 = ctx2.flags(f)
                 binary = util.binary(content1) or util.binary(content2)
-                if opts.git:
-                    if binary:
-                        binarydiff = True
-                elif binary or flag2 != flag1:
+                if not opts.git and (binary or flag2 != flag1):
                     losedatafn(f)
 
         path1 = posixpath.join(prefix, f1)
@@ -1853,9 +1849,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         elif revs and not repo.ui.quiet:
             header.append(diffline(path1, revs))
 
-        if binarydiff and not opts.nobinary:
+        if binary and opts.git and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
-            if text and opts.git:
+            if text:
                 header.append('index %s..%s' %
                               (gitindex(content1), gitindex(content2)))
         else:
