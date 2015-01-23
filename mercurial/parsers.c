@@ -1793,9 +1793,11 @@ static PyObject *index_commonancestorsheads(indexObject *self, PyObject *args)
 		if (!PyInt_Check(obj)) {
 			PyErr_SetString(PyExc_TypeError,
 					"arguments must all be ints");
+			Py_DECREF(obj);
 			goto bail;
 		}
 		val = PyInt_AsLong(obj);
+		Py_DECREF(obj);
 		if (val == -1) {
 			ret = PyList_New(0);
 			goto done;
