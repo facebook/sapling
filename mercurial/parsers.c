@@ -818,19 +818,27 @@ static PyObject *index_clearcaches(indexObject *self)
 static PyObject *index_stats(indexObject *self)
 {
 	PyObject *obj = PyDict_New();
+	PyObject *t = NULL;
 
 	if (obj == NULL)
 		return NULL;
 
 #define istat(__n, __d) \
-	if (PyDict_SetItemString(obj, __d, PyInt_FromSsize_t(self->__n)) == -1) \
-		goto bail;
+	t = PyInt_FromSsize_t(self->__n); \
+	if (!t) \
+		goto bail; \
+	if (PyDict_SetItemString(obj, __d, t) == -1) \
+		goto bail; \
+	Py_DECREF(t);
 
 	if (self->added) {
 		Py_ssize_t len = PyList_GET_SIZE(self->added);
-		if (PyDict_SetItemString(obj, "index entries added",
-					 PyInt_FromSsize_t(len)) == -1)
+		t = PyInt_FromSsize_t(len);
+		if (!t)
 			goto bail;
+		if (PyDict_SetItemString(obj, "index entries added", t) == -1)
+			goto bail;
+		Py_DECREF(t);
 	}
 
 	if (self->raw_length != self->length - 1)
@@ -850,6 +858,7 @@ static PyObject *index_stats(indexObject *self)
 
 bail:
 	Py_XDECREF(obj);
+	Py_XDECREF(t);
 	return NULL;
 }
 
