@@ -1772,8 +1772,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if f not in ctx1:
             addedset.add(f)
     for f in sorted(modified + added + removed):
-        flag1 = None
-        flag2 = None
         content1 = None
         content2 = None
         copyop = None
@@ -1785,11 +1783,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if opts.git or losedatafn:
             if f in addedset:
                 f1 = None
-                flag2 = ctx2.flags(f)
                 if f in copy:
                     if opts.git:
                         f1 = copy[f]
-                        flag1 = ctx1.flags(f1)
                         if f1 in removedset and f1 not in gone:
                             copyop = 'rename'
                             gone.add(f1)
@@ -1803,14 +1799,15 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     if (f in copyto and copyto[f] in addedset
                         and copy[copyto[f]] == f):
                         continue
-                    else:
-                        flag1 = ctx1.flags(f)
-            else:
-                flag1 = ctx1.flags(f)
-                flag2 = ctx2.flags(f)
 
+        flag1 = None
+        flag2 = None
         binary = False
         if opts.git or losedatafn:
+            if f1:
+                flag1 = ctx1.flags(f1)
+            if f2:
+                flag2 = ctx2.flags(f2)
             binary = util.binary(content1) or util.binary(content2)
 
         if losedatafn and not opts.git:
