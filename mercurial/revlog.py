@@ -1419,6 +1419,10 @@ class revlog(object):
 
         return content
 
+    def iscensored(self, rev):
+        """Check if a file revision is censored."""
+        return False
+
     def getstrippoint(self, minlink):
         """find the minimum rev that must be stripped to strip the linkrev
 
