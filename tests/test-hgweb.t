@@ -595,11 +595,14 @@ Uncaught exceptions result in a logged error and canned HTTP response
   Internal Server Error (no-eol)
   [1]
 
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ head -1 errors.log
   .* Exception happened during processing request '/raiseerror': (re)
 
 Uncaught exception after partial content sent
 
+  $ hg --config extensions.hgweberror=$TESTDIR/hgweberror.py serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
   $ $TESTDIR/get-with-headers.py localhost:$HGPORT 'raiseerror?partialresponse=1' transfer-encoding content-type
   200 Script output follows
   transfer-encoding: chunked
@@ -608,4 +611,5 @@ Uncaught exception after partial content sent
   partial content
   Internal Server Error (no-eol)
 
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cd ..
