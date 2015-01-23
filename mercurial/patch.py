@@ -1785,6 +1785,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         f1, f2 = f, f
         if opts.git or losedatafn:
             if f in addedset:
+                f1 = None
                 flag2 = ctx2.flags(f)
                 if f in copy:
                     if opts.git:
@@ -1797,6 +1798,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                             copyop = 'copy'
                         content1 = getfilectx(f1, ctx1).data()
             elif f in removedset:
+                f2 = None
                 if opts.git:
                     # have we already reported a copy above?
                     if (f in copyto and copyto[f] in addedset
@@ -1815,25 +1817,24 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 # copy/rename
                 f in copy or
                 # empty file creation
-                (content1 is None and not content2) or
+                (not f1 and not content2) or
                 # empty file deletion
-                (not content1 and content2 is None) or
+                (not content1 and not f2) or
                 # create with flags
-                (content1 is None and flag2) or
+                (not f1 and flag2) or
                 # change flags
-                (content1 is not None and content2 is not None and
-                 flag1 != flag2)):
+                (f1 and f2 and flag1 != flag2)):
                 losedatafn(f)
 
-        path1 = posixpath.join(prefix, f1)
-        path2 = posixpath.join(prefix, f2)
+        path1 = posixpath.join(prefix, f1 or f2)
+        path2 = posixpath.join(prefix, f2 or f1)
         header = []
         if opts.git:
             header.append('diff --git %s%s %s%s' %
                           (aprefix, path1, bprefix, path2))
-            if content1 is None: # added
+            if not f1: # added
                 header.append('new file mode %s' % gitmode[flag2])
-            elif content2 is None: # removed
+            elif not f2: # removed
                 header.append('deleted file mode %s' % gitmode[flag1])
             else:  # modified/copied/renamed
                 mode1, mode2 = gitmode[flag1], gitmode[flag2]
