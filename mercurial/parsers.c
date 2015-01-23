@@ -2146,6 +2146,127 @@ bail:
 	return NULL;
 }
 
+#define BUMPED_FIX 1
+#define USING_SHA_256 2
+
+static PyObject *readshas(
+	const char *source, unsigned char num, Py_ssize_t hashwidth)
+{
+	int i;
+	PyObject *list = PyTuple_New(num);
+	if (list == NULL) {
+		return NULL;
+	}
+	for (i = 0; i < num; i++) {
+		PyObject *hash = PyString_FromStringAndSize(source, hashwidth);
+		if (hash == NULL) {
+			Py_DECREF(list);
+			return NULL;
+		}
+		PyTuple_SetItem(list, i, hash);
+		source += hashwidth;
+	}
+	return list;
+}
+
+static PyObject *fm1readmarker(PyObject *self, PyObject *args)
+{
+	const char *data;
+	const char *meta;
+	Py_ssize_t datalen, offset;
+
+	uint32_t msize;
+	double mtime;
+	int16_t tz;
+	uint16_t flags;
+	unsigned char nsuccs, nparents, nmetadata;
+	Py_ssize_t hashwidth = 20;
+
+	PyObject *prec = NULL, *parents = NULL, *succs = NULL;
+	PyObject *metadata = NULL, *ret = NULL;
+	int i;
+
+	if (!PyArg_ParseTuple(args, "s#n", &data, &datalen, &offset)) {
+		return NULL;
+	}
+	data += offset;
+
+	msize = getbe32(data);
+	data += 4;
+	mtime = getbefloat64(data);
+	data += 8;
+	tz = getbeint16(data);
+	data += 2;
+	flags = getbeuint16(data);
+	data += 2;
+
+	if (flags & USING_SHA_256) {
+		hashwidth = 32;
+	}
+
+	nsuccs = (unsigned char)(*data++);
+	nparents = (unsigned char)(*data++);
+	nmetadata = (unsigned char)(*data++);
+
+	prec = PyString_FromStringAndSize(data, hashwidth);
+	data += hashwidth;
+	if (prec == NULL) {
+		goto bail;
+	}
+
+	succs = readshas(data, nsuccs, hashwidth);
+	if (succs == NULL) {
+		goto bail;
+	}
+	data += nsuccs * hashwidth;
+
+	if (nparents == 1 || nparents == 2) {
+		parents = readshas(data, nparents, hashwidth);
+		if (parents == NULL) {
+			goto bail;
+		}
+		data += nparents * hashwidth;
+	} else {
+		parents = Py_None;
+	}
+
+	meta = data + (2 * nmetadata);
+	metadata = PyTuple_New(nmetadata);
+	if (metadata == NULL) {
+		goto bail;
+	}
+	for (i = 0; i < nmetadata; i++) {
+		PyObject *tmp, *left = NULL, *right = NULL;
+		Py_ssize_t metasize = (unsigned char)(*data++);
+		left = PyString_FromStringAndSize(meta, metasize);
+		meta += metasize;
+		metasize = (unsigned char)(*data++);
+		right = PyString_FromStringAndSize(meta, metasize);
+		meta += metasize;
+		if (!left || !right) {
+			Py_XDECREF(left);
+			Py_XDECREF(right);
+			goto bail;
+		}
+		tmp = PyTuple_Pack(2, left, right);
+		Py_DECREF(left);
+		Py_DECREF(right);
+		if (!tmp) {
+			goto bail;
+		}
+		PyTuple_SetItem(metadata, i, tmp);
+	}
+	ret = Py_BuildValue("(nOOHO(di)O)", msize, prec, succs, flags,
+			    metadata, mtime, (int)tz * 60, parents);
+bail:
+	Py_XDECREF(prec);
+	Py_XDECREF(succs);
+	Py_XDECREF(metadata);
+	if (parents != Py_None)
+		Py_XDECREF(parents);
+	return ret;
+}
+
 static char parsers_doc[] = "Efficient content parsing.";
 
 PyObject *encodedir(PyObject *self, PyObject *args);
@@ -2161,6 +2282,7 @@ static PyMethodDef methods[] = {
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
 	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
+	{"fm1readmarker", fm1readmarker, METH_VARARGS, "parse v1 obsolete marker\n"},
 	{NULL, NULL}
 };
 
