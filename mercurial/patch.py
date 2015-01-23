@@ -1780,25 +1780,24 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if f not in removedset:
             content2 = getfilectx(f, ctx2).data()
         f1, f2 = f, f
-        if opts.git or losedatafn:
-            if f in addedset:
-                f1 = None
-                if f in copy:
-                    if opts.git:
-                        f1 = copy[f]
-                        if f1 in removedset and f1 not in gone:
-                            copyop = 'rename'
-                            gone.add(f1)
-                        else:
-                            copyop = 'copy'
-                        content1 = getfilectx(f1, ctx1).data()
-            elif f in removedset:
-                f2 = None
+        if f in addedset:
+            f1 = None
+            if f in copy:
                 if opts.git:
-                    # have we already reported a copy above?
-                    if (f in copyto and copyto[f] in addedset
-                        and copy[copyto[f]] == f):
-                        continue
+                    f1 = copy[f]
+                    if f1 in removedset and f1 not in gone:
+                        copyop = 'rename'
+                        gone.add(f1)
+                    else:
+                        copyop = 'copy'
+                    content1 = getfilectx(f1, ctx1).data()
+        elif f in removedset:
+            f2 = None
+            if opts.git:
+                # have we already reported a copy above?
+                if (f in copyto and copyto[f] in addedset
+                    and copy[copyto[f]] == f):
+                    continue
 
         flag1 = None
         flag2 = None
