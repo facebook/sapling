@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-from mercurial.node import nullrev, wdirrev
+from mercurial.node import wdirrev
 import util, error, osutil, revset, similar, encoding, phases
 import pathutil
 import match as matchmod
@@ -720,54 +720,10 @@ _revrangesep = ':'
 
 def revrange(repo, revs):
     """Yield revision as strings from a list of revision specifications."""
-
-    def revfix(repo, val, defval):
-        if not val and val != 0 and defval is not None:
-            return defval
-        return repo[val].rev()
-
     subsets = []
-
-    revsetaliases = [alias for (alias, _) in
-                     repo.ui.configitems("revsetalias")]
-
     for spec in revs:
-        # attempt to parse old-style ranges first to deal with
-        # things like old-tag which contain query metacharacters
-        try:
-            # ... except for revset aliases without arguments. These
-            # should be parsed as soon as possible, because they might
-            # clash with a hash prefix.
-            if spec in revsetaliases:
-                raise error.RepoLookupError
-
-            if isinstance(spec, int):
-                subsets.append(revset.baseset([spec]))
-                continue
-
-            if _revrangesep in spec:
-                start, end = spec.split(_revrangesep, 1)
-                if start in revsetaliases or end in revsetaliases:
-                    raise error.RepoLookupError
-
-                start = revfix(repo, start, 0)
-                end = revfix(repo, end, len(repo) - 1)
-                if end == nullrev and start < 0:
-                    start = nullrev
-                if start < end:
-                    l = revset.spanset(repo, start, end + 1)
-                else:
-                    l = revset.spanset(repo, start, end - 1)
-                subsets.append(l)
-                continue
-            elif spec and spec in repo: # single unquoted rev
-                rev = revfix(repo, spec, None)
-                subsets.append(revset.baseset([rev]))
-                continue
-        except error.RepoLookupError:
-            pass
-
-        # fall through to new-style queries if old-style fails
+        if isinstance(spec, int):
+            spec = revset.formatspec('rev(%d)', spec)
         m = revset.match(repo.ui, spec, repo)
         subsets.append(m(repo))
 
