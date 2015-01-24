@@ -526,7 +526,9 @@ def _buildsubset(ctx, status):
 
 def getfileset(ctx, expr):
     tree = parse(expr)
+    return getset(fullmatchctx(ctx, _buildstatus(ctx, tree)), tree)
 
+def _buildstatus(ctx, tree):
     # do we need status info?
     if (_intree(_statuscallers, tree) or
         # Using matchctx.existing() on a workingctx requires us to check
@@ -536,12 +538,10 @@ def getfileset(ctx, expr):
         ignored = _intree(['ignored'], tree)
 
         r = ctx.repo()
-        status = r.status(ctx.p1(), ctx,
-                          unknown=unknown, ignored=ignored, clean=True)
+        return r.status(ctx.p1(), ctx,
+                        unknown=unknown, ignored=ignored, clean=True)
     else:
-        status = None
-
-    return getset(fullmatchctx(ctx, status), tree)
+        return None
 
 def prettyformat(tree):
     return parser.prettyformat(tree, ('string', 'symbol'))
