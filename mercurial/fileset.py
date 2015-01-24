@@ -498,6 +498,12 @@ class matchctx(object):
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
 
+class fullmatchctx(matchctx):
+    """A match context where any files in any revisions should be valid"""
+
+    def __init__(self, ctx, subset=None, status=None):
+        super(fullmatchctx, self).__init__(ctx, subset, status)
+
 def _intree(funcs, tree):
     if isinstance(tree, tuple):
         if tree[0] == 'func' and tree[1][0] == 'symbol':
@@ -529,7 +535,7 @@ def getfileset(ctx, expr):
         status = None
         subset = list(ctx.walk(ctx.match([])))
 
-    return getset(matchctx(ctx, subset, status), tree)
+    return getset(fullmatchctx(ctx, subset, status), tree)
 
 def prettyformat(tree):
     return parser.prettyformat(tree, ('string', 'symbol'))
