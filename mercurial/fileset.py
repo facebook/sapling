@@ -474,7 +474,7 @@ methods = {
 }
 
 class matchctx(object):
-    def __init__(self, ctx, subset=None, status=None):
+    def __init__(self, ctx, subset, status=None):
         self.ctx = ctx
         self.subset = subset
         self._status = status
@@ -501,7 +501,8 @@ class matchctx(object):
 class fullmatchctx(matchctx):
     """A match context where any files in any revisions should be valid"""
 
-    def __init__(self, ctx, subset=None, status=None):
+    def __init__(self, ctx, status=None):
+        subset = _buildsubset(ctx, status)
         super(fullmatchctx, self).__init__(ctx, subset, status)
 
 def _intree(funcs, tree):
@@ -540,8 +541,7 @@ def getfileset(ctx, expr):
     else:
         status = None
 
-    subset = _buildsubset(ctx, status)
-    return getset(fullmatchctx(ctx, subset, status), tree)
+    return getset(fullmatchctx(ctx, status), tree)
 
 def prettyformat(tree):
     return parser.prettyformat(tree, ('string', 'symbol'))
