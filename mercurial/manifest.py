@@ -220,9 +220,14 @@ def _parse(lines):
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
-        # we expect to deal with not more than four revs at a time,
-        # during a commit --amend
-        self._mancache = util.lrucachedict(4)
+        # During normal operations, we expect to deal with not more than four
+        # revs at a time (such as during commit --amend). When rebasing large
+        # stacks of commits, the number can go up, hence the config knob below.
+        cachesize = 4
+        opts = getattr(opener, 'options', None)
+        if opts is not None:
+            cachesize = opts.get('manifestcachesize', cachesize)
+        self._mancache = util.lrucachedict(cachesize)
         revlog.revlog.__init__(self, opener, "00manifest.i")
 
     def readdelta(self, node):
