@@ -39,6 +39,7 @@ Prevent adding new files in the root directory accidentally.
 
   $ testrepohg files 'glob:*'
   .arcconfig
+  .clang-format
   .editorconfig
   .hgignore
   .hgsigs
