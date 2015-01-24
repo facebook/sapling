@@ -107,8 +107,6 @@ def loadall(ui):
             else:
                 ui.warn(_("*** failed to import extension %s: %s\n")
                         % (name, inst))
-            if ui.traceback():
-                return 1
 
     for name in _order[newindex:]:
         uisetup = getattr(_extensions[name], 'uisetup', None)
