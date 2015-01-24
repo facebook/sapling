@@ -497,6 +497,9 @@ class matchctx(object):
                 if (f in self.ctx and f not in removed) or f in unknown)
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
+    def switch(self, ctx, status=None):
+        subset = self.filter(_buildsubset(ctx, status))
+        return matchctx(ctx, subset, status)
 
 class fullmatchctx(matchctx):
     """A match context where any files in any revisions should be valid"""
@@ -504,12 +507,21 @@ class fullmatchctx(matchctx):
     def __init__(self, ctx, status=None):
         subset = _buildsubset(ctx, status)
         super(fullmatchctx, self).__init__(ctx, subset, status)
+    def switch(self, ctx, status=None):
+        return fullmatchctx(ctx, status)
+
+# filesets using matchctx.switch()
+_switchcallers = [
+]
 
 def _intree(funcs, tree):
     if isinstance(tree, tuple):
         if tree[0] == 'func' and tree[1][0] == 'symbol':
             if tree[1][1] in funcs:
                 return True
+            if tree[1][1] in _switchcallers:
+                # arguments won't be evaluated in the current context
+                return False
         for s in tree[1:]:
             if _intree(funcs, s):
                 return True
