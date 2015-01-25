@@ -419,4 +419,24 @@ Test a directory commit with a changed largefile and a changed normal file
   A a.dat
   A a.txt
 
+  $ hg ci -m "add a.*"
+  $ hg mv a.dat b.dat
+  $ hg mv foo/bar/abc foo/bar/def
+  $ hg status -C
+  A b.dat
+    a.dat
+  A foo/bar/def
+    foo/bar/abc
+  R a.dat
+  R foo/bar/abc
+
+  $ hg ci -m "move large and normal"
+  $ hg status -C --rev '.^' --rev .
+  A b.dat
+    a.dat
+  A foo/bar/def
+    foo/bar/abc
+  R a.dat
+  R foo/bar/abc
+
   $ cd ..

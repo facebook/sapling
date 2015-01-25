@@ -9,7 +9,7 @@
 '''setup for largefiles extension: uisetup'''
 
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httppeer, merge, scmutil, sshpeer, wireproto, revset, subrepo
+    httppeer, merge, scmutil, sshpeer, wireproto, revset, subrepo, copies
 from mercurial.i18n import _
 from mercurial.hgweb import hgweb_mod, webcommands
 
@@ -36,6 +36,8 @@ def uisetup(ui):
     extensions.wrapfunction(cmdutil, 'add', overrides.cmdutiladd)
     extensions.wrapfunction(cmdutil, 'remove', overrides.cmdutilremove)
     extensions.wrapfunction(cmdutil, 'forget', overrides.cmdutilforget)
+
+    extensions.wrapfunction(copies, 'pathcopies', overrides.copiespathcopies)
 
     # Subrepos call status function
     entry = extensions.wrapcommand(commands.table, 'status',

@@ -578,6 +578,15 @@ def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca, labels=None):
         repo.wwrite(fcd.path(), fco.data(), fco.flags())
     return 0
 
+def copiespathcopies(orig, ctx1, ctx2):
+    copies = orig(ctx1, ctx2)
+    updated = {}
+
+    for k, v in copies.iteritems():
+        updated[lfutil.splitstandin(k) or k] = lfutil.splitstandin(v) or v
+
+    return updated
+
 # Copy first changes the matchers to match standins instead of
 # largefiles.  Then it overrides util.copyfile in that function it
 # checks if the destination largefile already exists. It also keeps a
