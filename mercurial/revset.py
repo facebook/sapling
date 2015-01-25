@@ -31,7 +31,7 @@ def _revancestors(repo, revs, followfirst):
             revsnode = revqueue.popleft()
             heapq.heappush(h, -revsnode)
 
-        seen = set([node.nullrev])
+        seen = set()
         while h:
             current = -heapq.heappop(h)
             if current not in seen:

@@ -635,6 +635,20 @@ log -f -r 1:tip
   
 
 
+log -f -r null
+
+  $ hg log -f -r null
+  changeset:   -1:000000000000
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
+  $ hg log -f -r null -G
+  o  changeset:   -1:000000000000
+     user:
+     date:        Thu Jan 01 00:00:00 1970 +0000
+  
+
+
 log -r .  with two parents
 
   $ hg up -C 3

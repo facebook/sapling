@@ -477,6 +477,10 @@ Test explicit numeric revision
   hg: parse error: rev expects a number
   [255]
 
+Test null revision
+  $ log 'ancestors(null)'
+  -1
+
   $ log 'outgoing()'
   8
   9
