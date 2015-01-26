@@ -27,6 +27,15 @@ def run():
     "run the command in sys.argv"
     sys.exit((dispatch(request(sys.argv[1:])) or 0) & 255)
 
+def _formatparse(write, inst):
+    if len(inst.args) > 1:
+        write(_("hg: parse error at %s: %s\n") %
+                         (inst.args[1], inst.args[0]))
+        if (inst.args[0][0] == ' '):
+            write(_("unexpected leading whitespace\n"))
+    else:
+        write(_("hg: parse error: %s\n") % inst.args[0])
+
 def dispatch(req):
     "run the command specified in req.args"
     if req.ferr:
@@ -55,13 +64,7 @@ def dispatch(req):
             ferr.write(_("(%s)\n") % inst.hint)
         return -1
     except error.ParseError, inst:
-        if len(inst.args) > 1:
-            ferr.write(_("hg: parse error at %s: %s\n") %
-                             (inst.args[1], inst.args[0]))
-            if (inst.args[0][0] == ' '):
-                ferr.write(_("unexpected leading whitespace\n"))
-        else:
-            ferr.write(_("hg: parse error: %s\n") % inst.args[0])
+        _formatparse(ferr.write, inst)
         return -1
 
     msg = ' '.join(' ' in a and repr(a) or a for a in req.args)
@@ -154,13 +157,7 @@ def _runcatch(req):
         ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
     except error.ParseError, inst:
-        if len(inst.args) > 1:
-            ui.warn(_("hg: parse error at %s: %s\n") %
-                             (inst.args[1], inst.args[0]))
-            if (inst.args[0][0] == ' '):
-                ui.warn(_("unexpected leading whitespace\n"))
-        else:
-            ui.warn(_("hg: parse error: %s\n") % inst.args[0])
+        _formatparse(ui.warn, inst)
         return -1
     except error.LockHeld, inst:
         if inst.errno == errno.ETIMEDOUT:
