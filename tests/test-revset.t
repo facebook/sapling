@@ -888,6 +888,20 @@ parentrevspec
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
 
+Bogus function gets suggestions
+  $ log 'add()'
+  hg: parse error: not a function: add
+  [255]
+  $ log 'added()'
+  hg: parse error: not a function: added
+  [255]
+  $ log 'remo()'
+  hg: parse error: not a function: remo
+  [255]
+  $ log 'babar()'
+  hg: parse error: not a function: babar
+  [255]
+
 multiple revspecs
 
   $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{rev}\n'
