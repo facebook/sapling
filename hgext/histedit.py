@@ -349,7 +349,7 @@ def pick(ui, state, ha, opts):
     repo, ctx = state.repo, state.parentctx
     oldctx = repo[ha]
     if oldctx.parents()[0] == ctx:
-        ui.debug('node %s unchanged\n' % ha)
+        ui.debug('node %s unchanged\n' % ha[:12])
         return oldctx, []
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
@@ -361,7 +361,7 @@ def pick(ui, state, ha, opts):
     n = commit(text=oldctx.description(), user=oldctx.user(),
                date=oldctx.date(), extra=oldctx.extra())
     if n is None:
-        ui.warn(_('%s: empty changeset\n') % node.hex(ha))
+        ui.warn(_('%s: empty changeset\n') % ha[:12])
         return ctx, []
     new = repo[n]
     return new, [(oldctx.node(), (n,))]
@@ -389,10 +389,10 @@ def fold(ui, state, ha, opts):
     if stats and stats[3] > 0:
         raise error.InterventionRequired(
             _('Fix up the change and run hg histedit --continue'))
-    n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
+    n = repo.commit(text='fold-temp-revision %s' % ha[:12], user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
     if n is None:
-        ui.warn(_('%s: empty changeset') % node.hex(ha))
+        ui.warn(_('%s: empty changeset') % ha[:12])
         return ctx, []
     return finishfold(ui, repo, ctx, oldctx, n, opts, [])
 
@@ -666,7 +666,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     while state.rules:
         state.write()
         action, ha = state.rules.pop(0)
-        ui.debug('histedit: processing %s %s\n' % (action, ha))
+        ui.debug('histedit: processing %s %s\n' % (action, ha[:12]))
         actfunc = actiontable[action]
         state.parentctx, replacement_ = actfunc(ui, state, ha, opts)
         state.replacements.extend(replacement_)
@@ -736,7 +736,7 @@ def bootstrapcontinue(ui, state, opts):
     if s.modified or s.added or s.removed or s.deleted:
         # prepare the message for the commit to comes
         if action in ('f', 'fold', 'r', 'roll'):
-            message = 'fold-temp-revision %s' % currentnode
+            message = 'fold-temp-revision %s' % currentnode[:12]
         else:
             message = ctx.description()
         editopt = action in ('e', 'edit', 'm', 'mess')
@@ -822,7 +822,7 @@ def verifyrules(rules, repo, ctxs):
     or a rule on a changeset outside of the user-given range.
     """
     parsed = []
-    expected = set(str(c) for c in ctxs)
+    expected = set(c.hex() for c in ctxs)
     seen = set()
     for r in rules:
         if ' ' not in r:
@@ -830,22 +830,24 @@ def verifyrules(rules, repo, ctxs):
         action, rest = r.split(' ', 1)
         ha = rest.strip().split(' ', 1)[0]
         try:
-            ha = str(repo[ha])  # ensure its a short hash
+            ha = repo[ha].hex()
         except error.RepoError:
-            raise util.Abort(_('unknown changeset %s listed') % ha)
+            raise util.Abort(_('unknown changeset %s listed') % ha[:12])
         if ha not in expected:
             raise util.Abort(
                 _('may not use changesets other than the ones listed'))
         if ha in seen:
-            raise util.Abort(_('duplicated command for changeset %s') % ha)
+            raise util.Abort(_('duplicated command for changeset %s') %
+                    ha[:12])
         seen.add(ha)
         if action not in actiontable:
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
     missing = sorted(expected - seen)  # sort to stabilize output
     if missing:
-        raise util.Abort(_('missing rules for changeset %s') % missing[0],
-                         hint=_('do you want to use the drop action?'))
+        raise util.Abort(_('missing rules for changeset %s') %
+                missing[0][:12],
+                hint=_('do you want to use the drop action?'))
     return parsed
 
 def processreplacement(state):
