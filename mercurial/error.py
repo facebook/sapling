@@ -67,6 +67,15 @@ class OutOfBandError(Exception):
 class ParseError(Exception):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
 
+class UnknownIdentifier(ParseError):
+    """Exception raised when a {rev,file}set references an unknown identifier"""
+
+    def __init__(self, function, symbols):
+        from i18n import _
+        ParseError.__init__(self, _("unknown identifier: %s") % function)
+        self.function = function
+        self.symbols = symbols
+
 class RepoError(Exception):
     def __init__(self, *args, **kw):
         Exception.__init__(self, *args)
