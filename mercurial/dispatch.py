@@ -7,6 +7,7 @@
 
 from i18n import _
 import os, sys, atexit, signal, pdb, socket, errno, shlex, time, traceback, re
+import difflib
 import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil, encoding
 import ui as uimod
@@ -27,7 +28,17 @@ def run():
     "run the command in sys.argv"
     sys.exit((dispatch(request(sys.argv[1:])) or 0) & 255)
 
+def _getsimilar(symbols, value):
+    sim = lambda x: difflib.SequenceMatcher(None, value, x).ratio()
+    # The cutoff for similarity here is pretty arbitrary. It should
+    # probably be investigated and tweaked.
+    return [s for s in symbols if sim(s) > 0.6]
+
 def _formatparse(write, inst):
+    similar = []
+    if isinstance(inst, error.UnknownIdentifier):
+        # make sure to check fileset first, as revset can invoke fileset
+        similar = _getsimilar(inst.symbols, inst.function)
     if len(inst.args) > 1:
         write(_("hg: parse error at %s: %s\n") %
                          (inst.args[1], inst.args[0]))
@@ -35,6 +46,12 @@ def _formatparse(write, inst):
             write(_("unexpected leading whitespace\n"))
     else:
         write(_("hg: parse error: %s\n") % inst.args[0])
+        if similar:
+            if len(similar) == 1:
+                write(_("(did you mean %r?)\n") % similar[0])
+            else:
+                ss = ", ".join(sorted(similar))
+                write(_("(did you mean one of %s?)\n") % ss)
 
 def dispatch(req):
     "run the command specified in req.args"

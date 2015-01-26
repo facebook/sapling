@@ -891,12 +891,15 @@ parentrevspec
 Bogus function gets suggestions
   $ log 'add()'
   hg: parse error: not a function: add
+  (did you mean 'adds'?)
   [255]
   $ log 'added()'
   hg: parse error: not a function: added
+  (did you mean 'adds'?)
   [255]
   $ log 'remo()'
   hg: parse error: not a function: remo
+  (did you mean one of remote, removes?)
   [255]
   $ log 'babar()'
   hg: parse error: not a function: babar
