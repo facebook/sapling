@@ -368,7 +368,7 @@ def listset(repo, subset, a, b):
 def func(repo, subset, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
         return symbols[a[1]](repo, subset, b)
-    raise error.ParseError(_("not a function: %s") % a[1])
+    raise error.UnknownIdentifier(a[1], symbols.keys())
 
 # functions
 
@@ -2151,7 +2151,7 @@ def _checkaliasarg(tree, known=None):
     if isinstance(tree, tuple):
         arg = _getaliasarg(tree)
         if arg is not None and (not known or arg not in known):
-            raise error.ParseError(_("not a function: %s") % '_aliasarg')
+            raise error.UnknownIdentifier('_aliasarg', [])
         for t in tree:
             _checkaliasarg(t, known)
 
