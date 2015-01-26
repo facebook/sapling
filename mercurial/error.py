@@ -63,7 +63,7 @@ class OutOfBandError(Exception):
     """Exception raised when a remote repo reports failure"""
 
 class ParseError(Exception):
-    """Exception raised when parsing config files (msg[, pos])"""
+    """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
 
 class RepoError(Exception):
     def __init__(self, *args, **kw):
