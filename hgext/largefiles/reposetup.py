@@ -12,7 +12,7 @@ import os
 
 from mercurial import error, manifest, match as match_, util
 from mercurial.i18n import _
-from mercurial import scmutil
+from mercurial import scmutil, localrepo
 
 import lfcommands
 import lfutil
@@ -34,7 +34,7 @@ def reposetup(ui, repo):
         # their actual contents.
         def __getitem__(self, changeid):
             ctx = super(lfilesrepo, self).__getitem__(changeid)
-            if self.unfiltered().lfstatus:
+            if self.lfstatus:
                 class lfilesmanifestdict(manifest.manifestdict):
                     def __contains__(self, filename):
                         orig = super(lfilesmanifestdict, self).__contains__
@@ -72,20 +72,19 @@ def reposetup(ui, repo):
         # appropriate list in the result. Also removes standin files
         # from the listing. Revert to the original status if
         # self.lfstatus is False.
+        # XXX large file status is buggy when used on repo proxy.
+        # XXX this needs to be investigated.
+        @localrepo.unfilteredmethod
         def status(self, node1='.', node2=None, match=None, ignored=False,
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
             orig = super(lfilesrepo, self).status
-
-            # When various overrides set repo.lfstatus, the change is redirected
-            # to the unfiltered repo, and self.lfstatus is always false when
-            # this repo is filtered.
-            if not self.unfiltered().lfstatus:
+            if not self.lfstatus:
                 return orig(node1, node2, match, listignored, listclean,
                             listunknown, listsubrepos)
 
             # some calls in this function rely on the old version of status
-            self.unfiltered().lfstatus = False
+            self.lfstatus = False
             ctx1 = self[node1]
             ctx2 = self[node2]
             working = ctx2.rev() is None
@@ -241,7 +240,7 @@ def reposetup(ui, repo):
                 if wlock:
                     wlock.release()
 
-            self.unfiltered().lfstatus = True
+            self.lfstatus = True
             return scmutil.status(*result)
 
         def commitctx(self, ctx, *args, **kwargs):

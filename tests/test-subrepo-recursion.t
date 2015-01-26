@@ -162,6 +162,14 @@ Status with relative path:
   M ../foo/bar/z.txt
   M ../foo/y.txt
   ? a.txt
+
+XXX: filtering lfilesrepo.status() in 3.3-rc causes these files to be listed as
+added instead of modified.
+  $ hg status -S .. --config extensions.largefiles=
+  M ../foo/bar/z.txt
+  M ../foo/y.txt
+  ? a.txt
+
   $ hg diff --nodates -S ..
   diff -r d254738c5f5e foo/y.txt
   --- a/foo/y.txt

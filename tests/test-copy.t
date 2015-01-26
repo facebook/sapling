@@ -180,6 +180,13 @@ should show copy
   $ hg st -C
   M bar
     foo
+
+XXX: filtering lfilesrepo.status() in 3.3-rc causes the copy source to not be
+displayed.
+  $ hg st -C --config extensions.largefiles=
+  M bar
+    foo
+
   $ hg commit -m3
 
 should show no parents for tip
