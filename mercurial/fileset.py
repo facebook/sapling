@@ -186,7 +186,7 @@ def clean(mctx, x):
 def func(mctx, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
         return symbols[a[1]](mctx, b)
-    raise error.ParseError(_("not a function: %s") % a[1])
+    raise error.UnknownIdentifier(a[1], symbols.keys())
 
 def getlist(x):
     if not x:
