@@ -498,3 +498,45 @@ test on rebase dropping a merge
   |/
   o  0:cd010b8cd998 A
   
+
+Test hidden changesets in the rebase set (issue4504)
+
+  $ hg up --hidden 9
+  3 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo J > J
+  $ hg add J
+  $ hg commit -m J
+  $ hg debugobsolete `hg log --rev . -T '{node}'`
+
+  $ hg rebase --rev .~1::. --dest 'max(desc(D))' --traceback
+  rebasing 9:4bde274eefcf "I"
+  rebasing 13:06edfc82198f "J" (tip)
+  $ hg log -G
+  @  15:5ae8a643467b J
+  |
+  o  14:9ad579b4a5de I
+  |
+  | o  12:acd174b7ab39 I
+  | |
+  | o  11:6c11a6218c97 H
+  | |
+  o |  10:b5313c85b22e D
+  |/
+  | o    8:53a6a128b2b7 M
+  | |\
+  | | x  7:02de42196ebe H
+  | | |
+  o---+  6:eea13746799a G
+  | | |
+  | | o  5:24b6387c8c8c F
+  | | |
+  o---+  4:9520eea781bc E
+   / /
+  x |  3:32af7686d403 D
+  | |
+  o |  2:5fddd98957c8 C
+  | |
+  o |  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  

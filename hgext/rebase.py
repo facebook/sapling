@@ -16,7 +16,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
-from mercurial import copies
+from mercurial import copies, repoview
 from mercurial.commands import templateopts
 from mercurial.node import nullrev, nullid, hex, short
 from mercurial.lock import release
@@ -778,6 +778,7 @@ def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
 
 def clearstatus(repo):
     'Remove the status files'
+    _clearrebasesetvisibiliy(repo)
     util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
 
 def restorestatus(repo):
@@ -831,6 +832,7 @@ def restorestatus(repo):
         repo.ui.debug('computed skipped revs: %s\n' %
                       (' '.join(str(r) for r in sorted(skipped)) or None))
         repo.ui.debug('rebase status resumed\n')
+        _setrebasesetvisibility(repo, state.keys())
         return (originalwd, target, state, skipped,
                 collapse, keep, keepbranches, external, activebookmark)
     except IOError, err:
@@ -892,6 +894,7 @@ def buildstate(repo, dest, rebaseset, collapse):
     dest: context
     rebaseset: set of rev
     '''
+    _setrebasesetvisibility(repo, rebaseset)
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
@@ -1044,6 +1047,31 @@ def pullrebase(orig, ui, repo, *args, **opts):
             raise util.Abort(_('--tool can only be used with --rebase'))
         orig(ui, repo, *args, **opts)
 
+def _setrebasesetvisibility(repo, revs):
+    """store the currently rebased set on the repo object
+
+    This is used by another function to prevent rebased revision to because
+    hidden (see issue4505)"""
+    repo = repo.unfiltered()
+    revs = set(revs)
+    repo._rebaseset = revs
+    # invalidate cache if visibility changes
+    hiddens = repo.filteredrevcache.get('visible', set())
+    if revs & hiddens:
+        repo.invalidatevolatilesets()
+
+def _clearrebasesetvisibiliy(repo):
+    """remove rebaseset data from the repo"""
+    repo = repo.unfiltered()
+    if '_rebaseset' in vars(repo):
+        del repo._rebaseset
+
+def _rebasedvisible(orig, repo):
+    """ensure rebased revs stay visible (see issue4505)"""
+    blockers = orig(repo)
+    blockers.update(getattr(repo, '_rebaseset', ()))
+    return blockers
+
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('rebasestate')):
         return
@@ -1062,7 +1090,7 @@ def summaryhook(ui, repo):
               (len(state) - numrebased)))
 
 def uisetup(ui):
-    'Replace pull with a decorator to provide --rebase option'
+    #Replace pull with a decorator to provide --rebase option
     entry = extensions.wrapcommand(commands.table, 'pull', pullrebase)
     entry[1].append(('', 'rebase', None,
                      _("rebase working directory to branch head")))
@@ -1072,3 +1100,6 @@ def uisetup(ui):
     cmdutil.unfinishedstates.append(
         ['rebasestate', False, False, _('rebase in progress'),
          _("use 'hg rebase --continue' or 'hg rebase --abort'")])
+    # ensure rebased rev are not hidden
+    extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
+
