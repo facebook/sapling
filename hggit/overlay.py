@@ -284,6 +284,13 @@ class overlayrepo(object):
 
         self._makemaps(commits, refs)
 
+        try:
+            # Mercurial >= 3.3
+            from mercurial import namespaces
+            self.names = namespaces.namespaces()
+        except ImportError:
+            pass
+
     def __getitem__(self, n):
         if n not in self.revmap:
             return self.handler.repo[n]
