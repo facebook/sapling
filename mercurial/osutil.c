@@ -410,17 +410,22 @@ static PyObject *statfiles(PyObject *self, PyObject *args)
 		return NULL;
 
 	for (i = 0; i < count; i++) {
-		PyObject *stat;
+		PyObject *stat, *pypath;
 		struct stat st;
 		int ret, kind;
 		char *path;
 
-		path = PyString_AsString(PySequence_GetItem(names, i));
+		pypath = PySequence_GetItem(names, i);
+		if (!pypath)
+			return NULL;
+		path = PyString_AsString(pypath);
 		if (path == NULL) {
+			Py_DECREF(pypath);
 			PyErr_SetString(PyExc_TypeError, "not a string");
 			goto bail;
 		}
 		ret = lstat(path, &st);
+		Py_DECREF(pypath);
 		kind = st.st_mode & S_IFMT;
 		if (ret != -1 && (kind == S_IFREG || kind == S_IFLNK)) {
 			stat = makestat(&st);
