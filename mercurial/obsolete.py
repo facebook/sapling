@@ -285,7 +285,7 @@ _fm1parentmask = (_fm1parentnone << _fm1parentshift)
 _fm1metapair = 'BB'
 _fm1metapairsize = _calcsize('BB')
 
-def _fm1readmarkers(data, off):
+def _fm1purereadmarkers(data, off):
     # make some global constants local for performance
     noneflag = _fm1parentnone
     sha2flag = usingsha256
@@ -301,14 +301,6 @@ def _fm1readmarkers(data, off):
     # Loop on markers
     stop = len(data) - _fm1fsize
     ufixed = util.unpacker(_fm1fixed)
-
-    fast = getattr(parsers, 'fm1readmarker', None)
-    if fast is not None:
-        while off <= stop:
-            ret = fast(data, off)
-            yield ret[1:]
-            off += ret[0]
-        return
 
     while off <= stop:
         # read fixed part
@@ -403,6 +395,13 @@ def _fm1encodeonemarker(marker):
         data.append(key)
         data.append(value)
     return ''.join(data)
+
+def _fm1readmarkers(data, off):
+    native = getattr(parsers, 'fm1readmarkers', None)
+    if not native:
+        return _fm1purereadmarkers(data, off)
+    stop = len(data) - _fm1fsize
+    return native(data, off, stop)
 
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)

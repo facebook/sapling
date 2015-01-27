@@ -2169,13 +2169,10 @@ static PyObject *readshas(
 	return list;
 }
 
-static PyObject *fm1readmarker(PyObject *self, PyObject *args)
+static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 {
-	const char *data;
 	const char *meta;
-	Py_ssize_t datalen, offset;
 
-	uint32_t msize;
 	double mtime;
 	int16_t tz;
 	uint16_t flags;
@@ -2186,12 +2183,7 @@ static PyObject *fm1readmarker(PyObject *self, PyObject *args)
 	PyObject *metadata = NULL, *ret = NULL;
 	int i;
 
-	if (!PyArg_ParseTuple(args, "s#n", &data, &datalen, &offset)) {
-		return NULL;
-	}
-	data += offset;
-
-	msize = getbe32(data);
+	*msize = getbe32(data);
 	data += 4;
 	mtime = getbefloat64(data);
 	data += 8;
@@ -2256,7 +2248,7 @@ static PyObject *fm1readmarker(PyObject *self, PyObject *args)
 		}
 		PyTuple_SetItem(metadata, i, tmp);
 	}
-	ret = Py_BuildValue("(nOOHO(di)O)", msize, prec, succs, flags,
+	ret = Py_BuildValue("(OOHO(di)O)", prec, succs, flags,
 			    metadata, mtime, (int)tz * 60, parents);
 bail:
 	Py_XDECREF(prec);
@@ -2265,6 +2257,41 @@ bail:
 	if (parents != Py_None)
 		Py_XDECREF(parents);
 	return ret;
+}
+
+
+static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
+	const char *data;
+	Py_ssize_t datalen, offset, stop;
+	PyObject *markers = NULL;
+
+	if (!PyArg_ParseTuple(args, "s#nn", &data, &datalen, &offset, &stop)) {
+		return NULL;
+	}
+	data += offset;
+	markers = PyList_New(0);
+	if (!markers) {
+		return NULL;
+	}
+	while (offset < stop) {
+		uint32_t msize;
+		int error;
+		PyObject *record = fm1readmarker(data, &msize);
+		if (!record) {
+			goto bail;
+		}
+		error = PyList_Append(markers, record);
+		Py_DECREF(record);
+		if (error) {
+			goto bail;
+		}
+		data += msize;
+		offset += msize;
+	}
+	return markers;
+bail:
+	Py_DECREF(markers);
+	return NULL;
 }
 
 static char parsers_doc[] = "Efficient content parsing.";
@@ -2282,7 +2309,8 @@ static PyMethodDef methods[] = {
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
 	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
-	{"fm1readmarker", fm1readmarker, METH_VARARGS, "parse v1 obsolete marker\n"},
+	{"fm1readmarkers", fm1readmarkers, METH_VARARGS,
+			"parse v1 obsolete markers\n"},
 	{NULL, NULL}
 };
 
