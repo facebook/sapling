@@ -288,7 +288,7 @@ static PyObject *makestat(const struct stat *st)
 
 static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 {
-	PyObject *list, *elem, *stat, *ret = NULL;
+	PyObject *list, *elem, *stat = NULL, *ret = NULL;
 	char fullpath[PATH_MAX + 10];
 	int kind, err;
 	struct stat st;
@@ -369,6 +369,7 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 			elem = Py_BuildValue("si", ent->d_name, kind);
 		if (!elem)
 			goto error;
+		stat = NULL;
 
 		PyList_Append(list, elem);
 		Py_DECREF(elem);
@@ -379,6 +380,7 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 
 error:
 	Py_DECREF(list);
+	Py_XDECREF(stat);
 error_list:
 	closedir(dir);
 error_dir:
