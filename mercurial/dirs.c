@@ -175,6 +175,7 @@ static int dirs_fromiter(PyObject *dirs, PyObject *source)
 	}
 
 	ret = PyErr_Occurred() ? -1 : 0;
+	Py_DECREF(iter);
 	Py_XDECREF(item);
 	return ret;
 }
