@@ -319,7 +319,7 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 	if (!dir) {
 		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
 		goto error_dir;
- 	}
+	}
 
 	list = PyList_New(0);
 	if (!list)
