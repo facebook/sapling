@@ -20,12 +20,12 @@ class overlaymanifest(object):
         self.repo = repo
         self.tree = repo.handler.git.get_object(sha)
         self._map = None
-        self._flagmap = None
+        self._flags = None
 
     def withflags(self):
         self.load()
-        return set([path for path, flag in self._flagmap.iteritems()
-                    if flag & 020100])
+        return set([path for path, flag in self._flags.iteritems()
+                    if flag != ''])
 
     def copy(self):
         return overlaymanifest(self.repo, self.tree.id)
@@ -40,6 +40,15 @@ class overlaymanifest(object):
     def flags(self, path):
         self.load()
 
+        return hgflag(self._flags[path])
+
+    def load(self):
+        if self._map is not None:
+            return
+
+        self._map = {}
+        self._flags = {}
+
         def hgflag(gitflag):
             if gitflag & 0100:
                 return 'x'
@@ -47,15 +56,6 @@ class overlaymanifest(object):
                 return 'l'
             else:
                 return ''
-
-        return hgflag(self._flagmap[path])
-
-    def load(self):
-        if self._map is not None:
-            return
-
-        self._map = {}
-        self._flagmap = {}
 
         def addtree(tree, dirname):
             for entry in tree.iteritems():
@@ -66,7 +66,7 @@ class overlaymanifest(object):
                 else:
                     path = dirname + entry.path
                     self._map[path] = bin(entry.sha)
-                    self._flagmap[path] = entry.mode
+                    self._flags[path] = hgflag(entry.mode)
 
         addtree(self.tree, '')
 
@@ -92,6 +92,40 @@ class overlaymanifest(object):
     def __getitem__(self, path):
         self.load()
         return self._map[path]
+
+    def __contains__(self, path):
+        self.load()
+        return path in self._map
+
+    def get(self, path, default=None):
+        self.load()
+        return self._map.get(path, default)
+
+    def diff(self, m2, clean=False):
+        self.load()
+        if isinstance(m2, overlaymanifest):
+            m2.load()
+
+        # below code copied from manifest.py:manifestdict.diff
+        diff = {}
+
+        for fn, n1 in self.iteritems():
+            fl1 = self._flags.get(fn, '')
+            n2 = m2.get(fn, None)
+            fl2 = m2._flags.get(fn, '')
+            if n2 is None:
+                fl2 = ''
+            if n1 != n2 or fl1 != fl2:
+                diff[fn] = ((n1, fl1), (n2, fl2))
+            elif clean:
+                diff[fn] = None
+
+        for fn, n2 in m2.iteritems():
+            if fn not in self:
+                fl2 = m2._flags.get(fn, '')
+                diff[fn] = ((None, ''), (n2, fl2))
+
+        return diff
 
     def __delitem__(self, path):
         del self._map[path]
