@@ -34,6 +34,9 @@ static void _fix_newline(PyObject *hunk, PyObject *a, PyObject *b)
 		sz -= 1;
 
 	hline = PyBytes_FromStringAndSize(l, sz-1);
+	if (!hline) {
+		return NULL;
+	}
 
 	if (c == ' ' || c == '+') {
 		PyObject *rline = PyBytes_FromStringAndSize(l + 1, sz - 2);
@@ -194,4 +197,3 @@ initdiffhelpers(void)
 	                                        NULL, NULL);
 }
 #endif
-
