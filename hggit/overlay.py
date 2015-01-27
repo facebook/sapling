@@ -191,6 +191,10 @@ class overlaychangectx(context.changectx):
         except ImportError:
             return 1
 
+    def totuple(self):
+        return (self.commit.tree, self.user(), self.date(), self.files(),
+                self.description(), self.extra())
+
 class overlayrevlog(object):
     def __init__(self, repo, base):
         self.repo = repo
@@ -261,8 +265,10 @@ class overlaychangelog(overlayrevlog):
             sha = self.node(sha)
         if sha == nullid:
             return (nullid, "", (0, 0), [], "", {})
-        return overlaychangectx(self.repo, sha)
-
+        try:
+            return self.base.read(sha)
+        except LookupError:
+            return overlaychangectx(self.repo, sha).totuple()
 
 class overlayrepo(object):
     def __init__(self, handler, commits, refs):
