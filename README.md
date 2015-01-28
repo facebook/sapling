@@ -83,7 +83,7 @@ Occasionly the client or server caches may grow too big. Run `hg gc` to clean up
 Limitations
 ===========
 
-1. The extension must be used with Mercurial 2.7 or higher.
+1. The extension must be used with Mercurial 3.3 (commit d7d08337b3f6) or higher (earlier versions of the extension work with earlier versions of Mercurial though, up to Mercurial 2.7).
 
 2. remotefilelog has only been tested on linux with case-sensitive filesystems. It should work on other unix systems but may have problems on case-insensitive filesystems.
 

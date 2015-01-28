@@ -171,18 +171,9 @@ def onetimeclientsetup(ui):
     wrapfunction(merge, 'applyupdates', applyupdates)
 
     # prefetch files before mergecopies check
-    def mergecopies(orig, repo, c1, c2, ca):
+    def computenonoverlap(orig, repo, m1, m2, ma):
+        u1, u2 = orig(repo, m1, m2, ma)
         if shallowrepo.requirement in repo.requirements:
-            m1 = c1.manifest()
-            m2 = c2.manifest()
-            ma = ca.manifest()
-
-            def _nonoverlap(d1, d2, d3):
-                "Return list of elements in d1 not in d2 or d3"
-                return sorted([d for d in d1 if d not in d3 and d not in d2])
-            u1 = _nonoverlap(m1, m2, ma)
-            u2 = _nonoverlap(m2, m1, ma)
-
             files = []
             for f in u1:
                 files.append((f, hex(m1[f])))
@@ -191,16 +182,15 @@ def onetimeclientsetup(ui):
 
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
-        return orig(repo, c1, c2, ca)
-    wrapfunction(copies, 'mergecopies', mergecopies)
+        return u1, u2
+    wrapfunction(copies, '_computenonoverlap', computenonoverlap)
 
     # prefetch files before pathcopies check
-    def forwardcopies(orig, a, b):
+    def computeforwardmissing(orig, a, b):
+        missing = orig(a, b)
         repo = a._repo
         if shallowrepo.requirement in repo.requirements:
             mb = b.manifest()
-            missing = set(mb.iterkeys())
-            missing.difference_update(a.manifest().iterkeys())
 
             files = []
             for f in missing:
@@ -209,7 +199,7 @@ def onetimeclientsetup(ui):
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
         return orig(a, b)
-    wrapfunction(copies, '_forwardcopies', forwardcopies)
+    wrapfunction(copies, '_computeforwardmissing', computeforwardmissing)
 
     # close cache miss server connection after the command has finished
     def runcommand(orig, lui, repo, *args, **kwargs):
