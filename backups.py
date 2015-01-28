@@ -69,7 +69,15 @@ def backups(ui, repo, *pats, **opts):
         source = os.path.relpath(backup, os.getcwd())
         source = ui.expandpath(source)
         source, branches = hg.parseurl(source, opts.get('branch'))
-        other = hg.peer(repo, opts, source)
+        try:
+            other = hg.peer(repo, opts, source)
+        except error.LookupError as ex:
+            if not '@' in str(ex):
+                raise
+            missingrev = str(ex).split('@')[-1].split(':')[0]
+            ui.status("\nwarning: unable to open bundle %s - missing parent rev %s\n" %
+                (source, missingrev))
+            continue
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
 
         if revs:
