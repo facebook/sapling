@@ -160,6 +160,28 @@ issue4463: usage of command line configuration without additional quoting
   running "echo echo-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob)
 #endif
 
+  $ touch 'sp ace'
+  $ hg add 'sp ace'
+  $ hg ci -m 'sp ace'
+  created new head
+  $ echo > 'sp ace'
+
+Test pre-72a89cf86fcd backward compatibility with half-baked manual quoting
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extdiff]
+  > odd =
+  > [merge-tools]
+  > odd.diffargs = --foo='\$clabel' '\$clabel' "--bar=\$clabel" "\$clabel"
+  > odd.executable = echo
+  > EOF
+#if windows
+TODO
+#else
+  $ hg --debug odd | grep '^running'
+  running "/bin/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob)
+#endif
+
 #if execbit
 
 Test extdiff of multiple files in tmp dir:

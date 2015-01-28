@@ -212,13 +212,15 @@ def dodiff(ui, repo, cmdline, pats, opts):
                    'clabel': label2, 'child': dir2,
                    'root': repo.root}
         def quote(match):
-            key = match.group()[1:]
+            pre = match.group(2)
+            key = match.group(3)
             if not do3way and key == 'parent2':
-                return ''
-            return util.shellquote(replace[key])
+                return pre
+            return pre + util.shellquote(replace[key])
 
         # Match parent2 first, so 'parent1?' will match both parent1 and parent
-        regex = '\$(parent2|parent1?|child|plabel1|plabel2|clabel|root)'
+        regex = (r'''(['"]?)([^\s'"$]*)'''
+                 r'\$(parent2|parent1?|child|plabel1|plabel2|clabel|root)\1')
         if not do3way and not re.search(regex, cmdline):
             cmdline += ' $parent1 $child'
         cmdline = re.sub(regex, quote, cmdline)
