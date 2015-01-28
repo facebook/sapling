@@ -9,7 +9,7 @@ from mercurial import extensions, util, cmdutil, commands, error, bundlerepo
 from mercurial import hg, time, changegroup, exchange
 from mercurial.extensions import wrapfunction
 from hgext import pager
-from mercurial.node import hex, nullrev, nullid
+from mercurial.node import hex, nullrev, nullid, short
 from mercurial.i18n import _
 import errno, os, re, glob
 
@@ -71,11 +71,8 @@ def backups(ui, repo, *pats, **opts):
         try:
             other = hg.peer(repo, opts, source)
         except error.LookupError as ex:
-            if not '@' in str(ex):
-                raise
-            missingrev = str(ex).split('@')[-1].split(':')[0]
             ui.status("\nwarning: unable to open bundle %s - missing parent rev %s\n" %
-                (source, missingrev))
+                (source, short(ex.name)))
             continue
         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
 
