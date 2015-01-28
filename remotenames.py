@@ -125,15 +125,15 @@ def reposetup(ui, repo):
         repo.names.addnamespace(n)
 
 def extsetup(ui):
-    entry = extensions.wrapcommand(commands.table, 'bookmarks', bookmarks)
+    entry = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
     entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
     entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
 
-    entry = extensions.wrapcommand(commands.table, 'branches', branches)
+    entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
     entry[1].append(('', 'remote', None, 'show only remote branches'))
 
-def outputbranches(orig, ui, repo, *args, **opts):
+def exbranches(orig, ui, repo, *args, **opts):
     if not opts.get('remote'):
         orig(ui, repo, *args, **opts)
 
@@ -166,7 +166,7 @@ def outputbranches(orig, ui, repo, *args, **opts):
                 fm.plain('\n')
         fm.end()
 
-def outputbookmarks(orig, ui, repo, *args, **opts):
+def exbookmarks(orig, ui, repo, *args, **opts):
     """Bookmark output is sorted by bookmark name.
 
     This has the side benefit of grouping all remote bookmarks by remote name.
@@ -200,12 +200,6 @@ def outputbookmarks(orig, ui, repo, *args, **opts):
             fm.condwrite(not ui.quiet, 'rev node', fmt, rev,
                          fm.hexfunc(node), label=label)
             fm.plain('\n')
-
-def bookmarks(orig, ui, repo, *args, **opts):
-    outputbookmarks(orig, ui, repo, *args, **opts)
-
-def branches(orig, ui, repo, *args, **opts):
-    outputbranches(orig, ui, repo, *args, **opts)
 
 def activepath(ui, remote):
     realpath = ''
