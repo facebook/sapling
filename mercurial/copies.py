@@ -144,6 +144,15 @@ def _dirstatecopies(d):
             del c[k]
     return c
 
+def _computeforwardmissing(a, b):
+    """Computes which files are in b but not a.
+    This is its own function so extensions can easily wrap this call to see what
+    files _forwardcopies is about to process.
+    """
+    missing = set(b.manifest().iterkeys())
+    missing.difference_update(a.manifest().iterkeys())
+    return missing
+
 def _forwardcopies(a, b):
     '''find {dst@b: src@a} copy mapping where a is an ancestor of b'''
 
@@ -167,9 +176,7 @@ def _forwardcopies(a, b):
     # we currently don't try to find where old files went, too expensive
     # this means we can miss a case like 'hg rm b; hg cp a b'
     cm = {}
-    missing = set(b.manifest().iterkeys())
-    missing.difference_update(a.manifest().iterkeys())
-
+    missing = _computeforwardmissing(a, b)
     ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
     for f in missing:
         fctx = b[f]
