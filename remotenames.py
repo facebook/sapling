@@ -133,20 +133,19 @@ def extsetup(ui):
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
     entry[1].append(('', 'remote', None, 'show only remote branches'))
 
-def outputname(cmd, orig, ui, repo, *args, **opts):
+def outputbranches(orig, ui, repo, *args, **opts):
     if not opts.get('remote'):
         orig(ui, repo, *args, **opts)
 
-    # exit early if namespace doesn't even exist
-    namespace = 'remote' + cmd
-    if namespace not in repo.names:
-        return
-
-    ns = repo.names['remote' + cmd]
-    label = 'log.' + ns.colorname
-    fm = ui.formatter(cmd, opts)
-
     if opts.get('all') or opts.get('remote'):
+        # exit early if namespace doesn't even exist
+        namespace = 'remotebranches'
+        if namespace not in repo.names:
+            return
+
+        ns = repo.names[namespace]
+        label = 'log.' + ns.colorname
+        fm = ui.formatter('branches', opts)
 
         # create a sorted by descending rev list
         revs = set()
@@ -159,12 +158,6 @@ def outputname(cmd, orig, ui, repo, *args, **opts):
             for name in ns.names(repo, n):
                 fm.startitem()
                 padsize = max(31 - len(str(r)) - encoding.colwidth(name), 0)
-
-                # bookmarks have a slightly different padding
-                if cmd == 'bookmarks':
-                    if not ui.quiet:
-                        fm.plain('   ')
-                    padsize = max(25 - encoding.colwidth(name), 0)
 
                 fm.write(ns.colorname, '%s', name, label=label)
                 fmt = ' ' * padsize + ' %d:%s'
@@ -212,7 +205,7 @@ def bookmarks(orig, ui, repo, *args, **opts):
     outputbookmarks(orig, ui, repo, *args, **opts)
 
 def branches(orig, ui, repo, *args, **opts):
-    outputname('branches', orig, ui, repo, *args, **opts)
+    outputbranches(orig, ui, repo, *args, **opts)
 
 def activepath(ui, remote):
     realpath = ''
