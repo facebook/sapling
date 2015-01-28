@@ -27,21 +27,30 @@ class namespaces(object):
         bmknames = lambda repo: repo._bookmarks.keys()
         bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
         bmknodemap = lambda repo, name: repo.nodebookmarks(name)
-        n = namespace("bookmarks", templatename="bookmark", listnames=bmknames,
+        n = namespace("bookmarks", templatename="bookmark",
+                      # i18n: column positioning for "hg log"
+                      logfmt=_("bookmark:    %s\n"),
+                      listnames=bmknames,
                       namemap=bmknamemap, nodemap=bmknodemap)
         self.addnamespace(n)
 
         tagnames = lambda repo: [t for t, n in repo.tagslist()]
         tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
         tagnodemap = lambda repo, name: repo.nodetags(name)
-        n = namespace("tags", templatename="tag", listnames=tagnames,
+        n = namespace("tags", templatename="tag",
+                      # i18n: column positioning for "hg log"
+                      logfmt=_("tag:         %s\n"),
+                      listnames=tagnames,
                       namemap=tagnamemap, nodemap=tagnodemap)
         self.addnamespace(n)
 
         bnames = lambda repo: repo.branchmap().keys()
         bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
         bnodemap = lambda repo, node: [repo[node].branch()]
-        n = namespace("branches", templatename="branch", listnames=bnames,
+        n = namespace("branches", templatename="branch",
+                      # i18n: column positioning for "hg log"
+                      logfmt=_("branch:      %s\n"),
+                      listnames=bnames,
                       namemap=bnamemap, nodemap=bnodemap)
         self.addnamespace(n)
 
@@ -121,7 +130,7 @@ class namespace(object):
     """
 
     def __init__(self, name, templatename=None, logname=None, colorname=None,
-                 listnames=None, namemap=None, nodemap=None):
+                 logfmt=None, listnames=None, namemap=None, nodemap=None):
         """create a namespace
 
         name: the namespace to be registered (in plural form)
@@ -130,6 +139,8 @@ class namespace(object):
                  is used
         colorname: the name to use for colored log output; if not specified
                    logname is used
+        logfmt: the format to use for (l10n-ed) log output; if not specified
+                it is composed from logname
         listnames: function to list all names
         namemap: function that inputs a node, output name(s)
         nodemap: function that inputs a name, output node(s)
@@ -139,6 +150,7 @@ class namespace(object):
         self.templatename = templatename
         self.logname = logname
         self.colorname = colorname
+        self.logfmt = logfmt
         self.listnames = listnames
         self.namemap = namemap
         self.nodemap = nodemap
@@ -150,6 +162,11 @@ class namespace(object):
         # if colorname is not specified, just use the logname as a backup
         if self.colorname is None:
             self.colorname = self.logname
+
+        # if logfmt is not specified, compose it from logname as backup
+        if self.logfmt is None:
+            # i18n: column positioning for "hg log"
+            self.logfmt = ("%s:" % self.logname).ljust(13) + "%s\n"
 
     def names(self, repo, node):
         """method that returns a (sorted) list of names in a namespace that
