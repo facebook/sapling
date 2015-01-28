@@ -133,6 +133,7 @@ clone root separately, make different local change
   $ echo f > f
   $ hg status --subrepos
   ? s/f
+  $ hg add .
   $ git add f
   $ cd ..
 

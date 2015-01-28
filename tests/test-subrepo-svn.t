@@ -439,8 +439,9 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ hg add .hgsub
   $ hg ci -m addsub
   $ echo a > a
-  $ hg ci -Am adda
+  $ hg add .
   adding a
+  $ hg ci -m adda
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ svn up -qr6 s

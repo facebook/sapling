@@ -435,7 +435,7 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
-    def add(self, ui, match, dryrun, listsubrepos, prefix, explicitonly):
+    def add(self, ui, match, prefix, explicitonly, **opts):
         return []
 
     def addremove(self, matcher, prefix, opts, dry_run, similarity):
