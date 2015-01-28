@@ -35,7 +35,7 @@ static void _fix_newline(PyObject *hunk, PyObject *a, PyObject *b)
 
 	hline = PyBytes_FromStringAndSize(l, sz-1);
 	if (!hline) {
-		return NULL;
+		return;
 	}
 
 	if (c == ' ' || c == '+') {
