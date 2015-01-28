@@ -15,6 +15,7 @@ from mercurial import url
 from mercurial import util
 from mercurial.node import hex
 from hgext import schemes
+from mercurial import bookmarks
 
 _remotenames = {
     "bookmarks": {},
@@ -86,9 +87,16 @@ def blockerhook(orig, repo, *args, **kwargs):
 
     return blockers
 
+def exupdatefromremote(orig, ui, repo, remotemarks, path, trfunc, explicit=()):
+    if ui.configbool('remotenames', 'syncbookmarks', False):
+        return orig(ui, repo, remotemarks, path, trfunc, explicit)
+
+    ui.status('remotenames: skipped syncing local bookmarks\n')
+
 extensions.wrapfunction(exchange, 'push', expush)
 extensions.wrapfunction(exchange, 'pull', expull)
 extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
+extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
 
 def reposetup(ui, repo):
     if not repo.local():
