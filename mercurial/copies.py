@@ -208,6 +208,22 @@ def pathcopies(x, y):
         return _backwardrenames(x, y)
     return _chain(x, y, _backwardrenames(x, a), _forwardcopies(a, y))
 
+def _computenonoverlap(repo, m1, m2, ma):
+    """Computes the files exclusive to m1 and m2.
+    This is its own function so extensions can easily wrap this call to see what
+    files mergecopies is about to process.
+    """
+    u1 = _nonoverlap(m1, m2, ma)
+    u2 = _nonoverlap(m2, m1, ma)
+
+    if u1:
+        repo.ui.debug("  unmatched files in local:\n   %s\n"
+                      % "\n   ".join(u1))
+    if u2:
+        repo.ui.debug("  unmatched files in other:\n   %s\n"
+                      % "\n   ".join(u2))
+    return u1, u2
+
 def mergecopies(repo, c1, c2, ca):
     """
     Find moves and copies between context c1 and c2 that are relevant
@@ -261,15 +277,7 @@ def mergecopies(repo, c1, c2, ca):
 
     repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
-    u1 = _nonoverlap(m1, m2, ma)
-    u2 = _nonoverlap(m2, m1, ma)
-
-    if u1:
-        repo.ui.debug("  unmatched files in local:\n   %s\n"
-                      % "\n   ".join(u1))
-    if u2:
-        repo.ui.debug("  unmatched files in other:\n   %s\n"
-                      % "\n   ".join(u2))
+    u1, u2 = _computenonoverlap(repo, m1, m2, ma)
 
     for f in u1:
         checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
