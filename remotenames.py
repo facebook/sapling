@@ -173,8 +173,43 @@ def outputname(cmd, orig, ui, repo, *args, **opts):
                 fm.plain('\n')
         fm.end()
 
+def outputbookmarks(orig, ui, repo, *args, **opts):
+    """Bookmark output is sorted by bookmark name.
+
+    This has the side benefit of grouping all remote bookmarks by remote name.
+
+    """
+    if not opts.get('remote'):
+        orig(ui, repo, *args, **opts)
+
+    if opts.get('all') or opts.get('remote'):
+        n = 'remotebookmarks'
+        if n not in repo.names:
+            return
+        ns = repo.names[n]
+        color = ns.colorname
+        label = 'log.' + color
+
+        fm = ui.formatter('bookmarks', opts)
+
+        for name in sorted(ns.listnames(repo)):
+            node = ns.nodes(repo, name)[0]
+            rev = repo.changelog.rev(node)
+            fm.startitem()
+
+            if not ui.quiet:
+                fm.plain('   ')
+
+            padsize = max(25 - encoding.colwidth(name), 0)
+            fmt = ' ' * padsize + ' %d:%s'
+
+            fm.write(color, '%s', name, label=label)
+            fm.condwrite(not ui.quiet, 'rev node', fmt, rev,
+                         fm.hexfunc(node), label=label)
+            fm.plain('\n')
+
 def bookmarks(orig, ui, repo, *args, **opts):
-    outputname('bookmarks', orig, ui, repo, *args, **opts)
+    outputbookmarks(orig, ui, repo, *args, **opts)
 
 def branches(orig, ui, repo, *args, **opts):
     outputname('branches', orig, ui, repo, *args, **opts)
