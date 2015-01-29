@@ -82,7 +82,7 @@
 
   $ hg rebase -d tip
   rebasing 1:9abfe7bca547 "a"
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/9abfe7bca547-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/9abfe7bca547-8b11e5ff-backup.hg (glob)
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
 
 # strip
@@ -91,7 +91,7 @@
   $ hg debugrebuilddirstate # fixes dirstate non-determinism
   $ hg strip -r .
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/19edf50f4de7-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/19edf50f4de7-df3d0f74-backup.hg (glob)
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
 
 # unbundle
@@ -104,7 +104,7 @@
   z
 
   $ hg debugrebuilddirstate # fixes dirstate non-determinism
-  $ hg unbundle .hg/strip-backup/19edf50f4de7-backup.hg
+  $ hg unbundle .hg/strip-backup/19edf50f4de7-df3d0f74-backup.hg
   adding changesets
   adding manifests
   adding file changes

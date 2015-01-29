@@ -58,7 +58,7 @@
 # pull from shallow to shallow (ssh)
 
   $ hg strip -r 1
-  saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-backup.hg
+  saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-2e489c37-backup.hg (glob)
   $ hg pull ssh://user@dummy/$TESTTMP/shallow
   pulling from ssh://user@dummy/$TESTTMP/shallow
   searching for changes

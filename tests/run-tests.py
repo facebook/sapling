@@ -627,6 +627,8 @@ class Test(unittest.TestCase):
             (r':%s\b' % self._startport, ':$HGPORT'),
             (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
             (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
+            (r'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
+             r'\1 (glob)'),
             ]
 
         if os.name == 'nt':
@@ -689,6 +691,10 @@ class Test(unittest.TestCase):
         hgrc.write('commit = -d "0 0"\n')
         hgrc.write('shelve = --date "0 0"\n')
         hgrc.write('tag = -d "0 0"\n')
+        hgrc.write('[largefiles]\n')
+        hgrc.write('usercache = %s\n' %
+                   (os.path.join(self._testtmp, '.cache/largefiles')))
+
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
             assert '=' in key, ('extra config opt %s must '
@@ -780,7 +786,7 @@ class TTest(Test):
         tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (self._shell, tdir, ' '.join(reqs)),
-                      self._testtmp, 0)
+                      self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
@@ -1021,6 +1027,9 @@ class TTest(Test):
             if el.endswith(" (re)\n"):
                 return TTest.rematch(el[:-6], l)
             if el.endswith(" (glob)\n"):
+                # ignore '(glob)' added to l by 'replacements'
+                if l.endswith(" (glob)\n"):
+                    l = l[:-8] + "\n"
                 return TTest.globmatch(el[:-8], l)
             if os.altsep and l.replace('\\', '/') == el:
                 return '+glob'
@@ -1635,7 +1644,8 @@ class TestRunner(object):
         os.environ["BINDIR"] = self._bindir
         os.environ["PYTHON"] = PYTHON
 
-        path = [self._bindir] + os.environ["PATH"].split(os.pathsep)
+        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
         os.environ["PATH"] = os.pathsep.join(path)
@@ -1644,8 +1654,7 @@ class TestRunner(object):
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
-        pypath = [self._pythondir, self._testdir,
-                  os.path.abspath(os.path.dirname(__file__))]
+        pypath = [self._pythondir, self._testdir, runtestdir]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
@@ -1654,6 +1663,9 @@ class TestRunner(object):
         if oldpypath:
             pypath.append(oldpypath)
         os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+
+        if self.options.pure:
+            os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
 
         self._coveragefile = os.path.join(self._testdir, '.coverage')
 

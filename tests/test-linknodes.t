@@ -32,7 +32,7 @@
 
   $ hg rebase -d 1
   rebasing 2:0632994590a8 "xx" (tip)
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/0632994590a8-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/0632994590a8-0bc786d8-backup.hg (glob)
   $ hg log -f x --template "{node|short}\n"
   81deab2073bc
   b292c1e3311f
@@ -42,14 +42,14 @@
 
   $ hg rebase -d 0 -r 2
   rebasing 2:81deab2073bc "xx" (tip)
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/81deab2073bc-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/81deab2073bc-80cb4fda-backup.hg (glob)
   $ hg log -f x --template "{node|short}\n"
   b3fca10fb42d
   b292c1e3311f
 
   $ hg rebase -d 1 -r 2
   rebasing 2:b3fca10fb42d "xx" (tip)
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/b3fca10fb42d-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/b3fca10fb42d-da73a0c7-backup.hg (glob)
 
   $ cd ..
 
@@ -89,7 +89,7 @@
   rebasing 1:4549721d828f "xx2"
   note: rebase of 1:4549721d828f created no changes to commit
   rebasing 2:5ef6d97e851c "xxy"
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/4549721d828f-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/4549721d828f-b084e33c-backup.hg (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ hg log -f x --template '{node|short}\n'
   4ae8e31c85ef

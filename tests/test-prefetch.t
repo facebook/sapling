@@ -60,7 +60,7 @@
 
   $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
   $ hg strip tip^
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/97b1645a8f26-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/97b1645a8f26-44758a9a-backup.hg (glob)
 
   $ clearcache
   $ hg pull
@@ -82,7 +82,7 @@
 
   $ hg strip tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-backup.hg
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-3f43405e-backup.hg (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ clearcache
 
