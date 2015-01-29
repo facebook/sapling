@@ -758,6 +758,8 @@ test if untracked file is not overwritten
 
   $ echo issue3276_ok > repo/s/b
   $ hg -R repo2 push -f -q
+  $ touch -t 200001010000 repo/.hgsubstate
+  $ hg -R repo status --config debug.dirstate.delaywrite=2 repo/.hgsubstate
   $ hg -R repo update
   b: untracked file differs
   abort: untracked files in working directory differ from files in requested revision (in subrepo s)
@@ -766,6 +768,7 @@ test if untracked file is not overwritten
   $ cat repo/s/b
   issue3276_ok
   $ rm repo/s/b
+  $ touch -t 200001010000 repo/.hgsubstate
   $ hg -R repo revert --all
   reverting repo/.hgsubstate (glob)
   reverting subrepo s
