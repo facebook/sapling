@@ -96,10 +96,24 @@ def exupdatefromremote(orig, ui, repo, remotemarks, path, trfunc, explicit=()):
 
     ui.status('remotenames: skipped syncing local bookmarks\n')
 
+def exclone(orig, ui, *args, **opts):
+    """
+    We may not want local bookmarks on clone... but we always want remotenames!
+    """
+    srcpeer, dstpeer = orig(ui, *args, **opts)
+
+    pullremotenames(dstpeer.local(), srcpeer)
+
+    if not ui.configbool('remotenames', 'syncbookmarks', False):
+        ui.status('remotenames: removing cloned bookmarks\n')
+        dstpeer.local().vfs.unlink('bookmarks')
+    return (srcpeer, dstpeer)
+
 extensions.wrapfunction(exchange, 'push', expush)
 extensions.wrapfunction(exchange, 'pull', expull)
 extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
 extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
+extensions.wrapfunction(hg, 'clone', exclone)
 
 def reposetup(ui, repo):
     if not repo.local():
