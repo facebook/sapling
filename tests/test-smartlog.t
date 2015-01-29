@@ -58,7 +58,7 @@ Basic test
 
 With commit info
   $ echo "hello" >c2 && hg ci --amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-amend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-f9f5e1aa-amend-backup.hg (glob)
   $ hg smartlog -T compact --commit-info
   @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   |    d

@@ -28,17 +28,17 @@ from mercurial.node import nullid
 import os
 import tempfile
 
-def overridewritebundle(orig, cg, filename, bundletype, vfs=None):
+def overridewritebundle(orig, ui, cg, filename, bundletype, vfs=None):
     if (bundletype.startswith('HG10') and
         isinstance(cg, changegroup.cg2unpacker)):
         bundletype = 'HG2C' + bundletype[4:]
-    return orig(cg, filename, bundletype, vfs=vfs)
+    return orig(ui, cg, filename, bundletype, vfs=vfs)
 
-def overridechangegroupsubset(orig, repo, roots, heads, source):
+def overridechangegroupsubset(orig, repo, roots, heads, source, version = '01'):
     # we only care about performance for strips, not about 'hg bundle' and
     # similar
     if source != 'strip':
-        return orig(repo, roots, heads, source)
+        return orig(repo, roots, heads, source, version=version)
 
     # below is all copied from changegroup.py, except with cg1 changed to
     # cg2
@@ -55,7 +55,9 @@ def overridechangegroupsubset(orig, repo, roots, heads, source):
     bundler = changegroup.packermap['02'][0](repo)
     gengroup = changegroup.getsubsetraw(repo, outgoing, bundler, source,
                                         fastpath=False)
-    return changegroup.cg2unpacker(util.chunkbuffer(gengroup), 'UN')
+    result = changegroup.cg2unpacker(util.chunkbuffer(gengroup), 'UN')
+    result.version = '01' # needed to pass writebundle checks
+    return result
 
 def overridereadbundle(orig, ui, fh, fname, vfs=None):
     # copied from exchange.py
@@ -143,8 +145,9 @@ def extsetup(ui):
     # add bundle types for changegroup2
     bundletypes = changegroup.bundletypes
     cg2types = {}
-    for bundletype, (header, compressor) in bundletypes.iteritems():
+    for bundletype, hc in bundletypes.iteritems():
         if bundletype.startswith('HG10'):
+            header, compressor = hc
             cg2type = 'HG2C' + bundletype[4:]
             cg2header = 'HG2C' + header[4:]
             cg2types[cg2type] = (cg2header, compressor)

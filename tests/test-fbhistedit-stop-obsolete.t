@@ -188,7 +188,7 @@ fold a commit to check if other non-pick actions are handled correctly
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/8f09d743de05-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/8f09d743de05-69b44d25-backup.hg (glob)
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f

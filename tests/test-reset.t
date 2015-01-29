@@ -22,7 +22,7 @@ Soft reset should leave pending changes
   o  b292c1e3311f
   
   $ hg reset .^
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
@@ -38,7 +38,7 @@ Clean reset should overwrite all changes
 
   $ hg commit -qAm y
   $ hg reset --clean .^
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg diff
 
 Reset should recover from backup bundles (with correct phase)
@@ -108,7 +108,7 @@ Reset without a bookmark
   $ hg book -d foo
   $ hg reset .^
   reseting without an active bookmark
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg book foo
 
 Verify file status after reset
@@ -127,13 +127,13 @@ Verify file status after reset
   $ hg rm toberemoved
   $ hg commit -m 'to be reset'
   $ hg reset .^
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d36bf00ac47e-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d36bf00ac47e-375e6009-backup.hg (glob)
   $ hg status
   M x
   ! toberemoved
   ? tobeadded
   $ hg reset -C 66ee28d0328c
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34fb347b2aae-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34fb347b2aae-c2a02721-backup.hg (glob)
 
 Reset + Evolve tests
 

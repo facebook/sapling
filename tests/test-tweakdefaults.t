@@ -82,7 +82,7 @@ Empty rebase fails
   [255]
   $ hg rebase -d 2
   rebasing 1:7b4cb4e1674c "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-f22b5b1e-backup.hg (glob)
 
 Rebase fast forwards bookmark
 

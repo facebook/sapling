@@ -34,8 +34,8 @@ bundle by itself shouldn't be changegroup2
 a strip bundle should be changegroup2
   $ hg strip 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-backup.hg
-  $ head -c 6 .hg/strip-backup/0e067c57feba-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
+  $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   HG2CBZ (no-eol)
 
 applying bundle1 should continue to work
@@ -58,7 +58,7 @@ applying bundle1 should continue to work
 
 ... and via pull
   $ hg strip 1
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
   $ hg pull ../bundle.bundle
   pulling from ../bundle.bundle
   searching for changes
@@ -69,13 +69,13 @@ applying bundle1 should continue to work
   (run 'hg update' to get a working copy)
 
   $ hg strip 1
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-backup.hg
-  $ head -c 6 .hg/strip-backup/0e067c57feba-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
+  $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   HG2CBZ (no-eol)
 
 hg incoming on a changegroup2 should work
-  $ hg incoming .hg/strip-backup/0e067c57feba-backup.hg
-  comparing with .hg/strip-backup/0e067c57feba-backup.hg
+  $ hg incoming .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
+  comparing with .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   searching for changes
   changeset:   1:0e067c57feba
   user:        test
@@ -89,7 +89,7 @@ hg incoming on a changegroup2 should work
   summary:     c
   
 applying a changegroup2 should work via unbundle
-  $ hg unbundle .hg/strip-backup/0e067c57feba-backup.hg
+  $ hg unbundle .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   adding changesets
   adding manifests
   adding file changes
@@ -98,11 +98,11 @@ applying a changegroup2 should work via unbundle
 
 ... and via pull
   $ hg strip 1
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-backup.hg
-  $ head -c 6 .hg/strip-backup/0e067c57feba-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
+  $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   HG2CBZ (no-eol)
-  $ hg pull .hg/strip-backup/0e067c57feba-backup.hg
-  pulling from .hg/strip-backup/0e067c57feba-backup.hg
+  $ hg pull .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
+  pulling from .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   searching for changes
   adding changesets
   adding manifests
@@ -114,6 +114,6 @@ amends should also be cg2
   $ hg up 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch d && hg add d && hg ci --amend -mcd
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/991a3460af53-amend-backup.hg
-  $ head -c 6 .hg/strip-backup/991a3460af53-amend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg (glob)
+  $ head -c 6 .hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg
   HG2CBZ (no-eol)

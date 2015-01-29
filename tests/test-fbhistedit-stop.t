@@ -70,7 +70,7 @@ stop & continue cannot preserve hashes without obsolence
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/e860deea161a-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/e860deea161a-fa46228d-backup.hg (glob)
 
   $ hg log --graph
   @  changeset:   5:794fe033d0a0
@@ -122,14 +122,14 @@ stop on a commit
   $ echo added > added
   $ hg add added
   $ hg commit --amend
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d28623a90f2b-amend-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d28623a90f2b-2e0800c1-amend-backup.hg (glob)
 
   $ hg log -v -r '.' --template '{files}\n'
   added e
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/04d2fab98077-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/04d2fab98077-3b7c8dde-backup.hg (glob)
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  099559071076 f f
@@ -181,7 +181,7 @@ fold a commit to check if other non-pick actions are handled correctly
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/177f92b77385-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/177f92b77385-7102b3c2-backup.hg (glob)
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f
