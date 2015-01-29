@@ -255,8 +255,12 @@ def smartlogrevset(repo, subset, x):
     parentrevs = repo.changelog.parentrevs
 
     books = bookmarks.bmstore(repo)
+    ignore = re.compile(repo.ui.config('smartlog',
+                                       'ignorebookmarks',
+                                       '!'))
     for b in books:
-        heads.add(rev(books[b]))
+        if not ignore.match(b):
+            heads.add(rev(books[b]))
 
     heads.update(repo.revs('.'))
 
