@@ -51,6 +51,10 @@ def expush(orig, repo, remote, *args, **kwargs):
 
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
+    pullremotenames(repo, remote)
+    return res
+
+def pullremotenames(repo, remote):
     lock = repo.lock()
     try:
         try:
@@ -63,7 +67,6 @@ def expull(orig, repo, remote, *args, **kwargs):
                      % (path, e))
     finally:
         lock.release()
-        return res
 
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
