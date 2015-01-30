@@ -179,7 +179,7 @@ Test pre-72a89cf86fcd backward compatibility with half-baked manual quoting
 TODO
 #else
   $ hg --debug odd | grep '^running'
-  running "/bin/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob)
+  running "*/bin/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob)
 #endif
 
 #if execbit
