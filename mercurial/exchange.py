@@ -946,8 +946,9 @@ def _pulldiscoverychangegroup(pullop):
         scommon = set(common)
         filteredrheads = []
         for n in rheads:
-            if n in nm and n not in scommon:
-                common.append(n)
+            if n in nm:
+                if n not in scommon:
+                    common.append(n)
             else:
                 filteredrheads.append(n)
         if not filteredrheads:
