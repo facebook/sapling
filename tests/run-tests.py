@@ -61,12 +61,12 @@ from xml.dom import minidom
 import unittest
 
 try:
-    if sys.version_info < (2, 7):
-        import simplejson as json
-    else:
-        import json
+    import json
 except ImportError:
-    json = None
+    try:
+        import simplejson as json
+    except ImportError:
+        json = None
 
 processlock = threading.Lock()
 
@@ -500,7 +500,7 @@ class Test(unittest.TestCase):
             except self.failureException, e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
-                # this decision could be revisted in the future,
+                # this decision could be revisited in the future,
                 # especially for PythonTest instances.
                 if result.addFailure(self, str(e)):
                     success = True
@@ -627,6 +627,8 @@ class Test(unittest.TestCase):
             (r':%s\b' % self._startport, ':$HGPORT'),
             (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
             (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
+            (r'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
+             r'\1 (glob)'),
             ]
 
         if os.name == 'nt':
@@ -649,7 +651,8 @@ class Test(unittest.TestCase):
         env["HGPORT2"] = str(self._startport + 2)
         env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
-        env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+        env["HGEDITOR"] = ('"' + sys.executable + '"'
+                           + ' -c "import sys; sys.exit(0)"')
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"]   = "test"
         env["HGENCODING"] = "ascii"
@@ -688,6 +691,10 @@ class Test(unittest.TestCase):
         hgrc.write('commit = -d "0 0"\n')
         hgrc.write('shelve = --date "0 0"\n')
         hgrc.write('tag = -d "0 0"\n')
+        hgrc.write('[largefiles]\n')
+        hgrc.write('usercache = %s\n' %
+                   (os.path.join(self._testtmp, '.cache/largefiles')))
+
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
             assert '=' in key, ('extra config opt %s must '
@@ -719,6 +726,15 @@ class PythonTest(Test):
             raise KeyboardInterrupt()
 
         return result
+
+# This script may want to drop globs from lines matching these patterns on
+# Windows, but check-code.py wants a glob on these lines unconditionally.  Don't
+# warn if that is the case for anything matching these lines.
+checkcodeglobpats = [
+    re.compile(r'^pushing to \$TESTTMP/.*[^)]$'),
+    re.compile(r'^moving \S+/.*[^)]$'),
+    re.compile(r'^pulling from \$TESTTMP/.*[^)]$')
+]
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -770,7 +786,7 @@ class TTest(Test):
         tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (self._shell, tdir, ' '.join(reqs)),
-                      self._testtmp, 0)
+                      self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
@@ -976,6 +992,9 @@ class TTest(Test):
         if el + '\n' == l:
             if os.altsep:
                 # matching on "/" is not needed for this line
+                for pat in checkcodeglobpats:
+                    if pat.match(el):
+                        return True
                 return '-glob'
             return True
         i, n = 0, len(el)
@@ -1008,6 +1027,9 @@ class TTest(Test):
             if el.endswith(" (re)\n"):
                 return TTest.rematch(el[:-6], l)
             if el.endswith(" (glob)\n"):
+                # ignore '(glob)' added to l by 'replacements'
+                if l.endswith(" (glob)\n"):
+                    l = l[:-8] + "\n"
                 return TTest.globmatch(el[:-8], l)
             if os.altsep and l.replace('\\', '/') == el:
                 return '+glob'
@@ -1263,7 +1285,7 @@ class TestResult(unittest._TextTestResult):
             iolock.release()
 
 class TestSuite(unittest.TestSuite):
-    """Custom unitest TestSuite that knows how to execute Mercurial tests."""
+    """Custom unittest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
                  retest=False, keywords=None, loop=False,
@@ -1622,7 +1644,8 @@ class TestRunner(object):
         os.environ["BINDIR"] = self._bindir
         os.environ["PYTHON"] = PYTHON
 
-        path = [self._bindir] + os.environ["PATH"].split(os.pathsep)
+        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
         os.environ["PATH"] = os.pathsep.join(path)
@@ -1631,8 +1654,7 @@ class TestRunner(object):
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
-        pypath = [self._pythondir, self._testdir,
-                  os.path.abspath(os.path.dirname(__file__))]
+        pypath = [self._pythondir, self._testdir, runtestdir]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
@@ -1641,6 +1663,9 @@ class TestRunner(object):
         if oldpypath:
             pypath.append(oldpypath)
         os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+
+        if self.options.pure:
+            os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
 
         self._coveragefile = os.path.join(self._testdir, '.coverage')
 
@@ -1895,8 +1920,8 @@ class TestRunner(object):
         the one we expect it to be.  If not, print a warning to stderr."""
         if ((self._bindir == self._pythondir) and
             (self._bindir != self._tmpbindir)):
-            # The pythondir has been infered from --with-hg flag.
-            # We cannot expect anything sensible here
+            # The pythondir has been inferred from --with-hg flag.
+            # We cannot expect anything sensible here.
             return
         expecthg = os.path.join(self._pythondir, 'mercurial')
         actualhg = self._gethgpath()

@@ -22,13 +22,13 @@
 # Strip middle commit, verify sync fails
 
   $ hg strip -r 1 --config extensions.hgsql=!
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/d34c38483be9-backup.hg
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/d34c38483be9-3839604f-backup.hg (glob)
   $ hg log -l 1 2>&1 | egrep 'Corruption'
   hgext_hgsql.CorruptionException: revision offset doesn't match prior length (4295032832 offset vs 3 length): data/z.i
 
 # Recover middle commit, but on top, then try syncing (succeeds)
 
-  $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/d34c38483be9-backup.hg --config extensions.hgsql=!
+  $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/d34c38483be9-3839604f-backup.hg --config extensions.hgsql=!
   $ hg log -l 1
   changeset:   2:d34c38483be9
   tag:         tip
@@ -51,8 +51,8 @@
 # Fix ordering, can pull now
 
   $ hg strip -r 1 --config extensions.hgsql=!
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-backup.hg
-  $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-backup.hg --config extensions.hgsql=!
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-48128f20-backup.hg (glob)
+  $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-48128f20-backup.hg --config extensions.hgsql=!
   $ hg pull ../client
   pulling from ../client
   searching for changes

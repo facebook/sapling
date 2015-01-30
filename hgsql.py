@@ -970,8 +970,9 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
                                   _('unknown delta base'))
 
             baserev = self.rev(deltabase)
-            self._addrevision(node, None, transaction, link,
-                                      p1, p2, (baserev, delta), ifh, dfh)
+            self._addrevision(node, None, transaction, link, p1, p2,
+                              revlog.REVIDX_DEFAULT_FLAGS, (baserev, delta),
+                              ifh, dfh)
             if not dfh and not self._inline:
                 # addrevision switched from inline to conventional
                 # reopen the index
