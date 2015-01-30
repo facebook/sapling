@@ -15,6 +15,8 @@ details.
 For more information and instructions, see :hg:`help subversion`.
 '''
 
+testedwith = '2.8.2 3.0.1 3.1 3.2.2 3.3'
+
 import os
 import sys
 import traceback
