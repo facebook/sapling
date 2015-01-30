@@ -22,41 +22,6 @@ propertycache = util.propertycache
 # dirty in the working copy.
 _newnode = '!' * 21
 
-def _adjustlinkrev(repo, path, filelog, fnode, srcrev, inclusive=False):
-    """return the first ancestor of <srcrev> introducting <fnode>
-
-    If the linkrev of the file revision does not point to an ancestor of
-    srcrev, we'll walk down the ancestors until we find one introducing this
-    file revision.
-
-    :repo: a localrepository object (used to access changelog and manifest)
-    :path: the file path
-    :fnode: the nodeid of the file revision
-    :filelog: the filelog of this path
-    :srcrev: the changeset revision we search ancestors from
-    :inclusive: if true, the src revision will also be checked
-    """
-    cl = repo.unfiltered().changelog
-    ma = repo.manifest
-    # fetch the linkrev
-    fr = filelog.rev(fnode)
-    lkr = filelog.linkrev(fr)
-    # check if this linkrev is an ancestor of srcrev
-    anc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
-    if lkr not in anc:
-        for a in anc:
-            ac = cl.read(a) # get changeset data (we avoid object creation).
-            if path in ac[3]: # checking the 'files' field.
-                # The file has been touched, check if the content is similar
-                # to the one we search for.
-                if fnode == ma.readfast(ac[0]).get(path):
-                    return a
-        # In theory, we should never get out of that loop without a result. But
-        # if manifest uses a buggy file revision (not children of the one it
-        # replaces) we could. Such a buggy situation will likely result is crash
-        # somewhere else at to some point.
-    return lkr
-
 class basectx(object):
     """A basectx object represents the common logic for its children:
     changectx: read-only context that is already present in the repo,
@@ -781,6 +746,42 @@ class basefilectx(object):
 
         return True
 
+    def _adjustlinkrev(self, path, filelog, fnode, srcrev, inclusive=False):
+        """return the first ancestor of <srcrev> introducting <fnode>
+
+        If the linkrev of the file revision does not point to an ancestor of
+        srcrev, we'll walk down the ancestors until we find one introducing
+        this file revision.
+
+        :repo: a localrepository object (used to access changelog and manifest)
+        :path: the file path
+        :fnode: the nodeid of the file revision
+        :filelog: the filelog of this path
+        :srcrev: the changeset revision we search ancestors from
+        :inclusive: if true, the src revision will also be checked
+        """
+        repo = self._repo
+        cl = repo.unfiltered().changelog
+        ma = repo.manifest
+        # fetch the linkrev
+        fr = filelog.rev(fnode)
+        lkr = filelog.linkrev(fr)
+        # check if this linkrev is an ancestor of srcrev
+        anc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
+        if lkr not in anc:
+            for a in anc:
+                ac = cl.read(a) # get changeset data (we avoid object creation)
+                if path in ac[3]: # checking the 'files' field.
+                    # The file has been touched, check if the content is
+                    # similar to the one we search for.
+                    if fnode == ma.readfast(ac[0]).get(path):
+                        return a
+            # In theory, we should never get out of that loop without a result.
+            # But if manifest uses a buggy file revision (not children of the
+            # one it replaces) we could. Such a buggy situation will likely
+            # result is crash somewhere else at to some point.
+        return lkr
+
     def introrev(self):
         """return the rev of the changeset which introduced this file revision
 
@@ -795,8 +796,8 @@ class basefilectx(object):
         noctx = not ('_changeid' in attrs or '_changectx' in attrs)
         if noctx or self.rev() == lkr:
             return self.linkrev()
-        return _adjustlinkrev(self._repo, self._path, self._filelog,
-                              self._filenode, self.rev(), inclusive=True)
+        return self._adjustlinkrev(self._path, self._filelog, self._filenode,
+                                   self.rev(), inclusive=True)
 
     def parents(self):
         _path = self._path
@@ -822,7 +823,7 @@ class basefilectx(object):
                 # If self is associated with a changeset (probably explicitly
                 # fed), ensure the created filectx is associated with a
                 # changeset that is an ancestor of self.changectx.
-                rev = _adjustlinkrev(self._repo, path, l, fnode, self.rev())
+                rev = self._adjustlinkrev(path, l, fnode, self.rev())
                 fctx = filectx(self._repo, path, fileid=fnode, filelog=l,
                                changeid=rev)
             else:
