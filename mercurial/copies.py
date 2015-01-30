@@ -170,8 +170,11 @@ def _forwardcopies(a, b):
     missing = set(b.manifest().iterkeys())
     missing.difference_update(a.manifest().iterkeys())
 
+    ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
     for f in missing:
-        ofctx = _tracefile(b[f], am, limit)
+        fctx = b[f]
+        fctx._ancestrycontext = ancestrycontext
+        ofctx = _tracefile(fctx, am, limit)
         if ofctx:
             cm[f] = ofctx.path()
 

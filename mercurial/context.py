@@ -766,10 +766,17 @@ class basefilectx(object):
         # fetch the linkrev
         fr = filelog.rev(fnode)
         lkr = filelog.linkrev(fr)
+        # hack to reuse ancestor computation when searching for renames
+        memberanc = getattr(self, '_ancestrycontext', None)
+        iteranc = None
+        if memberanc is None:
+            memberanc = iteranc = cl.ancestors([srcrev], lkr,
+                                               inclusive=inclusive)
         # check if this linkrev is an ancestor of srcrev
-        anc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
-        if lkr not in anc:
-            for a in anc:
+        if lkr not in memberanc:
+            if iteranc is None:
+                iteranc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
+            for a in iteranc:
                 ac = cl.read(a) # get changeset data (we avoid object creation)
                 if path in ac[3]: # checking the 'files' field.
                     # The file has been touched, check if the content is
@@ -826,6 +833,8 @@ class basefilectx(object):
                 rev = self._adjustlinkrev(path, l, fnode, self.rev())
                 fctx = filectx(self._repo, path, fileid=fnode, filelog=l,
                                changeid=rev)
+                fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
+
             else:
                 fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
             ret.append(fctx)
