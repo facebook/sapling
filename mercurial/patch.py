@@ -1788,13 +1788,12 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     if opts.git:
         revs = None
 
-    modifiedset, addedset, removedset = set(modified), set(added), set(removed)
-    # Fix up modified and added, since merged-in additions appear as
+    addedset, removedset = set(added), set(removed)
+    # Fix up  added, since merged-in additions appear as
     # modifications during merges
-    for f in modifiedset.copy():
+    for f in modified:
         if f not in ctx1:
             addedset.add(f)
-            modifiedset.remove(f)
     for f in sorted(modified + added + removed):
         to = None
         tn = None
