@@ -559,16 +559,6 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
         # this isn't legal, let the original function deal with it
         return orig(ui, repo, pats, opts, rename)
 
-    def makestandin(relpath):
-        path = pathutil.canonpath(repo.root, repo.getcwd(), relpath)
-        return os.path.join(repo.wjoin(lfutil.standin(path)))
-
-    fullpats = scmutil.expandpats(pats)
-    dest = fullpats[-1]
-
-    if os.path.isdir(dest):
-        if not os.path.isdir(makestandin(dest)):
-            os.makedirs(makestandin(dest))
     # This could copy both lfiles and normal files in one command,
     # but we don't want to do that. First replace their matcher to
     # only match normal files and run it, then replace it to just
@@ -594,6 +584,17 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
         repo.getcwd()
     except OSError:
         return result
+
+    def makestandin(relpath):
+        path = pathutil.canonpath(repo.root, repo.getcwd(), relpath)
+        return os.path.join(repo.wjoin(lfutil.standin(path)))
+
+    fullpats = scmutil.expandpats(pats)
+    dest = fullpats[-1]
+
+    if os.path.isdir(dest):
+        if not os.path.isdir(makestandin(dest)):
+            os.makedirs(makestandin(dest))
 
     try:
         try:
