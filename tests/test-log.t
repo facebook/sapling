@@ -45,6 +45,13 @@ changeset graph
   $ hg mv dir/b e
   $ hg ci -me -d '5 0'
 
+Make sure largefiles doesn't interfere with logging a regular file
+  $ hg log a --config extensions.largefiles=
+  changeset:   0:9161b9aeaf16
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
+  
   $ hg log a
   changeset:   0:9161b9aeaf16
   user:        test
@@ -1625,6 +1632,12 @@ hg log -f dir across branches
   $ hg up -q 0
   $ echo b > d/a && hg ci -Aqm c
   $ hg log -f d -T '{desc}' -G
+  @  c
+  |
+  o  a
+  
+Ensure that largefiles doesn't intefere with following a normal file
+  $ hg  --config extensions.largefiles= log -f d -T '{desc}' -G
   @  c
   |
   o  a

@@ -316,9 +316,14 @@ def overridelog(orig, ui, repo, *pats, **opts):
 
         for i in range(0, len(m._files)):
             standin = lfutil.standin(m._files[i])
+            # If the "standin" is a directory, append instead of replace to
+            # support naming a directory on the command line with only
+            # largefiles.  The original directory is kept to support normal
+            # files.
             if standin in repo[ctx.node()]:
                 m._files[i] = standin
-            elif m._files[i] not in repo[ctx.node()]:
+            elif m._files[i] not in repo[ctx.node()] \
+                    and repo.wvfs.isdir(standin):
                 m._files.append(standin)
             pats.add(standin)
 
