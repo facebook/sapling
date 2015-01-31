@@ -363,6 +363,39 @@ static int lazymanifest_delitem(lazymanifest *self, PyObject *key)
 	return 0;
 }
 
+/* Do a binary search for the insertion point for new, creating the
+ * new entry if needed. */
+static int internalsetitem(lazymanifest *self, line *new) {
+	int start = 0, end = self->numlines;
+	while (start < end) {
+		int pos = start + (end - start) / 2;
+		int c = linecmp(new, self->lines + pos);
+		if (c < 0)
+			end = pos;
+		else if (c > 0)
+			start = pos + 1;
+		else {
+			if (self->lines[pos].deleted)
+				self->livelines++;
+			start = pos;
+			goto finish;
+		}
+	}
+	/* being here means we need to do an insert */
+	if (!realloc_if_full(self)) {
+		PyErr_NoMemory();
+		return -1;
+	}
+	memmove(self->lines + start + 1, self->lines + start,
+		(self->numlines - start) * sizeof(line));
+	self->numlines++;
+	self->livelines++;
+finish:
+	self->lines[start] = *new;
+	self->dirty = true;
+	return 0;
+}
+
 static int lazymanifest_setitem(
 	lazymanifest *self, PyObject *key, PyObject *value)
 {
@@ -378,7 +411,6 @@ static int lazymanifest_setitem(
 	char *dest;
 	int i;
 	line new;
-	line *hit;
 	if (!PyString_Check(key)) {
 		PyErr_Format(PyExc_TypeError,
 			     "setitem: manifest keys must be a string.");
@@ -446,32 +478,8 @@ static int lazymanifest_setitem(
 	}
 	new.from_malloc = true;     /* is `start` a pointer we allocated? */
 	new.deleted = false;        /* is this entry deleted? */
-	hit = bsearch(&new, self->lines, self->numlines,
-		      sizeof(line), &linecmp);
-	self->dirty = true;
-	if (hit) {
-		/* updating a line we already had */
-		if (hit->from_malloc) {
-			free(hit->start);
-		}
-		if (hit->deleted) {
-			self->livelines++;
-		}
-		*hit = new;
-	} else {
-		/* new line */
-		if (!realloc_if_full(self)) {
-			PyErr_NoMemory();
-			return -1;
-		}
-		self->lines[self->numlines++] = new;
-		self->livelines++;
-		/* TODO: do a binary search and insert rather than
-		 * append and qsort. Also offer a batch-insert
-		 * interface, which should be a nice little
-		 * performance win.
-		 */
-		qsort(self->lines, self->numlines, sizeof(line), &linecmp);
+	if (internalsetitem(self, &new)) {
+		return -1;
 	}
 	return 0;
 }

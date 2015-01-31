@@ -133,6 +133,10 @@ class testmanifest(unittest.TestCase):
         self.assertRaises(KeyError, lambda : m['foo'])
         self.assertEqual(1, len(m))
         self.assertEqual(1, len(list(m)))
+        # now restore and make sure everything works right
+        m['foo'] = 'a' * 20, ''
+        self.assertEqual(2, len(m))
+        self.assertEqual(2, len(list(m)))
 
     def testManifestDiff(self):
         MISSING = (None, '')
