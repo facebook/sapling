@@ -26,11 +26,19 @@ testpid = win32.testpid
 unlink = win32.unlink
 
 umask = 0022
+_SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 
 # wrap osutil.posixfile to provide friendlier exceptions
 def posixfile(name, mode='r', buffering=-1):
     try:
-        return osutil.posixfile(name, mode, buffering)
+        fp = osutil.posixfile(name, mode, buffering)
+
+        # The position when opening in append mode is implementation defined, so
+        # make it consistent with other platforms, which position at EOF.
+        if 'a' in mode:
+            fp.seek(0, _SEEK_END)
+
+        return fp
     except WindowsError, err:
         raise IOError(err.errno, '%s: %s' % (name, err.strerror))
 posixfile.__doc__ = osutil.posixfile.__doc__
