@@ -77,8 +77,6 @@ _unpack = struct.unpack
 _calcsize = struct.calcsize
 propertycache = util.propertycache
 
-_SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
-
 # the obsolete feature is not mature enough to be enabled by default.
 # you have to rely on third party extension extension to enable this.
 _enabled = False
@@ -592,12 +590,6 @@ class obsstore(object):
         if new:
             f = self.sopener('obsstore', 'ab')
             try:
-                # Whether the file's current position is at the begin or at
-                # the end after opening a file for appending is implementation
-                # defined. So we must seek to the end before calling tell(),
-                # or we may get a zero offset for non-zero sized files on
-                # some platforms (issue3543).
-                f.seek(0, _SEEK_END)
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 # offset == 0: new file - add the version header
