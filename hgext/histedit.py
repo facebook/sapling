@@ -158,6 +158,7 @@ from mercurial import discovery
 from mercurial import error
 from mercurial import copies
 from mercurial import context
+from mercurial import extensions
 from mercurial import hg
 from mercurial import node
 from mercurial import repair
@@ -674,6 +675,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         actfunc = actiontable[action]
         state.parentctx, replacement_ = actfunc(ui, state, ha, opts)
         state.replacements.extend(replacement_)
+    state.write()
 
     hg.update(repo, state.parentctx.node())
 
@@ -970,6 +972,23 @@ def cleanupnode(ui, repo, name, nodes):
             repair.strip(ui, repo, c)
     finally:
         release(lock)
+
+def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
+    if isinstance(nodelist, str):
+        nodelist = [nodelist]
+    if os.path.exists(os.path.join(repo.path, 'histedit-state')):
+        state = histeditstate(repo)
+        state.read()
+        histedit_nodes = set([ctx for (action, ctx) in state.rules])
+        strip_nodes = set([repo[n].hex() for n in nodelist])
+        common_nodes = histedit_nodes & strip_nodes
+        if common_nodes:
+            raise util.Abort(_('unable to strip %s. Nodes are '
+                               'used by history edit in progress.')
+                             % ', '.join(common_nodes))
+    return orig(ui, repo, nodelist, *args, **kwargs)
+
+extensions.wrapfunction(repair, 'strip', stripwrapper)
 
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('histedit-state')):

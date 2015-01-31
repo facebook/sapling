@@ -3,6 +3,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
+  > strip=
   > EOF
 
   $ initrepo ()
@@ -70,6 +71,11 @@ Go at a random point and try to continue
   $ hg up 0
   abort: histedit in progress
   (use 'hg histedit --continue' or 'hg histedit --abort')
+  [255]
+
+Try to delete necessary commit
+  $ hg strip -r 652413bf663e
+  abort: unable to strip 652413bf663ef2a641cab26574e46d5f5a64a55a. Nodes are used by history edit in progress.
   [255]
 
 commit, then edit the revision
