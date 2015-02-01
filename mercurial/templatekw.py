@@ -382,6 +382,13 @@ def shownames(namespace, **args):
     names = ns.names(repo, ctx.node())
     return showlist(ns.templatename, names, plural=namespace, **args)
 
+# don't remove "showtags" definition, even though namespaces will put
+# a helper function for "tags" keyword into "keywords" map automatically,
+# because online help text is built without namespaces initialization
+def showtags(**args):
+    """:tags: List of strings. Any tags associated with the changeset."""
+    return shownames('tags', **args)
+
 # keywords are callables like:
 # fn(repo, ctx, templ, cache, revcache, **args)
 # with:
@@ -420,6 +427,7 @@ keywords = {
     'phaseidx': showphaseidx,
     'rev': showrev,
     'subrepos': showsubrepos,
+    'tags': showtags,
 }
 
 def _showparents(**args):
