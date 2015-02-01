@@ -954,7 +954,7 @@ class basefilectx(object):
         cut = followfirst and 1 or None
         while True:
             for parent in c.parents()[:cut]:
-                visit[(parent.rev(), parent.node())] = parent
+                visit[(parent.linkrev(), parent.filenode())] = parent
             if not visit:
                 break
             c = visit.pop(max(visit))
