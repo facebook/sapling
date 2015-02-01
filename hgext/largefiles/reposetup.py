@@ -326,10 +326,10 @@ def reposetup(ui, repo):
                             actualfiles.append(lf)
                             if not matcheddir:
                                 # There may still be normal files in the dir, so
-                                # make sure a directory is in the list, which
-                                # forces status to walk and call the match
-                                # function on the matcher.  Windows does NOT
-                                # require this.
+                                # make sure _a_ directory is in the list, which
+                                # forces status/dirstate to walk all files and
+                                # call the match function on the matcher, even
+                                # on case sensitive filesytems.
                                 actualfiles.append('.')
                                 matcheddir = True
                 # Nothing in dir, so readd it
