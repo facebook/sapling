@@ -133,7 +133,7 @@ def _tracefile(fctx, am, limit=-1):
     for f in fctx.ancestors():
         if am.get(f.path(), None) == f.filenode():
             return f
-        if f.rev() < limit:
+        if limit >= 0 and f.linkrev() < limit and f.rev() < limit:
             return None
 
 def _dirstatecopies(d):
