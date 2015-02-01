@@ -802,4 +802,52 @@ revert the subrepository
   $ hg status --subrepos
   ? s/barfoo
 
+show file at specific revision
+  $ cat > s/foobar << EOF
+  > woop    woop
+  > fooo bar
+  > EOF
+  $ hg commit --subrepos -m "updated foobar"
+  committing subrepository s
+  $ cat > s/foobar << EOF
+  > current foobar
+  > (should not be visible using hg cat)
+  > EOF
+
+  $ hg cat -r . s/foobar
+  woop    woop
+  fooo bar (no-eol)
+  $ hg cat -r "parents(.)" s/foobar > catparents
+
+  $ mkdir -p tmp/s
+
+  $ hg cat -r "parents(.)" --output tmp/%% s/foobar
+  $ diff tmp/% catparents
+
+  $ hg cat -r "parents(.)" --output tmp/%s s/foobar
+  $ diff tmp/foobar catparents
+
+  $ hg cat -r "parents(.)" --output tmp/%d/otherfoobar s/foobar
+  $ diff tmp/s/otherfoobar catparents
+
+  $ hg cat -r "parents(.)" --output tmp/%p s/foobar
+  $ diff tmp/s/foobar catparents
+
+  $ hg cat -r "parents(.)" --output tmp/%H s/foobar
+  $ diff tmp/255ee8cf690ec86e99b1e80147ea93ece117cd9d catparents
+
+  $ hg cat -r "parents(.)" --output tmp/%R s/foobar
+  $ diff tmp/10 catparents
+
+  $ hg cat -r "parents(.)" --output tmp/%h s/foobar
+  $ diff tmp/255ee8cf690e catparents
+
+  $ rm tmp/10
+  $ hg cat -r "parents(.)" --output tmp/%r s/foobar
+  $ diff tmp/10 catparents
+
+  $ mkdir tmp/tc
+  $ hg cat -r "parents(.)" --output tmp/%b/foobar s/foobar
+  $ diff tmp/tc/foobar catparents
+
   $ cd ..

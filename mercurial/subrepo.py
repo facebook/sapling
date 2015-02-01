@@ -1577,6 +1577,25 @@ class gitsubrepo(abstractsubrepo):
 
 
     @annotatesubrepoerror
+    def cat(self, match, prefix, **opts):
+        rev = self._state[1]
+        if match.anypats():
+            return 1 #No support for include/exclude yet
+
+        if not match.files():
+            return 1
+
+        for f in match.files():
+            output = self._gitcommand(["show", "%s:%s" % (rev, f)])
+            fp = cmdutil.makefileobj(self._subparent, opts.get('output'),
+                                     self._ctx.node(),
+                                     pathname=os.path.join(prefix, f))
+            fp.write(output)
+            fp.close()
+        return 0
+
+
+    @annotatesubrepoerror
     def status(self, rev2, **opts):
         rev1 = self._state[1]
         if self._gitmissing() or not rev1:

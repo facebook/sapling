@@ -91,7 +91,7 @@ Interaction with Mercurial Commands
     -S/--subrepos is specified.
 
 :cat: cat currently only handles exact file matches in subrepos.
-    Git and Subversion subrepositories are currently ignored.
+    Subversion subrepositories are currently ignored.
 
 :commit: commit creates a consistent snapshot of the state of the
     entire project and its subrepositories. If any subrepositories
