@@ -633,6 +633,11 @@ class basefilectx(object):
             return self._changeid
         elif '_changectx' in self.__dict__:
             return self._changectx.rev()
+        elif '_descendantrev' in self.__dict__:
+            # this file context was created from a revision with a known
+            # descendant, we can (lazily) correct for linkrev aliases
+            return self._adjustlinkrev(self._path, self._filelog,
+                                       self._filenode, self._descendantrev)
         else:
             return self._filelog.linkrev(self._filerev)
 
