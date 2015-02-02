@@ -1091,8 +1091,8 @@ class jsonchangeset(changeset_printer):
 
             if copies:
                 self.ui.write(',\n  "copies": {%s}' %
-                              ", ".join('"%s": %s' % (j(k), j(copies[k]))
-                                                      for k in copies))
+                              ", ".join('"%s": "%s"' % (j(k), j(v))
+                                                        for k, v in copies))
 
         matchfn = self.matchfn
         if matchfn:
