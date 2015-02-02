@@ -2242,6 +2242,71 @@ def _parsealiasdecl(decl):
     except error.ParseError, inst:
         return (decl, None, None, parseerrordetail(inst))
 
+def _parsealiasdefn(defn, args):
+    """Parse alias definition ``defn``
+
+    This function also replaces alias argument references in the
+    specified definition by ``_aliasarg(ARGNAME)``.
+
+    ``args`` is a list of alias argument names, or None if the alias
+    is declared as a symbol.
+
+    This returns "tree" as parsing result.
+
+    >>> args = ['$1', '$2', 'foo']
+    >>> print prettyformat(_parsealiasdefn('$1 or foo', args))
+    (or
+      (func
+        ('symbol', '_aliasarg')
+        ('string', '$1'))
+      (func
+        ('symbol', '_aliasarg')
+        ('string', 'foo')))
+    >>> try:
+    ...     _parsealiasdefn('$1 or $bar', args)
+    ... except error.ParseError, inst:
+    ...     print parseerrordetail(inst)
+    at 6: '$' not for alias arguments
+    >>> args = ['$1', '$10', 'foo']
+    >>> print prettyformat(_parsealiasdefn('$10 or foobar', args))
+    (or
+      (func
+        ('symbol', '_aliasarg')
+        ('string', '$10'))
+      ('symbol', 'foobar'))
+    >>> print prettyformat(_parsealiasdefn('"$1" or "foo"', args))
+    (or
+      ('string', '$1')
+      ('string', 'foo'))
+    """
+    def tokenizedefn(program, lookup=None):
+        if args:
+            argset = set(args)
+        else:
+            argset = set()
+
+        for t, value, pos in _tokenizealias(program, lookup=lookup):
+            if t == 'symbol':
+                if value in argset:
+                    # emulate tokenization of "_aliasarg('ARGNAME')":
+                    # "_aliasarg()" is an unknown symbol only used separate
+                    # alias argument placeholders from regular strings.
+                    yield ('symbol', '_aliasarg', pos)
+                    yield ('(', None, pos)
+                    yield ('string', value, pos)
+                    yield (')', None, pos)
+                    continue
+                elif value.startswith('$'):
+                    raise error.ParseError(_("'$' not for alias arguments"),
+                                           pos)
+            yield (t, value, pos)
+
+    p = parser.parser(tokenizedefn, elements)
+    tree, pos = p.parse(defn)
+    if pos != len(defn):
+        raise error.ParseError(_('invalid token'), pos)
+    return tree
+
 class revsetalias(object):
     # whether own `error` information is already shown or not.
     # this avoids showing same warning multiple times at each `findaliases`.
