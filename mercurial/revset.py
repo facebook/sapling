@@ -2324,16 +2324,8 @@ class revsetalias(object):
                            ' "%s": %s') % (self.name, self.error)
             return
 
-        if self.args:
-            for arg in self.args:
-                # _aliasarg() is an unknown symbol only used separate
-                # alias argument placeholders from regular strings.
-                value = value.replace(arg, '_aliasarg(%r)' % (arg,))
-
         try:
-            self.replacement, pos = parse(value)
-            if pos != len(value):
-                raise error.ParseError(_('invalid token'), pos)
+            self.replacement = _parsealiasdefn(value, self.args)
             # Check for placeholder injection
             _checkaliasarg(self.replacement, self.args)
         except error.ParseError, inst:

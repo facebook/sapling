@@ -1024,6 +1024,19 @@ far away.
   ('symbol', 'tip')
   warning: failed to parse the declaration of revset alias "bad name": at 4: invalid token
   9
+  $ echo 'strictreplacing($1, $10) = $10 or desc("$1")' >> .hg/hgrc
+  $ try 'strictreplacing("foo", tip)'
+  (func
+    ('symbol', 'strictreplacing')
+    (list
+      ('string', 'foo')
+      ('symbol', 'tip')))
+  (or
+    ('symbol', 'tip')
+    (func
+      ('symbol', 'desc')
+      ('string', '$1')))
+  9
 
   $ try 'd(2:5)'
   (func
