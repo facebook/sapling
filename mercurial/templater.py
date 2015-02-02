@@ -393,7 +393,7 @@ def revset(context, mapping, args):
 
     def query(expr):
         m = revsetmod.match(repo.ui, expr)
-        return m(repo, revsetmod.spanset(repo))
+        return m(repo)
 
     if len(args) > 1:
         formatargs = list([a[0](context, mapping, a[1]) for a in args[1:]])

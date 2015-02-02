@@ -2448,7 +2448,9 @@ def match(ui, spec, repo=None):
         tree = findaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
     weight, tree = optimize(tree, True)
-    def mfunc(repo, subset):
+    def mfunc(repo, subset=None):
+        if subset is None:
+            subset = spanset(repo)
         if util.safehasattr(subset, 'isascending'):
             result = getset(repo, subset, tree)
         else:
