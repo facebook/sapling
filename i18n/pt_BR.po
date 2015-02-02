@@ -10401,11 +10401,6 @@ msgstr "ramo:         %s\n"
 
 #. i18n: column positioning for "hg log"
 #, python-format
-msgid "%s\n"
-msgstr "%s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
 msgid "phase:       %s\n"
 msgstr "fase:         %s\n"
 
@@ -25486,6 +25481,16 @@ msgstr "Dica:"
 msgid "Warning!"
 msgstr "Aviso!"
 
+#. i18n: column positioning for "hg log"
+#, python-format
+msgid "bookmark:    %s\n"
+msgstr "marcador:     %s\n"
+
+#. i18n: column positioning for "hg log"
+#, python-format
+msgid "tag:         %s\n"
+msgstr "etiqueta:     %s\n"
+
 #, python-format
 msgid "no such name: %s"
 msgstr "não existe tal nome: %s"
@@ -25683,6 +25688,10 @@ msgstr "terminou com o código %d"
 #, python-format
 msgid "killed by signal %d"
 msgstr "morto pelo sinal %d"
+
+#, python-format
+msgid "unknown strip-bundle2-version value %r; "
+msgstr "valor desconhecido de strip-bundle2-version %r; "
 
 #, python-format
 msgid "saved backup bundle to %s\n"
@@ -28204,6 +28213,9 @@ msgstr "procurar mudanças remotas"
 msgid "number of cpus must be an integer"
 msgstr "o número de cpus deve ser um inteiro"
 
+#~ msgid "%s\n"
+#~ msgstr "%s\n"
+
 #~ msgid "see hg help phases for details"
 #~ msgstr "veja hg help phases para mais detalhes"
 
@@ -28224,12 +28236,6 @@ msgstr "o número de cpus deve ser um inteiro"
 
 #~ msgid "no changes, revision %d skipped\n"
 #~ msgstr "nenhuma mudança, revisão %d omitida\n"
-
-#~ msgid "bookmark:    %s\n"
-#~ msgstr "marcador:     %s\n"
-
-#~ msgid "tag:         %s\n"
-#~ msgstr "etiqueta:     %s\n"
 
 #~ msgid ""
 #~ "    If -a/--active is specified, only show active branches. A branch\n"
