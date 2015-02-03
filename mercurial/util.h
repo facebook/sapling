@@ -196,4 +196,17 @@ static inline void putbe32(uint32_t x, char *c)
 	c[3] = (x) & 0xff;
 }
 
+static inline double getbefloat64(const char *c)
+{
+	const unsigned char *d = (const unsigned char *)c;
+	double ret;
+	int i;
+	uint64_t t = 0;
+	for (i = 0; i < 8; i++) {
+		t = (t<<8) + d[i];
+	}
+	memcpy(&ret, &t, sizeof(t));
+	return ret;
+}
+
 #endif /* _HG_UTIL_H_ */
