@@ -787,6 +787,12 @@ we can use patterns when searching for tags
   $ log 'present(named("unknown"))'
   $ log 'present(named("re:unknown"))'
 
+  $ log 'tag()'
+  6
+  $ log 'named("tags")'
+  6
+  9
+
 issue2437
 
   $ log '3 and p1(5)'
