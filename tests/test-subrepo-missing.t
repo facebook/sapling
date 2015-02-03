@@ -96,4 +96,14 @@ check that we can update parent repo with missing (amended) subrepo revision
   revision 102a90ea7b4a in subrepo subrepo is hidden
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+check that --hidden is propagated to the subrepo
+
+  $ hg -R subrepo up tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg ci -m 'commit with amended subrepo'
+  $ echo bar > subrepo/a
+  $ hg -R subrepo ci --amend -m "amend a (again)"
+  $ hg --hidden cat subrepo/a
+  foo
+
   $ cd ..

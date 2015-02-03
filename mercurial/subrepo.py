@@ -569,6 +569,11 @@ class hgsubrepo(abstractsubrepo):
         root = r.wjoin(path)
         create = not r.wvfs.exists('%s/.hg' % path)
         self._repo = hg.repository(r.baseui, root, create=create)
+
+        # Propagate the parent's --hidden option
+        if r is r.unfiltered():
+            self._repo = self._repo.unfiltered()
+
         self.ui = self._repo.ui
         for s, k in [('ui', 'commitsubrepos')]:
             v = r.ui.config(s, k)
