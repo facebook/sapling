@@ -103,6 +103,15 @@ Test that we pick the minimum of a revrange
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up --quiet
 
+Test config specified default
+-----------------------------
+
+  $ HGEDITOR=cat hg histedit --config "histedit.defaultrev=only(.) - ::eb57da33312f" --commands - << EOF
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 Run on a revision not descendants of the initial parent
 --------------------------------------------------------------------
 

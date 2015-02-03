@@ -579,6 +579,10 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                     _('only one repo argument allowed with --outgoing'))
         else:
             revs.extend(freeargs)
+            if len(revs) == 0:
+                histeditdefault = ui.config('histedit', 'defaultrev')
+                if histeditdefault:
+                    revs.append(histeditdefault)
             if len(revs) != 1:
                 raise util.Abort(
                     _('histedit requires exactly one ancestor revision'))
