@@ -821,6 +821,14 @@ def hgclone(orig, ui, opts, *args, **kwargs):
         sourcerepo, destrepo = result
         repo = destrepo.local()
 
+        # If largefiles is required for this repo, permanently enable it locally
+        if 'largefiles' in repo.requirements:
+            fp = repo.vfs('hgrc', 'a', text=True)
+            try:
+                fp.write('\n[extensions]\nlargefiles=\n')
+            finally:
+                fp.close()
+
         # Caching is implicitly limited to 'rev' option, since the dest repo was
         # truncated at that point.  The user may expect a download count with
         # this option, so attempt whether or not this is a largefile repo.

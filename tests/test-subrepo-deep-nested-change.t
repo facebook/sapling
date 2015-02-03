@@ -46,11 +46,28 @@ Cleaning both repositories, just as a clone -U
 
 Clone main
 
-  $ hg clone main cloned
+  $ hg --config extensions.largefiles= clone main cloned
   updating to branch default
   cloning subrepo sub1 from $TESTTMP/sub1
   cloning subrepo sub1/sub2 from $TESTTMP/sub2 (glob)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Largefiles is NOT enabled in the clone if the source repo doesn't require it
+  $ cat cloned/.hg/hgrc
+  # example repository config (see "hg help config" for more info)
+  [paths]
+  default = $TESTTMP/main (glob)
+  
+  # path aliases to other clones of this repo in URLs or filesystem paths
+  # (see "hg help config.paths" for more info)
+  #
+  # default-push = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-clone     = /home/jdoe/jdoes-clone
+  
+  [ui]
+  # name and email (local to this repository, optional), e.g.
+  # username = Jane Doe <jdoe@example.com>
 
 Checking cloned repo ids
 
@@ -318,6 +335,31 @@ Find an exact largefile match in a largefiles subrepo
   ../archive_lf/sub1/sub2
   ../archive_lf/sub1/sub2/large.bin
   $ rm -rf ../archive_lf
+
+The local repo enables largefiles if a largefiles repo is cloned
+  $ hg showconfig extensions
+  abort: repository requires features unknown to this Mercurial: largefiles!
+  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
+  [255]
+  $ hg --config extensions.largefiles= clone -qU . ../lfclone
+  $ cat ../lfclone/.hg/hgrc
+  # example repository config (see "hg help config" for more info)
+  [paths]
+  default = $TESTTMP/cloned (glob)
+  
+  # path aliases to other clones of this repo in URLs or filesystem paths
+  # (see "hg help config.paths" for more info)
+  #
+  # default-push = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-fork      = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-clone     = /home/jdoe/jdoes-clone
+  
+  [ui]
+  # name and email (local to this repository, optional), e.g.
+  # username = Jane Doe <jdoe@example.com>
+  
+  [extensions]
+  largefiles=
 
 Find an exact match to a standin (should archive nothing)
   $ hg --config extensions.largefiles= archive -S -I 'sub/sub2/.hglf/large.bin' ../archive_lf
