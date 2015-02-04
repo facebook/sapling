@@ -494,7 +494,23 @@ log copies with hardcoded style and with --style=default
   e
   
   
-
+  $ hg log -vC -r4 -Tjson
+  [
+   {
+    "rev": 4,
+    "node": "7e4639b4691b9f84b81036a8d4fb218ce3c5e3a3",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [5, 0],
+    "desc": "e",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["2ca5ba7019804f1f597249caddf22a64d34df0ba"],
+    "files": ["dir/b", "e"],
+    "copies": {"e": "dir/b"}
+   }
+  ]
 
 log copies, non-linear manifest
 
