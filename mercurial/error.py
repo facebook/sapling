@@ -22,6 +22,8 @@ class FilteredIndexError(IndexError):
 class LookupError(RevlogError, KeyError):
     def __init__(self, name, index, message):
         self.name = name
+        self.index = index
+        self.message = message
         if isinstance(name, str) and len(name) == 20:
             from node import short
             name = short(name)
