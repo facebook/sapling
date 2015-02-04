@@ -7,6 +7,8 @@
 PREFIX=/usr/local
 export PREFIX
 PYTHON=python
+$(eval HGROOT := $(shell pwd))
+HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
 PYFILES:=$(shell find mercurial hgext doc -name '*.py')
 DOCFILES=mercurial/help/*.txt
@@ -97,6 +99,13 @@ tests:
 
 test-%:
 	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS) $@
+
+testpy-%:
+	@echo Looking for Python $* in $(HGPYTHONS)
+	[ -e $(HGPYTHONS)/$*/bin/python ] || ( \
+	cd $$(mktemp --directory --tmpdir) && \
+        $(MAKE) -f $(HGROOT)/contrib/Makefile.python PYTHONVER=$* PREFIX=$(HGPYTHONS)/$* python )
+	cd tests && $(HGPYTHONS)/$*/bin/python run-tests.py $(TESTFLAGS)
 
 check-code:
 	hg manifest | xargs python contrib/check-code.py
