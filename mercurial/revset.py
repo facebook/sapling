@@ -1547,7 +1547,7 @@ def rev(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
-    if l not in fullreposet(repo) and l != node.nullrev:
+    if l not in repo.changelog and l != node.nullrev:
         return baseset()
     return subset & baseset([l])
 
