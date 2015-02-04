@@ -207,6 +207,15 @@ class remotefilectx(context.filectx):
 
         return True
 
+    def _adjustlinkrev(self, path, filelog, fnode, *args, **kwargs):
+        # When generating file blobs, taking the real path is too slow on large
+        # repos, so force it to just return the linkrev directly.
+        repo = self._repo
+        if util.safehasattr(repo, 'forcelinkrev') and repo.forcelinkrev:
+            return filelog.linkrev(filelog.rev(fnode))
+        return super(remotefilectx, self)._adjustlinkrev(path, filelog, fnode,
+            *args, **kwargs)
+
 class remoteworkingfilectx(context.workingfilectx, remotefilectx):
     def __init__(self, repo, path, filelog=None, workingctx=None):
         self._ancestormap = None
