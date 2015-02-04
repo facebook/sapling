@@ -2262,10 +2262,13 @@ bail:
 
 static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
 	const char *data;
-	Py_ssize_t datalen, offset, stop;
+	Py_ssize_t datalen;
+	/* only unsigned long because python 2.4, should be Py_ssize_t */
+	unsigned long offset, stop;
 	PyObject *markers = NULL;
 
-	if (!PyArg_ParseTuple(args, "s#nn", &data, &datalen, &offset, &stop)) {
+	/* replace kk with nn when we drop Python 2.4 */
+	if (!PyArg_ParseTuple(args, "s#kk", &data, &datalen, &offset, &stop)) {
 		return NULL;
 	}
 	data += offset;
