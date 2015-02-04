@@ -140,6 +140,17 @@ emit codes that less doesn't understand. You can work around this by
 either using ansi mode (or auto mode), or by using less -r (which will
 pass through all terminal control codes, not just color control
 codes).
+
+On some systems (such as MSYS in Windows), the terminal may support
+a different color mode than the pager (activated via the "pager"
+extension). It is possible to define separate modes depending on whether
+the pager is active::
+
+  [color]
+  mode = auto
+  pagermode = ansi
+
+If ``pagermode`` is not defined, the ``mode`` will be used.
 '''
 
 import os
@@ -213,6 +224,11 @@ def _modesetup(ui, coloropt):
     formatted = always or (os.environ.get('TERM') != 'dumb' and ui.formatted())
 
     mode = ui.config('color', 'mode', 'auto')
+
+    # If pager is active, color.pagermode overrides color.mode.
+    if getattr(ui, 'pageractive', False):
+        mode = ui.config('color', 'pagermode', mode)
+
     realmode = mode
     if mode == 'auto':
         if os.name == 'nt':
