@@ -14,6 +14,7 @@ PYFILES:=$(shell find mercurial hgext doc -name '*.py')
 DOCFILES=mercurial/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
+TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
