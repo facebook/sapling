@@ -277,6 +277,8 @@ class revlog(object):
 
     def tip(self):
         return self.node(len(self.index) - 2)
+    def __contains__(self, rev):
+        return 0 <= rev < len(self)
     def __len__(self):
         return len(self.index) - 1
     def __iter__(self):

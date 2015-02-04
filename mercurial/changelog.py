@@ -143,6 +143,11 @@ class changelog(revlog.revlog):
             if i not in self.filteredrevs:
                 return self.node(i)
 
+    def __contains__(self, rev):
+        """filtered version of revlog.__contains__"""
+        return (revlog.revlog.__contains__(self, rev)
+                and rev not in self.filteredrevs)
+
     def __iter__(self):
         """filtered version of revlog.__iter__"""
         if len(self.filteredrevs) == 0:
