@@ -1834,12 +1834,8 @@ def getgraphlogrevs(repo, pats, opts):
     # Default --rev value depends on --follow but --follow behaviour
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
-    possiblyunsorted = False # whether revs might need sorting
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
-        # Don't sort here because _makelogrevset might depend on the
-        # order of revs
-        possiblyunsorted = True
     else:
         if follow and len(repo) > 0:
             revs = repo.revs('reverse(:.)')
@@ -1849,7 +1845,9 @@ def getgraphlogrevs(repo, pats, opts):
     if not revs:
         return revset.baseset(), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
-    if possiblyunsorted:
+    if opts.get('rev'):
+        # User-specified revs might be unsorted, but don't sort before
+        # _makelogrevset because it might depend on the order of revs
         revs.sort(reverse=True)
     if expr:
         # Revset matchers often operate faster on revisions in changelog
