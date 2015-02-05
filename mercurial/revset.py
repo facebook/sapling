@@ -1277,7 +1277,8 @@ def named(repo, subset, x):
     names = set()
     for ns in namespaces:
         for name in ns.listnames(repo):
-            names.update(repo[n].rev() for n in ns.nodes(repo, name))
+            if name not in ns.deprecated:
+                names.update(repo[n].rev() for n in ns.nodes(repo, name))
 
     names -= set([node.nullrev])
     return subset & names

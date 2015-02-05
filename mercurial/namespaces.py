@@ -41,7 +41,8 @@ class namespaces(object):
                       # i18n: column positioning for "hg log"
                       logfmt=_("tag:         %s\n"),
                       listnames=tagnames,
-                      namemap=tagnamemap, nodemap=tagnodemap)
+                      namemap=tagnamemap, nodemap=tagnodemap,
+                      deprecated=set(['tip']))
         self.addnamespace(n)
 
         bnames = lambda repo: repo.branchmap().keys()
@@ -126,11 +127,13 @@ class namespace(object):
                    dictionary)
       'namemap': function that takes a name and returns a list of nodes
       'nodemap': function that takes a node and returns a list of names
+      'deprecated': set of names to be masked for ordinary use
 
     """
 
     def __init__(self, name, templatename=None, logname=None, colorname=None,
-                 logfmt=None, listnames=None, namemap=None, nodemap=None):
+                 logfmt=None, listnames=None, namemap=None, nodemap=None,
+                 deprecated=None):
         """create a namespace
 
         name: the namespace to be registered (in plural form)
@@ -144,6 +147,7 @@ class namespace(object):
         listnames: function to list all names
         namemap: function that inputs a node, output name(s)
         nodemap: function that inputs a name, output node(s)
+        deprecated: set of names to be masked for ordinary use
 
         """
         self.name = name
@@ -167,6 +171,11 @@ class namespace(object):
         if self.logfmt is None:
             # i18n: column positioning for "hg log"
             self.logfmt = ("%s:" % self.logname).ljust(13) + "%s\n"
+
+        if deprecated is None:
+            self.deprecated = set()
+        else:
+            self.deprecated = deprecated
 
     def names(self, repo, node):
         """method that returns a (sorted) list of names in a namespace that
