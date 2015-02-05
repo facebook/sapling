@@ -497,7 +497,7 @@ class unpackermixin(object):
         """read exactly <size> bytes from the stream"""
         return changegroup.readexactly(self._fp, size)
 
-    def seek(self, offset, whence):
+    def seek(self, offset, whence=0):
         """move the underlying file pointer"""
         if self._seekable:
             return self._fp.seek(offset, whence)
