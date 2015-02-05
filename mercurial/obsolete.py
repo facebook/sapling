@@ -489,15 +489,16 @@ def _addchildren(children, markers):
             for p in parents:
                 children.setdefault(p, set()).add(mark)
 
-def _checkinvalidmarkers(obsstore):
+def _checkinvalidmarkers(markers):
     """search for marker with invalid data and raise error if needed
 
     Exist as a separated function to allow the evolve extension for a more
     subtle handling.
     """
-    if node.nullid in obsstore.precursors:
-        raise util.Abort(_('bad obsolescence marker detected: '
-                           'invalid successors nullid'))
+    for mark in markers:
+        if node.nullid in mark[1]:
+            raise util.Abort(_('bad obsolescence marker detected: '
+                               'invalid successors nullid'))
 
 class obsstore(object):
     """Store obsolete markers
@@ -629,7 +630,7 @@ class obsstore(object):
         _addsuccessors(self.successors, markers)
         _addprecursors(self.precursors, markers)
         _addchildren(self.children, markers)
-        _checkinvalidmarkers(self)
+        _checkinvalidmarkers(markers)
 
     def relevantmarkers(self, nodes):
         """return a set of all obsolescence markers relevant to a set of nodes.
