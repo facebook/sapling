@@ -75,6 +75,7 @@ from i18n import _
 _pack = struct.pack
 _unpack = struct.unpack
 _calcsize = struct.calcsize
+propertycache = util.propertycache
 
 _SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 
@@ -522,16 +523,13 @@ class obsstore(object):
         # caches for various obsolescence related cache
         self.caches = {}
         self._all = []
-        self.precursors = {}
-        self.successors = {}
-        self.children = {}
         self.sopener = sopener
         data = sopener.tryread('obsstore')
         self._version = defaultformat
         self._readonly = readonly
         if data:
             self._version, markers = _readmarkers(data)
-            self._load(markers)
+            self._addmarkers(markers)
 
     def __iter__(self):
         return iter(self._all)
@@ -609,7 +607,7 @@ class obsstore(object):
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
                 # call 'filecacheentry.refresh()'  here
                 f.close()
-            self._load(new)
+            self._addmarkers(new)
             # new marker *may* have changed several set. invalidate the cache.
             self.caches.clear()
         # records the number of new markers for the transaction hooks
@@ -624,12 +622,36 @@ class obsstore(object):
         version, markers = _readmarkers(data)
         return self.add(transaction, markers)
 
-    def _load(self, markers):
+    @propertycache
+    def successors(self):
+        successors = {}
+        _addsuccessors(successors, self._all)
+        return successors
+
+    @propertycache
+    def precursors(self):
+        precursors = {}
+        _addprecursors(precursors, self._all)
+        return precursors
+
+    @propertycache
+    def children(self):
+        children = {}
+        _addchildren(children, self._all)
+        return children
+
+    def _cached(self, attr):
+        return attr in self.__dict__
+
+    def _addmarkers(self, markers):
         markers = list(markers) # to allow repeated iteration
         self._all.extend(markers)
-        _addsuccessors(self.successors, markers)
-        _addprecursors(self.precursors, markers)
-        _addchildren(self.children, markers)
+        if self._cached('successors'):
+            _addsuccessors(self.successors, markers)
+        if self._cached('precursors'):
+            _addprecursors(self.precursors, markers)
+        if self._cached('children'):
+            _addchildren(self.children, markers)
         _checkinvalidmarkers(markers)
 
     def relevantmarkers(self, nodes):
