@@ -1822,6 +1822,19 @@ def _makelogrevset(repo, pats, opts, revs):
         expr = None
     return expr, filematcher
 
+def _logrevs(repo, opts):
+    # Default --rev value depends on --follow but --follow behaviour
+    # depends on revisions resolved from --rev...
+    follow = opts.get('follow') or opts.get('follow_first')
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts['rev'])
+    elif follow:
+        revs = repo.revs('reverse(:.)')
+    else:
+        revs = revset.spanset(repo)
+        revs.reverse()
+    return revs
+
 def getgraphlogrevs(repo, pats, opts):
     """Return (revs, expr, filematcher) where revs is an iterable of
     revision numbers, expr is a revset string built from log options
@@ -1831,17 +1844,7 @@ def getgraphlogrevs(repo, pats, opts):
     filtering the files to be detailed when displaying the revision.
     """
     limit = loglimit(opts)
-    # Default --rev value depends on --follow but --follow behaviour
-    # depends on revisions resolved from --rev...
-    follow = opts.get('follow') or opts.get('follow_first')
-    if opts.get('rev'):
-        revs = scmutil.revrange(repo, opts['rev'])
-    else:
-        if follow:
-            revs = repo.revs('reverse(:.)')
-        else:
-            revs = revset.spanset(repo)
-            revs.reverse()
+    revs = _logrevs(repo, opts)
     if not revs:
         return revset.baseset(), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
@@ -1878,16 +1881,7 @@ def getlogrevs(repo, pats, opts):
     filtering the files to be detailed when displaying the revision.
     """
     limit = loglimit(opts)
-    # Default --rev value depends on --follow but --follow behaviour
-    # depends on revisions resolved from --rev...
-    follow = opts.get('follow') or opts.get('follow_first')
-    if opts.get('rev'):
-        revs = scmutil.revrange(repo, opts['rev'])
-    elif follow:
-        revs = repo.revs('reverse(:.)')
-    else:
-        revs = revset.spanset(repo)
-        revs.reverse()
+    revs = _logrevs(repo, opts)
     if not revs:
         return revset.baseset([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
