@@ -25,6 +25,7 @@ errors = [
     (r"^# .*\n(?!merge with )[^#]\S+[^:] ",
      "summary line doesn't start with 'topic: '"),
     (r"^# .*\n[A-Z][a-z]\S+", "don't capitalize summary lines"),
+    (r"^# .*\n[^\n]*: *[A-Z][a-z]\S+", "don't capitalize summary lines"),
     (r"^# .*\n.*\.\s+$", "don't add trailing period on summary line"),
     (r"^# .*\n.{78,}", "summary line too long"),
     (r"^\+\n \n", "adds double empty line"),
