@@ -1541,6 +1541,9 @@ have 2 filelog topological heads in a linear changeset graph.
   $ testlog --follow
   []
   []
+  $ testlog -rnull
+  ['null']
+  []
   $ echo a > a
   $ echo aa > aa
   $ echo f > f

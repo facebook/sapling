@@ -1830,8 +1830,6 @@ def getgraphlogrevs(repo, pats, opts):
     callable taking a revision number and returning a match objects
     filtering the files to be detailed when displaying the revision.
     """
-    if not len(repo):
-        return [], None, None
     limit = loglimit(opts)
     # Default --rev value depends on --follow but --follow behaviour
     # depends on revisions resolved from --rev...
