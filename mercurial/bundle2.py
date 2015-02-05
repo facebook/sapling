@@ -313,7 +313,7 @@ def processbundle(repo, unbundler, transactiongetter=None):
     except Exception, exc:
         for part in iterparts:
             # consume the bundle content
-            part.read()
+            part.seek(0, 2)
         # Small hack to let caller code distinguish exceptions from bundle2
         # processing from processing the old format. This is mostly
         # needed to handle different return codes to unbundle according to the
@@ -365,7 +365,7 @@ def _processpart(op, part):
             outpart.addparam('in-reply-to', str(part.id), mandatory=False)
     finally:
         # consume the part content to not corrupt the stream.
-        part.read()
+        part.seek(0, 2)
 
 
 def decodecaps(blob):
