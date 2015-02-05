@@ -190,13 +190,13 @@ editcomment = _("""# Edit history between %s and %s
 """)
 
 class histeditstate(object):
-    def __init__(self, repo, parentctx=None, rules=None, keep=None,
+    def __init__(self, repo, parentctxnode=None, rules=None, keep=None,
             topmost=None, replacements=None, lock=None, wlock=None):
         self.repo = repo
         self.rules = rules
         self.keep = keep
         self.topmost = topmost
-        self.parentctx = parentctx
+        self.parentctxnode = parentctxnode
         self.lock = lock
         self.wlock = wlock
         if replacements is None:
@@ -215,7 +215,7 @@ class histeditstate(object):
 
         parentctxnode, rules, keep, topmost, replacements = pickle.load(fp)
 
-        self.parentctx = self.repo[parentctxnode]
+        self.parentctxnode = parentctxnode
         self.rules = rules
         self.keep = keep
         self.topmost = topmost
@@ -223,7 +223,7 @@ class histeditstate(object):
 
     def write(self):
         fp = self.repo.vfs('histedit-state', 'w')
-        pickle.dump((self.parentctx.node(), self.rules, self.keep,
+        pickle.dump((self.parentctxnode, self.rules, self.keep,
                      self.topmost, self.replacements), fp)
         fp.close()
 
@@ -347,7 +347,8 @@ def collapse(repo, first, last, commitopts):
     return repo.commitctx(new)
 
 def pick(ui, state, ha, opts):
-    repo, ctx = state.repo, state.parentctx
+    repo, ctxnode = state.repo, state.parentctxnode
+    ctx = repo[ctxnode]
     oldctx = repo[ha]
     if oldctx.parents()[0] == ctx:
         ui.debug('node %s unchanged\n' % ha[:12])
@@ -369,7 +370,8 @@ def pick(ui, state, ha, opts):
 
 
 def edit(ui, state, ha, opts):
-    repo, ctx = state.repo, state.parentctx
+    repo, ctxnode = state.repo, state.parentctxnode
+    ctx = repo[ctxnode]
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     applychanges(ui, repo, oldctx, opts)
@@ -383,7 +385,8 @@ def rollup(ui, state, ha, opts):
     return fold(ui, state, ha, rollupopts)
 
 def fold(ui, state, ha, opts):
-    repo, ctx = state.repo, state.parentctx
+    repo, ctxnode = state.repo, state.parentctxnode
+    ctx = repo[ctxnode]
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
@@ -439,12 +442,14 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     return repo[n], replacements
 
 def drop(ui, state, ha, opts):
-    repo, ctx = state.repo, state.parentctx
+    repo, ctxnode = state.repo, state.parentctxnode
+    ctx = repo[ctxnode]
     return ctx, [(repo[ha].node(), ())]
 
 
 def message(ui, state, ha, opts):
-    repo, ctx = state.repo, state.parentctx
+    repo, ctxnode = state.repo, state.parentctxnode
+    ctx = repo[ctxnode]
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
@@ -604,7 +609,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
         # check whether we should update away
         parentnodes = [c.node() for c in repo[None].parents()]
-        for n in leafs | set([state.parentctx.node()]):
+        for n in leafs | set([state.parentctxnode]):
             if n in parentnodes:
                 hg.clean(repo, state.topmost)
                 break
@@ -660,9 +665,9 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                  if l and not l.startswith('#')]
         rules = verifyrules(rules, repo, ctxs)
 
-        parentctx = repo[root].parents()[0]
+        parentctxnode = repo[root].parents()[0].node()
 
-        state.parentctx = parentctx
+        state.parentctxnode = parentctxnode
         state.rules = rules
         state.keep = keep
         state.topmost = topmost
@@ -673,11 +678,12 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         action, ha = state.rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha[:12]))
         actfunc = actiontable[action]
-        state.parentctx, replacement_ = actfunc(ui, state, ha, opts)
+        parentctx, replacement_ = actfunc(ui, state, ha, opts)
+        state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
     state.write()
 
-    hg.update(repo, state.parentctx.node())
+    hg.update(repo, state.parentctxnode)
 
     mapping, tmpnodes, created, ntm = processreplacement(state)
     if mapping:
@@ -730,7 +736,8 @@ def gatherchildren(repo, ctx):
     return newchildren
 
 def bootstrapcontinue(ui, state, opts):
-    repo, parentctx = state.repo, state.parentctx
+    repo, parentctxnode = state.repo, state.parentctxnode
+    parentctx = repo[parentctxnode]
     action, currentnode = state.rules.pop(0)
     ctx = repo[currentnode]
 
@@ -786,7 +793,7 @@ def bootstrapcontinue(ui, state, opts):
         # otherwise update "parentctx" before proceeding to further operation
         parentctx = repo[newchildren[-1]]
 
-    state.parentctx = parentctx
+    state.parentctxnode = parentctx.node()
     state.replacements.extend(replacements)
 
     return state
