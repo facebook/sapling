@@ -60,6 +60,10 @@ body {
   border: 0;
 }
 
+div.atom-logo {
+  margin-top: 10px;
+}
+
 .atom-logo img{
   width: 14px;
   height: 14px;

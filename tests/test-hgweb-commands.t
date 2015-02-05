@@ -726,7 +726,6 @@ Logs and changes
   <ul>
    <li><a href="/help">help</a></li>
   </ul>
-  <p></p>
   <div class="atom-logo">
   <a href="/atom-log" title="subscribe to atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
