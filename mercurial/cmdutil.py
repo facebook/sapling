@@ -1473,14 +1473,7 @@ def walkchangerevs(repo, match, opts, prepare):
     function on each context in the window in forward order.'''
 
     follow = opts.get('follow') or opts.get('follow_first')
-
-    if opts.get('rev'):
-        revs = scmutil.revrange(repo, opts.get('rev'))
-    elif follow:
-        revs = repo.revs('reverse(:.)')
-    else:
-        revs = revset.spanset(repo)
-        revs.reverse()
+    revs = _logrevs(repo, opts)
     if not revs:
         return []
     wanted = set()
