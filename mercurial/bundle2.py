@@ -590,6 +590,7 @@ class unbundle20(unpackermixin):
         while headerblock is not None:
             part = unbundlepart(self.ui, headerblock, self._fp)
             yield part
+            part.seek(0, 2)
             headerblock = self._readpartheader()
         self.ui.debug('end of bundle2 stream\n')
 
