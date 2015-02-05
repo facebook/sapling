@@ -607,6 +607,8 @@ class unbundle20(unpackermixin):
             return self._readexact(headersize)
         return None
 
+    def compressed(self):
+        return False
 
 class bundlepart(object):
     """A bundle2 part contains application level payload
