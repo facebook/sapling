@@ -1837,7 +1837,7 @@ def getgraphlogrevs(repo, pats, opts):
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
     else:
-        if follow and len(repo) > 0:
+        if follow:
             revs = repo.revs('reverse(:.)')
         else:
             revs = revset.spanset(repo)
