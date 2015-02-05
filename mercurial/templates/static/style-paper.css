@@ -108,6 +108,9 @@ a { text-decoration:none; }
 .minusline { color: #dc143c; } /* crimson */
 .atline { color: purple; }
 
+.diffstat-table {
+  margin-top: 1em;
+}
 .diffstat-file {
   white-space: nowrap;
   font-size: 90%;
