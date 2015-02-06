@@ -4478,6 +4478,10 @@ def log(ui, repo, *pats, **opts):
     Returns 0 on success.
 
     """
+    if opts.get('follow') and opts.get('rev'):
+        opts['rev'] = [revset.formatspec('reverse(::%lr)', opts.get('rev'))]
+        del opts['follow']
+
     if opts.get('graph'):
         return cmdutil.graphlog(ui, repo, *pats, **opts)
 

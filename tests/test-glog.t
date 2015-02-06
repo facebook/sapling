@@ -2202,13 +2202,6 @@ Test --follow and forward --rev
       (func
         ('symbol', 'rev')
         ('symbol', '6'))))
-  --- log.nodes	* (glob)
-  +++ glog.nodes	* (glob)
-  @@ -1,3 +1,3 @@
-  -nodetag 6
-   nodetag 8
-   nodetag 7
-  +nodetag 6
 
 Test --follow-first and forward --rev
 

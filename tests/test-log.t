@@ -631,7 +631,7 @@ log -f
   
 
 
-log -f -r 1:tip
+log -f -r '1 + 4'
 
   $ hg up -C 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -639,25 +639,24 @@ log -f -r 1:tip
   $ hg ci -Amb2 -d '1 0'
   adding b2
   created new head
-  $ hg log -f -r 1:tip
+  $ hg log -f -r '1 + 4'
+  changeset:   4:ddb82e70d1a1
+  tag:         tip
+  parent:      0:67e992f2c4f3
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     b2
+  
   changeset:   1:3d5bf5654eda
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     r1
   
-  changeset:   2:60c670bf5b30
+  changeset:   0:67e992f2c4f3
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     r2
+  summary:     base
   
-  changeset:   3:e62f78d544b4
-  parent:      1:3d5bf5654eda
-  user:        test
-  date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     b1
-  
-
-
 log -f -r null
 
   $ hg log -f -r null
@@ -1345,6 +1344,11 @@ Also check when maxrev < lastrevfilelog
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo, related
+  
+  changeset:   2:c4c64aedf0f7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add unrelated old foo
   
   $ cd ..
 
