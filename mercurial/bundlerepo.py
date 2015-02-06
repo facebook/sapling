@@ -216,7 +216,7 @@ class bundlerepository(localrepo.localrepository):
 
         self.tempfile = None
         f = util.posixfile(bundlename, "rb")
-        self.bundle = exchange.readbundle(ui, f, bundlename)
+        self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
         if self.bundle.compressed():
             fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un")
@@ -234,7 +234,9 @@ class bundlerepository(localrepo.localrepository):
                 fptemp.close()
 
             f = self.vfs.open(self.tempfile, mode="rb")
-            self.bundle = exchange.readbundle(ui, f, bundlename, self.vfs)
+            self.bundlefile = self.bundle = exchange.readbundle(ui, f,
+                                                                bundlename,
+                                                                self.vfs)
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
@@ -300,7 +302,7 @@ class bundlerepository(localrepo.localrepository):
 
     def close(self):
         """Close assigned bundle file immediately."""
-        self.bundle.close()
+        self.bundlefile.close()
         if self.tempfile is not None:
             self.vfs.unlink(self.tempfile)
         if self._tempparent:
