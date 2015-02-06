@@ -1233,8 +1233,18 @@ class revlog(object):
             if dfh:
                 dfh.flush()
             ifh.flush()
-            basetext = self.revision(self.node(cachedelta[0]))
-            btext[0] = mdiff.patch(basetext, cachedelta[1])
+            baserev = cachedelta[0]
+            delta = cachedelta[1]
+            # special case deltas which replace entire base; no need to decode
+            # base revision. this neatly avoids censored bases, which throw when
+            # they're decoded.
+            hlen = struct.calcsize(">lll")
+            if delta[:hlen] == mdiff.replacediffheader(self.rawsize(baserev),
+                                                       len(delta) - hlen):
+                btext[0] = delta[hlen:]
+            else:
+                basetext = self.revision(self.node(baserev))
+                btext[0] = mdiff.patch(basetext, delta)
             try:
                 self.checkhash(btext[0], p1, p2, node)
                 if flags & REVIDX_ISCENSORED:
