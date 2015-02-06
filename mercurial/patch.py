@@ -1776,7 +1776,6 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         flag2 = None
         content1 = None
         content2 = None
-        binary = False
         copyop = None
         if f not in addedset:
             content1 = getfilectx(f, ctx1).data()
@@ -1810,6 +1809,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 flag1 = ctx1.flags(f)
                 flag2 = ctx2.flags(f)
 
+        binary = False
+        if opts.git or losedatafn:
             binary = util.binary(content1) or util.binary(content2)
 
         if losedatafn and not opts.git:
