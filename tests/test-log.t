@@ -672,10 +672,17 @@ log -f -r null
   
 
 
+log -f with null parent
+
+  $ hg up -C null
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -f
+
+
 log -r .  with two parents
 
   $ hg up -C 3
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

@@ -82,6 +82,10 @@ follow
   port:1:2:+:eggs:export
   port:0:1:+:spam:import
 
+  $ hg up -q null
+  $ hg grep -f port
+  [1]
+
   $ cd ..
   $ hg init t2
   $ cd t2

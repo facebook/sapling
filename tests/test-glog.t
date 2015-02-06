@@ -1767,6 +1767,13 @@ Test --follow and multiple files
   nodetag 1
   nodetag 0
 
+Test --follow null parent
+
+  $ hg up -q null
+  $ testlog -f
+  []
+  []
+
 Test --follow-first
 
   $ hg up -q 3

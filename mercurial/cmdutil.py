@@ -1821,6 +1821,8 @@ def _logrevs(repo, opts):
     follow = opts.get('follow') or opts.get('follow_first')
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
+    elif follow and repo.dirstate.p1() == nullid:
+        revs = revset.baseset()
     elif follow:
         revs = repo.revs('reverse(:.)')
     else:
