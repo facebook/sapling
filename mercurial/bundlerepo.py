@@ -15,7 +15,7 @@ from node import nullid
 from i18n import _
 import os, tempfile, shutil
 import changegroup, util, mdiff, discovery, cmdutil, scmutil, exchange
-import localrepo, changelog, manifest, filelog, revlog, error, phases
+import localrepo, changelog, manifest, filelog, revlog, error, phases, bundle2
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundle, linkmapper):
@@ -237,6 +237,24 @@ class bundlerepository(localrepo.localrepository):
             self.bundlefile = self.bundle = exchange.readbundle(ui, f,
                                                                 bundlename,
                                                                 self.vfs)
+
+        if isinstance(self.bundle, bundle2.unbundle20):
+            cgparts = [part for part in self.bundle.iterparts()
+                       if (part.type == 'b2x:changegroup')
+                       and (part.params.get('version', '01')
+                            in changegroup.packermap)]
+
+            if not cgparts:
+                raise util.Abort('No changegroups found')
+            version = cgparts[0].params.get('version', '01')
+            cgparts = [p for p in cgparts
+                       if p.params.get('version', '01') == version]
+            if len(cgparts) > 1:
+                raise NotImplementedError("Can't process multiple changegroups")
+            part = cgparts[0]
+
+            part.seek(0)
+            self.bundle = changegroup.packermap[version][1](part, 'UN')
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
