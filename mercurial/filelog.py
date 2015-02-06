@@ -29,7 +29,7 @@ def packmeta(meta, text):
 
 def _censoredtext(text):
     m, offs = parsemeta(text)
-    return m and "censored" in m and not text[offs:]
+    return m and "censored" in m
 
 class filelog(revlog.revlog):
     def __init__(self, opener, path):
