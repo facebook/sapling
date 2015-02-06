@@ -201,6 +201,7 @@ should succeed, slashy names
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   
   <table class="bigtable">
+      <thead>
       <tr>
           <th><a href="?sort=name">Name</a></th>
           <th><a href="?sort=description">Description</a></th>
@@ -209,6 +210,7 @@ should succeed, slashy names
           <th>&nbsp;</th>
           <th>&nbsp;</th>
       </tr>
+      </thead>
       <tbody class="stripes2">
       
   <tr>
@@ -699,6 +701,7 @@ should succeed, slashy names
   <h2 class="breadcrumb"><a href="/">Mercurial</a> &gt; <a href="/t">t</a> </h2>
   
   <table class="bigtable">
+      <thead>
       <tr>
           <th><a href="?sort=name">Name</a></th>
           <th><a href="?sort=description">Description</a></th>
@@ -707,6 +710,7 @@ should succeed, slashy names
           <th>&nbsp;</th>
           <th>&nbsp;</th>
       </tr>
+      </thead>
       <tbody class="stripes2">
       
   <tr>
@@ -1128,6 +1132,7 @@ test inexistent and inaccessible repo should be ignored silently
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   
   <table class="bigtable">
+      <thead>
       <tr>
           <th><a href="?sort=name">Name</a></th>
           <th><a href="?sort=description">Description</a></th>
@@ -1136,6 +1141,7 @@ test inexistent and inaccessible repo should be ignored silently
           <th>&nbsp;</th>
           <th>&nbsp;</th>
       </tr>
+      </thead>
       <tbody class="stripes2">
       
       </tbody>

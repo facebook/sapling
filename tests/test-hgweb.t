@@ -272,11 +272,13 @@ try bad style
   </form>
   
   <table class="bigtable">
+  <thead>
   <tr>
     <th class="name">name</th>
     <th class="size">size</th>
     <th class="permissions">permissions</th>
   </tr>
+  </thead>
   <tbody class="stripes2">
   <tr class="fileline">
     <td class="name"><a href="/file/2ef0ac749a14/">[up]</a></td>

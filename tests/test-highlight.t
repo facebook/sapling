@@ -268,10 +268,12 @@ hgweb fileannotate, html
   
   <div class="overflow">
   <table class="bigtable">
+  <thead>
   <tr>
    <th class="annotate">rev</th>
    <th class="line">&nbsp;&nbsp;line source</th>
   </tr>
+  </thead>
   <tbody class="stripes2">
     
   <tr id="l1">

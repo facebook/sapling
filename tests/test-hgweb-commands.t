@@ -751,11 +751,13 @@ Logs and changes
   </div>
   
   <table class="bigtable">
+  <thead>
    <tr>
     <th class="age">age</th>
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
+  </thead>
   <tbody class="stripes2">
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
@@ -1010,11 +1012,13 @@ Logs and changes
   </div>
   
   <table class="bigtable">
+  <thead>
    <tr>
     <th class="age">age</th>
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
+  </thead>
   <tbody class="stripes2">
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
