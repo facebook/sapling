@@ -1403,6 +1403,17 @@ class revlog(object):
                                       _('unknown delta base'))
 
                 baserev = self.rev(deltabase)
+
+                if baserev != nullrev and self.iscensored(baserev):
+                    # if base is censored, delta must be full replacement in a
+                    # single patch operation
+                    hlen = struct.calcsize(">lll")
+                    oldlen = self.rawsize(baserev)
+                    newlen = len(delta) - hlen
+                    if delta[:hlen] != mdiff.replacediffheader(oldlen, newlen):
+                        raise error.CensoredBaseError(self.indexfile,
+                                                      self.node(baserev))
+
                 chain = self._addrevision(node, None, transaction, link,
                                           p1, p2, REVIDX_DEFAULT_FLAGS,
                                           (baserev, delta), ifh, dfh)

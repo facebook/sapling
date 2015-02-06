@@ -659,8 +659,11 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
         pr()
         fl = repo.file(f)
         o = len(fl)
-        if not fl.addgroup(source, revmap, trp):
-            raise util.Abort(_("received file revlog group is empty"))
+        try:
+            if not fl.addgroup(source, revmap, trp):
+                raise util.Abort(_("received file revlog group is empty"))
+        except error.CensoredBaseError, e:
+            raise util.Abort(_("received delta base is censored: %s") % e)
         revisions += len(fl) - o
         files += 1
         if f in needfiles:

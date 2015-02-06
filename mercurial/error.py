@@ -141,3 +141,11 @@ class CensoredNodeError(RevlogError):
     def __init__(self, filename, node):
         from node import short
         RevlogError.__init__(self, '%s:%s' % (filename, short(node)))
+
+class CensoredBaseError(RevlogError):
+    """error raised when a delta is rejected because its base is censored
+
+    A delta based on a censored revision must be formed as single patch
+    operation which replaces the entire base with new content. This ensures
+    the delta may be applied by clones which have not censored the base.
+    """
