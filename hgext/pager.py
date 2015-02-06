@@ -149,6 +149,8 @@ def uisetup(ui):
                     usepager = True
                     break
 
+        setattr(ui, 'pageractive', usepager)
+
         if usepager:
             ui.setconfig('ui', 'formatted', ui.formatted(), 'pager')
             ui.setconfig('ui', 'interactive', False, 'pager')
