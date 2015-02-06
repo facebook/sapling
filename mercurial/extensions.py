@@ -10,6 +10,7 @@ import util, cmdutil, error
 from i18n import _, gettext
 
 _extensions = {}
+_aftercallbacks = {}
 _order = []
 _ignore = ['hbisect', 'bookmarks', 'parentrevspec', 'interhg', 'inotify']
 
@@ -87,6 +88,8 @@ def load(ui, name, path):
             mod = importh(name)
     _extensions[shortname] = mod
     _order.append(shortname)
+    for fn in _aftercallbacks.get(shortname, []):
+        fn(loaded=True)
     return mod
 
 def loadall(ui):
@@ -122,6 +125,32 @@ def loadall(ui):
                 if extsetup.func_code.co_argcount != 0:
                     raise
                 extsetup() # old extsetup with no ui argument
+
+    # Call aftercallbacks that were never met.
+    for shortname in _aftercallbacks:
+        if shortname in _extensions:
+            continue
+
+        for fn in _aftercallbacks[shortname]:
+            fn(loaded=False)
+
+def afterloaded(extension, callback):
+    '''Run the specified function after a named extension is loaded.
+
+    If the named extension is already loaded, the callback will be called
+    immediately.
+
+    If the named extension never loads, the callback will be called after
+    all extensions have been loaded.
+
+    The callback receives the named argument ``loaded``, which is a boolean
+    indicating whether the dependent extension actually loaded.
+    '''
+
+    if extension in _extensions:
+        callback(loaded=False)
+    else:
+        _aftercallbacks.setdefault(extension, []).append(callback)
 
 def wrapcommand(table, command, wrapper):
     '''Wrap the command named `command' in table
