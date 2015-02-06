@@ -13,7 +13,7 @@ import errno
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
-    usebundle2 = (repo.ui.config('experimental', 'bundle2-exp') and
+    usebundle2 = (repo.ui.config('experimental', 'bundle2-exp', True) and
                   repo.ui.config('experimental', 'strip-bundle2-version'))
     if usebundle2:
         cgversion = repo.ui.config('experimental', 'strip-bundle2-version')

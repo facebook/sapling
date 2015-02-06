@@ -59,7 +59,7 @@ def _canusebundle2(op):
     """return true if a pull/push can use bundle2
 
     Feel free to nuke this function when we drop the experimental option"""
-    return (op.repo.ui.configbool('experimental', 'bundle2-exp', False)
+    return (op.repo.ui.configbool('experimental', 'bundle2-exp', True)
             and op.remote.capable('bundle2'))
 
 
