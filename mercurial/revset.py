@@ -527,7 +527,7 @@ def branch(repo, subset, x):
     import branchmap
     urepo = repo.unfiltered()
     ucl = urepo.changelog
-    getbi = branchmap.revbranchcache(urepo).branchinfo
+    getbi = branchmap.revbranchcache(urepo, readonly=True).branchinfo
 
     try:
         b = getstring(x, '')
