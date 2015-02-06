@@ -519,6 +519,17 @@ def mergebase(ui, repo, *args, **kwargs):
               "Learn more about revsets with 'hg help revsets'\n\n")
     ui.status(cmd, "\n")
 
+def mergetool(ui, repo, *args, **kwargs):
+    cmdoptions = []
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    cmd = Command("resolve")
+
+    if len(args) == 0:
+        cmd['--all'] = None
+    cmd.extend(args)
+    ui.status(cmd, "\n")
+
 def mv(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('f', 'force', None, ''),
@@ -851,6 +862,7 @@ gitcommands = {
     'ls-files': lsfiles,
     'merge': merge,
     'merge-base': mergebase,
+    'mergetool': mergetool,
     'mv': mv,
     'pull': pull,
     'push': push,
