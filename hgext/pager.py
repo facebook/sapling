@@ -159,7 +159,12 @@ def uisetup(ui):
             _runpager(ui, p)
         return orig(ui, options, cmd, cmdfunc)
 
-    extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
+    # Wrap dispatch._runcommand after color is loaded so color can see
+    # ui.pageractive. Otherwise, if we loaded first, color's wrapped
+    # dispatch._runcommand would run without having access to ui.pageractive.
+    def afterloaded(loaded):
+        extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
+    extensions.afterloaded('color', afterloaded)
 
 def extsetup(ui):
     commands.globalopts.append(
