@@ -531,10 +531,14 @@ class ui(object):
         if util.hasscheme(loc) or os.path.isdir(os.path.join(loc, '.hg')):
             return loc
 
-        path = self.config('paths', loc)
-        if not path and default is not None:
-            path = self.config('paths', default)
-        return path or loc
+        p = self.paths.getpath(loc, default=default)
+        if p:
+            return p.loc
+        return loc
+
+    @util.propertycache
+    def paths(self):
+        return paths(self)
 
     def pushbuffer(self, error=False):
         """install a buffer to capture standard output of the ui object
@@ -923,3 +927,48 @@ class ui(object):
         ui.write(ui.label(s, 'label')).
         '''
         return msg
+
+class paths(dict):
+    """Represents a collection of paths and their configs.
+
+    Data is initially derived from ui instances and the config files they have
+    loaded.
+    """
+    def __init__(self, ui):
+        dict.__init__(self)
+
+        for name, loc in ui.configitems('paths'):
+            # No location is the same as not existing.
+            if not loc:
+                continue
+            self[name] = path(name, rawloc=loc)
+
+    def getpath(self, name, default=None):
+        """Return a ``path`` for the specified name, falling back to a default.
+
+        Returns the first of ``name`` or ``default`` that is present, or None
+        if neither is present.
+        """
+        try:
+            return self[name]
+        except KeyError:
+            if default is not None:
+                try:
+                    return self[default]
+                except KeyError:
+                    pass
+
+        return None
+
+class path(object):
+    """Represents an individual path and its configuration."""
+
+    def __init__(self, name, rawloc=None):
+        """Construct a path from its config options.
+
+        ``name`` is the symbolic name of the path.
+        ``rawloc`` is the raw location, as defined in the config.
+        """
+        self.name = name
+        # We'll do more intelligent things with rawloc in the future.
+        self.loc = rawloc
