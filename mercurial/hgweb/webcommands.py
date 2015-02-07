@@ -986,6 +986,17 @@ def annotate(web, req, tmpl):
 
 @webcommand('filelog')
 def filelog(web, req, tmpl):
+    """
+    /filelog/{revision}/{path}
+    --------------------------
+
+    Show information about the history of a file in the repository.
+
+    The ``revcount`` query string argument can be defined to control the
+    maximum number of entries to show.
+
+    The ``filelog`` template will be rendered.
+    """
 
     try:
         fctx = webutil.filectx(web.repo, req)
