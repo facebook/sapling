@@ -48,3 +48,32 @@ In this example::
 
 The ``collections`` section is deprecated and has been superseded by
 ``paths``.
+
+URLs and Common Arguments
+=========================
+
+URLs under each repository have the form ``/{command}[/{arguments}]``
+where ``{command}`` represents the name of a command or handler and
+``{arguments}`` represents any number of additional URL parameters
+to that command.
+
+The web server has a default style associated with it. Styles map to
+a collection of named templates. Each template is used to render a
+specific piece of data, such as a changeset or diff.
+
+The style for the current request can be overwritten two ways. First,
+if ``{command}`` contains a hyphen (``-``), the text before the hyphen
+defines the style. For example, ``/atom-log`` will render the ``log``
+command handler with the ``atom`` style. The second way to set the
+style is with the ``style`` query string argument. For example,
+``/log?style=atom``. The hyphenated URL parameter is preferred.
+
+Not all templates are available for all styles. Attempting to use
+a style that doesn't have all templates defined may result in an error
+rendering the page.
+
+Many commands take a ``{revision}`` URL parameter. This defines the
+changeset to operate on. This is commonly specified as the short,
+12 digit hexidecimal abbreviation for the full 40 character unique
+revision identifier. However, any value described by
+:hg:`help revisions` typically works.
