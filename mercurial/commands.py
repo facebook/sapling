@@ -4826,19 +4826,20 @@ def paths(ui, repo, search=None):
     Returns 0 on success.
     """
     if search:
-        for name, path in ui.configitems("paths"):
+        for name, path in sorted(ui.paths.iteritems()):
             if name == search:
-                ui.status("%s\n" % util.hidepassword(path))
+                ui.status("%s\n" % util.hidepassword(path.loc))
                 return
         if not ui.quiet:
             ui.warn(_("not found!\n"))
         return 1
     else:
-        for name, path in ui.configitems("paths"):
+        for name, path in sorted(ui.paths.iteritems()):
             if ui.quiet:
                 ui.write("%s\n" % name)
             else:
-                ui.write("%s = %s\n" % (name, util.hidepassword(path)))
+                ui.write("%s = %s\n" % (name,
+                                        util.hidepassword(path.loc)))
 
 @command('phase',
     [('p', 'public', False, _('set changeset phase to public')),
