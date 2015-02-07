@@ -13,7 +13,6 @@ from mercurial import util
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod, patch
-from mercurial import help as helpmod
 from mercurial import scmutil
 from mercurial.i18n import _
 from mercurial.error import ParseError, RepoLookupError, Abort
@@ -1083,6 +1082,7 @@ def _getdoc(e):
 @webcommand('help')
 def help(web, req, tmpl):
     from mercurial import commands # avoid cycle
+    from mercurial import help as helpmod # avoid cycle
 
     topicname = req.form.get('node', [None])[0]
     if not topicname:
