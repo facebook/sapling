@@ -1159,6 +1159,22 @@ def static(web, req, tmpl):
 
 @webcommand('graph')
 def graph(web, req, tmpl):
+    """
+    /graph[/{revision}]
+    -------------------
+
+    Show information about the graphical topology of the repository.
+
+    Information rendered by this handler can be used to create visual
+    representations of repository topology.
+
+    The ``revision`` URL parameter controls the starting changeset.
+
+    The ``revcount`` query string argument can define the number of changesets
+    to show information for.
+
+    This handler will render the ``graph`` template.
+    """
 
     ctx = webutil.changectx(web.repo, req)
     rev = ctx.rev()
