@@ -1863,6 +1863,17 @@ class TestRunner(object):
                   'prefix': self._installdir, 'libdir': self._pythondir,
                   'bindir': self._bindir,
                   'nohome': nohome, 'logfile': installerrs})
+
+        # setuptools requires install directories to exist.
+        def makedirs(p):
+            try:
+                os.makedirs(p)
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+        makedirs(self._pythondir)
+        makedirs(self._bindir)
+
         vlog("# Running", cmd)
         if os.system(cmd) == 0:
             if not self.options.verbose:
