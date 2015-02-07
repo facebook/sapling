@@ -797,6 +797,17 @@ def summary(web, req, tmpl):
 
 @webcommand('filediff')
 def filediff(web, req, tmpl):
+    """
+    /diff/{revision}/{path}
+    -----------------------
+
+    Show how a file changed in a particular commit.
+
+    The ``filediff`` template is rendered.
+
+    This hander is registered under both the ``/diff`` and ``/filediff``
+    paths. ``/diff`` is used in modern code.
+    """
     fctx, ctx = None, None
     try:
         fctx = webutil.filectx(web.repo, req)
