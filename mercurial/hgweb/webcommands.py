@@ -19,21 +19,36 @@ from mercurial.i18n import _
 from mercurial.error import ParseError, RepoLookupError, Abort
 from mercurial import revset
 
-# __all__ is populated with the allowed commands. Be sure to add to it if
-# you're adding a new command, or the new command won't work.
+__all__ = []
 
-__all__ = [
-   'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
-   'manifest', 'tags', 'bookmarks', 'branches', 'summary', 'filediff', 'diff',
-   'comparison', 'annotate', 'filelog', 'archive', 'static', 'graph', 'help',
-]
+class webcommand(object):
+    """Decorator used to register a web command handler.
 
+    The decorator takes as its positional arguments the name/path the
+    command should be accessible under.
+
+    Usage:
+
+    @webcommand('mycommand')
+    def mycommand(web, req, tmpl):
+        pass
+    """
+
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(self, func):
+        __all__.append(self.name)
+        return func
+
+@webcommand('log')
 def log(web, req, tmpl):
     if 'file' in req.form and req.form['file'][0]:
         return filelog(web, req, tmpl)
     else:
         return changelog(web, req, tmpl)
 
+@webcommand('rawfile')
 def rawfile(web, req, tmpl):
     guessmime = web.configbool('web', 'guessmime', False)
 
@@ -98,6 +113,7 @@ def _filerevision(web, tmpl, fctx):
                 rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f))
 
+@webcommand('file')
 def file(web, req, tmpl):
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if not path:
@@ -267,6 +283,7 @@ def _search(web, req, tmpl):
                 modedesc=searchfunc[1],
                 showforcekw=showforcekw, showunforcekw=showunforcekw)
 
+@webcommand('changelog')
 def changelog(web, req, tmpl, shortlog=False):
 
     query = ''
@@ -326,9 +343,11 @@ def changelog(web, req, tmpl, shortlog=False):
                 archives=web.archivelist("tip"), revcount=revcount,
                 morevars=morevars, lessvars=lessvars, query=query)
 
+@webcommand('shortlog')
 def shortlog(web, req, tmpl):
     return changelog(web, req, tmpl, shortlog=True)
 
+@webcommand('changeset')
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     basectx = webutil.basechangectx(web.repo, req)
@@ -382,7 +401,7 @@ def changeset(web, req, tmpl):
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
-rev = changeset
+rev = webcommand('rev')(changeset)
 
 def decodepath(path):
     """Hook for mapping a path in the repository to a path in the
@@ -392,6 +411,7 @@ def decodepath(path):
     the virtual file system presented by the manifest command below."""
     return path
 
+@webcommand('manifest')
 def manifest(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
@@ -474,6 +494,7 @@ def manifest(web, req, tmpl):
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
+@webcommand('tags')
 def tags(web, req, tmpl):
     i = list(reversed(web.repo.tagslist()))
     parity = paritygen(web.stripecount)
@@ -496,6 +517,7 @@ def tags(web, req, tmpl):
                 entriesnotip=lambda **x: entries(True, False, **x),
                 latestentry=lambda **x: entries(True, True, **x))
 
+@webcommand('bookmarks')
 def bookmarks(web, req, tmpl):
     i = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
     parity = paritygen(web.stripecount)
@@ -516,6 +538,7 @@ def bookmarks(web, req, tmpl):
                 entries=lambda **x: entries(latestonly=False, **x),
                 latestentry=lambda **x: entries(latestonly=True, **x))
 
+@webcommand('branches')
 def branches(web, req, tmpl):
     tips = []
     heads = web.repo.heads()
@@ -547,6 +570,7 @@ def branches(web, req, tmpl):
                 entries=lambda **x: entries(0, **x),
                 latestentry=lambda **x: entries(1, **x))
 
+@webcommand('summary')
 def summary(web, req, tmpl):
     i = reversed(web.repo.tagslist())
 
@@ -632,6 +656,7 @@ def summary(web, req, tmpl):
                 node=tip.hex(),
                 archives=web.archivelist("tip"))
 
+@webcommand('filediff')
 def filediff(web, req, tmpl):
     fctx, ctx = None, None
     try:
@@ -672,8 +697,9 @@ def filediff(web, req, tmpl):
                 child=webutil.children(ctx),
                 diff=diffs)
 
-diff = filediff
+diff = webcommand('diff')(filediff)
 
+@webcommand('comparison')
 def comparison(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
     if 'file' not in req.form:
@@ -732,6 +758,7 @@ def comparison(web, req, tmpl):
                 rightnode=hex(rightnode),
                 comparison=comparison)
 
+@webcommand('annotate')
 def annotate(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
@@ -784,6 +811,7 @@ def annotate(web, req, tmpl):
                 child=webutil.children(fctx),
                 permissions=fctx.manifest().flags(f))
 
+@webcommand('filelog')
 def filelog(web, req, tmpl):
 
     try:
@@ -862,6 +890,7 @@ def filelog(web, req, tmpl):
                 latestentry=latestentry,
                 revcount=revcount, morevars=morevars, lessvars=lessvars)
 
+@webcommand('archive')
 def archive(web, req, tmpl):
     type_ = req.form.get('type', [None])[0]
     allowed = web.configlist("web", "allow_archive")
@@ -911,6 +940,7 @@ def archive(web, req, tmpl):
     return []
 
 
+@webcommand('static')
 def static(web, req, tmpl):
     fname = req.form['file'][0]
     # a repo owner may set web.static in .hg/hgrc to get any file
@@ -924,6 +954,7 @@ def static(web, req, tmpl):
     staticfile(static, fname, req)
     return []
 
+@webcommand('graph')
 def graph(web, req, tmpl):
 
     ctx = webutil.changectx(web.repo, req)
@@ -1047,6 +1078,7 @@ def _getdoc(e):
         doc = _('(no help text available)')
     return doc
 
+@webcommand('help')
 def help(web, req, tmpl):
     from mercurial import commands # avoid cycle
 
