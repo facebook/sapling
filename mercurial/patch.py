@@ -1804,18 +1804,18 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             ctx1, modified, added, removed, copy, opts):
         content1 = None
         content2 = None
-        if f1:
-            content1 = getfilectx(f1, ctx1).data()
-        if f2:
-            content2 = getfilectx(f2, ctx2).data()
         flag1 = None
         flag2 = None
+        if f1:
+            content1 = getfilectx(f1, ctx1).data()
+            if opts.git or losedatafn:
+                flag1 = ctx1.flags(f1)
+        if f2:
+            content2 = getfilectx(f2, ctx2).data()
+            if opts.git or losedatafn:
+                flag2 = ctx2.flags(f2)
         binary = False
         if opts.git or losedatafn:
-            if f1:
-                flag1 = ctx1.flags(f1)
-            if f2:
-                flag2 = ctx2.flags(f2)
             binary = util.binary(content1) or util.binary(content2)
 
         if losedatafn and not opts.git:
