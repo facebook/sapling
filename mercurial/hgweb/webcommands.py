@@ -851,6 +851,21 @@ diff = webcommand('diff')(filediff)
 
 @webcommand('comparison')
 def comparison(web, req, tmpl):
+    """
+    /comparison/{revision}/{path}
+    -----------------------------
+
+    Show a comparison between the old and new versions of a file from changes
+    made on a particular revision.
+
+    This is similar to the ``diff`` handler. However, this form features
+    a split or side-by-side diff rather than a unified diff.
+
+    The ``context`` query string argument can be used to control the lines of
+    context in the diff.
+
+    The ``filecomparison`` template is rendered.
+    """
     ctx = webutil.changectx(web.repo, req)
     if 'file' not in req.form:
         raise ErrorResponse(HTTP_NOT_FOUND, 'file not given')
