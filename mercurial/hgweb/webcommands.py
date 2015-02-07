@@ -131,6 +131,24 @@ def _filerevision(web, tmpl, fctx):
 
 @webcommand('file')
 def file(web, req, tmpl):
+    """
+    /file/{revision}[/{path}]
+    -------------------------
+
+    Show information about a directory or file in the repository.
+
+    Info about the ``path`` given as a URL parameter will be rendered.
+
+    If ``path`` is a directory, information about the entries in that
+    directory will be rendered. This form is equivalent to the ``manifest``
+    handler.
+
+    If ``path`` is a file, information about that file will be shown via
+    the ``filerevision`` template.
+
+    If ``path`` is not defined, information about the root directory will
+    be rendered.
+    """
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if not path:
         return manifest(web, req, tmpl)
