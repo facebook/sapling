@@ -1076,6 +1076,25 @@ def filelog(web, req, tmpl):
 
 @webcommand('archive')
 def archive(web, req, tmpl):
+    """
+    /archive/{revision}.{format}[/{path}]
+    -------------------------------------
+
+    Obtain an archive of repository content.
+
+    The content and type of the archive is defined by a URL path parameter.
+    ``format`` is the file extension of the archive type to be generated. e.g.
+    ``zip`` or ``tar.bz2``. Not all archive types may be allowed by your
+    server configuration.
+
+    The optional ``path`` URL parameter controls content to include in the
+    archive. If omitted, every file in the specified revision is present in the
+    archive. If included, only the specified file or contents of the specified
+    directory will be included in the archive.
+
+    No template is used for this handler. Raw, binary content is generated.
+    """
+
     type_ = req.form.get('type', [None])[0]
     allowed = web.configlist("web", "allow_archive")
     key = req.form['node'][0]
