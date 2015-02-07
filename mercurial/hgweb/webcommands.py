@@ -520,6 +520,16 @@ def tags(web, req, tmpl):
 
 @webcommand('bookmarks')
 def bookmarks(web, req, tmpl):
+    """
+    /bookmarks
+    ----------
+
+    Show information about bookmarks.
+
+    No arguments are accepted.
+
+    The ``bookmarks`` template is rendered.
+    """
     i = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
     parity = paritygen(web.stripecount)
 
