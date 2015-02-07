@@ -925,6 +925,14 @@ def comparison(web, req, tmpl):
 
 @webcommand('annotate')
 def annotate(web, req, tmpl):
+    """
+    /annotate/{revision}/{path}
+    ---------------------------
+
+    Show changeset information for each line in a file.
+
+    The ``fileannotate`` template is rendered.
+    """
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
     parity = paritygen(web.stripecount)
