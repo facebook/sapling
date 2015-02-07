@@ -11,6 +11,7 @@ import error
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
 import encoding, util, minirst
 import cmdutil
+import hgweb.webcommands as webcommands
 
 def listexts(header, exts, indent=1, showdeprecated=False):
     '''return a text listing of the given extensions'''
@@ -202,6 +203,7 @@ addtopicsymbols('merge-tools', '.. internaltoolsmarker', filemerge.internals)
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.dockeywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
+addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands)
 
 def help_(ui, name, unknowncmd=False, full=True, **opts):
     '''

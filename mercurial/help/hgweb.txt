@@ -77,3 +77,10 @@ changeset to operate on. This is commonly specified as the short,
 12 digit hexidecimal abbreviation for the full 40 character unique
 revision identifier. However, any value described by
 :hg:`help revisions` typically works.
+
+Commands and URLs
+=================
+
+The following web commands and their URLs are available:
+
+  .. webcommandsmarker
