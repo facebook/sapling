@@ -541,6 +541,18 @@ def bookmarks(web, req, tmpl):
 
 @webcommand('branches')
 def branches(web, req, tmpl):
+    """
+    /branches
+    ---------
+
+    Show information about branches.
+
+    All known branches are contained in the output, even closed branches.
+
+    No arguments are accepted.
+
+    The ``branches`` template is rendered.
+    """
     tips = []
     heads = web.repo.heads()
     parity = paritygen(web.stripecount)
