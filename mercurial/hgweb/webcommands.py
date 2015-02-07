@@ -319,6 +319,29 @@ def _search(web, req, tmpl):
 
 @webcommand('changelog')
 def changelog(web, req, tmpl, shortlog=False):
+    """
+    /changelog[/{revision}]
+    -----------------------
+
+    Show information about multiple changesets.
+
+    If the optional ``revision`` URL argument is absent, information about
+    all changesets starting at ``tip`` will be rendered. If the ``revision``
+    argument is present, changesets will be shown starting from the specified
+    revision.
+
+    If ``revision`` is absent, the ``rev`` query string argument may be
+    defined. This will perform a search for changesets.
+
+    The argument for ``rev`` can be a single revision, a revision set,
+    or a literal keyword to search for in changeset data (equivalent to
+    :hg:`log -k`.
+
+    The ``revcount`` query string argument defines the maximum numbers of
+    changesets to render.
+
+    For non-searches, the ``changelog`` template will be rendered.
+    """
 
     query = ''
     if 'node' in req.form:
