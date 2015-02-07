@@ -44,6 +44,21 @@ class webcommand(object):
 
 @webcommand('log')
 def log(web, req, tmpl):
+    """
+    /log[/{revision}[/{path}]]
+    --------------------------
+
+    Show repository or file history.
+
+    For URLs of the form ``/log/{revision}``, a list of changesets starting at
+    the specified changeset identifier is shown. If ``{revision}`` is not
+    defined, the default is ``tip``. This form is equivalent to the
+    ``changelog`` handler.
+
+    For URLs of the form ``/log/{revision}/{file}``, the history for a specific
+    file will be shown. This form is equivalent to the ``filelog`` handler.
+    """
+
     if 'file' in req.form and req.form['file'][0]:
         return filelog(web, req, tmpl)
     else:
