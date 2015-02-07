@@ -1870,7 +1870,7 @@ class TestRunner(object):
         else:
             f = open(installerrs, 'rb')
             for line in f:
-                print line
+                sys.stdout.write(line)
             f.close()
             sys.exit(1)
         os.chdir(self._testdir)
