@@ -1290,7 +1290,7 @@ class gitsubrepo(abstractsubrepo):
         return retdata, p.returncode
 
     def _gitmissing(self):
-        return not os.path.exists(os.path.join(self._abspath, '.git'))
+        return not self.wvfs.exists('.git')
 
     def _gitstate(self):
         return self._gitcommand(['rev-parse', 'HEAD'])
@@ -1804,8 +1804,7 @@ class gitsubrepo(abstractsubrepo):
                 bakname = "%s.orig" % name
                 self.ui.note(_('saving current version of %s as %s\n') %
                         (name, bakname))
-                util.rename(os.path.join(self._abspath, name),
-                            os.path.join(self._abspath, bakname))
+                self.wvfs.rename(name, bakname)
 
         if not opts.get('dry_run'):
             self.get(substate, overwrite=True)
