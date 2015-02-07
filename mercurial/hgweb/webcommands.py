@@ -700,6 +700,17 @@ def branches(web, req, tmpl):
 
 @webcommand('summary')
 def summary(web, req, tmpl):
+    """
+    /summary
+    --------
+
+    Show a summary of repository state.
+
+    Information about the latest changesets, bookmarks, tags, and branches
+    is captured by this handler.
+
+    The ``summary`` template is rendered.
+    """
     i = reversed(web.repo.tagslist())
 
     def tagentries(**map):
