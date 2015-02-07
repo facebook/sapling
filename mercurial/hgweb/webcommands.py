@@ -494,6 +494,21 @@ def decodepath(path):
 
 @webcommand('manifest')
 def manifest(web, req, tmpl):
+    """
+    /manifest[/{revision}[/{path}]]
+    -------------------------------
+
+    Show information about a directory.
+
+    If the URL path arguments are defined, information about the root
+    directory for the ``tip`` changeset will be shown.
+
+    Because this handler can only show information for directories, it
+    is recommended to use the ``file`` handler instead, as it can handle both
+    directories and files.
+
+    The ``manifest`` template will be rendered for this handler.
+    """
     ctx = webutil.changectx(web.repo, req)
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     mf = ctx.manifest()
