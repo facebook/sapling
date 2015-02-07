@@ -1081,6 +1081,19 @@ def _getdoc(e):
 
 @webcommand('help')
 def help(web, req, tmpl):
+    """
+    /help[/{topic}]
+    ---------------
+
+    Render help documentation.
+
+    This web command is roughly equivalent to :hg:`help`. If a ``topic``
+    is defined, that help topic will be rendered. If not, an index of
+    available help topics will be rendered.
+
+    The ``help`` template will be rendered when requesting help for a topic.
+    ``helptopics`` will be rendered for the index of help topics.
+    """
     from mercurial import commands # avoid cycle
     from mercurial import help as helpmod # avoid cycle
 
