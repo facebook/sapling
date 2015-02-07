@@ -497,6 +497,16 @@ def manifest(web, req, tmpl):
 
 @webcommand('tags')
 def tags(web, req, tmpl):
+    """
+    /tags
+    -----
+
+    Show information about tags.
+
+    No arguments are accepted.
+
+    The ``tags`` template is rendered.
+    """
     i = list(reversed(web.repo.tagslist()))
     parity = paritygen(web.stripecount)
 
