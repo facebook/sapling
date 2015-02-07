@@ -346,6 +346,16 @@ def changelog(web, req, tmpl, shortlog=False):
 
 @webcommand('shortlog')
 def shortlog(web, req, tmpl):
+    """
+    /shortlog
+    ---------
+
+    Show basic information about a set of changesets.
+
+    This accepts the same parameters as the ``changelog`` handler. The only
+    difference is the ``shortlog`` template will be rendered instead of the
+    ``changelog`` template.
+    """
     return changelog(web, req, tmpl, shortlog=True)
 
 @webcommand('changeset')
