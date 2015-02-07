@@ -20,6 +20,7 @@ from mercurial.error import ParseError, RepoLookupError, Abort
 from mercurial import revset
 
 __all__ = []
+commands = {}
 
 class webcommand(object):
     """Decorator used to register a web command handler.
@@ -39,6 +40,7 @@ class webcommand(object):
 
     def __call__(self, func):
         __all__.append(self.name)
+        commands[self.name] = func
         return func
 
 @webcommand('log')
