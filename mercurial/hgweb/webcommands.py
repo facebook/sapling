@@ -350,6 +350,20 @@ def shortlog(web, req, tmpl):
 
 @webcommand('changeset')
 def changeset(web, req, tmpl):
+    """
+    /changeset[/{revision}]
+    -----------------------
+
+    Show information about a single changeset.
+
+    A URL path argument is the changeset identifier to show. See ``hg help
+    revisions`` for possible values. If not defined, the ``tip`` changeset
+    will be shown.
+
+    The ``changeset`` template is rendered. Contents of the ``changesettag``,
+    ``changesetbookmark``, ``filenodelink``, ``filenolink``, and the many
+    templates related to diffs may all be used to produce the output.
+    """
     ctx = webutil.changectx(web.repo, req)
     basectx = webutil.basechangectx(web.repo, req)
     if basectx is None:
