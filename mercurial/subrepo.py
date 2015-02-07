@@ -626,6 +626,7 @@ class hgsubrepo(abstractsubrepo):
                            os.path.join(prefix, self._path), explicitonly,
                            **opts)
 
+    @annotatesubrepoerror
     def addremove(self, m, prefix, opts, dry_run, similarity):
         # In the same way as sub directories are processed, once in a subrepo,
         # always entry any of its subrepos.  Don't corrupt the options that will
