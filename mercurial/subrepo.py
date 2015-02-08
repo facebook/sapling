@@ -878,9 +878,6 @@ class hgsubrepo(abstractsubrepo):
             opts['date'] = None
             opts['rev'] = substate[1]
 
-            pats = []
-            if not opts.get('all'):
-                pats = ['set:modified()']
             self.filerevert(*pats, **opts)
 
         # Update the repo to the revision specified in the given substate
