@@ -362,6 +362,14 @@ Test update with subrepos.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -S
 
+  $ hg forget -v subrepo/large.txt
+  removing subrepo/large.txt (glob)
+
+Test reverting a forgotten file
+  $ hg revert -R subrepo subrepo/large.txt
+  $ hg status -SA subrepo/large.txt
+  C subrepo/large.txt
+
   $ hg rm -v subrepo/large.txt
   removing subrepo/large.txt (glob)
   $ hg revert -R subrepo subrepo/large.txt

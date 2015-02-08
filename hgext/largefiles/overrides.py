@@ -716,10 +716,17 @@ def overriderevert(orig, ui, repo, *pats, **opts):
                 default='relpath'):
             match = oldmatch(ctx, pats, opts, globbed, default)
             m = copy.copy(match)
+
+            # revert supports recursing into subrepos, and though largefiles
+            # currently doesn't work correctly in that case, this match is
+            # called, so the lfdirstate above may not be the correct one for
+            # this invocation of match.
+            lfdirstate = lfutil.openlfdirstate(ctx._repo.ui, ctx._repo)
+
             def tostandin(f):
                 if lfutil.standin(f) in ctx:
                     return lfutil.standin(f)
-                elif lfutil.standin(f) in repo[None]:
+                elif lfutil.standin(f) in repo[None] or lfdirstate[f] == 'r':
                     return None
                 return f
             m._files = [tostandin(f) for f in m._files]
