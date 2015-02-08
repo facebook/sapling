@@ -884,7 +884,8 @@ class hgsubrepo(abstractsubrepo):
             self.filerevert(*pats, **opts)
 
         # Update the repo to the revision specified in the given substate
-        self.get(substate, overwrite=True)
+        if not opts.get('dry_run'):
+            self.get(substate, overwrite=True)
 
     def filerevert(self, *pats, **opts):
         ctx = self._repo[opts['rev']]
@@ -1693,7 +1694,8 @@ class gitsubrepo(abstractsubrepo):
                 util.rename(os.path.join(self._abspath, name),
                             os.path.join(self._abspath, bakname))
 
-        self.get(substate, overwrite=True)
+        if not opts.get('dry_run'):
+            self.get(substate, overwrite=True)
         return []
 
     def shortid(self, revid):

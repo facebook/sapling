@@ -2783,14 +2783,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
             _performrevert(repo, parents, ctx, actions)
 
-            # get the list of subrepos that must be reverted
-            subrepomatch = scmutil.match(ctx, pats, opts)
-            targetsubs = sorted(s for s in ctx.substate if subrepomatch(s))
+        # get the list of subrepos that must be reverted
+        subrepomatch = scmutil.match(ctx, pats, opts)
+        targetsubs = sorted(s for s in ctx.substate if subrepomatch(s))
 
-            if targetsubs:
-                # Revert the subrepos on the revert list
-                for sub in targetsubs:
-                    ctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
+        if targetsubs:
+            # Revert the subrepos on the revert list
+            for sub in targetsubs:
+                ctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
     finally:
         wlock.release()
 
