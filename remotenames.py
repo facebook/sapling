@@ -213,6 +213,9 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
         fm = ui.formatter('bookmarks', opts)
 
+        # it seems overkill to hide displaying hidden remote bookmarks
+        repo = repo.unfiltered()
+
         for name in sorted(ns.listnames(repo)):
             node = ns.nodes(repo, name)[0]
             rev = repo.changelog.rev(node)
