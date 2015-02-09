@@ -1140,3 +1140,27 @@ disabling in command line overlays with all configuration
   C sub3/3
 
   $ cd ..
+
+Test synopsis and docstring extending
+
+  $ hg init exthelp
+  $ cat > exthelp.py <<EOF
+  > from mercurial import commands, extensions
+  > def exbookmarks(orig, *args, **opts):
+  >     return orig(*args, **opts)
+  > def uisetup(ui):
+  >     synopsis = ' GREPME [--foo] [-x]'
+  >     docstring = '''
+  >     GREPME make sure that this is in the help!
+  >     '''
+  >     extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks,
+  >                            synopsis, docstring)
+  > EOF
+  $ abspath=`pwd`/exthelp.py
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "exthelp = $abspath" >> $HGRCPATH
+  $ cd exthelp
+  $ hg help bookmarks | grep GREPME
+  hg bookmarks [OPTIONS]... [NAME]... GREPME [--foo] [-x]
+      GREPME make sure that this is in the help!
+

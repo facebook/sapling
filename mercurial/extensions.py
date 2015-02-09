@@ -152,7 +152,7 @@ def afterloaded(extension, callback):
     else:
         _aftercallbacks.setdefault(extension, []).append(callback)
 
-def wrapcommand(table, command, wrapper):
+def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
     '''Wrap the command named `command' in table
 
     Replace command in the command table with wrapper. The wrapped command will
@@ -164,6 +164,22 @@ def wrapcommand(table, command, wrapper):
 
     where orig is the original (wrapped) function, and *args, **kwargs
     are the arguments passed to it.
+
+    Optionally append to the command synopsis and docstring, used for help.
+    For example, if your extension wraps the ``bookmarks`` command to add the
+    flags ``--remote`` and ``--all`` you might call this function like so:
+
+      synopsis = ' [-a] [--remote]'
+      docstring = """
+
+      The ``remotenames`` extension adds the ``--remote`` and ``--all`` (``-a``)
+      flags to the bookmarks command. Either flag will show the remote bookmarks
+      known to the repository; ``--remote`` will also supress the output of the
+      local bookmarks.
+      """
+
+      extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks,
+                             synopsis, docstring)
     '''
     assert callable(wrapper)
     aliases, entry = cmdutil.findcmd(command, table)
@@ -177,11 +193,17 @@ def wrapcommand(table, command, wrapper):
         return util.checksignature(wrapper)(
             util.checksignature(origfn), *args, **kwargs)
 
-    wrap.__doc__ = getattr(origfn, '__doc__')
     wrap.__module__ = getattr(origfn, '__module__')
+
+    doc = getattr(origfn, '__doc__')
+    if docstring is not None:
+        doc += docstring
+    wrap.__doc__ = doc
 
     newentry = list(entry)
     newentry[0] = wrap
+    if synopsis is not None:
+        newentry[2] += synopsis
     table[key] = tuple(newentry)
     return entry
 
