@@ -184,8 +184,13 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         assert revpath.startswith(subdir), ('That does not look like the '
                                             'right location in the repo.')
 
+        # meta.layout is a config-cached property so instead of testing for
+        # None we test to see if the layout is 'auto' and, if so, try to guess
+        # the layout based on the commits (where subdir is compared to the
+        # revpath extracted from the commit)
         if meta.layout == 'auto':
-            meta.layout = meta.layout_from_commit(subdir, revpath, ctx.branch())
+            meta.layout = meta.layout_from_commit(subdir, revpath,
+                                                  ctx.branch())
         elif meta.layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
                                                 ' defect in replay')
