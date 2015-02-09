@@ -193,7 +193,7 @@ class SVNMeta(object):
                 remotepath = layoutobj.remotepath(branch, subdir)
             except KeyError:
                 continue
-            if  remotepath == revpath:
+            if remotepath == revpath:
                 candidates.add(layout)
 
         if len(candidates) == 1:
@@ -204,7 +204,6 @@ class SVNMeta(object):
                 return config_layout
 
         return 'standard'
-
 
     @property
     def layout_file(self):
