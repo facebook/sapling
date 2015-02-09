@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import gettext, _
-import itertools, os
+import itertools, os, textwrap
 import error
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
 import encoding, util, minirst
@@ -172,7 +172,7 @@ helphooks = {}
 def addtopichook(topic, rewriter):
     helphooks.setdefault(topic, []).append(rewriter)
 
-def makeitemsdoc(topic, doc, marker, items):
+def makeitemsdoc(topic, doc, marker, items, dedent=False):
     """Extract docstring from the items key to function mapping, build a
     .single documentation block and use it to overwrite the marker in doc
     """
@@ -182,20 +182,25 @@ def makeitemsdoc(topic, doc, marker, items):
         if not text:
             continue
         text = gettext(text)
+        if dedent:
+            text = textwrap.dedent(text)
         lines = text.splitlines()
         doclines = [(lines[0])]
         for l in lines[1:]:
             # Stop once we find some Python doctest
             if l.strip().startswith('>>>'):
                 break
-            doclines.append('  ' + l.strip())
+            if dedent:
+                doclines.append(l.rstrip())
+            else:
+                doclines.append('  ' + l.strip())
         entries.append('\n'.join(doclines))
     entries = '\n\n'.join(entries)
     return doc.replace(marker, entries)
 
-def addtopicsymbols(topic, marker, symbols):
+def addtopicsymbols(topic, marker, symbols, dedent=False):
     def add(topic, doc):
-        return makeitemsdoc(topic, doc, marker, symbols)
+        return makeitemsdoc(topic, doc, marker, symbols, dedent=dedent)
     addtopichook(topic, add)
 
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
@@ -203,7 +208,8 @@ addtopicsymbols('merge-tools', '.. internaltoolsmarker', filemerge.internals)
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.dockeywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
-addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands)
+addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands,
+                dedent=True)
 
 def help_(ui, name, unknowncmd=False, full=True, **opts):
     '''
