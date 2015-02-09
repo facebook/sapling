@@ -218,7 +218,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
         for name in sorted(ns.listnames(repo)):
             node = ns.nodes(repo, name)[0]
-            rev = repo.changelog.rev(node)
+            ctx = repo[node]
             fm.startitem()
 
             if not ui.quiet:
@@ -227,9 +227,12 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             padsize = max(25 - encoding.colwidth(name), 0)
             fmt = ' ' * padsize + ' %d:%s'
 
+            tmplabel = label
+            if ctx.obsolete():
+                tmplabel = tmplabel + ' changeset.obsolete'
             fm.write(color, '%s', name, label=label)
-            fm.condwrite(not ui.quiet, 'rev node', fmt, rev,
-                         fm.hexfunc(node), label=label)
+            fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
+                         fm.hexfunc(node), label=tmplabel)
             fm.plain('\n')
 
 def activepath(ui, remote):
