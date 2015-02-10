@@ -1,4 +1,5 @@
 import os
+import errno
 
 from mercurial import commands
 from mercurial import encoding
@@ -106,7 +107,17 @@ def exclone(orig, ui, *args, **opts):
 
     if not ui.configbool('remotenames', 'syncbookmarks', False):
         ui.status('remotenames: removing cloned bookmarks\n')
-        dstpeer.local().vfs.unlink('bookmarks')
+        repo = dstpeer.local()
+        wlock = repo.wlock()
+        try:
+            try:
+                repo.vfs.unlink('bookmarks')
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+        finally:
+            wlock.release()
+
     return (srcpeer, dstpeer)
 
 extensions.wrapfunction(exchange, 'push', expush)
