@@ -132,10 +132,16 @@ def exupdate(orig, repo, *args, **opts):
     writedistance(repo)
     return res
 
+def exsetcurrent(orig, repo, mark):
+    res = orig(repo, mark)
+    writedistance(repo)
+    return res
+
 extensions.wrapfunction(exchange, 'push', expush)
 extensions.wrapfunction(exchange, 'pull', expull)
 extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
 extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
+extensions.wrapfunction(bookmarks, 'setcurrent', exsetcurrent)
 extensions.wrapfunction(hg, 'clone', exclone)
 extensions.wrapfunction(hg, 'updaterepo', exupdate)
 extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
