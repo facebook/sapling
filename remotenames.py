@@ -43,6 +43,7 @@ def expush(orig, repo, remote, *args, **kwargs):
                 for branch, nodes in remote.branchmap().iteritems():
                     bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
                 saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
+                writedistance(repo)
         except Exception, e:
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
