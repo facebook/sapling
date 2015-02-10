@@ -21,6 +21,8 @@ def _toollist(ui, tool, part, default=[]):
     return ui.configlist("merge-tools", tool + "." + part, default)
 
 internals = {}
+# Merge tools to document.
+internalsdoc = {}
 
 def internaltool(name, trymerge, onfailure=None):
     '''return a decorator for populating internal merge tool table'''
@@ -29,6 +31,7 @@ def internaltool(name, trymerge, onfailure=None):
         func.__doc__ = "``%s``\n" % fullname + func.__doc__.strip()
         internals[fullname] = func
         internals['internal:' + name] = func
+        internalsdoc[fullname] = func
         func.trymerge = trymerge
         func.onfailure = onfailure
         return func

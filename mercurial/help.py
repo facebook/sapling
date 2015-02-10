@@ -204,7 +204,8 @@ def addtopicsymbols(topic, marker, symbols, dedent=False):
     addtopichook(topic, add)
 
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
-addtopicsymbols('merge-tools', '.. internaltoolsmarker', filemerge.internals)
+addtopicsymbols('merge-tools', '.. internaltoolsmarker',
+                filemerge.internalsdoc)
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.dockeywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
