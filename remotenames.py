@@ -134,15 +134,6 @@ def exsetcurrent(orig, repo, mark):
     writedistance(repo)
     return res
 
-extensions.wrapfunction(exchange, 'push', expush)
-extensions.wrapfunction(exchange, 'pull', expull)
-extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
-extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
-extensions.wrapfunction(bookmarks, 'setcurrent', exsetcurrent)
-extensions.wrapfunction(hg, 'clone', exclone)
-extensions.wrapfunction(hg, 'updaterepo', exupdate)
-extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
-
 def reposetup(ui, repo):
     if not repo.local():
         return
@@ -170,6 +161,15 @@ def reposetup(ui, repo):
         repo.names.addnamespace(n)
 
 def extsetup(ui):
+    extensions.wrapfunction(exchange, 'push', expush)
+    extensions.wrapfunction(exchange, 'pull', expull)
+    extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
+    extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
+    extensions.wrapfunction(bookmarks, 'setcurrent', exsetcurrent)
+    extensions.wrapfunction(hg, 'clone', exclone)
+    extensions.wrapfunction(hg, 'updaterepo', exupdate)
+    extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
+
     entry = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
     entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
     entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
@@ -185,6 +185,8 @@ def extsetup(ui):
     entry[1].append(('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK'))
 
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
+
+    templatekw.keywords['remotenames'] = remotenameskw
 
 def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
@@ -669,4 +671,3 @@ def remotenameskw(**args):
     return templatekw.showlist('remotename', remotenames,
                                plural='remotenames', **args)
 
-templatekw.keywords['remotenames'] = remotenameskw
