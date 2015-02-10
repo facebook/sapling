@@ -1,6 +1,7 @@
 import os
 import errno
 
+from mercurial import bookmarks
 from mercurial import commands
 from mercurial import encoding
 from mercurial import error
@@ -17,7 +18,6 @@ from mercurial import url
 from mercurial import util
 from mercurial.node import hex
 from hgext import schemes
-from mercurial import bookmarks
 
 _remotenames = {
     "bookmarks": {},
