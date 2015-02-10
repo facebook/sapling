@@ -30,6 +30,7 @@ Continue testing
   $ hg clone alpha beta | $FILTERPWD
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  remotenames: removing cloned bookmarks
   $ cd beta
   $ hg book babar
   $ mkcommit d
@@ -57,6 +58,7 @@ Continue testing
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  remotenames: skipped syncing local bookmarks
   (run 'hg update' to get a working copy)
   $ hg pull beta | $FILTERPWD
   pulling from beta
@@ -65,7 +67,7 @@ Continue testing
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
-  adding remote bookmark babar
+  remotenames: skipped syncing local bookmarks
   (run 'hg update' to get a working copy)
   $ hg co -C default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -104,7 +106,6 @@ graph shows tags for the branch heads of each path
   | |  summary:     merged
   | |
   | o  changeset:   3:78f83396d79e
-  | |  bookmark:    babar
   | |  bookmark:    beta/babar
   | |  branch:      beta/default
   | |  parent:      1:7c3bad9141dc
@@ -134,7 +135,7 @@ graph shows tags for the branch heads of each path
 make sure we can list remote bookmarks with --all
 
   $ hg bookmarks --all
-     babar                     3:78f83396d79e
+  no bookmarks set
      beta/babar                3:78f83396d79e
 
   $ hg bookmarks --remote
@@ -229,7 +230,6 @@ but configured, it'll do the expected thing:
   | |  summary:     merged
   | |
   | o  changeset:   3:78f83396d79e
-  | |  bookmark:    babar
   | |  bookmark:    beta/babar
   | |  branch:      beta/default
   | |  parent:      1:7c3bad9141dc
