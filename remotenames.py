@@ -185,15 +185,18 @@ def exbranches(orig, ui, repo, *args, **opts):
                 revs.add(repo.changelog.rev(n))
 
         for r in sorted(revs, reverse=True):
-            n = repo[r].node()
-            for name in ns.names(repo, n):
+            ctx = repo[r]
+            for name in ns.names(repo, ctx.node()):
                 fm.startitem()
                 padsize = max(31 - len(str(r)) - encoding.colwidth(name), 0)
 
+                tmplabel = label
+                if ctx.obsolete():
+                    tmplabel = tmplabel + ' changeset.obsolete'
                 fm.write(ns.colorname, '%s', name, label=label)
                 fmt = ' ' * padsize + ' %d:%s'
                 fm.condwrite(not ui.quiet, 'rev node', fmt, r,
-                             fm.hexfunc(n), label=label)
+                             fm.hexfunc(ctx.node()), label=tmplabel)
                 fm.plain('\n')
         fm.end()
 
