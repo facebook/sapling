@@ -438,8 +438,10 @@ def distancefromremote(repo, remote="default"):
         return 0
 
     remoteb = joinremotename(remote, b)
-    distance = 0
+    if b == 'default' and repo.ui.configbool('remotenames', 'alias.default'):
+        remoteb = remote
 
+    distance = 0
     if remoteb in repo:
         rev1 = repo[remoteb].rev()
         rev2 = repo['.'].rev()
