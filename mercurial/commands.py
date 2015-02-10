@@ -1946,7 +1946,7 @@ def debugcomplete(ui, cmd='', **opts):
         ui.write("%s\n" % "\n".join(options))
         return
 
-    cmdlist = cmdutil.findpossible(cmd, table)
+    cmdlist, unused_allcmds = cmdutil.findpossible(cmd, table)
     if ui.verbose:
         cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))

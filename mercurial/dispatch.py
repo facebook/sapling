@@ -220,7 +220,15 @@ def _runcatch(req):
             # (but don't check for extensions themselves)
             commands.help_(ui, inst.args[0], unknowncmd=True)
         except error.UnknownCommand:
-            commands.help_(ui, 'shortlist')
+            suggested = False
+            if len(inst.args) == 2:
+                sim = _getsimilar(inst.args[1], inst.args[0])
+                if sim:
+                    ui.warn(_('(did you mean one of %s?)\n') %
+                            ', '.join(sorted(sim)))
+                    suggested = True
+            if not suggested:
+                commands.help_(ui, 'shortlist')
     except error.InterventionRequired, inst:
         ui.warn("%s\n" % inst)
         return 1

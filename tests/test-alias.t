@@ -360,9 +360,11 @@ shell alias defined in current repo
   sub
   $ hg --cwd .. subalias > /dev/null
   hg: unknown command 'subalias'
+  (did you mean one of idalias?)
   [255]
   $ hg -R .. subalias > /dev/null
   hg: unknown command 'subalias'
+  (did you mean one of idalias?)
   [255]
 
 
@@ -370,12 +372,18 @@ shell alias defined in other repo
 
   $ hg mainalias > /dev/null
   hg: unknown command 'mainalias'
+  (did you mean one of idalias?)
   [255]
   $ hg -R .. mainalias
   main
   $ hg --cwd .. mainalias
   main
 
+typos get useful suggestions
+  $ hg --cwd .. manalias
+  hg: unknown command 'manalias'
+  (did you mean one of idalias, mainalias, manifest?)
+  [255]
 
 shell aliases with escaped $ chars
 

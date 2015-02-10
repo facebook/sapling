@@ -34,8 +34,10 @@ def findpossible(cmd, table, strict=False):
     else:
         keys = table.keys()
 
+    allcmds = []
     for e in keys:
         aliases = parsealiases(e)
+        allcmds.extend(aliases)
         found = None
         if cmd in aliases:
             found = cmd
@@ -53,11 +55,11 @@ def findpossible(cmd, table, strict=False):
     if not choice and debugchoice:
         choice = debugchoice
 
-    return choice
+    return choice, allcmds
 
 def findcmd(cmd, table, strict=True):
     """Return (aliases, command table entry) for command string."""
-    choice = findpossible(cmd, table, strict)
+    choice, allcmds = findpossible(cmd, table, strict)
 
     if cmd in choice:
         return choice[cmd]
@@ -70,7 +72,7 @@ def findcmd(cmd, table, strict=True):
     if choice:
         return choice.values()[0]
 
-    raise error.UnknownCommand(cmd)
+    raise error.UnknownCommand(cmd, allcmds)
 
 def findrepo(p):
     while not os.path.isdir(os.path.join(p, ".hg")):

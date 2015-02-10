@@ -890,19 +890,19 @@ parentrevspec
 
 Bogus function gets suggestions
   $ log 'add()'
-  hg: parse error: not a function: add
+  hg: parse error: unknown identifier: add
   (did you mean 'adds'?)
   [255]
   $ log 'added()'
-  hg: parse error: not a function: added
+  hg: parse error: unknown identifier: added
   (did you mean 'adds'?)
   [255]
   $ log 'remo()'
-  hg: parse error: not a function: remo
+  hg: parse error: unknown identifier: remo
   (did you mean one of remote, removes?)
   [255]
   $ log 'babar()'
-  hg: parse error: not a function: babar
+  hg: parse error: unknown identifier: babar
   [255]
 
 multiple revspecs
@@ -1056,12 +1056,12 @@ far away.
     (range
       ('symbol', '2')
       ('symbol', '5')))
-  abort: failed to parse the definition of revset alias "injectparamasstring2": not a function: _aliasarg
+  abort: failed to parse the definition of revset alias "injectparamasstring2": unknown identifier: _aliasarg
   [255]
   $ hg debugrevspec --debug --config revsetalias.anotherbadone='branch(' "tip"
   ('symbol', 'tip')
   warning: failed to parse the definition of revset alias "anotherbadone": at 7: not a prefix: end
-  warning: failed to parse the definition of revset alias "injectparamasstring2": not a function: _aliasarg
+  warning: failed to parse the definition of revset alias "injectparamasstring2": unknown identifier: _aliasarg
   9
   >>> data = file('.hg/hgrc', 'rb').read()
   >>> file('.hg/hgrc', 'wb').write(data.replace('_aliasarg', ''))
