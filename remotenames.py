@@ -175,6 +175,9 @@ def exbranches(orig, ui, repo, *args, **opts):
         label = 'log.' + ns.colorname
         fm = ui.formatter('branches', opts)
 
+        # it seems overkill to hide displaying hidden remote branches
+        repo = repo.unfiltered()
+
         # create a sorted by descending rev list
         revs = set()
         for name in ns.listnames(repo):
