@@ -25,9 +25,6 @@ _remotenames = {
 }
 
 def expush(orig, repo, remote, *args, **kwargs):
-    # hack for pushing that turns off the dynamic blockerhook
-    repo.__setattr__('_hackremotenamepush', True)
-
     res = orig(repo, remote, *args, **kwargs)
     lock = repo.lock()
     try:
@@ -48,7 +45,6 @@ def expush(orig, repo, remote, *args, **kwargs):
             ui.debug('remote branches for path %s not saved: %s\n'
                      % (path, e))
     finally:
-        repo.__setattr__('_hackremotenamepush', False)
         lock.release()
         return res
 
@@ -75,10 +71,8 @@ def pullremotenames(repo, remote):
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
 
-    # protect un-hiding changesets behind a config knob
-    nohide = not repo.ui.configbool('remotenames', 'unhide')
-    hackpush = util.safehasattr(repo, '_hackremotenamepush')
-    if nohide or (hackpush and repo._hackremotenamepush):
+    unblock = util.safehasattr(repo, '_unblockhiddenremotenames')
+    if not unblock:
         return blockers
 
     # add remotenames to blockers by looping over all names in our own cache
@@ -181,6 +175,18 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
     entry[1].append(('', 'remote', None, 'show only remote branches'))
+
+    entry = extensions.wrapcommand(commands.table, 'log', exlog)
+    entry[1].append(('', 'remote', None, 'show remote names even if hidden'))
+
+def exlog(orig, ui, repo, *args, **opts):
+    # hack for logging that turns on the dynamic blockerhook
+    if opts.get('remote'):
+        repo.__setattr__('_unblockhiddenremotenames', True)
+    res = orig(ui, repo, *args, **opts)
+    if opts.get('remote'):
+        repo.__setattr__('_unblockhiddenremotenames', False)
+    return res
 
 def exbranches(orig, ui, repo, *args, **opts):
     if not opts.get('remote'):
