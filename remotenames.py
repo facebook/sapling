@@ -403,6 +403,41 @@ def saveremotenames(repo, remote, branches, bookmarks):
         f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
     f.close()
 
+def distancefromremote(repo, remote="default"):
+    """returns the signed distance between the current node and remote"""
+    b = repo._bookmarkcurrent
+
+    # if no bookmark is active, fallback to the branchname
+    if not b:
+        b = repo.lookupbranch('.')
+
+    # get the non-default name
+    paths = dict(repo.ui.configitems('paths'))
+    rpath = paths.get(remote)
+    if remote == 'default':
+        for path, uri in paths.iteritems():
+            if path != 'default' and path != 'default-push' and rpath == uri:
+                remote = path
+
+    # if we couldn't find anything for remote then return
+    if not rpath:
+        return 0
+
+    remoteb = joinremotename(remote, b)
+    distance = 0
+
+    if remoteb in repo:
+        rev1 = repo[remoteb].rev()
+        rev2 = repo['.'].rev()
+        sign = 1
+        if rev2 < rev1:
+            sign = -1
+            rev1, rev2 = rev2, rev1
+        nodes = repo.revs('%s::%s' % (rev1, rev2))
+        distance = sign * (len(nodes) - 1)
+
+    return distance
+
 #########
 # revsets
 #########
