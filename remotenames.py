@@ -7,6 +7,7 @@ from mercurial import error
 from mercurial import exchange
 from mercurial import extensions
 from mercurial import hg
+from mercurial import localrepo
 from mercurial import namespaces
 from mercurial import repoview
 from mercurial import revset
@@ -121,11 +122,17 @@ def exclone(orig, ui, *args, **opts):
 
     return (srcpeer, dstpeer)
 
+def excommit(orig, repo, *args, **opts):
+    res = orig(repo, *args, **opts)
+    writedistance(repo)
+    return res
+
 extensions.wrapfunction(exchange, 'push', expush)
 extensions.wrapfunction(exchange, 'pull', expull)
 extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
 extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
 extensions.wrapfunction(hg, 'clone', exclone)
+extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
 
 def reposetup(ui, repo):
     if not repo.local():
