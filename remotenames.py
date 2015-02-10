@@ -438,6 +438,24 @@ def distancefromremote(repo, remote="default"):
 
     return distance
 
+def writedistance(repo, remote="default"):
+    distance = distancefromremote(repo, remote)
+    sign = '+'
+    if distance < 0:
+        sign = '-'
+
+    wlock = repo.wlock()
+    try:
+        try:
+            fp = repo.vfs('remotedistance', 'w', atomictemp=True)
+            fp.write('%s %s' % (sign, abs(distance)))
+            fp.close()
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+    finally:
+        wlock.release()
+
 #########
 # revsets
 #########
