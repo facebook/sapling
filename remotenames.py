@@ -12,11 +12,13 @@ from mercurial import localrepo
 from mercurial import namespaces
 from mercurial import repoview
 from mercurial import revset
+from mercurial import scmutil
 from mercurial import templatekw
 from mercurial import ui
 from mercurial import url
 from mercurial import util
-from mercurial.node import hex
+from mercurial.i18n import _
+from mercurial.node import hex, short
 from hgext import schemes
 
 _remotenames = {
@@ -179,6 +181,11 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'log', exlog)
     entry[1].append(('', 'remote', None, 'show remote names even if hidden'))
 
+    entry = extensions.wrapcommand(commands.table, 'push', expushcmd)
+    entry[1].append(('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK'))
+
+    exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
+
 def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
     if opts.get('remote'):
@@ -187,6 +194,94 @@ def exlog(orig, ui, repo, *args, **opts):
     if opts.get('remote'):
         repo.__setattr__('_unblockhiddenremotenames', False)
     return res
+
+_pushto = None
+
+def expushdiscoverybookmarks(pushop):
+    if not _pushto:
+        return exchange._pushdiscoverybookmarks(pushop)
+
+    remotemarks = pushop.remote.listkeys('bookmarks')
+    rev, bookmark, force = _pushto
+
+    # allow new bookmark only if force is True
+    old = ''
+    if bookmark in remotemarks:
+        old = remotemarks[bookmark]
+    elif not force:
+        raise util.Abort('will not create new remote bookmark without --force')
+
+    # allow non-ff only if force is True
+    repo = pushop.repo
+    if not force and old != '':
+        if old not in repo:
+            raise util.Abort('remote bookmark revision is not in local repo; '
+                             'will not push without --force. '
+                             'Do you need to pull and rebase?')
+        if not repo[old].descendant(repo[rev]):
+            raise util.Abort('pushed rev is not a descendant of remote '
+                             'bookmark, will not push without --force')
+
+    pushop.outbookmarks.append((bookmark, old, hex(rev)))
+
+def expushcmd(orig, ui, repo, dest=None, **opts):
+    to = opts.get('to')
+    if not to:
+        if ui.configbool('remotenames', 'force.to', False):
+            raise util.Abort('config requires --to when pushing')
+        return orig(ui, repo, dest, **opts)
+
+    if opts.get('bookmark'):
+        raise util.Abort(
+            'cannot specify --to/-t and --bookmark/-B at the same time')
+    if opts.get('branch'):
+        raise util.Abort(
+            'cannot specify --to/-t and --branch/-b at the same time')
+
+    revs = opts.get('rev')
+    if revs:
+        revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
+    else:
+        revs = [repo.lookup('.')]
+    if len(revs) != 1:
+        raise util.Abort('--to requires exactly one rev to push')
+    rev = revs[0]
+
+    # needed for discovery method
+    global _pushto
+    _pushto = (rev, to, opts.get('force'))
+
+    # big can o' copypasta from exchange.push
+    dest = ui.expandpath(dest or 'default-push', dest or 'default')
+    dest, branches = hg.parseurl(dest, opts.get('branch'))
+    try:
+        other = hg.peer(repo, opts, dest)
+    except error.RepoError:
+        if dest == "default-push":
+            hint = _('see the "path" section in "hg help config"')
+            raise util.Abort(_("default repository not configured!"),
+                             hint=hint)
+        else:
+            raise
+
+    # all checks pass, go for it!
+    ui.status('pushing rev %s to destination %s bookmark %s\n' % (
+              short(rev), dest, to))
+
+    # TODO: subrepo stuff
+
+    pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
+                           bookmarks=(to,))
+
+    result = not pushop.cgresult
+    if pushop.bkresult is not None:
+        if pushop.bkresult == 2:
+            result = 2
+        elif not result and pushop.bkresult:
+            result = 2
+
+    _pushto = None
+    return result
 
 def exbranches(orig, ui, repo, *args, **opts):
     if not opts.get('remote'):
