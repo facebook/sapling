@@ -218,6 +218,8 @@ def expushdiscoverybookmarks(pushop):
             raise util.Abort('remote bookmark revision is not in local repo; '
                              'will not push without --force. '
                              'Do you need to pull and rebase?')
+        if repo[old] == repo[rev]:
+            raise util.Abort('remote bookmark already points at rev')
         if not repo[old].descendant(repo[rev]):
             raise util.Abort('pushed rev is not a descendant of remote '
                              'bookmark, will not push without --force')
