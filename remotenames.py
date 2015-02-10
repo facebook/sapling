@@ -142,9 +142,9 @@ def reposetup(ui, repo):
         rname = 'remote' + nsname
         rtmpl = 'remote' + ns.templatename
         names = lambda rp, d=d: d.keys()
-        namemap = lambda rp, name, d=d: namespaces.tolist(d.get(name))
-        nodemap = lambda rp, node, d=d: [name for name, n in
-                                         d.iteritems() if n == node]
+        namemap = lambda rp, name, d=d: d.get(name)
+        nodemap = lambda rp, node, d=d: [name for name, n in d.iteritems()
+                                         for n2 in n if n2 == node]
 
         n = namespaces.namespace(rname, templatename=rtmpl,
                                  logname=ns.templatename, colorname=rtmpl,
@@ -178,8 +178,8 @@ def exbranches(orig, ui, repo, *args, **opts):
         # create a sorted by descending rev list
         revs = set()
         for name in ns.listnames(repo):
-            n = ns.nodes(repo, name)[0]
-            revs.add(repo.changelog.rev(n))
+            for n in ns.nodes(repo, name):
+                revs.add(repo.changelog.rev(n))
 
         for r in sorted(revs, reverse=True):
             n = repo[r].node()
@@ -372,7 +372,9 @@ def loadremotenames(repo):
 
         # only mark as remote if the head changeset isn't marked closed
         if not ctx.extra().get('close'):
-            _remotenames[nametype][name] = ctx.node()
+            nodes = _remotenames[nametype].get(name, [])
+            nodes.append(ctx.node())
+            _remotenames[nametype][name] = nodes
 
 def saveremotenames(repo, remote, branches, bookmarks):
     # read in all data first before opening file to write
