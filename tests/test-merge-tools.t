@@ -603,7 +603,8 @@ update is a merge ...
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg debugsetparent 0
+  $ hg update -q 0
+  $ hg revert -q -r 1 .
   $ hg update -r 2
   merging f
   revision 1
@@ -628,7 +629,8 @@ update should also have --tool
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg debugsetparent 0
+  $ hg update -q 0
+  $ hg revert -q -r 1 .
   $ hg update -r 2 --tool false
   merging f
   merging f failed!
