@@ -98,7 +98,7 @@ def updatecache(repo):
         partial.write(repo)
 
     if repo._revbranchcache is not None:
-        repo._revbranchcache.write(repo)
+        repo._revbranchcache.write()
 
     assert partial.validfor(repo), filtername
     repo._branchcaches[repo.filtername] = partial
@@ -239,11 +239,9 @@ class branchcache(dict):
         cl = repo.changelog
         # collect new branch entries
         newbranches = {}
-        urepo = repo.unfiltered()
-        ucl = urepo.changelog
         getbranchinfo = repo.revbranchcache().branchinfo
         for r in revgen:
-            branch, closesbranch = getbranchinfo(ucl, r)
+            branch, closesbranch = getbranchinfo(r)
             newbranches.setdefault(branch, []).append(r)
             if closesbranch:
                 self._closednodes.add(cl.node(r))
@@ -331,6 +329,7 @@ class revbranchcache(object):
 
     def __init__(self, repo, readonly=True):
         assert repo.filtername is None
+        self._repo = repo
         self._names = [] # branch names in local encoding with static index
         self._rbcrevs = array('c') # structs of type _rbcrecfmt
         self._rbcsnameslen = 0
@@ -360,9 +359,10 @@ class revbranchcache(object):
         self._rbcnamescount = len(self._names) # number of good names on disk
         self._namesreverse = dict((b, r) for r, b in enumerate(self._names))
 
-    def branchinfo(self, changelog, rev):
+    def branchinfo(self, rev):
         """Return branch name and close flag for rev, using and updating
         persistent cache."""
+        changelog = self._repo.changelog
         rbcrevidx = rev * _rbcrecsize
 
         # if requested rev is missing, add and populate all missing revs
@@ -371,7 +371,7 @@ class revbranchcache(object):
             self._rbcrevs.extend('\0' * (len(changelog) * _rbcrecsize -
                                          len(self._rbcrevs)))
             for r in xrange(first, len(changelog)):
-                self._branchinfo(changelog, r)
+                self._branchinfo(r)
 
         # fast path: extract data from cache, use it if node is matching
         reponode = changelog.node(rev)[:_rbcnodelen]
@@ -384,10 +384,11 @@ class revbranchcache(object):
             return self._names[branchidx], close
         # fall back to slow path and make sure it will be written to disk
         self._rbcrevslen = min(self._rbcrevslen, rev)
-        return self._branchinfo(changelog, rev)
+        return self._branchinfo(rev)
 
-    def _branchinfo(self, changelog, rev):
+    def _branchinfo(self, rev):
         """Retrieve branch info from changelog and update _rbcrevs"""
+        changelog = self._repo.changelog
         b, close = changelog.branchinfo(rev)
         if b in self._namesreverse:
             branchidx = self._namesreverse[b]
@@ -404,8 +405,9 @@ class revbranchcache(object):
         self._rbcrevs[rbcrevidx:rbcrevidx + _rbcrecsize] = rec
         return b, close
 
-    def write(self, repo):
+    def write(self):
         """Save branch cache if it is dirty."""
+        repo = self._repo
         if self._rbcnamescount < len(self._names):
             try:
                 if self._rbcnamescount != 0:

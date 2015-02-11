@@ -528,10 +528,7 @@ def branch(repo, subset, x):
     a regular expression. To match a branch that actually starts with `re:`,
     use the prefix `literal:`.
     """
-    import branchmap
-    urepo = repo.unfiltered()
-    ucl = urepo.changelog
-    getbi = branchmap.revbranchcache(urepo, readonly=True).branchinfo
+    getbi = repo.revbranchcache().branchinfo
 
     try:
         b = getstring(x, '')
@@ -544,16 +541,16 @@ def branch(repo, subset, x):
             # note: falls through to the revspec case if no branch with
             # this name exists
             if pattern in repo.branchmap():
-                return subset.filter(lambda r: matcher(getbi(ucl, r)[0]))
+                return subset.filter(lambda r: matcher(getbi(r)[0]))
         else:
-            return subset.filter(lambda r: matcher(getbi(ucl, r)[0]))
+            return subset.filter(lambda r: matcher(getbi(r)[0]))
 
     s = getset(repo, fullreposet(repo), x)
     b = set()
     for r in s:
-        b.add(getbi(ucl, r)[0])
+        b.add(getbi(r)[0])
     c = s.__contains__
-    return subset.filter(lambda r: c(r) or getbi(ucl, r)[0] in b)
+    return subset.filter(lambda r: c(r) or getbi(r)[0] in b)
 
 def bumped(repo, subset, x):
     """``bumped()``
