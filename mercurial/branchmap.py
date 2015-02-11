@@ -414,7 +414,11 @@ class revbranchcache(object):
         self._rbcrevs[rbcrevidx:rbcrevidx + _rbcrecsize] = rec
         self._rbcrevslen = min(self._rbcrevslen, rev)
 
-    def write(self):
+        tr = self._repo.currenttransaction()
+        if tr:
+            tr.addfinalize('write-revbranchcache', self.write)
+
+    def write(self, tr=None):
         """Save branch cache if it is dirty."""
         repo = self._repo
         if self._rbcnamescount < len(self._names):
