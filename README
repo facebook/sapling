@@ -83,6 +83,21 @@ Expect changes.
 The commands ``bookmarks``, ``branches``, and ``log`` all gain a ``--remote``
 flag to display remote names. This will also unhide obsolete changesets.
 
+Another big behavior change is that of a bare ``hg push``. For changesets that
+do not create a new remote head AND are only reachable by a local bookmark,
+``hg push`` will abort and not push these changesets. Hopefully, this is
+behavior is clear with the following example::
+
+  hg clone foo
+  cd foo
+  hg book experimental-feature
+  <hack, hack, hack>
+  hg push
+  pushing to foo
+  searching for changes
+  abort: push creates new anonymous head without the bookmark: 'experimental-feature'
+  (use 'hg push -B experimental-feature' to create a new remote bookmark)
+
 ---------
 Templates
 ---------
