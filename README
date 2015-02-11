@@ -60,6 +60,16 @@ as expected.
 
 This extension is built on top of the Mercurial namespace API introduce in 3.3.
 
+------------
+Installation
+------------
+
+To enable the extension, you must add an entry to the ``[extensions]`` section
+of your ``hgrc`` file::
+
+  [extensions]
+  remotenames = /path/to/hgremotenames/remotenames.py
+
 ----------------
 Behavior Changes
 ----------------
