@@ -5277,11 +5277,25 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified'),
                          hint=('use --all to remerge all files'))
 
+    if show:
+        ms = mergemod.mergestate(repo)
+        m = scmutil.match(repo[None], pats, opts)
+        for f in ms:
+            if not m(f):
+                continue
+            if nostatus:
+                ui.write("%s\n" % f)
+            else:
+                ui.write("%s %s\n" % (ms[f].upper(), f),
+                         label='resolve.' +
+                         {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
+        return 0
+
     wlock = repo.wlock()
     try:
         ms = mergemod.mergestate(repo)
 
-        if not (ms.active() or repo.dirstate.p2() != nullid) and not show:
+        if not (ms.active() or repo.dirstate.p2() != nullid):
             raise util.Abort(
                 _('resolve command not applicable when not merging'))
 
@@ -5295,14 +5309,7 @@ def resolve(ui, repo, *pats, **opts):
 
             didwork = True
 
-            if show:
-                if nostatus:
-                    ui.write("%s\n" % f)
-                else:
-                    ui.write("%s %s\n" % (ms[f].upper(), f),
-                             label='resolve.' +
-                             {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
-            elif mark:
+            if mark:
                 ms.mark(f, "r")
             elif unmark:
                 ms.mark(f, "u")
@@ -5328,16 +5335,14 @@ def resolve(ui, repo, *pats, **opts):
 
         ms.commit()
 
-        if not didwork and pats and not show:
+        if not didwork and pats:
             ui.warn(_("arguments do not match paths that need resolving\n"))
 
     finally:
         wlock.release()
 
-    # Nudge users into finishing an unfinished operation. We don't print
-    # this with the list/show operation because we want list/show to remain
-    # machine readable.
-    if not list(ms.unresolved()) and not show:
+    # Nudge users into finishing an unfinished operation
+    if not list(ms.unresolved()):
         ui.status(_('(no more unresolved files)\n'))
 
     return ret
