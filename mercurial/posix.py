@@ -322,7 +322,7 @@ def shellquote(s):
     global _needsshellquote
     if _needsshellquote is None:
         _needsshellquote = re.compile(r'[^a-zA-Z0-9._/-]').search
-    if not _needsshellquote(s):
+    if s and not _needsshellquote(s):
         # "s" shouldn't have to be quoted
         return s
     else:
