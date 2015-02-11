@@ -14,7 +14,6 @@ from mercurial import repoview
 from mercurial import revset
 from mercurial import scmutil
 from mercurial import templatekw
-from mercurial import ui
 from mercurial import url
 from mercurial import util
 from mercurial.i18n import _
@@ -44,8 +43,8 @@ def expush(orig, repo, remote, *args, **kwargs):
                 saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
                 writedistance(repo)
         except Exception, e:
-            ui.debug('remote branches for path %s not saved: %s\n'
-                     % (path, e))
+            repo.ui.debug('remote branches for path %s not saved: %s\n'
+                          % (path, e))
     finally:
         lock.release()
         return res
@@ -65,8 +64,8 @@ def pullremotenames(repo, remote):
                 saveremotenames(repo, path, remote.branchmap(),
                                 remote.listkeys('bookmarks'))
         except Exception, e:
-            ui.debug('remote branches for path %s not saved: %s\n'
-                     % (path, e))
+            repo.ui.debug('remote branches for path %s not saved: %s\n'
+                          % (path, e))
     finally:
         lock.release()
 
