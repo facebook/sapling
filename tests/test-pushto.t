@@ -185,9 +185,6 @@ Test that local must have rev of remote to push --to without --force
   $ hg push --to @
   pushing rev 6683576730c5 to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  remote has heads on branch 'default' that are not known locally: cc61aa6be3dc
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  updating bookmark @
+  abort: push creates new anonymous head without the bookmark: 'headc'
+  (use 'hg push -B headc' to create a new remote bookmark)
+  [255]

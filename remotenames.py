@@ -199,10 +199,31 @@ def exlog(orig, ui, repo, *args, **opts):
 _pushto = None
 
 def expushdiscoverybookmarks(pushop):
+    repo = pushop.repo
+    revs = pushop.revs
+    remotemarks = pushop.remote.listkeys('bookmarks')
+
+    # simple check to make sure we don't push a local-only bookmark
+    if revs:
+        revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
+    else:
+        revs = [repo.lookup('.')]
+
+    # first rev should be the head; later we should use revsets
+    rev = repo[revs[0]]
+    localonly = [b for b in rev.bookmarks() if b not in remotemarks]
+    if localonly:
+        for chead in pushop.commonheads:
+            if rev != repo[chead] and repo[chead].descendant(rev):
+                msg = _("push creates new anonymous head without "
+                        "the bookmark: '%s'") % localonly[0]
+                hint = _("use 'hg push -B %s' to create a "
+                         "new remote bookmark") % localonly[0]
+                raise util.Abort(msg, hint=hint)
+
     if not _pushto:
         return exchange._pushdiscoverybookmarks(pushop)
 
-    remotemarks = pushop.remote.listkeys('bookmarks')
     rev, bookmark, force = _pushto
 
     # allow new bookmark only if force is True
@@ -213,7 +234,6 @@ def expushdiscoverybookmarks(pushop):
         raise util.Abort('will not create new remote bookmark without --force')
 
     # allow non-ff only if force is True
-    repo = pushop.repo
     if not force and old != '':
         if old not in repo:
             raise util.Abort('remote bookmark revision is not in local repo; '
