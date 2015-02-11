@@ -399,11 +399,15 @@ class revbranchcache(object):
         reponode = changelog.node(rev)
         if close:
             branchidx |= _rbccloseflag
+        self._setcachedata(rev, reponode, branchidx)
+        return b, close
+
+    def _setcachedata(self, rev, node, branchidx):
+        """Writes the node's branch data to the in-memory cache data."""
         rbcrevidx = rev * _rbcrecsize
         rec = array('c')
-        rec.fromstring(pack(_rbcrecfmt, reponode, branchidx))
+        rec.fromstring(pack(_rbcrecfmt, node, branchidx))
         self._rbcrevs[rbcrevidx:rbcrevidx + _rbcrecsize] = rec
-        return b, close
 
     def write(self):
         """Save branch cache if it is dirty."""
