@@ -367,11 +367,8 @@ class revbranchcache(object):
 
         # if requested rev is missing, add and populate all missing revs
         if len(self._rbcrevs) < rbcrevidx + _rbcrecsize:
-            first = len(self._rbcrevs) // _rbcrecsize
             self._rbcrevs.extend('\0' * (len(changelog) * _rbcrecsize -
                                          len(self._rbcrevs)))
-            for r in xrange(first, len(changelog)):
-                self._branchinfo(r)
 
         # fast path: extract data from cache, use it if node is matching
         reponode = changelog.node(rev)[:_rbcnodelen]
@@ -380,10 +377,17 @@ class revbranchcache(object):
         close = bool(branchidx & _rbccloseflag)
         if close:
             branchidx &= _rbcbranchidxmask
-        if cachenode == reponode:
+        if cachenode == '\0\0\0\0':
+            pass
+        elif cachenode == reponode:
             return self._names[branchidx], close
+        else:
+            # rev/node map has changed, invalidate the cache from here up
+            truncate = rbcrevidx + _rbcrecsize
+            del self._rbcrevs[truncate:]
+            self._rbcrevslen = min(self._rbcrevslen, truncate)
+
         # fall back to slow path and make sure it will be written to disk
-        self._rbcrevslen = min(self._rbcrevslen, rev)
         return self._branchinfo(rev)
 
     def _branchinfo(self, rev):
@@ -408,6 +412,7 @@ class revbranchcache(object):
         rec = array('c')
         rec.fromstring(pack(_rbcrecfmt, node, branchidx))
         self._rbcrevs[rbcrevidx:rbcrevidx + _rbcrecsize] = rec
+        self._rbcrevslen = min(self._rbcrevslen, rev)
 
     def write(self):
         """Save branch cache if it is dirty."""
