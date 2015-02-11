@@ -43,10 +43,11 @@ resolve -l should contain unresolved entries
   U file1
   U file2
 
-resolving an unknown path should emit a warning
+resolving an unknown path should emit a warning, but not for -l
 
   $ hg resolve -m does-not-exist
   arguments do not match paths that need resolving
+  $ hg resolve -l does-not-exist
 
 resolve the failure
 
