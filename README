@@ -112,3 +112,25 @@ which are in a repository whose path is listed in the ``upstream`` field of the
 ``remotenames.upstream`` setting, it defaults to behaving identically to
 ``pushed()``. The ``remotenames()`` revset simply returns all remote branches
 head changesets.
+
+--------
+Distance
+--------
+
+For actions that create commits or update to another changeset (``commit``,
+``rebase``, ``histedit``, ``update``, etc.), the distance to the default path
+is written in .hg/remotedistance. The format of this file is ``'SIGN NUMBER'``,
+e.g. ``'+ 10'`` or ``'- 7'``. This is handy for use in your shell prompt.
+
+For example, the following is in my bash prompt::
+
+  remote="$(less $repo_dir/.hg/remotedistance 2>/dev/null)"
+  sign="⇡"
+  if grep -q '-' <<<$string; then
+    sign="⇣"
+  fi
+  distance="$(echo $remote | cut -d ' ' -f2)"
+  remote=""
+  [[ "$distance" != "" && "$distance" != "0" ]] && remote=" $distance$sign"
+
+This tells me how many commits I'm ahead or behind in my prompt.
