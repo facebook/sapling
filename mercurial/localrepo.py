@@ -279,6 +279,7 @@ class localrepository(object):
 
 
         self._branchcaches = {}
+        self._revbranchcache = None
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
@@ -725,6 +726,12 @@ class localrepository(object):
         ordered by increasing revision number'''
         branchmap.updatecache(self)
         return self._branchcaches[self.filtername]
+
+    @unfilteredmethod
+    def revbranchcache(self):
+        if not self._revbranchcache:
+            self._revbranchcache = branchmap.revbranchcache(self.unfiltered())
+        return self._revbranchcache
 
     def branchtip(self, branch, ignoremissing=False):
         '''return the tip node for a given branch

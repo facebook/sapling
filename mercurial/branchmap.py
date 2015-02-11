@@ -96,6 +96,10 @@ def updatecache(repo):
     if revs:
         partial.update(repo, revs)
         partial.write(repo)
+
+    if repo._revbranchcache is not None:
+        repo._revbranchcache.write(repo)
+
     assert partial.validfor(repo), filtername
     repo._branchcaches[repo.filtername] = partial
 
@@ -134,7 +138,6 @@ class branchcache(dict):
             self._closednodes = set()
         else:
             self._closednodes = closednodes
-        self._revbranchcache = None
 
     def _hashfiltered(self, repo):
         """build hash of revision filtered in the current cache
@@ -226,9 +229,6 @@ class branchcache(dict):
             repo.ui.debug("couldn't write branch cache: %s\n" % inst)
             # Abort may be raise by read only opener
             pass
-        if self._revbranchcache:
-            self._revbranchcache.write(repo.unfiltered())
-            self._revbranchcache = None
 
     def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be
@@ -240,9 +240,8 @@ class branchcache(dict):
         # collect new branch entries
         newbranches = {}
         urepo = repo.unfiltered()
-        self._revbranchcache = revbranchcache(urepo)
-        getbranchinfo = self._revbranchcache.branchinfo
         ucl = urepo.changelog
+        getbranchinfo = repo.revbranchcache().branchinfo
         for r in revgen:
             branch, closesbranch = getbranchinfo(ucl, r)
             newbranches.setdefault(branch, []).append(r)
