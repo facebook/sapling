@@ -5225,7 +5225,7 @@ def rename(ui, repo, *pats, **opts):
     ('m', 'mark', None, _('mark files as resolved')),
     ('u', 'unmark', None, _('mark files as unresolved')),
     ('n', 'no-status', None, _('hide status prefix'))]
-    + mergetoolopts + walkopts,
+    + mergetoolopts + walkopts + formatteropts,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
 def resolve(ui, repo, *pats, **opts):
@@ -5278,17 +5278,17 @@ def resolve(ui, repo, *pats, **opts):
                          hint=('use --all to remerge all files'))
 
     if show:
+        fm = ui.formatter('resolve', opts)
         ms = mergemod.mergestate(repo)
         m = scmutil.match(repo[None], pats, opts)
         for f in ms:
             if not m(f):
                 continue
-            if nostatus:
-                ui.write("%s\n" % f)
-            else:
-                ui.write("%s %s\n" % (ms[f].upper(), f),
-                         label='resolve.' +
-                         {'u': 'unresolved', 'r': 'resolved'}[ms[f]])
+            l = 'resolve.' + {'u': 'unresolved', 'r': 'resolved'}[ms[f]]
+            fm.startitem()
+            fm.condwrite(not nostatus, 'status', '%s ', ms[f].upper(), label=l)
+            fm.write('path', '%s\n', f, label=l)
+        fm.end()
         return 0
 
     wlock = repo.wlock()
