@@ -196,7 +196,7 @@ def exlog(orig, ui, repo, *args, **opts):
         repo.__setattr__('_unblockhiddenremotenames', False)
     return res
 
-_pushto = None
+_pushto = False
 
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
@@ -227,7 +227,9 @@ def expushdiscoverybookmarks(pushop):
     if not _pushto:
         return exchange._pushdiscoverybookmarks(pushop)
 
-    rev, bookmark, force = _pushto
+    bookmark = pushop.bookmarks[0]
+    rev = pushop.revs[0]
+    force = pushop.force
 
     # allow new bookmark only if force is True
     old = ''
@@ -275,7 +277,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     # needed for discovery method
     global _pushto
-    _pushto = (rev, to, opts.get('force'))
+    _pushto = True
 
     # big can o' copypasta from exchange.push
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -306,7 +308,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         elif not result and pushop.bkresult:
             result = 2
 
-    _pushto = None
+    _pushto = False
     return result
 
 def exbranches(orig, ui, repo, *args, **opts):
