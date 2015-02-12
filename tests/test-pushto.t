@@ -142,6 +142,23 @@ Test that local must have rev of remote to push --to without --force
   searching for changes
   abort: remote bookmark revision is not in local repo; will not push without --force. Do you need to pull and rebase?
   [255]
+
+Clean up repo1
+
+  $ cd ../repo1
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  2 c
+  |
+  | o  1 b @
+  |/
+  o  0 a
+  
+  $ hg --config extensions.strip= strip 2
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/cc61aa6be3dc-73e4f2eb-backup.hg (glob)
+  $ cd ../repo2
+
+Test that rebasing and pushing works as expected
+
   $ hg pull
   pulling from $TESTTMP/repo1
   searching for changes
@@ -185,6 +202,15 @@ Test that local must have rev of remote to push --to without --force
   $ hg push --to @
   pushing rev 6683576730c5 to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: push creates new anonymous head without the bookmark: 'headc'
-  (use 'hg push -B headc' to create a new remote bookmark)
-  [255]
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark @
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  2 c headc default/@
+  |
+  o  1 b
+  |
+  o  0 a
+  
