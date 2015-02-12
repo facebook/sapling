@@ -1,0 +1,195 @@
+Set up extension and repos
+
+  $ echo "[phases]" >> $HGRCPATH
+  $ echo "publish = False" >> $HGRCPATH
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "remotenames=$(dirname $TESTDIR)/remotenames.py" >> $HGRCPATH
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "forceto = True" >> $HGRCPATH
+  $ hg init repo1
+
+Test that forceto works
+
+  $ hg clone repo1 repo2
+  updating to branch default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  remotenames: removing cloned bookmarks
+  $ cd repo2
+
+Test that anonymous heads are disallowed by default
+
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m a
+  $ hg push
+  abort: config requires --to when pushing
+  [255]
+
+Test that --to limits other options
+
+  $ echo b >> a
+  $ hg commit -m b
+  $ hg push --to @ --rev . --rev .^
+  abort: --to requires exactly one rev to push
+  [255]
+  $ hg push --to @ --bookmark foo
+  abort: cannot specify --to/-t and --bookmark/-B at the same time
+  [255]
+  $ hg push --to @ --branch foo
+  abort: cannot specify --to/-t and --branch/-b at the same time
+  [255]
+
+Test that --force is required to create new bookmarks
+
+  $ hg push --to @
+  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: will not create new remote bookmark without --force
+  [255]
+  $ hg push --to @ -f
+  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  exporting bookmark @
+
+Test that --force is required to move bookmarks to odd locations
+
+  $ hg push --to @
+  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: remote bookmark already points at rev
+  [255]
+  $ hg push --to @ -r .^
+  pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  [255]
+  $ hg up .^
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo c >> a
+  $ hg commit -m c
+  created new head
+  $ hg push --to @
+  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  [255]
+
+Test that --force allows moving bookmark around arbitrarily
+
+  $ hg book -r 1 headb
+  $ hg book -r 2 headc
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  2 c headc
+  |
+  | o  1 b headb default/@
+  |/
+  o  0 a
+  
+  $ hg push --to @ -r headb
+  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: remote bookmark already points at rev
+  [255]
+  $ hg push --to @ -r headb -f
+  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  no changes found
+  updating bookmark @
+  [1]
+  $ hg push --to @ -r headc
+  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  [255]
+  $ hg push --to @ -r headc -f
+  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  updating bookmark @
+  $ hg push --to @ -r 0
+  pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  [255]
+  $ hg push --to @ -r 0 -f
+  pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  no changes found
+  updating bookmark @
+  [1]
+  $ hg push --to @ -r headb
+  pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  no changes found
+  updating bookmark @
+  [1]
+
+Test that local must have rev of remote to push --to without --force
+
+  $ hg up -r 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --config extensions.strip= strip -B headb
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/1846eede8b68-61b88d4a-backup.hg (glob)
+  bookmark 'headb' deleted
+  $ hg push --to @ -r headc
+  pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  abort: remote bookmark revision is not in local repo; will not push without --force. Do you need to pull and rebase?
+  [255]
+  $ hg pull
+  pulling from $TESTTMP/repo1
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  remotenames: skipped syncing local bookmarks
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  o  2 b  default/@
+  |
+  | o  1 c headc
+  |/
+  @  0 a
+  
+  $ hg --config extensions.rebase= rebase -d default/@ -s headc
+  rebasing 1:cc61aa6be3dc "c" (headc)
+  merging a
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ echo "a" > a
+  $ echo "b" >> a
+  $ echo "c" >> a
+  $ hg resolve --mark a
+  (no more unresolved files)
+  $ hg --config extensions.rebase= rebase --continue
+  rebasing 1:cc61aa6be3dc "c" (headc)
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/cc61aa6be3dc-73e4f2eb-backup.hg (glob)
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  o  2 c headc
+  |
+  o  1 b  default/@
+  |
+  @  0 a
+  
+  $ hg up headc
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark headc)
+  $ hg push --to @
+  pushing rev 6683576730c5 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  remote has heads on branch 'default' that are not known locally: cc61aa6be3dc
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark @
