@@ -44,13 +44,13 @@ Test basic functions
   $ hg amend
   warning: the commit's children were left behind (use hg amend --fixup to rebase them)
   $ hg amend --fixup
-  rebasing the children of bbb36c6acd42(preamend)
+  rebasing the children of bbb36c6acd42.preamend
   rebasing 1:d2ae7f538514 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d2ae7f538514-2953539b-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-preamend-backup.hg (glob)
   $ echo a >> a
   $ hg amend --rebase
-  rebasing the children of a4365b3108cc(preamend)
+  rebasing the children of a4365b3108cc.preamend
   rebasing 1:dfec26c56fa2 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/dfec26c56fa2-aff347bb-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/bbb36c6acd42-b715c760-preamend-backup.hg (glob)

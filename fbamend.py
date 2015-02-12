@@ -138,11 +138,11 @@ def amend(ui, repo, *pats, **opts):
     if current:
         bookmarks.setcurrent(repo, current)
         if haschildren:
-            newbookmarks[current + "(preamend)"] = old.node()
+            newbookmarks[current + ".preamend"] = old.node()
     else:
         # no active bookmark
         if haschildren:
-            newbookmarks[hex(node)[:12] + "(preamend)"] = old.node()
+            newbookmarks[hex(node)[:12] + ".preamend"] = old.node()
 
     newbookmarks.write()
 
@@ -157,16 +157,16 @@ def fixupamend(ui, repo):
     preamendname = None
     active = repo._bookmarkcurrent
     if active:
-        preamendname = active + "(preamend)"
+        preamendname = active + ".preamend"
 
     if not preamendname:
-        preamendname = hex(current.node())[:12] + "(preamend)"
+        preamendname = hex(current.node())[:12] + ".preamend"
 
     if not preamendname in repo._bookmarks:
         if active:
-            raise util.Abort(_('no %s(preamend) bookmark' % active))
+            raise util.Abort(_('no %s.preamend bookmark' % active))
         else:
-            raise util.Abort(_('no %s(preamend) bookmark - is your bookmark not active?' %
+            raise util.Abort(_('no %s.preamend bookmark - is your bookmark not active?' %
                                hex(current.node())[:12]))
 
     ui.status("rebasing the children of %s\n" % (preamendname))
