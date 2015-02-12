@@ -73,8 +73,9 @@ Test that --force is required to move bookmarks to odd locations
   $ hg push --to @
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: remote bookmark already points at rev
-  [255]
+  remote bookmark already points at pushed rev
+  no changes found
+  [1]
   $ hg push --to @ -r .^
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
@@ -105,8 +106,9 @@ Test that --force allows moving bookmark around arbitrarily
   $ hg push --to @ -r headb
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: remote bookmark already points at rev
-  [255]
+  remote bookmark already points at pushed rev
+  no changes found
+  [1]
   $ hg push --to @ -r headb -f
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes

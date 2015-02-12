@@ -245,12 +245,13 @@ def expushdiscoverybookmarks(pushop):
             raise util.Abort('remote bookmark revision is not in local repo; '
                              'will not push without --force. '
                              'Do you need to pull and rebase?')
-        if repo[old] == repo[rev]:
-            raise util.Abort('remote bookmark already points at rev')
         foreground = obsolete.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
             raise util.Abort('pushed rev is not in the foreground of remote '
                              'bookmark, will not push without --force')
+        if repo[old] == repo[rev]:
+            repo.ui.warn(_('remote bookmark already points at pushed rev\n'))
+            return
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
 
