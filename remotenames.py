@@ -10,6 +10,7 @@ from mercurial import extensions
 from mercurial import hg
 from mercurial import localrepo
 from mercurial import namespaces
+from mercurial import obsolete
 from mercurial import repoview
 from mercurial import revset
 from mercurial import scmutil
@@ -246,8 +247,9 @@ def expushdiscoverybookmarks(pushop):
                              'Do you need to pull and rebase?')
         if repo[old] == repo[rev]:
             raise util.Abort('remote bookmark already points at rev')
-        if not repo[old].descendant(repo[rev]):
-            raise util.Abort('pushed rev is not a descendant of remote '
+        foreground = obsolete.foreground(repo, [repo.lookup(old)])
+        if repo[rev].node() not in foreground:
+            raise util.Abort('pushed rev is not in the foreground of remote '
                              'bookmark, will not push without --force')
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))

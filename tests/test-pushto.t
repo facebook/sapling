@@ -78,7 +78,7 @@ Test that --force is required to move bookmarks to odd locations
   $ hg push --to @ -r .^
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
   [255]
   $ hg up .^
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -88,7 +88,7 @@ Test that --force is required to move bookmarks to odd locations
   $ hg push --to @
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
   [255]
 
 Test that --force allows moving bookmark around arbitrarily
@@ -116,7 +116,7 @@ Test that --force allows moving bookmark around arbitrarily
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
   [255]
   $ hg push --to @ -r headc -f
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
@@ -129,7 +129,7 @@ Test that --force allows moving bookmark around arbitrarily
   $ hg push --to @ -r 0
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not a descendant of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
   [255]
   $ hg push --to @ -r 0 -f
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
@@ -228,3 +228,31 @@ Test that rebasing and pushing works as expected
   |
   o  0 a
   
+
+Test that pushing over obsoleted changesets doesn't require force
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "evolve=" >> $HGRCPATH
+  $ echo d >> a
+  $ hg commit --amend
+  $ hg log --hidden -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  4 c headc
+  |
+  | x  3 temporary amend commit for 6683576730c5
+  | |
+  | x  2 c  default/@
+  |/
+  o  1 b
+  |
+  o  0 a
+  
+  $ hg push --to @
+  pushing rev d53f6666e0c4 to destination $TESTTMP/repo1 bookmark @
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  pushing 2 obsolescence markers (* bytes) (glob)
+  2 obsolescence markers added
+  updating bookmark @
