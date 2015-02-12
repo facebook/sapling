@@ -922,7 +922,7 @@ Expected result:
   $ mkdir 7 8
   $ echo m > 7/f
   $ echo m > 8/f
-  $ hg merge -f --tool internal:dump -v --debug -r2 | sed '/^ 0\/f: both created -> m/,$d' 2> /dev/null
+  $ hg merge -f --tool internal:dump -v --debug -r2 | sed '/^resolving manifests/,$d' 2> /dev/null
     searching for copies back to rev 1
     unmatched files in local:
      5/g
@@ -940,24 +940,6 @@ Expected result:
      src: '5/f' -> dst: '5/g' *
      src: '6/f' -> dst: '6/g' *
     checking for directory renames
-  resolving manifests
-   branchmerge: True, force: True, partial: False
-   ancestor: e6cb3cf11019, local: ec44bf929ab5+, remote: c62e34d0b898
-  remote changed 8/f which local deleted
-  use (c)hanged version or leave (d)eleted? c
-   preserving 0/f for resolve of 0/f
-   preserving 1/g for resolve of 1/g
-   preserving 2/f for resolve of 2/f
-   preserving 3/f for resolve of 3/f
-   preserving 3/f for resolve of 3/g
-   preserving 4/f for resolve of 4/g
-   preserving 5/f for resolve of 5/f
-   preserving 5/g for resolve of 5/g
-   preserving 6/g for resolve of 6/g
-   preserving 7/f for resolve of 7/f
-  removing 4/f
-   8/f: prompt recreating -> g
-  getting 8/f
   $ hg mani
   0/f
   1/g
