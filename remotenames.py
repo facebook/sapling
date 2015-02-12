@@ -199,7 +199,7 @@ def exlog(orig, ui, repo, *args, **opts):
 _pushto = None
 
 def expushdiscoverybookmarks(pushop):
-    repo = pushop.repo
+    repo = pushop.repo.unfiltered()
     remotemarks = pushop.remote.listkeys('bookmarks')
 
     if not _pushto and not repo.ui.configbool('remotenames', 'pushanonheads'):
