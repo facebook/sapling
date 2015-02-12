@@ -126,6 +126,7 @@ def amend(ui, repo, *pats, **opts):
         return 1
 
     if haschildren and not rebase:
+        _usereducation(ui)
         ui.status("warning: the commit's children were left behind " +
                   "(use hg amend --fixup to rebase them)\n")
 
@@ -192,3 +193,9 @@ def fixupamend(ui, repo):
     merge.update(repo, current.node(), False, True, False)
     if active:
         bookmarks.setcurrent(repo, active)
+
+def _usereducation(ui):
+    """
+    You can print out a message to the user here
+    """
+    pass
