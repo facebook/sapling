@@ -172,10 +172,10 @@ will abort if any of the following flags are specified:
  * ``--branch`` / ``-b``
 
 Finally, there is a new config option to enforece using ``--to`` if that is
-apropriate in your chosen workflow. To enable it, set the option ``force.to``::
+apropriate in your chosen workflow. To enable it, set the option ``forceto``::
 
   [remotenames]
-  force.to = True
+  forceto = True
 
 -------------------
 Cloning and Pulling

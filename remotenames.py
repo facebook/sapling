@@ -230,7 +230,7 @@ def expushdiscoverybookmarks(pushop):
 def expushcmd(orig, ui, repo, dest=None, **opts):
     to = opts.get('to')
     if not to:
-        if ui.configbool('remotenames', 'force.to', False):
+        if ui.configbool('remotenames', 'forceto', False):
             raise util.Abort('config requires --to when pushing')
         return orig(ui, repo, dest, **opts)
 
