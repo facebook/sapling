@@ -203,25 +203,28 @@ def expushdiscoverybookmarks(pushop):
     remotemarks = pushop.remote.listkeys('bookmarks')
 
     if not _pushto and not repo.ui.configbool('remotenames', 'pushanonheads'):
-        # simple check to make sure we don't push an anonymous head
-        revs = pushop.revs
-        if revs:
-            revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
+        # check to make sure we don't push an anonymous head
+        if pushop.revs:
+            revs = set(repo.lookup(r) for r in scmutil.revrange(repo, pushop.revs))
         else:
-            revs = [repo.lookup('.')]
-        # first rev should be the head; later we should use revsets
-        rev = repo[revs[0]]
-        localonly = [b for b in rev.bookmarks() if b not in remotemarks]
-        if localonly:
-            for chead in pushop.commonheads:
-                if rev != repo[chead] and repo[chead].descendant(rev):
-                    msg = _("push creates new anonymous head without "
-                            "the bookmark: '%s'") % localonly[0]
-                    hint = _("use 'hg push -B %s' to create a "
-                             "new remote bookmark") % localonly[0]
-                    raise util.Abort(msg, hint=hint)
-    if not _pushto:
+            revs = set(repo.lookup(r) for r in repo.revs('head()'))
+        # find heads that don't have a bookmark going with them
+        for bookmark in pushop.bookmarks:
+            rev = repo.lookup(bookmark)
+            if rev in revs:
+                revs.remove(rev)
+        # remove heads that already have a remote bookmark
+        for bookmark, node in remotemarks.iteritems():
+            rev = repo.lookup(node)
+            if rev in revs:
+                revs.remove(rev)
+        if revs:
+            msg = _("push would create new anonymous heads (%s)" %
+                    ', '.join([short(r) for r in revs]))
+            hint = _("use 'hg push --to NAME' to create a new remote bookmark")
+            raise util.Abort(msg, hint=hint)
 
+    if not _pushto:
         return exchange._pushdiscoverybookmarks(pushop)
 
     rev, bookmark, force = _pushto

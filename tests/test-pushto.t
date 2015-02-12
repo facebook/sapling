@@ -4,12 +4,7 @@ Set up extension and repos
   $ echo "publish = False" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "remotenames=$(dirname $TESTDIR)/remotenames.py" >> $HGRCPATH
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "forceto = True" >> $HGRCPATH
   $ hg init repo1
-
-Test that forceto works
-
   $ hg clone repo1 repo2
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -20,6 +15,25 @@ Test that anonymous heads are disallowed by default
   $ echo a > a
   $ hg add a
   $ hg commit -m a
+  $ hg push
+  pushing to $TESTTMP/repo1
+  searching for changes
+  abort: push would create new anonymous heads (cb9a9f314b8b)
+  (use 'hg push --to NAME' to create a new remote bookmark)
+  [255]
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "pushanonheads = True" >> $HGRCPATH
+  $ hg push
+  pushing to $TESTTMP/repo1
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+Test that forceto works
+
+  $ echo "forceto = True" >> $HGRCPATH
   $ hg push
   abort: config requires --to when pushing
   [255]
@@ -51,7 +65,7 @@ Test that --force is required to create new bookmarks
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
+  added 1 changesets with 1 changes to 1 files
   exporting bookmark @
 
 Test that --force is required to move bookmarks to odd locations
