@@ -55,6 +55,20 @@ Test basic functions
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/dfec26c56fa2-aff347bb-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/bbb36c6acd42-b715c760-preamend-backup.hg (glob)
 
+Test that current bookmark is maintained
+
+  $ hg bookmark bm
+  $ hg bookmarks
+   * bm                        0:a4365b3108cc
+  $ echo a >> a
+  $ hg amend --rebase
+  rebasing the children of bm.preamend
+  rebasing 1:d82ed7448df5 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d82ed7448df5-9889bafb-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a4365b3108cc-05d6fcc0-preamend-backup.hg
+  $ hg bookmarks
+   * bm                        0:23f86863ec6c
+
 Test that the extension disables itself when evolution is enabled
 
   $ cat > ${TESTTMP}/obs.py << EOF
