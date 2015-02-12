@@ -237,18 +237,21 @@ def expushdiscoverybookmarks(pushop):
     if bookmark in remotemarks:
         old = remotemarks[bookmark]
     elif not force:
-        raise util.Abort('will not create new remote bookmark without --force')
+        msg = _('not creating new bookmark')
+        hint = _('use --force to create a new bookmark')
+        raise util.Abort(msg, hint=hint)
 
     # allow non-ff only if force is True
     if not force and old != '':
         if old not in repo:
-            raise util.Abort('remote bookmark revision is not in local repo; '
-                             'will not push without --force. '
-                             'Do you need to pull and rebase?')
+            msg = _('remote bookmark revision is not in local repo')
+            hint = _('pull and merge or rebase or use --force')
+            raise util.Abort(msg, hint=hint)
         foreground = obsolete.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
-            raise util.Abort('pushed rev is not in the foreground of remote '
-                             'bookmark, will not push without --force')
+            msg = _('pushed rev is not in the foreground of remote bookmark')
+            hint = _('use --force flag to complete non-fast-forward update')
+            raise util.Abort(msg, hint=hint)
         if repo[old] == repo[rev]:
             repo.ui.warn(_('remote bookmark already points at pushed rev\n'))
             return
@@ -259,15 +262,17 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     to = opts.get('to')
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
-            raise util.Abort('config requires --to when pushing')
+            msg = _('must specify --to when pushing')
+            hint = _('see configuration option %s') % 'remotenames.forceto'
+            raise util.Abort(msg, hint=hint)
         return orig(ui, repo, dest, **opts)
 
     if opts.get('bookmark'):
-        raise util.Abort(
-            'cannot specify --to/-t and --bookmark/-B at the same time')
+        msg = _('do not specify --to/-t and --bookmark/-B at the same time')
+        raise util.Abort(msg)
     if opts.get('branch'):
-        raise util.Abort(
-            'cannot specify --to/-t and --branch/-b at the same time')
+        msg = _('do not specify --to/-t and --branch/-b at the same time')
+        raise util.Abort(msg)
 
     revs = opts.get('rev')
     if revs:
@@ -275,7 +280,9 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     else:
         revs = [repo.lookup('.')]
     if len(revs) != 1:
-        raise util.Abort('--to requires exactly one rev to push')
+        msg = _('--to requires exactly one rev to push')
+        hint = _('use --rev BOOKMARK or omit --rev for current commit (.)')
+        raise util.Abort(msg, hint=hint)
     rev = revs[0]
 
     # needed for discovery method

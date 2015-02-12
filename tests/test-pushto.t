@@ -35,7 +35,8 @@ Test that forceto works
 
   $ echo "forceto = True" >> $HGRCPATH
   $ hg push
-  abort: config requires --to when pushing
+  abort: must specify --to when pushing
+  (see configuration option remotenames.forceto)
   [255]
 
 Test that --to limits other options
@@ -44,12 +45,13 @@ Test that --to limits other options
   $ hg commit -m b
   $ hg push --to @ --rev . --rev .^
   abort: --to requires exactly one rev to push
+  (use --rev BOOKMARK or omit --rev for current commit (.))
   [255]
   $ hg push --to @ --bookmark foo
-  abort: cannot specify --to/-t and --bookmark/-B at the same time
+  abort: do not specify --to/-t and --bookmark/-B at the same time
   [255]
   $ hg push --to @ --branch foo
-  abort: cannot specify --to/-t and --branch/-b at the same time
+  abort: do not specify --to/-t and --branch/-b at the same time
   [255]
 
 Test that --force is required to create new bookmarks
@@ -57,7 +59,8 @@ Test that --force is required to create new bookmarks
   $ hg push --to @
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: will not create new remote bookmark without --force
+  abort: not creating new bookmark
+  (use --force to create a new bookmark)
   [255]
   $ hg push --to @ -f
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
@@ -79,7 +82,8 @@ Test that --force is required to move bookmarks to odd locations
   $ hg push --to @ -r .^
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark
+  (use --force flag to complete non-fast-forward update)
   [255]
   $ hg up .^
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -89,7 +93,8 @@ Test that --force is required to move bookmarks to odd locations
   $ hg push --to @
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark
+  (use --force flag to complete non-fast-forward update)
   [255]
 
 Test that --force allows moving bookmark around arbitrarily
@@ -118,7 +123,8 @@ Test that --force allows moving bookmark around arbitrarily
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark
+  (use --force flag to complete non-fast-forward update)
   [255]
   $ hg push --to @ -r headc -f
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
@@ -131,7 +137,8 @@ Test that --force allows moving bookmark around arbitrarily
   $ hg push --to @ -r 0
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: pushed rev is not in the foreground of remote bookmark, will not push without --force
+  abort: pushed rev is not in the foreground of remote bookmark
+  (use --force flag to complete non-fast-forward update)
   [255]
   $ hg push --to @ -r 0 -f
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
@@ -156,7 +163,8 @@ Test that local must have rev of remote to push --to without --force
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: remote bookmark revision is not in local repo; will not push without --force. Do you need to pull and rebase?
+  abort: remote bookmark revision is not in local repo
+  (pull and merge or rebase or use --force)
   [255]
 
 Clean up repo1
