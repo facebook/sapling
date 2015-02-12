@@ -221,7 +221,8 @@ def expushdiscoverybookmarks(pushop):
                 revs.remove(rev)
         if revs:
             msg = _("push would create new anonymous heads (%s)" %
-                    ', '.join([short(r) for r in revs]))
+                    ', '.join([short(r) for r in revs
+                               if not repo[r].obsolete()]))
             hint = _("use 'hg push --to NAME' to create a new remote bookmark")
             raise util.Abort(msg, hint=hint)
 
