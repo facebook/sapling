@@ -93,7 +93,7 @@ def exupdatefromremote(orig, ui, repo, remotemarks, path, trfunc, explicit=()):
     if ui.configbool('remotenames', 'syncbookmarks', False):
         return orig(ui, repo, remotemarks, path, trfunc, explicit)
 
-    ui.status('remotenames: skipped syncing local bookmarks\n')
+    ui.debug('remotenames: skipped syncing local bookmarks\n')
 
 def exclone(orig, ui, *args, **opts):
     """
@@ -104,7 +104,7 @@ def exclone(orig, ui, *args, **opts):
     pullremotenames(dstpeer.local(), srcpeer)
 
     if not ui.configbool('remotenames', 'syncbookmarks', False):
-        ui.status('remotenames: removing cloned bookmarks\n')
+        ui.debug('remotenames: removing cloned bookmarks\n')
         repo = dstpeer.local()
         wlock = repo.wlock()
         try:

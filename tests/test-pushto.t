@@ -13,7 +13,6 @@ Test that forceto works
   $ hg clone repo1 repo2
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  remotenames: removing cloned bookmarks
   $ cd repo2
 
 Test that anonymous heads are disallowed by default
@@ -150,7 +149,6 @@ Test that local must have rev of remote to push --to without --force
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  remotenames: skipped syncing local bookmarks
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   o  2 b  default/@

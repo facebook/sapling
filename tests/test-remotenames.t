@@ -30,7 +30,6 @@ Continue testing
   $ hg clone alpha beta | $FILTERPWD
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  remotenames: removing cloned bookmarks
   $ cd beta
   $ hg book babar
   $ mkcommit d
@@ -58,7 +57,6 @@ Continue testing
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  remotenames: skipped syncing local bookmarks
   (run 'hg update' to get a working copy)
   $ hg pull beta | $FILTERPWD
   pulling from beta
@@ -67,7 +65,6 @@ Continue testing
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
-  remotenames: skipped syncing local bookmarks
   (run 'hg update' to get a working copy)
   $ hg co -C default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
