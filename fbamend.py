@@ -30,7 +30,8 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-amendopts = [('', 'rebase', None, _('rebases children commits after the amend')),
+amendopts = [
+    ('', 'rebase', None, _('rebases children commits after the amend')),
     ('', 'fixup', None, _('rebase children commits from a previous amend')),
 ]
 
@@ -70,8 +71,13 @@ def amend(ui, repo, *pats, **opts):
     '''amend the current commit with more changes
     '''
     rebase = opts.get('rebase')
-    fixup = opts.get('fixup')
 
+    if rebase and _histediting(repo):
+        # if a histedit is in flight, it's dangerous to remove old commits
+        hint = _('during histedit, use amend without --rebase')
+        raise util.Abort('histedit in progress', hint=hint)
+
+    fixup = opts.get('fixup')
     if fixup:
         fixupamend(ui, repo)
         return
@@ -126,24 +132,31 @@ def amend(ui, repo, *pats, **opts):
         return 1
 
     if haschildren and not rebase:
-        _usereducation(ui)
-        ui.status("warning: the commit's children were left behind " +
-                  "(use hg amend --fixup to rebase them)\n")
+        msg = _("warning: the commit's children were left behind\n")
+        if _histediting(repo):
+            ui.warn(msg)
+            ui.status(_('(this is okay since a histedit is in progress)\n'))
+        else:
+            _usereducation(ui)
+            ui.warn(msg)
+            ui.status("(use 'hg amend --fixup' to rebase them)\n")
 
-    # move bookmarks
     newbookmarks = repo._bookmarks
+
+    # move old bookmarks to new node
     for bm in oldbookmarks:
         newbookmarks[bm] = node
 
-    preamendname = _preamendname(repo, node)
-    if haschildren:
-        newbookmarks[preamendname] = old.node()
-    elif not repo._bookmarkcurrent:
-        # need to update bookmark if it isn't based on the current bookmark name
-        oldname = _preamendname(repo, old.node())
-        if oldname in repo._bookmarks:
-            newbookmarks[preamendname] = repo._bookmarks[oldname]
-            del newbookmarks[oldname]
+    if not _histediting(repo):
+        preamendname = _preamendname(repo, node)
+        if haschildren:
+            newbookmarks[preamendname] = old.node()
+        elif not repo._bookmarkcurrent:
+            # update bookmark if it isn't based on the current bookmark name
+            oldname = _preamendname(repo, old.node())
+            if oldname in repo._bookmarks:
+                newbookmarks[preamendname] = repo._bookmarks[oldname]
+                del newbookmarks[oldname]
 
     newbookmarks.write()
 
@@ -192,6 +205,9 @@ def _preamendname(repo, node):
     if not name:
         name = hex(node)[:12]
     return name + suffix
+
+def _histediting(repo):
+    return repo.vfs.exists('histedit-state')
 
 def _usereducation(ui):
     """

@@ -44,7 +44,8 @@ Test basic functions
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg amend
-  warning: the commit's children were left behind (use hg amend --fixup to rebase them)
+  warning: the commit's children were left behind
+  (use 'hg amend --fixup' to rebase them)
   $ hg amend --fixup
   rebasing the children of 34414ab6546d.preamend
   rebasing 2:a764265b74cf "b"
@@ -75,7 +76,8 @@ Test that bookmarked re-amends work well
 
   $ echo a >> a
   $ hg amend
-  warning: the commit's children were left behind (use hg amend --fixup to rebase them)
+  warning: the commit's children were left behind
+  (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  edf5fd2f5332 aa bm
   |
@@ -112,12 +114,13 @@ Test that bookmarked re-amends work well
   $ hg bookmarks
    * bm                        1:0889a0030a17
 
-Test that unbookmarked re-amens work well
+Test that unbookmarked re-amends work well
 
   $ hg boo -d bm
   $ echo a >> a
   $ hg amend
-  warning: the commit's children were left behind (use hg amend --fixup to rebase them)
+  warning: the commit's children were left behind
+  (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  94eb429c9465 aa
   |
@@ -148,6 +151,83 @@ Test that unbookmarked re-amens work well
   o  455e4104f605 b
   |
   @  83455f1f6049 aa
+  |
+  o  cb9a9f314b8b a
+  
+
+Test interaction with histedit
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "histedit=" >> $HGRCPATH
+  $ echo "fbhistedit=" >> $HGRCPATH
+  $ hg up tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo c >> c
+  $ hg add c
+  $ hg commit -m c
+  $ hg log -T '{node|short} {desc}\n'
+  765b28efbe8b c
+  455e4104f605 b
+  83455f1f6049 aa
+  cb9a9f314b8b a
+  $ hg histedit .^^ --commands - <<EOF
+  > pick 83455f1f6049
+  > x echo amending from exec
+  > x hg commit --amend -m 'message from exec'
+  > stop 455e4104f605
+  > pick 765b28efbe8b
+  > EOF
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  amending from exec
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  warning: the commit's children were left behind
+  (this is okay since a histedit is in progress)
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Changes commited as a2329fab3fab. You may amend the commit now.
+  When you are finished, run hg histedit --continue to resume
+  [1]
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  a2329fab3fab b
+  |
+  o  048e86baa19d message from exec
+  |
+  | o  765b28efbe8b c
+  | |
+  | o  455e4104f605 b
+  | |
+  | o  83455f1f6049 aa
+  |/
+  o  cb9a9f314b8b a
+  
+  $ hg amend --rebase
+  abort: histedit in progress
+  (during histedit, use amend without --rebase)
+  [255]
+  $ hg commit --amend -m 'commit --amend message'
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a2329fab3fab-e6fb940f-amend-backup.hg
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  3166f3b5587d commit --amend message
+  |
+  o  048e86baa19d message from exec
+  |
+  | o  765b28efbe8b c
+  | |
+  | o  455e4104f605 b
+  | |
+  | o  83455f1f6049 aa
+  |/
+  o  cb9a9f314b8b a
+  
+  $ hg histedit --continue
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/83455f1f6049-922a304e-backup.hg
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  0f83a9508203 c
+  |
+  o  3166f3b5587d commit --amend message
+  |
+  o  048e86baa19d message from exec
   |
   o  cb9a9f314b8b a
   
