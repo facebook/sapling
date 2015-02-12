@@ -293,7 +293,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             raise
 
     # all checks pass, go for it!
-    ui.status('pushing rev %s to destination %s bookmark %s\n' % (
+    ui.status(_('pushing rev %s to destination %s bookmark %s\n') % (
               short(rev), dest, to))
 
     # TODO: subrepo stuff
