@@ -211,6 +211,7 @@ def expushdiscoverybookmarks(pushop):
                 revs = set(pushop.revs)
             else:
                 revs = set(repo.lookup(r) for r in repo.revs('head()'))
+                revs -= set(pushop.remoteheads)
             # find heads that don't have a bookmark going with them
             for bookmark in pushop.bookmarks:
                 rev = repo.lookup(bookmark)

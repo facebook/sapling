@@ -46,3 +46,13 @@ Test that we can still push a head that advances a remote bookmark
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark @
+
+Test that we don't get an abort if we're doing a bare push that does nothing
+
+  $ hg --cwd ../repo1 bookmark -d @
+  $ hg bookmark -d @
+  $ hg push
+  pushing to $TESTTMP/repo1
+  searching for changes
+  no changes found
+  [1]
