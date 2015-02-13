@@ -44,19 +44,28 @@ Test basic functions
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg amend
+  
+      +----------------------------------------+
+      | Please read the Dex article on stacked |
+      | diff workflows to understand how the   |
+      | fbamend extension works:               |
+      |                                        |
+      |      https://fburl.com/hgstacks        |
+      +----------------------------------------+
+  
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg amend --fixup
   rebasing the children of 34414ab6546d.preamend
   rebasing 2:a764265b74cf "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a764265b74cf-c5eef4f8-backup.hg
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/86cf3bb05fcf-36a6cbd7-preamend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a764265b74cf-c5eef4f8-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/86cf3bb05fcf-36a6cbd7-preamend-backup.hg (glob)
   $ echo a >> a
   $ hg amend --rebase
   rebasing the children of 7817096bf624.preamend
   rebasing 2:e1c831172263 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-backup.hg
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34414ab6546d-72d06a8e-preamend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34414ab6546d-72d06a8e-preamend-backup.hg (glob)
 
 Test that current bookmark is maintained
 
@@ -67,8 +76,8 @@ Test that current bookmark is maintained
   $ hg amend --rebase
   rebasing the children of bm.preamend
   rebasing 2:1e390e3ec656 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-backup.hg
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7817096bf624-d72fddeb-preamend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7817096bf624-d72fddeb-preamend-backup.hg (glob)
   $ hg bookmarks
    * bm                        1:7635008c16e1
 
@@ -76,6 +85,15 @@ Test that bookmarked re-amends work well
 
   $ echo a >> a
   $ hg amend
+  
+      +----------------------------------------+
+      | Please read the Dex article on stacked |
+      | diff workflows to understand how the   |
+      | fbamend extension works:               |
+      |                                        |
+      |      https://fburl.com/hgstacks        |
+      +----------------------------------------+
+  
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
@@ -89,7 +107,7 @@ Test that bookmarked re-amends work well
   
   $ echo a >> a
   $ hg amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-81b0ec5b-amend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-81b0ec5b-amend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  0889a0030a17 aa bm
   |
@@ -102,8 +120,8 @@ Test that bookmarked re-amends work well
   $ hg amend --fixup
   rebasing the children of bm.preamend
   rebasing 2:2d6884e15790 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2d6884e15790-909076cb-backup.hg
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7635008c16e1-65f65ff6-preamend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2d6884e15790-909076cb-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7635008c16e1-65f65ff6-preamend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   o  6ba7926ba204 b
   |
@@ -119,6 +137,15 @@ Test that unbookmarked re-amends work well
   $ hg boo -d bm
   $ echo a >> a
   $ hg amend
+  
+      +----------------------------------------+
+      | Please read the Dex article on stacked |
+      | diff workflows to understand how the   |
+      | fbamend extension works:               |
+      |                                        |
+      |      https://fburl.com/hgstacks        |
+      +----------------------------------------+
+  
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
@@ -132,7 +159,7 @@ Test that unbookmarked re-amends work well
   
   $ echo a >> a
   $ hg amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-30a7ee2c-amend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-30a7ee2c-amend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  83455f1f6049 aa
   |
@@ -145,8 +172,8 @@ Test that unbookmarked re-amends work well
   $ hg amend --fixup
   rebasing the children of 83455f1f6049.preamend
   rebasing 2:6ba7926ba204 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6ba7926ba204-9ac223ef-backup.hg
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0889a0030a17-6bebea0c-preamend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6ba7926ba204-9ac223ef-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0889a0030a17-6bebea0c-preamend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   o  455e4104f605 b
   |
@@ -204,7 +231,7 @@ Test interaction with histedit
   (during histedit, use amend without --rebase)
   [255]
   $ hg commit --amend -m 'commit --amend message'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a2329fab3fab-e6fb940f-amend-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a2329fab3fab-e6fb940f-amend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  3166f3b5587d commit --amend message
   |
@@ -221,7 +248,7 @@ Test interaction with histedit
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/83455f1f6049-922a304e-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/83455f1f6049-922a304e-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  0f83a9508203 c
   |
