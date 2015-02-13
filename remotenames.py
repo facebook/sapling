@@ -219,12 +219,13 @@ def expushdiscoverybookmarks(pushop):
             rev = repo.lookup(node)
             if rev in revs:
                 revs.remove(rev)
+
+        revs = [short(r) for r in revs if not repo[r].obsolete()]
         if revs:
-            msg = _("push would create new anonymous heads (%s)" %
-                    ', '.join([short(r) for r in revs
-                               if not repo[r].obsolete()]))
-            hint = _("use 'hg push --to NAME' to create a new remote bookmark")
-            raise util.Abort(msg, hint=hint)
+            msg = _("push would create new anonymous heads (%s)")
+            hint = _("use 'hg push --to NAME' to create a new "
+                     "remote bookmark")
+            raise util.Abort(msg % ', '.join(revs), hint=hint)
 
     if not _pushto:
         return exchange._pushdiscoverybookmarks(pushop)
