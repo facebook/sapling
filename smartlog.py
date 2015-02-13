@@ -364,8 +364,10 @@ Excludes:
 - Your local commit heads that are older than 2 weeks.
     '''
     master = opts.get('master')
-    revs = set()
+    if not master:
+        master = ui.config('smartlog', 'master')
 
+    revs = set()
     rev = repo.changelog.rev
     branchinfo = repo.changelog.branchinfo
     ancestor = repo.changelog.ancestor

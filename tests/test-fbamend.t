@@ -1,4 +1,5 @@
-#
+Test functionality is present
+
   $ extpath=$(dirname $TESTDIR)
   $ cp $extpath/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
@@ -27,9 +28,50 @@
   
   (some details hidden, use --verbose to show complete help)
 
-Test that the extension disable itself when evolution is enabled
+Test basic functions
 
-  $ cat > ./obs.py << EOF
+  $ hg init repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m 'a'
+  $ echo b >> b
+  $ hg add b
+  $ hg commit -m 'b'
+  $ hg up .^
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo a >> a
+  $ hg amend
+  warning: the commit's children were left behind (use hg amend --fixup to rebase them)
+  $ hg amend --fixup
+  rebasing the children of bbb36c6acd42.preamend
+  rebasing 1:d2ae7f538514 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d2ae7f538514-2953539b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-preamend-backup.hg (glob)
+  $ echo a >> a
+  $ hg amend --rebase
+  rebasing the children of a4365b3108cc.preamend
+  rebasing 1:dfec26c56fa2 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/dfec26c56fa2-aff347bb-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/bbb36c6acd42-b715c760-preamend-backup.hg (glob)
+
+Test that current bookmark is maintained
+
+  $ hg bookmark bm
+  $ hg bookmarks
+   * bm                        0:a4365b3108cc
+  $ echo a >> a
+  $ hg amend --rebase
+  rebasing the children of bm.preamend
+  rebasing 1:d82ed7448df5 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d82ed7448df5-9889bafb-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a4365b3108cc-05d6fcc0-preamend-backup.hg
+  $ hg bookmarks
+   * bm                        0:23f86863ec6c
+
+Test that the extension disables itself when evolution is enabled
+
+  $ cat > ${TESTTMP}/obs.py << EOF
   > import mercurial.obsolete
   > mercurial.obsolete._enabled = True
   > EOF
