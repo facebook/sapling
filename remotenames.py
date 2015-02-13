@@ -204,6 +204,7 @@ def expushdiscoverybookmarks(pushop):
     remotemarks = pushop.remote.listkeys('bookmarks')
 
     if not _pushto:
+        ret = exchange._pushdiscoverybookmarks(pushop)
         if not repo.ui.configbool('remotenames', 'pushanonheads'):
             # check to make sure we don't push an anonymous head
             if pushop.revs:
@@ -227,9 +228,7 @@ def expushdiscoverybookmarks(pushop):
                 hint = _("use 'hg push --to NAME' to create a new "
                          "remote bookmark")
                 raise util.Abort(msg % ', '.join(revs), hint=hint)
-
-    if not _pushto:
-        return exchange._pushdiscoverybookmarks(pushop)
+        return ret
 
     bookmark = pushop.bookmarks[0]
     rev = pushop.revs[0]
