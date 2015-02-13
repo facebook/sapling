@@ -87,7 +87,7 @@ flag to display remote names. This will also unhide obsolete changesets.
 Templates
 ---------
 
-Remotenames adds three template keywords: ``remotebranches``,
+Remotenames adds the following new template keywords: ``remotebranches``,
 ``remotebookmarks``, and ``remotenames`` which is the combination of the first
 two. For example, the diagram above uses the template ``({remotebranches})
 [{remotebookmarks}]``. You could drop the ``remotebranches`` keyword if that's
@@ -113,13 +113,13 @@ Experimental. Setting ``alias.default = True`` will drop the turn
 Revsets
 -------
 
-Remotenames makes three new revsets available: ``pushed()``, ``upstream()``,
-``remotebranches()``, ``remotebookmarks()`` and ``remotenames()``. The
-``pushed()`` revset returns all revisions that are have been pushed to any
-repository tracked by remotenames. The ``upstream()`` set is those revisions
-which are in a repository whose path is listed in the ``upstream`` field of the
-``[remotenames]`` configuration section. If there is no
-``remotenames.upstream`` setting, it defaults to behaving identically to
+Remotenames makes the following new revsets available: ``pushed()``,
+``upstream()``, ``remotebranches()``, ``remotebookmarks()`` and
+``remotenames()``. The ``pushed()`` revset returns all revisions that are have
+been pushed to any repository tracked by remotenames. The ``upstream()`` set is
+those revisions which are in a repository whose path is listed in the
+``upstream`` field of the ``[remotenames]`` configuration section. If there is
+no ``remotenames.upstream`` setting, it defaults to behaving identically to
 ``pushed()``. The ``remotenames()`` revset simply returns all remote branches
 head changesets.
 
@@ -136,9 +136,7 @@ For example, the following is in my bash prompt::
 
   remote="$(less $repo_dir/.hg/remotedistance 2>/dev/null)"
   sign="⇡"
-  if grep -q '-' <<<$string; then
-    sign="⇣"
-  fi
+  [[ ${remote:0:1} == "-" ]] && sign="⇣"
   distance="$(echo $remote | cut -d ' ' -f2)"
   remote=""
   [[ "$distance" != "" && "$distance" != "0" ]] && remote=" $distance$sign"
