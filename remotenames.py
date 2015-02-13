@@ -206,7 +206,7 @@ def expushdiscoverybookmarks(pushop):
     if not _pushto and not repo.ui.configbool('remotenames', 'pushanonheads'):
         # check to make sure we don't push an anonymous head
         if pushop.revs:
-            revs = set(repo.lookup(r) for r in scmutil.revrange(repo, pushop.revs))
+            revs = set(pushop.revs)
         else:
             revs = set(repo.lookup(r) for r in repo.revs('head()'))
         # find heads that don't have a bookmark going with them
