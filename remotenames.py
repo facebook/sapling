@@ -221,6 +221,12 @@ def expushdiscoverybookmarks(pushop):
                 rev = repo.lookup(node)
                 if rev in revs:
                     revs.remove(rev)
+            # remove heads that already advance bookmarks (old mercurial
+            # behavior)
+            for bookmark, old, new in pushop.outbookmarks:
+                rev = repo.lookup(new)
+                if rev in revs:
+                    revs.remove(rev)
 
             revs = [short(r) for r in revs if not repo[r].obsolete()]
             if revs:
