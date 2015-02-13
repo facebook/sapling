@@ -202,10 +202,12 @@ _pushto = False
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
     remotemarks = pushop.remote.listkeys('bookmarks')
+    force = pushop.force
 
     if not _pushto:
         ret = exchange._pushdiscoverybookmarks(pushop)
-        if not repo.ui.configbool('remotenames', 'pushanonheads'):
+        if not (repo.ui.configbool('remotenames', 'pushanonheads')
+                or force):
             # check to make sure we don't push an anonymous head
             if pushop.revs:
                 revs = set(pushop.revs)
@@ -239,7 +241,6 @@ def expushdiscoverybookmarks(pushop):
 
     bookmark = pushop.bookmarks[0]
     rev = pushop.revs[0]
-    force = pushop.force
 
     # allow new bookmark only if force is True
     old = ''

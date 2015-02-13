@@ -56,3 +56,16 @@ Test that we don't get an abort if we're doing a bare push that does nothing
   searching for changes
   no changes found
   [1]
+
+Test that we can still push a head if there are no bookmarks in either the
+remote or local repo
+
+  $ echo c >> a
+  $ hg commit -m c
+  $ hg push -f
+  pushing to $TESTTMP/repo1
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
