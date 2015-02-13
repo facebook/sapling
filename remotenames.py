@@ -203,29 +203,30 @@ def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
     remotemarks = pushop.remote.listkeys('bookmarks')
 
-    if not _pushto and not repo.ui.configbool('remotenames', 'pushanonheads'):
-        # check to make sure we don't push an anonymous head
-        if pushop.revs:
-            revs = set(pushop.revs)
-        else:
-            revs = set(repo.lookup(r) for r in repo.revs('head()'))
-        # find heads that don't have a bookmark going with them
-        for bookmark in pushop.bookmarks:
-            rev = repo.lookup(bookmark)
-            if rev in revs:
-                revs.remove(rev)
-        # remove heads that already have a remote bookmark
-        for bookmark, node in remotemarks.iteritems():
-            rev = repo.lookup(node)
-            if rev in revs:
-                revs.remove(rev)
+    if not _pushto:
+        if not repo.ui.configbool('remotenames', 'pushanonheads'):
+            # check to make sure we don't push an anonymous head
+            if pushop.revs:
+                revs = set(pushop.revs)
+            else:
+                revs = set(repo.lookup(r) for r in repo.revs('head()'))
+            # find heads that don't have a bookmark going with them
+            for bookmark in pushop.bookmarks:
+                rev = repo.lookup(bookmark)
+                if rev in revs:
+                    revs.remove(rev)
+            # remove heads that already have a remote bookmark
+            for bookmark, node in remotemarks.iteritems():
+                rev = repo.lookup(node)
+                if rev in revs:
+                    revs.remove(rev)
 
-        revs = [short(r) for r in revs if not repo[r].obsolete()]
-        if revs:
-            msg = _("push would create new anonymous heads (%s)")
-            hint = _("use 'hg push --to NAME' to create a new "
-                     "remote bookmark")
-            raise util.Abort(msg % ', '.join(revs), hint=hint)
+            revs = [short(r) for r in revs if not repo[r].obsolete()]
+            if revs:
+                msg = _("push would create new anonymous heads (%s)")
+                hint = _("use 'hg push --to NAME' to create a new "
+                         "remote bookmark")
+                raise util.Abort(msg % ', '.join(revs), hint=hint)
 
     if not _pushto:
         return exchange._pushdiscoverybookmarks(pushop)
