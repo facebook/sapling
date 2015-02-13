@@ -35,6 +35,8 @@ Test basic functions
   $ echo a > a
   $ hg add a
   $ hg commit -m 'a'
+  $ echo a >> a
+  $ hg commit -m 'aa'
   $ echo b >> b
   $ hg add b
   $ hg commit -m 'b'
@@ -44,30 +46,111 @@ Test basic functions
   $ hg amend
   warning: the commit's children were left behind (use hg amend --fixup to rebase them)
   $ hg amend --fixup
-  rebasing the children of bbb36c6acd42.preamend
-  rebasing 1:d2ae7f538514 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d2ae7f538514-2953539b-backup.hg (glob)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-preamend-backup.hg (glob)
+  rebasing the children of 34414ab6546d.preamend
+  rebasing 2:a764265b74cf "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a764265b74cf-c5eef4f8-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/86cf3bb05fcf-36a6cbd7-preamend-backup.hg
   $ echo a >> a
   $ hg amend --rebase
-  rebasing the children of a4365b3108cc.preamend
-  rebasing 1:dfec26c56fa2 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/dfec26c56fa2-aff347bb-backup.hg (glob)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/bbb36c6acd42-b715c760-preamend-backup.hg (glob)
+  rebasing the children of 7817096bf624.preamend
+  rebasing 2:e1c831172263 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34414ab6546d-72d06a8e-preamend-backup.hg
 
 Test that current bookmark is maintained
 
   $ hg bookmark bm
   $ hg bookmarks
-   * bm                        0:a4365b3108cc
+   * bm                        1:7817096bf624
   $ echo a >> a
   $ hg amend --rebase
   rebasing the children of bm.preamend
-  rebasing 1:d82ed7448df5 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d82ed7448df5-9889bafb-backup.hg
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a4365b3108cc-05d6fcc0-preamend-backup.hg
+  rebasing 2:1e390e3ec656 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7817096bf624-d72fddeb-preamend-backup.hg
   $ hg bookmarks
-   * bm                        0:23f86863ec6c
+   * bm                        1:7635008c16e1
+
+Test that bookmarked re-amends work well
+
+  $ echo a >> a
+  $ hg amend
+  warning: the commit's children were left behind (use hg amend --fixup to rebase them)
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  edf5fd2f5332 aa bm
+  |
+  | o  2d6884e15790 b
+  | |
+  | o  7635008c16e1 aa bm.preamend
+  |/
+  o  cb9a9f314b8b a
+  
+  $ echo a >> a
+  $ hg amend
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-81b0ec5b-amend-backup.hg
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  0889a0030a17 aa bm
+  |
+  | o  2d6884e15790 b
+  | |
+  | o  7635008c16e1 aa bm.preamend
+  |/
+  o  cb9a9f314b8b a
+  
+  $ hg amend --fixup
+  rebasing the children of bm.preamend
+  rebasing 2:2d6884e15790 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2d6884e15790-909076cb-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7635008c16e1-65f65ff6-preamend-backup.hg
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  o  6ba7926ba204 b
+  |
+  @  0889a0030a17 aa bm
+  |
+  o  cb9a9f314b8b a
+  
+  $ hg bookmarks
+   * bm                        1:0889a0030a17
+
+Test that unbookmarked re-amens work well
+
+  $ hg boo -d bm
+  $ echo a >> a
+  $ hg amend
+  warning: the commit's children were left behind (use hg amend --fixup to rebase them)
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  94eb429c9465 aa
+  |
+  | o  6ba7926ba204 b
+  | |
+  | o  0889a0030a17 aa 94eb429c9465.preamend
+  |/
+  o  cb9a9f314b8b a
+  
+  $ echo a >> a
+  $ hg amend
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-30a7ee2c-amend-backup.hg
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  @  83455f1f6049 aa
+  |
+  | o  6ba7926ba204 b
+  | |
+  | o  0889a0030a17 aa 83455f1f6049.preamend
+  |/
+  o  cb9a9f314b8b a
+  
+  $ hg amend --fixup
+  rebasing the children of 83455f1f6049.preamend
+  rebasing 2:6ba7926ba204 "b"
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6ba7926ba204-9ac223ef-backup.hg
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0889a0030a17-6bebea0c-preamend-backup.hg
+  $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
+  o  455e4104f605 b
+  |
+  @  83455f1f6049 aa
+  |
+  o  cb9a9f314b8b a
+  
 
 Test that the extension disables itself when evolution is enabled
 
