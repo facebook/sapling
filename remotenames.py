@@ -234,8 +234,7 @@ def expushdiscoverybookmarks(pushop):
             revs = [short(r) for r in revs if not repo[r].obsolete()]
             if revs:
                 msg = _("push would create new anonymous heads (%s)")
-                hint = _("use 'hg push --to NAME' to create a new "
-                         "remote bookmark")
+                hint = _("use --force to override this warning")
                 raise util.Abort(msg % ', '.join(revs), hint=hint)
         return ret
 

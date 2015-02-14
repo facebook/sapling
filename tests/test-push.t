@@ -19,7 +19,7 @@ Test that anonymous heads are disallowed by default
   pushing to $TESTTMP/repo1
   searching for changes
   abort: push would create new anonymous heads (cb9a9f314b8b)
-  (use 'hg push --to NAME' to create a new remote bookmark)
+  (use --force to override this warning)
   [255]
 
 Create a remote bookmark
