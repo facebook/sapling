@@ -230,7 +230,7 @@ archivers = {
     }
 
 def archive(repo, dest, node, kind, decode=True, matchfn=None,
-            prefix=None, mtime=None, subrepos=False):
+            prefix='', mtime=None, subrepos=False):
     '''create archive of repo as it was at node.
 
     dest can be name of directory, name of archive file, or file

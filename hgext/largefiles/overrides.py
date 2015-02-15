@@ -861,7 +861,7 @@ def overriderebase(orig, ui, repo, **opts):
         repo._lfcommithooks.pop()
 
 def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
-            prefix=None, mtime=None, subrepos=None):
+            prefix='', mtime=None, subrepos=None):
     # No need to lock because we are only reading history and
     # largefile caches, neither of which are modified.
     lfcommands.cachelfiles(repo.ui, repo, node)
