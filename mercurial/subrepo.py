@@ -836,7 +836,7 @@ class hgsubrepo(abstractsubrepo):
     def files(self):
         rev = self._state[1]
         ctx = self._repo[rev]
-        return ctx.manifest()
+        return ctx.manifest().keys()
 
     def filedata(self, name):
         rev = self._state[1]
