@@ -126,3 +126,15 @@ Load commonly used test logic
   ? dir/.gitignore
   ? dir/bar
   ? foobar
+
+  $ hg add .gitignore
+  $ hg commit -m "add and commit .gitignore"
+  $ rm .gitignore
+  $ rm .hgignore
+  $ hg status
+  ! .gitignore
+  ? bar
+  ? dir/.gitignore
+  ? dir/bar
+  ? foo
+  ? foobar

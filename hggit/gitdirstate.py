@@ -101,6 +101,8 @@ class gitdirstate(dirstate.dirstate):
             for fn in fns:
                 d = os.path.dirname(fn)
                 fn = self.pathto(fn)
+                if not os.path.exists(fn):
+                    continue
                 fp = open(fn)
                 pats, warnings = gignorepats(None,fp,root=d)
                 for warning in warnings:
