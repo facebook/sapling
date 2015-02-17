@@ -37,7 +37,7 @@ def overridewritebundle(orig, ui, cg, filename, bundletype, vfs=None):
 def overridechangegroupsubset(orig, repo, roots, heads, source, version = '01'):
     # we only care about performance for strips, not about 'hg bundle' and
     # similar
-    if source != 'strip':
+    if source != 'strip' or version != '01':
         return orig(repo, roots, heads, source, version=version)
 
     # below is all copied from changegroup.py, except with cg1 changed to
@@ -91,53 +91,32 @@ def overridereadbundle(orig, ui, fh, fname, vfs=None):
 
 class cg2bundlerepository(bundlerepo.bundlerepository):
     def __init__(self, ui, path, bundlename):
-        # copied from bundlerepo.py
-        self._tempparent = None
-        try:
-            localrepo.localrepository.__init__(self, ui, path)
-        except error.RepoError:
-            self._tempparent = tempfile.mkdtemp()
-            localrepo.instance(ui, self._tempparent, 1)
-            localrepo.localrepository.__init__(self, ui, self._tempparent)
-        self.ui.setconfig('phases', 'publish', False, 'bundlerepo')
-
-        if path:
-            self._url = 'bundle:' + util.expandpath(path) + '+' + bundlename
-        else:
-            self._url = 'bundle:' + bundlename
-
-        self.tempfile = None
+        self.cg2temp = None
         f = util.posixfile(bundlename, "rb")
-        self.bundle = exchange.readbundle(ui, f, bundlename)
-        if self.bundle.compressed():
-            fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
+        bundle = exchange.readbundle(ui, f, bundlename)
+        if bundle.compressed and isinstance(bundle, changegroup.cg2unpacker):
+            fdtemp, bundlename = tempfile.mkstemp(prefix="hg-bundle-",
                                             suffix=".hgun")
-            self.tempfile = temp
+            self.cg2temp = bundlename
             fptemp = os.fdopen(fdtemp, 'wb')
 
             try:
-                if isinstance(self.bundle, changegroup.cg2unpacker):
-                    header = "HG2CUN"
-                else:
-                    header = "HG10UN"
-                fptemp.write(header)
+                fptemp.write("HG2CUN")
                 while True:
-                    chunk = self.bundle.read(2**18)
+                    chunk = bundle.read(2**18)
                     if not chunk:
                         break
                     fptemp.write(chunk)
             finally:
                 fptemp.close()
+            pass
+        f.close()
+        super(cg2bundlerepository, self).__init__(ui, path, bundlename)
 
-            f = self.vfs.open(self.tempfile, mode="rb")
-            self.bundle = exchange.readbundle(ui, f, bundlename, self.vfs)
-
-        # dict with the mapping 'filename' -> position in the bundle
-        self.bundlefilespos = {}
-
-        self.firstnewrev = self.changelog.repotiprev + 1
-        phases.retractboundary(self, None, phases.draft,
-                               [ctx.node() for ctx in self[self.firstnewrev:]])
+    def close(self):
+        super(cg2bundlerepository, self).close()
+        if self.cg2temp:
+            os.unlink(self.cg2temp)
 
 bundlerepo.bundlerepository = cg2bundlerepository
 
