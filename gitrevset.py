@@ -13,6 +13,7 @@ shortversion:
 
 """
 from mercurial import extensions
+from mercurial import error
 from mercurial import hg
 from mercurial import templatekw
 from mercurial import revset
@@ -32,6 +33,9 @@ def showgitnode(repo, ctx, templ, **args):
         repo.baseui.fout = repo.ui.ferr
         remoterepo = hg.peer(repo, {}, peerpath)
         remoterev = remoterepo.lookup('_gitlookup_hg_%s' % ctx.hex())
+    except error.RepoError:
+        # templates are expected to return an empty string when no data exists
+        return None
     finally:
         repo.baseui.fout = oldfout
     return remoterev.encode('hex')

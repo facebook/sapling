@@ -95,3 +95,9 @@ Check that our revset and template mappings work
 
   $ hg log -r . --template "{gitnode}\n"
   ffffffffffffffffffffffffffffffffffffffff
+
+  $ touch b
+  $ hg add b
+  $ hg ci -mb
+  $ hg log -r . --template "{gitnode}\n"
+  
