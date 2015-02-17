@@ -1,4 +1,4 @@
-# gitrevset.py
+# gitrevset.py 
 #
 # Copyright 2014 Facebook, Inc.
 """FBONLY: map a git hash to a Mercurial hash:
@@ -25,20 +25,15 @@ def showgitnode(repo, ctx, templ, **args):
     """Return the git revision corresponding to a given hg rev"""
     peerpath = repo.ui.expandpath('default')
 
-    # See if the data is local before attempting the remote stuff
-    local_data = checklocal(repo, '_gitlookup_hg_%s' % ctx.hex())
-    if local_data:
-        remoterev = local_data
-    else:
-        # sshing can cause junk 'remote: ...' output to stdout, so we need to
-        # redirect it temporarily so automation can parse the result easily.
-        oldfout = repo.ui.fout
-        try:
-            repo.baseui.fout = repo.ui.ferr
-            remoterepo = hg.peer(repo, {}, peerpath)
-            remoterev = remoterepo.lookup('_gitlookup_hg_%s' % ctx.hex())
-        finally:
-            repo.baseui.fout = oldfout
+    # sshing can cause junk 'remote: ...' output to stdout, so we need to
+    # redirect it temporarily so automation can parse the result easily.
+    oldfout = repo.ui.fout
+    try:
+        repo.baseui.fout = repo.ui.ferr
+        remoterepo = hg.peer(repo, {}, peerpath)
+        remoterev = remoterepo.lookup('_gitlookup_hg_%s' % ctx.hex())
+    finally:
+        repo.baseui.fout = oldfout
     return remoterev.encode('hex')
 
 def gitnode(repo, subset, x):
@@ -48,20 +43,15 @@ def gitnode(repo, subset, x):
     n = revset.getstring(l[0], _("id requires a string"))
     peerpath = repo.ui.expandpath('default')
 
-    # See if the data is local before attempting the remote stuff
-    local_data = checklocal(repo, '_gitlookup_git_%s' % n)
-    if local_data:
-        remoterev = local_data
-    else:
-        # sshing can cause junk 'remote: ...' output to stdout, so we need to
-        # redirect it temporarily so automation can parse the result easily.
-        oldfout = repo.ui.fout
-        try:
-            repo.baseui.fout = repo.ui.ferr
-            remoterepo = hg.peer(repo, {}, peerpath)
-            remoterev = remoterepo.lookup('_gitlookup_git_%s' % n)
-        finally:
-            repo.baseui.fout = oldfout
+    # sshing can cause junk 'remote: ...' output to stdout, so we need to
+    # redirect it temporarily so automation can parse the result easily.
+    oldfout = repo.ui.fout
+    try:
+        repo.baseui.fout = repo.ui.ferr
+        remoterepo = hg.peer(repo, {}, peerpath)
+        remoterev = remoterepo.lookup('_gitlookup_git_%s' % n)
+    finally:
+        repo.baseui.fout = oldfout
     rn = repo[remoterev].rev()
     return subset.filter(lambda r: r == rn)
 
@@ -75,14 +65,3 @@ def extsetup(ui):
     templatekw.keywords['gitnode'] = showgitnode
     revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
-
-def checklocal(repo, tocheck):
-    try:
-        mapfile = repo.ui.configpath('gitlookup', 'mapfile')
-        if not mapfile:
-            return None
-        import gitlookup
-        return gitlookup._dolookup(repo, tocheck)
-    except:
-        return None
-
