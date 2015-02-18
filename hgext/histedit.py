@@ -599,11 +599,9 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
     # rebuild state
     if goal == 'continue':
-        state = histeditstate(repo)
         state.read()
         state = bootstrapcontinue(ui, state, opts)
     elif goal == 'abort':
-        state = histeditstate(repo)
         state.read()
         mapping, tmpnodes, leafs, _ntm = processreplacement(state)
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
