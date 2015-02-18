@@ -138,7 +138,6 @@ continue should work
 
   $ hg histedit --continue
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f

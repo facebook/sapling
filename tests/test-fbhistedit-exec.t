@@ -121,7 +121,9 @@ a failing command should drop us into the shell
   > pick 055a42cdd887 d
   > pick e860deea161a e
   > exec exit 1
+  > exec exit 1
   > pick 652413bf663e f
+  > exec exit 1
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   Command 'exit 1' failed with exit status 1
@@ -129,7 +131,20 @@ a failing command should drop us into the shell
 continue should work
 
   $ hg histedit --continue
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'exit 1' failed with exit status 1
+  [1]
+
+continue after consecutive failed execs
+
+  $ hg histedit --continue
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'exit 1' failed with exit status 1
+  [1]
+
+continue after the last entry
+
+  $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {desc}' --graph

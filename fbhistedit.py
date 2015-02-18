@@ -114,78 +114,20 @@ def verifyrules(orig, rules, repo, ctxs):
                          hint=_('do you want to use the drop action?'))
     return parsed
 
-# copied from mercurial histedit.py
 def bootstrapcontinue(orig, ui, state, opts):
     repo, parentctx = state.repo, state.parentctx
-    action, currentnode = state.rules.pop(0)
-    ctx = repo['.']
+    if state.rules[0][0] in ['x', 'exec']:
+        m, a, r, d = repo.status()[:4]
+        if m or a or r or d:
+            raise util.Abort(_('working copy has pending changes'),
+                hint=_('amend, commit, or revert them and run histedit '
+                    '--continue, or abort with histedit --abort'))
 
-    # Our x/exec specialcasing
-    if action in ['x', 'exec']:
-        action, currentnode = state.rules.pop(0)
-        if action not in ['x', 'exec']:
-            ctx = repo[currentnode]
-            hg.update(repo, ctx)
+        state.rules.pop(0)
+        state.parentctx = parentctx
+        return state
     else:
-        ctx = repo[currentnode]
-
-    newchildren = histedit.gatherchildren(repo, parentctx)
-
-    # Commit dirty working directory if necessary
-    new = None
-    m, a, r, d = repo.status()[:4]
-    if m or a or r or d:
-        # prepare the message for the commit to comes
-        if action in ('f', 'fold', 'r', 'roll'):
-            message = 'fold-temp-revision %s' % currentnode
-        else:
-            message = ctx.description()
-        editopt = action in ('e', 'edit', 'm', 'mess')
-        canonaction = {'e': 'edit', 'm': 'mess', 'p': 'pick'}
-        editform = 'histedit.%s' % canonaction.get(action, action)
-        editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
-        commit = histedit.commitfuncfor(repo, ctx)
-        new = commit(text=message, user=ctx.user(),
-                     date=ctx.date(), extra=ctx.extra(),
-                     editor=editor)
-        if new is not None:
-            newchildren.append(new)
-
-    replacements = []
-    # track replacements
-    if ctx.node() not in newchildren:
-        # note: new children may be empty when the changeset is dropped.
-        # this happen e.g during conflicting pick where we revert content
-        # to parent.
-        replacements.append((ctx.node(), tuple(newchildren)))
-
-    if action in ('f', 'fold', 'r', 'roll'):
-        if newchildren:
-            # finalize fold operation if applicable
-            if new is None:
-                new = newchildren[-1]
-            else:
-                newchildren.pop()  # remove new from internal changes
-            foldopts = opts
-            if action in ('r', 'roll'):
-                foldopts = foldopts.copy()
-                foldopts['rollup'] = True
-            parentctx, repl = histedit.finishfold(ui, repo, parentctx, ctx, new,
-                                         foldopts, newchildren)
-            replacements.extend(repl)
-        else:
-            # newchildren is empty if the fold did not result in any commit
-            # this happen when all folded change are discarded during the
-            # merge.
-            replacements.append((ctx.node(), (parentctx.node(),)))
-    elif newchildren:
-        # otherwise update "parentctx" before proceeding to further operation
-        parentctx = repo[newchildren[-1]]
-
-    state.parentctx = parentctx
-    state.replacements.extend(replacements)
-
-    return state
+        return orig(ui, state, opts)
 
 def extsetup(ui):
     histedit.editcomment = _("""# Edit history between %s and %s
