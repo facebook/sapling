@@ -1,4 +1,4 @@
-# gitrevset.py 
+# gitrevset.py
 #
 # Copyright 2014 Facebook, Inc.
 """FBONLY: map a git hash to a Mercurial hash:
@@ -35,7 +35,7 @@ def showgitnode(repo, ctx, templ, **args):
         remoterev = remoterepo.lookup('_gitlookup_hg_%s' % ctx.hex())
     except error.RepoError:
         # templates are expected to return an empty string when no data exists
-        return None
+        return ''
     finally:
         repo.baseui.fout = oldfout
     return remoterev.encode('hex')
