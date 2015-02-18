@@ -14,6 +14,7 @@ import hbisect
 #  "{files % '{file}\n'}" (hgweb-style with inlining and function support)
 # and to access raw values:
 #  "{ifcontains(file, files, ...)}", "{ifcontains(key, extras, ...)}"
+#  "{get(extras, key)}"
 
 class _hybrid(object):
     def __init__(self, gen, values, makemap, joinfmt=None):
@@ -34,6 +35,10 @@ class _hybrid(object):
         return x in self.values
     def __len__(self):
         return len(self.values)
+    def __getattr__(self, name):
+        if name != 'get':
+            raise AttributeError(name)
+        return getattr(self.values, name)
 
 def showlist(name, values, plural=None, element=None, **args):
     if not element:
