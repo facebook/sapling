@@ -47,6 +47,9 @@ Second branch starting at nullrev:
   fourth (second)
   $ hg log -T '{file_copies % "{source} -> {name}\n"}' -r .
   second -> fourth
+  $ hg log -T '{rev} {ifcontains("fourth", file_copies, "t", "f")}\n' -r .:7
+  8 t
+  7 f
 
 Quoting for ui.logtemplate
 
@@ -2386,6 +2389,10 @@ Test current bookmark templating
   2 bar foo
   1 baz
   0 
+  $ hg log --template "{rev} {ifcontains('foo', bookmarks, 't', 'f')}\n"
+  2 t
+  1 f
+  0 f
 
 Test stringify on sub expressions
 
