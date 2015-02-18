@@ -2381,6 +2381,11 @@ Test current bookmark templating
   2 
   1 
   0 
+  $ hg book -r1 baz
+  $ hg log --template "{rev} {join(bookmarks, ' ')}\n"
+  2 bar foo
+  1 baz
+  0 
 
 Test stringify on sub expressions
 
