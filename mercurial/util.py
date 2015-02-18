@@ -359,8 +359,10 @@ class sortdict(dict):
     def __iter__(self):
         return self._list.__iter__()
     def update(self, src):
-        for k in src:
-            self[k] = src[k]
+        if isinstance(src, dict):
+            src = src.iteritems()
+        for k, v in src:
+            self[k] = v
     def clear(self):
         dict.clear(self)
         self._list = []
