@@ -112,6 +112,8 @@ uncompressed clone from lz4 to lz4 should be fine
   streaming all changes
   4 files to transfer, 785 bytes of data
   transferred 785 bytes in * seconds * (glob)
+  searching for changes
+  no changes found
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
