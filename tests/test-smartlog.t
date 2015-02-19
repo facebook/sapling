@@ -68,6 +68,24 @@ As a revset
   | |    b
   | |
 
+With --master
+  $ hg smartlog -T compact --master 1:2
+  @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
 Specific revs
   $ hg smartlog -T compact -r 2 -r 4
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test

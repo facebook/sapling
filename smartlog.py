@@ -217,6 +217,22 @@ def getdag(ui, repo, revs, master):
         ui.warn('note: Smartlog encountered an error, so the sorting might be wrong.\n\n')
         return sorted(results, reverse=True)
 
+def _masterrevset(repo, masterstring):
+    if masterstring:
+        return masterstring
+
+    books = bookmarks.bmstore(repo)
+    if '@' in books:
+        master = '@'
+    elif 'master' in books:
+        master = 'master'
+    elif 'trunk' in books:
+        master = 'trunk'
+    else:
+        master = 'tip'
+
+    return master
+
 def smartlogrevset(repo, subset, x):
     """``smartlog([scope, [master]])``
     Revisions included by default in the smartlog extension
@@ -267,16 +283,7 @@ def smartlogrevset(repo, subset, x):
     for head in heads:
         branches.add(branchinfo(head)[0])
 
-    # from options
-    if not master:
-        if '@' in books:
-            master = '@'
-        elif 'master' in books:
-            master = 'master'
-        elif 'trunk' in books:
-            master = 'trunk'
-        else:
-            master = 'tip'
+    master = _masterrevset(repo, master)
 
     try:
         master = repo.revs(master).first()
