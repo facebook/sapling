@@ -233,6 +233,14 @@ def _masterrevset(repo, masterstring):
 
     return master
 
+def _masterrev(repo, mastername):
+    try:
+        master = repo.revs(mastername).first()
+    except error.RepoLookupError:
+        master = repo.revs(_masterrevset(repo, '')).first()
+
+    return master
+
 def smartlogrevset(repo, subset, x):
     """``smartlog([scope, [master]])``
     Revisions included by default in the smartlog extension
@@ -284,11 +292,7 @@ def smartlogrevset(repo, subset, x):
         branches.add(branchinfo(head)[0])
 
     master = _masterrevset(repo, master)
-
-    try:
-        master = repo.revs(master).first()
-    except error.RepoLookupError:
-        master = repo.revs('tip').first()
+    master = _masterrev(repo, master)
 
     masterbranch = branchinfo(master)[0]
 
