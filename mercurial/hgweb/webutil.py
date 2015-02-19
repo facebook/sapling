@@ -138,9 +138,10 @@ def _siblings(siblings=[], hiderev=None):
         yield d
 
 def parents(ctx, hide=None):
-    if (isinstance(ctx, context.basefilectx) and
-        ctx.changectx().rev() != ctx.linkrev()):
-        return _siblings([ctx._repo[ctx.linkrev()]], hide)
+    if isinstance(ctx, context.basefilectx):
+        introrev = ctx.introrev()
+        if ctx.changectx().rev() != introrev:
+            return _siblings([ctx._repo[introrev]], hide)
     return _siblings(ctx.parents(), hide)
 
 def children(ctx, hide=None):
