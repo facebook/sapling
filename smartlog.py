@@ -218,23 +218,33 @@ def getdag(ui, repo, revs, master):
         return sorted(results, reverse=True)
 
 def _masterrevset(ui, repo, masterstring):
+    """
+    Try to find the name of ``master`` -- usually a bookmark.
+
+    Defaults to 'tip' if no suitable local or remote bookmark is found.
+    """
+
     if not masterstring:
         masterstring = ui.config('smartlog', 'master')
 
     if masterstring:
         return masterstring
 
-    books = bookmarks.bmstore(repo)
-    if '@' in books:
-        master = '@'
-    elif 'master' in books:
-        master = 'master'
-    elif 'trunk' in books:
-        master = 'trunk'
-    else:
-        master = 'tip'
+    names = set(bookmarks.bmstore(repo).keys())
+    if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
+        names.update(set(repo.names['remotebookmarks'].listnames(repo)))
 
-    return master
+    # '' is local repo. This defines an order precedence
+    checkrepos = ['', 'remote/', 'default/']
+    checknames = ['@', 'master', 'trunk']
+
+    for reponame in checkrepos:
+        for name in checknames:
+            fullname = reponame + name
+            if fullname in names:
+                return fullname
+
+    return 'tip'
 
 def _masterrev(repo, masterrevset):
     try:
