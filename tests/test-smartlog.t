@@ -117,3 +117,22 @@ Specific revs
   o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
        a1
   
+
+Test master ordering
+  $ hg boo -f master -r 49cdb4091aca
+  $ hg smartlog -T compact
+  o  2[feature1,master]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |

@@ -366,6 +366,7 @@ Excludes:
     master = opts.get('master')
     if not master:
         master = ui.config('smartlog', 'master')
+    master = _masterrevset(repo, master)
 
     revs = set()
     rev = repo.changelog.rev
@@ -383,6 +384,7 @@ Excludes:
         else:
             scope = 'recent'
         revs.update(repo.revs('smartlog(%s, %s)', scope, master))
+        master = _masterrev(repo, master)
     else:
         for r in opts.get('rev'):
             revs.update(repo.revs(r))
