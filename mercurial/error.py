@@ -23,7 +23,9 @@ class LookupError(RevlogError, KeyError):
     def __init__(self, name, index, message):
         self.name = name
         self.index = index
-        self.message = message
+        # this can't be called 'message' because at least some installs of
+        # Python 2.6+ complain about the 'message' property being deprecated
+        self.lookupmessage = message
         if isinstance(name, str) and len(name) == 20:
             from node import short
             name = short(name)
