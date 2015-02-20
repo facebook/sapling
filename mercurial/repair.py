@@ -181,6 +181,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 repo.ui.pushbuffer()
             if isinstance(gen, bundle2.unbundle20):
                 tr = repo.transaction('strip')
+                tr.hookargs = {'source': 'strip',
+                               'url': 'bundle:' + vfs.join(chgrpfile)}
                 try:
                     bundle2.processbundle(repo, gen, lambda: tr)
                     tr.close()
