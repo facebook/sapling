@@ -217,7 +217,10 @@ def getdag(ui, repo, revs, master):
         ui.warn('note: Smartlog encountered an error, so the sorting might be wrong.\n\n')
         return sorted(results, reverse=True)
 
-def _masterrevset(repo, masterstring):
+def _masterrevset(ui, repo, masterstring):
+    if not masterstring:
+        masterstring = ui.config('smartlog', 'master')
+
     if masterstring:
         return masterstring
 
@@ -291,7 +294,7 @@ def smartlogrevset(repo, subset, x):
     for head in heads:
         branches.add(branchinfo(head)[0])
 
-    master = _masterrevset(repo, master)
+    master = _masterrevset(repo.ui, repo, master)
     master = _masterrev(repo, master)
 
     masterbranch = branchinfo(master)[0]
@@ -364,9 +367,7 @@ Excludes:
 - Your local commit heads that are older than 2 weeks.
     '''
     master = opts.get('master')
-    if not master:
-        master = ui.config('smartlog', 'master')
-    master = _masterrevset(repo, master)
+    master = _masterrevset(ui, repo, master)
 
     revs = set()
     rev = repo.changelog.rev

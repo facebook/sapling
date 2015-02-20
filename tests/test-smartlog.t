@@ -136,3 +136,73 @@ Test master ordering
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
+
+Test overriding master
+  $ hg boo -f master -r 38d85b506754
+  $ hg smartlog -T compact
+  @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  .
+  .
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact --master feature1
+  o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact --config smartlog.master=feature1
+  o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact --config smartlog.master=feature2 --master feature1
+  o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
