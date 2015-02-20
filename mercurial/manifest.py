@@ -527,25 +527,33 @@ class treemanifest(object):
         the nodeid will be None and the flags will be the empty
         string.
         '''
-        diff = {}
+        result = {}
+        emptytree = treemanifest()
+        def _diff(t1, t2):
+            for d, m1 in t1._dirs.iteritems():
+                m2 = t2._dirs.get(d, emptytree)
+                _diff(m1, m2)
 
-        for fn, n1 in self.iteritems():
-            fl1 = self.flags(fn)
-            n2 = m2.get(fn, None)
-            fl2 = m2.flags(fn)
-            if n2 is None:
-                fl2 = ''
-            if n1 != n2 or fl1 != fl2:
-                diff[fn] = ((n1, fl1), (n2, fl2))
-            elif clean:
-                diff[fn] = None
+            for d, m2 in t2._dirs.iteritems():
+                if d not in t1._dirs:
+                    _diff(emptytree, m2)
 
-        for fn, n2 in m2.iteritems():
-            if fn not in self:
-                fl2 = m2.flags(fn)
-                diff[fn] = ((None, ''), (n2, fl2))
+            for fn, n1 in t1._files.iteritems():
+                fl1 = t1._flags.get(fn, '')
+                n2 = t2._files.get(fn, None)
+                fl2 = t2._flags.get(fn, '')
+                if n1 != n2 or fl1 != fl2:
+                    result[t1._subpath(fn)] = ((n1, fl1), (n2, fl2))
+                elif clean:
+                    result[t1._subpath(fn)] = None
 
-        return diff
+            for fn, n2 in t2._files.iteritems():
+                if fn not in t1._files:
+                    fl2 = t2._flags.get(fn, '')
+                    result[t2._subpath(fn)] = ((None, ''), (n2, fl2))
+
+        _diff(self, m2)
+        return result
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
