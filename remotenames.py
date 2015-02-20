@@ -138,6 +138,10 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
+    hoist = ui.config('remotenames', 'hoistremotebookmarks')
+    if hoist:
+        hoist += '/'
+
     loadremotenames(repo)
 
     # cache this so we don't iterate over new values
@@ -149,8 +153,24 @@ def reposetup(ui, repo):
 
         rname = 'remote' + nsname
         rtmpl = 'remote' + ns.templatename
-        names = lambda rp, d=d: d.keys()
-        namemap = lambda rp, name, d=d: d.get(name)
+
+        if nsname == 'bookmarks' and hoist:
+            def names(rp, d=d):
+                l = d.keys()
+                for name in l:
+                    if name.startswith(hoist):
+                        l.append(name[len(hoist):])
+                return l
+            def namemap(rp, name, d=d):
+                if name in d:
+                    return d[name]
+                return d.get(hoist + name)
+            # we don't hoist nodemap because we don't want hoisted names
+            # to show up in logs, which is the primary use case here
+        else:
+            names = lambda rp, d=d: d.keys()
+            namemap = lambda rp, name, d=d: d.get(name)
+
         nodemap = lambda rp, node, d=d: [name for name, n in d.iteritems()
                                          for n2 in n if n2 == node]
 
