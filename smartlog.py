@@ -236,9 +236,9 @@ def _masterrevset(ui, repo, masterstring):
 
     return master
 
-def _masterrev(repo, mastername):
+def _masterrev(repo, masterrevset):
     try:
-        master = repo.revs(mastername).first()
+        master = repo.revs(masterrevset).first()
     except error.RepoLookupError:
         master = repo.revs(_masterrevset(repo, '')).first()
 
@@ -366,8 +366,8 @@ Excludes:
 - All commits under @/master/tip that aren't related to your commits.
 - Your local commit heads that are older than 2 weeks.
     '''
-    master = opts.get('master')
-    master = _masterrevset(ui, repo, master)
+    masterstring = opts.get('master')
+    masterrevset = _masterrevset(ui, repo, masterstring)
 
     revs = set()
     rev = repo.changelog.rev
@@ -384,15 +384,15 @@ Excludes:
             scope = 'all'
         else:
             scope = 'recent'
-        revs.update(repo.revs('smartlog(%s, %s)', scope, master))
-        master = _masterrev(repo, master)
+        revs.update(repo.revs('smartlog(%s, %s)', scope, masterrevset))
+        masterrev = _masterrev(repo, masterrevset)
     else:
         for r in opts.get('rev'):
             revs.update(repo.revs(r))
         try:
-            master = repo.revs('.').first()
+            masterrev = repo.revs('.').first()
         except error.RepoLookupError:
-            master = revs[0]
+            masterrev = revs[0]
 
     if -1 in revs:
         revs.remove(-1)
@@ -416,7 +416,7 @@ Excludes:
     global enabled
     try:
         enabled = True
-        revdag = getdag(ui, repo, revs, master)
+        revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         showparents = [ctx.node() for ctx in repo[None].parents()]
         cmdutil.displaygraph(ui, revdag, displayer, showparents,
