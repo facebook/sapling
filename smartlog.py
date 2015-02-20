@@ -234,17 +234,20 @@ def _masterrevset(ui, repo, masterstring):
     if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
         names.update(set(repo.names['remotebookmarks'].listnames(repo)))
 
-    # '' is local repo. This defines an order precedence
-    checkrepos = ['', 'remote/', 'default/']
-    checknames = ['@', 'master', 'trunk']
-
-    for reponame in checkrepos:
-        for name in checknames:
-            fullname = reponame + name
-            if fullname in names:
-                return fullname
+    for name in _reposnames():
+        if name in names:
+            return name
 
     return 'tip'
+
+def _reposnames():
+    # '' is local repo. This also defines an order precedence for master.
+    repos = ['', 'remote/', 'default/']
+    names = ['@', 'master', 'trunk', 'stable']
+
+    for repo in repos:
+        for name in names:
+            yield repo + name
 
 def _masterrev(repo, masterrevset):
     try:
@@ -288,6 +291,13 @@ def smartlogrevset(repo, subset, x):
     for b in books:
         if not ignore.match(b):
             heads.add(rev(books[b]))
+
+    # add 'interesting' remote bookmarks as well
+    if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
+        remotebooks = repo.names['remotebookmarks']
+        for name in _reposnames():
+            if name in remotebooks:
+                heads.add(rev(remotebooks.namemap(repo, name)[0]))
 
     heads.update(repo.revs('.'))
 
