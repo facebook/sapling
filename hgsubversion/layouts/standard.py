@@ -28,6 +28,7 @@ class StandardLayout(base.BaseLayout):
         # the lambda is to ensure nested paths are handled properly
         meta._gen_cachedconfig('taglocations', ['tags'], 'tag_locations',
                                'tagpaths', lambda x: list(reversed(sorted(x))))
+        meta._gen_cachedconfig('trunkdir', 'trunk', 'trunk_dir')
 
     @property
     def name(self):
@@ -35,7 +36,7 @@ class StandardLayout(base.BaseLayout):
 
     @property
     def trunk(self):
-        return 'trunk' + self.meta.infix
+        return self.meta.trunkdir + self.meta.infix
 
     def localname(self, path):
         if path == self.trunk:
@@ -102,7 +103,7 @@ class StandardLayout(base.BaseLayout):
         if self.localname(candidate) in known_branches:
             return candidate, '/'.join(components)
 
-        if path == 'trunk' or path.startswith('trunk/'):
+        if path == self.meta.trunkdir or path.startswith(self.meta.trunkdir + '/'):
             return self.trunk, path[len(self.trunk) + 1:]
 
         if path.startswith(self.meta.branchdir):
