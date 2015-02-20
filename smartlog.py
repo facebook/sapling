@@ -258,9 +258,9 @@ def smartlogrevset(repo, subset, x):
     else:
         scope = 'recent'
     if len(args) > 1:
-        master = revset.getstring(args[1], _('master must be a string'))
+        masterstring = revset.getstring(args[1], _('master must be a string'))
     else:
-        master = ''
+        masterstring = ''
 
     revs = set()
     heads = set()
@@ -294,10 +294,10 @@ def smartlogrevset(repo, subset, x):
     for head in heads:
         branches.add(branchinfo(head)[0])
 
-    master = _masterrevset(repo.ui, repo, master)
-    master = _masterrev(repo, master)
+    masterrevset = _masterrevset(repo.ui, repo, masterstring)
+    masterrev = _masterrev(repo, masterrevset)
 
-    masterbranch = branchinfo(master)[0]
+    masterbranch = branchinfo(masterrev)[0]
 
     for branch in branches:
         if branch != masterbranch:
@@ -307,7 +307,7 @@ def smartlogrevset(repo, subset, x):
             except:
                 branchmaster = repo.revs('tip').first()
         else:
-            branchmaster = master
+            branchmaster = masterrev
 
         # Find ancestors of heads that are not in master
         # Don't use revsets, they are too slow
