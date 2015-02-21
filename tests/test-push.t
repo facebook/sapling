@@ -177,3 +177,25 @@ force it to consistency for now. (see issue3228, fixed in Mercurial 2.1)
   searching for changes
   no changes found
   [1]
+
+The remote repo is empty and the local one doesn't have any bookmarks/tags
+  $ cd hgrepo2
+  $ echo init >> test.txt
+  $ hg addremove
+  adding test.txt
+  $ fn_hg_commit -m init
+  $ hg update null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg push ../gitrepo2
+  pushing to ../gitrepo2
+  searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
+  $ hg summary
+  parent: -1:000000000000  (no revision checked out)
+  branch: default
+  commit: (clean)
+  update: 1 new changesets (update)
+Only one bookmark 'master' should be created
+  $ hg bookmarks
+   * master                    0:8aded40be5af

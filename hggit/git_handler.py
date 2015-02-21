@@ -983,9 +983,9 @@ class GitHandler(object):
                     del new_refs['capabilities^{}']
                     tip = hex(tip)
                     try:
-                        commands.bookmark(self.ui, self.repo, 'master', tip, force=True)
+                        commands.bookmark(self.ui, self.repo, 'master', rev=tip, force=True)
                     except NameError:
-                        bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
+                        bookmarks.bookmark(self.ui, self.repo, 'master', rev=tip, force=True)
                     bookmarks.setcurrent(self.repo, 'master')
                     new_refs['refs/heads/master'] = self.map_git_get(tip)
 
