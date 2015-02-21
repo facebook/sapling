@@ -148,7 +148,7 @@ def afterloaded(extension, callback):
     '''
 
     if extension in _extensions:
-        callback(loaded=False)
+        callback(loaded=True)
     else:
         _aftercallbacks.setdefault(extension, []).append(callback)
 
