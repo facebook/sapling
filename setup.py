@@ -63,6 +63,8 @@ else:
         raise SystemExit(
             "Couldn't import standard bz2 (incomplete Python install).")
 
+ispypy = "PyPy" in sys.version
+
 import os, stat, subprocess, time
 import re
 import shutil
@@ -276,7 +278,7 @@ class hgbuildmo(build):
 
 
 class hgdist(Distribution):
-    pure = 0
+    pure = ispypy
 
     global_options = Distribution.global_options + \
                      [('pure', None, "use pure (slow) Python "
