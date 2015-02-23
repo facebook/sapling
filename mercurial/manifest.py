@@ -10,13 +10,8 @@ import mdiff, parsers, error, revlog, util
 import array, struct
 
 class manifestdict(dict):
-    def __init__(self, mapping=None, flags=None):
-        if mapping is None:
-            mapping = {}
-        if flags is None:
-            flags = {}
-        dict.__init__(self, mapping)
-        self._flags = flags
+    def __init__(self):
+        self._flags = {}
     def __setitem__(self, k, v):
         assert v is not None
         dict.__setitem__(self, k, v)
@@ -26,7 +21,10 @@ class manifestdict(dict):
         """Set the flags (symlink, executable) for path f."""
         self._flags[f] = flags
     def copy(self):
-        return manifestdict(self, dict.copy(self._flags))
+        copy = manifestdict()
+        dict.__init__(copy, self)
+        copy._flags = dict.copy(self._flags)
+        return copy
     def intersectfiles(self, files):
         '''make a new manifestdict with the intersection of self with files
 
