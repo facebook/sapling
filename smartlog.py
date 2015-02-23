@@ -250,7 +250,7 @@ def _masterrev(repo, masterrevset):
     try:
         master = repo.revs(masterrevset).first()
     except error.RepoLookupError:
-        master = repo.revs(_masterrevset(repo, '')).first()
+        master = repo.revs(_masterrevset(repo.ui, repo, '')).first()
 
     return master
 
