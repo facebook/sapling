@@ -642,16 +642,9 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
         ctxs = [repo[r] for r in revs]
         if not rules:
-            rules = '\n'.join([makedesc(c) for c in ctxs])
-            rules += '\n\n'
-            rules += editcomment % (node.short(root), node.short(topmost))
-            rules = ui.edit(rules, ui.username())
-            # Save edit rules in .hg/histedit-last-edit.txt in case
-            # the user needs to ask for help after something
-            # surprising happens.
-            f = open(repo.join('histedit-last-edit.txt'), 'w')
-            f.write(rules)
-            f.close()
+            rules = ruleeditor(repo, ui, [['pick', c] for c in ctxs],
+                               editcomment=editcomment % (node.short(root),
+                                                          node.short(topmost)))
         else:
             if rules == '-':
                 f = sys.stdin
@@ -825,6 +818,25 @@ def makedesc(c):
     line = 'pick %s %d %s' % (c, c.rev(), summary)
     # trim to 80 columns so it's not stupidly wide in my editor
     return util.ellipsis(line, 80)
+
+def ruleeditor(repo, ui, rules, editcomment=""):
+    """open an editor to edit rules
+
+    rules are in the format [ [act, ctx], ...] like in state.rules
+    """
+    rules = '\n'.join([makedesc(repo[rev]) for [act, rev] in rules])
+    rules += '\n\n'
+    rules += editcomment
+    rules = ui.edit(rules, ui.username())
+
+    # Save edit rules in .hg/histedit-last-edit.txt in case
+    # the user needs to ask for help after something
+    # surprising happens.
+    f = open(repo.join('histedit-last-edit.txt'), 'w')
+    f.write(rules)
+    f.close()
+
+    return rules
 
 def verifyrules(rules, repo, ctxs):
     """Verify that there exists exactly one edit rule per given changeset.
