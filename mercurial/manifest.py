@@ -336,7 +336,8 @@ def _splittopdir(f):
         return '', f
 
 class treemanifest(object):
-    def __init__(self, text=''):
+    def __init__(self, dir='', text=''):
+        self._dir = dir
         self._dirs = {}
         # Using _lazymanifest here is a little slower than plain old dicts
         self._files = {}
@@ -347,27 +348,33 @@ class treemanifest(object):
             if fl:
                 self.setflag(f, fl)
 
+    def _subpath(self, path):
+        return self._dir + path
+
     def __len__(self):
         size = len(self._files)
         for m in self._dirs.values():
             size += m.__len__()
         return size
 
+    def __str__(self):
+        return '<treemanifest dir=%s>' % self._dir
+
     def iteritems(self):
         for p, n in sorted(self._dirs.items() + self._files.items()):
             if p in self._files:
-                yield p, n
+                yield self._subpath(p), n
             else:
-                for sf, sn in n.iteritems():
-                    yield p + sf, sn
+                for f, sn in n.iteritems():
+                    yield f, sn
 
     def iterkeys(self):
         for p in sorted(self._dirs.keys() + self._files.keys()):
             if p in self._files:
-                yield p
+                yield self._subpath(p)
             else:
                 for f in self._dirs[p].iterkeys():
-                    yield p + f
+                    yield f
 
     def keys(self):
         return list(self.iterkeys())
@@ -437,7 +444,7 @@ class treemanifest(object):
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
-                self._dirs[dir] = treemanifest()
+                self._dirs[dir] = treemanifest(self._subpath(dir))
             self._dirs[dir].__setitem__(subpath, n)
         else:
             self._files[f] = n
@@ -447,13 +454,13 @@ class treemanifest(object):
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
-                self._dirs[dir] = treemanifest()
+                self._dirs[dir] = treemanifest(self._subpath(dir))
             self._dirs[dir].setflag(subpath, flags)
         else:
             self._flags[f] = flags
 
     def copy(self):
-        copy = treemanifest()
+        copy = treemanifest(self._dir)
         for d in self._dirs:
             copy._dirs[d] = self._dirs[d].copy()
         copy._files = dict.copy(self._files)
@@ -567,7 +574,7 @@ class manifest(revlog.revlog):
 
     def _newmanifest(self, data=''):
         if self._usetreemanifest:
-            return treemanifest(data)
+            return treemanifest('', data)
         return manifestdict(data)
 
     def readdelta(self, node):
