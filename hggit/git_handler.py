@@ -976,7 +976,12 @@ class GitHandler(object):
         new_refs = refs.copy()
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
-        if refs == {} or refs.keys()[0] == 'capabilities^{}':
+        #
+        # (older dulwich versions return the proto-level
+        # capabilities^{} key when the dict should have been
+        # empty. That check can probably be removed at some point in
+        # the future.)
+        if not refs or refs.keys()[0] == 'capabilities^{}':
             if not exportable:
                 tip = self.repo.lookup('tip')
                 if tip != nullid:
