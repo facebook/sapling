@@ -1901,6 +1901,11 @@ Thrown an error if a template function doesn't exist
   hg: parse error: unknown function 'foo'
   [255]
 
+Pass generator object created by template function to filter
+
+  $ hg log -l 1 --template '{if(author, author)|user}\n'
+  test
+
 Test diff function:
 
   $ hg diff -c 8

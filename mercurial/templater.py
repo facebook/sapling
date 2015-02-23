@@ -162,8 +162,13 @@ def buildfilter(exp, context):
 
 def runfilter(context, mapping, data):
     func, data, filt = data
+    # func() may return string, generator of strings or arbitrary object such
+    # as date tuple, but filter does not want generator.
+    thing = func(context, mapping, data)
+    if isinstance(thing, types.GeneratorType):
+        thing = stringify(thing)
     try:
-        return filt(func(context, mapping, data))
+        return filt(thing)
     except (ValueError, AttributeError, TypeError):
         if isinstance(data, tuple):
             dt = data[1]
