@@ -976,11 +976,12 @@ class GitHandler(object):
         new_refs = refs.copy()
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
-        if refs.keys()[0] == 'capabilities^{}':
+        if refs == {} or refs.keys()[0] == 'capabilities^{}':
             if not exportable:
                 tip = self.repo.lookup('tip')
                 if tip != nullid:
-                    del new_refs['capabilities^{}']
+                    if 'capabilities^{}' in new_refs:
+                        del new_refs['capabilities^{}']
                     tip = hex(tip)
                     try:
                         commands.bookmark(self.ui, self.repo, 'master', rev=tip, force=True)
