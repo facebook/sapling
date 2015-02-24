@@ -91,6 +91,24 @@ As a revset
   | |    b
   | |
 
+With --master
+  $ hg smartlog -T compact --master 1:2
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
 Specific revs
   $ hg smartlog -T compact -r 2 -r 4
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -122,3 +140,131 @@ Specific revs
   o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
        a1
   
+
+Test master ordering
+  $ hg boo -f master -r 49cdb4091aca
+  $ hg smartlog -T compact
+  o  2[feature1,master]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+Test overriding master
+  $ hg boo -f master -r 38d85b506754
+  $ hg smartlog -T compact
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  .
+  .
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact --master feature1
+  o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact --config smartlog.master=feature1
+  o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+  $ hg smartlog -T compact --config smartlog.master=feature2 --master feature1
+  o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
+Test draft branches
+
+  $ hg branch foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg commit -m 'create branch foo'
+  $ hg sl
+  @  changeset:   6:26d4a421c339
+  |  branch:      foo
+  |  bookmark:    feature2
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     create branch foo
+  |
+  .
+  .
+  |
+  o  changeset:   4:38d85b506754
+  |  bookmark:    master
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     c2
+  |
+  .
+  .
+  |
+  | o  changeset:   2:49cdb4091aca
+  |/   bookmark:    feature1
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     b
+  |
+  o  changeset:   1:b68836a6e2ca
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     a2
+  |

@@ -227,6 +227,46 @@ def getdag(ui, repo, revs, master):
         ui.warn('note: Smartlog encountered an error, so the sorting might be wrong.\n\n')
         return sorted(results, reverse=True)
 
+def _masterrevset(ui, repo, masterstring):
+    """
+    Try to find the name of ``master`` -- usually a bookmark.
+
+    Defaults to 'tip' if no suitable local or remote bookmark is found.
+    """
+
+    if not masterstring:
+        masterstring = ui.config('smartlog', 'master')
+
+    if masterstring:
+        return masterstring
+
+    names = set(bookmarks.bmstore(repo).keys())
+    if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
+        names.update(set(repo.names['remotebookmarks'].listnames(repo)))
+
+    for name in _reposnames():
+        if name in names:
+            return name
+
+    return 'tip'
+
+def _reposnames():
+    # '' is local repo. This also defines an order precedence for master.
+    repos = ['', 'remote/', 'default/']
+    names = ['@', 'master', 'trunk', 'stable']
+
+    for repo in repos:
+        for name in names:
+            yield repo + name
+
+def _masterrev(repo, masterrevset):
+    try:
+        master = repo.revs(masterrevset).first()
+    except error.RepoLookupError:
+        master = repo.revs(_masterrevset(repo.ui, repo, '')).first()
+
+    return master
+
 def smartlogrevset(repo, subset, x):
     """``smartlog([scope, [master]])``
     Revisions included by default in the smartlog extension
@@ -241,9 +281,9 @@ def smartlogrevset(repo, subset, x):
     else:
         scope = 'recent'
     if len(args) > 1:
-        master = revset.getstring(args[1], _('master must be a string'))
+        masterstring = revset.getstring(args[1], _('master must be a string'))
     else:
-        master = ''
+        masterstring = ''
 
     revs = set()
     heads = set()
@@ -262,6 +302,13 @@ def smartlogrevset(repo, subset, x):
         if not ignore.match(b):
             heads.add(rev(books[b]))
 
+    # add 'interesting' remote bookmarks as well
+    if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
+        remotebooks = repo.names['remotebookmarks']
+        for name in _reposnames():
+            if name in remotebooks:
+                heads.add(rev(remotebooks.namemap(repo, name)[0]))
+
     heads.update(repo.revs('.'))
 
     global hiddenchanges
@@ -277,33 +324,24 @@ def smartlogrevset(repo, subset, x):
     for head in heads:
         branches.add(branchinfo(head)[0])
 
-    # from options
-    if not master:
-        if '@' in books:
-            master = '@'
-        elif 'master' in books:
-            master = 'master'
-        elif 'trunk' in books:
-            master = 'trunk'
-        else:
-            master = 'tip'
+    masterrevset = _masterrevset(repo.ui, repo, masterstring)
+    masterrev = _masterrev(repo, masterrevset)
 
-    try:
-        master = repo.revs(master).first()
-    except error.RepoLookupError:
-        master = repo.revs('tip').first()
-
-    masterbranch = branchinfo(master)[0]
+    masterbranch = branchinfo(masterrev)[0]
 
     for branch in branches:
         if branch != masterbranch:
             try:
-                branchmaster = repo.revs(
-                    'first(reverse(branch("%s")) & public())' % branch).first()
+                rs = 'first(reverse(branch("%s")) & public())' % branch
+                branchmaster = repo.revs(rs).first()
+                if branchmaster is None:
+                    # local-only (draft) branch
+                    rs = 'branch("%s")' % branch
+                    branchmaster = repo.revs(rs).first()
             except:
                 branchmaster = repo.revs('tip').first()
         else:
-            branchmaster = master
+            branchmaster = masterrev
 
         # Find ancestors of heads that are not in master
         # Don't use revsets, they are too slow
@@ -363,9 +401,8 @@ Excludes:
 - All commits under @/master/tip that aren't related to your commits.
 - Your local commit heads that are older than 2 weeks.
     '''
-    master = opts.get('master')
-    if not master:
-        master = ui.config('smartlog', 'master')
+    masterstring = opts.get('master')
+    masterrevset = _masterrevset(ui, repo, masterstring)
 
     revs = set()
     rev = repo.changelog.rev
@@ -385,14 +422,15 @@ Excludes:
             scope = 'all'
         else:
             scope = 'recent'
-        revs.update(repo.revs('smartlog(%s, %s)', scope, master))
+        revs.update(repo.revs('smartlog(%s, %s)', scope, masterrevset))
+        masterrev = _masterrev(repo, masterrevset)
     else:
         for r in opts.get('rev'):
             revs.update(repo.revs(r))
         try:
-            master = repo.revs('.').first()
+            masterrev = repo.revs('.').first()
         except error.RepoLookupError:
-            master = revs[0]
+            masterrev = revs[0]
 
     if -1 in revs:
         revs.remove(-1)
@@ -416,7 +454,7 @@ Excludes:
     global enabled
     try:
         enabled = True
-        revdag = getdag(ui, repo, revs, master)
+        revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         showparents = [ctx.node() for ctx in repo[None].parents()]
         cmdutil.displaygraph(ui, revdag, displayer, showparents,
