@@ -134,6 +134,7 @@ clone root separately, make different local change
   $ hg status --subrepos
   ? s/f
   $ hg add .
+  adding f
   $ git add f
   $ cd ..
 
@@ -849,5 +850,131 @@ show file at specific revision
   $ mkdir tmp/tc
   $ hg cat -r "parents(.)" --output tmp/%b/foobar s/foobar
   $ diff tmp/tc/foobar catparents
+
+cleanup
+  $ rm -r tmp
+  $ rm catparents
+
+add git files, using either files or patterns
+  $ echo "hsss! hsssssssh!" > s/snake.python
+  $ echo "ccc" > s/c.c
+  $ echo "cpp" > s/cpp.cpp
+
+  $ hg add s/snake.python s/c.c s/cpp.cpp
+  $ hg st --subrepos s
+  M s/foobar
+  A s/c.c
+  A s/cpp.cpp
+  A s/snake.python
+  ? s/barfoo
+  $ hg revert s
+  reverting subrepo ../gitroot
+
+  $ hg add --subrepos "glob:**.python"
+  adding s/snake.python (glob)
+  $ hg st --subrepos s
+  A s/snake.python
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  $ hg revert s
+  reverting subrepo ../gitroot
+
+  $ hg add --subrepos s
+  adding s/barfoo (glob)
+  adding s/c.c (glob)
+  adding s/cpp.cpp (glob)
+  adding s/foobar.orig (glob)
+  adding s/snake.python (glob)
+  $ hg st --subrepos s
+  A s/barfoo
+  A s/c.c
+  A s/cpp.cpp
+  A s/foobar.orig
+  A s/snake.python
+  $ hg revert s
+  reverting subrepo ../gitroot
+make sure everything is reverted correctly
+  $ hg st --subrepos s
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  ? s/snake.python
+
+  $ hg add --subrepos --exclude "path:s/c.c"
+  adding s/barfoo (glob)
+  adding s/cpp.cpp (glob)
+  adding s/foobar.orig (glob)
+  adding s/snake.python (glob)
+  $ hg st --subrepos s
+  A s/barfoo
+  A s/cpp.cpp
+  A s/foobar.orig
+  A s/snake.python
+  ? s/c.c
+  $ hg revert --all -q
+
+.hgignore should not have influence in subrepos
+  $ cat > .hgignore << EOF
+  > syntax: glob
+  > *.python
+  > EOF
+  $ hg add .hgignore
+  $ hg add --subrepos "glob:**.python"
+  adding s/snake.python (glob)
+  $ hg st --subrepos s
+  A s/snake.python
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  $ hg revert --all -q
+
+.gitignore should have influence,
+except for explicitly added files (no patterns)
+  $ cat > s/.gitignore << EOF
+  > *.python
+  > EOF
+  $ hg add s/.gitignore
+  $ hg st --subrepos s
+  A s/.gitignore
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  $ hg add --subrepos "glob:**.python"
+  $ hg st --subrepos s
+  A s/.gitignore
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  $ hg add --subrepos s/snake.python
+  $ hg st --subrepos s
+  A s/.gitignore
+  A s/snake.python
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+
+correctly do a dry run
+  $ hg add --subrepos s --dry-run
+  adding s/barfoo (glob)
+  adding s/c.c (glob)
+  adding s/cpp.cpp (glob)
+  adding s/foobar.orig (glob)
+  $ hg st --subrepos s
+  A s/.gitignore
+  A s/snake.python
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+
+currently no error given when adding an already tracked file
+  $ hg add s/.gitignore
 
   $ cd ..

@@ -1523,6 +1523,29 @@ class gitsubrepo(abstractsubrepo):
             return False
 
     @annotatesubrepoerror
+    def add(self, ui, match, prefix, explicitonly, **opts):
+        if self._gitmissing():
+            return []
+        if match.files():
+            files = match.files()
+        else:
+            (modified, added, removed,
+             deleted, unknown, ignored, clean) = self.status(None)
+            files = unknown
+
+        files = [f for f in files if match(f)]
+        for f in files:
+            exact = match.exact(f)
+            command = ["add"]
+            if exact:
+                command.append("-f") #should be added, even if ignored
+            if ui.verbose or not exact:
+                ui.status(_('adding %s\n') % match.rel(f))
+            if not opts.get('dry_run'):
+                self._gitcommand(command + [f])
+        return []
+
+    @annotatesubrepoerror
     def remove(self):
         if self._gitmissing():
             return

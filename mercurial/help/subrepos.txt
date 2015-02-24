@@ -78,7 +78,7 @@ Interaction with Mercurial Commands
 :add: add does not recurse in subrepos unless -S/--subrepos is
     specified.  However, if you specify the full path of a file in a
     subrepo, it will be added even without -S/--subrepos specified.
-    Git and Subversion subrepositories are currently silently
+    Subversion subrepositories are currently silently
     ignored.
 
 :addremove: addremove does not recurse into subrepos unless
