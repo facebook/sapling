@@ -116,6 +116,14 @@ empty default pull
   searching for changes
   no changes found
 
+pull from wrong ssh URL
+
+  $ hg pull -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/doesnotexist
+  pulling from ssh://user@dummy/doesnotexist
+  remote: abort: there is no Mercurial repository here (.hg not found)!
+  abort: no suitable response from remote hg!
+  [255]
+
 local change
 
   $ echo bleah > foo
@@ -446,6 +454,7 @@ stderr from remote commands should be printed before stdout from local code (iss
   Got arguments 1:user@dummy 2:hg -R local-stream serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R doesnotexist serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R local serve --stdio
   Got arguments 1:user@dummy 2:hg -R $TESTTMP/local serve --stdio

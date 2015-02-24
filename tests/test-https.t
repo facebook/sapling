@@ -156,8 +156,8 @@ pull without cacert
   $ echo '[hooks]' >> .hg/hgrc
   $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
   $ hg pull $DISABLEOSXDUMMYCERT
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   searching for changes
   adding changesets
   adding manifests
@@ -188,28 +188,30 @@ variables in the filename
   searching for changes
   no changes found
   $ P=`pwd` hg -R copy-pull pull --insecure
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   searching for changes
   no changes found
 
 cacert mismatch
 
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/
+  pulling from https://127.0.0.1:$HGPORT/
   abort: 127.0.0.1 certificate error: certificate is for localhost
   (configure hostfingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca or use --insecure to connect insecurely)
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/ --insecure
-  warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://127.0.0.1:$HGPORT/
+  warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
+  pulling from https://localhost:$HGPORT/
   abort: error: *certificate verify failed* (glob)
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem --insecure
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   searching for changes
   no changes found
 
@@ -218,6 +220,7 @@ Test server cert which isn't valid yet
   $ hg -R test serve -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem
   $ cat hg1.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-not-yet.pem https://localhost:$HGPORT1/
+  pulling from https://localhost:$HGPORT1/
   abort: error: *certificate verify failed* (glob)
   [255]
 
@@ -226,6 +229,7 @@ Test server cert which no longer is valid
   $ hg -R test serve -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
   $ cat hg2.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
+  pulling from https://localhost:$HGPORT2/
   abort: error: *certificate verify failed* (glob)
   [255]
 
@@ -267,8 +271,8 @@ Prepare for connecting through proxy
 Test unvalidated https through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --insecure --traceback
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   searching for changes
   no changes found
 
@@ -286,8 +290,10 @@ Test https with cacert and fingerprint through proxy
 Test https with cert problems through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-other.pem
+  pulling from https://localhost:$HGPORT/
   abort: error: *certificate verify failed* (glob)
   [255]
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
+  pulling from https://localhost:$HGPORT2/
   abort: error: *certificate verify failed* (glob)
   [255]
