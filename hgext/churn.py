@@ -46,7 +46,7 @@ def countrate(ui, repo, amap, *pats, **opts):
             date = datetime.datetime(*time.gmtime(float(t) - tz)[:6])
             return date.strftime(opts['dateformat'])
     else:
-        tmpl = opts.get('template', '{author|email}')
+        tmpl = opts.get('oldtemplate') or opts.get('template')
         tmpl = maketemplater(ui, repo, tmpl)
         def getkey(ctx):
             ui.pushbuffer()
@@ -95,7 +95,9 @@ def countrate(ui, repo, amap, *pats, **opts):
      _('count rate for the specified revision or revset'), _('REV')),
     ('d', 'date', '',
      _('count rate for revisions matching date spec'), _('DATE')),
-    ('t', 'template', '{author|email}',
+    ('t', 'oldtemplate', '',
+     _('template to group changesets (DEPRECATED)'), _('TEMPLATE')),
+    ('T', 'template', '{author|email}',
      _('template to group changesets'), _('TEMPLATE')),
     ('f', 'dateformat', '',
      _('strftime-compatible format for grouping by date'), _('FORMAT')),
