@@ -48,11 +48,11 @@ class manifestdict(dict):
             (not match.anypats() and util.all(fn in self for fn in files))):
             return self.intersectfiles(files)
 
-        mf = self.copy()
-        for fn in mf.keys():
+        m = self.copy()
+        for fn in m.keys():
             if not match(fn):
-                del mf[fn]
-        return mf
+                del m[fn]
+        return m
 
     def diff(self, m2, clean=False):
         '''Finds changes between the current manifest and m2.
@@ -247,16 +247,16 @@ class manifest(revlog.revlog):
             return self._mancache[node][0]
         text = self.revision(node)
         arraytext = array.array('c', text)
-        mapping = _parse(text)
-        self._mancache[node] = (mapping, arraytext)
-        return mapping
+        m = _parse(text)
+        self._mancache[node] = (m, arraytext)
+        return m
 
     def find(self, node, f):
         '''look up entry for a single file efficiently.
         return (node, flags) pair if found, (None, None) if not.'''
         if node in self._mancache:
-            mapping = self._mancache[node][0]
-            return mapping.get(f), mapping.flags(f)
+            m = self._mancache[node][0]
+            return m.get(f), m.flags(f)
         text = self.revision(node)
         start, end = _msearch(text, f)
         if start == end:
@@ -265,7 +265,7 @@ class manifest(revlog.revlog):
         f, n = l.split('\0')
         return revlog.bin(n[:40]), n[40:-1]
 
-    def add(self, map, transaction, link, p1, p2, added, removed):
+    def add(self, m, transaction, link, p1, p2, added, removed):
         if p1 in self._mancache:
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
@@ -280,7 +280,7 @@ class manifest(revlog.revlog):
             # since the lists are already sorted
             work.sort()
 
-            arraytext, deltatext = map.fastdelta(self._mancache[p1][1], work)
+            arraytext, deltatext = m.fastdelta(self._mancache[p1][1], work)
             cachedelta = self.rev(p1), deltatext
             text = util.buffer(arraytext)
         else:
@@ -288,11 +288,11 @@ class manifest(revlog.revlog):
             # just encode a fulltext of the manifest and pass that
             # through to the revlog layer, and let it handle the delta
             # process.
-            text = map.text()
+            text = m.text()
             arraytext = array.array('c', text)
             cachedelta = None
 
         n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
-        self._mancache[n] = (map, arraytext)
+        self._mancache[n] = (m, arraytext)
 
         return n
