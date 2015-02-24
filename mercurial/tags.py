@@ -337,7 +337,7 @@ def _writetagcache(ui, repo, heads, tagfnode, cachetags):
     # them local encoding on input, we would lose info writing them to
     # the cache.
     cachefile.write('\n')
-    for (name, (node, hist)) in cachetags.iteritems():
+    for (name, (node, hist)) in sorted(cachetags.iteritems()):
         for n in hist:
             cachefile.write("%s %s\n" % (hex(n), name))
         cachefile.write("%s %s\n" % (hex(node), name))
