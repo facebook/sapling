@@ -1352,11 +1352,11 @@ def parsedate(date, formats=None, bias={}):
         formats = defaultdateformats
     date = date.strip()
 
-    if date == _('now'):
+    if date == 'now' or date == _('now'):
         return makedate()
-    if date == _('today'):
+    if date == 'today' or date == _('today'):
         date = datetime.date.today().strftime('%b %d')
-    elif date == _('yesterday'):
+    elif date == 'yesterday' or date == _('yesterday'):
         date = (datetime.date.today() -
                 datetime.timedelta(days=1)).strftime('%b %d')
 
