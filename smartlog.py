@@ -322,8 +322,12 @@ def smartlogrevset(repo, subset, x):
     for branch in branches:
         if branch != masterbranch:
             try:
-                branchmaster = repo.revs(
-                    'first(reverse(branch("%s")) & public())' % branch).first()
+                rs = 'first(reverse(branch("%s")) & public())' % branch
+                branchmaster = repo.revs(rs).first()
+                if branchmaster is None:
+                    # local-only (draft) branch
+                    rs = 'branch("%s")' % branch
+                    branchmaster = repo.revs(rs).first()
             except:
                 branchmaster = repo.revs('tip').first()
         else:

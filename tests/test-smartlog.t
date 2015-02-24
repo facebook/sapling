@@ -206,3 +206,42 @@ Test overriding master
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
+
+Test draft branches
+
+  $ hg branch foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg commit -m 'create branch foo'
+  $ hg sl
+  @  changeset:   6:40ffc5bb8387
+  |  branch:      foo
+  |  bookmark:    feature2
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     create branch foo
+  |
+  .
+  .
+  |
+  o  changeset:   4:38d85b506754
+  |  bookmark:    master
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     c2
+  |
+  .
+  .
+  |
+  | o  changeset:   2:49cdb4091aca
+  |/   bookmark:    feature1
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     b
+  |
+  o  changeset:   1:b68836a6e2ca
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     a2
+  |
