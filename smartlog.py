@@ -294,10 +294,11 @@ def smartlogrevset(repo, subset, x):
 
     # add 'interesting' remote bookmarks as well
     if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
-        remotebooks = repo.names['remotebookmarks']
+        ns = repo.names['remotebookmarks']
+        remotebooks = set(ns.listnames(repo))
         for name in _reposnames():
             if name in remotebooks:
-                heads.add(rev(remotebooks.namemap(repo, name)[0]))
+                heads.add(rev(ns.namemap(repo, name)[0]))
 
     heads.update(repo.revs('.'))
 
