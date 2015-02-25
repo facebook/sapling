@@ -24,6 +24,9 @@ def reposetup(ui, repo):
         return
 
     class lfilesrepo(repo.__class__):
+        # the mark to examine whether "repo" object enables largefiles or not
+        _largefilesenabled = True
+
         lfstatus = False
         def status_nolfiles(self, *args, **kwargs):
             return super(lfilesrepo, self).status(*args, **kwargs)
