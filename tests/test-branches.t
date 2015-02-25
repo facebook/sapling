@@ -561,8 +561,8 @@ no errors when revbranchcache is not writable
 recovery from invalid cache revs file with trailing data
   $ echo >> .hg/cache/rbc-revs-v1
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
-  truncating cache/rbc-revs-v1 to 120
   5
+  truncating cache/rbc-revs-v1 to 120
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120
 recovery from invalid cache file with partial last record
@@ -571,8 +571,8 @@ recovery from invalid cache file with partial last record
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=119
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
-  truncating cache/rbc-revs-v1 to 112
   5
+  truncating cache/rbc-revs-v1 to 112
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120
 recovery from invalid cache file with missing record - no truncation
@@ -590,11 +590,11 @@ recovery from invalid cache file with some bad records
   $ f -qDB 112 rbc-revs-v1 >> .hg/cache/rbc-revs-v1
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120
-  $ hg log -r 'branch(.)' -T '{rev} '
-  3 4 8 9 10 11 12 13  (no-eol)
+  $ hg log -r 'branch(.)' -T '{rev} ' --debug
+  3 4 8 9 10 11 12 13 truncating cache/rbc-revs-v1 to 8
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
-  truncating cache/rbc-revs-v1 to 8
   5
+  truncating cache/rbc-revs-v1 to 104
   $ f --size --hexdump --bytes=16 .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=120
   0000: 19 70 9c 5a 00 00 00 00 dd 6b 44 0d 00 00 00 01 |.p.Z.....kD.....|

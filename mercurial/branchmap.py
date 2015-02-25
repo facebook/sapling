@@ -97,9 +97,6 @@ def updatecache(repo):
         partial.update(repo, revs)
         partial.write(repo)
 
-    if repo._revbranchcache is not None:
-        repo._revbranchcache.write()
-
     assert partial.validfor(repo), filtername
     repo._branchcaches[repo.filtername] = partial
 

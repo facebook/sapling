@@ -322,6 +322,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   files: 1/1 chunks (100.00%)
   added 2 changesets with 2 changes to 1 files
   invalid branchheads cache (served): tip differs
-  truncating cache/rbc-revs-v1 to 72
   rebase completed
   updating the branch cache
+  truncating cache/rbc-revs-v1 to 72

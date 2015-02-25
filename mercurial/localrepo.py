@@ -303,7 +303,11 @@ class localrepository(object):
         self.names = namespaces.namespaces()
 
     def close(self):
-        pass
+        self._writecaches()
+
+    def _writecaches(self):
+        if self._revbranchcache:
+            self._revbranchcache.write()
 
     def _restrictcapabilities(self, caps):
         # bundle2 is not ready for prime time, drop it unless explicitly
