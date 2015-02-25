@@ -2893,7 +2893,8 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     """manually set the parents of the current working directory
 
     This is useful for writing repository conversion tools, but should
-    be used with care.
+    be used with care. For example, neither the working copy nor the dirstate
+    is updated, so file status may be incorrect after running this command.
 
     Returns 0 on success.
     """
