@@ -179,11 +179,13 @@ def branch(ui, repo, *args, **kwargs):
         return
     elif opts.get('delete'):
         cmd['-d'] = None
-        cmd.append(args[0])
+        if len(args) > 0:
+            cmd.append(args[0])
     elif opts.get('move'):
-        cmd['-m'] = args[0]
-        if len(args) > 1:
-            cmd.append(args[1])
+        if len(args) > 0:
+            cmd['-m'] = args[0]
+            if len(args) > 1:
+                cmd.append(args[1])
     else:
         if len(args) > 1:
             cmd['-r'] = args[1]
