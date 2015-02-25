@@ -628,12 +628,22 @@ def revrange(repo, revs):
         return repo[val].rev()
 
     seen, l = set(), revset.baseset([])
+
+    revsetaliases = [alias for (alias, _) in
+                     repo.ui.configitems("revsetalias")]
+
     for spec in revs:
         if l and not seen:
             seen = set(l)
         # attempt to parse old-style ranges first to deal with
         # things like old-tag which contain query metacharacters
         try:
+            # ... except for revset aliases without arguments. These
+            # should be parsed as soon as possible, because they might
+            # clash with a hash prefix.
+            if spec in revsetaliases:
+                raise error.RepoLookupError
+
             if isinstance(spec, int):
                 seen.add(spec)
                 l = l + revset.baseset([spec])
@@ -641,6 +651,9 @@ def revrange(repo, revs):
 
             if _revrangesep in spec:
                 start, end = spec.split(_revrangesep, 1)
+                if start in revsetaliases or end in revsetaliases:
+                    raise error.RepoLookupError
+
                 start = revfix(repo, start, 0)
                 end = revfix(repo, end, len(repo) - 1)
                 if end == nullrev and start < 0:
