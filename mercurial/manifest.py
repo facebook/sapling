@@ -445,14 +445,17 @@ class treemanifest(object):
     def __init__(self, dir='', text=''):
         self._dir = dir
         self._node = revlog.nullid
+        self._dirty = False
         self._dirs = {}
         # Using _lazymanifest here is a little slower than plain old dicts
         self._files = {}
         self._flags = {}
-        def readsubtree(subdir, subm):
-            raise AssertionError('treemanifest constructor only accepts '
-                                 'flat manifests')
-        self.parse(text, readsubtree)
+        if text:
+            def readsubtree(subdir, subm):
+                raise AssertionError('treemanifest constructor only accepts '
+                                     'flat manifests')
+            self.parse(text, readsubtree)
+            self._dirty = True # Mark flat manifest dirty after parsing
 
     def _subpath(self, path):
         return self._dir + path
@@ -468,8 +471,8 @@ class treemanifest(object):
                 all(m._isempty() for m in self._dirs.values())))
 
     def __str__(self):
-        return ('<treemanifest dir=%s, node=%s>' %
-                (self._dir, revlog.hex(self._node)))
+        return ('<treemanifest dir=%s, node=%s, dirty=%s>' %
+                (self._dir, revlog.hex(self._node), self._dirty))
 
     def dir(self):
         '''The directory that this tree manifest represents, including a
@@ -480,10 +483,12 @@ class treemanifest(object):
         '''This node of this instance. nullid for unsaved instances. Should
         be updated when the instance is read or written from a revlog.
         '''
+        assert not self._dirty
         return self._node
 
     def setnode(self, node):
         self._node = node
+        self._dirty = False
 
     def iteritems(self):
         for p, n in sorted(self._dirs.items() + self._files.items()):
@@ -563,6 +568,7 @@ class treemanifest(object):
             del self._files[f]
             if f in self._flags:
                 del self._flags[f]
+        self._dirty = True
 
     def __setitem__(self, f, n):
         assert n is not None
@@ -573,6 +579,7 @@ class treemanifest(object):
             self._dirs[dir].__setitem__(subpath, n)
         else:
             self._files[f] = n[:21] # to match manifestdict's behavior
+        self._dirty = True
 
     def setflag(self, f, flags):
         """Set the flags (symlink, executable) for path f."""
@@ -584,10 +591,12 @@ class treemanifest(object):
             self._dirs[dir].setflag(subpath, flags)
         else:
             self._flags[f] = flags
+        self._dirty = True
 
     def copy(self):
         copy = treemanifest(self._dir)
         copy._node = self._node
+        copy._dirty = self._dirty
         for d in self._dirs:
             copy._dirs[d] = self._dirs[d].copy()
         copy._files = dict.copy(self._files)
@@ -598,6 +607,8 @@ class treemanifest(object):
         '''Set of files in this manifest that are not in the other'''
         files = set()
         def _filesnotin(t1, t2):
+            if t1._node == t2._node and not t1._dirty and not t2._dirty:
+                return
             for d, m1 in t1._dirs.iteritems():
                 if d in t2._dirs:
                     m2 = t2._dirs[d]
@@ -699,6 +710,8 @@ class treemanifest(object):
             if not m._isempty():
                 ret._dirs[dir] = m
 
+        if not ret._isempty():
+            ret._dirty = True
         return ret
 
     def diff(self, m2, clean=False):
@@ -719,6 +732,8 @@ class treemanifest(object):
         result = {}
         emptytree = treemanifest()
         def _diff(t1, t2):
+            if t1._node == t2._node and not t1._dirty and not t2._dirty:
+                return
             for d, m1 in t1._dirs.iteritems():
                 m2 = t2._dirs.get(d, emptytree)
                 _diff(m1, m2)
@@ -749,13 +764,20 @@ class treemanifest(object):
             if fl == 'd':
                 f = f + '/'
                 self._dirs[f] = readsubtree(self._subpath(f), n)
-            else:
-                # Use __setitem__ and setflag rather than assigning directly
-                # to _files and _flags, thereby letting us parse flat manifests
-                # as well as tree manifests.
+            elif '/' in f:
+                # This is a flat manifest, so use __setitem__ and setflag rather
+                # than assigning directly to _files and _flags, so we can
+                # assign a path in a subdirectory, and to mark dirty (compared
+                # to nullid).
                 self[f] = n
                 if fl:
                     self.setflag(f, fl)
+            else:
+                # Assigning to _files and _flags avoids marking as dirty,
+                # and should be a little faster.
+                self._files[f] = n
+                if fl:
+                    self._flags[f] = fl
 
     def text(self, usemanifestv2=False):
         """Get the full data of this manifest as a bytestring."""
