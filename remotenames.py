@@ -649,6 +649,10 @@ def upstream(repo, subset, x):
     revset.getargs(x, 0, 0, "upstream takes no arguments")
     upstream_names = repo.ui.configlist('remotenames', 'upstream')
     filt = lambda x: True
+    default_path = dict(repo.ui.configitems('paths')).get('default')
+    if not upstream_names and default_path:
+        default_path = expandscheme(repo.ui, default_path)
+        upstream_names = [activepath(repo.ui, default_path)]
     if upstream_names:
         filt = lambda name: name in upstream_names
     return upstream_revs(filt, repo, subset, x)
