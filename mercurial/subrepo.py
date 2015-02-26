@@ -1526,14 +1526,15 @@ class gitsubrepo(abstractsubrepo):
     def add(self, ui, match, prefix, explicitonly, **opts):
         if self._gitmissing():
             return []
-        if match.files():
-            files = match.files()
-        else:
-            (modified, added, removed,
-             deleted, unknown, ignored, clean) = self.status(None)
-            files = unknown
 
-        files = [f for f in files if match(f)]
+        (modified, added, removed,
+         deleted, unknown, ignored, clean) = self.status(None)
+
+        # Unknown files not of interest will be rejected by the matcher
+        files = unknown
+        files.extend(match.files())
+
+        files = [f for f in sorted(set(files)) if match(f)]
         for f in files:
             exact = match.exact(f)
             command = ["add"]

@@ -922,11 +922,11 @@ make sure everything is reverted correctly
   > *.python
   > EOF
   $ hg add .hgignore
-  $ hg add --subrepos "glob:**.python"
+  $ hg add --subrepos "glob:**.python" s/barfoo
   adding s/snake.python (glob)
   $ hg st --subrepos s
+  A s/barfoo
   A s/snake.python
-  ? s/barfoo
   ? s/c.c
   ? s/cpp.cpp
   ? s/foobar.orig
