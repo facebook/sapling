@@ -632,7 +632,7 @@ def upstream_revs(filt, repo, subset, x):
         except KeyError:
             continue
         for name in ns.listnames(repo):
-            if filt(name):
+            if filt(splitremotename(name)[0]):
                 upstream_tips.update(ns.nodes(repo, name))
 
     if not upstream_tips:
@@ -647,12 +647,10 @@ def upstream(repo, subset, x):
     '''
     repo = repo.unfiltered()
     revset.getargs(x, 0, 0, "upstream takes no arguments")
-    upstream_names = [s + '/' for s in
-                      repo.ui.configlist('remotenames', 'upstream')]
-    if not upstream_names:
-        filt = lambda x: True
-    else:
-        filt = lambda name: any(map(name.startswith, upstream_names))
+    upstream_names = repo.ui.configlist('remotenames', 'upstream')
+    filt = lambda x: True
+    if upstream_names:
+        filt = lambda name: name in upstream_names
     return upstream_revs(filt, repo, subset, x)
 
 def pushed(repo, subset, x):
