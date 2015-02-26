@@ -144,13 +144,17 @@ class remotefilelog(object):
 
         # if this node already exists, save the old version in case
         # we ever delete this new commit in the future
-        if os.path.exists(path):
-            filename = os.path.basename(path)
-            directory = os.path.dirname(path)
-            files = [f for f in os.listdir(directory) if f.startswith(filename)]
-            shutil.copyfile(path, path + str(len(files)))
+        oldumask = os.umask(0o002)
+        try:
+            if os.path.exists(path):
+                filename = os.path.basename(path)
+                directory = os.path.dirname(path)
+                files = [f for f in os.listdir(directory) if f.startswith(filename)]
+                shutil.copyfile(path, path + str(len(files)))
 
-        _writefile(path, _createfileblob())
+            _writefile(path, _createfileblob())
+        finally:
+            os.umask(oldumask)
 
         return node
 
