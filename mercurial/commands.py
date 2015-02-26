@@ -4244,12 +4244,12 @@ def incoming(ui, repo, source="default", **opts):
     pull location. These are the changesets that would have been pulled
     if a pull at the time you issued this command.
 
-    For remote repository, using --bundle avoids downloading the
-    changesets twice if the incoming is followed by a pull.
-
     See pull for valid source format details.
 
     .. container:: verbose
+
+      For remote repository, using --bundle avoids downloading the
+      changesets twice if the incoming is followed by a pull.
 
       Examples:
 
