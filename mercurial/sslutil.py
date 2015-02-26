@@ -10,12 +10,16 @@ import os, sys
 
 from mercurial import util
 from mercurial.i18n import _
+
+_canloaddefaultcerts = False
 try:
     # avoid using deprecated/broken FakeSocket in python 2.6
     import ssl
     CERT_REQUIRED = ssl.CERT_REQUIRED
     try:
         ssl_context = ssl.SSLContext
+        _canloaddefaultcerts = util.safehasattr(ssl_context,
+                                                'load_default_certs')
 
         def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=ssl.CERT_NONE,
                             ca_certs=None, serverhostname=None):
@@ -35,6 +39,8 @@ try:
             sslcontext.verify_mode = cert_reqs
             if ca_certs is not None:
                 sslcontext.load_verify_locations(cafile=ca_certs)
+            elif _canloaddefaultcerts:
+                sslcontext.load_default_certs()
 
             sslsocket = sslcontext.wrap_socket(sock,
                                                server_hostname=serverhostname)
@@ -130,10 +136,13 @@ def _plainapplepython():
             exe.startswith('/system/library/frameworks/python.framework/'))
 
 def _defaultcacerts():
+    """return path to CA certificates; None for system's store; ! to disable"""
     if _plainapplepython():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
         if os.path.exists(dummycert):
             return dummycert
+    if _canloaddefaultcerts:
+        return None
     return '!'
 
 def sslkwargs(ui, host):
