@@ -646,8 +646,12 @@ def upstream(repo, subset, x):
     Select changesets in an upstream repository according to remotenames.
     '''
     repo = repo.unfiltered()
-    revset.getargs(x, 0, 0, "upstream takes no arguments")
     upstream_names = repo.ui.configlist('remotenames', 'upstream')
+    # override default args from hgrc with args passed in on the command line
+    if x:
+        upstream_names = [revset.getstring(symbol,
+                                           "remote path must be a string")
+                          for symbol in revset.getlist(x)]
     filt = lambda x: True
     default_path = dict(repo.ui.configitems('paths')).get('default')
     if not upstream_names and default_path:
