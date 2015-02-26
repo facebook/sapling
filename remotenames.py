@@ -645,6 +645,7 @@ def upstream(repo, subset, x):
     '''``upstream()``
     Select changesets in an upstream repository according to remotenames.
     '''
+    repo = repo.unfiltered()
     revset.getargs(x, 0, 0, "upstream takes no arguments")
     upstream_names = [s + '/' for s in
                       repo.ui.configlist('remotenames', 'upstream')]
