@@ -231,7 +231,9 @@ def expushdiscoverybookmarks(pushop):
                 if rev in revs:
                     revs.remove(rev)
 
-            revs = [short(r) for r in revs if not repo[r].obsolete()]
+            revs = [short(r) for r in revs
+                    if not repo[r].obsolete()
+                    and not repo[r].closesbranch()]
             if revs:
                 msg = _("push would create new anonymous heads (%s)")
                 hint = _("use --force to override this warning")
