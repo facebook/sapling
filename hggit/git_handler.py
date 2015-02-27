@@ -1326,6 +1326,10 @@ class GitHandler(object):
             renames = {}
             rename_detector = self._rename_detector
 
+        # this set is unused if rename detection isn't enabled -- that makes the
+        # code below simpler
+        renamed_out = set()
+
         changes = diff_tree.tree_changes(self.git.object_store, btree, tree,
                                          rename_detector=rename_detector)
 
@@ -1355,6 +1359,17 @@ class GitHandler(object):
             # there.
             # This is not an issue for gitlink <-> {symlink, regular file}
             # transitions because they write to separate dictionaries.
+            #
+            # There's a similar edge case when rename detection is enabled: if a
+            # file is renamed and then replaced by a symlink (typically to the
+            # new location), it is returned by dulwich as an add and a
+            # rename. The order of those results is unspecified. Handle both
+            # cases:
+            # rename first, then add -- delete stored in 'new = file' case with
+            # renamed_out, then renamed_out check passes in 'old = file' case so
+            # is overwritten.
+            # add first, then rename -- add stored in 'old = file' case, then
+            # membership check fails in 'new = file' case so is overwritten.
             if newmode == 0160000:
                 # new = gitlink
                 gitlinks[newfile] = newsha
@@ -1375,12 +1390,18 @@ class GitHandler(object):
                 files[newfile] = False, newmode, newsha
                 if renames is not None and newfile != oldfile:
                     renames[newfile] = oldfile
-                    if change.type == diff_tree.CHANGE_RENAME:
+                    renamed_out.add(oldfile)
+                    # the membership check is explained in a comment above
+                    if (change.type == diff_tree.CHANGE_RENAME and
+                        oldfile not in files):
                         files[oldfile] = True, None, None
             else:
                 # old = file
-                # the membership check is explained in a comment above
-                if oldfile not in files:
+                #   files  renamed_out  |  action
+                #     no       *        |   write
+                #    yes       no       |  ignore
+                #    yes      yes       |   write
+                if oldfile not in files or oldfile in renamed_out:
                     files[oldfile] = True, None, None
 
         return files, gitlinks, renames

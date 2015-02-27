@@ -51,6 +51,20 @@ Add a submodule (gitlink) and move it to a different spot:
   rm 'gitsubmodule'
   $ fn_git_commit -m 'move submodule'
 
+Rename a file elsewhere and replace it with a symlink:
+
+  $ git mv beta beta-new
+  $ ln -s beta-new beta
+  $ git add beta
+  $ fn_git_commit -m 'beta renamed'
+
+Rename the file back:
+
+  $ git rm beta
+  rm 'beta'
+  $ git mv beta-new beta
+  $ fn_git_commit -m 'beta renamed back'
+
   $ git checkout -f -b not-master 2>&1 | sed s/\'/\"/g
   Switched to a new branch "not-master"
 
@@ -58,7 +72,75 @@ Add a submodule (gitlink) and move it to a different spot:
   $ hg clone -q gitrepo hgrepo
   $ cd hgrepo
   $ hg log -p --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  4 d22608e850ea875936802e119831f1789f5d98bd move submodule
+  @  6 10614bb16f4d240ba81b6a71d76a7aa160621a29 beta renamed back
+  |  branch=default hg-git-rename-source=git
+  |
+  |  diff --git a/beta b/beta
+  |  old mode 120000
+  |  new mode 100644
+  |  --- a/beta
+  |  +++ b/beta
+  |  @@ -1,1 +1,12 @@
+  |  -beta-new
+  |  \ No newline at end of file
+  |  +1
+  |  +2
+  |  +3
+  |  +4
+  |  +5
+  |  +6
+  |  +7
+  |  +8
+  |  +9
+  |  +10
+  |  +11
+  |  +12
+  |  diff --git a/beta-new b/beta-new
+  |  deleted file mode 100644
+  |  --- a/beta-new
+  |  +++ /dev/null
+  |  @@ -1,12 +0,0 @@
+  |  -1
+  |  -2
+  |  -3
+  |  -4
+  |  -5
+  |  -6
+  |  -7
+  |  -8
+  |  -9
+  |  -10
+  |  -11
+  |  -12
+  |
+  o  5 96ad24db491a180ccd330556129d75377e201f63 beta renamed
+  |  branch=default hg-git-rename-source=git
+  |
+  |  diff --git a/beta b/beta
+  |  old mode 100644
+  |  new mode 120000
+  |  --- a/beta
+  |  +++ b/beta
+  |  @@ -1,12 +1,1 @@
+  |  -1
+  |  -2
+  |  -3
+  |  -4
+  |  -5
+  |  -6
+  |  -7
+  |  -8
+  |  -9
+  |  -10
+  |  -11
+  |  -12
+  |  +beta-new
+  |  \ No newline at end of file
+  |  diff --git a/beta b/beta-new
+  |  copy from beta
+  |  copy to beta-new
+  |
+  o  4 d22608e850ea875936802e119831f1789f5d98bd move submodule
   |  branch=default hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -177,8 +259,8 @@ Make a new commit with a copy and a rename in Mercurial
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 01661f396ff940d709465c43e1a8be7f90817bc8
-  # Parent  8aff1302f945109f4ec3daa0a1c4102bbc4dd2e4
+  # Node ID fc770f3d5429f9406cb45eaf4331e16d5f7a700d
+  # Parent  8542264382fc0ad8acf981974805d73bf89e9521
   delta/epsilon
   
   diff --git a/gamma b/delta
@@ -210,8 +292,10 @@ Make a new commit with a copy and a rename in Mercurial
 
   $ cd ../gitrepo
   $ git log master --pretty=oneline
-  7283d2253aa25f55777dd963a3d148048e0f9646 delta/epsilon
-  a317f1d089c8f20846717173058ab10054523e0f gamma2
+  254e71fefd695af5bcbac61c6e5e57cbbada37b8 delta/epsilon
+  bf71b4d53de0f136931cc80482b1d1f47162630a gamma2
+  f95497455dfa891b4cd9b524007eb9514c3ab654 beta renamed back
+  055f482277da6cd3dd37c7093d06983bad68f782 beta renamed
   d7f31298f27df8a9226eddb1e4feb96922c46fa5 move submodule
   c610256cb6959852d9e70d01902a06726317affc add submodule
   e1348449e0c3a417b086ed60fc13f068d4aa8b26 gamma
@@ -221,7 +305,7 @@ Make a new commit with a copy and a rename in Mercurial
 Make sure the right metadata is stored
   $ git cat-file commit master^
   tree 0adbde18545845f3b42ad1a18939ed60a9dec7a8
-  parent d7f31298f27df8a9226eddb1e4feb96922c46fa5
+  parent f95497455dfa891b4cd9b524007eb9514c3ab654
   author test <none@none> 0 +0000
   committer test <none@none> 0 +0000
   HG:rename-source hg
@@ -229,7 +313,7 @@ Make sure the right metadata is stored
   gamma2
   $ git cat-file commit master
   tree f8f32f4e20b56a5a74582c6a5952c175bf9ec155
-  parent a317f1d089c8f20846717173058ab10054523e0f
+  parent bf71b4d53de0f136931cc80482b1d1f47162630a
   author test <none@none> 0 +0000
   committer test <none@none> 0 +0000
   HG:rename gamma:delta
@@ -247,8 +331,8 @@ Now make another clone and compare the hashes
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 01661f396ff940d709465c43e1a8be7f90817bc8
-  # Parent  8aff1302f945109f4ec3daa0a1c4102bbc4dd2e4
+  # Node ID fc770f3d5429f9406cb45eaf4331e16d5f7a700d
+  # Parent  8542264382fc0ad8acf981974805d73bf89e9521
   delta/epsilon
   
   diff --git a/gamma b/delta
@@ -278,8 +362,10 @@ Regenerate the Git metadata and compare the hashes
   $ hg gexport
   $ cd .hg/git
   $ git log master --pretty=oneline
-  7283d2253aa25f55777dd963a3d148048e0f9646 delta/epsilon
-  a317f1d089c8f20846717173058ab10054523e0f gamma2
+  254e71fefd695af5bcbac61c6e5e57cbbada37b8 delta/epsilon
+  bf71b4d53de0f136931cc80482b1d1f47162630a gamma2
+  f95497455dfa891b4cd9b524007eb9514c3ab654 beta renamed back
+  055f482277da6cd3dd37c7093d06983bad68f782 beta renamed
   d7f31298f27df8a9226eddb1e4feb96922c46fa5 move submodule
   c610256cb6959852d9e70d01902a06726317affc add submodule
   e1348449e0c3a417b086ed60fc13f068d4aa8b26 gamma
