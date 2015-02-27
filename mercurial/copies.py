@@ -149,9 +149,7 @@ def _computeforwardmissing(a, b):
     This is its own function so extensions can easily wrap this call to see what
     files _forwardcopies is about to process.
     """
-    missing = set(b.manifest().iterkeys())
-    missing.difference_update(a.manifest().iterkeys())
-    return missing
+    return b.manifest().filesnotin(a.manifest())
 
 def _forwardcopies(a, b):
     '''find {dst@b: src@a} copy mapping where a is an ancestor of b'''

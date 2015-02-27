@@ -38,6 +38,12 @@ class manifestdict(dict):
                     ret._flags[fn] = flags
         return ret
 
+    def filesnotin(self, m2):
+        '''Set of files in this manifest that are not in the other'''
+        files = set(self.iterkeys())
+        files.difference_update(m2.iterkeys())
+        return files
+
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''
         if match.always():
