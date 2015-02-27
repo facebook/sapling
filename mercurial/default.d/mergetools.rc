@@ -102,6 +102,13 @@ bcompare.gui=True
 bcompare.priority=-1
 bcompare.diffargs=-lro -lefttitle=$plabel1 -righttitle=$clabel -solo -expandall $parent $child
 
+; OS X version of Beyond Compare
+bcomposx.executable = /Applications/Beyond Compare.app/Contents/MacOS/bcomp
+bcomposx.args=$local $other $base -mergeoutput=$output -ro -lefttitle=parent1 -centertitle=base -righttitle=parent2 -outputtitle=merged -automerge -reviewconflicts -solo
+bcomposx.gui=True
+bcomposx.priority=-1
+bcomposx.diffargs=-lro -lefttitle=$plabel1 -righttitle=$clabel -solo -expandall $parent $child
+
 winmerge.args=/e /x /wl /ub /dl other /dr local $other $local $output
 winmerge.regkey=Software\Thingamahoochie\WinMerge
 winmerge.regkeyalt=Software\Wow6432Node\Thingamahoochie\WinMerge\
