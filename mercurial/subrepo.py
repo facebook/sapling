@@ -245,7 +245,7 @@ def submerge(repo, wctx, mctx, actx, overwrite):
                   'use (c)hanged version or (d)elete?'
                   '$$ &Changed $$ &Delete') % s, 0) == 0:
                 debug(s, "prompt recreate", r)
-                wctx.sub(s).get(r)
+                mctx.sub(s).get(r)
                 sm[s] = r
 
     # record merged .hgsubstate

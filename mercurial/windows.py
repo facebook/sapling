@@ -167,7 +167,7 @@ def shellquote(s):
         # they are used as a part of path name (and the latter doesn't
         # work as "escape character", like one on posix) on Windows
         _needsshellquote = re.compile(r'[^a-zA-Z0-9._:/\\-]').search
-    if not _needsshellquote(s) and not _quotere.search(s):
+    if s and not _needsshellquote(s) and not _quotere.search(s):
         # "s" shouldn't have to be quoted
         return s
     return '"%s"' % _quotere.sub(r'\1\1\\\2', s)

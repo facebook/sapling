@@ -311,6 +311,138 @@ should conflict
   t3
   >>>>>>> other: 7af322bc1198  - test: 7
 
+11: remove subrepo t
+
+  $ hg co -C 5
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg revert -r 4 .hgsub # remove t
+  $ hg ci -m11
+  created new head
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+
+local removed, remote changed, keep changed
+
+  $ hg merge 6
+   remote changed subrepository t which local removed
+  use (c)hanged version or (d)elete? c
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+BROKEN: should include subrepo t
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  6747d179aa9a688023c4b0cad32e4c92bb7f34ad t
+  $ hg ci -m 'local removed, remote changed, keep changed'
+BROKEN: should include subrepo t
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+BROKEN: should include subrepo t
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  $ cat t/t
+  t2
+
+local removed, remote changed, keep removed
+
+  $ hg co -C 11
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge --config ui.interactive=true 6 <<EOF
+  > d
+  > EOF
+   remote changed subrepository t which local removed
+  use (c)hanged version or (d)elete? d
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  $ hg ci -m 'local removed, remote changed, keep removed'
+  created new head
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+
+local changed, remote removed, keep changed
+
+  $ hg co -C 6
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge 11
+   local changed subrepository t which remote removed
+  use (c)hanged version or (d)elete? c
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+BROKEN: should include subrepo t
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+BROKEN: should include subrepo t
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  $ hg ci -m 'local changed, remote removed, keep changed'
+  created new head
+BROKEN: should include subrepo t
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+BROKEN: should include subrepo t
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  $ cat t/t
+  t2
+
+local changed, remote removed, keep removed
+
+  $ hg co -C 6
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge --config ui.interactive=true 11 <<EOF
+  > d
+  > EOF
+   local changed subrepository t which remote removed
+  use (c)hanged version or (d)elete? d
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+  $ hg ci -m 'local changed, remote removed, keep removed'
+  created new head
+  $ hg debugsub
+  path s
+   source   s
+   revision e4ece1bf43360ddc8f6a96432201a37b7cd27ae4
+  $ cat .hgsubstate
+  e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
+
+clean up to avoid having to fix up the tests below
+
+  $ hg co -C 10
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > strip=
+  > EOF
+  $ hg strip -r 11:15
+  saved backup bundle to $TESTTMP/t/.hg/strip-backup/*-backup.hg (glob)
+
 clone
 
   $ cd ..
