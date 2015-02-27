@@ -8,10 +8,6 @@
 import util
 import heapq
 
-def _nonoverlap(d1, d2, d3):
-    "Return list of elements in d1 not in d2 or d3"
-    return sorted([d for d in d1 if d not in d3 and d not in d2])
-
 def _dirname(f):
     s = f.rfind("/")
     if s == -1:
@@ -218,8 +214,10 @@ def _computenonoverlap(repo, m1, m2, ma):
     This is its own function so extensions can easily wrap this call to see what
     files mergecopies is about to process.
     """
-    u1 = _nonoverlap(m1, m2, ma)
-    u2 = _nonoverlap(m2, m1, ma)
+    addedinm1 = m1.filesnotin(ma)
+    addedinm2 = m2.filesnotin(ma)
+    u1 = sorted(addedinm1 - addedinm2)
+    u2 = sorted(addedinm2 - addedinm1)
 
     if u1:
         repo.ui.debug("  unmatched files in local:\n   %s\n"
