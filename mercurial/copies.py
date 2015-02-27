@@ -302,7 +302,9 @@ def mergecopies(repo, c1, c2, ca):
         else:
             diverge2.update(fl) # reverse map for below
 
-    bothnew = sorted([d for d in m1 if d in m2 and d not in ma])
+    addedinm1 = m1.filesnotin(ma)
+    addedinm2 = m2.filesnotin(ma)
+    bothnew = sorted(addedinm1 & addedinm2)
     if bothnew:
         repo.ui.debug("  unmatched files new in both:\n   %s\n"
                       % "\n   ".join(bothnew))
