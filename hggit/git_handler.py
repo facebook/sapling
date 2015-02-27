@@ -659,7 +659,7 @@ class GitHandler(object):
             message += "\n--HG--\n" + extra_message
 
         if (extra.get('hg-git-rename-source', None) != 'git'
-            and not extra_in_message and not git_extra):
+            and not extra_in_message and not git_extra and extra_message == ''):
             # We need to store this if no other metadata is stored. This
             # indicates that when reimporting the commit into Mercurial we'll
             # know not to detect renames.

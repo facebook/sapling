@@ -95,8 +95,16 @@ bail if the user does not have dulwich
   $ commit -m "append f2"
   $ git push origin
   To $TESTTMP/gitrepo1
-     5cbc2d4..776fecd  branch1 -> branch1
-     26a4009..e67b2e2  branch2 -> branch2
+     bbfe79a..d8aef79  branch1 -> branch1
+     288e92b..f8f8de5  branch2 -> branch2
+make sure the commit doesn't have an HG:rename-source annotation
+  $ git cat-file commit d8aef79
+  tree b5644d8071b8a5963b8d1fd089fb3fdfb14b1203
+  parent bbfe79acf62dcd6a97763e2a67424a6de8a96941
+  author test <test@example.org> 1167609612 +0000
+  committer test <test@example.org> 1167609612 +0000
+  
+  append f1
   $ cd ..
 
   $ cd hgrepo
