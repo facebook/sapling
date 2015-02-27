@@ -276,6 +276,7 @@ def extdiff(ui, repo, *pats, **opts):
 
 def uisetup(ui):
     for cmd, path in ui.configitems('extdiff'):
+        path = util.expandpath(path)
         if cmd.startswith('cmd.'):
             cmd = cmd[4:]
             if not path:
