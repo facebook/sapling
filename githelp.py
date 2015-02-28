@@ -138,7 +138,9 @@ def add(ui, repo, *args, **kwargs):
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if (opts.get('patch')):
-        ui.status("note: hg crecord provides a more powerful UI for recording changes\n\n")
+        ui.status("note: hg crecord provides a more powerful UI for recording changes\n")
+        ui.status("note: record and crecord will commit when complete, as there is no staging area in mercurial\n\n")
+
         cmd = Command('record')
     else:
         cmd = Command("add")
