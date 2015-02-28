@@ -11,7 +11,7 @@
   >    hg ci -m "add $1"
   > }
   $ getid() {
-  >    hg id --debug --hidden -ir "desc('$1')"
+  >    hg log -T "{node}\n" --hidden -r "desc('$1')"
   > }
 
   $ cat > debugkeys.py <<EOF
@@ -621,7 +621,7 @@ check graph view
 
 check filelog view
 
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg id --debug --id`/'babar'
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg log -r . -T "{node}"`/'babar'
   200 Script output follows
 
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/68'
