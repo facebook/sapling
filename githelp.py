@@ -4,7 +4,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""try mapping git commands to Mercurial commands
 
+Tries to map a given git command to a Mercurial command:
+
+  $ hg githelp -- git checkout master
+  hg update master
+
+"""
 from mercurial import extensions, util, cmdutil, commands, error
 from mercurial import hg, changegroup, fancyopts
 from mercurial.extensions import wrapfunction
@@ -48,7 +55,7 @@ def githelp(ui, repo, *args, **kwargs):
 
     cmd = args[0]
     if not cmd in gitcommands:
-        ui.warn("error: unknown git command %s\n" % (cmd))
+        raise GitUnknownError("error: unknown git command %s" % (cmd))
 
     args = args[1:]
     return gitcommands[cmd](ui, repo, *args, **kwargs)
@@ -126,20 +133,33 @@ class AndCommand(object):
 def add(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('A', 'all', None, ''),
+        ('p', 'patch', None, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    cmd = Command("add")
-
-    if not opts.get('all'):
-        cmd.extend(args)
+    if (opts.get('patch')):
+        ui.status("note: hg crecord provides a more powerful UI for recording changes\n\n")
+        cmd = Command('record')
     else:
-        ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
+        cmd = Command("add")
+
+        if not opts.get('all'):
+            cmd.extend(args)
+        else:
+            ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
 
     ui.status(cmd, "\n")
 
 def bisect(ui, repo, *args, **kwargs):
     ui.status("See 'hg help bisect' for how to use bisect.\n\n")
+
+def blame(ui, repo, *args, **kwargs):
+    cmdoptions = [
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+    cmd = Command('annotate')
+    cmd.extend([convert(v) for v in args])
+    ui.status(cmd, "\n")
 
 def branch(ui, repo, *args, **kwargs):
     cmdoptions = [
@@ -367,10 +387,7 @@ def grep(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    ui.status("note: hg grep greps all of history (and is slow). " +
-        "Use wgrep to grep the working copy.\n\n")
-
-    cmd = Command('wgrep')
+    cmd = Command('grep')
 
     if len(args) > 0:
         cmd.append(args[0])
@@ -403,12 +420,13 @@ def log(ui, repo, *args, **kwargs):
         ('p', 'patch', None, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
-
+    ui.status('note: -v prints the entire commit message like Git does. To ' +
+              'print just the first line, drop the -v.\n\n')
     ui.status("note: see hg help revset for information on how to filter " +
         "log output.\n\n")
 
     cmd = Command('log')
-    cmd['-f'] = None
+    cmd['-v'] = None
 
     if opts.get('number'):
         cmd['-l'] = opts.get('number')
@@ -487,6 +505,31 @@ def merge(ui, repo, *args, **kwargs):
     if len(args) > 0:
         cmd.append(args[len(args) - 1])
 
+    ui.status(cmd, "\n")
+
+def mergebase(ui, repo, *args, **kwargs):
+    cmdoptions = []
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    if len(args) != 2:
+        args = ['A', 'B']
+
+    cmd = Command("log -T '{node}\\n' -r 'ancestor(%s,%s)'"
+                  % (args[0], args[1]))
+
+    ui.status('NOTE: ancestors() is part of the revset language.\n',
+              "Learn more about revsets with 'hg help revsets'\n\n")
+    ui.status(cmd, "\n")
+
+def mergetool(ui, repo, *args, **kwargs):
+    cmdoptions = []
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    cmd = Command("resolve")
+
+    if len(args) == 0:
+        cmd['--all'] = None
+    cmd.extend(args)
     ui.status(cmd, "\n")
 
 def mv(ui, repo, *args, **kwargs):
@@ -611,39 +654,13 @@ def reset(ui, repo, *args, **kwargs):
     commit = convert(args[0] if len(args) > 0 else '.')
     hard = opts.get('hard')
 
-    try:
-        revs = repo.revs(commit)
-        parentreset = revs and revs[0] == repo.revs('.^')[0]
-        selfreset = revs and revs[0] == repo.revs('.')[0]
-    except:
-        parentreset = False
-        selfreset = False
+    if opts.get('mixed'):
+        ui.status('NOTE: There is no staging area (index) in mercurial, so --mixed has no meaning\n\n')
 
-    # Case 1: undo a commit
-    if parentreset:
-        if hard:
-            ui.status("note: hg strip will delete the commit entirely.\n\n")
-
-            cmd = Command('strip')
-            cmd['-r'] = '.'
-        else:
-            ui.status("note: hg strip -k will delete the commit, but keep the " +
-                "changes in your working copy.\n\n")
-            cmd = Command('strip')
-            cmd['-k'] = None
-            cmd['-r'] = '.'
-    # Case 2: clearing pending changes
-    elif hard and selfreset:
-        cmd = Command('revert')
-        cmd['--all'] = None
-    # Case 3: move a bookmark
-    else:
-        upcmd = Command('update')
-        upcmd.append(commit)
-        bookcmd = Command('bookmark')
-        bookcmd['-f'] = None
-        bookcmd.append('<bookmarkname>')
-        cmd = upcmd & bookcmd
+    cmd = Command('reset')
+    if hard:
+        cmd.append('--clean')
+    cmd.append(commit)
 
     ui.status(cmd, "\n")
 
@@ -656,9 +673,25 @@ def revert(ui, repo, *args, **kwargs):
         ui.status("note: hg backout doesn't support multiple commits at once\n\n")
 
     cmd = Command('backout')
-    cmd.append(args[0])
+    if args:
+        cmd.append(args[0])
 
     ui.status(cmd, "\n")
+
+def revparse(ui, repo, *args, **kwargs):
+    cmdoptions = [
+        ('', 'show-cdup', None, ''),
+        ('', 'show-toplevel', None, ''),
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    if opts.get('show_cdup') or opts.get('show_toplevel'):
+        cmd = Command('root')
+        if opts.get('show_cdup'):
+            ui.status("note: hg root prints the root of the repository\n\n")
+        ui.status(cmd, "\n")
+    else:
+        ui.status("note: see hg help revset for how to refer to commits\n")
 
 def rm(ui, repo, *args, **kwargs):
     cmdoptions = [
@@ -816,6 +849,7 @@ def tag(ui, repo, *args, **kwargs):
 gitcommands = {
     'add': add,
     'bisect': bisect,
+    'blame': blame,
     'branch': branch,
     'checkout': checkout,
     'cherry-pick': cherrypick,
@@ -829,12 +863,15 @@ gitcommands = {
     'log': log,
     'ls-files': lsfiles,
     'merge': merge,
+    'merge-base': mergebase,
+    'mergetool': mergetool,
     'mv': mv,
     'pull': pull,
     'push': push,
     'rebase': rebase,
     'reset': reset,
     'revert': revert,
+    'rev-parse': revparse,
     'rm': rm,
     'show': show,
     'stash': stash,
