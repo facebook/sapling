@@ -1530,9 +1530,16 @@ class gitsubrepo(abstractsubrepo):
         (modified, added, removed,
          deleted, unknown, ignored, clean) = self.status(None)
 
+        tracked = set()
+        # dirstates 'amn' warn, 'r' is added again
+        for l in (modified, added, deleted, clean):
+            tracked.update(l)
+
         # Unknown files not of interest will be rejected by the matcher
         files = unknown
         files.extend(match.files())
+
+        rejected = []
 
         files = [f for f in sorted(set(files)) if match(f)]
         for f in files:
@@ -1542,9 +1549,18 @@ class gitsubrepo(abstractsubrepo):
                 command.append("-f") #should be added, even if ignored
             if ui.verbose or not exact:
                 ui.status(_('adding %s\n') % match.rel(f))
+
+            if f in tracked:  # hg prints 'adding' even if already tracked
+                if exact:
+                    rejected.append(f)
+                continue
             if not opts.get('dry_run'):
                 self._gitcommand(command + [f])
-        return []
+
+        for f in rejected:
+            ui.warn(_("%s already tracked!\n") % match.abs(f))
+
+        return rejected
 
     @annotatesubrepoerror
     def remove(self):

@@ -974,7 +974,26 @@ correctly do a dry run
   ? s/cpp.cpp
   ? s/foobar.orig
 
-currently no error given when adding an already tracked file
+error given when adding an already tracked file
   $ hg add s/.gitignore
+  s/.gitignore already tracked!
+  [1]
+
+removed files can be re-added
+  $ hg ci --subrepos -m 'snake'
+  committing subrepository s
+  $ cd s
+  $ git rm snake.python
+  rm 'snake.python'
+  $ touch snake.python
+  $ cd ..
+  $ hg add s/snake.python
+  $ hg status -S
+  M s/snake.python
+  ? .hgignore
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
 
   $ cd ..
