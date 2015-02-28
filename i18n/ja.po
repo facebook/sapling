@@ -149,8 +149,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2015-01-31 23:43+0900\n"
-"PO-Revision-Date: 2015-02-01 08:15+0900\n"
+"POT-Creation-Date: 2015-02-28 17:53+0900\n"
+"PO-Revision-Date: 2015-03-01 01:23+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -24938,12 +24938,12 @@ msgstr "旧形式の obsstore では sha256 を扱えません"
 msgid "parsing obsolete marker: unknown version %r"
 msgstr "廃止情報解析: 未知のリビジョン %r"
 
+msgid "bad obsolescence marker detected: invalid successors nullid"
+msgstr "不正な廃止情報を検出: 後継としての null 指定は不正です"
+
 #, python-format
 msgid "in-marker cycle with %s"
 msgstr "マーカ %s における循環参照があります"
-
-msgid "bad obsolescence marker detected: invalid successors nullid"
-msgstr "不正な廃止情報を検出: 後継としての null 指定は不正です"
 
 #, python-format
 msgid "unknown key: %r"
@@ -25559,6 +25559,9 @@ msgid ""
 "we'll\n"
 "    work around it to return a non-filtered value."
 msgstr ""
+"    不可視なリビジョンが該当する場合は、 別な可視リビジョンが無いか、\n"
+"    ある程度の事後処理が実施されます (※ 訳注: 代替リビジョンの返却は、\n"
+"    未保証です)"
 
 #. i18n: "filelog" is a keyword
 msgid "filelog requires a pattern"
@@ -26990,6 +26993,9 @@ msgstr ":rev: 整数。 各リポジトリ固有のリビジョン番号。"
 msgid ":subrepos: List of strings. Updated subrepositories in the changeset."
 msgstr ":subrepos: 文字列挙。 当該リビジョンで更新されたサブリポジトリ名。"
 
+msgid ":tags: List of strings. Any tags associated with the changeset."
+msgstr ":tags: 文字列列挙。 当該リビジョンに付与されたタグの一覧。"
+
 msgid ""
 ":parents: List of strings. The parents of the changeset in \"rev:node\"\n"
 "    format. If the changeset has only one \"natural\" parent (the "
@@ -27591,6 +27597,3 @@ msgstr "連携先での変更の検索"
 
 msgid "number of cpus must be an integer"
 msgstr "CPU 数には数値を指定してください"
-
-msgid ":tags: List of strings. Any tags associated with the changeset."
-msgstr ":tags: 文字列列挙。 当該リビジョンに付与されたタグの一覧。"
