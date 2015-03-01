@@ -458,6 +458,22 @@ Test actions on largefiles using relative paths from subdir
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     anotherlarge
   |
+
+  $ hg log glob:another*
+  changeset:   1:9627a577c5e9
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     anotherlarge
+  
+  $ hg log -G glob:another*
+  @  changeset:   1:9627a577c5e9
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     anotherlarge
+  |
+
   $ echo more >> anotherlarge
   $ hg st .
   M anotherlarge
@@ -467,6 +483,22 @@ Test actions on largefiles using relative paths from subdir
   $ hg st
   ? sub/anotherlarge.orig
   $ cd ..
+
+Test glob logging from the root dir
+  $ hg log glob:**another*
+  changeset:   1:9627a577c5e9
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     anotherlarge
+  
+  $ hg log -G glob:**another*
+  @  changeset:   1:9627a577c5e9
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     anotherlarge
+  |
 
   $ cd ..
 

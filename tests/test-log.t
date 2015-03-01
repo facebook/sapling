@@ -58,6 +58,28 @@ Make sure largefiles doesn't interfere with logging a regular file
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
+  $ hg log glob:a*
+  changeset:   3:2ca5ba701980
+  user:        test
+  date:        Thu Jan 01 00:00:04 1970 +0000
+  summary:     d
+  
+  changeset:   0:9161b9aeaf16
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
+  
+  $ hg log glob:a* --config extensions.largefiles=
+  changeset:   3:2ca5ba701980
+  user:        test
+  date:        Thu Jan 01 00:00:04 1970 +0000
+  summary:     d
+  
+  changeset:   0:9161b9aeaf16
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     a
+  
 log on directory
 
   $ hg log dir

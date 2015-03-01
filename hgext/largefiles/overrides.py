@@ -304,17 +304,31 @@ def overridelog(orig, ui, repo, *pats, **opts):
             return matchandpats
 
         pats = set(p)
-        # TODO: handling of patterns in both cases below
+
+        def fixpats(pat, tostandin=lfutil.standin):
+            kindpat = match_._patsplit(pat, None)
+
+            if kindpat[0] is not None:
+                return kindpat[0] + ':' + tostandin(kindpat[1])
+            return tostandin(kindpat[1])
+
         if m._cwd:
             if os.path.isabs(m._cwd):
                 # TODO: handle largefile magic when invoked from other cwd
                 return matchandpats
             back = (m._cwd.count('/') + 1) * '../'
-            pats.update(back + lfutil.standin(m._cwd + '/' + f) for f in p)
+
+            def tostandin(f):
+                return back + lfutil.standin(m._cwd + '/' + f)
+
+            pats.update(fixpats(f, tostandin) for f in p)
         else:
-            pats.update(lfutil.standin(f) for f in p)
+            pats.update(fixpats(f) for f in p)
 
         for i in range(0, len(m._files)):
+            # Don't add '.hglf' to m.files, since that is already covered by '.'
+            if m._files[i] == '.':
+                continue
             standin = lfutil.standin(m._files[i])
             # If the "standin" is a directory, append instead of replace to
             # support naming a directory on the command line with only
@@ -325,7 +339,6 @@ def overridelog(orig, ui, repo, *pats, **opts):
             elif m._files[i] not in repo[ctx.node()] \
                     and repo.wvfs.isdir(standin):
                 m._files.append(standin)
-            pats.add(standin)
 
         m._fmap = set(m._files)
         m._always = False
