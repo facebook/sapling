@@ -319,11 +319,21 @@ def overridelog(orig, ui, repo, *pats, **opts):
             back = (m._cwd.count('/') + 1) * '../'
 
             def tostandin(f):
+                # The file may already be a standin, so trucate the back
+                # escaping and test before mangling it.  This avoids turning
+                # 'glob:../.hglf/foo*' into 'glob:../.hglf/../.hglf/foo*'.
+                if f.startswith(back) and lfutil.splitstandin(f[len(back):]):
+                    return f
+
                 return back + lfutil.standin(m._cwd + '/' + f)
 
             pats.update(fixpats(f, tostandin) for f in p)
         else:
-            pats.update(fixpats(f) for f in p)
+            def tostandin(f):
+                if lfutil.splitstandin(f):
+                    return f
+                return lfutil.standin(f)
+            pats.update(fixpats(f, tostandin) for f in p)
 
         for i in range(0, len(m._files)):
             # Don't add '.hglf' to m.files, since that is already covered by '.'
@@ -351,6 +361,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
             return r
         m.matchfn = lfmatchfn
 
+        ui.debug('updated patterns: %s\n' % sorted(pats))
         return m, pats
 
     # For hg log --patch, the match object is used in two different senses:

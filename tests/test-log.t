@@ -46,12 +46,9 @@ changeset graph
   $ hg ci -me -d '5 0'
 
 Make sure largefiles doesn't interfere with logging a regular file
-  $ hg log a --config extensions.largefiles=
-  changeset:   0:9161b9aeaf16
-  user:        test
-  date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     a
-  
+  $ hg --debug log a -T '{rev}: {desc}\n' --config extensions.largefiles=
+  updated patterns: ['.hglf/a', 'a']
+  0: a
   $ hg log a
   changeset:   0:9161b9aeaf16
   user:        test
@@ -69,17 +66,11 @@ Make sure largefiles doesn't interfere with logging a regular file
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
-  $ hg log glob:a* --config extensions.largefiles=
-  changeset:   3:2ca5ba701980
-  user:        test
-  date:        Thu Jan 01 00:00:04 1970 +0000
-  summary:     d
-  
-  changeset:   0:9161b9aeaf16
-  user:        test
-  date:        Thu Jan 01 00:00:01 1970 +0000
-  summary:     a
-  
+  $ hg --debug log glob:a* -T '{rev}: {desc}\n' --config extensions.largefiles=
+  updated patterns: ['glob:.hglf/a*', 'glob:a*']
+  3: d
+  0: a
+
 log on directory
 
   $ hg log dir

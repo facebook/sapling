@@ -466,13 +466,21 @@ Test actions on largefiles using relative paths from subdir
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     anotherlarge
   
-  $ hg log -G glob:another*
-  @  changeset:   1:9627a577c5e9
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     anotherlarge
+  $ hg --debug log -T '{rev}: {desc}\n' -G glob:another*
+  updated patterns: ['glob:../.hglf/sub/another*', 'glob:another*']
+  @  1: anotherlarge
   |
+
+#if no-msys
+  $ hg --debug log -T '{rev}: {desc}\n' 'glob:../.hglf/sub/another*' # no-msys
+  updated patterns: ['glob:../.hglf/sub/another*']
+  1: anotherlarge
+
+  $ hg --debug log -G -T '{rev}: {desc}\n' 'glob:../.hglf/sub/another*' # no-msys
+  updated patterns: ['glob:../.hglf/sub/another*']
+  @  1: anotherlarge
+  |
+#endif
 
   $ echo more >> anotherlarge
   $ hg st .
