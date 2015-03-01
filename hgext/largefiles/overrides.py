@@ -313,19 +313,25 @@ def overridelog(orig, ui, repo, *pats, **opts):
             return tostandin(kindpat[1])
 
         if m._cwd:
-            if os.path.isabs(m._cwd):
-                # TODO: handle largefile magic when invoked from other cwd
-                return matchandpats
-            back = (m._cwd.count('/') + 1) * '../'
+            hglf = lfutil.shortname
+            back = util.pconvert(m.rel(hglf)[:-len(hglf)])
 
             def tostandin(f):
                 # The file may already be a standin, so trucate the back
-                # escaping and test before mangling it.  This avoids turning
+                # prefix and test before mangling it.  This avoids turning
                 # 'glob:../.hglf/foo*' into 'glob:../.hglf/../.hglf/foo*'.
                 if f.startswith(back) and lfutil.splitstandin(f[len(back):]):
                     return f
 
-                return back + lfutil.standin(m._cwd + '/' + f)
+                # An absolute path is from outside the repo, so truncate the
+                # path to the root before building the standin.  Otherwise cwd
+                # is somewhere in the repo, relative to root, and needs to be
+                # prepended before building the standin.
+                if os.path.isabs(m._cwd):
+                    f = f[len(back):]
+                else:
+                    f = m._cwd + '/' + f
+                return back + lfutil.standin(f)
 
             pats.update(fixpats(f, tostandin) for f in p)
         else:
