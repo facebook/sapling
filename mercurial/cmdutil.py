@@ -2266,6 +2266,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 date = ctx.date()
                 # Recompute copies (avoid recording a -> b -> a)
                 copied = copies.pathcopies(base, ctx)
+                if old.p2:
+                    copied.update(copies.pathcopies(old.p2(), ctx))
 
                 # Prune files which were reverted by the updates: if old
                 # introduced file X and our intermediate commit, node,
