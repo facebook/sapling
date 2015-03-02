@@ -721,7 +721,7 @@ def overriderevert(orig, ui, repo, *pats, **opts):
             # currently doesn't work correctly in that case, this match is
             # called, so the lfdirstate above may not be the correct one for
             # this invocation of match.
-            lfdirstate = lfutil.openlfdirstate(ctx._repo.ui, ctx._repo)
+            lfdirstate = lfutil.openlfdirstate(ctx._repo.ui, ctx._repo, False)
 
             def tostandin(f):
                 if lfutil.standin(f) in ctx:
