@@ -1057,3 +1057,66 @@ Before the fix, the copy information was lost.
   A a2
     a0
   R a0
+  $ cd ..
+
+Check that amend properly preserve rename from directory rename (issue-4516)
+
+If a parent of the merge renames a full directory, any files added to the old
+directory in the other parent will be renamed to the new directory. For some
+reason, the rename metadata was when amending such merge. This test ensure we
+do not regress. We have a dedicated repo because it needs a setup with renamed
+directory)
+
+  $ hg init issue4516
+  $ cd issue4516
+  $ mkdir olddirname
+  $ echo line1 > olddirname/commonfile.py
+  $ hg add olddirname/commonfile.py
+  $ hg ci -m first
+
+  $ hg branch newdirname
+  marked working directory as branch newdirname
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg mv olddirname newdirname
+  moving olddirname/commonfile.py to newdirname/commonfile.py (glob)
+  $ hg ci -m rename
+
+  $ hg update default
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo line1 > olddirname/newfile.py
+  $ hg add olddirname/newfile.py
+  $ hg ci -m log
+
+  $ hg up newdirname
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ # create newdirname/newfile.py
+  $ hg merge default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m add
+  $ 
+  $ hg debugrename newdirname/newfile.py
+  newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def
+  $ hg status -C --change .
+  A newdirname/newfile.py
+  $ hg status -C --rev 1
+  A newdirname/newfile.py
+  $ hg status -C --rev 2
+  A newdirname/commonfile.py
+    olddirname/commonfile.py
+  A newdirname/newfile.py
+    olddirname/newfile.py
+  R olddirname/commonfile.py
+  R olddirname/newfile.py
+  $ hg debugindex newdirname/newfile.py
+     rev    offset  length   base linkrev nodeid       p1           p2
+       0         0      88      0       3 34a4d536c0c0 000000000000 000000000000
+
+  $ echo a >> newdirname/commonfile.py
+  $ hg ci --amend -m bug
+  $ hg debugrename newdirname/newfile.py
+  newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def
+  $ hg debugindex newdirname/newfile.py
+     rev    offset  length   base linkrev nodeid       p1           p2
+       0         0      88      0       3 34a4d536c0c0 000000000000 000000000000
+
