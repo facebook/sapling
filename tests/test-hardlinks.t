@@ -159,7 +159,7 @@ Push to repo r1 should break up most hardlinks in r2:
   1 r2/.hg/store/00manifest.i
   1 r2/.hg/store/data/d1/f2.i
   2 r2/.hg/store/data/f1.i
-  2 r2/.hg/store/fncache
+  1 r2/.hg/store/fncache
 
   $ hg -R r2 verify
   checking changesets
@@ -184,7 +184,7 @@ Committing a change to f1 in r1 must break up hardlink f1.i in r2:
   1 r2/.hg/store/00manifest.i
   1 r2/.hg/store/data/d1/f2.i
   1 r2/.hg/store/data/f1.i
-  2 r2/.hg/store/fncache
+  1 r2/.hg/store/fncache
 
 
   $ cd r3

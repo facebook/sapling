@@ -722,7 +722,7 @@ def copyfile(src, dest, hardlink=False):
         unlink(dest)
     # hardlinks are problematic on CIFS, quietly ignore this flag
     # until we find a way to work around it cleanly (issue4546)
-    if False or hardlink:
+    if False and hardlink:
         try:
             oslink(src, dest)
             return
