@@ -720,7 +720,9 @@ def copyfile(src, dest, hardlink=False):
     "copy a file, preserving mode and atime/mtime"
     if os.path.lexists(dest):
         unlink(dest)
-    if hardlink:
+    # hardlinks are problematic on CIFS, quietly ignore this flag
+    # until we find a way to work around it cleanly (issue4546)
+    if False or hardlink:
         try:
             oslink(src, dest)
             return
