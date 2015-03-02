@@ -577,7 +577,7 @@ def getstatuswriter(ui, repo, forcibly=None):
     Otherwise, this returns the function to always write out (or
     ignore if ``not forcibly``) status.
     '''
-    if forcibly is None:
+    if forcibly is None and util.safehasattr(repo, '_largefilesenabled'):
         return repo._lfstatuswriters[-1]
     else:
         if forcibly:

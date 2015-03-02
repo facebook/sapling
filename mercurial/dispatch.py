@@ -227,6 +227,9 @@ def _runcatch(req):
             except (AttributeError, IndexError):
                 # it might be anything, for example a string
                 reason = inst.reason
+            if isinstance(reason, unicode):
+                # SSLError of Python 2.7.9 contains a unicode
+                reason = reason.encode(encoding.encoding, 'replace')
             ui.warn(_("abort: error: %s\n") % reason)
         elif (util.safehasattr(inst, "args")
               and inst.args and inst.args[0] == errno.EPIPE):

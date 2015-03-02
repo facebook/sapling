@@ -274,7 +274,8 @@ class repoview(object):
         unfichangelog = unfi.changelog
         revs = filterrevs(unfi, self.filtername)
         cl = self._clcache
-        newkey = (len(unfichangelog), unfichangelog.tip(), hash(revs))
+        newkey = (len(unfichangelog), unfichangelog.tip(), hash(revs),
+                  unfichangelog._delayed)
         if cl is not None:
             # we need to check curkey too for some obscure reason.
             # MQ test show a corruption of the underlying repo (in _clcache)
@@ -282,7 +283,7 @@ class repoview(object):
             oldfilter = cl.filteredrevs
             try:
                 cl.filteredrevs = ()  # disable filtering for tip
-                curkey = (len(cl), cl.tip(), hash(oldfilter))
+                curkey = (len(cl), cl.tip(), hash(oldfilter), cl._delayed)
             finally:
                 cl.filteredrevs = oldfilter
             if newkey != self._clcachekey or newkey != curkey:

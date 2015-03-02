@@ -848,6 +848,9 @@ def hgclone(orig, ui, opts, *args, **kwargs):
     return result
 
 def overriderebase(orig, ui, repo, **opts):
+    if not util.safehasattr(repo, '_largefilesenabled'):
+        return orig(ui, repo, **opts)
+
     resuming = opts.get('continue')
     repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
     repo._lfstatuswriters.append(lambda *msg, **opts: None)

@@ -527,7 +527,7 @@ def branch(repo, subset, x):
     import branchmap
     urepo = repo.unfiltered()
     ucl = urepo.changelog
-    getbi = branchmap.revbranchcache(urepo).branchinfo
+    getbi = branchmap.revbranchcache(urepo, readonly=True).branchinfo
 
     try:
         b = getstring(x, '')
@@ -1277,7 +1277,8 @@ def named(repo, subset, x):
     names = set()
     for ns in namespaces:
         for name in ns.listnames(repo):
-            names.update(repo[n].rev() for n in ns.nodes(repo, name))
+            if name not in ns.deprecated:
+                names.update(repo[n].rev() for n in ns.nodes(repo, name))
 
     names -= set([node.nullrev])
     return subset & names

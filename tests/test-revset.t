@@ -791,7 +791,6 @@ we can use patterns when searching for tags
   6
   $ log 'named("tags")'
   6
-  9
 
 issue2437
 

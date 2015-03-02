@@ -199,10 +199,10 @@ def showbookmarks(**args):
     """
     repo = args['ctx']._repo
     bookmarks = args['ctx'].bookmarks()
-    hybrid = showlist('bookmark', bookmarks, **args)
-    for value in hybrid.values:
-        value['current'] = repo._bookmarkcurrent
-    return hybrid
+    current = repo._bookmarkcurrent
+    c = [{'bookmark': x, 'current': current} for x in bookmarks]
+    f = _showlist('bookmark', bookmarks, **args)
+    return _hybrid(f, c, lambda x: x['bookmark'])
 
 def showchildren(**args):
     """:children: List of strings. The children of the changeset."""

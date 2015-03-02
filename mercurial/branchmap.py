@@ -330,7 +330,7 @@ class revbranchcache(object):
     and will grow with it but be 1/8th of its size.
     """
 
-    def __init__(self, repo):
+    def __init__(self, repo, readonly=True):
         assert repo.filtername is None
         self._names = [] # branch names in local encoding with static index
         self._rbcrevs = array('c') # structs of type _rbcrecfmt
@@ -342,6 +342,10 @@ class revbranchcache(object):
         except (IOError, OSError), inst:
             repo.ui.debug("couldn't read revision branch cache names: %s\n" %
                           inst)
+            if readonly:
+                # don't try to use cache - fall back to the slow path
+                self.branchinfo = self._branchinfo
+
         if self._names:
             try:
                 data = repo.vfs.read(_rbcrevs)

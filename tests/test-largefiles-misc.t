@@ -915,6 +915,77 @@ locally (issue4109)
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 #endif
 
+Test overridden functions work correctly even for repos disabling
+largefiles (issue4547)
+
+  $ hg showconfig extensions | grep largefiles
+  extensions.largefiles=!
+
+(test updating implied by clone)
+
+  $ hg init enabled-but-no-largefiles
+  $ echo normal1 > enabled-but-no-largefiles/normal1
+  $ hg -R enabled-but-no-largefiles add enabled-but-no-largefiles/normal1
+  $ hg -R enabled-but-no-largefiles commit -m '#0@enabled-but-no-largefiles'
+  Invoking status precommit hook
+  A normal1
+  $ cat >> enabled-but-no-largefiles/.hg/hgrc <<EOF
+  > [extensions]
+  > # enable locally
+  > largefiles=
+  > EOF
+  $ hg clone -q enabled-but-no-largefiles no-largefiles
+
+(test rebasing implied by pull: precommit while rebasing unexpectedly
+shows "normal3" as "?", because lfdirstate isn't yet written out at
+that time)
+
+  $ echo normal2 > enabled-but-no-largefiles/normal2
+  $ hg -R enabled-but-no-largefiles add enabled-but-no-largefiles/normal2
+  $ hg -R enabled-but-no-largefiles commit -m '#1@enabled-but-no-largefiles'
+  Invoking status precommit hook
+  A normal2
+
+  $ echo normal3 > no-largefiles/normal3
+  $ hg -R no-largefiles add no-largefiles/normal3
+  $ hg -R no-largefiles commit -m '#1@no-largefiles'
+  Invoking status precommit hook
+  A normal3
+
+  $ hg -R no-largefiles -q pull --rebase
+  Invoking status precommit hook
+  ? normal3
+
+(test reverting)
+
+  $ hg init subrepo-root
+  $ cat >> subrepo-root/.hg/hgrc <<EOF
+  > [extensions]
+  > # enable locally
+  > largefiles=
+  > EOF
+  $ echo large > subrepo-root/large
+  $ hg -R subrepo-root add --large subrepo-root/large
+  $ hg clone -q no-largefiles subrepo-root/no-largefiles
+  $ cat > subrepo-root/.hgsub <<EOF
+  > no-largefiles = no-largefiles
+  > EOF
+  $ hg -R subrepo-root add subrepo-root/.hgsub
+  $ hg -R subrepo-root commit -m '#0'
+  Invoking status precommit hook
+  A .hgsub
+  A large
+  ? .hgsubstate
+  $ echo dirty >> subrepo-root/large
+  $ echo dirty >> subrepo-root/no-largefiles/normal1
+  $ hg -R subrepo-root status -S
+  M large
+  M no-largefiles/normal1
+  $ hg -R subrepo-root revert --all
+  reverting subrepo-root/.hglf/large (glob)
+  reverting subrepo no-largefiles
+  reverting subrepo-root/no-largefiles/normal1 (glob)
+
   $ cd ..
 
 

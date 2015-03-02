@@ -25509,13 +25509,13 @@ msgstr "não é possível lidar com sha256 com o formato obsstore antigo"
 msgid "parsing obsolete marker: unknown version %r"
 msgstr "decodificando marcações de obsolescência: versão desconhecida %r"
 
-#, python-format
-msgid "in-marker cycle with %s"
-msgstr "ciclo nos marcadores com %s"
-
 msgid "bad obsolescence marker detected: invalid successors nullid"
 msgstr ""
 "marcação de obsolescência inválida detectada: sucessores nullid inválidos"
+
+#, python-format
+msgid "in-marker cycle with %s"
+msgstr "ciclo nos marcadores com %s"
 
 #, python-format
 msgid "unknown key: %r"
@@ -25690,8 +25690,9 @@ msgid "killed by signal %d"
 msgstr "morto pelo sinal %d"
 
 #, python-format
-msgid "unknown strip-bundle2-version value %r; "
-msgstr "valor desconhecido de strip-bundle2-version %r; "
+msgid "unknown strip-bundle2-version value %r; should be one of %r\n"
+msgstr ""
+"valor desconhecido de strip-bundle2-version %r; deveria ser um dentre %r\n"
 
 #, python-format
 msgid "saved backup bundle to %s\n"
@@ -27610,6 +27611,9 @@ msgstr ":rev: Inteiro. O número de ordem da revisão no repositório local."
 msgid ":subrepos: List of strings. Updated subrepositories in the changeset."
 msgstr ":subrepos: Lista de strings. Sub-repositórios atualizados na revisão."
 
+msgid ":tags: List of strings. Any tags associated with the changeset."
+msgstr ":tags: Lista de strings. Quaisquer etiquetas associadas à revisão."
+
 msgid ""
 ":parents: List of strings. The parents of the changeset in \"rev:node\"\n"
 "    format. If the changeset has only one \"natural\" parent (the predecessor\n"
@@ -28249,6 +28253,3 @@ msgstr "o número de cpus deve ser um inteiro"
 
 #~ msgid "graft for revision %s is empty\n"
 #~ msgstr "o enxerto para a revisão %s é vazio\n"
-
-#~ msgid ":tags: List of strings. Any tags associated with the changeset."
-#~ msgstr ":tags: Lista de strings. Quaisquer etiquetas associadas à revisão."
