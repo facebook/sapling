@@ -34,6 +34,17 @@ Empty update fails
   $ hg log -r . -T '{rev}\n'
   1
 
+Updating to a specific date isn't blocked by our extensions'
+
+  $ hg bookmark temp
+  $ hg up -d "<today"
+  found revision 2 from Thu Jan 01 00:00:00 1970 +0000
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up temp
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark temp)
+  $ hg bookmark --delete temp
+
 Log is -f by default
 
   $ hg log -G -T '{rev} {desc}\n'
@@ -48,7 +59,6 @@ Log is -f by default
   |/
   o  0 a
   
-
 Dirty update to different rev fails by default
 
   $ echo x >> a

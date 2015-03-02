@@ -44,7 +44,7 @@ def extsetup(ui):
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
-    if not node and not rev:
+    if not node and not rev and not kwargs['date']:
         raise util.Abort(
             'you must specify a destination to update to',
             hint="if you're trying to move a bookmark forward, try " +
