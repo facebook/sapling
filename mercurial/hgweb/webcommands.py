@@ -431,56 +431,8 @@ def changeset(web, req, tmpl):
     templates related to diffs may all be used to produce the output.
     """
     ctx = webutil.changectx(web.repo, req)
-    basectx = webutil.basechangectx(web.repo, req)
-    if basectx is None:
-        basectx = ctx.p1()
-    showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
-    showbookmarks = webutil.showbookmark(web.repo, tmpl, 'changesetbookmark',
-                                         ctx.node())
-    showbranch = webutil.nodebranchnodefault(ctx)
 
-    files = []
-    parity = paritygen(web.stripecount)
-    for blockno, f in enumerate(ctx.files()):
-        template = f in ctx and 'filenodelink' or 'filenolink'
-        files.append(tmpl(template,
-                          node=ctx.hex(), file=f, blockno=blockno + 1,
-                          parity=parity.next()))
-
-    style = web.config('web', 'style', 'paper')
-    if 'style' in req.form:
-        style = req.form['style'][0]
-
-    parity = paritygen(web.stripecount)
-    diffs = webutil.diffs(web.repo, tmpl, ctx, basectx, None, parity, style)
-
-    parity = paritygen(web.stripecount)
-    diffstatgen = webutil.diffstatgen(ctx, basectx)
-    diffstat = webutil.diffstat(tmpl, ctx, diffstatgen, parity)
-
-    return tmpl('changeset',
-                diff=diffs,
-                rev=ctx.rev(),
-                node=ctx.hex(),
-                parent=tuple(webutil.parents(ctx)),
-                child=webutil.children(ctx),
-                basenode=basectx.hex(),
-                changesettag=showtags,
-                changesetbookmark=showbookmarks,
-                changesetbranch=showbranch,
-                author=ctx.user(),
-                desc=ctx.description(),
-                extra=ctx.extra(),
-                date=ctx.date(),
-                files=files,
-                diffsummary=lambda **x: webutil.diffsummary(diffstatgen),
-                diffstat=diffstat,
-                archives=web.archivelist(ctx.hex()),
-                tags=webutil.nodetagsdict(web.repo, ctx.node()),
-                bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
-                branch=webutil.nodebranchnodefault(ctx),
-                inbranch=webutil.nodeinbranch(web.repo, ctx),
-                branches=webutil.nodebranchdict(web.repo, ctx))
+    return tmpl('changeset', **webutil.changesetentry(web, req, tmpl, ctx))
 
 rev = webcommand('rev')(changeset)
 
