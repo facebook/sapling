@@ -112,7 +112,7 @@ Mailing list: http://selenic.com/mailman/listinfo/mercurial
 
 Copying
 """""""
-Copyright (C) 2005-2014 Matt Mackall.
+Copyright (C) 2005-2015 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License version 2 or any later version.
 

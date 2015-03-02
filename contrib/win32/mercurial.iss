@@ -21,7 +21,7 @@
 #endif
 
 [Setup]
-AppCopyright=Copyright 2005-2010 Matt Mackall and others
+AppCopyright=Copyright 2005-2015 Matt Mackall and others
 AppName=Mercurial
 #if ARCH == "x64"
 AppVerName=Mercurial {#VERSION} (64-bit)
@@ -44,7 +44,7 @@ AppContact=mercurial@selenic.com
 DefaultDirName={pf}\Mercurial
 SourceDir=..\..
 VersionInfoDescription=Mercurial distributed SCM (version {#VERSION})
-VersionInfoCopyright=Copyright 2005-2010 Matt Mackall and others
+VersionInfoCopyright=Copyright 2005-2015 Matt Mackall and others
 VersionInfoCompany=Matt Mackall and others
 InternalCompressLevel=max
 SolidCompression=true

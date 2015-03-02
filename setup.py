@@ -555,7 +555,7 @@ extra = {}
 if py2exeloaded:
     extra['console'] = [
         {'script':'hg',
-         'copyright':'Copyright (C) 2005-2010 Matt Mackall and others',
+         'copyright':'Copyright (C) 2005-2015 Matt Mackall and others',
          'product_version':version}]
     # sub command of 'build' because 'py2exe' does not handle sub_commands
     build.sub_commands.insert(0, ('build_hgextindex', None))
