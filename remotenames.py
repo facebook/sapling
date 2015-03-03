@@ -575,7 +575,26 @@ def loadremotenames(repo):
             nodes.append(ctx.node())
             _remotenames[nametype][name] = nodes
 
+def transition(repo, ui):
+    """
+    Help with transitioning to using a remotenames workflow.
+
+    Allows deleting matching local bookmarks defined in a config file:
+
+    [remotenames]
+    transitionbookmarks = master, stable
+    """
+    transmarks = ui.configlist('remotenames', 'transitionbookmarks')
+    localmarks = repo._bookmarks
+    for mark in transmarks:
+        if mark in localmarks:
+            del localmarks[mark]
+    localmarks.write()
+
 def saveremotenames(repo, remote, branches, bookmarks):
+    if not repo.vfs.exists('remotenames'):
+        transition(repo, repo.ui)
+
     # read in all data first before opening file to write
     olddata = set(readremotenames(repo))
 

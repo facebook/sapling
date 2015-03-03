@@ -53,3 +53,22 @@ Test hoisting name lookup
   cb9a9f314b8b -  - remote/bm1 remote/bm2
   $ hg log -r bm2 -T '{node|short} - {bookmarks} - {remotebookmarks}\n'
   cb9a9f314b8b -  - remote/bm1 remote/bm2
+
+Test transition bookmark deletion
+  $ rm .hg/remotenames
+  $ hg book stable -r .
+  $ echo b > b
+  $ hg add b
+  $ hg commit -qm 'b'
+  $ hg book master
+  $ hg bookmarks
+   * master                    1:d2ae7f538514
+     stable                    0:cb9a9f314b8b
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "transitionbookmarks = master, stable, other" >> $HGRCPATH
+  $ hg pull
+  pulling from $TESTTMP/repo1
+  searching for changes
+  no changes found
+  $ hg bookmarks
+  no bookmarks set
