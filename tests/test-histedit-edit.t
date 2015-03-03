@@ -88,7 +88,7 @@ Go at a random point and try to continue
 
 Try to delete necessary commit
   $ hg strip -r 652413bf663e
-  abort: unable to strip 652413bf663ef2a641cab26574e46d5f5a64a55a. Nodes are used by history edit in progress.
+  abort: histedit in progress, can't strip 363532343133
   [255]
 
 commit, then edit the revision

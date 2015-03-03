@@ -1026,9 +1026,8 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
         strip_nodes = set([repo[n].hex() for n in nodelist])
         common_nodes = histedit_nodes & strip_nodes
         if common_nodes:
-            raise util.Abort(_('unable to strip %s. Nodes are '
-                               'used by history edit in progress.')
-                             % ', '.join(common_nodes))
+            raise util.Abort(_("histedit in progress, can't strip %s")
+                             % ', '.join(node.short(x) for x in common_nodes))
     return orig(ui, repo, nodelist, *args, **kwargs)
 
 extensions.wrapfunction(repair, 'strip', stripwrapper)
