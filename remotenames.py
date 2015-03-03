@@ -30,22 +30,7 @@ def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
     lock = repo.lock()
     try:
-        try:
-            path = activepath(repo.ui, remote)
-            if path:
-                # on a push, we don't want to keep obsolete heads since
-                # they won't show up as heads on the next pull, so we
-                # remove them here otherwise we would require the user
-                # to issue a pull to refresh .hg/remotenames
-                bmap = {}
-                repo = repo.unfiltered()
-                for branch, nodes in remote.branchmap().iteritems():
-                    bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
-                saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
-                writedistance(repo)
-        except Exception, e:
-            repo.ui.debug('remote branches for path %s not saved: %s\n'
-                          % (path, e))
+        pullremotenames(repo, remote)
     finally:
         lock.release()
         return res
@@ -61,8 +46,15 @@ def pullremotenames(repo, remote):
     try:
         path = activepath(repo.ui, remote)
         if path:
-            saveremotenames(repo, path, remote.branchmap(),
-                            remote.listkeys('bookmarks'))
+            # on a push, we don't want to keep obsolete heads since
+            # they won't show up as heads on the next pull, so we
+            # remove them here otherwise we would require the user
+            # to issue a pull to refresh .hg/remotenames
+            bmap = {}
+            repo = repo.unfiltered()
+            for branch, nodes in remote.branchmap().iteritems():
+                bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
+            saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
     finally:
         lock.release()
 
