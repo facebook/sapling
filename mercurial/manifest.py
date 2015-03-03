@@ -482,8 +482,20 @@ class treemanifest(object):
 
     def filesnotin(self, m2):
         '''Set of files in this manifest that are not in the other'''
-        files = set(self.iterkeys())
-        files.difference_update(m2.iterkeys())
+        files = set()
+        def _filesnotin(t1, t2):
+            for d, m1 in t1._dirs.iteritems():
+                if d in t2._dirs:
+                    m2 = t2._dirs[d]
+                    _filesnotin(m1, m2)
+                else:
+                    files.update(m1.iterkeys())
+
+            for fn in t1._files.iterkeys():
+                if fn not in t2._files:
+                    files.add(t1._subpath(fn))
+
+        _filesnotin(self, m2)
         return files
 
     @propertycache
