@@ -475,7 +475,21 @@ def activepath(ui, remote):
             # prefer a non-default name to default
             if path != 'default' and path != 'default-push':
                 break
+
+    renames = getrenames(ui)
+    realpath = renames.get(realpath, realpath)
     return realpath
+
+# memoization
+_renames = None
+def getrenames(ui):
+    global _renames
+    if _renames is None:
+        _renames = {}
+        for k, v in ui.configitems('remotenames'):
+            if k.startswith('rename.'):
+                _renames[k[7:]] = v
+    return _renames
 
 def expandscheme(ui, uri):
     '''For a given uri, expand the scheme for it'''

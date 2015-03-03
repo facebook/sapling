@@ -268,3 +268,9 @@ Test remotenames revset and keyword
   2:95cb4ab9fe1d alpha/stable
   3:78f83396d79e beta/babar beta/default
   4:8948da77173b beta/stable
+
+Test renaming
+
+  $ hg pull -q --config remotenames.rename.beta=remote beta
+  $ hg log -r 78f83396d79e -T '{node|short} {remotebookmarks}\n'
+  78f83396d79e beta/babar remote/babar
