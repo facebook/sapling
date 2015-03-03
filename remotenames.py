@@ -126,7 +126,7 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    hoist = ui.config('remotenames', 'hoistremotebookmarks')
+    hoist = ui.config('remotenames', 'hoist')
     if hoist:
         hoist += '/'
 

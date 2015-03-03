@@ -38,7 +38,7 @@ Test hoisting basics
   remote/default
   tip
   $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "hoistremotebookmarks = remote" >> $HGRCPATH
+  $ echo "hoist = remote" >> $HGRCPATH
   $ hg debugnamecomplete
   bm1
   bm2
