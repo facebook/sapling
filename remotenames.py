@@ -59,14 +59,10 @@ def expull(orig, repo, remote, *args, **kwargs):
 def pullremotenames(repo, remote):
     lock = repo.lock()
     try:
-        try:
-            path = activepath(repo.ui, remote)
-            if path:
-                saveremotenames(repo, path, remote.branchmap(),
-                                remote.listkeys('bookmarks'))
-        except Exception, e:
-            repo.ui.debug('remote branches for path %s not saved: %s\n'
-                          % (path, e))
+        path = activepath(repo.ui, remote)
+        if path:
+            saveremotenames(repo, path, remote.branchmap(),
+                            remote.listkeys('bookmarks'))
     finally:
         lock.release()
 
