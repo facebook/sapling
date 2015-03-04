@@ -1528,7 +1528,8 @@ class gitsubrepo(abstractsubrepo):
             return []
 
         (modified, added, removed,
-         deleted, unknown, ignored, clean) = self.status(None)
+         deleted, unknown, ignored, clean) = self.status(None, unknown=True,
+                                                         clean=True)
 
         tracked = set()
         # dirstates 'amn' warn, 'r' is added again
