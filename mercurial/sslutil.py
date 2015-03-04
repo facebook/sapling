@@ -129,6 +129,13 @@ def _plainapplepython():
     return (exe.startswith('/usr/bin/python') or
             exe.startswith('/system/library/frameworks/python.framework/'))
 
+def _defaultcacerts():
+    if _plainapplepython():
+        dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
+        if os.path.exists(dummycert):
+            return dummycert
+    return None
+
 def sslkwargs(ui, host):
     kws = {}
     hostfingerprint = ui.config('hostfingerprints', host)
@@ -139,9 +146,9 @@ def sslkwargs(ui, host):
         cacerts = util.expandpath(cacerts)
         if not os.path.exists(cacerts):
             raise util.Abort(_('could not find web.cacerts: %s') % cacerts)
-    elif cacerts is None and _plainapplepython():
-        dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
-        if os.path.exists(dummycert):
+    elif cacerts is None:
+        dummycert = _defaultcacerts()
+        if dummycert:
             ui.debug('using %s to enable OS X system CA\n' % dummycert)
             ui.setconfig('web', 'cacerts', dummycert, 'dummy')
             cacerts = dummycert
