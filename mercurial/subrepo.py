@@ -1640,7 +1640,7 @@ class gitsubrepo(abstractsubrepo):
         rev1 = self._state[1]
         if self._gitmissing() or not rev1:
             # if the repo is missing, return no results
-            return [], [], [], [], [], [], []
+            return scmutil.status([], [], [], [], [], [], [])
         modified, added, removed = [], [], []
         self._gitupdatestat()
         if rev2:
