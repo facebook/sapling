@@ -124,7 +124,7 @@ Apple's OpenSSL. This trick do not work with plain OpenSSL.
   abort: error: *certificate verify failed* (glob)
   [255]
 
-  $ DISABLEOSXDUMMYCERT="--config=web.cacerts="
+  $ DISABLEOSXDUMMYCERT="--config=web.cacerts=!"
 #endif
 
 clone via pull
@@ -240,7 +240,7 @@ Fingerprints
   $ echo "127.0.0.1 = 914f1aff87249c09b6859b88b1906d30756491ca" >> copy-pull/.hg/hgrc
 
 - works without cacerts
-  $ hg -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
   5fed3813f7f5
 
 - fails when cert doesn't match hostname (port is ignored)

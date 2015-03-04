@@ -323,7 +323,7 @@ def has_ssl():
 @check("defaultcacerts", "can verify SSL certs by system's CA certs store")
 def has_defaultcacerts():
     from mercurial import sslutil
-    return sslutil._defaultcacerts()
+    return sslutil._defaultcacerts() != '!'
 
 @check("windows", "Windows")
 def has_windows():

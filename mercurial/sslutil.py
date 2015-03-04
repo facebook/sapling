@@ -134,7 +134,7 @@ def _defaultcacerts():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
         if os.path.exists(dummycert):
             return dummycert
-    return None
+    return '!'
 
 def sslkwargs(ui, host):
     kws = {}
@@ -142,17 +142,18 @@ def sslkwargs(ui, host):
     if hostfingerprint:
         return kws
     cacerts = ui.config('web', 'cacerts')
-    if cacerts:
+    if cacerts == '!':
+        pass
+    elif cacerts:
         cacerts = util.expandpath(cacerts)
         if not os.path.exists(cacerts):
             raise util.Abort(_('could not find web.cacerts: %s') % cacerts)
-    elif cacerts is None:
-        dummycert = _defaultcacerts()
-        if dummycert:
-            ui.debug('using %s to enable OS X system CA\n' % dummycert)
-            ui.setconfig('web', 'cacerts', dummycert, 'dummy')
-            cacerts = dummycert
-    if cacerts:
+    else:
+        cacerts = _defaultcacerts()
+        if cacerts and cacerts != '!':
+            ui.debug('using %s to enable OS X system CA\n' % cacerts)
+        ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
+    if cacerts != '!':
         kws.update({'ca_certs': cacerts,
                     'cert_reqs': CERT_REQUIRED,
                     })
@@ -201,7 +202,7 @@ class validator(object):
                                  hint=_('check hostfingerprint configuration'))
             self.ui.debug('%s certificate matched fingerprint %s\n' %
                           (host, nicefingerprint))
-        elif cacerts:
+        elif cacerts != '!':
             msg = _verifycert(peercert2, host)
             if msg:
                 raise util.Abort(_('%s certificate error: %s') % (host, msg),

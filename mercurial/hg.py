@@ -672,7 +672,9 @@ def remoteui(src, opts):
         for key, val in src.configitems(sect):
             dst.setconfig(sect, key, val, 'copied')
     v = src.config('web', 'cacerts')
-    if v:
+    if v == '!':
+        dst.setconfig('web', 'cacerts', v, 'copied')
+    elif v:
         dst.setconfig('web', 'cacerts', util.expandpath(v), 'copied')
 
     return dst

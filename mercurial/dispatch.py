@@ -826,7 +826,7 @@ def _dispatch(req):
 
     if cmdoptions.get('insecure', False):
         for ui_ in uis:
-            ui_.setconfig('web', 'cacerts', '', '--insecure')
+            ui_.setconfig('web', 'cacerts', '!', '--insecure')
 
     if options['version']:
         return commands.version_(ui)
