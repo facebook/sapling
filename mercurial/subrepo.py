@@ -1662,7 +1662,7 @@ class gitsubrepo(abstractsubrepo):
 
         deleted, unknown, ignored, clean = [], [], [], []
 
-        if not rev2:
+        if opts.get('unknown'):
             command = ['ls-files', '--others', '--exclude-standard']
             out = self._gitcommand(command)
             for line in out.split('\n'):
