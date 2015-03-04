@@ -54,4 +54,5 @@ def graphlog(ui, repo, *pats, **opts):
     Nodes printed as an @ character are parents of the working
     directory.
     """
-    return cmdutil.graphlog(ui, repo, *pats, **opts)
+    opts['graph'] = True
+    return commands.log(ui, repo, *pats, **opts)

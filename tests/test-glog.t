@@ -2243,6 +2243,14 @@ Test --follow-first and backward --rev
         ('symbol', 'rev')
         ('symbol', '6'))))
 
+Test --follow with --rev of graphlog extension
+
+  $ hg --config extensions.graphlog= glog -qfr1
+  o  1:216d4c92cf98
+  |
+  o  0:f8035bb17114
+  
+
 Test subdir
 
   $ hg up -q 3
