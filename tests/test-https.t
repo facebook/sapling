@@ -119,7 +119,7 @@ OS X has a dummy CA cert that enables use of the system CA store when using
 Apple's OpenSSL. This trick do not work with plain OpenSSL.
 
   $ DISABLEOSXDUMMYCERT=
-#if osx
+#if defaultcacerts
   $ hg clone https://localhost:$HGPORT/ copy-pull
   abort: error: *certificate verify failed* (glob)
   [255]
