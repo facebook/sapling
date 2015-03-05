@@ -76,7 +76,7 @@ Test 'file:' uri handling:
   abort: file:// URLs can only refer to localhost
   [255]
 
-  $ hg pull -q file:../test
+  $ hg pull -q file:../test  # no-msys
 
 It's tricky to make file:// URLs working on every platform with
 regular shell commands.
