@@ -47,7 +47,6 @@ class gitrepo(peerrepository):
         elif namespace == 'bookmarks':
             if self.localrepo is not None:
                 handler = self.localrepo.githandler
-                handler.export_commits()
                 refs = handler.fetch_pack(self.path, heads=[])
                 # map any git shas that exist in hg to hg shas
                 stripped_refs = dict([
