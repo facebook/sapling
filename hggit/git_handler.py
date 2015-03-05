@@ -227,7 +227,6 @@ class GitHandler(object):
         self.save_map()
 
     def fetch(self, remote, heads):
-        self.export_commits()
         refs = self.fetch_pack(remote, heads)
         remote_name = self.remote_name(remote)
 
