@@ -2071,6 +2071,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
                                % join(subpath))
 
     # warn about failure to delete explicit files/dirs
+    deleteddirs = scmutil.dirs(deleted)
     for f in m.files():
         def insubrepo():
             for subpath in wctx.substate:
@@ -2078,7 +2079,8 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
                     return True
             return False
 
-        if f in repo.dirstate or f in wctx.dirs() or f == '.' or insubrepo():
+        isdir = f in deleteddirs or f in wctx.dirs()
+        if f in repo.dirstate or isdir or f == '.' or insubrepo():
             continue
 
         if repo.wvfs.exists(f):

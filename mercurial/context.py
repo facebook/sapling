@@ -1289,9 +1289,6 @@ class committablectx(basectx):
         self._repo.dirstate.setparents(node)
         self._repo.dirstate.endparentchange()
 
-    def dirs(self):
-        return self._repo.dirstate.dirs()
-
 class workingctx(committablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
