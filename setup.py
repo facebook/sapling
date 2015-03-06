@@ -31,4 +31,5 @@ setup(
         'upgradegeneraldelta',
         'writecg2',
     ],
+    packages=['crecord']
 )
