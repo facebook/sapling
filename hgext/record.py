@@ -76,7 +76,7 @@ class header(object):
     """
     diffgit_re = re.compile('diff --git a/(.*) b/(.*)$')
     diff_re = re.compile('diff -r .* (.*)$')
-    allhunks_re = re.compile('(?:index|new file|deleted file) ')
+    allhunks_re = re.compile('(?:index|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
     special_re = re.compile('(?:index|new|deleted|copy|rename) ')
 
@@ -522,9 +522,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
-        chunks = patch.diff(repo, changes=status, opts=diffopts)
+        originalchunks = patch.diff(repo, changes=status, opts=diffopts)
         fp = cStringIO.StringIO()
-        fp.write(''.join(chunks))
+        fp.write(''.join(originalchunks))
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
@@ -548,13 +548,22 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
             ui.status(_('no changes to record\n'))
             return 0
 
+        newandmodifiedfiles = set()
+        for h in chunks:
+            ishunk = isinstance(h, hunk)
+            isnew = h.filename() in status.added
+            if ishunk and isnew and not h in originalchunks:
+                newandmodifiedfiles.add(h.filename())
+
         modified = set(status.modified)
 
         # 2. backup changed files, so we can restore them in the end
+
         if backupall:
             tobackup = changed
         else:
-            tobackup = [f for f in newfiles if f in modified]
+            tobackup = [f for f in newfiles
+                        if f in modified or f in newandmodifiedfiles]
 
         backups = {}
         if tobackup:
@@ -577,10 +586,13 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
 
             fp = cStringIO.StringIO()
             for c in chunks:
-                if c.filename() in backups:
+                fname = c.filename()
+                if fname in backups or fname in newandmodifiedfiles:
                     c.write(fp)
             dopatch = fp.tell()
             fp.seek(0)
+
+            [os.unlink(c) for c in newandmodifiedfiles]
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:

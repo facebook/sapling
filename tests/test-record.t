@@ -235,7 +235,19 @@ Add plain file
   new file mode 100644
   examine changes to 'plain'? [Ynesfdaq?] y
   
-
+  @@ -0,0 +1,10 @@
+  +1
+  +2
+  +3
+  +4
+  +5
+  +6
+  +7
+  +8
+  +9
+  +10
+  record this change to 'plain'? [Ynesfdaq?] y
+  
   $ hg tip -p
   changeset:   7:11fb457c1be4
   tag:         tip
@@ -317,6 +329,7 @@ Modify end of plain file, add EOL
   > y
   > y
   > y
+  > y
   > EOF
   diff --git a/plain b/plain
   1 hunks, 1 lines changed
@@ -335,7 +348,10 @@ Modify end of plain file, add EOL
   new file mode 100644
   examine changes to 'plain2'? [Ynesfdaq?] y
   
-
+  @@ -0,0 +1,1 @@
+  +1
+  record change 2/2 to 'plain2'? [Ynesfdaq?] y
+  
 Modify beginning, trim end, record both, add another file to test
 changes numbering
 
@@ -1353,6 +1369,8 @@ Ignore win32text deprecation warning for now:
    c
   +d
   
+
+
 Test --user when ui.username not set
   $ unset HGUSER
   $ echo e >> subdir/f1
@@ -1375,5 +1393,42 @@ Test --user when ui.username not set
   xyz
   $ HGUSER="test"
   $ export HGUSER
+
+
+Editing patch of newly added file
+
+  $ cat > editor.sh << '__EOF__'
+  > cat "$1"  | sed "s/first/very/g"  > tt
+  > mv tt  "$1"
+  > __EOF__
+  $ cat > newfile << '__EOF__'
+  > This is the first line
+  > This is the second line
+  > This is the third line
+  > __EOF__
+  $ hg add newfile
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record -d '23 0' -medit-patch-new <<EOF
+  > y
+  > e
+  > EOF
+  diff --git a/newfile b/newfile
+  new file mode 100644
+  examine changes to 'newfile'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,3 @@
+  +This is the first line
+  +This is the second line
+  +This is the third line
+  record this change to 'newfile'? [Ynesfdaq?] e
+  
+  $ hg cat -r tip newfile
+  This is the very line
+  This is the second line
+  This is the third line
+
+  $ cat newfile
+  This is the first line
+  This is the second line
+  This is the third line
 
   $ cd ..

@@ -473,18 +473,24 @@ record added file alone
 
   $ hg -v record -l msg -d '12 2' r<<EOF
   > y
+  > y
   > EOF
   diff --git a/r b/r
   new file mode 100644
   examine changes to 'r'? [Ynesfdaq?] y
   
+  @@ -0,0 +1,1 @@
+  +$Id$
+  record this change to 'r'? [Ynesfdaq?] y
+  
+  resolving manifests
+  patching file r
   committing files:
   r
   committing manifest
   committing changelog
   committed changeset 3:82a2f715724d
   overwriting r expanding keywords
- - status call required for dirstate.normallookup() check
   $ hg status r
   $ hg --verbose rollback
   repository tip rolled back to revision 2 (undo commit)
@@ -501,11 +507,18 @@ record added keyword ignored file
   $ hg add i
   $ hg --verbose record -d '13 1' -m recignored<<EOF
   > y
+  > y
   > EOF
   diff --git a/i b/i
   new file mode 100644
   examine changes to 'i'? [Ynesfdaq?] y
   
+  @@ -0,0 +1,1 @@
+  +$Id$
+  record this change to 'i'? [Ynesfdaq?] y
+  
+  resolving manifests
+  patching file i
   committing files:
   i
   committing manifest
