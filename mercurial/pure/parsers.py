@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.node import bin, nullid
+from mercurial.node import nullid
 from mercurial import util
 import struct, zlib, cStringIO
 
@@ -20,15 +20,6 @@ _sha = util.sha1
 def dirstatetuple(*x):
     # x is a tuple
     return x
-
-def parse_manifest(mfdict, fdict, lines):
-    for l in lines.splitlines():
-        f, n = l.split('\0')
-        if len(n) > 40:
-            fdict[f] = n[40:]
-            mfdict[f] = bin(n[:40])
-        else:
-            mfdict[f] = bin(n)
 
 def parse_index2(data, inline):
     def gettype(q):

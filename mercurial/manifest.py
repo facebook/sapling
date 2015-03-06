@@ -217,9 +217,23 @@ def _addlistdelta(addlist, x):
                    + content for start, end, content in x)
     return deltatext, newaddlist
 
+# Pure Python fallback
+def _parsemanifest(mfdict, fdict, lines):
+    bin = revlog.bin
+    for l in lines.splitlines():
+        f, n = l.split('\0')
+        if len(n) > 40:
+            fdict[f] = n[40:]
+            mfdict[f] = bin(n[:40])
+        else:
+            mfdict[f] = bin(n)
+
 def _parse(lines):
     mfdict = manifestdict()
-    parsers.parse_manifest(mfdict, mfdict._flags, lines)
+    try:
+        parsers.parse_manifest(mfdict, mfdict._flags, lines)
+    except AttributeError:
+        _parsemanifest(mfdict, mfdict._flags, lines)
     return mfdict
 
 class manifest(revlog.revlog):
