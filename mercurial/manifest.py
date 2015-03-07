@@ -88,6 +88,11 @@ class _lazymanifest(dict):
         return ''.join("%s\0%s%s\n" % (
             f, _hex(n[:20]), flag) for f, n, flag in fl)
 
+try:
+    _lazymanifest = parsers.lazymanifest
+except AttributeError:
+    pass
+
 class manifestdict(object):
     def __init__(self, data=''):
         self._lm = _lazymanifest(data)
