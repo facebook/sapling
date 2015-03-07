@@ -1088,6 +1088,22 @@ def parsefilename(str):
     return s[:i]
 
 def pathtransform(path, strip):
+    '''turn a path from a patch into a path suitable for the repository
+
+    Returns (stripped components, path in repository).
+
+    >>> pathtransform('a/b/c', 0)
+    ('', 'a/b/c')
+    >>> pathtransform('   a/b/c   ', 0)
+    ('', '   a/b/c')
+    >>> pathtransform('   a/b/c   ', 2)
+    ('a/b/', 'c')
+    >>> pathtransform('   a//b/c   ', 2)
+    ('a//b/', 'c')
+    >>> pathtransform('a/b/c', 3)
+    Traceback (most recent call last):
+    PatchError: unable to strip away 1 of 3 dirs from a/b/c
+    '''
     pathlen = len(path)
     i = 0
     if strip == 0:
