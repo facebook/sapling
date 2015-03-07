@@ -1366,11 +1366,14 @@ def applydiff(ui, fp, backend, store, strip=1, eolmode='strict'):
     return _applydiff(ui, fp, patchfile, backend, store, strip=strip,
                       eolmode=eolmode)
 
-def _applydiff(ui, fp, patcher, backend, store, strip=1,
+def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
                eolmode='strict'):
 
+    if prefix:
+        # clean up double slashes, lack of trailing slashes, etc
+        prefix = util.normpath(prefix) + '/'
     def pstrip(p):
-        return pathtransform(p, strip - 1, '')[1]
+        return pathtransform(p, strip - 1, prefix)[1]
 
     rejects = 0
     err = 0
@@ -1393,7 +1396,8 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1,
                 if gp.oldpath:
                     gp.oldpath = pstrip(gp.oldpath)
             else:
-                gp = makepatchmeta(backend, afile, bfile, first_hunk, strip, '')
+                gp = makepatchmeta(backend, afile, bfile, first_hunk, strip,
+                                   prefix)
             if gp.op == 'RENAME':
                 backend.unlink(gp.oldpath)
             if not first_hunk:
