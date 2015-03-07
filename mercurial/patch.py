@@ -1087,7 +1087,7 @@ def parsefilename(str):
             return s
     return s[:i]
 
-def pathstrip(path, strip):
+def pathtransform(path, strip):
     pathlen = len(path)
     i = 0
     if strip == 0:
@@ -1110,9 +1110,9 @@ def makepatchmeta(backend, afile_orig, bfile_orig, hunk, strip):
     nullb = bfile_orig == "/dev/null"
     create = nulla and hunk.starta == 0 and hunk.lena == 0
     remove = nullb and hunk.startb == 0 and hunk.lenb == 0
-    abase, afile = pathstrip(afile_orig, strip)
+    abase, afile = pathtransform(afile_orig, strip)
     gooda = not nulla and backend.exists(afile)
-    bbase, bfile = pathstrip(bfile_orig, strip)
+    bbase, bfile = pathtransform(bfile_orig, strip)
     if afile == bfile:
         goodb = gooda
     else:
@@ -1352,7 +1352,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1,
                eolmode='strict'):
 
     def pstrip(p):
-        return pathstrip(p, strip - 1)[1]
+        return pathtransform(p, strip - 1)[1]
 
     rejects = 0
     err = 0
@@ -1541,9 +1541,9 @@ def changedfiles(ui, repo, patchpath, strip=1):
             if state == 'file':
                 afile, bfile, first_hunk, gp = values
                 if gp:
-                    gp.path = pathstrip(gp.path, strip - 1)[1]
+                    gp.path = pathtransform(gp.path, strip - 1)[1]
                     if gp.oldpath:
-                        gp.oldpath = pathstrip(gp.oldpath, strip - 1)[1]
+                        gp.oldpath = pathtransform(gp.oldpath, strip - 1)[1]
                 else:
                     gp = makepatchmeta(backend, afile, bfile, first_hunk, strip)
                 changed.add(gp.path)
