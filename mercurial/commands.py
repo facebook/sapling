@@ -4057,6 +4057,8 @@ def identify(ui, repo, source=None, rev=None,
      _('commit even if some hunks fail')),
     ('', 'exact', None,
      _('apply patch to the nodes from which it was generated')),
+    ('', 'prefix', '',
+     _('apply patch to directory relative to the root'), _('DIR')),
     ('', 'import-branch', None,
      _('use any branch information in patch (implied by --exact)'))] +
     commitopts + commitopts2 + similarityopts,
@@ -4156,6 +4158,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         raise util.Abort(_('cannot use --similarity with --bypass'))
     if opts.get('exact') and opts.get('edit'):
         raise util.Abort(_('cannot use --exact with --edit'))
+    if opts.get('exact') and opts.get('prefix'):
+        raise util.Abort(_('cannot use --exact with --prefix'))
 
     if update:
         cmdutil.checkunfinished(repo)

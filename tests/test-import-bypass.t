@@ -112,6 +112,9 @@ Test unsupported combinations
   $ hg import --bypass --similarity 50 ../test.diff
   abort: cannot use --similarity with --bypass
   [255]
+  $ hg import --exact --prefix dir/ ../test.diff
+  abort: cannot use --exact with --prefix
+  [255]
 
 Test commit editor
 (this also tests that editor is invoked, if the patch doesn't contain
