@@ -20,17 +20,18 @@ def _parsemanifest(mfdict, fdict, lines):
         else:
             mfdict[f] = bin(n)
 
-def _parse(lines):
-    mfdict = manifestdict()
+def _parse(lines, mfdict, flags):
     try:
-        parsers.parse_manifest(mfdict, mfdict._flags, lines)
+        parsers.parse_manifest(mfdict, flags, lines)
     except AttributeError:
-        _parsemanifest(mfdict, mfdict._flags, lines)
+        _parsemanifest(mfdict, flags, lines)
     return mfdict
 
 class manifestdict(dict):
-    def __init__(self):
+    def __init__(self, data=''):
         self._flags = {}
+        _parse(data, self, self._flags)
+
     def __setitem__(self, k, v):
         assert v is not None
         dict.__setitem__(self, k, v)
@@ -250,7 +251,8 @@ class manifest(revlog.revlog):
 
     def readdelta(self, node):
         r = self.rev(node)
-        return _parse(mdiff.patchtext(self.revdiff(self.deltaparent(r), r)))
+        d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
+        return manifestdict(d)
 
     def readfast(self, node):
         '''use the faster of readdelta or read'''
@@ -267,7 +269,7 @@ class manifest(revlog.revlog):
             return self._mancache[node][0]
         text = self.revision(node)
         arraytext = array.array('c', text)
-        m = _parse(text)
+        m = manifestdict(text)
         self._mancache[node] = (m, arraytext)
         return m
 
