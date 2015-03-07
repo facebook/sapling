@@ -1521,12 +1521,12 @@ def patchbackend(ui, backend, patchobj, strip, prefix, files=None,
         raise PatchError(_('patch failed to apply'))
     return ret > 0
 
-def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
-                  similarity=0):
+def internalpatch(ui, repo, patchobj, strip, prefix, files=None,
+                  eolmode='strict', similarity=0):
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
     backend = workingbackend(ui, repo, similarity)
-    return patchbackend(ui, backend, patchobj, strip, '', files, eolmode)
+    return patchbackend(ui, backend, patchobj, strip, prefix, files, eolmode)
 
 def patchrepo(ui, repo, ctx, store, patchobj, strip, files=None,
               eolmode='strict'):
@@ -1552,7 +1552,7 @@ def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
     if patcher:
         return _externalpatch(ui, repo, patcher, patchname, strip,
                               files, similarity)
-    return internalpatch(ui, repo, patchname, strip, files, eolmode,
+    return internalpatch(ui, repo, patchname, strip, '', files, eolmode,
                          similarity)
 
 def changedfiles(ui, repo, patchpath, strip=1):
