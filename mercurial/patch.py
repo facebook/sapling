@@ -1123,14 +1123,14 @@ def pathtransform(path, strip, prefix):
         count -= 1
     return path[:i].lstrip(), prefix + path[i:].rstrip()
 
-def makepatchmeta(backend, afile_orig, bfile_orig, hunk, strip):
+def makepatchmeta(backend, afile_orig, bfile_orig, hunk, strip, prefix):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     create = nulla and hunk.starta == 0 and hunk.lena == 0
     remove = nullb and hunk.startb == 0 and hunk.lenb == 0
-    abase, afile = pathtransform(afile_orig, strip, '')
+    abase, afile = pathtransform(afile_orig, strip, prefix)
     gooda = not nulla and backend.exists(afile)
-    bbase, bfile = pathtransform(bfile_orig, strip, '')
+    bbase, bfile = pathtransform(bfile_orig, strip, prefix)
     if afile == bfile:
         goodb = gooda
     else:
@@ -1393,7 +1393,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1,
                 if gp.oldpath:
                     gp.oldpath = pstrip(gp.oldpath)
             else:
-                gp = makepatchmeta(backend, afile, bfile, first_hunk, strip)
+                gp = makepatchmeta(backend, afile, bfile, first_hunk, strip, '')
             if gp.op == 'RENAME':
                 backend.unlink(gp.oldpath)
             if not first_hunk:
@@ -1563,7 +1563,8 @@ def changedfiles(ui, repo, patchpath, strip=1):
                     if gp.oldpath:
                         gp.oldpath = pathtransform(gp.oldpath, strip - 1, '')[1]
                 else:
-                    gp = makepatchmeta(backend, afile, bfile, first_hunk, strip)
+                    gp = makepatchmeta(backend, afile, bfile, first_hunk, strip,
+                                       '')
                 changed.add(gp.path)
                 if gp.op == 'RENAME':
                     changed.add(gp.oldpath)
