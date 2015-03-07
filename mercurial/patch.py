@@ -1353,7 +1353,7 @@ def applybindelta(binchunk, data):
             raise PatchError(_('unexpected delta opcode 0'))
     return out
 
-def applydiff(ui, fp, backend, store, strip=1, eolmode='strict'):
+def applydiff(ui, fp, backend, store, strip=1, prefix='', eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
 
     Returns 0 for a clean patch, -1 if any rejects were found and 1 if
@@ -1364,7 +1364,7 @@ def applydiff(ui, fp, backend, store, strip=1, eolmode='strict'):
     patching then normalized according to 'eolmode'.
     """
     return _applydiff(ui, fp, patchfile, backend, store, strip=strip,
-                      eolmode=eolmode)
+                      prefix=prefix, eolmode=eolmode)
 
 def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
                eolmode='strict'):
