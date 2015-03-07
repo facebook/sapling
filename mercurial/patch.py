@@ -1494,7 +1494,8 @@ def _externalpatch(ui, repo, patcher, patchname, strip, files,
                          util.explainexit(code)[0])
     return fuzz
 
-def patchbackend(ui, backend, patchobj, strip, files=None, eolmode='strict'):
+def patchbackend(ui, backend, patchobj, strip, prefix, files=None,
+                 eolmode='strict'):
     if files is None:
         files = set()
     if eolmode is None:
@@ -1509,7 +1510,7 @@ def patchbackend(ui, backend, patchobj, strip, files=None, eolmode='strict'):
     except TypeError:
         fp = patchobj
     try:
-        ret = applydiff(ui, fp, backend, store, strip=strip,
+        ret = applydiff(ui, fp, backend, store, strip=strip, prefix=prefix,
                         eolmode=eolmode)
     finally:
         if fp != patchobj:
@@ -1525,12 +1526,12 @@ def internalpatch(ui, repo, patchobj, strip, files=None, eolmode='strict',
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""
     backend = workingbackend(ui, repo, similarity)
-    return patchbackend(ui, backend, patchobj, strip, files, eolmode)
+    return patchbackend(ui, backend, patchobj, strip, '', files, eolmode)
 
 def patchrepo(ui, repo, ctx, store, patchobj, strip, files=None,
               eolmode='strict'):
     backend = repobackend(ui, repo, ctx, store)
-    return patchbackend(ui, backend, patchobj, strip, files, eolmode)
+    return patchbackend(ui, backend, patchobj, strip, '', files, eolmode)
 
 def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
           similarity=0):
