@@ -1087,20 +1087,22 @@ def parsefilename(str):
             return s
     return s[:i]
 
-def pathtransform(path, strip):
+def pathtransform(path, strip, prefix):
     '''turn a path from a patch into a path suitable for the repository
+
+    prefix, if not empty, is expected to be normalized with a / at the end.
 
     Returns (stripped components, path in repository).
 
-    >>> pathtransform('a/b/c', 0)
+    >>> pathtransform('a/b/c', 0, '')
     ('', 'a/b/c')
-    >>> pathtransform('   a/b/c   ', 0)
+    >>> pathtransform('   a/b/c   ', 0, '')
     ('', '   a/b/c')
-    >>> pathtransform('   a/b/c   ', 2)
+    >>> pathtransform('   a/b/c   ', 2, '')
     ('a/b/', 'c')
-    >>> pathtransform('   a//b/c   ', 2)
-    ('a//b/', 'c')
-    >>> pathtransform('a/b/c', 3)
+    >>> pathtransform('   a//b/c   ', 2, 'd/e/')
+    ('a//b/', 'd/e/c')
+    >>> pathtransform('a/b/c', 3, '')
     Traceback (most recent call last):
     PatchError: unable to strip away 1 of 3 dirs from a/b/c
     '''
@@ -1119,16 +1121,16 @@ def pathtransform(path, strip):
         while i < pathlen - 1 and path[i] == '/':
             i += 1
         count -= 1
-    return path[:i].lstrip(), path[i:].rstrip()
+    return path[:i].lstrip(), prefix + path[i:].rstrip()
 
 def makepatchmeta(backend, afile_orig, bfile_orig, hunk, strip):
     nulla = afile_orig == "/dev/null"
     nullb = bfile_orig == "/dev/null"
     create = nulla and hunk.starta == 0 and hunk.lena == 0
     remove = nullb and hunk.startb == 0 and hunk.lenb == 0
-    abase, afile = pathtransform(afile_orig, strip)
+    abase, afile = pathtransform(afile_orig, strip, '')
     gooda = not nulla and backend.exists(afile)
-    bbase, bfile = pathtransform(bfile_orig, strip)
+    bbase, bfile = pathtransform(bfile_orig, strip, '')
     if afile == bfile:
         goodb = gooda
     else:
@@ -1368,7 +1370,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1,
                eolmode='strict'):
 
     def pstrip(p):
-        return pathtransform(p, strip - 1)[1]
+        return pathtransform(p, strip - 1, '')[1]
 
     rejects = 0
     err = 0
@@ -1557,9 +1559,9 @@ def changedfiles(ui, repo, patchpath, strip=1):
             if state == 'file':
                 afile, bfile, first_hunk, gp = values
                 if gp:
-                    gp.path = pathtransform(gp.path, strip - 1)[1]
+                    gp.path = pathtransform(gp.path, strip - 1, '')[1]
                     if gp.oldpath:
-                        gp.oldpath = pathtransform(gp.oldpath, strip - 1)[1]
+                        gp.oldpath = pathtransform(gp.oldpath, strip - 1, '')[1]
                 else:
                     gp = makepatchmeta(backend, afile, bfile, first_hunk, strip)
                 changed.add(gp.path)
