@@ -4,7 +4,7 @@ import itertools
 
 import silenttestrunner
 
-from mercurial import parsers
+from mercurial import manifest as manifestmod
 
 HASH_1 = '1' * 40
 HASH_2 = 'f' * 40
@@ -38,12 +38,12 @@ class testmanifest(unittest.TestCase):
         self.assert_(thing in container, msg)
 
     def testEmptyManifest(self):
-        m = parsers.lazymanifest('')
+        m = manifestmod._lazymanifest('')
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
     def testManifest(self):
-        m = parsers.lazymanifest(A_SHORT_MANIFEST)
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         want = [
             ('bar/baz/qux.py', binascii.unhexlify(HASH_2), 'l'),
             ('foo', binascii.unhexlify(HASH_1), ''),
@@ -58,13 +58,13 @@ class testmanifest(unittest.TestCase):
     def testSetItem(self):
         want = binascii.unhexlify(HASH_1), ''
 
-        m = parsers.lazymanifest('')
+        m = manifestmod._lazymanifest('')
         m['a'] = want
         self.assertIn('a', m)
         self.assertEqual(want, m['a'])
         self.assertEqual('a\0' + HASH_1 + '\n', m.text())
 
-        m = parsers.lazymanifest(A_SHORT_MANIFEST)
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         m['a'] = want
         self.assertEqual(want, m['a'])
         self.assertEqual('a\0' + HASH_1 + '\n' + A_SHORT_MANIFEST,
@@ -76,7 +76,7 @@ class testmanifest(unittest.TestCase):
     def testCompaction(self):
         unhex = binascii.unhexlify
         h1, h2 = unhex(HASH_1), unhex(HASH_2)
-        m = parsers.lazymanifest(A_SHORT_MANIFEST)
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         m['alpha'] = h1, ''
         m['beta'] = h2, ''
         del m['foo']
@@ -91,8 +91,8 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(w, list(m))
 
     def testSetGetNodeSuffix(self):
-        clean = parsers.lazymanifest(A_SHORT_MANIFEST)
-        m = parsers.lazymanifest(A_SHORT_MANIFEST)
+        clean = manifestmod._lazymanifest(A_SHORT_MANIFEST)
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         h, f = m['foo']
         want = h + 'a', f
         # Merge code wants to set 21-byte fake hashes at times
@@ -120,7 +120,7 @@ class testmanifest(unittest.TestCase):
         self.assertEqual({'foo': ((h, ''), want)}, clean.diff(m))
 
     def testFilterCopyException(self):
-        m = parsers.lazymanifest(A_SHORT_MANIFEST)
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         def filt(path):
             if path == 'foo':
                 assert False
@@ -128,7 +128,7 @@ class testmanifest(unittest.TestCase):
         self.assertRaises(AssertionError, m.filtercopy, filt)
 
     def testRemoveItem(self):
-        m = parsers.lazymanifest(A_SHORT_MANIFEST)
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         del m['foo']
         self.assertRaises(KeyError, lambda : m['foo'])
         self.assertEqual(1, len(m))
@@ -138,9 +138,9 @@ class testmanifest(unittest.TestCase):
         MISSING = (None, '')
         addl = 'z-only-in-left\0' + HASH_1 + '\n'
         addr = 'z-only-in-right\0' + HASH_2 + 'x\n'
-        left = parsers.lazymanifest(
+        left = manifestmod._lazymanifest(
             A_SHORT_MANIFEST.replace(HASH_1, HASH_3 + 'x') + addl)
-        right = parsers.lazymanifest(A_SHORT_MANIFEST + addr)
+        right = manifestmod._lazymanifest(A_SHORT_MANIFEST + addr)
         want = {
             'foo': ((binascii.unhexlify(HASH_3), 'x'),
                     (binascii.unhexlify(HASH_1), '')),
@@ -154,14 +154,14 @@ class testmanifest(unittest.TestCase):
             'foo': (MISSING, (binascii.unhexlify(HASH_3), 'x')),
             'z-only-in-left': (MISSING, (binascii.unhexlify(HASH_1), '')),
             }
-        self.assertEqual(want, parsers.lazymanifest('').diff(left))
+        self.assertEqual(want, manifestmod._lazymanifest('').diff(left))
 
         want = {
             'bar/baz/qux.py': ((binascii.unhexlify(HASH_2), 'l'), MISSING),
             'foo': ((binascii.unhexlify(HASH_3), 'x'), MISSING),
             'z-only-in-left': ((binascii.unhexlify(HASH_1), ''), MISSING),
             }
-        self.assertEqual(want, left.diff(parsers.lazymanifest('')))
+        self.assertEqual(want, left.diff(manifestmod._lazymanifest('')))
         copy = right.copy()
         del copy['z-only-in-right']
         del right['foo']
@@ -171,7 +171,7 @@ class testmanifest(unittest.TestCase):
             }
         self.assertEqual(want, right.diff(copy))
 
-        short = parsers.lazymanifest(A_SHORT_MANIFEST)
+        short = manifestmod._lazymanifest(A_SHORT_MANIFEST)
         pruned = short.copy()
         del pruned['foo']
         want = {
@@ -192,30 +192,37 @@ class testmanifest(unittest.TestCase):
         backwards = ''.join(
             l + '\n' for l in reversed(A_SHORT_MANIFEST.split('\n')) if l)
         try:
-            parsers.lazymanifest(backwards)
+            manifestmod._lazymanifest(backwards)
             self.fail('Should have raised ValueError')
         except ValueError, v:
             self.assertIn('Manifest lines not in sorted order.', str(v))
 
     def testNoTerminalNewline(self):
         try:
-            parsers.lazymanifest(A_SHORT_MANIFEST + 'wat')
+            manifestmod._lazymanifest(A_SHORT_MANIFEST + 'wat')
             self.fail('Should have raised ValueError')
         except ValueError, v:
             self.assertIn('Manifest did not end in a newline.', str(v))
 
     def testNoNewLineAtAll(self):
         try:
-            parsers.lazymanifest('wat')
+            manifestmod._lazymanifest('wat')
             self.fail('Should have raised ValueError')
         except ValueError, v:
             self.assertIn('Manifest did not end in a newline.', str(v))
 
     def testHugeManifest(self):
-        m = parsers.lazymanifest(A_HUGE_MANIFEST)
+        m = manifestmod._lazymanifest(A_HUGE_MANIFEST)
         self.assertEqual(HUGE_MANIFEST_ENTRIES, len(m))
         self.assertEqual(len(m), len(list(m)))
 
+    def testIntersectFiles(self):
+        m = manifestmod.manifestdict(A_HUGE_MANIFEST)
+        m2 = m.intersectfiles(['file1', 'file200', 'file300'])
+        w = ('file1\0%sx\n'
+             'file200\0%sl\n'
+             'file300\0%s\n') % (HASH_2, HASH_1, HASH_1)
+        self.assertEqual(w, m2.text())
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

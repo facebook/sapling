@@ -9,53 +9,119 @@ from i18n import _
 import mdiff, parsers, error, revlog, util
 import array, struct
 
-# Pure Python fallback
-def _parsemanifest(mfdict, fdict, lines):
-    bin = revlog.bin
-    for l in lines.splitlines():
-        f, n = l.split('\0')
-        if len(n) > 40:
-            fdict[f] = n[40:]
-            mfdict[f] = bin(n[:40])
-        else:
-            mfdict[f] = bin(n)
 
-def _parse(lines, mfdict, flags):
-    try:
-        parsers.parse_manifest(mfdict, flags, lines)
-    except AttributeError:
-        _parsemanifest(mfdict, flags, lines)
-    return mfdict
+class _lazymanifest(dict):
+    """This is the pure implementation of lazymanifest.
 
-class manifestdict(dict):
-    def __init__(self, data=''):
-        self._flags = {}
-        _parse(data, self, self._flags)
+    It has not been optimized *at all* and is not lazy.
+    """
+
+    def __init__(self, data):
+        # This init method does a little bit of excessive-looking
+        # precondition checking. This is so that the behavior of this
+        # class exactly matches its C counterpart to try and help
+        # prevent surprise breakage for anyone that develops against
+        # the pure version.
+        if data and data[-1] != '\n':
+            raise ValueError('Manifest did not end in a newline.')
+        dict.__init__(self)
+        prev = None
+        for l in data.splitlines():
+            if prev is not None and prev > l:
+                raise ValueError('Manifest lines not in sorted order.')
+            prev = l
+            f, n = l.split('\0')
+            if len(n) > 40:
+                self[f] = revlog.bin(n[:40]), n[40:]
+            else:
+                self[f] = revlog.bin(n), ''
 
     def __setitem__(self, k, v):
-        assert v is not None
-        dict.__setitem__(self, k, v)
-    def flags(self, f):
-        return self._flags.get(f, "")
-    def setflag(self, f, flags):
-        """Set the flags (symlink, executable) for path f."""
-        self._flags[f] = flags
+        node, flag = v
+        assert node is not None
+        if len(node) > 21:
+            node = node[:21] # match c implementation behavior
+        dict.__setitem__(self, k, (node, flag))
+
+    def __iter__(self):
+        return ((f, e[0], e[1]) for f, e in sorted(self.iteritems()))
+
     def copy(self):
-        copy = manifestdict()
-        dict.__init__(copy, self)
-        copy._flags = dict.copy(self._flags)
-        return copy
+        c = _lazymanifest('')
+        c.update(self)
+        return c
+
+    def diff(self, m2, clean=False):
+        '''Finds changes between the current manifest and m2.'''
+        diff = {}
+
+        for fn, e1 in self.iteritems():
+            if fn not in m2:
+                diff[fn] = e1, (None, '')
+            else:
+                e2 = m2[fn]
+                if e1 != e2:
+                    diff[fn] = e1, e2
+                elif clean:
+                    diff[fn] = None
+
+        for fn, e2 in m2.iteritems():
+            if fn not in self:
+                diff[fn] = (None, ''), e2
+
+        return diff
+
+    def filtercopy(self, filterfn):
+        c = _lazymanifest('')
+        for f, n, fl in self:
+            if filterfn(f):
+                c[f] = n, fl
+        return c
+
+    def text(self):
+        """Get the full data of this manifest as a bytestring."""
+        fl = sorted(self)
+
+        _hex = revlog.hex
+        # if this is changed to support newlines in filenames,
+        # be sure to check the templates/ dir again (especially *-raw.tmpl)
+        return ''.join("%s\0%s%s\n" % (
+            f, _hex(n[:20]), flag) for f, n, flag in fl)
+
+class manifestdict(object):
+    def __init__(self, data=''):
+        self._lm = _lazymanifest(data)
+
+    def __getitem__(self, key):
+        return self._lm[key][0]
+
+    def __len__(self):
+        return len(self._lm)
+
+    def __setitem__(self, key, node):
+        self._lm[key] = node, self.flags(key, '')
+
+    def __contains__(self, key):
+        return key in self._lm
+
+    def __delitem__(self, key):
+        del self._lm[key]
+
+    def keys(self):
+        return [x[0] for x in self._lm]
+
+    def iterkeys(self):
+        return iter(self.keys())
+
     def intersectfiles(self, files):
-        '''make a new manifestdict with the intersection of self with files
+        '''make a new lazymanifest with the intersection of self with files
 
         The algorithm assumes that files is much smaller than self.'''
         ret = manifestdict()
+        lm = self._lm
         for fn in files:
-            if fn in self:
-                ret[fn] = self[fn]
-                flags = self._flags.get(fn, None)
-                if flags:
-                    ret._flags[fn] = flags
+            if fn in lm:
+                ret._lm[fn] = self._lm[fn]
         return ret
 
     def filesnotin(self, m2):
@@ -74,11 +140,9 @@ class manifestdict(dict):
             (not match.anypats() and util.all(fn in self for fn in files))):
             return self.intersectfiles(files)
 
-        m = self.copy()
-        for fn in m.keys():
-            if not match(fn):
-                del m[fn]
-        return m
+        lm = manifestdict('')
+        lm._lm = self._lm.filtercopy(match)
+        return lm
 
     def diff(self, m2, clean=False):
         '''Finds changes between the current manifest and m2.
@@ -95,35 +159,36 @@ class manifestdict(dict):
         the nodeid will be None and the flags will be the empty
         string.
         '''
-        diff = {}
+        return self._lm.diff(m2._lm, clean)
 
-        for fn, n1 in self.iteritems():
-            fl1 = self._flags.get(fn, '')
-            n2 = m2.get(fn, None)
-            fl2 = m2._flags.get(fn, '')
-            if n2 is None:
-                fl2 = ''
-            if n1 != n2 or fl1 != fl2:
-                diff[fn] = ((n1, fl1), (n2, fl2))
-            elif clean:
-                diff[fn] = None
+    def setflag(self, key, flag):
+        self._lm[key] = self[key], flag
 
-        for fn, n2 in m2.iteritems():
-            if fn not in self:
-                fl2 = m2._flags.get(fn, '')
-                diff[fn] = ((None, ''), (n2, fl2))
+    def get(self, key, default=None):
+        try:
+            return self._lm[key][0]
+        except KeyError:
+            return default
 
-        return diff
+    def flags(self, key, default=''):
+        try:
+            return self._lm[key][1]
+        except KeyError:
+            return default
+
+    def __iter__(self):
+        return (x[0] for x in self._lm)
+
+    def copy(self):
+        c = manifestdict('')
+        c._lm = self._lm.copy()
+        return c
+
+    def iteritems(self):
+        return (x[:2] for x in self._lm)
 
     def text(self):
-        """Get the full data of this manifest as a bytestring."""
-        fl = sorted(self)
-        _checkforbidden(fl)
-
-        hex, flags = revlog.hex, self.flags
-        # if this is changed to support newlines in filenames,
-        # be sure to check the templates/ dir again (especially *-raw.tmpl)
-        return ''.join("%s\0%s%s\n" % (f, hex(self[f]), flags(f)) for f in fl)
+        return self._lm.text()
 
     def fastdelta(self, base, changes):
         """Given a base manifest text as an array.array and a list of changes
@@ -143,7 +208,8 @@ class manifestdict(dict):
             # bs will either be the index of the item or the insert point
             start, end = _msearch(addbuf, f, start)
             if not todelete:
-                l = "%s\0%s%s\n" % (f, revlog.hex(self[f]), self.flags(f))
+                h, fl = self._lm[f]
+                l = "%s\0%s%s\n" % (f, revlog.hex(h), fl)
             else:
                 if start == end:
                     # item we want to delete was not found, error out
@@ -280,12 +346,10 @@ class manifest(revlog.revlog):
             m = self._mancache[node][0]
             return m.get(f), m.flags(f)
         text = self.revision(node)
-        start, end = _msearch(text, f)
-        if start == end:
+        try:
+            return manifestdict(text)._lm[f]
+        except KeyError:
             return None, None
-        l = text[start:end]
-        f, n = l.split('\0')
-        return revlog.bin(n[:40]), n[40:-1]
 
     def add(self, m, transaction, link, p1, p2, added, removed):
         if p1 in self._mancache:
