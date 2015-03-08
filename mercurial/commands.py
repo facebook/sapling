@@ -3268,7 +3268,7 @@ def files(ui, repo, *pats, **opts):
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
-    ds = repo.dirstate
+    ds = ctx._repo.dirstate
     for f in ctx.matches(m):
         if rev is None and ds[f] == 'r':
             continue
