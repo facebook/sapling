@@ -1096,7 +1096,7 @@ directory)
   $ hg ci -m add
   $ 
   $ hg debugrename newdirname/newfile.py
-  newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def
+  newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def (glob)
   $ hg status -C --change .
   A newdirname/newfile.py
   $ hg status -C --rev 1
@@ -1115,7 +1115,7 @@ directory)
   $ echo a >> newdirname/commonfile.py
   $ hg ci --amend -m bug
   $ hg debugrename newdirname/newfile.py
-  newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def
+  newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def (glob)
   $ hg debugindex newdirname/newfile.py
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0      88      0       3 34a4d536c0c0 000000000000 000000000000
