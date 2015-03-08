@@ -1,13 +1,13 @@
 from distutils.core import setup, Extension
 
 setup(
-    name='fb-hg-experimental',
+    name='fbhgext',
     version='0.1.0',
     author='Durham Goode',
     maintainer='Durham Goode',
     maintainer_email='durham@fb.com',
     url='',
-    description='Experimental Mercurial extensions from Facebook',
+    description='Facebook specific mercurial extensions',
     long_description="",
     keywords='fb hg mercurial',
     license='',
@@ -15,9 +15,21 @@ setup(
         'backups',
         'chistedit',
         'fbamend',
+        'fbhistedit',
         'githelp',
+        'gitlookup',
+        'gitrevset',
+        'phabdiff',
+        'phrevset',
+        'rage',
+        'reflog',
+        'reset',
+        'simplecache',
         'smartlog',
         'sparse',
+        'tweakdefaults',
         'upgradegeneraldelta',
-    ]
+        'writecg2',
+    ],
+    packages=['crecord']
 )

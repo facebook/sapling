@@ -19,6 +19,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 enabled = False
+commit_info = False
 hiddenchanges = 0
 
 def uisetup(ui):
@@ -27,7 +28,16 @@ def uisetup(ui):
         if ctx.node() == "...":
             self.ui.write('\n\n\n')
             return
-        return orig(self, ctx, copies, matchfn, props)
+        res = orig(self, ctx, copies, matchfn, props)
+
+        if commit_info and ctx == self.repo['.']:
+            changes = ctx.p1().status(ctx)
+            prefix = ['M', 'A', 'R', '!', '?', 'I', 'C']
+            for i in range (0, len(prefix)):
+                for f in changes[i]:
+                    self.ui.write(' ' + prefix[i] + ' ' + f + '\n')
+            self.ui.write('\n')
+        return res
 
     wrapfunction(cmdutil.changeset_printer, '_show', show)
     wrapfunction(cmdutil.changeset_templater, '_show', show)
@@ -375,6 +385,7 @@ def smartlogrevset(repo, subset, x):
     ('', 'master', '', _('master bookmark'), ''),
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
     ('', 'all', False, _('don\'t hide old local commits'), ''),
+    ('', 'commit-info', False, _('show changes in current commit'), ''),
     ] + commands.logopts, _('hg smartlog|slog'))
 def smartlog(ui, repo, *pats, **opts):
     '''Displays the graph of commits that are relevant to you.
@@ -403,6 +414,9 @@ Excludes:
 
     global hiddenchanges
     hiddenchanges = 0
+
+    global commit_info
+    commit_info = opts.get('commit_info')
 
     if not opts.get('rev'):
         if opts.get('all'):

@@ -146,15 +146,15 @@ Stack of non-conflicting commits should be accepted
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=7585d2e4bf9ab3b58237c20d51ad5ef8778934d0 HG_SOURCE=strip
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-backup.hg
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-1d6b2021-backup.hg (glob)
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip
-  prechangegroup hook: HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
-  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
-  changegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
-  incoming hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
-  incoming hook: HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
-  incoming hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-temp.hg
+  prechangegroup hook: HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-e5e817a4-temp.hg
+  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-e5e817a4-temp.hg
+  changegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-e5e817a4-temp.hg
+  incoming hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-e5e817a4-temp.hg
+  incoming hook: HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-e5e817a4-temp.hg
+  incoming hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip HG_URL=bundle:$TESTTMP/client/.hg/strip-backup/7585d2e4bf9a-e5e817a4-temp.hg
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes
@@ -227,7 +227,7 @@ Stack with conflict in tail should abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=17000cb5287186f68e3ad728ee9c573feb0fa3c3 HG_SOURCE=strip
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/17000cb52871-backup.hg
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/17000cb52871-8ac986d3-backup.hg (glob)
   $ cd ../server
   $ log
   @  a => baz [draft:ddd9491cc0b4]
@@ -262,7 +262,7 @@ Stack with conflict in head should abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=6e1d0b2f81801d1de2645ac4295781ff2ee08fb4 HG_SOURCE=strip
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6e1d0b2f8180-backup.hg
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6e1d0b2f8180-84c690c2-backup.hg (glob)
 
   $ cd ../server
   $ log

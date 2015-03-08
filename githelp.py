@@ -140,11 +140,14 @@ def add(ui, repo, *args, **kwargs):
     if (opts.get('patch')):
         ui.status("note: hg crecord provides a more powerful UI for recording changes\n")
         ui.status("note: record and crecord will commit when complete, as there is no staging area in mercurial\n\n")
-
         cmd = Command('record')
     else:
         cmd = Command("add")
 
+        if not opts.get('all'):
+            cmd.extend(args)
+        else:
+            ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
         if not opts.get('all'):
             cmd.extend(args)
         else:

@@ -4,14 +4,15 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""display recently made backups to recover stripped commits"""
 
 from mercurial import extensions, util, cmdutil, commands, error, bundlerepo
-from mercurial import hg, time, changegroup, exchange
+from mercurial import hg, changegroup, exchange
 from mercurial.extensions import wrapfunction
 from hgext import pager
 from mercurial.node import hex, nullrev, nullid, short
 from mercurial.i18n import _
-import errno, os, re, glob
+import errno, os, re, glob, time
 
 pager.attended.append('backups')
 
@@ -92,12 +93,16 @@ def backups(ui, repo, *pats, **opts):
         try:
             if chlist:
                 if recovernode:
-                    if recovernode in other:
-                        ui.status("Unbundling %s\n" % (recovernode))
-                        f = hg.openpath(ui, source)
-                        gen = exchange.readbundle(ui, f, source)
-                        modheads = changegroup.addchangegroup(repo, gen, 'unbundle', 'bundle:' + source)
-                        break
+                    lock = repo.lock()
+                    try:
+                        if recovernode in other:
+                            ui.status("Unbundling %s\n" % (recovernode))
+                            f = hg.openpath(ui, source)
+                            gen = exchange.readbundle(ui, f, source)
+                            modheads = changegroup.addchangegroup(repo, gen, 'unbundle', 'bundle:' + source)
+                            break
+                    finally:
+                        lock.release()
                 else:
                     backupdate = os.path.getmtime(source)
                     backupdate = time.strftime('%a %H:%M, %Y-%m-%d', time.localtime(backupdate))

@@ -60,6 +60,14 @@ import Queue as queue
 from xml.dom import minidom
 import unittest
 
+try:
+    import json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        json = None
+
 processlock = threading.Lock()
 
 # subprocess._cleanup can race with any Popen.wait or Popen.poll on py24
@@ -98,8 +106,6 @@ PYTHON = sys.executable.replace('\\', '/')
 IMPL_PATH = 'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = 'JYTHONPATH'
-
-TESTDIR = HGTMP = INST = BINDIR = TMPBINDIR = PYTHONDIR = None
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
@@ -186,6 +192,8 @@ def getparser():
              " (default: $%s or %d)" % defaults['timeout'])
     parser.add_option("--time", action="store_true",
         help="time how long each test takes")
+    parser.add_option("--json", action="store_true",
+                      help="store test result data in 'report.json' file")
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
@@ -290,6 +298,7 @@ def getdiff(expected, output, ref, err):
     lines = []
     for line in difflib.unified_diff(expected, output, ref, err):
         if line.startswith('+++') or line.startswith('---'):
+            line = line.replace('\\', '/')
             if line.endswith(' \n'):
                 line = line[:-2] + '\n'
         lines.append(line)
@@ -491,7 +500,7 @@ class Test(unittest.TestCase):
             except self.failureException, e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
-                # this decision could be revisted in the future,
+                # this decision could be revisited in the future,
                 # especially for PythonTest instances.
                 if result.addFailure(self, str(e)):
                     success = True
@@ -618,6 +627,8 @@ class Test(unittest.TestCase):
             (r':%s\b' % self._startport, ':$HGPORT'),
             (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
             (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
+            (r'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
+             r'\1 (glob)'),
             ]
 
         if os.name == 'nt':
@@ -640,7 +651,8 @@ class Test(unittest.TestCase):
         env["HGPORT2"] = str(self._startport + 2)
         env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
-        env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+        env["HGEDITOR"] = ('"' + sys.executable + '"'
+                           + ' -c "import sys; sys.exit(0)"')
         env["HGMERGE"] = "internal:merge"
         env["HGUSER"]   = "test"
         env["HGENCODING"] = "ascii"
@@ -673,11 +685,16 @@ class Test(unittest.TestCase):
         hgrc.write('slash = True\n')
         hgrc.write('interactive = False\n')
         hgrc.write('mergemarkers = detailed\n')
+        hgrc.write('promptecho = True\n')
         hgrc.write('[defaults]\n')
         hgrc.write('backout = -d "0 0"\n')
         hgrc.write('commit = -d "0 0"\n')
         hgrc.write('shelve = --date "0 0"\n')
         hgrc.write('tag = -d "0 0"\n')
+        hgrc.write('[largefiles]\n')
+        hgrc.write('usercache = %s\n' %
+                   (os.path.join(self._testtmp, '.cache/largefiles')))
+
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
             assert '=' in key, ('extra config opt %s must '
@@ -709,6 +726,15 @@ class PythonTest(Test):
             raise KeyboardInterrupt()
 
         return result
+
+# This script may want to drop globs from lines matching these patterns on
+# Windows, but check-code.py wants a glob on these lines unconditionally.  Don't
+# warn if that is the case for anything matching these lines.
+checkcodeglobpats = [
+    re.compile(r'^pushing to \$TESTTMP/.*[^)]$'),
+    re.compile(r'^moving \S+/.*[^)]$'),
+    re.compile(r'^pulling from \$TESTTMP/.*[^)]$')
+]
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
@@ -760,7 +786,7 @@ class TTest(Test):
         tdir = self._testdir.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (self._shell, tdir, ' '.join(reqs)),
-                      self._testtmp, 0)
+                      self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
@@ -966,6 +992,9 @@ class TTest(Test):
         if el + '\n' == l:
             if os.altsep:
                 # matching on "/" is not needed for this line
+                for pat in checkcodeglobpats:
+                    if pat.match(el):
+                        return True
                 return '-glob'
             return True
         i, n = 0, len(el)
@@ -998,6 +1027,9 @@ class TTest(Test):
             if el.endswith(" (re)\n"):
                 return TTest.rematch(el[:-6], l)
             if el.endswith(" (glob)\n"):
+                # ignore '(glob)' added to l by 'replacements'
+                if l.endswith(" (glob)\n"):
+                    l = l[:-8] + "\n"
                 return TTest.globmatch(el[:-8], l)
             if os.altsep and l.replace('\\', '/') == el:
                 return '+glob'
@@ -1179,6 +1211,11 @@ class TestResult(unittest._TextTestResult):
 
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
+        if self.shouldStop:
+            # don't print, some other test case already failed and
+            # printed, we're just stale and probably failed due to our
+            # temp dir getting cleaned up.
+            return
 
         accepted = False
         failed = False
@@ -1191,28 +1228,30 @@ class TestResult(unittest._TextTestResult):
             os.system("%s %s %s" %
                       (self._options.view, test.refpath, test.errpath))
         else:
-            failed, lines = getdiff(expected, got,
-                                    test.refpath, test.errpath)
-            if failed:
-                self.addFailure(test, 'diff generation failed')
+            servefail, lines = getdiff(expected, got,
+                                       test.refpath, test.errpath)
+            if servefail:
+                self.addFailure(
+                    test,
+                    'server failed to start (HGPORT=%s)' % test._startport)
             else:
                 self.stream.write('\n')
                 for line in lines:
                     self.stream.write(line)
                 self.stream.flush()
 
-            # handle interactive prompt without releasing iolock
-            if self._options.interactive:
-                self.stream.write('Accept this change? [n] ')
-                answer = sys.stdin.readline().strip()
-                if answer.lower() in ('y', 'yes'):
-                    if test.name.endswith('.t'):
-                        rename(test.errpath, test.path)
-                    else:
-                        rename(test.errpath, '%s.out' % test.path)
-                    accepted = True
-            if not accepted and not failed:
-                self.faildata[test.name] = ''.join(lines)
+        # handle interactive prompt without releasing iolock
+        if self._options.interactive:
+            self.stream.write('Accept this change? [n] ')
+            answer = sys.stdin.readline().strip()
+            if answer.lower() in ('y', 'yes'):
+                if test.name.endswith('.t'):
+                    rename(test.errpath, test.path)
+                else:
+                    rename(test.errpath, '%s.out' % test.path)
+                accepted = True
+        if not accepted and not failed:
+            self.faildata[test.name] = ''.join(lines)
         iolock.release()
 
         return accepted
@@ -1246,7 +1285,7 @@ class TestResult(unittest._TextTestResult):
             iolock.release()
 
 class TestSuite(unittest.TestSuite):
-    """Custom unitest TestSuite that knows how to execute Mercurial tests."""
+    """Custom unittest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
                  retest=False, keywords=None, loop=False,
@@ -1419,6 +1458,43 @@ class TextTestRunner(unittest.TextTestRunner):
             finally:
                 xuf.close()
 
+        if self._runner.options.json:
+            if json is None:
+                raise ImportError("json module not installed")
+            jsonpath = os.path.join(self._runner._testdir, 'report.json')
+            fp = open(jsonpath, 'w')
+            try:
+                timesd = {}
+                for test, cuser, csys, real in result.times:
+                    timesd[test] = (real, cuser, csys)
+
+                outcome = {}
+                for tc in result.successes:
+                    testresult = {'result': 'success',
+                                  'time': ('%0.3f' % timesd[tc.name][0]),
+                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
+                                  'csys': ('%0.3f' % timesd[tc.name][2])}
+                    outcome[tc.name] = testresult
+
+                for tc, err in sorted(result.faildata.iteritems()):
+                    testresult = {'result': 'failure',
+                                  'time': ('%0.3f' % timesd[tc][0]),
+                                  'cuser': ('%0.3f' % timesd[tc][1]),
+                                  'csys': ('%0.3f' % timesd[tc][2])}
+                    outcome[tc] = testresult
+
+                for tc, reason in result.skipped:
+                    testresult = {'result': 'skip',
+                                  'time': ('%0.3f' % timesd[tc.name][0]),
+                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
+                                  'csys': ('%0.3f' % timesd[tc.name][2])}
+                    outcome[tc.name] = testresult
+
+                jsonout = json.dumps(outcome, sort_keys=True, indent=4)
+                fp.writelines(("testreport =", jsonout))
+            finally:
+                fp.close()
+
         self._runner._checkhglib('Tested')
 
         self.stream.writeln('# Ran %d tests, %d skipped, %d warned, %d failed.'
@@ -1568,7 +1644,8 @@ class TestRunner(object):
         os.environ["BINDIR"] = self._bindir
         os.environ["PYTHON"] = PYTHON
 
-        path = [self._bindir] + os.environ["PATH"].split(os.pathsep)
+        runtestdir = os.path.abspath(os.path.dirname(__file__))
+        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
         os.environ["PATH"] = os.pathsep.join(path)
@@ -1577,8 +1654,7 @@ class TestRunner(object):
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
-        pypath = [self._pythondir, self._testdir,
-                  os.path.abspath(os.path.dirname(__file__))]
+        pypath = [self._pythondir, self._testdir, runtestdir]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
@@ -1587,6 +1663,9 @@ class TestRunner(object):
         if oldpypath:
             pypath.append(oldpypath)
         os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+
+        if self.options.pure:
+            os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
 
         self._coveragefile = os.path.join(self._testdir, '.coverage')
 
@@ -1841,8 +1920,8 @@ class TestRunner(object):
         the one we expect it to be.  If not, print a warning to stderr."""
         if ((self._bindir == self._pythondir) and
             (self._bindir != self._tmpbindir)):
-            # The pythondir has been infered from --with-hg flag.
-            # We cannot expect anything sensible here
+            # The pythondir has been inferred from --with-hg flag.
+            # We cannot expect anything sensible here.
             return
         expecthg = os.path.join(self._pythondir, 'mercurial')
         actualhg = self._gethgpath()

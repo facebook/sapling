@@ -56,9 +56,32 @@ Basic test
   |    a2
   |
 
+With commit info
+  $ echo "hello" >c2 && hg ci --amend
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-f9f5e1aa-amend-backup.hg (glob)
+  $ hg smartlog -T compact --commit-info
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  |   M c2
+  |   A d
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  .
+  .
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+
 As a revset
   $ hg log -G -T compact -r 'smartlog()'
-  @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -70,7 +93,7 @@ As a revset
 
 With --master
   $ hg smartlog -T compact --master 1:2
-  @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -102,7 +125,7 @@ Specific revs
   |
 
   $ hg smartlog -T compact -r 'smartlog()' -r 0
-  @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -124,7 +147,7 @@ Test master ordering
   o  2[feature1,master]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4   38d85b506754   1970-01-01 00:00 +0000   test
@@ -140,7 +163,7 @@ Test master ordering
 Test overriding master
   $ hg boo -f master -r 38d85b506754
   $ hg smartlog -T compact
-  @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -160,7 +183,7 @@ Test overriding master
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -177,7 +200,7 @@ Test overriding master
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -194,7 +217,7 @@ Test overriding master
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  5[tip][feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   | |    d
   | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
@@ -214,7 +237,7 @@ Test draft branches
   (branches are permanent and global, did you want a bookmark?)
   $ hg commit -m 'create branch foo'
   $ hg sl
-  @  changeset:   6:40ffc5bb8387
+  @  changeset:   6:26d4a421c339
   |  branch:      foo
   |  bookmark:    feature2
   |  tag:         tip

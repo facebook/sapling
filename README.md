@@ -3,6 +3,8 @@ hg-experimental
 
 This is a collection of proof-of-concept Mercurial extensions written at Facebook. While they are all in basic use, they are considered experimental, are unsupported, and may or may not receive updates in the future. We're making them open source as examples of some better workflows we've been experimenting with.
 
+Note that there will be extensions included here that only work with Facebook's infrastructure; they are included to give you an idea of how we integrate mercurial with our workflows.
+
 
 smartlog
 ==========
