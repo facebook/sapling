@@ -14,9 +14,10 @@ import hbisect
 #  "{files % '{file}\n'}" (hgweb-style with inlining and function support)
 
 class _hybrid(object):
-    def __init__(self, gen, values, joinfmt=None):
+    def __init__(self, gen, values, makemap, joinfmt=None):
         self.gen = gen
         self.values = values
+        self._makemap = makemap
         if joinfmt:
             self.joinfmt = joinfmt
         else:
@@ -24,8 +25,9 @@ class _hybrid(object):
     def __iter__(self):
         return self.gen
     def __call__(self):
+        makemap = self._makemap
         for x in self.values:
-            yield x
+            yield makemap(x)
     def __len__(self):
         return len(self.values)
 
@@ -33,7 +35,7 @@ def showlist(name, values, plural=None, element=None, **args):
     if not element:
         element = name
     f = _showlist(name, values, plural, **args)
-    return _hybrid(f, [{element: x} for x in values])
+    return _hybrid(f, values, lambda x: {element: x})
 
 def _showlist(name, values, plural=None, **args):
     '''expand set of values.
@@ -201,9 +203,8 @@ def showbookmarks(**args):
     bookmarks = args['ctx'].bookmarks()
     current = repo._bookmarkcurrent
     makemap = lambda v: {'bookmark': v, 'current': current}
-    c = [makemap(v) for v in bookmarks]
     f = _showlist('bookmark', bookmarks, **args)
-    return _hybrid(f, c, lambda x: x['bookmark'])
+    return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 
 def showchildren(**args):
     """:children: List of strings. The children of the changeset."""
@@ -246,7 +247,8 @@ def showextras(**args):
     makemap = lambda k: {'key': k, 'value': extras[k]}
     c = [makemap(k) for k in extras]
     f = _showlist('extra', c, plural='extras', **args)
-    return _hybrid(f, c, lambda x: '%s=%s' % (x['key'], x['value']))
+    return _hybrid(f, extras, makemap,
+                   lambda x: '%s=%s' % (x['key'], x['value']))
 
 def showfileadds(**args):
     """:file_adds: List of strings. Files added by this changeset."""
@@ -274,7 +276,8 @@ def showfilecopies(**args):
     makemap = lambda k: {'name': k, 'source': copies[k]}
     c = [makemap(k) for k in copies]
     f = _showlist('file_copy', c, plural='file_copies', **args)
-    return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
+    return _hybrid(f, copies, makemap,
+                   lambda x: '%s (%s)' % (x['name'], x['source']))
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
@@ -288,7 +291,8 @@ def showfilecopiesswitch(**args):
     makemap = lambda k: {'name': k, 'source': copies[k]}
     c = [makemap(k) for k in copies]
     f = _showlist('file_copy', c, plural='file_copies', **args)
-    return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
+    return _hybrid(f, copies, makemap,
+                   lambda x: '%s (%s)' % (x['name'], x['source']))
 
 def showfiledels(**args):
     """:file_dels: List of strings. Files removed by this changeset."""
