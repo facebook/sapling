@@ -241,7 +241,8 @@ def showextras(**args):
     """:extras: List of dicts with key, value entries of the 'extras'
     field of this changeset."""
     extras = args['ctx'].extra()
-    c = [{'key': x[0], 'value': x[1]} for x in sorted(extras.items())]
+    extras = util.sortdict((k, extras[k]) for k in sorted(extras))
+    c = [{'key': k, 'value': extras[k]} for k in extras]
     f = _showlist('extra', c, plural='extras', **args)
     return _hybrid(f, c, lambda x: '%s=%s' % (x['key'], x['value']))
 
@@ -267,7 +268,8 @@ def showfilecopies(**args):
             if rename:
                 copies.append((fn, rename[0]))
 
-    c = [{'name': x[0], 'source': x[1]} for x in copies]
+    copies = util.sortdict(copies)
+    c = [{'name': k, 'source': copies[k]} for k in copies]
     f = _showlist('file_copy', c, plural='file_copies', **args)
     return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
 
@@ -279,7 +281,8 @@ def showfilecopiesswitch(**args):
     only if the --copied switch is set.
     """
     copies = args['revcache'].get('copies') or []
-    c = [{'name': x[0], 'source': x[1]} for x in copies]
+    copies = util.sortdict(copies)
+    c = [{'name': k, 'source': copies[k]} for k in copies]
     f = _showlist('file_copy', c, plural='file_copies', **args)
     return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
 
