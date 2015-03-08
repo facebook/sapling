@@ -2219,6 +2219,24 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(f for f in forget if f not in rejected)
     return bad, forgot
 
+def files(ui, ctx, m, fm, fmt):
+    rev = ctx.rev()
+    ret = 1
+    ds = ctx._repo.dirstate
+
+    for f in ctx.matches(m):
+        if rev is None and ds[f] == 'r':
+            continue
+        fm.startitem()
+        if ui.verbose:
+            fc = ctx[f]
+            fm.write('size flags', '% 10d % 1s ', fc.size(), fc.flags())
+        fm.data(abspath=f)
+        fm.write('path', fmt, m.rel(f))
+        ret = 0
+
+    return ret
+
 def remove(ui, repo, m, prefix, after, force, subrepos):
     join = lambda f: os.path.join(prefix, f)
     ret = 0

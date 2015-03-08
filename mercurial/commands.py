@@ -3258,8 +3258,6 @@ def files(ui, repo, *pats, **opts):
 
     """
     ctx = scmutil.revsingle(repo, opts.get('rev'), None)
-    rev = ctx.rev()
-    ret = 1
 
     end = '\n'
     if opts.get('print0'):
@@ -3268,17 +3266,7 @@ def files(ui, repo, *pats, **opts):
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
-    ds = ctx._repo.dirstate
-    for f in ctx.matches(m):
-        if rev is None and ds[f] == 'r':
-            continue
-        fm.startitem()
-        if ui.verbose:
-            fc = ctx[f]
-            fm.write('size flags', '% 10d % 1s ', fc.size(), fc.flags())
-        fm.data(abspath=f)
-        fm.write('path', fmt, m.rel(f))
-        ret = 0
+    ret = cmdutil.files(ui, ctx, m, fm, fmt)
 
     fm.end()
 
