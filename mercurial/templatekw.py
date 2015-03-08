@@ -200,7 +200,8 @@ def showbookmarks(**args):
     repo = args['ctx']._repo
     bookmarks = args['ctx'].bookmarks()
     current = repo._bookmarkcurrent
-    c = [{'bookmark': x, 'current': current} for x in bookmarks]
+    makemap = lambda v: {'bookmark': v, 'current': current}
+    c = [makemap(v) for v in bookmarks]
     f = _showlist('bookmark', bookmarks, **args)
     return _hybrid(f, c, lambda x: x['bookmark'])
 
@@ -242,7 +243,8 @@ def showextras(**args):
     field of this changeset."""
     extras = args['ctx'].extra()
     extras = util.sortdict((k, extras[k]) for k in sorted(extras))
-    c = [{'key': k, 'value': extras[k]} for k in extras]
+    makemap = lambda k: {'key': k, 'value': extras[k]}
+    c = [makemap(k) for k in extras]
     f = _showlist('extra', c, plural='extras', **args)
     return _hybrid(f, c, lambda x: '%s=%s' % (x['key'], x['value']))
 
@@ -269,7 +271,8 @@ def showfilecopies(**args):
                 copies.append((fn, rename[0]))
 
     copies = util.sortdict(copies)
-    c = [{'name': k, 'source': copies[k]} for k in copies]
+    makemap = lambda k: {'name': k, 'source': copies[k]}
+    c = [makemap(k) for k in copies]
     f = _showlist('file_copy', c, plural='file_copies', **args)
     return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
 
@@ -282,7 +285,8 @@ def showfilecopiesswitch(**args):
     """
     copies = args['revcache'].get('copies') or []
     copies = util.sortdict(copies)
-    c = [{'name': k, 'source': copies[k]} for k in copies]
+    makemap = lambda k: {'name': k, 'source': copies[k]}
+    c = [makemap(k) for k in copies]
     f = _showlist('file_copy', c, plural='file_copies', **args)
     return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
 
