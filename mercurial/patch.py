@@ -1191,6 +1191,86 @@ def parsefilename(str):
             return s
     return s[:i]
 
+def parsepatch(fp):
+    """patch -> [] of headers -> [] of hunks """
+    class parser(object):
+        """patch parsing state machine"""
+        def __init__(self):
+            self.fromline = 0
+            self.toline = 0
+            self.proc = ''
+            self.header = None
+            self.context = []
+            self.before = []
+            self.hunk = []
+            self.headers = []
+
+        def addrange(self, limits):
+            fromstart, fromend, tostart, toend, proc = limits
+            self.fromline = int(fromstart)
+            self.toline = int(tostart)
+            self.proc = proc
+
+        def addcontext(self, context):
+            if self.hunk:
+                h = recordhunk(self.header, self.fromline, self.toline,
+                        self.proc, self.before, self.hunk, context)
+                self.header.hunks.append(h)
+                self.fromline += len(self.before) + h.removed
+                self.toline += len(self.before) + h.added
+                self.before = []
+                self.hunk = []
+                self.proc = ''
+            self.context = context
+
+        def addhunk(self, hunk):
+            if self.context:
+                self.before = self.context
+                self.context = []
+            self.hunk = hunk
+
+        def newfile(self, hdr):
+            self.addcontext([])
+            h = header(hdr)
+            self.headers.append(h)
+            self.header = h
+
+        def addother(self, line):
+            pass # 'other' lines are ignored
+
+        def finished(self):
+            self.addcontext([])
+            return self.headers
+
+        transitions = {
+            'file': {'context': addcontext,
+                     'file': newfile,
+                     'hunk': addhunk,
+                     'range': addrange},
+            'context': {'file': newfile,
+                        'hunk': addhunk,
+                        'range': addrange,
+                        'other': addother},
+            'hunk': {'context': addcontext,
+                     'file': newfile,
+                     'range': addrange},
+            'range': {'context': addcontext,
+                      'hunk': addhunk},
+            'other': {'other': addother},
+            }
+
+    p = parser()
+
+    state = 'context'
+    for newstate, data in scanpatch(fp):
+        try:
+            p.transitions[state][newstate](p, data)
+        except KeyError:
+            raise PatchError('unhandled transition: %s -> %s' %
+                                   (state, newstate))
+        state = newstate
+    return p.finished()
+
 def pathtransform(path, strip, prefix):
     '''turn a path from a patch into a path suitable for the repository
 
