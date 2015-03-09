@@ -514,7 +514,7 @@ actiontable = {'p': pick,
 
 @command('histedit',
     [('', 'commands', '',
-      _('read history edits from the specified file')),
+      _('read history edits from the specified file'), _('FILE')),
      ('c', 'continue', False, _('continue an edit already in progress')),
      ('', 'edit-plan', False, _('edit remaining actions list')),
      ('k', 'keep', False,
@@ -523,7 +523,7 @@ actiontable = {'p': pick,
      ('o', 'outgoing', False, _('changesets not found in destination')),
      ('f', 'force', False,
       _('force outgoing even for unrelated repositories')),
-     ('r', 'rev', [], _('first revision to be edited'))],
+     ('r', 'rev', [], _('first revision to be edited'), _('REV'))],
      _("ANCESTOR | --outgoing [URL]"))
 def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history
