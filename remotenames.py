@@ -486,8 +486,8 @@ def expandscheme(ui, uri):
     for s in urischemes:
         # TODO: refactor schemes so we don't
         # duplicate this logic
-        ui.note('performing schemes expansion with '
-                'scheme %s\n' % s)
+        ui.note(_('performing schemes expansion with '
+                  'scheme %s\n') % s)
         scheme = hg.schemes[s]
         parts = uri.split('://', 1)[1].split('/', scheme.parts)
         if len(parts) > scheme.parts:
