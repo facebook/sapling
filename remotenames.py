@@ -149,10 +149,12 @@ def reposetup(ui, repo):
                     if name.startswith(hoist):
                         l.append(name[len(hoist):])
                 return l
+
             def namemap(rp, name, d=d):
                 if name in d:
                     return d[name]
                 return d.get(hoist + name)
+
             # we don't hoist nodemap because we don't want hoisted names
             # to show up in logs, which is the primary use case here
         else:
@@ -763,4 +765,3 @@ def remotenameskw(**args):
 
     return templatekw.showlist('remotename', remotenames,
                                plural='remotenames', **args)
-
