@@ -69,51 +69,6 @@ def scanpatch(fp):
             else:
                 yield 'other', line
 
-class hunk(object):
-    """patch hunk
-
-    XXX shouldn't we merge this with patch.hunk ?
-    """
-    maxcontext = 3
-
-    def __init__(self, header, fromline, toline, proc, before, hunk, after):
-        def trimcontext(number, lines):
-            delta = len(lines) - self.maxcontext
-            if False and delta > 0:
-                return number + delta, lines[:self.maxcontext]
-            return number, lines
-
-        self.header = header
-        self.fromline, self.before = trimcontext(fromline, before)
-        self.toline, self.after = trimcontext(toline, after)
-        self.proc = proc
-        self.hunk = hunk
-        self.added, self.removed = self.countchanges(self.hunk)
-
-    def countchanges(self, hunk):
-        """hunk -> (n+,n-)"""
-        add = len([h for h in hunk if h[0] == '+'])
-        rem = len([h for h in hunk if h[0] == '-'])
-        return add, rem
-
-    def write(self, fp):
-        delta = len(self.before) + len(self.after)
-        if self.after and self.after[-1] == '\\ No newline at end of file\n':
-            delta -= 1
-        fromlen = delta + self.removed
-        tolen = delta + self.added
-        fp.write('@@ -%d,%d +%d,%d @@%s\n' %
-                 (self.fromline, fromlen, self.toline, tolen,
-                  self.proc and (' ' + self.proc)))
-        fp.write(''.join(self.before + self.hunk + self.after))
-
-    pretty = write
-
-    def filename(self):
-        return self.header.filename()
-
-    def __repr__(self):
-        return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
 def parsepatch(fp):
     """patch -> [] of headers -> [] of hunks """
@@ -137,8 +92,8 @@ def parsepatch(fp):
 
         def addcontext(self, context):
             if self.hunk:
-                h = hunk(self.header, self.fromline, self.toline, self.proc,
-                         self.before, self.hunk, context)
+                h = patch.recordhunk(self.header, self.fromline, self.toline,
+                        self.proc, self.before, self.hunk, context)
                 self.header.hunks.append(h)
                 self.fromline += len(self.before) + h.removed
                 self.toline += len(self.before) + h.added
@@ -490,7 +445,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
 
         newandmodifiedfiles = set()
         for h in chunks:
-            ishunk = isinstance(h, hunk)
+            ishunk = isinstance(h, patch.recordhunk)
             isnew = h.filename() in status.added
             if ishunk and isnew and not h in originalchunks:
                 newandmodifiedfiles.add(h.filename())
