@@ -514,7 +514,7 @@ actiontable = {'p': pick,
 
 @command('histedit',
     [('', 'commands', '',
-      _('Read history edits from the specified file.')),
+      _('read history edits from the specified file')),
      ('c', 'continue', False, _('continue an edit already in progress')),
      ('', 'edit-plan', False, _('edit remaining actions list')),
      ('k', 'keep', False,
