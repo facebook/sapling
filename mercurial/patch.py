@@ -1276,6 +1276,58 @@ def makepatchmeta(backend, afile_orig, bfile_orig, hunk, strip, prefix):
         gp.op = 'DELETE'
     return gp
 
+def scanpatch(fp):
+    """like patch.iterhunks, but yield different events
+
+    - ('file',    [header_lines + fromfile + tofile])
+    - ('context', [context_lines])
+    - ('hunk',    [hunk_lines])
+    - ('range',   (-start,len, +start,len, proc))
+    """
+    lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
+    lr = linereader(fp)
+
+    def scanwhile(first, p):
+        """scan lr while predicate holds"""
+        lines = [first]
+        while True:
+            line = lr.readline()
+            if not line:
+                break
+            if p(line):
+                lines.append(line)
+            else:
+                lr.push(line)
+                break
+        return lines
+
+    while True:
+        line = lr.readline()
+        if not line:
+            break
+        if line.startswith('diff --git a/') or line.startswith('diff -r '):
+            def notheader(line):
+                s = line.split(None, 1)
+                return not s or s[0] not in ('---', 'diff')
+            header = scanwhile(line, notheader)
+            fromfile = lr.readline()
+            if fromfile.startswith('---'):
+                tofile = lr.readline()
+                header += [fromfile, tofile]
+            else:
+                lr.push(fromfile)
+            yield 'file', header
+        elif line[0] == ' ':
+            yield 'context', scanwhile(line, lambda l: l[0] in ' \\')
+        elif line[0] in '-+':
+            yield 'hunk', scanwhile(line, lambda l: l[0] in '-+\\')
+        else:
+            m = lines_re.match(line)
+            if m:
+                yield 'range', m.groups()
+            else:
+                yield 'other', line
+
 def scangitpatch(lr, firstline):
     """
     Git patches can emit:
