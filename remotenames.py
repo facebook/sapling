@@ -440,7 +440,7 @@ def activepath(ui, remote):
     elif not isinstance(remote, str):
         try:
             rpath = remote._url
-        except:
+        except AttributeError:
             rpath = remote.url
 
     for path, uri in ui.configitems('paths'):
