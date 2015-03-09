@@ -69,12 +69,6 @@ def scanpatch(fp):
             else:
                 yield 'other', line
 
-def countchanges(hunk):
-    """hunk -> (n+,n-)"""
-    add = len([h for h in hunk if h[0] == '+'])
-    rem = len([h for h in hunk if h[0] == '-'])
-    return add, rem
-
 class hunk(object):
     """patch hunk
 
@@ -94,7 +88,13 @@ class hunk(object):
         self.toline, self.after = trimcontext(toline, after)
         self.proc = proc
         self.hunk = hunk
-        self.added, self.removed = countchanges(self.hunk)
+        self.added, self.removed = self.countchanges(self.hunk)
+
+    def countchanges(self, hunk):
+        """hunk -> (n+,n-)"""
+        add = len([h for h in hunk if h[0] == '+'])
+        rem = len([h for h in hunk if h[0] == '-'])
+        return add, rem
 
     def write(self, fp):
         delta = len(self.before) + len(self.after)
