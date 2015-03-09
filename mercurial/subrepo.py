@@ -1662,13 +1662,42 @@ class gitsubrepo(abstractsubrepo):
 
         deleted, unknown, ignored, clean = [], [], [], []
 
+        command = ['status', '--porcelain', '-z']
         if opts.get('unknown'):
-            command = ['ls-files', '--others', '--exclude-standard']
-            out = self._gitcommand(command)
-            for line in out.split('\n'):
-                if len(line) == 0:
-                    continue
-                unknown.append(line)
+            command += ['--untracked-files=all']
+        if opts.get('ignored'):
+            command += ['--ignored']
+        out = self._gitcommand(command)
+
+        changedfiles = set()
+        changedfiles.update(modified)
+        changedfiles.update(added)
+        changedfiles.update(removed)
+        for line in out.split('\0'):
+            if not line:
+                continue
+            st = line[0:2]
+            #moves and copies show 2 files on one line
+            if line.find('\0') >= 0:
+                filename1, filename2 = line[3:].split('\0')
+            else:
+                filename1 = line[3:]
+                filename2 = None
+
+            changedfiles.add(filename1)
+            if filename2:
+                changedfiles.add(filename2)
+
+            if st == '??':
+                unknown.append(filename1)
+            elif st == '!!':
+                ignored.append(filename1)
+
+        if opts.get('clean'):
+            out = self._gitcommand(['ls-files'])
+            for f in out.split('\n'):
+                if not f in changedfiles:
+                    clean.append(f)
 
         return scmutil.status(modified, added, removed, deleted,
                               unknown, ignored, clean)

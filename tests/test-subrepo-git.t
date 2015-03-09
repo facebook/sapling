@@ -175,6 +175,8 @@ user a pulls, merges, commits
   pulling subrepo s from $TESTTMP/gitroot
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ hg st --subrepos s
+  A s/f
   $ cat s/f
   f
   $ cat s/g
@@ -944,6 +946,16 @@ except for explicitly added files (no patterns)
   ? s/c.c
   ? s/cpp.cpp
   ? s/foobar.orig
+  $ hg st --subrepos s --all
+  A s/.gitignore
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  I s/snake.python
+  C s/f
+  C s/foobar
+  C s/g
   $ hg add --subrepos "glob:**.python"
   $ hg st --subrepos s
   A s/.gitignore
@@ -978,13 +990,41 @@ error given when adding an already tracked file
   $ hg add s/.gitignore
   s/.gitignore already tracked!
   [1]
+  $ hg add s/g
+  s/g already tracked!
+  [1]
 
 removed files can be re-added
+removing files using 'rm' or 'git rm' has the same effect,
+since we ignore the staging area
   $ hg ci --subrepos -m 'snake'
   committing subrepository s
   $ cd s
+  $ rm snake.python
+(remove leftover .hg so Mercurial doesn't look for a root here)
+  $ rm -r .hg
+  $ hg status --subrepos --all .
+  R snake.python
+  ? barfoo
+  ? c.c
+  ? cpp.cpp
+  ? foobar.orig
+  C .gitignore
+  C f
+  C foobar
+  C g
   $ git rm snake.python
   rm 'snake.python'
+  $ hg status --subrepos --all .
+  R snake.python
+  ? barfoo
+  ? c.c
+  ? cpp.cpp
+  ? foobar.orig
+  C .gitignore
+  C f
+  C foobar
+  C g
   $ touch snake.python
   $ cd ..
   $ hg add s/snake.python
