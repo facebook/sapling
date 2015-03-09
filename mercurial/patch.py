@@ -804,6 +804,64 @@ class patchfile(object):
         self.write_rej()
         return len(self.rej)
 
+class header(object):
+    """patch header
+    """
+    diffgit_re = re.compile('diff --git a/(.*) b/(.*)$')
+    diff_re = re.compile('diff -r .* (.*)$')
+    allhunks_re = re.compile('(?:index|deleted file) ')
+    pretty_re = re.compile('(?:new file|deleted file) ')
+    special_re = re.compile('(?:index|new|deleted|copy|rename) ')
+
+    def __init__(self, header):
+        self.header = header
+        self.hunks = []
+
+    def binary(self):
+        return util.any(h.startswith('index ') for h in self.header)
+
+    def pretty(self, fp):
+        for h in self.header:
+            if h.startswith('index '):
+                fp.write(_('this modifies a binary file (all or nothing)\n'))
+                break
+            if self.pretty_re.match(h):
+                fp.write(h)
+                if self.binary():
+                    fp.write(_('this is a binary file\n'))
+                break
+            if h.startswith('---'):
+                fp.write(_('%d hunks, %d lines changed\n') %
+                         (len(self.hunks),
+                          sum([max(h.added, h.removed) for h in self.hunks])))
+                break
+            fp.write(h)
+
+    def write(self, fp):
+        fp.write(''.join(self.header))
+
+    def allhunks(self):
+        return util.any(self.allhunks_re.match(h) for h in self.header)
+
+    def files(self):
+        match = self.diffgit_re.match(self.header[0])
+        if match:
+            fromfile, tofile = match.groups()
+            if fromfile == tofile:
+                return [fromfile]
+            return [fromfile, tofile]
+        else:
+            return self.diff_re.match(self.header[0]).groups()
+
+    def filename(self):
+        return self.files()[-1]
+
+    def __repr__(self):
+        return '<header %s>' % (' '.join(map(repr, self.files())))
+
+    def special(self):
+        return util.any(self.special_re.match(h) for h in self.header)
+
 class hunk(object):
     def __init__(self, desc, num, lr, context):
         self.number = num
