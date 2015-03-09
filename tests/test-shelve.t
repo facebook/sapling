@@ -81,11 +81,11 @@ the common case - no options or filenames
 ensure that our shelved changes exist
 
   $ hg shelve -l
-  default-01      (*)    changes to '[mq]: second.patch' (glob)
-  default         (*)    changes to '[mq]: second.patch' (glob)
+  default-01      (*)* changes to '[mq]: second.patch' (glob)
+  default         (*)* changes to '[mq]: second.patch' (glob)
 
   $ hg shelve -l -p default
-  default         (*)    changes to '[mq]: second.patch' (glob)
+  default         (*)* changes to '[mq]: second.patch' (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
