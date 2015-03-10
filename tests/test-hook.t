@@ -13,6 +13,7 @@ commit hooks can see env vars
   > pre-cat = python "$TESTDIR/printenv.py" pre-cat
   > post-cat = python "$TESTDIR/printenv.py" post-cat
   > pretxnopen = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxnopen"
+  > txnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnclose"
   > EOF
   $ echo a > a
   $ hg add a
@@ -21,6 +22,7 @@ commit hooks can see env vars
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a
   0:cb9a9f314b8b
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=commit
   commit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
   commit.b hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
 
@@ -47,6 +49,7 @@ pretxncommit and commit hooks can see both parents of merge
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   1:ab228980c14d
+  txnclose hook: HG_TXNNAME=commit
   commit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   $ hg update -C 0
@@ -58,6 +61,7 @@ pretxncommit and commit hooks can see both parents of merge
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   2:ee9deb46ab31
+  txnclose hook: HG_TXNNAME=commit
   commit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   created new head
@@ -69,6 +73,7 @@ pretxncommit and commit hooks can see both parents of merge
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$TESTTMP/a
   3:07f3376c1e65
+  txnclose hook: HG_TXNNAME=commit
   commit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
   commit.b hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
 
@@ -112,6 +117,7 @@ tag hooks can see env vars
   pretxncommit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a
   4:539e4b31b6dc
   tag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
+  txnclose hook: HG_TXNNAME=commit
   commit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
   commit.b hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
   $ hg tag -l la
@@ -206,6 +212,7 @@ pushkey hook
   searching for changes
   no changes found
   pretxnopen hook: HG_TXNNAME=bookmarks
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNNAME=bookmarks
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1
   exporting bookmark foo
   [1]

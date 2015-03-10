@@ -924,6 +924,16 @@ class localrepository(object):
         # outdated when running hooks. As fncache is used for streaming clone,
         # this is not expected to break anything that happen during the hooks.
         tr.addfinalize('flush-fncache', self.store.write)
+        # we must avoid cyclic reference between repo and transaction.
+        reporef = weakref.ref(self)
+        def txnclosehook(tr2):
+            """To be run if transaction is successful, will schedule a hook run
+            """
+            def hook():
+                reporef().hook('txnclose', throw=False, txnname=desc,
+                               **tr2.hookargs)
+            reporef()._afterlock(hook)
+        tr.addfinalize('txnclose-hook', txnclosehook)
         self._transref = weakref.ref(tr)
         return tr
 
