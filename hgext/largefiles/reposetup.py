@@ -10,7 +10,7 @@
 import copy
 import os
 
-from mercurial import error, manifest, match as match_, util
+from mercurial import error, match as match_, util
 from mercurial.i18n import _
 from mercurial import scmutil, localrepo
 
@@ -38,17 +38,17 @@ def reposetup(ui, repo):
         def __getitem__(self, changeid):
             ctx = super(lfilesrepo, self).__getitem__(changeid)
             if self.lfstatus:
-                class lfilesmanifestdict(manifest.manifestdict):
-                    def __contains__(self, filename):
-                        orig = super(lfilesmanifestdict, self).__contains__
-                        return orig(filename) or orig(lfutil.standin(filename))
                 class lfilesctx(ctx.__class__):
                     def files(self):
                         filenames = super(lfilesctx, self).files()
                         return [lfutil.splitstandin(f) or f for f in filenames]
                     def manifest(self):
                         man1 = super(lfilesctx, self).manifest()
-                        man1.__class__ = lfilesmanifestdict
+                        orig = man1.__contains__
+                        def __contains__(self, filename):
+                            return (orig(filename) or
+                                    orig(lfutil.standin(filename)))
+                        man1.__contains__ = __contains__.__get__(man1)
                         return man1
                     def filectx(self, path, fileid=None, filelog=None):
                         orig = super(lfilesctx, self).filectx
