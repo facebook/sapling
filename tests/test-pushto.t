@@ -21,9 +21,10 @@ Test that anonymous heads are disallowed by default
   abort: push would create new anonymous heads (cb9a9f314b8b)
   (use --force to override this warning)
   [255]
-  $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "pushanonheads = True" >> $HGRCPATH
-  $ hg push
+
+Test that config allows anonymous heads to be pushed
+
+  $ hg push --config remotenames.pushanonheads=True
   pushing to $TESTTMP/repo1
   searching for changes
   adding changesets
@@ -33,6 +34,7 @@ Test that anonymous heads are disallowed by default
 
 Test that forceto works
 
+  $ echo "[remotenames]" >> $HGRCPATH
   $ echo "forceto = True" >> $HGRCPATH
   $ hg push
   abort: must specify --to when pushing
