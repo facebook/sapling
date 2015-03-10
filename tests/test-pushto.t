@@ -22,6 +22,33 @@ Test that anonymous heads are disallowed by default
   (use --force to override this warning)
   [255]
 
+Test that config changes what is pushed by default
+
+  $ echo b > b
+  $ hg add b
+  $ hg commit -m b
+  $ hg up .^
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo c > c
+  $ hg add c
+  $ hg commit -m c
+  created new head
+  $ hg push -r 'head()'
+  pushing to $TESTTMP/repo1
+  searching for changes
+  abort: push would create new anonymous heads (d36c0562f908, d2ae7f538514)
+  (use --force to override this warning)
+  [255]
+  $ hg push
+  pushing to $TESTTMP/repo1
+  searching for changes
+  abort: push would create new anonymous heads (d36c0562f908)
+  (use --force to override this warning)
+  [255]
+  $ hg --config extensions.strip= strip d36c0562f908 d2ae7f538514
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/d36c0562f908-ccf5bddc-backup.hg (glob)
+
 Test that config allows anonymous heads to be pushed
 
   $ hg push --config remotenames.pushanonheads=True

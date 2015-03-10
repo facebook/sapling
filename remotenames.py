@@ -231,7 +231,7 @@ def expushdiscoverybookmarks(pushop):
                 revs = set(pushop.revs)
             else:
                 revs = set(repo.lookup(r) for r in repo.revs('head()'))
-                revs -= set(pushop.remoteheads)
+            revs -= set(pushop.remoteheads)
             # find heads that don't have a bookmark going with them
             for bookmark in pushop.bookmarks:
                 rev = repo.lookup(bookmark)
@@ -287,6 +287,9 @@ def expushdiscoverybookmarks(pushop):
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
 
+def _pushrev(repo, ui):
+    return repo.lookup(ui.config('remotenames', 'pushrev', '.'))
+
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
     global _pushto, _delete
@@ -307,12 +310,17 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         opts['rev'] = ['null']
         return orig(ui, repo, dest, **opts)
 
+    revs = opts.get('rev')
     to = opts.get('to')
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
             msg = _('must specify --to when pushing')
             hint = _('see configuration option %s') % 'remotenames.forceto'
             raise util.Abort(msg, hint=hint)
+
+        if not revs:
+            revs = [_pushrev(repo, ui)]
+        opts['rev'] = revs
 
         return orig(ui, repo, dest, **opts)
 
@@ -323,11 +331,10 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         msg = _('do not specify --to/-t and --branch/-b at the same time')
         raise util.Abort(msg)
 
-    revs = opts.get('rev')
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
     else:
-        revs = [repo.lookup('.')]
+        revs = [_pushrev(repo, ui)]
     if len(revs) != 1:
         msg = _('--to requires exactly one rev to push')
         hint = _('use --rev BOOKMARK or omit --rev for current commit (.)')
