@@ -104,6 +104,86 @@ Test --strip
   $ hg rollback
   repository tip rolled back to revision 1 (undo import)
 
+Test --strip with --bypass
+
+  $ mkdir -p dir/dir2
+  $ echo bb > dir/dir2/b
+  $ echo cc > dir/dir2/c
+  $ echo d > dir/d
+  $ hg ci -Am 'addabcd'
+  adding dir/d
+  adding dir/dir2/b
+  adding dir/dir2/c
+  $ shortlog
+  @  2:d805bc8236b6 test 0 0 - default - addabcd
+  |
+  | o  1:4e322f7ce8e3 test 0 0 - foo - changea
+  |/
+  o  0:07f494440405 test 0 0 - default - adda
+  
+  $ hg import --bypass --strip 2 --prefix dir/ - <<EOF
+  > # HG changeset patch
+  > # User test
+  > # Date 0 0
+  > # Branch foo
+  > changeabcd
+  > 
+  > diff --git a/foo/a b/foo/a
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/foo/a
+  > @@ -0,0 +1 @@
+  > +a
+  > diff --git a/foo/dir2/b b/foo/dir2/b2
+  > rename from foo/dir2/b
+  > rename to foo/dir2/b2
+  > diff --git a/foo/dir2/c b/foo/dir2/c
+  > --- a/foo/dir2/c
+  > +++ b/foo/dir2/c
+  > @@ -0,0 +1 @@
+  > +cc
+  > diff --git a/foo/d b/foo/d
+  > deleted file mode 100644
+  > --- a/foo/d
+  > +++ /dev/null
+  > @@ -1,1 +0,0 @@
+  > -d
+  > EOF
+  applying patch from stdin
+
+  $ shortlog
+  o  3:5bd46886ca3e test 0 0 - default - changeabcd
+  |
+  @  2:d805bc8236b6 test 0 0 - default - addabcd
+  |
+  | o  1:4e322f7ce8e3 test 0 0 - foo - changea
+  |/
+  o  0:07f494440405 test 0 0 - default - adda
+  
+  $ hg diff --change 3 --git
+  diff --git a/dir/a b/dir/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/dir/a
+  @@ -0,0 +1,1 @@
+  +a
+  diff --git a/dir/d b/dir/d
+  deleted file mode 100644
+  --- a/dir/d
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -d
+  diff --git a/dir/dir2/b b/dir/dir2/b2
+  rename from dir/dir2/b
+  rename to dir/dir2/b2
+  diff --git a/dir/dir2/c b/dir/dir2/c
+  --- a/dir/dir2/c
+  +++ b/dir/dir2/c
+  @@ -1,1 +1,2 @@
+   cc
+  +cc
+  $ hg -q --config extensions.strip= strip .
+
 Test unsupported combinations
 
   $ hg import --bypass --no-commit ../test.diff

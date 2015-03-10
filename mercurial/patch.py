@@ -1528,10 +1528,10 @@ def internalpatch(ui, repo, patchobj, strip, prefix, files=None,
     backend = workingbackend(ui, repo, similarity)
     return patchbackend(ui, backend, patchobj, strip, prefix, files, eolmode)
 
-def patchrepo(ui, repo, ctx, store, patchobj, strip, files=None,
+def patchrepo(ui, repo, ctx, store, patchobj, strip, prefix, files=None,
               eolmode='strict'):
     backend = repobackend(ui, repo, ctx, store)
-    return patchbackend(ui, backend, patchobj, strip, '', files, eolmode)
+    return patchbackend(ui, backend, patchobj, strip, prefix, files, eolmode)
 
 def patch(ui, repo, patchname, strip=1, prefix='', files=None, eolmode='strict',
           similarity=0):

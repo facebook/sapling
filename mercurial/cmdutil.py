@@ -713,7 +713,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             try:
                 files = set()
                 try:
-                    patch.patchrepo(ui, repo, p1, store, tmpname, strip,
+                    patch.patchrepo(ui, repo, p1, store, tmpname, strip, prefix,
                                     files, eolmode=None)
                 except patch.PatchError, e:
                     raise util.Abort(str(e))
