@@ -83,7 +83,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
 
 class transaction(object):
     def __init__(self, report, opener, vfsmap, journalname, undoname=None,
-                 after=None, createmode=None):
+                 after=None, createmode=None, validator=None):
         """Begin a new transaction
 
         Begins a new transaction that allows rolling back writes in the event of
@@ -107,6 +107,12 @@ class transaction(object):
         self.journal = journalname
         self.undoname = undoname
         self._queue = []
+        # A callback to validate transaction content before closing it.
+        # should raise exception is anything is wrong.
+        # target user is repository hooks.
+        if validator is None:
+            validator = lambda tr: None
+        self.validator = validator
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
         self.file = opener.open(self.journal, "w")
@@ -378,6 +384,7 @@ class transaction(object):
     def close(self):
         '''commit the transaction'''
         if self.count == 1:
+            self.validator(self)  # will raise exception if needed
             self._generatefiles()
             categories = sorted(self._finalizecallback)
             for cat in categories:
