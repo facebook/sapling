@@ -813,15 +813,23 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   transaction will be in ``$HG_TXNNAME``. A non-zero status will
   prevent the transaction from being opened.
 
+``pretxnclose``
+  Run right before the transaction is actually finalized. Any
+  repository change will be visible to the hook program. This lets you
+  validate the transaction content or change it. Exit status 0 allows
+  the commit to proceed. Non-zero status will cause the transaction to
+  be rolled back. The reason for the transaction opening will be in
+  ``$HG_TXNNAME``. The rest of the available data will vary according
+  the transaction type. New changesets will add
+  ``$HG_NODE`` (id of the first added changeset), ``$HG_URL`` and
+  ``$HG_SOURCE`` variables, bookmarks and phases changes will set
+  ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``, etc.
+
 ``txnclose``
   Run after any repository transaction has been commited. At this
   point, the transaction can no longer be rolled back. The hook will run
-  after the lock is released. The reason for the transaction will
-  be in ``$HG_TXNNAME``. The rest of the available data will vary
-  according the event that happened during the transaction. New changesets
-  will add ``$HG_NODE`` (id of the first added changeset), ``$HG_URL``
-  and ``$HG_SOURCE`` variables, bookmarks and phases changes will set
-  ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``, etc.
+  after the lock is released. see ``pretxnclose`` docs for details about
+  available variables.
 
 ``pretxnchangegroup``
   Run after a changegroup has been added via push, pull or unbundle,

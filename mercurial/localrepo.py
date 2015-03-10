@@ -915,17 +915,24 @@ class localrepository(object):
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
         vfsmap = {'plain': self.vfs} # root of .hg/
-        tr = transaction.transaction(rp, self.svfs, vfsmap,
+        # we must avoid cyclic reference between repo and transaction.
+        reporef = weakref.ref(self)
+        def validate(tr):
+            """will run pre-closing hooks"""
+            pending = lambda: tr.writepending() and self.root or ""
+            reporef().hook('pretxnclose', throw=True, pending=pending,
+                           xnname=desc)
+
+        tr = transaction.transaction(rp, self.sopener, vfsmap,
                                      "journal",
                                      "undo",
                                      aftertrans(renames),
-                                     self.store.createmode)
+                                     self.store.createmode,
+                                     validator=validate)
         # note: writing the fncache only during finalize mean that the file is
         # outdated when running hooks. As fncache is used for streaming clone,
         # this is not expected to break anything that happen during the hooks.
         tr.addfinalize('flush-fncache', self.store.write)
-        # we must avoid cyclic reference between repo and transaction.
-        reporef = weakref.ref(self)
         def txnclosehook(tr2):
             """To be run if transaction is successful, will schedule a hook run
             """
