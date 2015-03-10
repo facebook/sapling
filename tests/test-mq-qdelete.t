@@ -155,11 +155,11 @@ qdel -k X && hg qimp -e X used to trigger spurious output with versioned queues
   $ hg init --mq
   $ hg qimport -r 3
   $ hg qpop
-  popping 3.diff
+  popping imported_patch_pc
   patch queue now empty
-  $ hg qdel -k 3.diff
-  $ hg qimp -e 3.diff
-  adding 3.diff to series file
+  $ hg qdel -k imported_patch_pc
+  $ hg qimp -e imported_patch_pc
+  adding imported_patch_pc to series file
   $ hg qfinish -a
   no patches applied
 
@@ -167,17 +167,17 @@ qdel -k X && hg qimp -e X used to trigger spurious output with versioned queues
 resilience to inconsistency: qfinish -a with applied patches not in series
 
   $ hg qser
-  3.diff
+  imported_patch_pc
   $ hg qapplied
   $ hg qpush
-  applying 3.diff
-  patch 3.diff is empty
-  now at: 3.diff
+  applying imported_patch_pc
+  patch imported_patch_pc is empty
+  now at: imported_patch_pc
   $ echo next >>  base
   $ hg qrefresh -d '1 0'
   $ echo > .hg/patches/series # remove 3.diff from series to confuse mq
   $ hg qfinish -a
-  revision 47dfa8501675 refers to unknown patches: 3.diff
+  revision 47dfa8501675 refers to unknown patches: imported_patch_pc
 
 more complex state 'both known and unknown patches
 

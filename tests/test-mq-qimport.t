@@ -198,32 +198,32 @@ try to import --push
   now at: appendbar.diff
   $ hg qfin -a
   patch b.diff finalized without changeset message
-  $ touch .hg/patches/2.diff
+  $ touch .hg/patches/append_foo
   $ hg qimport -r 'p1(.)::'
-  abort: patch "2.diff" already exists
+  abort: patch "append_foo" already exists
   [255]
   $ hg qapplied
-  3.diff
+  append_bar
   $ hg qfin -a
-  $ rm .hg/patches/2.diff
+  $ rm .hg/patches/append_foo
   $ hg qimport -r 'p1(.)::' -P
   $ hg qpop -a
-  popping 3.diff
-  popping 2.diff
+  popping append_bar
+  popping append_foo
   patch queue now empty
-  $ hg qdel 3.diff
-  $ hg qdel -k 2.diff
+  $ hg qdel append_foo
+  $ hg qdel -k append_bar
 
 qimport -e
 
-  $ hg qimport -e 2.diff
-  adding 2.diff to series file
-  $ hg qdel -k 2.diff
+  $ hg qimport -e append_bar
+  adding append_bar to series file
+  $ hg qdel -k append_bar
 
 qimport -e --name newname oldexisitingpatch
 
-  $ hg qimport -e --name this-name-is-better 2.diff
-  renaming 2.diff to this-name-is-better
+  $ hg qimport -e --name this-name-is-better append_bar
+  renaming append_bar to this-name-is-better
   adding this-name-is-better to series file
   $ hg qser
   this-name-is-better

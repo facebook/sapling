@@ -431,9 +431,9 @@ strip of applied mq should cleanup status file
 applied patches before strip
 
   $ hg qapplied
-  2.diff
-  3.diff
-  4.diff
+  d
+  e
+  f
 
 stripping revision in queue
 
@@ -444,7 +444,7 @@ stripping revision in queue
 applied patches after stripping rev in queue
 
   $ hg qapplied
-  2.diff
+  d
 
 stripping ancestor of queue
 
