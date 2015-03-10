@@ -209,10 +209,13 @@ def pathcopies(x, y):
         return _backwardrenames(x, y)
     return _chain(x, y, _backwardrenames(x, a), _forwardcopies(a, y))
 
-def _computenonoverlap(repo, addedinm1, addedinm2):
+def _computenonoverlap(repo, m1, m2, addedinm1, addedinm2):
     """Computes, based on addedinm1 and addedinm2, the files exclusive to m1
     and m2. This is its own function so extensions can easily wrap this call
     to see what files mergecopies is about to process.
+
+    Even though m1 and m2 are not used in this function, they are useful in
+    other extensions for being able to read the file nodes of the changed files.
     """
     u1 = sorted(addedinm1 - addedinm2)
     u2 = sorted(addedinm2 - addedinm1)
@@ -280,7 +283,7 @@ def mergecopies(repo, c1, c2, ca):
 
     addedinm1 = m1.filesnotin(ma)
     addedinm2 = m2.filesnotin(ma)
-    u1, u2 = _computenonoverlap(repo, addedinm1, addedinm2)
+    u1, u2 = _computenonoverlap(repo, m1, m2, addedinm1, addedinm2)
 
     for f in u1:
         checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
