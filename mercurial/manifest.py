@@ -100,6 +100,9 @@ class manifestdict(object):
     def __getitem__(self, key):
         return self._lm[key][0]
 
+    def find(self, key):
+        return self._lm[key]
+
     def __len__(self):
         return len(self._lm)
 
@@ -352,7 +355,7 @@ class manifest(revlog.revlog):
             return m.get(f), m.flags(f)
         text = self.revision(node)
         try:
-            return manifestdict(text)._lm[f]
+            return manifestdict(text).find(f)
         except KeyError:
             return None, None
 
