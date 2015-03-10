@@ -687,7 +687,7 @@ class manifest(revlog.revlog):
         return md
 
     def readdelta(self, node):
-        if self._usemanifestv2:
+        if self._usemanifestv2 or self._usetreemanifest:
             return self._slowreaddelta(node)
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
