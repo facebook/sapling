@@ -1533,7 +1533,7 @@ def patchrepo(ui, repo, ctx, store, patchobj, strip, files=None,
     backend = repobackend(ui, repo, ctx, store)
     return patchbackend(ui, backend, patchobj, strip, '', files, eolmode)
 
-def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
+def patch(ui, repo, patchname, strip=1, prefix='', files=None, eolmode='strict',
           similarity=0):
     """Apply <patchname> to the working directory.
 
@@ -1552,7 +1552,7 @@ def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
     if patcher:
         return _externalpatch(ui, repo, patcher, patchname, strip,
                               files, similarity)
-    return internalpatch(ui, repo, patchname, strip, '', files, eolmode,
+    return internalpatch(ui, repo, patchname, strip, prefix, files, eolmode,
                          similarity)
 
 def changedfiles(ui, repo, patchpath, strip=1):

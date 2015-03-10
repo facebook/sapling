@@ -615,6 +615,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
 
     update = not opts.get('bypass')
     strip = opts["strip"]
+    prefix = opts["prefix"]
     sim = float(opts.get('similarity') or 0)
     if not tmpname:
         return (None, None, False)
@@ -674,8 +675,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             partial = opts.get('partial', False)
             files = set()
             try:
-                patch.patch(ui, repo, tmpname, strip=strip, files=files,
-                            eolmode=None, similarity=sim / 100.0)
+                patch.patch(ui, repo, tmpname, strip=strip, prefix=prefix,
+                            files=files, eolmode=None, similarity=sim / 100.0)
             except patch.PatchError, e:
                 if not partial:
                     raise util.Abort(str(e))

@@ -670,6 +670,25 @@ test -p0
   $ hg status
   $ cat a
   bb
+
+test --prefix
+
+  $ mkdir -p dir/dir2
+  $ echo b > dir/dir2/b
+  $ hg ci -Am b
+  adding dir/dir2/b
+  $ hg import -p2 --prefix dir - << EOF
+  > foobar
+  > --- drop1/drop2/dir2/b
+  > +++ drop1/drop2/dir2/b
+  > @@ -1,1 +1,1 @@
+  > -b
+  > +cc
+  > EOF
+  applying patch from stdin
+  $ hg status
+  $ cat dir/dir2/b
+  cc
   $ cd ..
 
 
