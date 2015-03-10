@@ -193,6 +193,7 @@ def extsetup(ui):
 
     entry = extensions.wrapcommand(commands.table, 'push', expushcmd)
     entry[1].append(('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK'))
+    entry[1].append(('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK'))
 
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
@@ -208,11 +209,18 @@ def exlog(orig, ui, repo, *args, **opts):
     return res
 
 _pushto = False
+_delete = None
 
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
     remotemarks = pushop.remote.listkeys('bookmarks')
     force = pushop.force
+
+    if _delete:
+        if _delete not in remotemarks:
+            raise util.Abort(_('remote bookmark %s does not exist'))
+        pushop.outbookmarks.append([_delete, remotemarks[_delete], ''])
+        return exchange._pushdiscoverybookmarks(pushop)
 
     if not _pushto:
         ret = exchange._pushdiscoverybookmarks(pushop)
@@ -280,12 +288,31 @@ def expushdiscoverybookmarks(pushop):
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
+    # needed for discovery method
+    global _pushto, _delete
+
+    _delete = opts.get('delete')
     to = opts.get('to')
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
             msg = _('must specify --to when pushing')
             hint = _('see configuration option %s') % 'remotenames.forceto'
             raise util.Abort(msg, hint=hint)
+
+        if _delete:
+            flag = None
+            for f in ('to', 'bookmark', 'branch', 'rev'):
+                if opts.get(f):
+                    flag = f
+                    break
+            if flag:
+                msg = _('do not specify --delete and '
+                        '--%s at the same time' % flag)
+                raise util.Abort(msg)
+            # we want to skip pushing any changesets while deleting a remote
+            # bookmark, so we send the null revision
+            opts['rev'] = ['null']
+
         return orig(ui, repo, dest, **opts)
 
     if opts.get('bookmark'):
@@ -306,8 +333,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         raise util.Abort(msg, hint=hint)
     rev = revs[0]
 
-    # needed for discovery method
-    global _pushto
     _pushto = True
 
     # big can o' copypasta from exchange.push
