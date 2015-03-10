@@ -292,26 +292,27 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     global _pushto, _delete
 
     _delete = opts.get('delete')
+    if _delete:
+        flag = None
+        for f in ('to', 'bookmark', 'branch', 'rev'):
+            if opts.get(f):
+                flag = f
+                break
+        if flag:
+            msg = _('do not specify --delete and '
+                    '--%s at the same time' % flag)
+            raise util.Abort(msg)
+        # we want to skip pushing any changesets while deleting a remote
+        # bookmark, so we send the null revision
+        opts['rev'] = ['null']
+        return orig(ui, repo, dest, **opts)
+
     to = opts.get('to')
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
             msg = _('must specify --to when pushing')
             hint = _('see configuration option %s') % 'remotenames.forceto'
             raise util.Abort(msg, hint=hint)
-
-        if _delete:
-            flag = None
-            for f in ('to', 'bookmark', 'branch', 'rev'):
-                if opts.get(f):
-                    flag = f
-                    break
-            if flag:
-                msg = _('do not specify --delete and '
-                        '--%s at the same time' % flag)
-                raise util.Abort(msg)
-            # we want to skip pushing any changesets while deleting a remote
-            # bookmark, so we send the null revision
-            opts['rev'] = ['null']
 
         return orig(ui, repo, dest, **opts)
 
