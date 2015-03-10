@@ -946,6 +946,9 @@ Older extension is tested with current version, the other only with newer:
 Declare the version as supporting this hg version, show regular bts link:
   $ hgver=`$PYTHON -c 'from mercurial import util; print util.version().split("+")[0]'`
   $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
+  $ if [ -z "$hgver" ]; then
+  >   echo "unable to fetch a mercurial version. Make sure __version__ is correct";
+  > fi
   $ rm -f throw.pyc throw.pyo
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** unknown exception encountered, please report by visiting
