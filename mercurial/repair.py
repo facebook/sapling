@@ -137,6 +137,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # create a changegroup for all the branches we need to keep
     backupfile = None
     vfs = repo.vfs
+    node = nodelist[-1]
     if backup:
         backupfile = _bundle(repo, stripbases, cl.heads(), node, topic)
         repo.ui.status(_("saved backup bundle to %s\n") %
