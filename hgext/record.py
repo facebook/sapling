@@ -8,8 +8,9 @@
 '''commands to interactively select changes for commit/qrefresh'''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, extensions, hg, patch
+from mercurial import cmdutil, commands, extensions, patch
 from mercurial import util
+from mercurial import merge as mergemod
 import cStringIO, errno, os, shutil, tempfile
 
 cmdtable = {}
@@ -205,8 +206,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
-                hg.revert(repo, repo.dirstate.p1(),
-                          lambda key: key in backups)
+                # Equivalent to hg.revert
+                choices = lambda key: key in backups
+                mergemod.update(repo, repo.dirstate.p1(),
+                        False, True, choices)
 
             # 3b. (apply)
             if dopatch:
