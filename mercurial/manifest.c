@@ -222,21 +222,28 @@ static void lmiter_dealloc(PyObject *o)
 	PyObject_Del(self);
 }
 
+static line *lmiter_nextline(lmIter *self)
+{
+	do {
+		self->pos++;
+		if (self->pos >= self->m->numlines) {
+			return NULL;
+		}
+		/* skip over deleted manifest entries */
+	} while (self->m->lines[self->pos].deleted);
+	return self->m->lines + self->pos;
+}
+
 static PyObject *lmiter_iternext(PyObject *o)
 {
 	size_t pl;
 	line *l;
 	Py_ssize_t consumed;
-	PyObject *ret = NULL, *path = NULL, *hash = NULL, *flags = NULL;
-	lmIter *self = (lmIter *)o;
-	do {
-		self->pos++;
-		if (self->pos >= self->m->numlines) {
-			goto bail;
-		}
-		/* skip over deleted manifest entries */
-	} while (self->m->lines[self->pos].deleted);
-	l = self->m->lines + self->pos;
+	PyObject *path = NULL, *hash = NULL, *flags = NULL;
+	l = lmiter_nextline((lmIter *)o);
+	if (!l) {
+		goto bail;
+	}
 	pl = pathlen(l);
 	path = PyString_FromStringAndSize(l->start, pl);
 	hash = nodeof(l);
@@ -246,12 +253,12 @@ static PyObject *lmiter_iternext(PyObject *o)
 	if (!path || !hash || !flags) {
 		goto bail;
 	}
-	ret = PyTuple_Pack(3, path, hash, flags);
+	return PyTuple_Pack(3, path, hash, flags);
  bail:
 	Py_XDECREF(path);
 	Py_XDECREF(hash);
 	Py_XDECREF(flags);
-	return ret;
+	return NULL;
 }
 
 static PyTypeObject lazymanifestIterator = {
