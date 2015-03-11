@@ -171,8 +171,8 @@ def onetimeclientsetup(ui):
     wrapfunction(merge, 'applyupdates', applyupdates)
 
     # prefetch files before mergecopies check
-    def computenonoverlap(orig, repo, m1, m2, ma):
-        u1, u2 = orig(repo, m1, m2, ma)
+    def computenonoverlap(orig, repo, m1, m2, addedinm1, addedinm2):
+        u1, u2 = orig(repo, m1, m2, addedinm1, addedinm2)
         if shallowrepo.requirement in repo.requirements:
             files = []
             for f in u1:
