@@ -1757,7 +1757,7 @@ def patchbackend(ui, backend, patchobj, strip, prefix, files=None,
         raise PatchError(_('patch failed to apply'))
     return ret > 0
 
-def internalpatch(ui, repo, patchobj, strip, prefix, files=None,
+def internalpatch(ui, repo, patchobj, strip, prefix='', files=None,
                   eolmode='strict', similarity=0):
     """use builtin patch to apply <patchobj> to the working directory.
     returns whether patch was applied with fuzz factor."""

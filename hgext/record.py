@@ -365,7 +365,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
                 try:
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
-                    patch.internalpatch(ui, repo, fp, 1, '', eolmode=None)
+                    patch.internalpatch(ui, repo, fp, 1, eolmode=None)
                 except patch.PatchError, err:
                     raise util.Abort(str(err))
             del fp
