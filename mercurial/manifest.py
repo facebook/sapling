@@ -115,11 +115,14 @@ class manifestdict(object):
     def __delitem__(self, key):
         del self._lm[key]
 
-    def keys(self):
-        return [x[0] for x in self._lm]
+    def __iter__(self):
+        return self._lm.iterkeys()
 
     def iterkeys(self):
-        return iter(self.keys())
+        return self._lm.iterkeys()
+
+    def keys(self):
+        return list(self.iterkeys())
 
     def intersectfiles(self, files):
         '''make a new lazymanifest with the intersection of self with files
@@ -183,9 +186,6 @@ class manifestdict(object):
             return self._lm[key][1]
         except KeyError:
             return default
-
-    def __iter__(self):
-        return (x[0] for x in self._lm)
 
     def copy(self):
         c = manifestdict('')

@@ -294,6 +294,50 @@ static PyTypeObject lazymanifestIterator = {
 	lmiter_iternext,                 /* tp_iternext: next() method */
 };
 
+static PyObject *lmiter_iterkeysnext(PyObject *o)
+{
+	size_t pl;
+	line *l = lmiter_nextline((lmIter *)o);
+	if (!l) {
+		return NULL;
+	}
+	pl = pathlen(l);
+	return PyString_FromStringAndSize(l->start, pl);
+}
+
+static PyTypeObject lazymanifestKeysIterator = {
+	PyObject_HEAD_INIT(NULL)
+	0,                               /*ob_size */
+	"parsers.lazymanifest.keysiterator", /*tp_name */
+	sizeof(lmIter),                  /*tp_basicsize */
+	0,                               /*tp_itemsize */
+	lmiter_dealloc,                  /*tp_dealloc */
+	0,                               /*tp_print */
+	0,                               /*tp_getattr */
+	0,                               /*tp_setattr */
+	0,                               /*tp_compare */
+	0,                               /*tp_repr */
+	0,                               /*tp_as_number */
+	0,                               /*tp_as_sequence */
+	0,                               /*tp_as_mapping */
+	0,                               /*tp_hash */
+	0,                               /*tp_call */
+	0,                               /*tp_str */
+	0,                               /*tp_getattro */
+	0,                               /*tp_setattro */
+	0,                               /*tp_as_buffer */
+	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+	   use tp_iter and tp_iternext fields. */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	"Keys iterator for a lazymanifest.",  /* tp_doc */
+	0,                               /* tp_traverse */
+	0,                               /* tp_clear */
+	0,                               /* tp_richcompare */
+	0,                               /* tp_weaklistoffset */
+	PyObject_SelfIter,               /* tp_iter: __iter__() method */
+	lmiter_iterkeysnext,             /* tp_iternext: next() method */
+};
+
 static lazymanifest *lazymanifest_copy(lazymanifest *self);
 
 static PyObject *lazymanifest_getiter(lazymanifest *self)
@@ -305,6 +349,25 @@ static PyObject *lazymanifest_getiter(lazymanifest *self)
 		return NULL;
 	}
 	i = PyObject_New(lmIter, &lazymanifestIterator);
+	if (i) {
+		i->m = t;
+		i->pos = -1;
+	} else {
+		Py_DECREF(t);
+		PyErr_NoMemory();
+	}
+	return (PyObject *)i;
+}
+
+static PyObject *lazymanifest_getkeysiter(lazymanifest *self)
+{
+	lmIter *i = NULL;
+	lazymanifest *t = lazymanifest_copy(self);
+	if (!t) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+	i = PyObject_New(lmIter, &lazymanifestKeysIterator);
 	if (i) {
 		i->m = t;
 		i->pos = -1;
@@ -795,6 +858,8 @@ static PyObject *lazymanifest_diff(lazymanifest *self, PyObject *args)
 }
 
 static PyMethodDef lazymanifest_methods[] = {
+	{"iterkeys", (PyCFunction)lazymanifest_getkeysiter, METH_NOARGS,
+	 "Iterate over file names in this lazymanifest."},
 	{"copy", (PyCFunction)lazymanifest_copy, METH_NOARGS,
 	 "Make a copy of this lazymanifest."},
 	{"filtercopy", (PyCFunction)lazymanifest_filtercopy, METH_O,
