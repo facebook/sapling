@@ -49,7 +49,8 @@ def record(ui, repo, *pats, **opts):
 
     This command is not available when committing a merge.'''
 
-    cmdutil.dorecord(ui, repo, commands.commit, 'commit', False, *pats, **opts)
+    opts["interactive"] = True
+    commands.commit(ui, repo, *pats, **opts)
 
 def qrefresh(origfn, ui, repo, *pats, **opts):
     if not opts['interactive']:
