@@ -616,7 +616,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.read()
         state = bootstrapcontinue(ui, state, opts)
     elif goal == 'edit-plan':
-        state = histeditstate(repo)
         state.read()
         if not rules:
             comment = editcomment % (state.parentctx, node.short(state.topmost))
