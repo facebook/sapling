@@ -243,7 +243,7 @@ static PyObject *lmiter_iternext(PyObject *o)
 	consumed = pl + 41;
 	flags = PyString_FromStringAndSize(l->start + consumed,
 									   l->len - consumed - 1);
-	if (!flags) {
+	if (!path || !hash || !flags) {
 		goto bail;
 	}
 	ret = PyTuple_Pack(3, path, hash, flags);
