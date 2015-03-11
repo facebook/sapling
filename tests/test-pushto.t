@@ -36,7 +36,7 @@ Test that config changes what is pushed by default
   $ hg push -r 'head()'
   pushing to $TESTTMP/repo1
   searching for changes
-  abort: push would create new anonymous heads (d36c0562f908, d2ae7f538514)
+  abort: push would create new anonymous heads (d2ae7f538514, d36c0562f908)
   (use --force to override this warning)
   [255]
   $ hg push

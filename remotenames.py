@@ -255,7 +255,7 @@ def expushdiscoverybookmarks(pushop):
             if revs:
                 msg = _("push would create new anonymous heads (%s)")
                 hint = _("use --force to override this warning")
-                raise util.Abort(msg % ', '.join(revs), hint=hint)
+                raise util.Abort(msg % ', '.join(sorted(revs)), hint=hint)
         return ret
 
     bookmark = pushop.bookmarks[0]
