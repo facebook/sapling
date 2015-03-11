@@ -350,12 +350,9 @@ class manifest(revlog.revlog):
     def find(self, node, f):
         '''look up entry for a single file efficiently.
         return (node, flags) pair if found, (None, None) if not.'''
-        if node in self._mancache:
-            m = self._mancache[node][0]
-            return m.get(f), m.flags(f)
-        text = self.revision(node)
+        m = self.read(node)
         try:
-            return manifestdict(text).find(f)
+            return m.find(f)
         except KeyError:
             return None, None
 
