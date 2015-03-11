@@ -420,6 +420,13 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     This has the side benefit of grouping all remote bookmarks by remote name.
 
     """
+
+    disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
+    for name in args:
+        if name in disallowed:
+            raise util.Abort(_(" bookmark '%s' not allowed by configuration")
+                    % name)
+
     if not opts.get('remote'):
         orig(ui, repo, *args, **opts)
 

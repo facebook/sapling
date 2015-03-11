@@ -72,3 +72,20 @@ Test transition bookmark deletion
   no changes found
   $ hg bookmarks
   no bookmarks set
+
+Test transition bookmark disallowed
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "disallowedbookmarks = master, stable, other" >> $HGRCPATH
+  $ hg book master
+  abort:  bookmark 'master' not allowed by configuration
+  [255]
+  $ hg book okay stable
+  abort:  bookmark 'stable' not allowed by configuration
+  [255]
+  $ hg book other -r .^
+  abort:  bookmark 'other' not allowed by configuration
+  [255]
+  $ hg book foo
+  $ hg book -m foo stable
+  abort:  bookmark 'stable' not allowed by configuration
+  [255]
