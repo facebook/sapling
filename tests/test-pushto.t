@@ -3,7 +3,7 @@ Set up extension and repos
   $ echo "[phases]" >> $HGRCPATH
   $ echo "publish = False" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=$(dirname $TESTDIR)/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
   $ hg init repo1
   $ hg clone repo1 repo2
   updating to branch default
@@ -16,7 +16,7 @@ Test that anonymous heads are disallowed by default
   $ hg add a
   $ hg commit -m a
   $ hg push
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   abort: push would create new anonymous heads (cb9a9f314b8b)
   (use --force to override this warning)
@@ -27,20 +27,20 @@ Test that config changes what is pushed by default
   $ echo b > b
   $ hg add b
   $ hg commit -m b
-  $ hg up .^
+  $ hg up ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
   $ hg add c
   $ hg commit -m c
   created new head
   $ hg push -r 'head()'
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   abort: push would create new anonymous heads (d2ae7f538514, d36c0562f908)
   (use --force to override this warning)
   [255]
   $ hg push
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   abort: push would create new anonymous heads (d36c0562f908)
   (use --force to override this warning)
@@ -52,7 +52,7 @@ Test that config changes what is pushed by default
 Test that config allows anonymous heads to be pushed
 
   $ hg push --config remotenames.pushanonheads=True
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -72,7 +72,7 @@ Test that --to limits other options
 
   $ echo b >> a
   $ hg commit -m b
-  $ hg push --to @ --rev . --rev .^
+  $ hg push --to @ --rev . --rev ".^"
   abort: --to requires exactly one rev to push
   (use --rev BOOKMARK or omit --rev for current commit (.))
   [255]
@@ -108,13 +108,13 @@ Test that --force is required to move bookmarks to odd locations
   remote bookmark already points at pushed rev
   no changes found
   [1]
-  $ hg push --to @ -r .^
+  $ hg push --to @ -r ".^"
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
   (use --force flag to complete non-fast-forward update)
   [255]
-  $ hg up .^
+  $ hg up ".^"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> a
   $ hg commit -m c
@@ -213,7 +213,7 @@ Clean up repo1
 Test that rebasing and pushing works as expected
 
   $ hg pull
-  pulling from $TESTTMP/repo1
+  pulling from $TESTTMP/repo1 (glob)
   searching for changes
   adding changesets
   adding manifests

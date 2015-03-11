@@ -1,6 +1,6 @@
 Set up extension and repos
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=$(dirname $TESTDIR)/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
   $ hg init repo1
   $ cd repo1
   $ echo a > a
@@ -22,7 +22,7 @@ Test renaming
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "rename.default = remote" >> $HGRCPATH
   $ hg pull
-  pulling from $TESTTMP/repo1
+  pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
@@ -67,7 +67,7 @@ Test transition bookmark deletion
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "transitionbookmarks = master, stable, other" >> $HGRCPATH
   $ hg pull
-  pulling from $TESTTMP/repo1
+  pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   $ hg bookmarks
@@ -82,7 +82,7 @@ Test transition bookmark disallowed
   $ hg book okay stable
   abort:  bookmark 'stable' not allowed by configuration
   [255]
-  $ hg book other -r .^
+  $ hg book other -r ".^"
   abort:  bookmark 'other' not allowed by configuration
   [255]
   $ hg book foo

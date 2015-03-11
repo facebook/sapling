@@ -1,6 +1,5 @@
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=$(echo $(dirname $TESTDIR))/remotenames.py" >> $HGRCPATH
- 
+  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
   $ hg init test
   $ cd test
   $ echo foo>foo
@@ -8,7 +7,6 @@
   $ echo foo>foo.d/foo
   $ echo bar>foo.d/bAr.hg.d/BaR
   $ echo bar>foo.d/baR.d.hg/bAR
- 
   $ hg commit -A -m 1
   adding foo
   adding foo.d/bAr.hg.d/BaR
@@ -19,15 +17,14 @@
   $ cat hg.pid >> $DAEMON_PIDS
 
 clone
-  $ hg clone http://localhost:$HGPORT/ copy 2>&1 | \
-  > sed -e 's/[0-9][0-9.]*/XXX/g' -e 's/[KM]\(B\/sec\)/X\1/'
+  $ hg clone http://localhost:$HGPORT/ copy 2>&1
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added XXX changesets with XXX changes to XXX files
+  added 1 changesets with 4 changes to 4 files
   updating to branch default
-  XXX files updated, XXX files merged, XXX files removed, XXX files unresolved
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd copy
 
@@ -37,8 +34,8 @@ add a commit to the clone
   $ hg ci -m 'add alpha'
 
 verify that the branchheads are stored properly
-  $ hg pull | sed "s/$HGPORT//"
-  pulling from http://localhost:/
+  $ hg pull
+  pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
   $ hg log --graph

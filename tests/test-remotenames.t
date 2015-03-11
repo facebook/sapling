@@ -1,7 +1,7 @@
   > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=$(echo $(dirname $TESTDIR))/remotenames.py" >> $HGRCPATH
+  > echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
 
-  > FILTERPWD="sed s%$PWD/%%g"
+  > FILTERPWD="sed s%`pwd`/%%g"
 
   > mkcommit()
   > {

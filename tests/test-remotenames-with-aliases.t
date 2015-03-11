@@ -1,11 +1,11 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > remotenames=$(echo $(dirname $TESTDIR))/remotenames.py
+  > remotenames=`dirname $TESTDIR`/remotenames.py
   > [remotenames]
   > alias.default = True
   > EOF
 
-  $ FILTERPWD="sed s%$PWD/%%g"
+  $ FILTERPWD="sed s%`pwd`/%%g"
 
   $ mkcommit () {
   >     echo c$1 > f$1

@@ -3,7 +3,7 @@ Set up extension and repos
   $ echo "[phases]" >> $HGRCPATH
   $ echo "publish = False" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=$(dirname $TESTDIR)/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
   $ hg init repo1
   $ hg clone repo1 repo2
   updating to branch default
@@ -16,7 +16,7 @@ Test that anonymous heads are disallowed by default
   $ hg add a
   $ hg commit -m a
   $ hg push
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   abort: push would create new anonymous heads (cb9a9f314b8b)
   (use --force to override this warning)
@@ -39,7 +39,7 @@ Test that we can still push a head that advances a remote bookmark
   $ hg commit -m b
   $ hg book @
   $ hg push
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -50,7 +50,7 @@ Test that we can still push a head that advances a remote bookmark
 Test --delete
 
   $ hg push --delete @
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   deleting remote bookmark @
@@ -60,7 +60,7 @@ Test that we don't get an abort if we're doing a bare push that does nothing
 
   $ hg bookmark -d @
   $ hg push
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   [1]
@@ -71,7 +71,7 @@ remote or local repo
   $ echo c >> a
   $ hg commit -m c
   $ hg push -f
-  pushing to $TESTTMP/repo1
+  pushing to $TESTTMP/repo1 (glob)
   searching for changes
   adding changesets
   adding manifests
