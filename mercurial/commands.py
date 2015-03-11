@@ -1431,7 +1431,8 @@ def commit(ui, repo, *pats, **opts):
     """
     if opts.get('interactive'):
         opts.pop('interactive')
-        cmdutil.dorecord(ui, repo, commit, 'commit', False, *pats, **opts)
+        cmdutil.dorecord(ui, repo, commit, 'commit', False,
+                        cmdutil.recordfilter, *pats, **opts)
         return
 
     if opts.get('subrepos'):

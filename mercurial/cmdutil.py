@@ -19,7 +19,11 @@ import lock as lockmod
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
-def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
+def recordfilter(ui, fp):
+    return patch.filterpatch(ui, patch.parsepatch(fp))
+
+def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
+            filterfn, *pats, **opts):
     import merge as mergemod
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
@@ -61,7 +65,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
 
         # 1. filter patch, so we have intending-to apply subset of it
         try:
-            chunks = patch.filterpatch(ui, patch.parsepatch(fp))
+            chunks = filterfn(ui, fp)
         except patch.PatchError, err:
             raise util.Abort(_('error parsing patch: %s') % err)
 

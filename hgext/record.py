@@ -66,7 +66,8 @@ def qrefresh(origfn, ui, repo, *pats, **opts):
         mq.refresh(ui, repo, **opts)
 
     # backup all changed files
-    cmdutil.dorecord(ui, repo, committomq, 'qrefresh', True, *pats, **opts)
+    cmdutil.dorecord(ui, repo, committomq, 'qrefresh', True,
+                    cmdutil.recordfilter, *pats, **opts)
 
 # This command registration is replaced during uisetup().
 @command('qrecord',
@@ -91,7 +92,8 @@ def qrecord(ui, repo, patch, *pats, **opts):
         opts['checkname'] = False
         mq.new(ui, repo, patch, *pats, **opts)
 
-    cmdutil.dorecord(ui, repo, committomq, 'qnew', False, *pats, **opts)
+    cmdutil.dorecord(ui, repo, committomq, 'qnew', False,
+                    cmdutil.recordfilter, *pats, **opts)
 
 def qnew(origfn, ui, repo, patch, *args, **opts):
     if opts['interactive']:
