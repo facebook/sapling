@@ -347,6 +347,15 @@ class remotefilelog(object):
                 # Directory doesn't exist. Oh well
                 pass
 
+            # If exists locally, but with a bad history, adjust the linknodes
+            # manually.
+            if relativeto and os.path.exists(localpath):
+                raw = _readfile(localpath)
+                mapping = self._ancestormap(node, raw, relativeto,
+                    adjustlinknodes=True)
+                if mapping:
+                    return mapping
+
             # Fallback to the server cache
             self.repo.fileservice.prefetch([(self.filename, hexnode)],
                 force=True)
@@ -360,7 +369,8 @@ class remotefilelog(object):
 
         raise error.LookupError(node, self.filename, _('no valid file history'))
 
-    def _ancestormap(self, node, raw, relativeto, fromserver=False):
+    def _ancestormap(self, node, raw, relativeto, fromserver=False,
+            adjustlinknodes=False):
         index, size = self._parsesize(raw)
         start = index + 1 + size
 
@@ -416,9 +426,60 @@ class remotefilelog(object):
             return True
 
         if not validmap(node):
+            if adjustlinknodes and relativeto:
+                return self._fixmappinglinknodes(mapping, node, relativeto)
             return None
 
         return mapping
+
+    def _fixmappinglinknodes(self, mapping, node, relativeto):
+        """Takes a known-invalid mapping and does the minimal amount of work to
+        produce a valid mapping, given the desired relative commit."""
+        repo = self.repo
+        cl = repo.unfiltered().changelog
+        ma = repo.manifest
+
+        newmapping = {}
+        def _fixsinglelinknode(path, fnode, source, autoaccept=False):
+            """Given a file node and a source commit, fills in the newmapping
+            with the valid history of that file node, relative to the source
+            commit."""
+            if fnode == nullid or fnode in newmapping:
+                return
+
+            p1, p2, linknode, copyfrom = mapping[fnode]
+            if autoaccept or cl.ancestor(linknode, source) == linknode:
+                newmapping[fnode] = p1, p2, linknode, copyfrom
+                _fixsinglelinknode(copyfrom or path, p1, linknode, autoaccept=True)
+                _fixsinglelinknode(path, p2, linknode, autoaccept=True)
+            else:
+                srcrev = cl.rev(source)
+                iteranc = cl.ancestors([srcrev], inclusive=True)
+                for a in iteranc:
+                    ac = cl.read(a) # get changeset data (we avoid object creation)
+                    if path in ac[3]: # checking the 'files' field.
+                        # The file has been touched, check if the content is
+                        # similar to the one we search for.
+                        if fnode == ma.readfast(ac[0]).get(path):
+                            linknode = cl.node(a)
+                            newmapping[fnode] = p1, p2, linknode, copyfrom
+                            _fixsinglelinknode(copyfrom or path, p1, linknode)
+                            _fixsinglelinknode(path, p2, linknode)
+                            return
+
+                # This shouldn't happen, but if for some reason we are unable to
+                # resolve a correct mapping, give up and let the _ancestormap()
+                # above try a new method.
+                msg = ("remotefilelog: unable to find valid history for "
+                    "%s:%s" % (path, hex(fnode)))
+                repo.ui.warn(msg)
+                raise KeyError(msg)
+
+        try:
+            _fixsinglelinknode(self.filename, node, relativeto)
+            return newmapping
+        except KeyError:
+            return None
 
     def ancestor(self, a, b):
         if a == nullid or b == nullid:

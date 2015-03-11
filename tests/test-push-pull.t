@@ -145,3 +145,51 @@
   adding file changes
   added 2 changesets with 2 changes to 2 files
   (run 'hg update' to get a working copy)
+
+  $ cd ..
+
+# Test pushing from shallow to shallow with multiple manifests introducing the
+# same filenode. Test this by constructing two separate histories of file 'c'
+# that share a file node and verifying that the history works after pushing.
+
+  $ hginit multimf-master
+  $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow -q
+  $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow2 -q
+  $ cd multimf-shallow
+  $ echo a > a
+  $ hg commit -qAm a
+  $ echo b > b
+  $ hg commit -qAm b
+  $ echo c > c
+  $ hg commit -qAm c1
+  $ hg up -q 0
+  $ echo c > c
+  $ hg commit -qAm c2
+  $ echo cc > c
+  $ hg commit -qAm c22
+  $ hg log -G -T '{rev}\n'
+  @  4
+  |
+  o  3
+  |
+  | o  2
+  | |
+  | o  1
+  |/
+  o  0
+  
+
+  $ cd ../multimf-shallow2
+  $ hg pull ssh://user@dummy/$TESTTMP/multimf-shallow
+  pulling from ssh://user@dummy/$TESTTMP/multimf-shallow
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 4 changes to 3 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+
+  $ hg up -q 4
+  $ hg log -f -T '{rev}\n' c
+  4
+  3
