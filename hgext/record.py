@@ -18,7 +18,8 @@ testedwith = 'internal'
 
 @command("record",
          # same options as commit + white space diff options
-         commands.table['^commit|ci'][1][:] + commands.diffwsopts,
+        [c for c in commands.table['^commit|ci'][1][:]
+            if c[1] != "interactive"] + commands.diffwsopts,
           _('hg record [OPTION]... [FILE]...'))
 def record(ui, repo, *pats, **opts):
     '''interactively select changes to commit

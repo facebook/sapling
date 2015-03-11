@@ -1383,6 +1383,7 @@ def clone(ui, source, dest=None, **opts):
     ('', 'amend', None, _('amend the parent of the working dir')),
     ('s', 'secret', None, _('use the secret phase for committing')),
     ('e', 'edit', None, _('invoke editor on commit messages')),
+    ('i', 'interactive', None, _('use interactive mode')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
@@ -1422,6 +1423,11 @@ def commit(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if nothing changed.
     """
+    if opts.get('interactive'):
+        opts.pop('interactive')
+        cmdutil.dorecord(ui, repo, commit, 'commit', False, *pats, **opts)
+        return
+
     if opts.get('subrepos'):
         if opts.get('amend'):
             raise util.Abort(_('cannot amend with --subrepos'))
