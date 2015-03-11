@@ -28,12 +28,8 @@ _remotenames = {
 
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
-    lock = repo.lock()
-    try:
-        pullremotenames(repo, remote)
-    finally:
-        lock.release()
-        return res
+    pullremotenames(repo, remote)
+    return res
 
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
