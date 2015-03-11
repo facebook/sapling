@@ -166,6 +166,9 @@ def reposetup(ui, repo):
                                  nodemap=nodemap)
         repo.names.addnamespace(n)
 
+def _tracking(ui):
+    return ui.configbool('remotenames', 'tracking', True) # omg default true
+
 def extsetup(ui):
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
@@ -179,6 +182,9 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
     entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
     entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
+
+    if _tracking(ui):
+        entry[1].append(('t', 'track', '', 'track this bookmark', 'BOOKMARK'))
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
