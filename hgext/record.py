@@ -253,7 +253,11 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         for chunk, l in patch.difflabel(lambda: args):
             orig(chunk, label=label + l)
     oldwrite = ui.write
-    extensions.wrapfunction(ui, 'write', wrapwrite)
+
+    def wrap(*args, **kwargs):
+        return wrapwrite(oldwrite, *args, **kwargs)
+    setattr(ui, 'write', wrap)
+
     try:
         return cmdutil.commit(ui, repo, recordfunc, pats, opts)
     finally:
