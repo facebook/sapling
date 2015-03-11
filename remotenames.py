@@ -169,6 +169,25 @@ def reposetup(ui, repo):
 def _tracking(ui):
     return ui.configbool('remotenames', 'tracking', True) # omg default true
 
+def setuptracking(ui):
+    try:
+        rebase = extensions.find('rebase')
+        if rebase:
+            entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
+    except KeyError:
+        # rebase isn't on
+        pass
+
+def exrebase(orig, ui, repo, **opts):
+    dest = opts['dest']
+    current = bookmarks.readcurrent(repo)
+    if not dest and current:
+        tracking = _readtracking(repo)
+        if current in tracking:
+            opts['dest'] = tracking[current]
+
+    return orig(ui, repo, **opts)
+
 def extsetup(ui):
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
@@ -185,6 +204,7 @@ def extsetup(ui):
 
     if _tracking(ui):
         entry[1].append(('t', 'track', '', 'track this bookmark', 'BOOKMARK'))
+        setuptracking(ui)
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
@@ -419,9 +439,13 @@ def exbranches(orig, ui, repo, *args, **opts):
 def _readtracking(repo):
     tracking = {}
     try:
-        for line in repo.vfs.read('bookmarks.tracking'):
-            book, track = line.strip().split(' ')
-            tracking[book] = track
+        for line in repo.vfs.read('bookmarks.tracking').strip().split('\n'):
+            try:
+                book, track = line.strip().split(' ')
+                tracking[book] = track
+            except ValueError:
+                # corrupt file, ignore entry
+                pass
     except IOError:
         pass
     return tracking
