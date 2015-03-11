@@ -737,13 +737,7 @@ def reposetup(ui, repo):
     extensions.wrapfunction(patch, 'diff', kw_diff)
     extensions.wrapfunction(cmdutil, 'amend', kw_amend)
     extensions.wrapfunction(cmdutil, 'copy', kw_copy)
+    extensions.wrapfunction(cmdutil, 'dorecord', kw_dorecord)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
-    for name in recordextensions.split():
-        try:
-            record = extensions.find(name)
-            extensions.wrapfunction(record, 'dorecord', kw_dorecord)
-        except KeyError:
-            pass
-
     repo.__class__ = kwrepo

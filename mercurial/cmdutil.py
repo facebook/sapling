@@ -7,7 +7,7 @@
 
 from node import hex, nullid, nullrev, short
 from i18n import _
-import os, sys, errno, re, tempfile
+import os, sys, errno, re, tempfile, cStringIO, shutil
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import context, repair, graphmod, revset, phases, obsolete, pathutil
@@ -18,6 +18,177 @@ import lock as lockmod
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
+
+def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
+    import merge as mergemod
+    if not ui.interactive():
+        raise util.Abort(_('running non-interactively, use %s instead') %
+                         cmdsuggest)
+
+    # make sure username is set before going interactive
+    if not opts.get('user'):
+        ui.username() # raise exception, username not provided
+
+    def recordfunc(ui, repo, message, match, opts):
+        """This is generic record driver.
+
+        Its job is to interactively filter local changes, and
+        accordingly prepare working directory into a state in which the
+        job can be delegated to a non-interactive commit command such as
+        'commit' or 'qrefresh'.
+
+        After the actual job is done by non-interactive command, the
+        working directory is restored to its original state.
+
+        In the end we'll record interesting changes, and everything else
+        will be left in place, so the user can continue working.
+        """
+
+        checkunfinished(repo, commit=True)
+        merge = len(repo[None].parents()) > 1
+        if merge:
+            raise util.Abort(_('cannot partially commit a merge '
+                               '(use "hg commit" instead)'))
+
+        status = repo.status(match=match)
+        diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
+        diffopts.nodates = True
+        diffopts.git = True
+        originalchunks = patch.diff(repo, changes=status, opts=diffopts)
+        fp = cStringIO.StringIO()
+        fp.write(''.join(originalchunks))
+        fp.seek(0)
+
+        # 1. filter patch, so we have intending-to apply subset of it
+        try:
+            chunks = patch.filterpatch(ui, patch.parsepatch(fp))
+        except patch.PatchError, err:
+            raise util.Abort(_('error parsing patch: %s') % err)
+
+        del fp
+
+        contenders = set()
+        for h in chunks:
+            try:
+                contenders.update(set(h.files()))
+            except AttributeError:
+                pass
+
+        changed = status.modified + status.added + status.removed
+        newfiles = [f for f in changed if f in contenders]
+        if not newfiles:
+            ui.status(_('no changes to record\n'))
+            return 0
+
+        newandmodifiedfiles = set()
+        for h in chunks:
+            ishunk = isinstance(h, patch.recordhunk)
+            isnew = h.filename() in status.added
+            if ishunk and isnew and not h in originalchunks:
+                newandmodifiedfiles.add(h.filename())
+
+        modified = set(status.modified)
+
+        # 2. backup changed files, so we can restore them in the end
+
+        if backupall:
+            tobackup = changed
+        else:
+            tobackup = [f for f in newfiles
+                        if f in modified or f in newandmodifiedfiles]
+
+        backups = {}
+        if tobackup:
+            backupdir = repo.join('record-backups')
+            try:
+                os.mkdir(backupdir)
+            except OSError, err:
+                if err.errno != errno.EEXIST:
+                    raise
+        try:
+            # backup continues
+            for f in tobackup:
+                fd, tmpname = tempfile.mkstemp(prefix=f.replace('/', '_')+'.',
+                                               dir=backupdir)
+                os.close(fd)
+                ui.debug('backup %r as %r\n' % (f, tmpname))
+                util.copyfile(repo.wjoin(f), tmpname)
+                shutil.copystat(repo.wjoin(f), tmpname)
+                backups[f] = tmpname
+
+            fp = cStringIO.StringIO()
+            for c in chunks:
+                fname = c.filename()
+                if fname in backups or fname in newandmodifiedfiles:
+                    c.write(fp)
+            dopatch = fp.tell()
+            fp.seek(0)
+
+            [os.unlink(c) for c in newandmodifiedfiles]
+
+            # 3a. apply filtered patch to clean repo  (clean)
+            if backups:
+                # Equivalent to hg.revert
+                choices = lambda key: key in backups
+                mergemod.update(repo, repo.dirstate.p1(),
+                        False, True, choices)
+
+
+            # 3b. (apply)
+            if dopatch:
+                try:
+                    ui.debug('applying patch\n')
+                    ui.debug(fp.getvalue())
+                    patch.internalpatch(ui, repo, fp, 1, eolmode=None)
+                except patch.PatchError, err:
+                    raise util.Abort(str(err))
+            del fp
+
+            # 4. We prepared working directory according to filtered
+            #    patch. Now is the time to delegate the job to
+            #    commit/qrefresh or the like!
+
+            # Make all of the pathnames absolute.
+            newfiles = [repo.wjoin(nf) for nf in newfiles]
+            commitfunc(ui, repo, *newfiles, **opts)
+
+            return 0
+        finally:
+            # 5. finally restore backed-up files
+            try:
+                for realname, tmpname in backups.iteritems():
+                    ui.debug('restoring %r to %r\n' % (tmpname, realname))
+                    util.copyfile(tmpname, repo.wjoin(realname))
+                    # Our calls to copystat() here and above are a
+                    # hack to trick any editors that have f open that
+                    # we haven't modified them.
+                    #
+                    # Also note that this racy as an editor could
+                    # notice the file's mtime before we've finished
+                    # writing it.
+                    shutil.copystat(tmpname, repo.wjoin(realname))
+                    os.unlink(tmpname)
+                if tobackup:
+                    os.rmdir(backupdir)
+            except OSError:
+                pass
+
+    # wrap ui.write so diff output can be labeled/colorized
+    def wrapwrite(orig, *args, **kw):
+        label = kw.pop('label', '')
+        for chunk, l in patch.difflabel(lambda: args):
+            orig(chunk, label=label + l)
+
+    oldwrite = ui.write
+    def wrap(*args, **kwargs):
+        return wrapwrite(oldwrite, *args, **kwargs)
+    setattr(ui, 'write', wrap)
+
+    try:
+        return commit(ui, repo, recordfunc, pats, opts)
+    finally:
+        ui.write = oldwrite
+
 
 def findpossible(cmd, table, strict=False):
     """
