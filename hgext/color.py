@@ -251,12 +251,16 @@ def _modesetup(ui, coloropt):
         else:
             realmode = 'ansi'
 
+    def modewarn():
+        # only warn if color.mode was explicitly set and we're in
+        # an interactive terminal
+        if mode == realmode and ui.interactive():
+            ui.warn(_('warning: failed to set color mode to %s\n') % mode)
+
     if realmode == 'win32':
         _terminfo_params = {}
         if not w32effects:
-            if mode == 'win32' and ui.interactive():
-                # only warn if color.mode is explicitly set to win32
-                ui.warn(_('warning: failed to set color mode to %s\n') % mode)
+            modewarn()
             return None
         _effects.update(w32effects)
     elif realmode == 'ansi':
@@ -264,10 +268,8 @@ def _modesetup(ui, coloropt):
     elif realmode == 'terminfo':
         _terminfosetup(ui, mode)
         if not _terminfo_params:
-            if mode == 'terminfo' and ui.interactive():
-                ## FIXME Shouldn't we return None in this case too?
-                # only warn if color.mode is explicitly set to win32
-                ui.warn(_('warning: failed to set color mode to %s\n') % mode)
+            ## FIXME Shouldn't we return None in this case too?
+            modewarn()
             realmode = 'ansi'
     else:
         return None
