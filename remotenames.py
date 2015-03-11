@@ -416,6 +416,22 @@ def exbranches(orig, ui, repo, *args, **opts):
                 fm.plain('\n')
         fm.end()
 
+def _readtracking(repo):
+    tracking = {}
+    try:
+        for line in repo.vfs.read('bookmarks.tracking'):
+            book, track = line.strip().split(' ')
+            tracking[book] = track
+    except IOError:
+        pass
+    return tracking
+
+def _writetracking(repo, tracking):
+    data = ''
+    for book, track in tracking.iteritems():
+        data += '%s %s\n' % (book, track)
+    f = repo.vfs.write('bookmarks.tracking', data)
+
 def exbookmarks(orig, ui, repo, *args, **opts):
     """Bookmark output is sorted by bookmark name.
 
@@ -428,6 +444,12 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         if name in disallowed:
             raise util.Abort(_(" bookmark '%s' not allowed by configuration")
                     % name)
+
+    if opts.get('track'):
+        tracking = _readtracking(repo)
+        for arg in args:
+            tracking[arg] = opts.get('track')
+        _writetracking(repo, tracking)
 
     if not opts.get('remote'):
         orig(ui, repo, *args, **opts)
