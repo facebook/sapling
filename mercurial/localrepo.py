@@ -919,6 +919,15 @@ class localrepository(object):
         return None
 
     def transaction(self, desc, report=None):
+        if (self.ui.configbool('devel', 'all')
+                or self.ui.configbool('devel', 'check-locks')):
+            l = self._lockref and self._lockref()
+            if l is None or not l.held:
+                msg = 'transaction with no lock\n'
+                if self.ui.tracebackflag:
+                    util.debugstacktrace(msg, 1)
+                else:
+                    self.ui.write_err(msg)
         tr = self.currenttransaction()
         if tr is not None:
             return tr.nest()
