@@ -30,39 +30,39 @@ Load commonly used test logic
 
   $ hg book -r 1 beta
 
-  $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+  $ hg outgoing | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:47580592d3d6
-  tag:         beta
+  bookmark:    beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
   changeset:   2:953796e1cfd8
-  tag:         master
+  bookmark:    master
   tag:         tip
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma
   
-  $ hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+  $ hg outgoing -r beta | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:47580592d3d6
-  tag:         beta
+  bookmark:    beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  $ hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+  $ hg outgoing -r master | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:47580592d3d6
-  tag:         beta
+  bookmark:    beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
   changeset:   2:953796e1cfd8
-  tag:         master
+  bookmark:    master
   tag:         tip
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
@@ -98,38 +98,38 @@ let's pull and try again
   pulling from */gitrepo (glob)
   importing git objects into hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+  $ hg outgoing | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:47580592d3d6
-  tag:         beta
+  bookmark:    beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
   changeset:   2:953796e1cfd8
-  tag:         master
+  bookmark:    master
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma
   
-  $ hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+  $ hg outgoing -r beta | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:47580592d3d6
-  tag:         beta
+  bookmark:    beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  $ hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
+  $ hg outgoing -r master | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
   changeset:   1:47580592d3d6
-  tag:         beta
+  bookmark:    beta
   user:        test
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
   changeset:   2:953796e1cfd8
-  tag:         master
+  bookmark:    master
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma

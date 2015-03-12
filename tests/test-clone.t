@@ -22,8 +22,9 @@ clone a tag
   $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgrepo-a log --graph | egrep -v ': *(beta|master)'
+  $ hg -R hgrepo-a log --graph
   @  changeset:   0:ff7a2f2d8d70
+     bookmark:    master
      tag:         alpha
      tag:         default/master
      tag:         tip
@@ -35,8 +36,9 @@ clone a branch
   $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgrepo-b log --graph | egrep -v ': *(beta|master)'
+  $ hg -R hgrepo-b log --graph
   @  changeset:   1:7fe02317c63d
+  |  bookmark:    beta
   |  tag:         default/beta
   |  tag:         tip
   |  user:        test <test@example.org>
@@ -44,6 +46,7 @@ clone a branch
   |  summary:     add beta
   |
   o  changeset:   0:ff7a2f2d8d70
+     bookmark:    master
      tag:         alpha
      tag:         default/master
      user:        test <test@example.org>

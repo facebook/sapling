@@ -46,8 +46,9 @@ do some work
 get things back to hg
   $ hg gimport
   importing git objects into hg
-  $ hg log --graph --debug | grep -v ': *master' | grep -v phase:
+  $ hg log --graph --debug | grep -v phase:
   o  changeset:   1:9f124f3c1fc29a14f5eb027c24811b0ac9d5ff10
+  |  bookmark:    master
   |  tag:         tip
   |  parent:      0:0221c246a56712c6aa64e5ee382244d8a471b1e2
   |  parent:      -1:0000000000000000000000000000000000000000

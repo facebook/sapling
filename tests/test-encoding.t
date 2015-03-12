@@ -31,8 +31,9 @@ The warning message changed in Git 1.8.0
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
 
-  $ HGENCODING=utf-8 hg log --graph --debug | grep -v ': *master' | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
+  $ HGENCODING=utf-8 hg log --graph --debug | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
   @  changeset:   3:b8a0ac52f339ccd6d5729508bac4aee6e8b489d8
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  parent:      2:8bc4d64940260d4a1e70b54c099d3a76c83ff41e

@@ -76,13 +76,14 @@ TODO shouldn't need to do this since we're (in theory) pushing master explicitly
 which should not implicitly also push the not-master ref.
   $ hg book not-master -r default/not-master --force
 master and default/master should be diferent
-  $ hg log -r master | grep -v ': *master'
+  $ hg log -r master
   changeset:   2:953796e1cfd8
+  bookmark:    master
   user:        test
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma
   
-  $ hg log -r default/master | grep -v 'master@default'
+  $ hg log -r default/master
   changeset:   3:25eed24f5e8f
   tag:         default/master
   tag:         tip

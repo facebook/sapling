@@ -10,9 +10,10 @@ Load commonly used test logic
 
   $ cd ..
   $ hg init hgrepo-empty
-  $ hg -R hgrepo-empty incoming gitrepo | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg -R hgrepo-empty incoming gitrepo | grep -v 'no changes found'
   comparing with gitrepo
   changeset:   0:7eeab2ea75ec
+  bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:10 2007 +0000
   summary:     add alpha
@@ -22,7 +23,7 @@ Load commonly used test logic
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg -R hgrepo incoming | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg -R hgrepo incoming | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
 
   $ cd gitrepo
@@ -31,9 +32,10 @@ Load commonly used test logic
   $ fn_git_commit -m 'add beta'
   $ cd ..
 
-  $ hg -R hgrepo incoming | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg -R hgrepo incoming | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
+  bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
@@ -52,9 +54,10 @@ Load commonly used test logic
   $ git add d/gamma
   $ fn_git_commit -m'add d/gamma line 2'
   $ cd ../hgrepo
-  $ hg incoming -p | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg incoming -p | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
+  bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
@@ -79,6 +82,7 @@ Load commonly used test logic
   +gamma
   
   changeset:   3:5202f48c20c9
+  bookmark:    b1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     add d/gamma line 2
@@ -92,14 +96,15 @@ Load commonly used test logic
   
 
 incoming -r
-  $ hg incoming -r master | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg incoming -r master | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
+  bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
-  $ hg incoming -r b1 | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg incoming -r b1 | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9865e289be73
   tag:         t1
@@ -108,11 +113,12 @@ incoming -r
   summary:     add d/gamma
   
   changeset:   2:5202f48c20c9
+  bookmark:    b1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     add d/gamma line 2
   
-  $ hg incoming -r t1 | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg incoming -r t1 | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9865e289be73
   tag:         t1
@@ -127,5 +133,5 @@ nothing incoming after pull
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg incoming | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo

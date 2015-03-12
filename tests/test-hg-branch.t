@@ -37,9 +37,10 @@ Load commonly used test logic
   added 1 commits with 1 trees and 0 blobs
   updating reference refs/heads/master
 
-  $ hg log --graph | egrep -v ': *(not-master|master)'
+  $ hg log --graph
   @  changeset:   2:400db38f4f64
   |  branch:      gamma
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
@@ -52,6 +53,7 @@ Load commonly used test logic
   |  summary:     rename alpha to beta
   |
   o  changeset:   0:ff7a2f2d8d70
+     bookmark:    not-master
      tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -62,9 +64,10 @@ Load commonly used test logic
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
+  $ hg -R hgrepo2 log --graph
   o  changeset:   2:400db38f4f64
   |  branch:      gamma
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
@@ -77,6 +80,7 @@ Load commonly used test logic
   |  summary:     rename alpha to beta
   |
   o  changeset:   0:ff7a2f2d8d70
+     bookmark:    not-master
      tag:         default/not-master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

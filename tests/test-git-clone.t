@@ -16,8 +16,9 @@ Load commonly used test logic
   $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgrepo log --graph  | grep -v ': *master'
+  $ hg -R hgrepo log --graph
   @  changeset:   1:7fe02317c63d
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test <test@example.org>

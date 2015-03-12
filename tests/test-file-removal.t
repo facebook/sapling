@@ -102,8 +102,9 @@ final manifest in git is just beta
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
-  $ hg log --graph | grep -v ': *master'
+  $ hg log --graph
   @  changeset:   8:0995b8a0a943
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test <test@example.org>
@@ -230,7 +231,7 @@ test with rename detection enabled
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd hgreporenames
-  $ hg log --graph | grep -v ': master'
+  $ hg log --graph
   @  changeset:   8:0995b8a0a943
   |  bookmark:    master
   |  tag:         default/master

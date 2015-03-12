@@ -191,8 +191,9 @@ replace subrepo with symlink
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
-  $ hg log --graph  | grep -v ': *master'
+  $ hg log --graph
   @  changeset:   9:9c3929c04f22
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test <test@example.org>
@@ -354,8 +355,9 @@ are the same is enough
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgreporenames
-  $ hg log --graph | grep -v ': *master'
+  $ hg log --graph
   @  changeset:   9:9c3929c04f22
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test <test@example.org>

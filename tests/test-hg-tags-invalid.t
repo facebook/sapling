@@ -31,8 +31,9 @@ Load commonly used test logic
   adding reference refs/tags/alph#a
   adding reference refs/tags/gamm_a
 
-  $ hg log --graph | egrep -v ': *(not-master|master)'
+  $ hg log --graph
   @  changeset:   3:0950ab44ea23
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
@@ -52,6 +53,7 @@ Load commonly used test logic
   |  summary:     Added tag alph#a for changeset ff7a2f2d8d70
   |
   o  changeset:   0:ff7a2f2d8d70
+     bookmark:    not-master
      tag:         alph#a
      tag:         default/not-master
      user:        test <test@example.org>
@@ -70,8 +72,9 @@ git should have only the valid tag alph#a but have full commit log including the
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
+  $ hg -R hgrepo2 log --graph
   @  changeset:   3:0950ab44ea23
+  |  bookmark:    master
   |  tag:         default/master
   |  tag:         tip
   |  user:        test
@@ -92,6 +95,7 @@ git should have only the valid tag alph#a but have full commit log including the
   |  summary:     Added tag alph#a for changeset ff7a2f2d8d70
   |
   o  changeset:   0:ff7a2f2d8d70
+     bookmark:    not-master
      tag:         alph#a
      tag:         default/not-master
      user:        test <test@example.org>

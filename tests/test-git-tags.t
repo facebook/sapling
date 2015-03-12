@@ -21,8 +21,9 @@ Load commonly used test logic
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd hgrepo
-  $ hg log --graph  | grep -v ': *master'
+  $ hg log --graph
   @  changeset:   1:5403d6137622
+  |  bookmark:    master
   |  tag:         beta
   |  tag:         default/master
   |  tag:         tip
