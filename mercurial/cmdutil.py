@@ -16,12 +16,25 @@ import bookmarks
 import encoding
 import crecord as crecordmod
 import lock as lockmod
+import crecord as crecordmod
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
 def recordfilter(ui, originalhunks):
-    return patch.filterpatch(ui, originalhunks)
+    usecurses =  ui.configbool('experimental', 'crecord', False)
+    if usecurses:
+        testfile = ui.config('experimental', 'crecordtest', None)
+        if testfile:
+            recordfn = crecordmod.testdecorator(testfile,
+                                                crecordmod.testchunkselector)
+        else:
+            recordfn = crecordmod.chunkselector
+
+        return crecordmod.filterpatch(ui, originalhunks, recordfn)
+
+    else:
+        return patch.filterpatch(ui, originalhunks)
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
