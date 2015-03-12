@@ -14,6 +14,7 @@ import context, repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
 import encoding
+import crecord as crecordmod
 import lock as lockmod
 
 def parsealiases(cmd):
@@ -86,9 +87,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
         newandmodifiedfiles = set()
         for h in chunks:
+            iscrecordhunk = isinstance(h, crecordmod.uihunk)
             ishunk = isinstance(h, patch.recordhunk)
             isnew = h.filename() in status.added
-            if ishunk and isnew and not h in originalchunks:
+            if (ishunk or iscrecordhunk) and isnew and not h in originalchunks:
                 newandmodifiedfiles.add(h.filename())
 
         modified = set(status.modified)
