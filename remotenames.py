@@ -189,6 +189,11 @@ def exrebase(orig, ui, repo, **opts):
 
     return orig(ui, repo, **opts)
 
+def exstrip(orig, ui, repo, *args, **opts):
+    ret = orig(ui, repo, *args, **opts)
+    writedistance(repo)
+    return ret
+
 def extsetup(ui):
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
@@ -221,6 +226,15 @@ def extsetup(ui):
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
     templatekw.keywords['remotenames'] = remotenameskw
+
+    try:
+        strip = extensions.find('strip')
+        if strip:
+            extensions.wrapcommand(strip.cmdtable, 'strip', exstrip)
+    except KeyError:
+        # strip isn't on
+        pass
+
 
 def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
