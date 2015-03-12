@@ -44,11 +44,12 @@ def reposetup(ui, repo):
                         return [lfutil.splitstandin(f) or f for f in filenames]
                     def manifest(self):
                         man1 = super(lfilesctx, self).manifest()
-                        orig = man1.__contains__
-                        def __contains__(self, filename):
-                            return (orig(filename) or
-                                    orig(lfutil.standin(filename)))
-                        man1.__contains__ = __contains__.__get__(man1)
+                        class lfilesmanifest(man1.__class):
+                            def __contains__(self, filename):
+                                orig = super(lfilesmanifest, self).__contains__
+                                return (orig(filename) or
+                                        orig(lfutil.standin(filename)))
+                        man1.__class__ = lfilesmanifest
                         return man1
                     def filectx(self, path, fileid=None, filelog=None):
                         orig = super(lfilesctx, self).filectx
