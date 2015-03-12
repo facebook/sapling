@@ -109,3 +109,39 @@ Test that we don't try to push if tracking bookmark isn't a remote bookmark
   abort: must specify --to when pushing
   (see configuration option remotenames.forceto)
   [255]
+
+Test renaming a remote and tracking
+
+  $ rm .hg/remotenames
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "rename.default = remote" >> $HGRCPATH
+  $ hg pull
+  pulling from $TESTTMP/repo1
+  searching for changes
+  no changes found
+  $ hg book c -t remote/a
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  3 c c remote/b
+  |
+  o  2 b
+  |
+  o  1 a2  remote/a
+  |
+  o  0 a1
+  
+  $ hg push
+  pushing rev aff78bd8e592 to destination $TESTTMP/repo1 bookmark a
+  searching for changes
+  no changes found
+  updating bookmark a
+  [1]
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  3 c c remote/a remote/b
+  |
+  o  2 b
+  |
+  o  1 a2
+  |
+  o  0 a1
+  
+

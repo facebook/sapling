@@ -342,6 +342,9 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         if current and current in tracking:
             track = tracking[current]
             path, book = splitremotename(track)
+            # un-rename a path, if needed
+            revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+            path = revrenames.get(path, path)
             paths = set(path for path, ignore in ui.configitems('paths'))
             if book and path in paths:
                 dest = path
@@ -567,13 +570,13 @@ def activepath(ui, remote):
             if path != 'default' and path != 'default-push':
                 break
 
-    renames = getrenames(ui)
+    renames = _getrenames(ui)
     realpath = renames.get(realpath, realpath)
     return realpath
 
 # memoization
 _renames = None
-def getrenames(ui):
+def _getrenames(ui):
     global _renames
     if _renames is None:
         _renames = {}
