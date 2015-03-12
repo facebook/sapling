@@ -781,58 +781,46 @@ def saveremotenames(repo, remote, branches, bookmarks):
         f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
     f.close()
 
-def distancefromremote(repo, remote="default"):
-    """returns the signed distance between the current node and remote"""
-    b = repo._bookmarkcurrent
+def distancefromtracked(repo, bookmark):
+    """return the (ahead, behind) distance between the tracked names"""
 
-    # if no bookmark is active, fallback to the branchname
-    if not b:
-        b = repo.lookupbranch('.')
+    tracking = _readtracking(repo)
+    remotename = ''
+    distance = (0, 0)
 
-    # get the non-default name
-    paths = dict(repo.ui.configitems('paths'))
-    rpath = paths.get(remote)
-    if remote == 'default':
-        for path, uri in paths.iteritems():
-            if path != 'default' and path != 'default-push' and rpath == uri:
-                remote = path
+    if bookmark and bookmark in tracking:
+        remotename = tracking[bookmark]
 
-    # if we couldn't find anything for remote then return
-    if not rpath:
-        return 0
+    if not remotename:
+        return (remotename, distance)
 
-    remoteb = joinremotename(remote, b)
-    if b == 'default' and repo.ui.configbool('remotenames', 'alias.default'):
-        remoteb = remote
+    # load the cache
+    try:
+        distance = repo.vfs.read('cache/tracking.%s' % bookmark).strip()
+        return (remotename, [int(d) for d in distance.split(' ')])
+    except IOError:
+        pass
 
-    distance = 0
-    if remoteb in repo:
-        rev1 = repo[remoteb].rev()
-        rev2 = repo['.'].rev()
-        sign = 1
-        if rev2 < rev1:
-            sign = -1
-            rev1, rev2 = rev2, rev1
-        nodes = repo.revs('%s::%s' % (rev1, rev2))
-        distance = sign * (len(nodes) - 1)
+    if remotename in repo:
+        rev1 = repo[bookmark].rev()
+        rev2 = repo[remotename].rev()
+        distance = (str(len(repo.revs('only(%d, %d)' % (rev1, rev2)))),
+                    str(len(repo.revs('only(%d, %d)' % (rev2, rev1)))))
+        # save in a cache
+        repo.vfs.write('cache/tracking.%s' % bookmark, ' '.join(distance))
+    return (remotename, distance)
 
-    return distance
-
-def writedistance(repo, remote="default"):
-    distance = distancefromremote(repo, remote)
-    sign = '+'
-    if distance < 0:
-        sign = '-'
-
+def writedistance(repo):
     wlock = repo.wlock()
     try:
-        try:
-            fp = repo.vfs('remotedistance', 'w', atomictemp=True)
-            fp.write('%s %s' % (sign, abs(distance)))
-            fp.close()
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                raise
+        for bmark, remotename in _readtracking(repo).iteritems():
+            # delete the cache if it exists
+            try:
+                repo.vfs.unlink('cache/tracking.%s' % bmark)
+                distancefromtracked(repo, bmark)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
     finally:
         wlock.release()
 
