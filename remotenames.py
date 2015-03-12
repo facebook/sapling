@@ -479,6 +479,11 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     This has the side benefit of grouping all remote bookmarks by remote name.
 
     """
+    delete = opts.get('delete')
+    rename = opts.get('rename')
+    inactive = opts.get('inactive')
+    remote = opts.get('remote')
+    track = opts.get('track')
 
     disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
     for name in args:
@@ -486,16 +491,43 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             raise util.Abort(_(" bookmark '%s' not allowed by configuration")
                              % name)
 
-    if opts.get('track'):
+    if track:
         tracking = _readtracking(repo)
         for arg in args:
-            tracking[arg] = opts.get('track')
+            tracking[arg] = track
         _writetracking(repo, tracking)
 
-    if not opts.get('remote'):
-        orig(ui, repo, *args, **opts)
+    if delete or rename or args or inactive:
+        return orig(ui, repo, *args, **opts)
 
-    if opts.get('all') or opts.get('remote'):
+    # copy pasta from commands.py; need to patch core
+    if not remote:
+        fm = ui.formatter('bookmarks', opts)
+        hexfn = fm.hexfunc
+        marks = repo._bookmarks
+        if len(marks) == 0 and not fm:
+            ui.status(_("no bookmarks set\n"))
+        for bmark, n in sorted(marks.iteritems()):
+            current = repo._bookmarkcurrent
+            if bmark == current:
+                prefix, label = '*', 'bookmarks.current'
+            else:
+                prefix, label = ' ', ''
+
+            fm.startitem()
+            if not ui.quiet:
+                fm.plain(' %s ' % prefix, label=label)
+            fm.write('bookmark', '%s', bmark, label=label)
+            pad = " " * (25 - encoding.colwidth(bmark))
+            rev = repo.changelog.rev(n)
+            h = hexfn(n)
+            fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s', rev, h,
+                         label=label)
+            fm.data(active=(bmark == current))
+            fm.plain('\n')
+        fm.end()
+
+    if remote or opts.get('all'):
         n = 'remotebookmarks'
         if n not in repo.names:
             return
@@ -526,6 +558,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
                          fm.hexfunc(node), label=tmplabel)
             fm.plain('\n')
+        fm.end()
 
 def activepath(ui, remote):
     realpath = ''
