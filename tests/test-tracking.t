@@ -52,3 +52,60 @@ Create a tracking bookmark
   |
   o  0 a1
   
+ 
+Test push tracking
+
+  $ cd ..
+  $ hg clone repo1 repo2
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo2
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  2 b  default/b
+  |
+  o  1 a2  default/a
+  |
+  o  0 a1
+  
+
+  $ hg boo c -t default/b
+  $ echo c > c
+  $ hg add c
+  $ hg commit -m c
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  3 c c
+  |
+  o  2 b  default/b
+  |
+  o  1 a2  default/a
+  |
+  o  0 a1
+  
+ 
+  $ hg push
+  pushing rev aff78bd8e592 to destination $TESTTMP/repo1 bookmark b
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark b
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  @  3 c c default/b
+  |
+  o  2 b
+  |
+  o  1 a2  default/a
+  |
+  o  0 a1
+  
+
+Test that we don't try to push if tracking bookmark isn't a remote bookmark
+
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "forceto = True" >> $HGRCPATH
+  $ hg book c -t foo
+  $ hg push
+  abort: must specify --to when pushing
+  (see configuration option remotenames.forceto)
+  [255]

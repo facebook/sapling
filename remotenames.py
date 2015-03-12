@@ -334,6 +334,19 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     revs = opts.get('rev')
     to = opts.get('to')
+
+    if not dest and not to and not revs and _tracking(ui):
+        current = bookmarks.readcurrent(repo)
+        tracking = _readtracking(repo)
+        # print "tracking on %s %s" % (current, tracking)
+        if current and current in tracking:
+            track = tracking[current]
+            path, book = splitremotename(track)
+            paths = set(path for path, ignore in ui.configitems('paths'))
+            if book and path in paths:
+                dest = path
+                to = book
+
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
             msg = _('must specify --to when pushing')
