@@ -194,6 +194,11 @@ def exstrip(orig, ui, repo, *args, **opts):
     writedistance(repo)
     return ret
 
+def exhistedit(orig, ui, repo, *args, **opts):
+    ret = orig(ui, repo, *args, **opts)
+    writedistance(repo)
+    return ret
+
 def extsetup(ui):
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
@@ -235,6 +240,13 @@ def extsetup(ui):
         # strip isn't on
         pass
 
+    try:
+        histedit = extensions.find('histedit')
+        if histedit:
+            extensions.wrapcommand(histedit.cmdtable, 'histedit', exhistedit)
+    except KeyError:
+        # histedit isn't on
+        pass
 
 def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
