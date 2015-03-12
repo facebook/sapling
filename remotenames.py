@@ -167,13 +167,14 @@ def reposetup(ui, repo):
         repo.names.addnamespace(n)
 
 def _tracking(ui):
-    return ui.configbool('remotenames', 'tracking', True) # omg default true
+    # omg default true
+    return ui.configbool('remotenames', 'tracking', True)
 
 def setuptracking(ui):
     try:
         rebase = extensions.find('rebase')
         if rebase:
-            entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
+            extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
     except KeyError:
         # rebase isn't on
         pass
@@ -470,7 +471,7 @@ def _writetracking(repo, tracking):
     data = ''
     for book, track in tracking.iteritems():
         data += '%s %s\n' % (book, track)
-    f = repo.vfs.write('bookmarks.tracking', data)
+    repo.vfs.write('bookmarks.tracking', data)
 
 def exbookmarks(orig, ui, repo, *args, **opts):
     """Bookmark output is sorted by bookmark name.
@@ -483,7 +484,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     for name in args:
         if name in disallowed:
             raise util.Abort(_(" bookmark '%s' not allowed by configuration")
-                    % name)
+                             % name)
 
     if opts.get('track'):
         tracking = _readtracking(repo)

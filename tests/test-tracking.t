@@ -27,7 +27,7 @@ Create a tracking bookmark
   $ echo a >> a
   $ hg commit -m a2
   $ hg book a
-  $ hg up .^
+  $ hg up ".^"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark a)
   $ echo b > b
@@ -52,7 +52,6 @@ Create a tracking bookmark
   |
   o  0 a1
   
- 
 Test push tracking
 
   $ cd ..
@@ -81,7 +80,6 @@ Test push tracking
   |
   o  0 a1
   
- 
   $ hg push
   pushing rev aff78bd8e592 to destination $TESTTMP/repo1 bookmark b
   searching for changes
@@ -116,7 +114,7 @@ Test renaming a remote and tracking
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "rename.default = remote" >> $HGRCPATH
   $ hg pull
-  pulling from $TESTTMP/repo1
+  pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   $ hg book c -t remote/a
