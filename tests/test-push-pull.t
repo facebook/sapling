@@ -167,16 +167,16 @@
   $ hg commit -qAm c2
   $ echo cc > c
   $ hg commit -qAm c22
-  $ hg log -G -T '{rev}\n'
-  @  4
+  $ hg log -G -T '{rev} {desc}\n'
+  @  4 c22
   |
-  o  3
+  o  3 c2
   |
-  | o  2
+  | o  2 c1
   | |
-  | o  1
+  | o  1 b
   |/
-  o  0
+  o  0 a
   
 
   $ cd ../multimf-shallow2

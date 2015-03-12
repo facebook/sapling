@@ -458,8 +458,8 @@ class remotefilelog(object):
                 for a in iteranc:
                     ac = cl.read(a) # get changeset data (we avoid object creation)
                     if path in ac[3]: # checking the 'files' field.
-                        # The file has been touched, check if the content is
-                        # similar to the one we search for.
+                        # The file has been touched, check if the filenode is
+                        # the same one we're searching for.
                         if fnode == ma.readfast(ac[0]).get(path):
                             linknode = cl.node(a)
                             newmapping[fnode] = p1, p2, linknode, copyfrom
