@@ -466,7 +466,10 @@ static int lazymanifest_setitem(
 	}
 	memcpy(dest, path, plen + 1);
 	for (i = 0; i < 20; i++) {
-		sprintf(dest + plen + 1 + (i * 2), "%02hhx", hash[i]);
+		/* Cast to unsigned, so it will not get sign-extended when promoted
+		 * to int (as is done when passing to a variadic function)
+		 */
+		sprintf(dest + plen + 1 + (i * 2), "%02x", (unsigned char)hash[i]);
 	}
 	memcpy(dest + plen + 41, flags, flen);
 	dest[plen + 41 + flen] = '\n';
