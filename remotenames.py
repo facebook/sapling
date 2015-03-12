@@ -549,6 +549,12 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             h = hexfn(n)
             fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s', rev, h,
                          label=label)
+            rname, distance = distancefromtracked(repo, bmark)
+            if distance != (0, 0) and ui.verbose:
+                pad = " " * (25 - encoding.colwidth(str(rev)) -
+                             encoding.colwidth(str(h)))
+                fm.write('bookmark', pad + ' [%s: %s ahead, %s behind]', rname,
+                         *distance, label=label)
             fm.data(active=(bmark == current))
             fm.plain('\n')
         fm.end()

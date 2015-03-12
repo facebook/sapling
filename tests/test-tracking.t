@@ -42,16 +42,23 @@ Create a tracking bookmark
   |/
   o  0 a1
   
+  $ hg book -v
+     a                         1:fdceb0e57656
+   * b                         2:a36ba4057bfd             [a: 1 ahead, 1 behind]
   $ hg rebase
   rebasing 2:a36ba4057bfd "b" (tip b)
   saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/a36ba4057bfd-8ec5973a-backup.hg (glob)
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
+  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}'
   @  2 b b
   |
   o  1 a2 a
   |
   o  0 a1
   
+  $ hg book -v
+     a                         1:fdceb0e57656
+   * b                         2:01c5289520dd             [a: 1 ahead, 0 behind]
+
 Test push tracking
 
   $ cd ..
