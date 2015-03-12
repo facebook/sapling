@@ -25,10 +25,9 @@ enable obsolescence
   > [phases]
   > publish=False
   > [hooks]
-  > changegroup = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" changegroup"
-  > b2x-pretransactionclose.tip = hg log -r tip -T "pre-close-tip:{node|short} {phase} {bookmarks}\n"
-  > b2x-transactionclose.tip = hg log -r tip -T "postclose-tip:{node|short} {phase} {bookmarks}\n"
-  > b2x-transactionclose.env = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" b2x-transactionclose"
+  > pretxnclose.tip = hg log -r tip -T "pre-close-tip:{node|short} {phase} {bookmarks}\n"
+  > txnclose.tip = hg log -r tip -T "postclose-tip:{node|short} {phase} {bookmarks}\n"
+  > txnclose.env = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" txnclose"
   > pushkey= sh "$TESTTMP/bundle2-pushkey-hook.sh"
   > EOF
 
@@ -39,13 +38,19 @@ The extension requires a repo (currently unused)
   $ touch a
   $ hg add a
   $ hg commit -m 'a'
+  pre-close-tip:3903775176ed draft 
+  postclose-tip:3903775176ed draft 
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=commit
 
   $ hg unbundle $TESTDIR/bundles/rebase.hg
   adding changesets
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+3 heads)
-  changegroup hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_SOURCE=unbundle HG_URL=bundle:*/rebase.hg (glob)
+  pre-close-tip:02de42196ebe draft 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_TXNNAME=unbundle
+  bundle:*/tests/bundles/rebase.hg HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ cd ..
@@ -56,11 +61,20 @@ Real world exchange
 Add more obsolescence information
 
   $ hg -R main debugobsolete -d '0 0' 1111111111111111111111111111111111111111 `getmainid 9520eea781bc`
+  pre-close-tip:02de42196ebe draft 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
   $ hg -R main debugobsolete -d '0 0' 2222222222222222222222222222222222222222 `getmainid 24b6387c8c8c`
+  pre-close-tip:02de42196ebe draft 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
 
 clone --pull
 
   $ hg -R main phase --public cd010b8cd998
+  pre-close-tip:000000000000 public 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=phase
   $ hg clone main other --pull --rev 9520eea781bc
   adding changesets
   adding manifests
@@ -69,8 +83,8 @@ clone --pull
   1 new obsolescence markers
   pre-close-tip:9520eea781bc draft 
   postclose-tip:9520eea781bc draft 
-  b2x-transactionclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
-  changegroup hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNNAME=pull
+  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R other log -G
@@ -84,6 +98,9 @@ clone --pull
 pull
 
   $ hg -R main phase --public 9520eea781bc
+  pre-close-tip:000000000000 public 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=phase
   $ hg -R other pull -r 24b6387c8c8c
   pulling from $TESTTMP/main (glob)
   searching for changes
@@ -94,8 +111,8 @@ pull
   1 new obsolescence markers
   pre-close-tip:24b6387c8c8c draft 
   postclose-tip:24b6387c8c8c draft 
-  b2x-transactionclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
-  changegroup hook: HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNNAME=pull
+  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
   o  2:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
@@ -111,12 +128,16 @@ pull
 pull empty (with phase movement)
 
   $ hg -R main phase --public 24b6387c8c8c
+  pre-close-tip:000000000000 public 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=phase
   $ hg -R other pull -r 24b6387c8c8c
   pulling from $TESTTMP/main (glob)
   no changes found
   pre-close-tip:000000000000 public 
   postclose-tip:24b6387c8c8c public 
-  b2x-transactionclose hook: HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNNAME=pull
+  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
   $ hg -R other log -G
   o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -135,7 +156,8 @@ pull empty
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
-  b2x-transactionclose hook: HG_NEW_OBSMARKERS=0 HG_SOURCE=pull HG_URL=file:$TESTTMP/main
+  txnclose hook: HG_NEW_OBSMARKERS=0 HG_SOURCE=pull HG_TXNNAME=pull
+  file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
   $ hg -R other log -G
   o  2:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   |
@@ -151,14 +173,29 @@ add extra data to test their exchange during push
 
   $ hg -R main bookmark --rev eea13746799a book_eea1
   $ hg -R main debugobsolete -d '0 0' 3333333333333333333333333333333333333333 `getmainid eea13746799a`
+  pre-close-tip:02de42196ebe draft 
+  postclose-tip:02de42196ebe draft 
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
   $ hg -R main bookmark --rev 02de42196ebe book_02de
   $ hg -R main debugobsolete -d '0 0' 4444444444444444444444444444444444444444 `getmainid 02de42196ebe`
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
   $ hg -R main bookmark --rev 42ccdea3bb16 book_42cc
   $ hg -R main debugobsolete -d '0 0' 5555555555555555555555555555555555555555 `getmainid 42ccdea3bb16`
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
   $ hg -R main bookmark --rev 5fddd98957c8 book_5fdd
   $ hg -R main debugobsolete -d '0 0' 6666666666666666666666666666666666666666 `getmainid 5fddd98957c8`
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
   $ hg -R main bookmark --rev 32af7686d403 book_32af
   $ hg -R main debugobsolete -d '0 0' 7777777777777777777777777777777777777777 `getmainid 32af7686d403`
+  pre-close-tip:02de42196ebe draft book_02de
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_TXNNAME=debugobsolete
 
   $ hg -R other bookmark --rev cd010b8cd998 book_eea1
   $ hg -R other bookmark --rev cd010b8cd998 book_02de
@@ -167,6 +204,9 @@ add extra data to test their exchange during push
   $ hg -R other bookmark --rev cd010b8cd998 book_32af
 
   $ hg -R main phase --public eea13746799a
+  pre-close-tip:000000000000 public 
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=phase
 
 push
   $ hg -R main push other --rev eea13746799a --bookmark book_eea1
@@ -180,8 +220,7 @@ push
   lock:  free
   wlock: free
   postclose-tip:eea13746799a public book_eea1
-  b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_URL=push
-  changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_SOURCE=push HG_URL=push
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNNAME=unbundle HG_URL=push
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -190,7 +229,8 @@ push
   updating bookmark book_eea1
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
-  b2x-transactionclose hook: HG_SOURCE=push-response HG_URL=file:$TESTTMP/other
+  txnclose hook: HG_SOURCE=push-response HG_TXNNAME=push-response
+  file:/*/$TESTTMP/other HG_URL=file:$TESTTMP/other (glob)
   $ hg -R other log -G
   o    3:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com> book_eea1 G
   |\
@@ -218,8 +258,8 @@ pull over ssh
   updating bookmark book_02de
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
-  b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=ssh://user@dummy/main
-  changegroup hook: HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_SOURCE=pull HG_URL=ssh://user@dummy/main
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNNAME=pull
+  ssh://user@dummy/main HG_URL=ssh://user@dummy/main
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -243,8 +283,8 @@ pull over http
   updating bookmark book_42cc
   pre-close-tip:42ccdea3bb16 draft book_42cc
   postclose-tip:42ccdea3bb16 draft book_42cc
-  b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/
-  changegroup hook: HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_SOURCE=pull HG_URL=http://localhost:$HGPORT/
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNNAME=pull
+  http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete
@@ -270,11 +310,11 @@ push over ssh
   remote: lock:  free
   remote: wlock: free
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
-  remote: b2x-transactionclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
-  remote: changegroup hook: HG_BUNDLE2-EXP=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
+  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2-EXP=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_TXNNAME=unbundle HG_URL=remote:ssh:127.0.0.1
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
-  b2x-transactionclose hook: HG_SOURCE=push-response HG_URL=ssh://user@dummy/other
+  txnclose hook: HG_SOURCE=push-response HG_TXNNAME=push-response
+  ssh://user@dummy/other HG_URL=ssh://user@dummy/other
   $ hg -R other log -G
   o  6:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com> book_5fdd C
   |
@@ -304,6 +344,9 @@ push over http
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main phase --public 32af7686d403
+  pre-close-tip:000000000000 public 
+  postclose-tip:02de42196ebe draft book_02de
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=phase
   $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403 --bookmark book_32af
   pushing to http://localhost:$HGPORT2/
   searching for changes
@@ -315,7 +358,8 @@ push over http
   updating bookmark book_32af
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
-  b2x-transactionclose hook: HG_SOURCE=push-response HG_URL=http://localhost:$HGPORT2/
+  txnclose hook: HG_SOURCE=push-response HG_TXNNAME=push-response
+  http://localhost:$HGPORT2/ HG_URL=http://localhost:$HGPORT2/
   $ cat other-error.log
 
 Check final content.
@@ -400,6 +444,9 @@ Setting up
   $ echo 'I' > I
   $ hg add I
   $ hg ci -m 'I'
+  pre-close-tip:e7ec4e813ba6 draft 
+  postclose-tip:e7ec4e813ba6 draft 
+  txnclose hook: HG_TXNNAME=commit
   $ hg id
   e7ec4e813ba6 tip
   $ cd ..
@@ -501,7 +548,7 @@ Doing the actual push: hook abort
   > [failpush]
   > reason =
   > [hooks]
-  > b2x-pretransactionclose.failpush = false
+  > pretxnclose.failpush = false
   > EOF
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
@@ -514,13 +561,13 @@ Doing the actual push: hook abort
   pre-close-tip:e7ec4e813ba6 draft 
   transaction abort!
   rollback completed
-  abort: b2x-pretransactionclose.failpush hook exited with status 1
+  abort: pretxnclose.failpush hook exited with status 1
   [255]
 
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
-  abort: b2x-pretransactionclose.failpush hook exited with status 1
+  abort: pretxnclose.failpush hook exited with status 1
   remote: pre-close-tip:e7ec4e813ba6 draft 
   remote: transaction abort!
   remote: rollback completed
@@ -529,7 +576,7 @@ Doing the actual push: hook abort
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
   searching for changes
-  abort: b2x-pretransactionclose.failpush hook exited with status 1
+  abort: pretxnclose.failpush hook exited with status 1
   [255]
 
 (check that no 'pending' files remain)
