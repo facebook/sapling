@@ -413,7 +413,15 @@ class converter(object):
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
-        source = progresssource(self.ui, self.source, len(files))
+        if len(parents) < 3:
+            source = progresssource(self.ui, self.source, len(files))
+        else:
+            # For an octopus merge, we end up traversing the list of
+            # changed files N-1 times. This tweak to the number of
+            # files makes it so the progress bar doesn't overflow
+            # itself.
+            source = progresssource(self.ui, self.source,
+                                    len(files) * (len(parents) - 1))
         newnode = self.dest.putcommit(files, copies, parents, commit,
                                       source, self.map, full)
         source.close()
@@ -535,4 +543,3 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     c = converter(ui, srcc, destc, revmapfile, opts)
     c.convert(sortmode)
-
