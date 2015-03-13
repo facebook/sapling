@@ -170,6 +170,8 @@ def getparser():
         help="shortcut for --with-hg=<testdir>/../hg")
     parser.add_option("--loop", action="store_true",
         help="loop tests repeatedly")
+    parser.add_option("--runs-per-test", type="int", dest="runs_per_test",
+        help="run each test N times (default=1)", default=1)
     parser.add_option("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
     parser.add_option("-p", "--port", type="int",
@@ -1288,7 +1290,7 @@ class TestSuite(unittest.TestSuite):
     """Custom unittest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
-                 retest=False, keywords=None, loop=False,
+                 retest=False, keywords=None, loop=False, runs_per_test=1,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
@@ -1323,6 +1325,7 @@ class TestSuite(unittest.TestSuite):
         self._retest = retest
         self._keywords = keywords
         self._loop = loop
+        self._runs_per_test = runs_per_test
 
     def run(self, result):
         # We have a number of filters that need to be applied. We do this
@@ -1356,8 +1359,8 @@ class TestSuite(unittest.TestSuite):
 
                     if ignored:
                         continue
-
-            tests.append(test)
+            for _ in xrange(self._runs_per_test):
+                tests.append(test)
 
         runtests = list(tests)
         done = queue.Queue()
@@ -1729,6 +1732,7 @@ class TestRunner(object):
                               retest=self.options.retest,
                               keywords=self.options.keywords,
                               loop=self.options.loop,
+                              runs_per_test=self.options.runs_per_test,
                               tests=tests)
             verbosity = 1
             if self.options.verbose:
