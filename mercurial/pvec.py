@@ -142,7 +142,7 @@ def _flipbit(v, node):
 
 def ctxpvec(ctx):
     '''construct a pvec for ctx while filling in the cache'''
-    r = ctx._repo
+    r = ctx.repo()
     if not util.safehasattr(r, "_pveccache"):
         r._pveccache = {}
     pvc = r._pveccache
