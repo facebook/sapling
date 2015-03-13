@@ -39,7 +39,7 @@ Test that config changes what is pushed by default
   abort: push would create new anonymous heads (d2ae7f538514, d36c0562f908)
   (use --force to override this warning)
   [255]
-  $ hg push
+  $ hg push -r .
   pushing to $TESTTMP/repo1 (glob)
   searching for changes
   abort: push would create new anonymous heads (d36c0562f908)

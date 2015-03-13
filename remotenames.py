@@ -394,8 +394,13 @@ def expushdiscoverybookmarks(pushop):
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
 
-def _pushrev(repo, ui):
-    return repo.lookup(ui.config('remotenames', 'pushrev', '.'))
+def _pushrevs(repo, ui, rev):
+    pushrev = ui.config('remotenames', 'pushrev')
+    if pushrev:
+        return [repo.lookup(pushrev)]
+    if rev:
+        return [repo.lookup(rev)]
+    return []
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
@@ -442,8 +447,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             raise util.Abort(msg, hint=hint)
 
         if not revs:
-            revs = [_pushrev(repo, ui)]
-        opts['rev'] = revs
+            opts['rev'] = _pushrevs(repo, ui, None)
 
         return orig(ui, repo, dest, **opts)
 
@@ -457,7 +461,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
     else:
-        revs = [_pushrev(repo, ui)]
+        revs = _pushrevs(repo, ui, '.')
     if len(revs) != 1:
         msg = _('--to requires exactly one rev to push')
         hint = _('use --rev BOOKMARK or omit --rev for current commit (.)')
