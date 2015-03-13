@@ -893,6 +893,21 @@ class recordhunk(object):
         self.hunk = hunk
         self.added, self.removed = self.countchanges(self.hunk)
 
+    def __eq__(self, v):
+        if not isinstance(v, recordhunk):
+            return False
+
+        return ((v.hunk == self.hunk) and
+                (v.proc == self.proc) and
+                (self.fromline == v.fromline) and
+                (self.header.files() == v.header.files()))
+
+    def __hash__(self):
+        return hash((tuple(self.hunk),
+            tuple(self.header.files()),
+            self.fromline,
+            self.proc))
+
     def countchanges(self, hunk):
         """hunk -> (n+,n-)"""
         add = len([h for h in hunk if h[0] == '+'])
