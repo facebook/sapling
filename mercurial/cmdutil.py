@@ -39,6 +39,9 @@ def recordfilter(ui, originalhunks):
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
     import merge as mergemod
+    hunkclasses = (crecordmod.uihunk, patch.recordhunk)
+    ishunk = lambda x: isinstance(x, hunkclasses)
+
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
                          cmdsuggest)
@@ -96,10 +99,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
         newandmodifiedfiles = set()
         for h in chunks:
-            iscrecordhunk = isinstance(h, crecordmod.uihunk)
-            ishunk = isinstance(h, patch.recordhunk)
             isnew = h.filename() in status.added
-            if (ishunk or iscrecordhunk) and isnew and not h in originalchunks:
+            if ishunk(h) and isnew and not h in originalchunks:
                 newandmodifiedfiles.add(h.filename())
 
         modified = set(status.modified)
