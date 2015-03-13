@@ -832,8 +832,7 @@ def saveremotenames(repo, remote, branches, bookmarks):
     # read in all data first before opening file to write
     olddata = set(readremotenames(repo))
 
-    bfile = repo.join('remotenames')
-    f = open(bfile, 'w')
+    f = repo.vfs('remotenames', 'w')
 
     # only update the given 'remote', so iterate over old data and re-save it
     for node, nametype, oldremote, rname in olddata:
