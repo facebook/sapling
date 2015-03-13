@@ -433,7 +433,7 @@ def filterpatch(ui, chunks, chunkselector):
     uiheaders = [uiheader(h) for h in headers]
     # let user choose headers/hunks/lines, and mark their applied flags
     # accordingly
-    chunkselector(uiheaders, ui)
+    chunkselector(ui, uiheaders)
     appliedhunklist = []
     for hdr in uiheaders:
         if (hdr.applied and
@@ -466,7 +466,7 @@ def gethw():
         "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
     return h, w
 
-def chunkselector(headerlist, ui):
+def chunkselector(ui, headerlist):
     """
     curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
@@ -480,7 +480,7 @@ def testdecorator(testfn, f):
         return f(testfn, *args, **kwargs)
     return u
 
-def testchunkselector(testfn, headerlist, ui):
+def testchunkselector(testfn, ui, headerlist):
     """
     test interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
