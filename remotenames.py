@@ -827,6 +827,27 @@ def writedistance(repo):
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
+
+        # are we on a 'branch' but not at the head, i.e. is there a bookmark
+        # that we are heading towards?
+        try:
+            repo.vfs.unlink('cache/tracking.current')
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+
+        try:
+            revs = list(repo.revs('limit(.:: and bookmark() - ., 1)'))
+            if revs:
+                # if we are here then we have one or more bookmarks and we'll
+                # pick the first one for now
+                bmark = repo[revs[0]].bookmarks()[0]
+                d = len(repo.revs('only(%d, .)' % revs[0]))
+                repo.vfs.write('cache/tracking.current', '%s %d' % (bmark, d))
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
+
     finally:
         wlock.release()
 
