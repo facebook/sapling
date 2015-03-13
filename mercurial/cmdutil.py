@@ -2222,7 +2222,7 @@ def forget(ui, repo, match, prefix, explicitonly):
 def files(ui, ctx, m, fm, fmt):
     rev = ctx.rev()
     ret = 1
-    ds = ctx._repo.dirstate
+    ds = ctx.repo().dirstate
 
     for f in ctx.matches(m):
         if rev is None and ds[f] == 'r':
