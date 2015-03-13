@@ -391,7 +391,7 @@ def revset(context, mapping, args):
 
     raw = args[0][1]
     ctx = mapping['ctx']
-    repo = ctx._repo
+    repo = ctx.repo()
 
     def query(expr):
         m = revsetmod.match(repo.ui, expr)

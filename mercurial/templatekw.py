@@ -397,7 +397,7 @@ def showsubrepos(**args):
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
     ctx = args['ctx']
-    repo = ctx._repo
+    repo = ctx.repo()
     ns = repo.names[namespace]
     names = ns.names(repo, ctx.node())
     return showlist(ns.templatename, names, plural=namespace, **args)
