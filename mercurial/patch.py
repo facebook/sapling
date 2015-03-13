@@ -15,6 +15,7 @@ import email.Parser
 
 from i18n import _
 from node import hex, short
+import cStringIO
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
@@ -1352,7 +1353,7 @@ def parsefilename(str):
             return s
     return s[:i]
 
-def parsepatch(fp):
+def parsepatch(originalchunks):
     """patch -> [] of headers -> [] of hunks """
     class parser(object):
         """patch parsing state machine"""
@@ -1421,6 +1422,9 @@ def parsepatch(fp):
             }
 
     p = parser()
+    fp = cStringIO.StringIO()
+    fp.write(''.join(originalchunks))
+    fp.seek(0)
 
     state = 'context'
     for newstate, data in scanpatch(fp):
@@ -1430,6 +1434,7 @@ def parsepatch(fp):
             raise PatchError('unhandled transition: %s -> %s' %
                                    (state, newstate))
         state = newstate
+    del fp
     return p.finished()
 
 def pathtransform(path, strip, prefix):

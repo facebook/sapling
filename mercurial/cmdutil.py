@@ -20,8 +20,8 @@ import lock as lockmod
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
-def recordfilter(ui, fp):
-    return patch.filterpatch(ui, patch.parsepatch(fp))
+def recordfilter(ui, originalhunks):
+    return patch.filterpatch(ui, originalhunks)
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
@@ -59,18 +59,14 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
-        originalchunks = patch.diff(repo, changes=status, opts=diffopts)
-        fp = cStringIO.StringIO()
-        fp.write(''.join(originalchunks))
-        fp.seek(0)
+        originaldiff =  patch.diff(repo, changes=status, opts=diffopts)
+        originalchunks = patch.parsepatch(originaldiff)
 
         # 1. filter patch, so we have intending-to apply subset of it
         try:
-            chunks = filterfn(ui, fp)
+            chunks = filterfn(ui, originalchunks)
         except patch.PatchError, err:
             raise util.Abort(_('error parsing patch: %s') % err)
-
-        del fp
 
         contenders = set()
         for h in chunks:
