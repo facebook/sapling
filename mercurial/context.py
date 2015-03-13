@@ -266,12 +266,9 @@ class basectx(object):
         diffopts = patch.diffopts(self._repo.ui, opts)
         return patch.diff(self._repo, ctx2, self, match=match, opts=diffopts)
 
-    @propertycache
-    def _dirs(self):
-        return scmutil.dirs(self._manifest)
-
     def dirs(self):
-        return self._dirs
+        return self._manifest.dirs()
+
 
     def dirty(self, missing=False, merge=True, branch=True):
         return False
