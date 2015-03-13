@@ -141,7 +141,7 @@ def parents(ctx, hide=None):
     if isinstance(ctx, context.basefilectx):
         introrev = ctx.introrev()
         if ctx.changectx().rev() != introrev:
-            return _siblings([ctx._repo[introrev]], hide)
+            return _siblings([ctx.repo()[introrev]], hide)
     return _siblings(ctx.parents(), hide)
 
 def children(ctx, hide=None):
