@@ -243,6 +243,12 @@ def copystore(ui, srcrepo, destpath):
     try:
         hardlink = None
         num = 0
+        closetopic = [None]
+        def prog(topic, pos):
+            if pos is None:
+                closetopic[0] = topic
+            else:
+                ui.progress(topic, pos + num)
         srcpublishing = srcrepo.ui.configbool('phases', 'publish', True)
         srcvfs = scmutil.vfs(srcrepo.sharedpath)
         dstvfs = scmutil.vfs(destpath)
@@ -259,12 +265,16 @@ def copystore(ui, srcrepo, destpath):
                     # lock to avoid premature writing to the target
                     destlock = lock.lock(dstvfs, lockfile)
                 hardlink, n = util.copyfiles(srcvfs.join(f), dstvfs.join(f),
-                                             hardlink)
+                                             hardlink, progress=prog)
                 num += n
         if hardlink:
             ui.debug("linked %d files\n" % num)
+            if closetopic[0]:
+                ui.progress(closetopic[0], None)
         else:
             ui.debug("copied %d files\n" % num)
+            if closetopic[0]:
+                ui.progress(closetopic[0], None)
         return destlock
     except: # re-raises
         release(destlock)

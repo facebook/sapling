@@ -65,6 +65,14 @@ No update, with debug option:
 
 #if hardlink
   $ hg --debug clone -U . ../c
+  linking: 1
+  linking: 2
+  linking: 3
+  linking: 4
+  linking: 5
+  linking: 6
+  linking: 7
+  linking: 8
   linked 8 files
 #else
   $ hg --debug clone -U . ../c
