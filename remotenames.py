@@ -208,6 +208,7 @@ def expaths(orig, ui, repo, *args, **opts):
 
     """
     delete = opts.get('delete')
+    add = opts.get('add')
     if delete:
         # find the first section and remote path that matches, and delete that
         foundpaths = False
@@ -218,6 +219,29 @@ def expaths(orig, ui, repo, *args, **opts):
                 foundpaths = True
             if not (foundpaths and line.strip().startswith(delete)):
                 f.write(line)
+        f.close()
+        return
+
+    if add:
+        # find the first section that matches, then look for previous value; if
+        # not found add a new entry
+        foundpaths = False
+        oldhgrc = repo.vfs.read('hgrc').splitlines(True)
+        f = repo.vfs('hgrc', 'w')
+        done = False
+        for line in oldhgrc:
+            if '[paths]' in line:
+                foundpaths = True
+            if foundpaths and line.strip().startswith(add):
+                done = True
+                line = '%s = %s\n' % (add, args[0])
+            f.write(line)
+
+        # did we not find an existing path?
+        if not done:
+            done = True
+            f.write("%s = %s\n" % (add, args[0]))
+
         f.close()
         return
 
@@ -255,6 +279,7 @@ def extsetup(ui):
 
     entry = extensions.wrapcommand(commands.table, 'paths', expaths)
     entry[1].append(('d', 'delete', '', 'delete remote path', 'NAME'))
+    entry[1].append(('a', 'add', '', 'add remote path', 'NAME PATH'))
 
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
