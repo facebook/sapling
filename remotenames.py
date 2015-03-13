@@ -201,6 +201,28 @@ def exhistedit(orig, ui, repo, *args, **opts):
     writedistance(repo)
     return ret
 
+def expaths(orig, ui, repo, *args, **opts):
+    """allow adding and removing remote paths
+
+    This is very hacky and only exists as an experimentation.
+
+    """
+    delete = opts.get('delete')
+    if delete:
+        # find the first section and remote path that matches, and delete that
+        foundpaths = False
+        oldhgrc = repo.vfs.read('hgrc').splitlines(True)
+        f = repo.vfs('hgrc', 'w')
+        for line in oldhgrc:
+            if '[paths]' in line:
+                foundpaths = True
+            if not (foundpaths and line.strip().startswith(delete)):
+                f.write(line)
+        f.close()
+        return
+
+    return orig(ui, repo, *args)
+
 def extsetup(ui):
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
@@ -230,6 +252,9 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'push', expushcmd)
     entry[1].append(('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK'))
     entry[1].append(('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK'))
+
+    entry = extensions.wrapcommand(commands.table, 'paths', expaths)
+    entry[1].append(('d', 'delete', '', 'delete remote path', 'NAME'))
 
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
