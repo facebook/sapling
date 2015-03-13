@@ -1142,8 +1142,6 @@ class TestResult(unittest._TextTestResult):
         self.warned = []
 
         self.times = []
-        self._started = {}
-        self._stopped = {}
         # Data stored for the benefit of generating xunit reports.
         self.successes = []
         self.faildata = {}
@@ -1265,20 +1263,17 @@ class TestResult(unittest._TextTestResult):
         # child's processes along with real elapsed time taken by a process.
         # This module has one limitation. It can only work for Linux user
         # and not for Windows.
-        self._started[test.name] = os.times()
+        test.started = os.times()
 
     def stopTest(self, test, interrupted=False):
         super(TestResult, self).stopTest(test)
 
-        self._stopped[test.name] = os.times()
+        test.stopped = os.times()
 
-        starttime = self._started[test.name]
-        endtime = self._stopped[test.name]
+        starttime = test.started
+        endtime = test.stopped
         self.times.append((test.name, endtime[2] - starttime[2],
                     endtime[3] - starttime[3], endtime[4] - starttime[4]))
-
-        del self._started[test.name]
-        del self._stopped[test.name]
 
         if interrupted:
             iolock.acquire()
