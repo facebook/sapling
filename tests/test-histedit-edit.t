@@ -95,6 +95,13 @@ commit, then edit the revision
   $ hg ci -m 'wat'
   created new head
   $ echo a > e
+
+qnew should fail while we're in the middle of the edit step
+
+  $ hg --config extensions.mq= qnew please-fail
+  abort: histedit in progress
+  (use 'hg histedit --continue' or 'hg histedit --abort')
+  [255]
   $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
