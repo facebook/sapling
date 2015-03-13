@@ -6,9 +6,10 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import mdiff, parsers, error, revlog, util
+import mdiff, parsers, error, revlog, util, scmutil
 import array, struct
 
+propertycache = util.propertycache
 
 class _lazymanifest(dict):
     """This is the pure implementation of lazymanifest.
@@ -146,6 +147,13 @@ class manifestdict(object):
         files = set(self)
         files.difference_update(m2)
         return files
+
+    @propertycache
+    def _dirs(self):
+        return scmutil.dirs(self)
+
+    def dirs(self):
+        return self._dirs
 
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''
