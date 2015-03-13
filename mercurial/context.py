@@ -607,10 +607,8 @@ class changectx(basectx):
             if match(fn):
                 yield fn
         for fn in sorted(fset):
-            if fn in self._dirs:
-                # specified pattern is a directory
-                continue
-            match.bad(fn, _('no such file in rev %s') % self)
+            if not self.hasdir(fn):
+                match.bad(fn, _('no such file in rev %s') % self)
 
     def matches(self, match):
         return self.walk(match)
@@ -1564,7 +1562,7 @@ class workingctx(committablectx):
             def bad(f, msg):
                 # 'f' may be a directory pattern from 'match.files()',
                 # so 'f not in ctx1' is not enough
-                if f not in other and f not in other.dirs():
+                if f not in other and not other.hasdir(f):
                     self._repo.ui.warn('%s: %s\n' %
                                        (self._repo.dirstate.pathto(f), msg))
             match.bad = bad
