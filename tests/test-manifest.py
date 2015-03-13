@@ -40,7 +40,7 @@ class testmanifest(unittest.TestCase):
     def testEmptyManifest(self):
         m = manifestmod._lazymanifest('')
         self.assertEqual(0, len(m))
-        self.assertEqual([], list(m))
+        self.assertEqual([], list(m.iterentries()))
 
     def testManifest(self):
         m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
@@ -49,7 +49,7 @@ class testmanifest(unittest.TestCase):
             ('foo', binascii.unhexlify(HASH_1), ''),
             ]
         self.assertEqual(len(want), len(m))
-        self.assertEqual(want, list(m))
+        self.assertEqual(want, list(m.iterentries()))
         self.assertEqual((binascii.unhexlify(HASH_1), ''), m['foo'])
         self.assertRaises(KeyError, lambda : m['wat'])
         self.assertEqual((binascii.unhexlify(HASH_2), 'l'),
@@ -88,7 +88,7 @@ class testmanifest(unittest.TestCase):
         self.assertEqual((h2, ''), m['beta'])
         self.assertRaises(KeyError, lambda : m['foo'])
         w = [('alpha', h1, ''), ('bar/baz/qux.py', h2, 'l'), ('beta', h2, '')]
-        self.assertEqual(w, list(m))
+        self.assertEqual(w, list(m.iterentries()))
 
     def testSetGetNodeSuffix(self):
         clean = manifestmod._lazymanifest(A_SHORT_MANIFEST)
@@ -100,7 +100,7 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(want, m['foo'])
         self.assertEqual([('bar/baz/qux.py', binascii.unhexlify(HASH_2), 'l'),
                           ('foo', binascii.unhexlify(HASH_1) + 'a', '')],
-                         list(m))
+                         list(m.iterentries()))
         # Sometimes it even tries a 22-byte fake hash, but we can
         # return 21 and it'll work out
         m['foo'] = want[0] + '+', f
@@ -114,7 +114,7 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(want, m2['foo'])
         # suffix with iteration
         self.assertEqual([('bar/baz/qux.py', binascii.unhexlify(HASH_2), 'l'),
-                          ('foo', want[0], '')], list(m))
+                          ('foo', want[0], '')], list(m.iterentries()))
         # shows up in diff
         self.assertEqual({'foo': (want, (h, ''))}, m.diff(clean))
         self.assertEqual({'foo': ((h, ''), want)}, clean.diff(m))

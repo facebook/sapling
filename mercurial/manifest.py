@@ -44,10 +44,13 @@ class _lazymanifest(dict):
         dict.__setitem__(self, k, (node, flag))
 
     def __iter__(self):
-        return ((f, e[0], e[1]) for f, e in sorted(self.iteritems()))
+        return iter(sorted(dict.keys(self)))
 
     def iterkeys(self):
         return iter(sorted(dict.keys(self)))
+
+    def iterentries(self):
+        return ((f, e[0], e[1]) for f, e in sorted(self.iteritems()))
 
     def copy(self):
         c = _lazymanifest('')
@@ -76,14 +79,14 @@ class _lazymanifest(dict):
 
     def filtercopy(self, filterfn):
         c = _lazymanifest('')
-        for f, n, fl in self:
+        for f, n, fl in self.iterentries():
             if filterfn(f):
                 c[f] = n, fl
         return c
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
-        fl = sorted(self)
+        fl = sorted(self.iterentries())
 
         _hex = revlog.hex
         # if this is changed to support newlines in filenames,
@@ -119,7 +122,7 @@ class manifestdict(object):
         del self._lm[key]
 
     def __iter__(self):
-        return self._lm.iterkeys()
+        return self._lm.__iter__()
 
     def iterkeys(self):
         return self._lm.iterkeys()
@@ -140,8 +143,8 @@ class manifestdict(object):
 
     def filesnotin(self, m2):
         '''Set of files in this manifest that are not in the other'''
-        files = set(self.iterkeys())
-        files.difference_update(m2.iterkeys())
+        files = set(self)
+        files.difference_update(m2)
         return files
 
     def matches(self, match):
@@ -196,7 +199,7 @@ class manifestdict(object):
         return c
 
     def iteritems(self):
-        return (x[:2] for x in self._lm)
+        return (x[:2] for x in self._lm.iterentries())
 
     def text(self):
         return self._lm.text()
