@@ -152,6 +152,8 @@ class basectx(object):
         return hex(self.node())
     def manifest(self):
         return self._manifest
+    def repo(self):
+        return self._repo
     def phasestr(self):
         return phases.phasenames[self.phase()]
     def mutable(self):
