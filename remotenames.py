@@ -54,6 +54,9 @@ def pullremotenames(repo, remote):
     finally:
         lock.release()
 
+    loadremotenames(repo)
+    writedistance(repo)
+
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
 
