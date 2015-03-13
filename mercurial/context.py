@@ -269,6 +269,8 @@ class basectx(object):
     def dirs(self):
         return self._manifest.dirs()
 
+    def hasdir(self, dir):
+        return self._manifest.hasdir(dir)
 
     def dirty(self, missing=False, merge=True, branch=True):
         return False
