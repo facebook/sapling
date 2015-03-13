@@ -818,7 +818,7 @@ def transition(repo, ui):
             del localmarks[mark]
     localmarks.write()
 
-def saveremotenames(repo, remote, branches, bookmarks):
+def saveremotenames(repo, remote, branches={}, bookmarks={}):
     # delete old files
     try:
         repo.vfs.unlink('remotedistance')
