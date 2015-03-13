@@ -388,7 +388,7 @@ def synclfdirstate(repo, lfdirstate, lfile, normallookup):
         lfdirstate.drop(lfile)
 
 def markcommitted(orig, ctx, node):
-    repo = ctx._repo
+    repo = ctx.repo()
 
     orig(node)
 
