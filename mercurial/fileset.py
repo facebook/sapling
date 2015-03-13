@@ -233,7 +233,7 @@ def resolved(mctx, x):
     getargs(x, 0, 0, _("resolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
-    ms = merge.mergestate(mctx.ctx._repo)
+    ms = merge.mergestate(mctx.ctx.repo())
     return [f for f in mctx.subset if f in ms and ms[f] == 'r']
 
 def unresolved(mctx, x):
@@ -244,7 +244,7 @@ def unresolved(mctx, x):
     getargs(x, 0, 0, _("unresolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
-    ms = merge.mergestate(mctx.ctx._repo)
+    ms = merge.mergestate(mctx.ctx.repo())
     return [f for f in mctx.subset if f in ms and ms[f] == 'u']
 
 def hgignore(mctx, x):
@@ -253,7 +253,7 @@ def hgignore(mctx, x):
     """
     # i18n: "hgignore" is a keyword
     getargs(x, 0, 0, _("hgignore takes no arguments"))
-    ignore = mctx.ctx._repo.dirstate._ignore
+    ignore = mctx.ctx.repo().dirstate._ignore
     return [f for f in mctx.subset if ignore(f)]
 
 def grep(mctx, x):
@@ -398,7 +398,7 @@ def subrepo(mctx, x):
             def m(s):
                 return (s == pat)
         else:
-            m = matchmod.match(ctx._repo.root, '', [pat], ctx=ctx)
+            m = matchmod.match(ctx.repo().root, '', [pat], ctx=ctx)
         return [sub for sub in sstate if m(sub)]
     else:
         return [sub for sub in sstate]
@@ -493,7 +493,7 @@ def getfileset(ctx, expr):
         unknown = _intree(['unknown'], tree)
         ignored = _intree(['ignored'], tree)
 
-        r = ctx._repo
+        r = ctx.repo()
         status = r.status(ctx.p1(), ctx,
                           unknown=unknown, ignored=ignored, clean=True)
         subset = []
