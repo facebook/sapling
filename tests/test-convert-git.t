@@ -170,7 +170,79 @@ Remove the directory, then try to replace it with a file (issue754)
 
 full conversion
 
-  $ hg -q convert --datesort git-repo2 fullrepo
+  $ hg convert --datesort git-repo2 fullrepo \
+  > --config extensions.progress= --config progress.assume-tty=1 \
+  > --config progress.delay=0 --config progress.changedelay=0 \
+  > --config progress.refresh=0 --config progress.width=60
+  \r (no-eol) (esc)
+  scanning [===>                                        ] 1/9\r (no-eol) (esc)
+  scanning [========>                                   ] 2/9\r (no-eol) (esc)
+  scanning [=============>                              ] 3/9\r (no-eol) (esc)
+  scanning [==================>                         ] 4/9\r (no-eol) (esc)
+  scanning [=======================>                    ] 5/9\r (no-eol) (esc)
+  scanning [============================>               ] 6/9\r (no-eol) (esc)
+  scanning [=================================>          ] 7/9\r (no-eol) (esc)
+  scanning [======================================>     ] 8/9\r (no-eol) (esc)
+  scanning [===========================================>] 9/9\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [                                          ] 0/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [===>                                      ] 1/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [========>                                 ] 2/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=============>                            ] 3/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=================>                        ] 4/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [======================>                   ] 5/9\r (no-eol) (esc)
+  getting files [========>                              ] 1/4\r (no-eol) (esc)
+  getting files [==================>                    ] 2/4\r (no-eol) (esc)
+  getting files [============================>          ] 3/4\r (no-eol) (esc)
+  getting files [======================================>] 4/4\r (no-eol) (esc)
+  getting files [ <=>                                   ] 5/4\r (no-eol) (esc)
+  getting files [  <=>                                  ] 6/4\r (no-eol) (esc)
+  getting files [   <=>                                 ] 7/4\r (no-eol) (esc)
+  getting files [    <=>                                ] 8/4\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [===========================>              ] 6/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [===============================>          ] 7/9\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [====================================>     ] 8/9\r (no-eol) (esc)
+  getting files [==================>                    ] 1/2\r (no-eol) (esc)
+  getting files [======================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  initializing destination fullrepo repository
+  scanning source...
+  sorting...
+  converting...
+  8 add foo
+  7 change foo
+  6 add quux
+  5 add bar
+  4 add baz
+  3 Octopus merge
+  2 change bar
+  1 change foo
+  0 Discard change to foo
+  updating bookmarks
   $ hg up -q -R fullrepo
   $ glog -R fullrepo
   @    9 "Discard change to foo" files: foo
