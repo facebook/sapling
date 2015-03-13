@@ -762,13 +762,13 @@ def relevantmarkers(repo, node):
 
 def precursormarkers(ctx):
     """obsolete marker marking this changeset as a successors"""
-    for data in ctx._repo.obsstore.precursors.get(ctx.node(), ()):
-        yield marker(ctx._repo, data)
+    for data in ctx.repo().obsstore.precursors.get(ctx.node(), ()):
+        yield marker(ctx.repo(), data)
 
 def successormarkers(ctx):
     """obsolete marker making this changeset obsolete"""
-    for data in ctx._repo.obsstore.successors.get(ctx.node(), ()):
-        yield marker(ctx._repo, data)
+    for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
+        yield marker(ctx.repo(), data)
 
 def allsuccessors(obsstore, nodes, ignoreflags=0):
     """Yield node for every successor of <nodes>.
