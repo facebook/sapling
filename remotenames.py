@@ -767,6 +767,13 @@ def transition(repo, ui):
     localmarks.write()
 
 def saveremotenames(repo, remote, branches, bookmarks):
+    # delete old files
+    try:
+        repo.vfs.unlink('remotedistance')
+    except OSError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+
     if not repo.vfs.exists('remotenames'):
         transition(repo, repo.ui)
 
