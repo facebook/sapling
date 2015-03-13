@@ -127,7 +127,7 @@ def state(ctx, ui):
             src = src.lstrip() # strip any extra whitespace after ']'
 
         if not util.url(src).isabs():
-            parent = _abssource(ctx._repo, abort=False)
+            parent = _abssource(ctx.repo(), abort=False)
             if parent:
                 parent = util.url(parent)
                 parent.path = posixpath.join(parent.path or '', src)
@@ -332,7 +332,7 @@ def subrepo(ctx, path):
     import hg as h
     hg = h
 
-    pathutil.pathauditor(ctx._repo.root)(path)
+    pathutil.pathauditor(ctx.repo().root)(path)
     state = ctx.substate[path]
     if state[2] not in types:
         raise util.Abort(_('unknown subrepo type %s') % state[2])
@@ -516,10 +516,10 @@ class abstractsubrepo(object):
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        super(hgsubrepo, self).__init__(ctx._repo.ui)
+        super(hgsubrepo, self).__init__(ctx.repo().ui)
         self._path = path
         self._state = state
-        r = ctx._repo
+        r = ctx.repo()
         root = r.wjoin(path)
         create = not r.wvfs.exists('%s/.hg' % path)
         self._repo = hg.repository(r.baseui, root, create=create)
@@ -898,7 +898,7 @@ class hgsubrepo(abstractsubrepo):
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        super(svnsubrepo, self).__init__(ctx._repo.ui)
+        super(svnsubrepo, self).__init__(ctx.repo().ui)
         self._path = path
         self._state = state
         self._ctx = ctx
@@ -922,7 +922,7 @@ class svnsubrepo(abstractsubrepo):
                 cmd.append('--non-interactive')
         cmd.extend(commands)
         if filename is not None:
-            path = os.path.join(self._ctx._repo.origroot, self._path, filename)
+            path = os.path.join(self._ctx.repo().origroot, self._path, filename)
             cmd.append(path)
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
@@ -1064,7 +1064,7 @@ class svnsubrepo(abstractsubrepo):
             os.chmod(path, stat.S_IMODE(s.st_mode) | stat.S_IWRITE)
             os.remove(path)
 
-        path = self._ctx._repo.wjoin(self._path)
+        path = self._ctx.repo().wjoin(self._path)
         shutil.rmtree(path, onerror=onerror)
         try:
             os.removedirs(os.path.dirname(path))
@@ -1082,7 +1082,7 @@ class svnsubrepo(abstractsubrepo):
         # update to a directory which has since been deleted and recreated.
         args.append('%s@%s' % (state[0], state[1]))
         status, err = self._svncommand(args, failok=True)
-        _sanitize(self.ui, self._ctx._repo.wjoin(self._path), '.svn')
+        _sanitize(self.ui, self._ctx.repo().wjoin(self._path), '.svn')
         if not re.search('Checked out revision [0-9]+.', status):
             if ('is already a working copy for a different URL' in err
                 and (self._wcchanged()[:2] == (False, False))):
@@ -1128,13 +1128,13 @@ class svnsubrepo(abstractsubrepo):
 
 class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        super(gitsubrepo, self).__init__(ctx._repo.ui)
+        super(gitsubrepo, self).__init__(ctx.repo().ui)
         self._state = state
         self._ctx = ctx
         self._path = path
-        self._relpath = os.path.join(reporelpath(ctx._repo), path)
-        self._abspath = ctx._repo.wjoin(path)
-        self._subparent = ctx._repo
+        self._relpath = os.path.join(reporelpath(ctx.repo()), path)
+        self._abspath = ctx.repo().wjoin(path)
+        self._subparent = ctx.repo()
         self._ensuregit()
 
     def _ensuregit(self):
