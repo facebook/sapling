@@ -46,6 +46,9 @@ class _lazymanifest(dict):
     def __iter__(self):
         return ((f, e[0], e[1]) for f, e in sorted(self.iteritems()))
 
+    def iterkeys(self):
+        return iter(sorted(dict.keys(self)))
+
     def copy(self):
         c = _lazymanifest('')
         c.update(self)
