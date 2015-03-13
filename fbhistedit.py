@@ -24,10 +24,10 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 def stop(ui, state, ha, opts):
-    repo, ctx = state.repo, state.parentctx
+    repo, ctxnode = state.repo, state.parentctxnode
     oldctx = repo[ha]
 
-    hg.update(repo, ctx.node())
+    hg.update(repo, ctxnode)
     stats = histedit.applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
         raise error.InterventionRequired(
@@ -43,13 +43,14 @@ def stop(ui, state, ha, opts):
         repo[new])
 
 def execute(ui, state, cmd, opts):
-    repo, ctx = state.repo, state.parentctx
-    hg.update(repo, ctx.node())
+    repo, ctxnode = state.repo, state.parentctxnode
+    hg.update(repo, ctxnode)
 
     # release locks so the programm can call hg and then relock.
     lock.release(state.lock, state.wlock)
 
     try:
+        ctx = repo[ctxnode]
         rc = util.system(cmd, environ={'HGNODE': ctx.hex()}, cwd=repo.root)
     except OSError as os:
         raise error.InterventionRequired(
@@ -70,8 +71,8 @@ def execute(ui, state, cmd, opts):
             _('Fix up the change and run hg histedit --continue'))
 
     newctx = repo['.']
-    if ctx.node() != newctx.node():
-        return newctx, [(ctx.node(), (newctx.node(),))]
+    if ctxnode != newctx.node():
+        return newctx, [(ctxnode, (newctx.node(),))]
     return newctx, []
 
 # HACK:
@@ -115,7 +116,7 @@ def verifyrules(orig, rules, repo, ctxs):
     return parsed
 
 def bootstrapcontinue(orig, ui, state, opts):
-    repo, parentctx = state.repo, state.parentctx
+    repo, parentctxnode = state.repo, state.parentctxnode
     if state.rules[0][0] in ['x', 'exec']:
         m, a, r, d = repo.status()[:4]
         if m or a or r or d:
@@ -124,7 +125,7 @@ def bootstrapcontinue(orig, ui, state, opts):
                     '--continue, or abort with histedit --abort'))
 
         state.rules.pop(0)
-        state.parentctx = parentctx
+        state.parentctxnode = parentctxnode
         return state
     else:
         return orig(ui, state, opts)
