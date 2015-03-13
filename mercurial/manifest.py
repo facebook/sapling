@@ -155,6 +155,9 @@ class manifestdict(object):
     def dirs(self):
         return self._dirs
 
+    def hasdir(self, dir):
+        return dir in self._dirs
+
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''
         if match.always():
