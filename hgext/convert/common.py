@@ -31,7 +31,10 @@ class MissingTool(Exception):
 def checktool(exe, name=None, abort=True):
     name = name or exe
     if not util.findexe(exe):
-        exc = abort and util.Abort or MissingTool
+        if abort:
+            exc = util.Abort
+        else:
+            exc = MissingTool
         raise exc(_('cannot find required "%s" tool') % name)
 
 class NoRepo(Exception):

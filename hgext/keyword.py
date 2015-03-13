@@ -506,7 +506,10 @@ def files(ui, repo, *pats, **opts):
     kwt = kwtools['templater']
     wctx = repo[None]
     status = _status(ui, repo, wctx, kwt, *pats, **opts)
-    cwd = pats and repo.getcwd() or ''
+    if pats:
+        cwd = repo.getcwd()
+    else:
+        cwd = ''
     files = []
     if not opts.get('unknown') or opts.get('all'):
         files = sorted(status.modified + status.added + status.clean)

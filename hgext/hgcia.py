@@ -121,7 +121,10 @@ class ciamsg(object):
         return patch.diffstat(pbuf.lines) or ''
 
     def logmsg(self):
-        diffstat = self.cia.diffstat and self.diffstat() or ''
+        if self.cia.diffstat:
+            diffstat = self.diffstat()
+        else:
+            diffstat = ''
         self.cia.ui.pushbuffer()
         self.cia.templater.show(self.ctx, changes=self.ctx.changeset(),
                                 baseurl=self.cia.ui.config('web', 'baseurl'),
@@ -199,7 +202,10 @@ class hgcia(object):
         style = self.ui.config('cia', 'style')
         template = self.ui.config('cia', 'template')
         if not template:
-            template = self.diffstat and self.dstemplate or self.deftemplate
+            if self.diffstat:
+                template = self.dstemplate
+            else:
+                template = self.deftemplate
         template = templater.parsestring(template, quoted=False)
         t = cmdutil.changeset_templater(self.ui, self.repo, False, None,
                                         template, style, False)

@@ -274,7 +274,11 @@ class FTPRangeHandler(urllib2.FTPHandler):
             dirs = dirs[1:]
         try:
             fw = self.connect_ftp(user, passwd, host, port, dirs)
-            type = file and 'I' or 'D'
+            if file:
+                type = 'I'
+            else:
+                type = 'D'
+
             for attr in attrs:
                 attr, value = splitattr(attr)
                 if attr.lower() == 'type' and \

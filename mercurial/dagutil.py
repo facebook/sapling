@@ -88,7 +88,10 @@ class genericdag(basedag):
     '''generic implementations for DAGs'''
 
     def ancestorset(self, starts, stops=None):
-        stops = stops and set(stops) or set()
+        if stops:
+            stops = set(stops)
+        else:
+            stops = set()
         seen = set()
         pending = list(starts)
         while pending:
@@ -179,7 +182,10 @@ class revlogdag(revlogbaseddag):
     def ancestorset(self, starts, stops=None):
         rlog = self._revlog
         idx = rlog.index
-        stops = stops and set(stops) or set()
+        if stops:
+            stops = set(stops)
+        else:
+            stops = set()
         seen = set()
         pending = list(starts)
         while pending:

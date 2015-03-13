@@ -523,7 +523,11 @@ class localrepository(object):
             if prevtags and prevtags[-1] != '\n':
                 fp.write('\n')
             for name in names:
-                m = munge and munge(name) or name
+                if munge:
+                    m = munge(name)
+                else:
+                    m = name
+
                 if (self._tagscache.tagtypes and
                     name in self._tagscache.tagtypes):
                     old = self.tags().get(name, nullid)
@@ -893,7 +897,11 @@ class localrepository(object):
 
     def currenttransaction(self):
         """return the current transaction or None if non exists"""
-        tr = self._transref and self._transref() or None
+        if self._transref:
+            tr = self._transref()
+        else:
+            tr = None
+
         if tr and tr.running():
             return tr
         return None
@@ -913,7 +921,10 @@ class localrepository(object):
 
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
-        rp = report and report or self.ui.warn
+        if report:
+            rp = report
+        else:
+            rp = self.ui.warn
         vfsmap = {'plain': self.vfs} # root of .hg/
         # we must avoid cyclic reference between repo and transaction.
         reporef = weakref.ref(self)

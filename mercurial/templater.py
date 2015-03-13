@@ -656,7 +656,10 @@ class templater(object):
         self.mapfile = mapfile or 'template'
         self.cache = cache.copy()
         self.map = {}
-        self.base = (mapfile and os.path.dirname(mapfile)) or ''
+        if mapfile:
+            self.base = os.path.dirname(mapfile)
+        else:
+            self.base = ''
         self.filters = templatefilters.filters.copy()
         self.filters.update(filters)
         self.defaults = defaults

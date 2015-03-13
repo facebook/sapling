@@ -209,7 +209,10 @@ class gnuarch_source(converter_source, commandline):
         mode = os.lstat(os.path.join(self.tmppath, name)).st_mode
         if stat.S_ISLNK(mode):
             data = os.readlink(os.path.join(self.tmppath, name))
-            mode = mode and 'l' or ''
+            if mode:
+                mode = 'l'
+            else:
+                mode = ''
         else:
             data = open(os.path.join(self.tmppath, name), 'rb').read()
             mode = (mode & 0111) and 'x' or ''

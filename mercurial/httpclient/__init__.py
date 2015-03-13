@@ -330,7 +330,10 @@ class HTTPConnection(object):
         elif use_ssl is None:
             use_ssl = (port == 443)
         elif port is None:
-            port = (use_ssl and 443 or 80)
+            if use_ssl:
+                port = 443
+            else:
+                port = 80
         self.port = port
         if use_ssl and not socketutil.have_ssl:
             raise Exception('ssl requested but unavailable on this Python')

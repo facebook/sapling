@@ -398,7 +398,10 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
     writable = mode not in ('r', 'rb')
 
     if not pat or pat == '-':
-        fp = writable and repo.ui.fout or repo.ui.fin
+        if writable:
+            fp = repo.ui.fout
+        else:
+            fp = repo.ui.fin
         if util.safehasattr(fp, 'fileno'):
             return os.fdopen(os.dup(fp.fileno()), mode)
         else:
@@ -474,7 +477,10 @@ def copy(ui, repo, pats, opts, rename=False):
 
     def walkpat(pat):
         srcs = []
-        badstates = after and '?' or '?r'
+        if after:
+            badstates = '?'
+        else:
+            badstates = '?r'
         m = scmutil.match(repo[None], [pat], opts, globbed=True)
         for abs in repo.walk(m):
             state = repo.dirstate[abs]
@@ -693,7 +699,10 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
 
     def writepid(pid):
         if opts['pid_file']:
-            mode = appendpid and 'a' or 'w'
+            if appendpid:
+                mode = 'a'
+            else:
+                mode = 'w'
             fp = open(opts['pid_file'], mode)
             fp.write(str(pid) + '\n')
             fp.close()
@@ -929,7 +938,11 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         branch = ctx.branch()
         if switch_parent:
             parents.reverse()
-        prev = (parents and parents[0]) or nullid
+
+        if parents:
+            prev = parents[0]
+        else:
+            prev = nullid
 
         shouldclose = False
         if not fp and len(template) > 0:
@@ -1067,7 +1080,10 @@ class changeset_printer(object):
         log = self.repo.changelog
         date = util.datestr(ctx.date())
 
-        hexfunc = self.ui.debugflag and hex or short
+        if self.ui.debugflag:
+            hexfunc = hex
+        else:
+            hexfunc = short
 
         parents = [(p, hexfunc(log.node(p)))
                    for p in self._meaningful_parentrevs(log, rev)]
@@ -1866,7 +1882,10 @@ def _makelogrevset(repo, pats, opts, revs):
     opts = dict(opts)
     # follow or not follow?
     follow = opts.get('follow') or opts.get('follow_first')
-    followfirst = opts.get('follow_first') and 1 or 0
+    if opts.get('follow_first'):
+        followfirst = 1
+    else:
+        followfirst = 0
     # --follow with FILE behaviour depends on revs...
     it = iter(revs)
     startrev = it.next()

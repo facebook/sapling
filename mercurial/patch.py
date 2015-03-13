@@ -259,8 +259,17 @@ def extract(ui, fileobj):
     if not diffs_seen:
         os.unlink(tmpname)
         return None, message, user, date, branch, None, None, None
-    p1 = parents and parents.pop(0) or None
-    p2 = parents and parents.pop(0) or None
+
+    if parents:
+        p1 = parents.pop(0)
+    else:
+        p1 = None
+
+    if parents:
+        p2 = parents.pop(0)
+    else:
+        p2 = None
+
     return tmpname, message, user, date, branch, nodeid, p1, p2
 
 class patchmeta(object):
@@ -1489,13 +1498,19 @@ def makepatchmeta(backend, afile_orig, bfile_orig, hunk, strip, prefix):
     fname = None
     if not missing:
         if gooda and goodb:
-            fname = isbackup and afile or bfile
+            if isbackup:
+                fname = afile
+            else:
+                fname = bfile
         elif gooda:
             fname = afile
 
     if not fname:
         if not nullb:
-            fname = isbackup and afile or bfile
+            if isbackup:
+                fname = afile
+            else:
+                fname = bfile
         elif not nulla:
             fname = afile
         else:
@@ -2070,7 +2085,10 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     if not modified and not added and not removed:
         return []
 
-    hexfunc = repo.ui.debugflag and hex or short
+    if repo.ui.debugflag:
+        hexfunc = hex
+    else:
+        hexfunc = short
     revs = [hexfunc(node) for node in [ctx1.node(), ctx2.node()] if node]
 
     copy = {}

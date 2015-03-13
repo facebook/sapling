@@ -515,7 +515,11 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     sortmode = [m for m in sortmodes if opts.get(m)]
     if len(sortmode) > 1:
         raise util.Abort(_('more than one sort mode specified'))
-    sortmode = sortmode and sortmode[0] or defaultsort
+    if sortmode:
+        sortmode = sortmode[0]
+    else:
+        sortmode = defaultsort
+
     if sortmode == 'sourcesort' and not srcc.hasnativeorder():
         raise util.Abort(_('--sourcesort is not supported by this data source'))
     if sortmode == 'closesort' and not srcc.hasnativeclose():

@@ -87,7 +87,10 @@ class mercurial_sink(converter_sink):
         if not branch:
             branch = 'default'
         pbranches = [(b[0], b[1] and b[1] or 'default') for b in pbranches]
-        pbranch = pbranches and pbranches[0][1] or 'default'
+        if pbranches:
+            pbranch = pbranches[0][1]
+        else:
+            pbranch = 'default'
 
         branchpath = os.path.join(self.path, branch)
         if setbranch:

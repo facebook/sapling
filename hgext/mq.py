@@ -418,7 +418,10 @@ class queue(object):
             gitmode = ui.configbool('mq', 'git', None)
             if gitmode is None:
                 raise error.ConfigError
-            self.gitmode = gitmode and 'yes' or 'no'
+            if gitmode:
+                self.gitmode = 'yes'
+            else:
+                self.gitmode = 'no'
         except error.ConfigError:
             self.gitmode = ui.config('mq', 'git', 'auto').lower()
         self.plainmode = ui.configbool('mq', 'plain', False)
@@ -610,7 +613,11 @@ class queue(object):
         return True, ''
 
     def explainpushable(self, idx, all_patches=False):
-        write = all_patches and self.ui.write or self.ui.warn
+        if all_patches:
+            write = self.ui.write
+        else:
+            write = self.ui.warn
+
         if all_patches or self.ui.verbose:
             if isinstance(idx, str):
                 idx = self.series.index(idx)
@@ -1825,7 +1832,11 @@ class queue(object):
                 self.ui.write(pfx)
             if summary:
                 ph = patchheader(self.join(patchname), self.plainmode)
-                msg = ph.message and ph.message[0] or ''
+                if ph.message:
+                    msg = ph.message[0]
+                else:
+                    msg = ''
+
                 if self.ui.formatted():
                     width = self.ui.termwidth() - len(pfx) - len(patchname) - 2
                     if width > 0:
@@ -2228,7 +2239,10 @@ def unapplied(ui, repo, patch=None, **opts):
         ui.write(_("all patches applied\n"))
         return 1
 
-    length = opts.get('first') and 1 or None
+    if opts.get('first'):
+        length = 1
+    else:
+        length = None
     q.qseries(repo, start=start, length=length, status='U',
               summary=opts.get('summary'))
 
@@ -2454,7 +2468,11 @@ def top(ui, repo, **opts):
 
     Returns 0 on success."""
     q = repo.mq
-    t = q.applied and q.seriesend(True) or 0
+    if q.applied:
+        t = q.seriesend(True)
+    else:
+        t = 0
+
     if t:
         q.qseries(repo, start=t - 1, length=1, status='A',
                   summary=opts.get('summary'))

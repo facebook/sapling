@@ -1836,7 +1836,10 @@ class TestRunner(object):
         compiler = ''
         if self.options.compiler:
             compiler = '--compiler ' + self.options.compiler
-        pure = self.options.pure and "--pure" or ""
+        if self.options.pure:
+            pure = "--pure"
+        else:
+            pure = ""
         py3 = ''
         if sys.version_info[0] == 3:
             py3 = '--c2to3'

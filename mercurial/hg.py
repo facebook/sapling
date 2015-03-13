@@ -34,7 +34,11 @@ def addbranchrevs(lrepo, other, branches, revs):
         else:
             y = None
         return x, y
-    revs = revs and list(revs) or []
+    if revs:
+        revs = list(revs)
+    else:
+        revs = []
+
     if not peer.capable('branchmap'):
         if branches:
             raise util.Abort(_("remote branch lookup not supported"))

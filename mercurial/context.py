@@ -963,7 +963,11 @@ class basefilectx(object):
     def ancestors(self, followfirst=False):
         visit = {}
         c = self
-        cut = followfirst and 1 or None
+        if followfirst:
+            cut = 1
+        else:
+            cut = None
+
         while True:
             for parent in c.parents()[:cut]:
                 visit[(parent.linkrev(), parent.filenode())] = parent
@@ -1755,7 +1759,11 @@ class memctx(committablectx):
             # "filectxfn" for performance (e.g. converting from another VCS)
             self._filectxfn = util.cachefunc(filectxfn)
 
-        self._extra = extra and extra.copy() or {}
+        if extra:
+            self._extra = extra.copy()
+        else:
+            self._extra = {}
+
         if self._extra.get('branch', '') == '':
             self._extra['branch'] = 'default'
 

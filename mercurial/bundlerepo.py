@@ -426,7 +426,10 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             rheads = None
         else:
             cg = other.changegroupsubset(incoming, rheads, 'incoming')
-        bundletype = localrepo and "HG10BZ" or "HG10UN"
+        if localrepo:
+            bundletype = "HG10BZ"
+        else:
+            bundletype = "HG10UN"
         fname = bundle = changegroup.writebundle(ui, cg, bundlename, bundletype)
         # keep written bundle?
         if bundlename:

@@ -435,7 +435,10 @@ def diff(ui, dst, src):
 
     diff = sorted(set(smarks) - set(dmarks))
     for k in diff:
-        mark = ui.debugflag and smarks[k] or smarks[k][:12]
+        if ui.debugflag:
+            mark = smarks[k]
+        else:
+            mark = smarks[k][:12]
         ui.write("   %-25s %s\n" % (k, mark))
 
     if len(diff) <= 0:

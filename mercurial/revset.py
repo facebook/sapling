@@ -18,7 +18,10 @@ import repoview
 
 def _revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
-    cut = followfirst and 1 or None
+    if followfirst:
+        cut = 1
+    else:
+        cut = None
     cl = repo.changelog
 
     def iterate():
@@ -49,7 +52,10 @@ def _revancestors(repo, revs, followfirst):
 
 def _revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
-    cut = followfirst and 1 or None
+    if followfirst:
+        cut = 1
+    else:
+        cut = None
 
     def iterate():
         cl = repo.changelog

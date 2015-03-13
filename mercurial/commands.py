@@ -277,7 +277,10 @@ def annotate(ui, repo, *pats, **opts):
         opts['file'] = True
 
     fm = ui.formatter('annotate', opts)
-    datefunc = ui.quiet and util.shortdate or util.datestr
+    if ui.quiet:
+        datefunc = util.shortdate
+    else:
+        datefunc = util.datestr
     hexfn = fm.hexfunc
 
     opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
@@ -664,7 +667,10 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         # one of the parent was not checked.
         parents = repo[nodes[0]].parents()
         if len(parents) > 1:
-            side = good and state['bad'] or state['good']
+            if good:
+                side = state['bad']
+            else:
+                side = state['good']
             num = len(set(i.node() for i in parents) & set(side))
             if num == 1:
                 return parents[0].ancestor(parents[1])
@@ -3670,7 +3676,10 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     def display(fn, ctx, pstates, states):
         rev = ctx.rev()
-        datefunc = ui.quiet and util.shortdate or util.datestr
+        if ui.quiet:
+            datefunc = util.shortdate
+        else:
+            datefunc = util.datestr
         found = False
         @util.cachefunc
         def binary():
@@ -3946,7 +3955,10 @@ def identify(ui, repo, source=None, rev=None,
         raise util.Abort(_("there is no Mercurial repository here "
                            "(.hg not found)"))
 
-    hexfunc = ui.debugflag and hex or short
+    if ui.debugflag:
+        hexfunc = hex
+    else:
+        hexfunc = short
     default = not (num or id or branch or tags or bookmarks)
     output = []
     revs = []
@@ -4342,7 +4354,10 @@ def locate(ui, repo, *pats, **opts):
 
     Returns 0 if a match is found, 1 otherwise.
     """
-    end = opts.get('print0') and '\0' or '\n'
+    if opts.get('print0'):
+        end = '\0'
+    else:
+        end = '\n'
     rev = scmutil.revsingle(repo, opts.get('rev'), None).node()
 
     ret = 1
@@ -4506,7 +4521,10 @@ def log(ui, repo, *pats, **opts):
                 rename = getrenamed(fn, rev)
                 if rename:
                     copies.append((fn, rename[0]))
-        revmatchfn = filematcher and filematcher(ctx.rev()) or None
+        if filematcher:
+            revmatchfn = filematcher(ctx.rev())
+        else:
+            revmatchfn = None
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
         if displayer.flush(rev):
             count += 1
@@ -5550,7 +5568,10 @@ def serve(ui, repo, **opts):
     if opts.get('port'):
         opts['port'] = util.getport(opts.get('port'))
 
-    baseui = repo and repo.baseui or ui
+    if repo:
+        baseui = repo.baseui
+    else:
+        baseui = ui
     optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog certificate encoding")
     for o in optlist.split():
@@ -5700,15 +5721,25 @@ def status(ui, repo, *pats, **opts):
     else:
         node1, node2 = scmutil.revpair(repo, revs)
 
-    cwd = (pats and repo.getcwd()) or ''
-    end = opts.get('print0') and '\0' or '\n'
+    if pats:
+        cwd = repo.getcwd()
+    else:
+        cwd = ''
+
+    if opts.get('print0'):
+        end = '\0'
+    else:
+        end = '\n'
     copy = {}
     states = 'modified added removed deleted unknown ignored clean'.split()
     show = [k for k in states if opts.get(k)]
     if opts.get('all'):
         show += ui.quiet and (states[:4] + ['clean']) or states
     if not show:
-        show = ui.quiet and states[:4] or states[:5]
+        if ui.quiet:
+            show = states[:4]
+        else:
+            show = states[:5]
 
     stat = repo.status(node1, node2, scmutil.match(repo[node2], pats, opts),
                        'ignored' in show, 'clean' in show, 'unknown' in show,
@@ -6029,7 +6060,11 @@ def tag(ui, repo, name1, *names, **opts):
             rev_ = opts['rev']
         message = opts.get('message')
         if opts.get('remove'):
-            expectedtype = opts.get('local') and 'local' or 'global'
+            if opts.get('local'):
+                expectedtype = 'local'
+            else:
+                expectedtype = 'global'
+
             for n in names:
                 if not repo.tagtype(n):
                     raise util.Abort(_("tag '%s' does not exist") % n)

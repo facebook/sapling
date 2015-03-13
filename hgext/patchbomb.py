@@ -489,7 +489,10 @@ def patchbomb(ui, repo, *revs, **opts):
     if outgoing or bundle:
         if len(revs) > 1:
             raise util.Abort(_("too many destinations"))
-        dest = revs and revs[0] or None
+        if revs:
+            dest = revs[0]
+        else:
+            dest = None
         revs = []
 
     if rev:

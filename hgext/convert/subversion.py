@@ -871,8 +871,16 @@ class svn_source(converter_source):
             if self.ui.configbool('convert', 'localtimezone'):
                 date = makedatetimestamp(date[0])
 
-            log = message and self.recode(message) or ''
-            author = author and self.recode(author) or ''
+            if message:
+                log = self.recode(message)
+            else:
+                log = ''
+
+            if author:
+                author = self.recode(author)
+            else:
+                author = ''
+
             try:
                 branch = self.module.split("/")[-1]
                 if branch == self.trunkname:
@@ -1118,7 +1126,10 @@ class svn_sink(converter_sink, commandline):
         self.opener = scmutil.opener(self.wc)
         self.wopener = scmutil.opener(self.wc)
         self.childmap = mapfile(ui, self.join('hg-childmap'))
-        self.is_exec = util.checkexec(self.wc) and util.isexec or None
+        if util.checkexec(self.wc):
+            self.is_exec = util.isexec
+        else:
+            self.is_exec = None
 
         if created:
             hook = os.path.join(created, 'hooks', 'pre-revprop-change')

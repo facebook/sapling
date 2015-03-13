@@ -90,7 +90,10 @@ def rawfile(web, req, tmpl):
     if guessmime:
         mt = mimetypes.guess_type(path)[0]
         if mt is None:
-            mt = util.binary(text) and 'application/binary' or 'text/plain'
+            if util.binary(text):
+                mt = 'application/binary'
+            else:
+                mt = 'text/plain'
     if mt.startswith('text/'):
         mt += '; charset="%s"' % encoding.encoding
 
@@ -365,7 +368,11 @@ def changelog(web, req, tmpl, shortlog=False):
             entry['parity'] = parity.next()
             yield entry
 
-    revcount = shortlog and web.maxshortchanges or web.maxchanges
+    if shortlog:
+        revcount = web.maxshortchanges
+    else:
+        revcount = web.maxchanges
+
     if 'revcount' in req.form:
         try:
             revcount = int(req.form.get('revcount', [revcount])[0])
@@ -783,8 +790,12 @@ def filediff(web, req, tmpl):
         style = req.form['style'][0]
 
     diffs = webutil.diffs(web.repo, tmpl, ctx, None, [path], parity, style)
-    rename = fctx and webutil.renamelink(fctx) or []
-    ctx = fctx and fctx or ctx
+    if fctx:
+        rename = webutil.renamelink(fctx)
+        ctx = fctx
+    else:
+        rename = []
+        ctx = ctx
     return tmpl("filediff",
                 file=path,
                 node=hex(n),

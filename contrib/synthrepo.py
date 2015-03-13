@@ -359,7 +359,10 @@ def synthesize(ui, repo, descpath, **opts):
                             files.iterkeys(), filectxfn, ui.username(),
                             '%d %d' % util.makedate())
         initnode = mc.commit()
-        hexfn = ui.debugflag and hex or short
+        if ui.debugflag:
+            hexfn = hex
+        else:
+            hexfn = short
         ui.status(_('added commit %s with %d files\n')
                   % (hexfn(initnode), len(files)))
 
@@ -475,7 +478,10 @@ def renamedirs(dirs, words):
         if dirpath in replacements:
             return replacements[dirpath]
         head, _ = os.path.split(dirpath)
-        head = head and rename(head) or ''
+        if head:
+            head = rename(head)
+        else:
+            head = ''
         renamed = os.path.join(head, wordgen.next())
         replacements[dirpath] = renamed
         return renamed
