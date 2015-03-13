@@ -34,7 +34,6 @@ def expush(orig, repo, remote, *args, **kwargs):
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote)
-    writedistance(repo)
     return res
 
 def pullremotenames(repo, remote):
