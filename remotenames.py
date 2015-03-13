@@ -836,6 +836,11 @@ def writedistance(repo):
             # delete the cache if it exists
             try:
                 repo.vfs.unlink('cache/tracking.%s' % bmark)
+            except OSError, inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+
+            try:
                 distancefromtracked(repo, bmark)
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
