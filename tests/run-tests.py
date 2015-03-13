@@ -461,7 +461,14 @@ class Test(unittest.TestCase):
 
         # Remove any previous output files.
         if os.path.exists(self.errpath):
-            os.remove(self.errpath)
+            try:
+                os.remove(self.errpath)
+            except OSError, e:
+                # We might have raced another test to clean up a .err
+                # file, so ignore ENOENT when removing a previous .err
+                # file.
+                if e.errno != errno.ENOENT:
+                    raise
 
     def run(self, result):
         """Run this test and report results against a TestResult instance."""
