@@ -217,7 +217,8 @@ def extsetup(ui):
     entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
 
     if _tracking(ui):
-        entry[1].append(('t', 'track', '', 'track this bookmark', 'BOOKMARK'))
+        entry[1].append(('t', 'track', '', 'track this bookmark or remote name',
+                         'BOOKMARK'))
         setuptracking(ui)
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
