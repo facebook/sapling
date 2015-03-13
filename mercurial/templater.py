@@ -749,7 +749,11 @@ def stylemap(styles, paths=None):
         styles = [styles]
 
     for style in styles:
-        if not style:
+        # only plain name is allowed to honor template paths
+        if (not style
+            or style in (os.curdir, os.pardir)
+            or os.sep in style
+            or os.altsep and os.altsep in style):
             continue
         locations = [os.path.join(style, 'map'), 'map-' + style]
         locations.append('map')

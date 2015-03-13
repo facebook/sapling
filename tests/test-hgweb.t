@@ -580,6 +580,45 @@ phase changes are refreshed (issue4061)
   
   
 
+no style can be loaded from directories other than the specified paths
+
+  $ mkdir -p x/templates/fallback
+  $ cat <<EOF > x/templates/fallback/map
+  > default = 'shortlog'
+  > shortlog = 'fall back to default\n'
+  > mimetype = 'text/plain'
+  > EOF
+  $ cat <<EOF > x/map
+  > default = 'shortlog'
+  > shortlog = 'access to outside of templates directory\n'
+  > mimetype = 'text/plain'
+  > EOF
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log \
+  > --config web.style=fallback --config web.templates=x/templates
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT "?style=`pwd`/x"
+  200 Script output follows
+  
+  fall back to default
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '?style=..'
+  200 Script output follows
+  
+  fall back to default
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '?style=./..'
+  200 Script output follows
+  
+  fall back to default
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '?style=.../.../'
+  200 Script output follows
+  
+  fall back to default
+
 errors
 
   $ cat errors.log
