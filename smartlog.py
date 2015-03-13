@@ -161,6 +161,8 @@ def getdag(ui, repo, revs, master):
             return self._rev
         def files(self):
             return []
+        def closesbranch(self):
+            return False
 
     fakes = {}
     knownrevs = set(revs)
