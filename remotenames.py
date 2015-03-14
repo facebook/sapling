@@ -173,7 +173,7 @@ def _tracking(ui):
     return ui.configbool('remotenames', 'tracking', True)
 
 def _setuprebase(rebase):
-    entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
+    extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
 
 def exrebase(orig, ui, repo, **opts):
     dest = opts['dest']
@@ -439,8 +439,10 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     revs = opts.get('rev')
     to = opts.get('to')
 
+    paths = set(path for path, ignore in ui.configitems('paths'))
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
 
+    origdest = dest
     if not dest and not to and not revs and _tracking(ui):
         current = bookmarks.readcurrent(repo)
         tracking = _readtracking(repo)
@@ -450,13 +452,17 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             path, book = splitremotename(track)
             # un-rename a path, if needed
             path = revrenames.get(path, path)
-            paths = set(path for path, ignore in ui.configitems('paths'))
             if book and path in paths:
                 dest = path
                 to = book
 
     # un-rename passed path
     dest = revrenames.get(dest, dest)
+
+    # if dest was renamed to default but we aren't specifically requesting
+    # to push to default, change dest to default-push, if available
+    if not origdest and dest == 'default' and 'default-push' in paths:
+        dest = 'default-push'
 
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
