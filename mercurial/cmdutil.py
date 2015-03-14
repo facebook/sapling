@@ -1260,8 +1260,12 @@ class jsonchangeset(changeset_printer):
 
     def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
-        hexnode = hex(ctx.node())
         rev = ctx.rev()
+        if rev is None:
+            jrev = jnode = 'null'
+        else:
+            jrev = str(rev)
+            jnode = '"%s"' % hex(ctx.node())
         j = encoding.jsonescape
 
         if self._first:
@@ -1271,13 +1275,13 @@ class jsonchangeset(changeset_printer):
             self.ui.write(",\n {")
 
         if self.ui.quiet:
-            self.ui.write('\n  "rev": %d' % rev)
-            self.ui.write(',\n  "node": "%s"' % hexnode)
+            self.ui.write('\n  "rev": %s' % jrev)
+            self.ui.write(',\n  "node": %s' % jnode)
             self.ui.write('\n }')
             return
 
-        self.ui.write('\n  "rev": %d' % rev)
-        self.ui.write(',\n  "node": "%s"' % hexnode)
+        self.ui.write('\n  "rev": %s' % jrev)
+        self.ui.write(',\n  "node": %s' % jnode)
         self.ui.write(',\n  "branch": "%s"' % j(ctx.branch()))
         self.ui.write(',\n  "phase": "%s"' % ctx.phasestr())
         self.ui.write(',\n  "user": "%s"' % j(ctx.user()))

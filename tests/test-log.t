@@ -1642,6 +1642,30 @@ working-directory revision requires special treatment
   date:        [A-Za-z0-9:+ ]+ (re)
   extra:       branch=default
   
+  $ hg log -r 'wdir()' -Tjson
+  [
+   {
+    "rev": null,
+    "node": null,
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [*, 0], (glob)
+    "desc": "",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["65624cd9070a035fa7191a54f2b8af39f16b0c08"]
+   }
+  ]
+
+  $ hg log -r 'wdir()' -Tjson -q
+  [
+   {
+    "rev": null,
+    "node": null
+   }
+  ]
+
 Check that adding an arbitrary name shows up in log automatically
 
   $ cat > ../names.py <<EOF
