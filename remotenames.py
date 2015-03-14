@@ -172,14 +172,8 @@ def _tracking(ui):
     # omg default true
     return ui.configbool('remotenames', 'tracking', True)
 
-def setuptracking(ui):
-    try:
-        rebase = extensions.find('rebase')
-        if rebase:
-            extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
-    except KeyError:
-        # rebase isn't on
-        pass
+def _setuprebase(rebase):
+    entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
 
 def exrebase(orig, ui, repo, **opts):
     dest = opts['dest']
@@ -269,7 +263,13 @@ def extsetup(ui):
         entry[1].append(('u', 'untrack', None,
                          'remove tracking for this bookmark',
                          'BOOKMARK'))
-        setuptracking(ui)
+        try:
+            rebase = extensions.find('rebase')
+            if rebase:
+                _setuprebase(rebase)
+        except KeyError:
+            # rebase isn't on
+            pass
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
