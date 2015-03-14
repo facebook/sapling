@@ -269,3 +269,17 @@ Test remotenames revset and keyword
   3:78f83396d79e beta/babar beta/default
   4:8948da77173b beta/stable
 
+Test clone --mirror
+
+  $ cd ..
+  $ cd alpha
+  $ hg book foo bar baz
+  $ cd ..
+  $ hg clone --mirror alpha mirror
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd mirror
+  $ hg book
+     bar                       2:95cb4ab9fe1d
+     baz                       2:95cb4ab9fe1d
+     foo                       2:95cb4ab9fe1d

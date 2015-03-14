@@ -288,6 +288,9 @@ def extsetup(ui):
 
     extensions.wrapcommand(commands.table, 'pull', expullcmd)
 
+    entry = extensions.wrapcommand(commands.table, 'clone', exclonecmd)
+    entry[1].append(('', 'mirror', None, 'sync all bookmarks'))
+
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
     templatekw.keywords['remotenames'] = remotenameskw
@@ -512,6 +515,11 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     _pushto = False
     return result
+
+def exclonecmd(orig, ui, *args, **opts):
+    if opts['mirror']:
+        ui.setconfig('remotenames', 'syncbookmarks', True, 'mirror-clone')
+    orig(ui, *args, **opts)
 
 def exbranches(orig, ui, repo, *args, **opts):
     if not opts.get('remote'):
