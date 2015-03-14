@@ -177,8 +177,12 @@ def _setuprebase(rebase):
 
 def exrebase(orig, ui, repo, **opts):
     dest = opts['dest']
+    source = opts['source']
+    revs = opts['rev']
+    base = opts['base']
     current = bookmarks.readcurrent(repo)
-    if not dest and current:
+
+    if not (dest or source or revs or base) and current:
         tracking = _readtracking(repo)
         if current in tracking:
             opts['dest'] = tracking[current]

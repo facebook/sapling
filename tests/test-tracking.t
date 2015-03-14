@@ -157,3 +157,48 @@ Test untracking
   $ hg book -u c
   $ hg book -v
    * c                         3:aff78bd8e592
+
+Test that tracking isn't over-eager on rebase
+
+  $ hg up 1
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (leaving bookmark c)
+  $ touch e
+  $ hg commit -qAm e
+  $ hg book c -r 1 -t remote/a -f
+  $ hg up c
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark c)
+  $ touch d
+  $ hg commit -qAm d
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  @  5 ff58066d17c3 c
+  |
+  | o  4 364e447d28f4
+  |/
+  | o  3 aff78bd8e592  remote/a remote/b
+  | |
+  | o  2 01c5289520dd
+  |/
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
+  $ hg bookmarks -v
+   * c                         5:ff58066d17c3             [remote/a: 1 ahead, 2 behind]
+  $ hg rebase -b .
+  nothing to rebase - ff58066d17c3 is both "base" and destination
+  [1]
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  @  5 ff58066d17c3 c
+  |
+  | o  4 364e447d28f4
+  |/
+  | o  3 aff78bd8e592  remote/a remote/b
+  | |
+  | o  2 01c5289520dd
+  |/
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
