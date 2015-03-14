@@ -97,3 +97,10 @@ Test push to renamed dest
   abort: push would create new anonymous heads (d2ae7f538514)
   (use --force to override this warning)
   [255]
+
+Test pull from renamed source
+  $ hg pull remote
+  pulling from $TESTTMP/repo1 (glob)
+  searching for changes
+  no changes found
+

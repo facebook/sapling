@@ -286,6 +286,8 @@ def extsetup(ui):
     entry[1].append(('d', 'delete', '', 'delete remote path', 'NAME'))
     entry[1].append(('a', 'add', '', 'add remote path', 'NAME PATH'))
 
+    extensions.wrapcommand(commands.table, 'pull', expullcmd)
+
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
     templatekw.keywords['remotenames'] = remotenameskw
@@ -401,6 +403,11 @@ def _pushrevs(repo, ui, rev):
     if rev:
         return [repo.lookup(rev)]
     return []
+
+def expullcmd(orig, ui, repo, source="default", **opts):
+    revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+    source = revrenames.get(source, source)
+    return orig(ui, repo, source, **opts)
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
