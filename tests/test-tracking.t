@@ -150,3 +150,10 @@ Test renaming a remote and tracking
   o  0 a1
   
 
+Test untracking
+
+  $ hg book -v
+   * c                         3:aff78bd8e592             [remote/a: 0 ahead, 0 behind]
+  $ hg book -u c
+  $ hg book -v
+   * c                         3:aff78bd8e592

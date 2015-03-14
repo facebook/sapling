@@ -266,6 +266,9 @@ def extsetup(ui):
     if _tracking(ui):
         entry[1].append(('t', 'track', '', 'track this bookmark or remote name',
                          'BOOKMARK'))
+        entry[1].append(('u', 'untrack', None,
+                         'remove tracking for this bookmark',
+                         'BOOKMARK'))
         setuptracking(ui)
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
@@ -577,12 +580,20 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     inactive = opts.get('inactive')
     remote = opts.get('remote')
     track = opts.get('track')
+    untrack = opts.get('untrack')
 
     disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
     for name in args:
         if name in disallowed:
             raise util.Abort(_(" bookmark '%s' not allowed by configuration")
                              % name)
+
+    if untrack:
+        if track:
+            msg = _('do not specify --untrack and --track at the same time')
+            raise util.Abort(msg)
+        _removetracking(repo, args)
+        return
 
     if delete or rename or args or inactive:
         ret = orig(ui, repo, *args, **opts)
