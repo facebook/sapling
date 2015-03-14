@@ -1623,6 +1623,16 @@ issue3772: hg log -r :null showing revision 0 as well
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
+working-directory revision requires special treatment
+
+  $ hg log -r 'wdir()'
+  changeset:   0:65624cd9070a+
+  user:        test
+  date:        [A-Za-z0-9:+ ]+ (re)
+  
+  $ hg log -r 'wdir()' -q
+  0:65624cd9070a+
+
 Check that adding an arbitrary name shows up in log automatically
 
   $ cat > ../names.py <<EOF

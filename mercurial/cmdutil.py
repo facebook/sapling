@@ -1101,21 +1101,24 @@ class changeset_printer(object):
         '''show a single changeset or file revision'''
         changenode = ctx.node()
         rev = ctx.rev()
-
-        if self.ui.quiet:
-            self.ui.write("%d:%s\n" % (rev, short(changenode)),
-                          label='log.node')
-            return
-
-        date = util.datestr(ctx.date())
-
         if self.ui.debugflag:
             hexfunc = hex
         else:
             hexfunc = short
+        if rev is None:
+            pctx = ctx.p1()
+            revnode = (pctx.rev(), hexfunc(pctx.node()) + '+')
+        else:
+            revnode = (rev, hexfunc(changenode))
+
+        if self.ui.quiet:
+            self.ui.write("%d:%s\n" % revnode, label='log.node')
+            return
+
+        date = util.datestr(ctx.date())
 
         # i18n: column positioning for "hg log"
-        self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
+        self.ui.write(_("changeset:   %d:%s\n") % revnode,
                       label='log.changeset changeset.%s' % ctx.phasestr())
 
         # branches are shown first before any other names due to backwards
