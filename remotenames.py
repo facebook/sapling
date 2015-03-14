@@ -521,14 +521,16 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             raise util.Abort(_(" bookmark '%s' not allowed by configuration")
                              % name)
 
-    if track:
-        tracking = _readtracking(repo)
-        for arg in args:
-            tracking[arg] = track
-        _writetracking(repo, tracking)
-
     if delete or rename or args or inactive:
-        return orig(ui, repo, *args, **opts)
+        ret = orig(ui, repo, *args, **opts)
+        # update the cache
+        if track:
+            tracking = _readtracking(repo)
+            for arg in args:
+                tracking[arg] = track
+            _writetracking(repo, tracking)
+            writedistance(repo)
+        return ret
 
     # copy pasta from commands.py; need to patch core
     if not remote:
