@@ -987,6 +987,9 @@ def writedistance(repo):
 
             try:
                 distancefromtracked(repo, bmark)
+            except error.RepoLookupError:
+                # bookmark may have been deleted
+                continue
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
