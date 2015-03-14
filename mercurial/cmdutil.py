@@ -1296,7 +1296,11 @@ class jsonchangeset(changeset_printer):
                       ", ".join('"%s"' % c.hex() for c in ctx.parents()))
 
         if self.ui.debugflag:
-            self.ui.write(',\n  "manifest": "%s"' % hex(ctx.manifestnode()))
+            if rev is None:
+                jmanifestnode = 'null'
+            else:
+                jmanifestnode = '"%s"' % hex(ctx.manifestnode())
+            self.ui.write(',\n  "manifest": %s' % jmanifestnode)
 
             self.ui.write(',\n  "extra": {%s}' %
                           ", ".join('"%s": "%s"' % (j(k), j(v))
