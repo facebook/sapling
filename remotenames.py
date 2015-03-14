@@ -554,6 +554,18 @@ def _writetracking(repo, tracking):
         data += '%s %s\n' % (book, track)
     repo.vfs.write('bookmarks.tracking', data)
 
+def _removetracking(repo, bookmarks):
+    tracking = _readtracking(repo)
+    needwrite = False
+    for bmark in bookmarks:
+        try:
+            del tracking[bmark]
+            needwrite = True
+        except KeyError:
+            pass
+    if needwrite:
+        _writetracking(repo, tracking)
+
 def exbookmarks(orig, ui, repo, *args, **opts):
     """Bookmark output is sorted by bookmark name.
 
@@ -574,13 +586,18 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
     if delete or rename or args or inactive:
         ret = orig(ui, repo, *args, **opts)
-        # update the cache
         if track:
             tracking = _readtracking(repo)
             for arg in args:
                 tracking[arg] = track
             _writetracking(repo, tracking)
+            # update the cache
             writedistance(repo)
+
+        # also remove tracking for a deleted bookmark, if it exists
+        if delete:
+            _removetracking(repo, args)
+
         return ret
 
     # copy pasta from commands.py; need to patch core
