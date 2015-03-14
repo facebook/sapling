@@ -173,19 +173,43 @@ def _tracking(ui):
     return ui.configbool('remotenames', 'tracking', True)
 
 def _setuprebase(rebase):
-    extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
+    entry = extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
+    entry[1].append(
+            ('o', 'only', '', 'rebase only(REV, dest) onto dest', 'REV'))
 
 def exrebase(orig, ui, repo, **opts):
+    if opts['continue']:
+        return orig(ui, repo, **opts)
+
     dest = opts['dest']
     source = opts['source']
     revs = opts['rev']
     base = opts['base']
-    current = bookmarks.readcurrent(repo)
+    only = opts['only']
 
-    if not (dest or source or revs or base) and current:
+    tracking = _readtracking(repo)
+    if not (only or dest or source or revs or base):
+        current = bookmarks.readcurrent(repo)
+        if current:
+            only = current
+        else:
+            only = '.'
+
+    if only:
+        if source or revs or base:
+            raise util.Abort(_(
+                'do not specify source, base, or revs with --only'))
         tracking = _readtracking(repo)
-        if current in tracking:
-            opts['dest'] = tracking[current]
+        if only in tracking:
+            if not dest:
+                dest = tracking[only]
+                opts['dest'] = dest
+        if dest:
+            revs = repo.revs('only(%s, %s)', only, dest)
+            opts['rev'] = revs
+        else:
+            raise util.Abort(_(
+                'must specify a destination or use tracking with --only'))
 
     return orig(ui, repo, **opts)
 

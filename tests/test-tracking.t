@@ -202,3 +202,120 @@ Test that tracking isn't over-eager on rebase
   |
   o  0 07199ae38cd5
   
+Test rebase --only
+
+  $ hg rebase -o c -r 4
+  abort: do not specify source, base, or revs with --only
+  [255]
+  $ hg rebase -o c -s 3
+  abort: do not specify source, base, or revs with --only
+  [255]
+  $ hg rebase -o c -b 2
+  abort: do not specify source, base, or revs with --only
+  [255]
+
+Test implicit rebase destination
+
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  @  5 ff58066d17c3 c
+  |
+  | o  4 364e447d28f4
+  |/
+  | o  3 aff78bd8e592  remote/a remote/b
+  | |
+  | o  2 01c5289520dd
+  |/
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
+  $ hg bookmarks -v
+   * c                         5:ff58066d17c3             [remote/a: 1 ahead, 2 behind]
+  $ hg rebase -o c
+  rebasing 5:ff58066d17c3 "d" (tip c)
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/ff58066d17c3-470dd0be-backup.hg (glob)
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  @  5 045b4e9d5205 c
+  |
+  | o  4 364e447d28f4
+  | |
+  o |  3 aff78bd8e592  remote/a remote/b
+  | |
+  o |  2 01c5289520dd
+  |/
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
+  $ hg bookmarks -v
+   * c                         5:045b4e9d5205             [remote/a: 1 ahead, 0 behind]
+  $ hg rebase -o 4 -d 2
+  rebasing 4:364e447d28f4 "e"
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/364e447d28f4-83823c60-backup.hg (glob)
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  o  5 2b4db3670e1d
+  |
+  | @  4 045b4e9d5205 c
+  | |
+  | o  3 aff78bd8e592  remote/a remote/b
+  |/
+  o  2 01c5289520dd
+  |
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
+
+Test no orphaning
+
+  $ hg up 3
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark c)
+  $ touch f
+  $ hg commit -qAm f
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  @  6 5ffbdce6407e
+  |
+  | o  5 2b4db3670e1d
+  | |
+  +---o  4 045b4e9d5205 c
+  | |
+  o |  3 aff78bd8e592  remote/a remote/b
+  |/
+  o  2 01c5289520dd
+  |
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
+  $ hg rebase -o 4 -d 5
+  abort: can't remove original changesets with unrebased descendants
+  (use --keep to keep original changesets)
+  [255]
+
+Test implicit --only
+
+  $ hg up 5
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg rebase
+  abort: must specify a destination or use tracking with --only
+  [255]
+  $ hg book mark -t remote/b
+  $ hg rebase
+  rebasing 5:2b4db3670e1d "e" (mark)
+  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/2b4db3670e1d-ba49e51b-backup.hg (glob)
+  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
+  @  6 0c564799815f mark
+  |
+  | o  5 5ffbdce6407e
+  |/
+  | o  4 045b4e9d5205 c
+  |/
+  o  3 aff78bd8e592  remote/a remote/b
+  |
+  o  2 01c5289520dd
+  |
+  o  1 fdceb0e57656
+  |
+  o  0 07199ae38cd5
+  
