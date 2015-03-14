@@ -739,6 +739,9 @@ def activepath(ui, remote):
                     except AttributeError:
                         uri = url.getauthinfo(uri)[0]
         uri = uri.rstrip('/')
+        # guard against hgsubversion nonsense
+        if not isinstance(rpath, basestring):
+            continue
         rpath = rpath.rstrip('/')
         if uri == rpath:
             realpath = path
