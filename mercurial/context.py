@@ -722,6 +722,8 @@ class basefilectx(object):
         return self._changectx.manifest()
     def changectx(self):
         return self._changectx
+    def repo(self):
+        return self._repo
 
     def path(self):
         return self._path
