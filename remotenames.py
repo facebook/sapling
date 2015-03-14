@@ -693,12 +693,15 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             h = hexfn(n)
             fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s', rev, h,
                          label=label)
-            rname, distance = distancefromtracked(repo, bmark)
-            if distance != (0, 0) and ui.verbose:
-                pad = " " * (25 - encoding.colwidth(str(rev)) -
-                             encoding.colwidth(str(h)))
-                fm.write('bookmark', pad + ' [%s: %s ahead, %s behind]', rname,
-                         *distance, label=label)
+            if ui.verbose:
+                rname, distance = distancefromtracked(repo, bmark)
+                ab = ''
+                if distance != (0, 0):
+                    ab = ': %s ahead, %s behind' % distance
+                if rname:
+                    pad = " " * (25 - encoding.colwidth(str(rev)) -
+                                 encoding.colwidth(str(h)))
+                    fm.write('bookmark', pad + '[%s%s]', rname, ab, label=label)
             fm.data(active=(bmark == current))
             fm.plain('\n')
         fm.end()
@@ -962,7 +965,7 @@ def distancefromtracked(repo, bookmark):
     # load the cache
     try:
         distance = repo.vfs.read('cache/tracking.%s' % bookmark).strip()
-        return (remotename, [int(d) for d in distance.split(' ')])
+        return (remotename, tuple(int(d) for d in distance.split(' ')))
     except IOError:
         pass
 

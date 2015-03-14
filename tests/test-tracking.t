@@ -44,7 +44,7 @@ Create a tracking bookmark
   
   $ hg book -v
      a                         1:fdceb0e57656
-   * b                         2:a36ba4057bfd             [a: 1 ahead, 1 behind]
+   * b                         2:a36ba4057bfd            [a: 1 ahead, 1 behind]
   $ hg rebase
   rebasing 2:a36ba4057bfd "b" (tip b)
   saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/a36ba4057bfd-8ec5973a-backup.hg (glob)
@@ -57,7 +57,7 @@ Create a tracking bookmark
   
   $ hg book -v
      a                         1:fdceb0e57656
-   * b                         2:01c5289520dd             [a: 1 ahead, 0 behind]
+   * b                         2:01c5289520dd            [a: 1 ahead, 0 behind]
 
 Test push tracking
 
@@ -153,7 +153,7 @@ Test renaming a remote and tracking
 Test untracking
 
   $ hg book -v
-   * c                         3:aff78bd8e592             [remote/a: 0 ahead, 0 behind]
+   * c                         3:aff78bd8e592            [remote/a]
   $ hg book -u c
   $ hg book -v
    * c                         3:aff78bd8e592
@@ -185,7 +185,7 @@ Test that tracking isn't over-eager on rebase
   o  0 07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         5:ff58066d17c3             [remote/a: 1 ahead, 2 behind]
+   * c                         5:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase -b .
   nothing to rebase - ff58066d17c3 is both "base" and destination
   [1]
@@ -230,7 +230,7 @@ Test implicit rebase destination
   o  0 07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         5:ff58066d17c3             [remote/a: 1 ahead, 2 behind]
+   * c                         5:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase -o c
   rebasing 5:ff58066d17c3 "d" (tip c)
   saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/ff58066d17c3-470dd0be-backup.hg (glob)
@@ -248,7 +248,7 @@ Test implicit rebase destination
   o  0 07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         5:045b4e9d5205             [remote/a: 1 ahead, 0 behind]
+   * c                         5:045b4e9d5205            [remote/a: 1 ahead, 0 behind]
   $ hg rebase -o 4 -d 2
   rebasing 4:364e447d28f4 "e"
   saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/364e447d28f4-83823c60-backup.hg (glob)
