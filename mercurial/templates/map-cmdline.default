@@ -1,7 +1,7 @@
 # Base templates. Due to name clashes with existing keywords, we have
 # to replace some keywords with 'lkeyword', for 'labelled keyword'
 changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{summary}\n'
-changeset_quiet = '{node}'
+changeset_quiet = '{lnode}'
 changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\n'
 changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
 
@@ -40,7 +40,7 @@ fullcset = '{label("log.changeset changeset.{phase}",
 parent = '{label("log.parent changeset.{phase}",
                   "parent:      {rev}:{node|formatnode}")}\n'
 
-node = '{label("log.node",
+lnode = '{label("log.node",
                 "{rev}:{node|short}")}\n'
 
 manifest = '{label("ui.debug log.manifest",
