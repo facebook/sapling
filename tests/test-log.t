@@ -1633,6 +1633,15 @@ working-directory revision requires special treatment
   $ hg log -r 'wdir()' -q
   0:65624cd9070a+
 
+  $ hg log -r 'wdir()' --debug
+  changeset:   0:65624cd9070a035fa7191a54f2b8af39f16b0c08+
+  phase:       draft
+  parent:      0:65624cd9070a035fa7191a54f2b8af39f16b0c08
+  parent:      -1:0000000000000000000000000000000000000000
+  user:        test
+  date:        [A-Za-z0-9:+ ]+ (re)
+  extra:       branch=default
+  
 Check that adding an arbitrary name shows up in log automatically
 
   $ cat > ../names.py <<EOF

@@ -1151,7 +1151,7 @@ class changeset_printer(object):
                           % (pctx.rev(), hexfunc(pctx.node())),
                           label=label)
 
-        if self.ui.debugflag:
+        if self.ui.debugflag and rev is not None:
             mnode = ctx.manifestnode()
             # i18n: column positioning for "hg log"
             self.ui.write(_("manifest:    %d:%s\n") %
