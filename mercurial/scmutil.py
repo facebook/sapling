@@ -582,6 +582,13 @@ def rcpath():
             _rcpath = osrcpath()
     return _rcpath
 
+def intrev(repo, rev):
+    """Return integer for a given revision that can be used in comparison or
+    arithmetic operation"""
+    if rev is None:
+        return len(repo)
+    return rev
+
 def revsingle(repo, revspec, default='.'):
     if not revspec and revspec != 0:
         return repo[default]
