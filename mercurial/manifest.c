@@ -104,7 +104,7 @@ static bool realloc_if_full(lazymanifest *self)
 		self->maxlines *= 2;
 		self->lines = realloc(self->lines, self->maxlines * sizeof(line));
 	}
-	return self->lines;
+	return !!self->lines;
 }
 
 /*
