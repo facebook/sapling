@@ -1107,7 +1107,6 @@ class changeset_printer(object):
                           label='log.node')
             return
 
-        log = self.repo.changelog
         date = util.datestr(ctx.date())
 
         if self.ui.debugflag:
@@ -1163,7 +1162,7 @@ class changeset_printer(object):
                       label='log.date')
 
         if self.ui.debugflag:
-            files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
+            files = ctx.p1().status(ctx)[:3]
             for key, value in zip([# i18n: column positioning for "hg log"
                                    _("files:"),
                                    # i18n: column positioning for "hg log"
