@@ -51,6 +51,12 @@ Second branch starting at nullrev:
   8 t
   7 f
 
+Some keywords are invalid for working-directory revision, but they should
+never cause crash:
+
+  $ hg log -r 'wdir()' -T '{manifest}\n'
+  
+
 Quoting for ui.logtemplate
 
   $ hg tip --config "ui.logtemplate={rev}\n"

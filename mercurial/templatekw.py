@@ -355,6 +355,9 @@ def showchangessincelatesttag(repo, ctx, templ, cache, **args):
 def showmanifest(**args):
     repo, ctx, templ = args['repo'], args['ctx'], args['templ']
     mnode = ctx.manifestnode()
+    if mnode is None:
+        # just avoid crash, we might want to use the 'ff...' hash in future
+        return
     args = args.copy()
     args.update({'rev': repo.manifest.rev(mnode), 'node': hex(mnode)})
     return templ('manifest', **args)
