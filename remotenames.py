@@ -829,6 +829,12 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
     if not repo.vfs.exists('remotenames'):
         transition(repo, repo.ui)
 
+    # while we're removing old paths, also update _remotenames
+    for btype, rmap in _remotenames.iteritems():
+        for rname in rmap.copy():
+            if remote == splitremotename(rname)[0]:
+                del _remotenames[btype][rname]
+
     # read in all data first before opening file to write
     olddata = set(readremotenames(repo))
 
