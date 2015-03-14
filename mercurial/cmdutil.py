@@ -1115,9 +1115,6 @@ class changeset_printer(object):
         else:
             hexfunc = short
 
-        parents = [self.repo[p]
-                   for p in self._meaningful_parentrevs(log, rev)]
-
         # i18n: column positioning for "hg log"
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
                       label='log.changeset changeset.%s' % ctx.phasestr())
@@ -1145,7 +1142,7 @@ class changeset_printer(object):
             # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
                           label='log.phase')
-        for pctx in parents:
+        for pctx in self._meaningful_parentrevs(ctx):
             label = 'log.parent changeset.%s' % pctx.phasestr()
             # i18n: column positioning for "hg log"
             self.ui.write(_("parent:      %d:%s\n")
@@ -1229,19 +1226,20 @@ class changeset_printer(object):
                                match=matchfn, stat=False)
             self.ui.write("\n")
 
-    def _meaningful_parentrevs(self, log, rev):
+    def _meaningful_parentrevs(self, ctx):
         """Return list of meaningful (or all if debug) parentrevs for rev.
 
         For merges (two non-nullrev revisions) both parents are meaningful.
         Otherwise the first parent revision is considered meaningful if it
         is not the preceding revision.
         """
-        parents = log.parentrevs(rev)
-        if not self.ui.debugflag and parents[1] == nullrev:
-            if parents[0] >= rev - 1:
-                parents = []
-            else:
-                parents = [parents[0]]
+        parents = ctx.parents()
+        if len(parents) > 1:
+            return parents
+        if self.ui.debugflag:
+            return [parents[0], self.repo['null']]
+        if parents[0].rev() >= ctx.rev() - 1:
+            return []
         return parents
 
 class jsonchangeset(changeset_printer):
@@ -1354,18 +1352,6 @@ class changeset_templater(changeset_printer):
             self.t.cache['changeset'] = tmpl
 
         self.cache = {}
-
-    def _meaningful_parentrevs(self, ctx):
-        """Return list of meaningful (or all if debug) parentrevs for rev.
-        """
-        parents = ctx.parents()
-        if len(parents) > 1:
-            return parents
-        if self.ui.debugflag:
-            return [parents[0], self.repo['null']]
-        if parents[0].rev() >= ctx.rev() - 1:
-            return []
-        return parents
 
     def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
