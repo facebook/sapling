@@ -89,3 +89,11 @@ Test transition bookmark disallowed
   $ hg book -m foo stable
   abort:  bookmark 'stable' not allowed by configuration
   [255]
+
+Test push to renamed dest
+  $ hg push remote
+  pushing to $TESTTMP/repo1 (glob)
+  searching for changes
+  abort: push would create new anonymous heads (d2ae7f538514)
+  (use --force to override this warning)
+  [255]

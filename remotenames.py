@@ -425,6 +425,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     revs = opts.get('rev')
     to = opts.get('to')
 
+    revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
+
     if not dest and not to and not revs and _tracking(ui):
         current = bookmarks.readcurrent(repo)
         tracking = _readtracking(repo)
@@ -433,12 +435,14 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             track = tracking[current]
             path, book = splitremotename(track)
             # un-rename a path, if needed
-            revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
             path = revrenames.get(path, path)
             paths = set(path for path, ignore in ui.configitems('paths'))
             if book and path in paths:
                 dest = path
                 to = book
+
+    # un-rename passed path
+    dest = revrenames.get(dest, dest)
 
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
