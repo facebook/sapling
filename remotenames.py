@@ -598,10 +598,12 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     untrack = opts.get('untrack')
 
     disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
-    for name in args:
-        if name in disallowed:
-            raise util.Abort(_(" bookmark '%s' not allowed by configuration")
-                             % name)
+
+    if not delete:
+        for name in args:
+            if name in disallowed:
+                raise util.Abort(_("bookmark '%s' not allowed by configuration")
+                                   % name)
 
     if untrack:
         if track:

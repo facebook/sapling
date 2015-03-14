@@ -60,9 +60,11 @@ Test transition bookmark deletion
   $ echo b > b
   $ hg add b
   $ hg commit -qm 'b'
+  $ hg book notdeleted
   $ hg book master
   $ hg bookmarks
    * master                    1:d2ae7f538514
+     notdeleted                1:d2ae7f538514
      stable                    0:cb9a9f314b8b
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "transitionbookmarks = master, stable, other" >> $HGRCPATH
@@ -71,24 +73,25 @@ Test transition bookmark deletion
   searching for changes
   no changes found
   $ hg bookmarks
-  no bookmarks set
+     notdeleted                1:d2ae7f538514
 
 Test transition bookmark disallowed
   $ echo "[remotenames]" >> $HGRCPATH
-  $ echo "disallowedbookmarks = master, stable, other" >> $HGRCPATH
+  $ echo "disallowedbookmarks = master, stable, other, notdeleted" >> $HGRCPATH
   $ hg book master
-  abort:  bookmark 'master' not allowed by configuration
+  abort: bookmark 'master' not allowed by configuration
   [255]
   $ hg book okay stable
-  abort:  bookmark 'stable' not allowed by configuration
+  abort: bookmark 'stable' not allowed by configuration
   [255]
   $ hg book other -r ".^"
-  abort:  bookmark 'other' not allowed by configuration
+  abort: bookmark 'other' not allowed by configuration
   [255]
   $ hg book foo
   $ hg book -m foo stable
-  abort:  bookmark 'stable' not allowed by configuration
+  abort: bookmark 'stable' not allowed by configuration
   [255]
+  $ hg book -d notdeleted
 
 Test push to renamed dest
   $ hg push remote
