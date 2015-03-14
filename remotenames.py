@@ -220,6 +220,8 @@ def expaths(orig, ui, repo, *args, **opts):
             if not (foundpaths and line.strip().startswith(delete)):
                 f.write(line)
         f.close()
+        saveremotenames(repo, delete)
+        writedistance(repo)
         return
 
     if add:
