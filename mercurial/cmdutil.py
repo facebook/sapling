@@ -1115,7 +1115,7 @@ class changeset_printer(object):
         else:
             hexfunc = short
 
-        parents = [(p, hexfunc(log.node(p)))
+        parents = [self.repo[p]
                    for p in self._meaningful_parentrevs(log, rev)]
 
         # i18n: column positioning for "hg log"
@@ -1145,10 +1145,11 @@ class changeset_printer(object):
             # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
                           label='log.phase')
-        for parent in parents:
-            label = 'log.parent changeset.%s' % self.repo[parent[0]].phasestr()
+        for pctx in parents:
+            label = 'log.parent changeset.%s' % pctx.phasestr()
             # i18n: column positioning for "hg log"
-            self.ui.write(_("parent:      %d:%s\n") % parent,
+            self.ui.write(_("parent:      %d:%s\n")
+                          % (pctx.rev(), hexfunc(pctx.node())),
                           label=label)
 
         if self.ui.debugflag:
