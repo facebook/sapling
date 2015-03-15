@@ -6248,7 +6248,7 @@ def tag(ui, repo, name1, *names, **opts):
                         raise util.Abort(_("tag '%s' is not a global tag") % n)
                     else:
                         raise util.Abort(_("tag '%s' is not a local tag") % n)
-            rev_ = nullid
+            rev_ = 'null'
             if not message:
                 # we don't translate commit messages
                 message = 'Removed tag %s' % ', '.join(names)
