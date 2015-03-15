@@ -101,19 +101,18 @@ def findrenames(repo, added, removed, threshold):
     # Zero length files will be frequently unrelated to each other, and
     # tracking the deletion/addition of such a file will probably cause more
     # harm than good. We strip them out here to avoid matching them later on.
-    addedfiles = set([workingctx[fp] for fp in added
-            if workingctx[fp].size() > 0])
-    removedfiles = set([parentctx[fp] for fp in removed
-            if fp in parentctx and parentctx[fp].size() > 0])
+    addedfiles = [workingctx[fp] for fp in sorted(added)
+                  if workingctx[fp].size() > 0]
+    removedfiles = [parentctx[fp] for fp in sorted(removed)
+                    if fp in parentctx and parentctx[fp].size() > 0]
 
     # Find exact matches.
-    for (a, b) in _findexactmatches(repo,
-            sorted(addedfiles), sorted(removedfiles)):
+    for (a, b) in _findexactmatches(repo, addedfiles[:], removedfiles):
         addedfiles.remove(b)
         yield (a.path(), b.path(), 1.0)
 
     # If the user requested similar files to be matched, search for them also.
     if threshold < 1.0:
-        for (a, b, score) in _findsimilarmatches(repo,
-                sorted(addedfiles), sorted(removedfiles), threshold):
+        for (a, b, score) in _findsimilarmatches(repo, addedfiles,
+                                                 removedfiles, threshold):
             yield (a.path(), b.path(), score)

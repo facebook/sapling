@@ -55,6 +55,78 @@ comparing two empty files caused ZeroDivisionError in the past
 
   $ hg commit -m B
 
+should be sorted by path for stable result
+
+  $ for i in `python $TESTDIR/seq.py 0 9`; do
+  >     cp small-file $i
+  > done
+  $ rm small-file
+  $ hg addremove
+  adding 0
+  adding 1
+  adding 2
+  adding 3
+  adding 4
+  adding 5
+  adding 6
+  adding 7
+  adding 8
+  adding 9
+  removing small-file
+  recording removal of small-file as rename to 0 (100% similar)
+  recording removal of small-file as rename to 1 (100% similar)
+  recording removal of small-file as rename to 2 (100% similar)
+  recording removal of small-file as rename to 3 (100% similar)
+  recording removal of small-file as rename to 4 (100% similar)
+  recording removal of small-file as rename to 5 (100% similar)
+  recording removal of small-file as rename to 6 (100% similar)
+  recording removal of small-file as rename to 7 (100% similar)
+  recording removal of small-file as rename to 8 (100% similar)
+  recording removal of small-file as rename to 9 (100% similar)
+  $ hg commit -m '10 same files'
+
+pick one from many identical files
+
+  $ cp 0 a
+  $ rm `python $TESTDIR/seq.py 0 9`
+  $ hg addremove
+  removing 0
+  removing 1
+  removing 2
+  removing 3
+  removing 4
+  removing 5
+  removing 6
+  removing 7
+  removing 8
+  removing 9
+  adding a
+  recording removal of 9 as rename to a (100% similar)
+  $ hg revert -aq
+
+pick one from many similar files
+
+  $ cp 0 a
+  $ for i in `python $TESTDIR/seq.py 0 9`; do
+  >     echo $i >> $i
+  > done
+  $ hg commit -m 'make them slightly different'
+  $ rm `python $TESTDIR/seq.py 0 9`
+  $ hg addremove -s50
+  removing 0
+  removing 1
+  removing 2
+  removing 3
+  removing 4
+  removing 5
+  removing 6
+  removing 7
+  removing 8
+  removing 9
+  adding a
+  recording removal of 9 as rename to a (99% similar)
+  $ hg commit -m 'always the same file should be selected'
+
 should all fail
 
   $ hg addremove -s foo
