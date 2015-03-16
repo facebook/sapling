@@ -100,8 +100,7 @@ trivial
     ('symbol', '0')
     ('symbol', '1'))
   * set:
-  <filteredset
-    <spanset+ 0:1>>
+  <spanset+ 0:1>
   0
   1
   $ try 3::6
@@ -109,8 +108,7 @@ trivial
     ('symbol', '3')
     ('symbol', '6'))
   * set:
-  <filteredset
-    <baseset [3, 5, 6]>>
+  <baseset [3, 5, 6]>
   3
   5
   6

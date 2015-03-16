@@ -2718,6 +2718,8 @@ class abstractsmartset(object):
         """Returns a new object with the intersection of the two collections.
 
         This is part of the mandatory API for smartset."""
+        if isinstance(other, fullreposet):
+            return self
         return self.filter(other.__contains__, cache=False)
 
     def __add__(self, other):
