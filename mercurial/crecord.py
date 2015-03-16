@@ -877,13 +877,8 @@ class curseschunkselector(object):
         width = self.xscreensize
         # turn tabs into spaces
         instr = instr.expandtabs(4)
-        try:
-            strlen = len(unicode(encoding.fromlocal(instr), code))
-        except Exception:
-            # if text is not utf8, then assume an 8-bit single-byte encoding.
-            strlen = len(instr)
-
-        numspaces = (width - ((strlen + xstart) % width) - 1)
+        strwidth = encoding.ucolwidth(instr)
+        numspaces = (width - ((strwidth + xstart) % width) - 1)
         return instr + " " * numspaces + "\n"
 
     def printstring(self, window, text, fgcolor=None, bgcolor=None, pair=None,
