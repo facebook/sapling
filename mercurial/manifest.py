@@ -506,7 +506,12 @@ class treemanifest(object):
         return self._alldirs
 
     def hasdir(self, dir):
-        return dir in self._alldirs
+        topdir, subdir = _splittopdir(dir)
+        if topdir:
+            if topdir in self._dirs:
+                return self._dirs[topdir].hasdir(subdir)
+            return False
+        return (dir + '/') in self._dirs
 
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''
