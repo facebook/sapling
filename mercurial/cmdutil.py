@@ -21,6 +21,19 @@ import crecord as crecordmod
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
+def setupwrapcolorwrite(ui):
+    # wrap ui.write so diff output can be labeled/colorized
+    def wrapwrite(orig, *args, **kw):
+        label = kw.pop('label', '')
+        for chunk, l in patch.difflabel(lambda: args):
+            orig(chunk, label=label + l)
+
+    oldwrite = ui.write
+    def wrap(*args, **kwargs):
+        return wrapwrite(oldwrite, *args, **kwargs)
+    setattr(ui, 'write', wrap)
+    return oldwrite
+
 def recordfilter(ui, originalhunks):
     usecurses =  ui.configbool('experimental', 'crecord', False)
     if usecurses:
@@ -189,17 +202,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             except OSError:
                 pass
 
-    # wrap ui.write so diff output can be labeled/colorized
-    def wrapwrite(orig, *args, **kw):
-        label = kw.pop('label', '')
-        for chunk, l in patch.difflabel(lambda: args):
-            orig(chunk, label=label + l)
-
-    oldwrite = ui.write
-    def wrap(*args, **kwargs):
-        return wrapwrite(oldwrite, *args, **kwargs)
-    setattr(ui, 'write', wrap)
-
+    oldwrite = setupwrapcolorwrite(ui)
     try:
         return commit(ui, repo, recordfunc, pats, opts)
     finally:
