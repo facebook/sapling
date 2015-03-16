@@ -31,7 +31,7 @@ except NameError:
         _('the python curses/wcurses module is not available/installed'))
 
 
-orig_stdout = sys.__stdout__ # used by gethw()
+_origstdout = sys.__stdout__ # used by gethw()
 
 
 
@@ -467,7 +467,7 @@ def gethw():
 
     """
     h, w = struct.unpack(
-        "hhhh", fcntl.ioctl(orig_stdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
+        "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
     return h, w
 
 
