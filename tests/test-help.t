@@ -245,6 +245,7 @@ Test extension help:
        acl           hooks for controlling repository access
        blackbox      log repository events to a blackbox for debugging
        bugzilla      hooks for integrating with the Bugzilla bug tracker
+       censor        erase file content at a given revision
        churn         command to display statistics about repository history
        color         colorize output from some commands
        convert       import revisions from foreign VCS repositories into
