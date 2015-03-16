@@ -17,6 +17,7 @@ import os, re, sys, fcntl, struct, termios, signal, tempfile, locale, cStringIO
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
 locale.setlocale(locale.LC_ALL, '')
+
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
 if os.name == 'posix':
     import curses
@@ -30,10 +31,7 @@ except NameError:
     raise util.Abort(
         _('the python curses/wcurses module is not available/installed'))
 
-
 _origstdout = sys.__stdout__ # used by gethw()
-
-
 
 class patchnode(object):
     """abstract class for patch graph nodes
@@ -455,8 +453,6 @@ def filterpatch(ui, chunks, chunk_selector):
 
     return appliedhunklist
 
-
-
 def gethw():
     """
     magically get the current height and width of the window (without initscr)
@@ -469,7 +465,6 @@ def gethw():
     h, w = struct.unpack(
         "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
     return h, w
-
 
 def chunkselector(headerlist, ui):
     """
