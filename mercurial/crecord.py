@@ -8,18 +8,9 @@
 # This code is based on the Mark Edgington's crecord extension.
 # (Itself based on Bryan O'Sullivan's record extension.)
 
-from mercurial.i18n import _
-
-from mercurial import patch as patchmod
-from mercurial import util
-from mercurial import demandimport
-demandimport.ignore.append('mercurial.encoding')
-try:
-    import mercurial.encoding as encoding
-    code = encoding.encoding
-except ImportError:
-    encoding = util
-    code = encoding._encoding
+from i18n import _
+import patch as patchmod
+import util, encoding
 
 import os
 import re
