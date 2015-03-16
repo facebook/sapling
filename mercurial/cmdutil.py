@@ -50,7 +50,11 @@ def filterchunks(ui, originalhunks, usecurses, testfile):
 def recordfilter(ui, originalhunks):
     usecurses =  ui.configbool('experimental', 'crecord', False)
     testfile = ui.config('experimental', 'crecordtest', None)
-    newchunks = filterchunks(ui, originalhunks, usecurses, testfile)
+    oldwrite = setupwrapcolorwrite(ui)
+    try:
+        newchunks = filterchunks(ui, originalhunks, usecurses, testfile)
+    finally:
+        ui.write = oldwrite
     return newchunks
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
@@ -206,12 +210,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             except OSError:
                 pass
 
-    oldwrite = setupwrapcolorwrite(ui)
-    try:
-        return commit(ui, repo, recordfunc, pats, opts)
-    finally:
-        ui.write = oldwrite
-
+    return commit(ui, repo, recordfunc, pats, opts)
 
 def findpossible(cmd, table, strict=False):
     """
