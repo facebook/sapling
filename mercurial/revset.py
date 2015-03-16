@@ -2836,6 +2836,10 @@ class baseset(abstractsmartset):
                 return self._asclist[0]
         return None
 
+    def __repr__(self):
+        d = {None: '', False: '-', True: '+'}[self._ascending]
+        return '<%s%s %r>' % (type(self).__name__, d, self._list)
+
 class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
@@ -2919,6 +2923,9 @@ class filteredset(abstractsmartset):
         for x in it():
             return x
         return None
+
+    def __repr__(self):
+        return '<%s %r>' % (type(self).__name__, self._subset)
 
 class addset(abstractsmartset):
     """Represent the addition of two sets
@@ -3093,6 +3100,10 @@ class addset(abstractsmartset):
         self.reverse()
         return val
 
+    def __repr__(self):
+        d = {None: '', False: '-', True: '+'}[self._ascending]
+        return '<%s%s %r, %r>' % (type(self).__name__, d, self._r1, self._r2)
+
 class generatorset(abstractsmartset):
     """Wrap a generator for lazy iteration
 
@@ -3262,6 +3273,10 @@ class generatorset(abstractsmartset):
             return it().next()
         return None
 
+    def __repr__(self):
+        d = {False: '-', True: '+'}[self._ascending]
+        return '<%s%s>' % (type(self).__name__, d)
+
 class spanset(abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
@@ -3365,6 +3380,11 @@ class spanset(abstractsmartset):
         for x in it():
             return x
         return None
+
+    def __repr__(self):
+        d = {False: '-', True: '+'}[self._ascending]
+        return '<%s%s %d:%d>' % (type(self).__name__, d,
+                                 self._start, self._end - 1)
 
 class fullreposet(spanset):
     """a set containing all revisions in the repo
