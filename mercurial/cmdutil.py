@@ -34,10 +34,8 @@ def setupwrapcolorwrite(ui):
     setattr(ui, 'write', wrap)
     return oldwrite
 
-def recordfilter(ui, originalhunks):
-    usecurses =  ui.configbool('experimental', 'crecord', False)
+def filterchunks(ui, originalhunks, usecurses, testfile):
     if usecurses:
-        testfile = ui.config('experimental', 'crecordtest', None)
         if testfile:
             recordfn = crecordmod.testdecorator(testfile,
                                                 crecordmod.testchunkselector)
@@ -48,6 +46,12 @@ def recordfilter(ui, originalhunks):
 
     else:
         return patch.filterpatch(ui, originalhunks)
+
+def recordfilter(ui, originalhunks):
+    usecurses =  ui.configbool('experimental', 'crecord', False)
+    testfile = ui.config('experimental', 'crecordtest', None)
+    newchunks = filterchunks(ui, originalhunks, usecurses, testfile)
+    return newchunks
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
