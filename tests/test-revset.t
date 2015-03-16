@@ -93,31 +93,83 @@
   $ echo "[paths]" >> .hg/hgrc
   $ echo "default = ../remote1" >> .hg/hgrc
 
+trivial
+
+  $ try 0:1
+  (range
+    ('symbol', '0')
+    ('symbol', '1'))
+  * set:
+  <filteredset
+    <spanset+ 0:1>>
+  0
+  1
+  $ try 3::6
+  (dagrange
+    ('symbol', '3')
+    ('symbol', '6'))
+  * set:
+  <filteredset
+    <baseset [3, 5, 6]>>
+  3
+  5
+  6
+  $ try '0|1|2'
+  (or
+    (or
+      ('symbol', '0')
+      ('symbol', '1'))
+    ('symbol', '2'))
+  * set:
+  <addset
+    <addset
+      <baseset [0]>,
+      <baseset [1]>>,
+    <baseset [2]>>
+  0
+  1
+  2
+
 names that should work without quoting
 
   $ try a
   ('symbol', 'a')
+  * set:
+  <baseset [0]>
   0
   $ try b-a
   (minus
     ('symbol', 'b')
     ('symbol', 'a'))
+  * set:
+  <filteredset
+    <baseset [1]>>
   1
   $ try _a_b_c_
   ('symbol', '_a_b_c_')
+  * set:
+  <baseset [6]>
   6
   $ try _a_b_c_-a
   (minus
     ('symbol', '_a_b_c_')
     ('symbol', 'a'))
+  * set:
+  <filteredset
+    <baseset [6]>>
   6
   $ try .a.b.c.
   ('symbol', '.a.b.c.')
+  * set:
+  <baseset [7]>
   7
   $ try .a.b.c.-a
   (minus
     ('symbol', '.a.b.c.')
     ('symbol', 'a'))
+  * set:
+  <filteredset
+    <baseset [7]>>
   7
   $ try -- '-a-b-c-' # complains
   hg: parse error at 7: not a prefix: end
@@ -139,6 +191,8 @@ names that should work without quoting
   [255]
   $ try é
   ('symbol', '\xc3\xa9')
+  * set:
+  <baseset [9]>
   9
 
 no quoting needed
@@ -154,6 +208,9 @@ quoting needed
   (minus
     ('string', '-a-b-c-')
     ('symbol', 'a'))
+  * set:
+  <filteredset
+    <baseset [4]>>
   4
 
   $ log '1 or 2'
@@ -170,6 +227,10 @@ quoting needed
       ('symbol', '1')
       ('symbol', '2'))
     ('symbol', '3'))
+  * set:
+  <addset
+    <baseset []>,
+    <baseset [3]>>
   3
   $ try '1|2&3'
   (or
@@ -177,6 +238,10 @@ quoting needed
     (and
       ('symbol', '2')
       ('symbol', '3')))
+  * set:
+  <addset
+    <baseset [1]>,
+    <baseset []>>
   1
   $ try '1&2&3' # associativity
   (and
@@ -184,6 +249,8 @@ quoting needed
       ('symbol', '1')
       ('symbol', '2'))
     ('symbol', '3'))
+  * set:
+  <baseset []>
   $ try '1|(2|3)'
   (or
     ('symbol', '1')
@@ -191,6 +258,12 @@ quoting needed
       (or
         ('symbol', '2')
         ('symbol', '3'))))
+  * set:
+  <addset
+    <baseset [1]>,
+    <addset
+      <baseset [2]>,
+      <baseset [3]>>>
   1
   2
   3
@@ -325,10 +398,16 @@ ancestor can accept 0 or more arguments
   (func
     ('symbol', 'grep')
     ('string', '\x08issue\\d+'))
+  * set:
+  <filteredset
+    <fullreposet+ 0:9>>
   $ try 'grep(r"\bissue\d+")'
   (func
     ('symbol', 'grep')
     ('string', '\\bissue\\d+'))
+  * set:
+  <filteredset
+    <fullreposet+ 0:9>>
   6
   $ try 'grep(r"\")'
   hg: parse error at 7: unterminated string
@@ -691,6 +770,8 @@ check that conversion to only works
     (list
       ('symbol', '3')
       ('symbol', '1')))
+  * set:
+  <baseset+ [3]>
   3
   $ try --optimize 'ancestors(1) - ancestors(3)'
   (minus
@@ -706,6 +787,8 @@ check that conversion to only works
     (list
       ('symbol', '1')
       ('symbol', '3')))
+  * set:
+  <baseset+ []>
   $ try --optimize 'not ::2 and ::6'
   (and
     (not
@@ -719,6 +802,8 @@ check that conversion to only works
     (list
       ('symbol', '6')
       ('symbol', '2')))
+  * set:
+  <baseset+ [3, 4, 5, 6]>
   3
   4
   5
@@ -738,6 +823,8 @@ check that conversion to only works
     (list
       ('symbol', '6')
       ('symbol', '4')))
+  * set:
+  <baseset+ [3, 5, 6]>
   3
   5
   6
@@ -974,6 +1061,9 @@ aliases:
   (func
     ('symbol', 'merge')
     None)
+  * set:
+  <filteredset
+    <fullreposet+ 0:9>>
   6
 
 test alias recursion
@@ -985,6 +1075,11 @@ test alias recursion
     (func
       ('symbol', 'merge')
       None))
+  * set:
+  <addset+
+    <filteredset
+      <fullreposet+ 0:9>>,
+    <generatorset+>>
   6
   7
 
@@ -1014,6 +1109,12 @@ test infinite recursion
     (or
       ('symbol', '1')
       ('symbol', '2')))
+  * set:
+  <addset
+    <baseset [3]>,
+    <addset
+      <baseset [1]>,
+      <baseset [2]>>>
   3
   1
   2
@@ -1034,6 +1135,8 @@ test nesting and variable passing
     (range
       ('symbol', '2')
       ('symbol', '5')))
+  * set:
+  <baseset [5]>
   5
 
 test variable isolation, variable placeholders are rewritten as string
@@ -1070,17 +1173,23 @@ far away.
   ('symbol', 'tip')
   warning: failed to parse the definition of revset alias "anotherbadone": at 7: not a prefix: end
   warning: failed to parse the definition of revset alias "injectparamasstring2": unknown identifier: _aliasarg
+  * set:
+  <baseset [9]>
   9
   >>> data = file('.hg/hgrc', 'rb').read()
   >>> file('.hg/hgrc', 'wb').write(data.replace('_aliasarg', ''))
 
   $ try 'tip'
   ('symbol', 'tip')
+  * set:
+  <baseset [9]>
   9
 
   $ hg debugrevspec --debug --config revsetalias.'bad name'='tip' "tip"
   ('symbol', 'tip')
   warning: failed to parse the declaration of revset alias "bad name": at 4: invalid token
+  * set:
+  <baseset [9]>
   9
   $ echo 'strictreplacing($1, $10) = $10 or desc("$1")' >> .hg/hgrc
   $ try 'strictreplacing("foo", tip)'
@@ -1094,6 +1203,12 @@ far away.
     (func
       ('symbol', 'desc')
       ('string', '$1')))
+  * set:
+  <addset
+    <baseset [9]>,
+    <filteredset
+      <filteredset
+        <fullreposet+ 0:9>>>>
   9
 
   $ try 'd(2:5)'
@@ -1111,6 +1226,8 @@ far away.
           ('symbol', '2')
           ('symbol', '5'))
         ('symbol', 'date'))))
+  * set:
+  <baseset [4, 5, 3, 2]>
   4
   5
   3
@@ -1132,6 +1249,8 @@ far away.
           ('symbol', '2')
           ('symbol', '3'))
         ('symbol', 'date'))))
+  * set:
+  <baseset [3, 2]>
   3
   2
   $ try 'rs()'
@@ -1177,6 +1296,8 @@ far away.
           ('symbol', '2')
           ('symbol', '3'))
         ('symbol', 'date'))))
+  * set:
+  <baseset [3, 2]>
   3
   2
 
@@ -1317,6 +1438,8 @@ tests for concatenation of strings/symbols by "##"
       ('symbol', '1ee'))
     ('string', 'ce5'))
   ('string', '2785f51eece5')
+  * set:
+  <baseset [0]>
   0
 
   $ echo 'cat4($1, $2, $3, $4) = $1 ## $2 ## $3 ## $4' >> .hg/hgrc
@@ -1338,6 +1461,8 @@ tests for concatenation of strings/symbols by "##"
       ('symbol', '1ee'))
     ('string', 'ce5'))
   ('string', '2785f51eece5')
+  * set:
+  <baseset [0]>
   0
 
 (check concatenation in alias nesting)

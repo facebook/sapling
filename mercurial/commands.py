@@ -2929,7 +2929,10 @@ def debugrevspec(ui, repo, expr, **opts):
             weight, optimizedtree = revset.optimize(newtree, True)
             ui.note("* optimized:\n", revset.prettyformat(optimizedtree), "\n")
     func = revset.match(ui, expr)
-    for c in func(repo):
+    revs = func(repo)
+    if ui.verbose:
+        ui.note("* set:\n", revset.prettyformatset(revs), "\n")
+    for c in revs:
         ui.write("%s\n" % c)
 
 @command('debugsetparents', [], _('REV1 [REV2]'))

@@ -16,14 +16,20 @@
   (func
     ('symbol', 'p1')
     None)
+  * set:
+  <baseset []>
   $ try 'p2()'
   (func
     ('symbol', 'p2')
     None)
+  * set:
+  <baseset []>
   $ try 'parents()'
   (func
     ('symbol', 'parents')
     None)
+  * set:
+  <baseset+ []>
 
 null revision
   $ log 'p1()'
