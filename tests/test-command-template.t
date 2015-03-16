@@ -104,6 +104,10 @@ Default style is like normal output:
   $ hg log -v --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
 
+  $ hg log -q > log.out
+  $ hg log -q --style default > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+
   $ hg log --debug > log.out
   $ hg log --debug --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
@@ -121,6 +125,9 @@ Default style should also preserve color information (issue2866):
   $ cmp log.out style.out || diff -u log.out style.out
   $ hg --color=debug -v log > log.out
   $ hg --color=debug -v log --style default > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug -q log > log.out
+  $ hg --color=debug -q log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
   $ hg --color=debug --debug log > log.out
   $ hg --color=debug --debug log --style default > style.out
