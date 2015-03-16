@@ -50,7 +50,7 @@ the second head H2, and so on
 
 Verify target contents before censorship at each revision
 
-  $ hg cat -r 3 target
+  $ hg cat -r $H1 target
   Tainted file is now sanitized
   $ hg cat -r $H2 target
   Tainted file now super sanitized
@@ -73,7 +73,7 @@ Try to censor revision with too large of a tombstone message
 Censor revision with 2 offenses
 
   $ hg censor -r $C2 -t "remove password" target
-  $ hg cat -r 3 target
+  $ hg cat -r $H1 target
   Tainted file is now sanitized
   $ hg cat -r $H2 target
   Tainted file now super sanitized
@@ -90,7 +90,7 @@ Censor revision with 2 offenses
 Censor revision with 1 offense
 
   $ hg censor -r $C1 target
-  $ hg cat -r 3 target
+  $ hg cat -r $H1 target
   Tainted file is now sanitized
   $ hg cat -r $H2 target
   Tainted file now super sanitized
@@ -136,7 +136,7 @@ Can only checkout target at uncensored revisions, -X is workaround for --all
 
 Uncensored file can be viewed at any revision
 
-  $ hg cat -r 3 bystander
+  $ hg cat -r $H1 bystander
   Normal file v2
   $ hg cat -r $C2 bystander
   Normal file v2
@@ -147,7 +147,7 @@ Uncensored file can be viewed at any revision
 
 Can update to children of censored revision
 
-  $ hg update -r 3
+  $ hg update -r $H1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat target
   Tainted file is now sanitized
@@ -313,3 +313,168 @@ Can censor after revlog has expanded to no longer permit inline storage
   $ hg cat -r $C5 target
   $ hg cat -r $H2 target
   fresh start
+
+Repo with censored nodes can be cloned and cloned nodes are censored
+
+  $ cd ..
+  $ hg clone r rclone
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd rclone
+  $ hg cat -r $H1 target
+  advanced head H1
+  $ hg cat -r $H2~5 target
+  Tainted file now super sanitized
+  $ hg cat -r $C2 target
+  $ hg cat -r $C1 target
+  $ hg cat -r 0 target
+  Initially untainted file
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 12 changesets, 13 total revisions
+
+Repo cloned before tainted content introduced can pull censored nodes
+
+  $ cd ../rpull
+  $ hg cat -r tip target
+  Initially untainted file
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 1 changesets, 2 total revisions
+  $ hg pull -r $H1 -r $H2
+  pulling from $TESTTMP/r (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 11 changesets with 11 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg update 4
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat target
+  Tainted file now super sanitized
+  $ hg cat -r $H1 target
+  advanced head H1
+  $ hg cat -r $H2~5 target
+  Tainted file now super sanitized
+  $ hg cat -r $C2 target
+  $ hg cat -r $C1 target
+  $ hg cat -r 0 target
+  Initially untainted file
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 12 changesets, 13 total revisions
+
+Censored nodes can be pushed if they censor previously unexchanged nodes
+
+  $ echo 'Passwords: hunter2hunter2' > target
+  $ hg ci -m 're-add password from clone' target
+  created new head
+  $ H3=`hg id --debug -i`
+  $ REV=$H3
+  $ echo 'Re-sanitized; nothing to see here' > target
+  $ hg ci -m 're-sanitized' target
+  $ H2=`hg id --debug -i`
+  $ CLEANREV=$H2
+  $ hg cat -r $REV target
+  Passwords: hunter2hunter2
+  $ hg censor -r $REV target
+  $ hg cat -r $REV target
+  $ hg cat -r $CLEANREV target
+  Re-sanitized; nothing to see here
+  $ hg push -f -r $H2
+  pushing to $TESTTMP/r (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files (+1 heads)
+
+  $ cd ../r
+  $ hg cat -r $REV target
+  $ hg cat -r $CLEANREV target
+  Re-sanitized; nothing to see here
+  $ hg update $CLEANREV
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat target
+  Re-sanitized; nothing to see here
+
+Censored nodes can be bundled up and unbundled in another repo
+
+  $ hg bundle --base 0 ../pwbundle
+  13 changesets found
+  $ cd ../rclone
+  $ hg unbundle ../pwbundle
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg cat -r $REV target
+  $ hg cat -r $CLEANREV target
+  Re-sanitized; nothing to see here
+  $ hg update $CLEANREV
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat target
+  Re-sanitized; nothing to see here
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 14 changesets, 15 total revisions
+
+Censored nodes can be imported on top of censored nodes, consecutively
+
+  $ hg init ../rimport
+  $ hg bundle --base 1 ../rimport/splitbundle
+  12 changesets found
+  $ cd ../rimport
+  $ hg pull -r $H1 -r $H2 ../r
+  pulling from ../r
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 10 changes to 2 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg unbundle splitbundle
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 5 changes to 2 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg update $H2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat target
+  Re-sanitized; nothing to see here
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 14 changesets, 15 total revisions
+  $ cd ../r
+
+Can import bundle where first revision of a file is censored
+
+  $ hg init ../rinit
+  $ hg censor -r 0 target
+  $ hg bundle -r 0 --base null ../rinit/initbundle
+  1 changesets found
+  $ cd ../rinit
+  $ hg unbundle initbundle
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
+  $ hg cat -r 0 target
