@@ -12,16 +12,8 @@ from i18n import _
 import patch as patchmod
 import util, encoding
 
-import os
-import re
-import sys
-import fcntl
-import struct
-import termios
-import signal
-import tempfile
-import locale
-import cStringIO
+import os, re, sys, fcntl, struct, termios, signal, tempfile, locale, cStringIO
+
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
 locale.setlocale(locale.LC_ALL, '')
