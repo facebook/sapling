@@ -3018,8 +3018,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         if not opts.get('dry_run'):
             needdata = ('revert', 'add', 'undelete')
             _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
-
-            _performrevert(repo, parents, ctx, actions)
+            interactive = opts.get('interactive', False)
+            _performrevert(repo, parents, ctx, actions, interactive)
 
         # get the list of subrepos that must be reverted
         subrepomatch = scmutil.match(ctx, pats, opts)
@@ -3036,7 +3036,7 @@ def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
     pass
 
-def _performrevert(repo, parents, ctx, actions):
+def _performrevert(repo, parents, ctx, actions, interactive=False):
     """function that actually perform all the actions computed for revert
 
     This is an independent function to let extension to plug in and react to
@@ -3070,10 +3070,40 @@ def _performrevert(repo, parents, ctx, actions):
             normal = repo.dirstate.normallookup
         else:
             normal = repo.dirstate.normal
-    for f in actions['revert'][0]:
-        checkout(f)
-        if normal:
-            normal(f)
+
+    if interactive:
+        # Prompt the user for changes to revert
+        torevert = [repo.wjoin(f) for f in actions['revert'][0]]
+        m = scmutil.match(ctx, torevert, {})
+        diff = patch.diff(repo, None, ctx.node(), m)
+        originalchunks = patch.parsepatch(diff)
+        try:
+            chunks = recordfilter(repo.ui, originalchunks)
+        except patch.PatchError, err:
+            raise util.Abort(_('error parsing patch: %s') % err)
+
+        # Apply changes
+        fp = cStringIO.StringIO()
+        for c in chunks:
+            c.write(fp)
+        dopatch = fp.tell()
+        fp.seek(0)
+        if dopatch:
+            try:
+                patch.internalpatch(repo.ui, repo, fp, 1, eolmode=None)
+            except patch.PatchError, err:
+                raise util.Abort(str(err))
+        del fp
+
+        for f in actions['revert'][0]:
+            if normal:
+                normal(f)
+
+    else:
+        for f in actions['revert'][0]:
+            checkout(f)
+            if normal:
+                normal(f)
 
     for f in actions['add'][0]:
         checkout(f)
