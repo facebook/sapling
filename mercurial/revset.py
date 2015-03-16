@@ -1481,7 +1481,7 @@ def parents(repo, subset, x):
         up = ps.update
         parentrevs = cl.parentrevs
         for r in getset(repo, fullreposet(repo), x):
-            if r is None:
+            if r == node.wdirrev:
                 up(p.rev() for p in repo[r].parents())
             else:
                 up(parentrevs(r))
@@ -1986,8 +1986,8 @@ def user(repo, subset, x):
 def wdir(repo, subset, x):
     # i18n: "wdir" is a keyword
     getargs(x, 0, 0, _("wdir takes no arguments"))
-    if None in subset or isinstance(subset, fullreposet):
-        return baseset([None])
+    if node.wdirrev in subset or isinstance(subset, fullreposet):
+        return baseset([node.wdirrev])
     return baseset()
 
 # for internal use

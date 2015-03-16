@@ -721,11 +721,19 @@ BROKEN: should be '-1'
 
 Test working-directory revision
   $ hg debugrevspec 'wdir()'
-  None
+  2147483647
   $ hg debugrevspec 'tip or wdir()'
   9
-  None
+  2147483647
   $ hg debugrevspec '0:tip and wdir()'
+  $ log '(all() + wdir()) & min(. + wdir())'
+  9
+  $ log '(all() + wdir()) & max(. + wdir())'
+  2147483647
+  $ log '(all() + wdir()) & first(wdir() + .)'
+  2147483647
+  $ log '(all() + wdir()) & last(. + wdir())'
+  2147483647
 
   $ log 'outgoing()'
   8

@@ -2392,4 +2392,12 @@ should not draw line down to null due to the magic of fullreposet
      summary:     add a
   
 
+working-directory revision
+
+  $ hg log -G -qr '. + wdir()'
+  o  2147483647:ffffffffffff
+  |
+  @  3:5918b8d165d1
+  |
+
   $ cd ..
