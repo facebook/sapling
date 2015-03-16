@@ -419,7 +419,7 @@ class uihunk(patchnode):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
-def filterpatch(ui, chunks, chunk_selector):
+def filterpatch(ui, chunks, chunkselector):
     """interactively filter patch chunks into applied-only chunks"""
 
     chunks = list(chunks)
@@ -433,7 +433,7 @@ def filterpatch(ui, chunks, chunk_selector):
     uiheaders = [uiheader(h) for h in headers]
     # let user choose headers/hunks/lines, and mark their applied flags
     # accordingly
-    chunk_selector(uiheaders, ui)
+    chunkselector(uiheaders, ui)
     appliedhunklist = []
     for hdr in uiheaders:
         if (hdr.applied and
