@@ -643,7 +643,7 @@ def reposetup(ui, repo):
         # shrink keywords read from working dir
         self.lines = kwt.shrinklines(self.fname, self.lines)
 
-    def kw_diff(orig, repo, node1=None, node2=None, match=None, changes=None,
+    def kwdiff(orig, repo, node1=None, node2=None, match=None, changes=None,
                 opts=None, prefix=''):
         '''Monkeypatch patch.diff to avoid expansion.'''
         kwt.restrict = True
@@ -737,7 +737,7 @@ def reposetup(ui, repo):
 
     extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
-    extensions.wrapfunction(patch, 'diff', kw_diff)
+    extensions.wrapfunction(patch, 'diff', kwdiff)
     extensions.wrapfunction(cmdutil, 'amend', kw_amend)
     extensions.wrapfunction(cmdutil, 'copy', kw_copy)
     extensions.wrapfunction(cmdutil, 'dorecord', kw_dorecord)
