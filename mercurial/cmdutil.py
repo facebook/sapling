@@ -2436,7 +2436,7 @@ def commit(ui, repo, commitfunc, pats, opts):
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
     # amend will reuse the existing user if not specified, but the obsolete
     # marker creation requires that the current user's name is specified.
-    if obsolete._enabled:
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
         ui.username() # raise exception if username not set
 
     ui.note(_('amending changeset %s\n') % old)
