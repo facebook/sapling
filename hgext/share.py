@@ -15,7 +15,7 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 @command('share',
-    [('U', 'noupdate', None, _('do not create a working copy')),
+    [('U', 'noupdate', None, _('do not create a working directory')),
      ('B', 'bookmarks', None, _('also share bookmarks'))],
     _('[-U] [-B] SOURCE [DEST]'),
     norepo=True)

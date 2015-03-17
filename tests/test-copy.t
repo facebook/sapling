@@ -138,7 +138,7 @@ should print a warning that this is not a real copy; foo is added
 moving a missing file
   $ rm foo
   $ hg mv foo foo3
-  foo: deleted in working copy
+  foo: deleted in working directory
   foo3 does not exist!
   $ hg up -qC .
 

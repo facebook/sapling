@@ -72,7 +72,7 @@ Short help:
    grep          search for a pattern in specified files and revisions
    heads         show branch heads
    help          show help for a given topic or a help overview
-   identify      identify the working copy or specified revision
+   identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
@@ -147,7 +147,7 @@ Short help:
    grep          search for a pattern in specified files and revisions
    heads         show branch heads
    help          show help for a given topic or a help overview
-   identify      identify the working copy or specified revision
+   identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
@@ -690,7 +690,7 @@ Test that default list of commands omits extension commands
    grep          search for a pattern in specified files and revisions
    heads         show branch heads
    help          show help for a given topic or a help overview
-   identify      identify the working copy or specified revision
+   identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
@@ -1656,7 +1656,7 @@ Dish up an empty repo; serve it cold.
   identify
   </a>
   </td><td>
-  identify the working copy or specified revision
+  identify the working directory or specified revision
   </td></tr>
   <tr><td>
   <a href="/help/import">

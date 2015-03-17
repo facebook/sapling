@@ -636,7 +636,7 @@ Make sure no one adds back a -b option:
    -f --force          force removal of changesets, discard uncommitted changes
                        (no backup)
       --no-backup      no backups
-   -k --keep           do not modify working copy during strip
+   -k --keep           do not modify working directory during strip
    -B --bookmark VALUE remove revs only reachable from given bookmark
       --mq             operate on patch repository
   

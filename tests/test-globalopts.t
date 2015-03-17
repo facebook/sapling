@@ -309,7 +309,7 @@ Testing -h/--help:
    grep          search for a pattern in specified files and revisions
    heads         show branch heads
    help          show help for a given topic or a help overview
-   identify      identify the working copy or specified revision
+   identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory
@@ -390,7 +390,7 @@ Testing -h/--help:
    grep          search for a pattern in specified files and revisions
    heads         show branch heads
    help          show help for a given topic or a help overview
-   identify      identify the working copy or specified revision
+   identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
    init          create a new repository in the given directory

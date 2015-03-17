@@ -1263,8 +1263,8 @@ def cat(ui, repo, file1, *pats, **opts):
     return cmdutil.cat(ui, repo, ctx, m, '', **opts)
 
 @command('^clone',
-    [('U', 'noupdate', None,
-     _('the clone will include an empty working copy (only a repository)')),
+    [('U', 'noupdate', None, _('the clone will include an empty working '
+                               'directory (only a repository)')),
     ('u', 'updaterev', '', _('revision, tag or branch to check out'), _('REV')),
     ('r', 'rev', [], _('include the specified changeset'), _('REV')),
     ('b', 'branch', [], _('clone only the specified branch'), _('BRANCH')),
@@ -2906,8 +2906,9 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     """manually set the parents of the current working directory
 
     This is useful for writing repository conversion tools, but should
-    be used with care. For example, neither the working copy nor the dirstate
-    is updated, so file status may be incorrect after running this command.
+    be used with care. For example, neither the working directory nor the
+    dirstate is updated, so file status may be incorrect after running this
+    command.
 
     Returns 0 on success.
     """
@@ -3234,7 +3235,7 @@ def files(ui, repo, *pats, **opts):
     removed files).
 
     If no patterns are given to match, this command prints the names
-    of all files under Mercurial control in the working copy.
+    of all files under Mercurial control in the working directory.
 
     .. container:: verbose
 
@@ -3920,7 +3921,7 @@ def help_(ui, name=None, **opts):
     optionalrepo=True)
 def identify(ui, repo, source=None, rev=None,
              num=None, id=None, branch=None, tags=None, bookmarks=None, **opts):
-    """identify the working copy or specified revision
+    """identify the working directory or specified revision
 
     Print a summary identifying the repository state at REV using one or
     two parent hash identifiers, followed by a "+" if the working

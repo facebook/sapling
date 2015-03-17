@@ -81,7 +81,8 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmark=None):
           ('', 'no-backup', None, _('no backups')),
           ('', 'nobackup', None, _('no backups (DEPRECATED)')),
           ('n', '', None, _('ignored  (DEPRECATED)')),
-          ('k', 'keep', None, _("do not modify working copy during strip")),
+          ('k', 'keep', None, _("do not modify working directory during "
+                                "strip")),
           ('B', 'bookmark', '', _("remove revs only reachable from given"
                                   " bookmark"))],
           _('hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV...'))

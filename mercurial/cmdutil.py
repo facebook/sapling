@@ -588,7 +588,7 @@ def copy(ui, repo, pats, opts, rename=False):
                 srcexists = True
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
-                    ui.warn(_('%s: deleted in working copy\n') % relsrc)
+                    ui.warn(_('%s: deleted in working directory\n') % relsrc)
                     srcexists = False
                 else:
                     ui.warn(_('%s: cannot copy - %s\n') %
