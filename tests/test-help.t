@@ -509,6 +509,7 @@ Test command without options
    -B --ignore-blank-lines  ignore changes whose lines are all blank
    -U --unified NUM         number of lines of context to show
       --stat                output diffstat-style summary of changes
+      --relative DIR        produce diffs relative to subdirectory
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories

@@ -69,4 +69,39 @@ Filename with spaces git diffstat:
    file with spaces |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
 
+diffstat within directories:
+
+  $ hg rm -f 'file with spaces'
+
+  $ mkdir dir1 dir2
+  $ echo new1 > dir1/new
+  $ echo new2 > dir2/new
+  $ hg add dir1/new dir2/new
+  $ hg diff --stat
+   dir1/new |  1 +
+   dir2/new |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+
+  $ hg diff --stat --relative dir1
+   new |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+  $ hg diff --stat --relative dir1 dir2
+  warning: dir2 not inside relative root dir1
+
+  $ hg diff --stat --relative dir1 -I dir1/old
+
+  $ cd dir1
+  $ hg diff --stat .
+   dir1/new |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  $ hg diff --stat --relative .
+   new |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+  $ hg diff --stat --relative ../dir1 ../dir2
+  warning: ../dir2 not inside relative root .
+
+  $ hg diff --stat --relative . -I old
+
   $ cd ..

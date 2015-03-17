@@ -44,4 +44,24 @@ inside beta
   @@ -0,0 +1,1 @@
   +2
 
+relative to beta
+
+  $ cd ..
+  $ hg diff --nodates --relative beta
+  diff -r 7d5ef1aea329 two
+  --- a/two
+  +++ b/two
+  @@ -0,0 +1,1 @@
+  +2
+
+inside beta
+
+  $ cd beta
+  $ hg diff --nodates --relative .
+  diff -r 7d5ef1aea329 two
+  --- a/two
+  +++ b/two
+  @@ -0,0 +1,1 @@
+  +2
+
   $ cd ..

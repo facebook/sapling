@@ -148,6 +148,7 @@ diffopts2 = [
     ('U', 'unified', '',
      _('number of lines of context to show'), _('NUM')),
     ('', 'stat', None, _('output diffstat-style summary of changes')),
+    ('', 'relative', '', _('produce diffs relative to subdirectory'), _('DIR')),
 ]
 
 mergetoolopts = [
@@ -3169,7 +3170,8 @@ def diff(ui, repo, *pats, **opts):
     diffopts = patch.diffallopts(ui, opts)
     m = scmutil.match(repo[node2], pats, opts)
     cmdutil.diffordiffstat(ui, repo, diffopts, node1, node2, m, stat=stat,
-                           listsubrepos=opts.get('subrepos'))
+                           listsubrepos=opts.get('subrepos'),
+                           relative=opts.get('relative'))
 
 @command('^export',
     [('o', 'output', '',
