@@ -182,6 +182,24 @@ divergent bookmarks
   $ hg bookmarks | grep '^   X' | grep -v ':000000000000'
      X                         1:9b140be10808
      X@foo                     2:0d2164f0ce0d
+
+(test that remotely diverged bookmarks are reused if they aren't changed)
+
+  $ hg bookmarks | grep '^   @'
+     @                         1:9b140be10808
+     @1                        2:0d2164f0ce0d
+     @foo                      2:0d2164f0ce0d
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  no changes found
+  warning: failed to assign numbered name to divergent bookmark X
+  divergent bookmark @ stored as @1
+  $ hg bookmarks | grep '^   @'
+     @                         1:9b140be10808
+     @1                        2:0d2164f0ce0d
+     @foo                      2:0d2164f0ce0d
+
   $ python $TESTTMP/seq.py 1 100 | while read i; do hg bookmarks -d "X@${i}"; done
   $ hg bookmarks -d "@1"
 

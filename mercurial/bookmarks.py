@@ -362,11 +362,14 @@ def compare(repo, srcmarks, dstmarks,
 
     return results
 
-def _diverge(ui, b, path, localmarks):
+def _diverge(ui, b, path, localmarks, remotenode):
     '''Return appropriate diverged bookmark for specified ``path``
 
     This returns None, if it is failed to assign any divergent
     bookmark name.
+
+    This reuses already existing one with "@number" suffix, if it
+    refers ``remotenode``.
     '''
     if b == '@':
         b = ''
@@ -383,7 +386,7 @@ def _diverge(ui, b, path, localmarks):
     # assign a unique "@number" suffix newly
     for x in range(1, 100):
         n = '%s@%d' % (b, x)
-        if n not in localmarks:
+        if n not in localmarks or localmarks[n] == remotenode:
             return n
 
     return None
@@ -417,9 +420,10 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
             changed.append((b, bin(scid), status,
                             _("importing bookmark %s\n") % (b)))
         else:
-            db = _diverge(ui, b, path, localmarks)
+            snode = bin(scid)
+            db = _diverge(ui, b, path, localmarks, snode)
             if db:
-                changed.append((db, bin(scid), warn,
+                changed.append((db, snode, warn,
                                 _("divergent bookmark %s stored as %s\n") %
                                 (b, db)))
             else:
