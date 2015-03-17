@@ -2226,6 +2226,12 @@ def _filepairs(ctx1, modified, added, removed, copy, opts):
 
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
+    '''given input data, generate a diff and yield it in blocks
+
+    If generating a diff would lose data like flags or binary data and
+    losedatafn is not None, it will be called.
+
+    prefix is added to every path in the diff output.'''
 
     def gitindex(text):
         if not text:
