@@ -1008,7 +1008,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
 def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                    changes=None, stat=False, fp=None, prefix='',
-                   listsubrepos=False):
+                   relative='', listsubrepos=False):
     '''show diff or diffstat.'''
     if fp is None:
         write = ui.write
@@ -1016,20 +1016,35 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         def write(s, **kw):
             fp.write(s)
 
+    if relative:
+        relroot = pathutil.canonpath(repo.root, repo.getcwd(), relative)
+    else:
+        relroot = ''
+    if relroot != '':
+        # XXX relative roots currently don't work if the root is within a
+        # subrepo
+        uirelroot = match.uipath(relroot)
+        relroot += '/'
+        for matchroot in match.files():
+            if not matchroot.startswith(relroot):
+                ui.warn(_('warning: %s not inside relative root %s\n') % (
+                    match.uipath(matchroot), uirelroot))
+
     if stat:
         diffopts = diffopts.copy(context=0)
         width = 80
         if not ui.plain():
             width = ui.termwidth()
         chunks = patch.diff(repo, node1, node2, match, changes, diffopts,
-                            prefix=prefix)
+                            prefix=prefix, relroot=relroot)
         for chunk, label in patch.diffstatui(util.iterlines(chunks),
                                              width=width,
                                              git=diffopts.git):
             write(chunk, label=label)
     else:
         for chunk, label in patch.diffui(repo, node1, node2, match,
-                                         changes, diffopts, prefix=prefix):
+                                         changes, diffopts, prefix=prefix,
+                                         relroot=relroot):
             write(chunk, label=label)
 
     if listsubrepos:
