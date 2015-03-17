@@ -370,13 +370,6 @@ def _diverge(ui, b, path, localmarks):
     '''
     if b == '@':
         b = ''
-    # find a unique @ suffix
-    for x in range(1, 100):
-        n = '%s@%d' % (b, x)
-        if n not in localmarks:
-            break
-    else:
-        n = None
     # try to use an @pathalias suffix
     # if an @pathalias already exists, we overwrite (update) it
     if path.startswith("file:"):
@@ -385,8 +378,15 @@ def _diverge(ui, b, path, localmarks):
         if u.startswith("file:"):
             u = util.url(u).path
         if path == u:
-            n = '%s@%s' % (b, p)
-    return n
+            return '%s@%s' % (b, p)
+
+    # assign a unique "@number" suffix newly
+    for x in range(1, 100):
+        n = '%s@%d' % (b, x)
+        if n not in localmarks:
+            return n
+
+    return None
 
 def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
     ui.debug("checking for updated bookmarks\n")
