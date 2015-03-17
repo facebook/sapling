@@ -2059,7 +2059,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
     return mdiff.diffopts(**buildopts)
 
 def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
-         losedatafn=None, prefix=''):
+         losedatafn=None, prefix='', relroot=''):
     '''yields diff of changes to files between two nodes, or node and
     working directory.
 
@@ -2076,7 +2076,9 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     prefix is a filename prefix that is prepended to all filenames on
     display (used for subrepos).
-    '''
+
+    relroot, if not empty, must be normalized with a trailing /. Any match
+    patterns that fall outside it will be ignored.'''
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -2120,9 +2122,23 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     if opts.git or opts.upgrade:
         copy = copies.pathcopies(ctx1, ctx2)
 
+    if relroot is not None:
+        # XXX this would ideally be done in the matcher, but that is generally
+        # meant to 'or' patterns, not 'and' them. In this case we need to 'and'
+        # all the patterns from the matcher with relroot.
+        def filterrel(l):
+            return [f for f in l if f.startswith(relroot)]
+        modified = filterrel(modified)
+        added = filterrel(added)
+        removed = filterrel(removed)
+        # filter out copies where either side isn't inside the relative root
+        copy = dict(((dst, src) for (dst, src) in copy.iteritems()
+                     if dst.startswith(relroot)
+                     and src.startswith(relroot)))
+
     def difffn(opts, losedata):
         return trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
-                       copy, getfilectx, opts, losedata, prefix, '')
+                       copy, getfilectx, opts, losedata, prefix, relroot)
     if opts.upgrade and not opts.git:
         try:
             def losedata(fn):
