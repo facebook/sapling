@@ -254,7 +254,7 @@ def onetimeclientsetup(ui):
     def filectx(orig, self, path, fileid=None, filelog=None):
         if fileid is None:
             fileid = self.filenode(path)
-        if (shallowrepo.requirement in self._repo.requirements and 
+        if (shallowrepo.requirement in self._repo.requirements and
             self._repo.shallowmatch(path)):
             return remotefilectx.remotefilectx(self._repo, path,
                 fileid=fileid, changectx=self, filelog=filelog)
@@ -271,7 +271,7 @@ def onetimeclientsetup(ui):
 
     # prefetch required revisions before a diff
     def trydiff(orig, repo, revs, ctx1, ctx2, modified, added, removed,
-                copy, getfilectx, opts, losedatafn, prefix):
+                copy, getfilectx, *args, **kwargs):
         if shallowrepo.requirement in repo.requirements:
             prefetch = []
             mf1 = ctx1.manifest()
@@ -289,7 +289,7 @@ def onetimeclientsetup(ui):
             repo.fileservice.prefetch(prefetch)
 
         return orig(repo, revs, ctx1, ctx2, modified, added, removed,
-            copy, getfilectx, opts, losedatafn, prefix)
+            copy, getfilectx, *args, **kwargs)
     wrapfunction(patch, 'trydiff', trydiff)
 
     # Prevent verify from processing files
