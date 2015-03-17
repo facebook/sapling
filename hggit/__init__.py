@@ -17,6 +17,15 @@ Try hg clone git:// or hg clone git+ssh://
 For more information and instructions, see :hg:`help git`
 '''
 
+__version__ = '0.8.1'
+
+def getversion():
+    """return version with dependencies for hg --version -v"""
+    import dulwich
+    dulver = '.'.join(str(i) for i in dulwich.__version__)
+    return __version__ + (" (dulwich %s)" % dulver)
+
+
 from bisect import insort
 import os
 

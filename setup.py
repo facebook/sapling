@@ -9,9 +9,19 @@ try:
 except ImportError:
     extra_req = ['ordereddict>=1.1']
 
+
+from os.path import dirname, join
+def get_version(relpath):
+    root = dirname(__file__)
+    for line in open(join(root, relpath), 'rb'):
+        line = line.decode('utf-8')
+        if '__version__' in line:
+            return line.split("'")[1]
+
+
 setup(
     name='hg-git',
-    version='0.8.1',
+    version=get_version('hggit/__init__.py'),
     author='The hg-git Authors',
     maintainer='Augie Fackler',
     maintainer_email='durin42@gmail.com',
