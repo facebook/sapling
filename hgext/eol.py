@@ -6,13 +6,13 @@ directory. That way you can get CRLF line endings on Windows and LF on
 Unix/Mac, thereby letting everybody use their OS native line endings.
 
 The extension reads its configuration from a versioned ``.hgeol``
-configuration file found in the root of the working copy. The
+configuration file found in the root of the working directory. The
 ``.hgeol`` file use the same syntax as all other Mercurial
 configuration files. It uses two sections, ``[patterns]`` and
 ``[repository]``.
 
 The ``[patterns]`` section specifies how line endings should be
-converted between the working copy and the repository. The format is
+converted between the working directory and the repository. The format is
 specified by a file pattern. The first match is used, so put more
 specific patterns first. The available line endings are ``LF``,
 ``CRLF``, and ``BIN``.
@@ -51,7 +51,7 @@ Example versioned ``.hgeol`` file::
 .. note::
 
    The rules will first apply when files are touched in the working
-   copy, e.g. by updating to null and back to tip to touch all files.
+   directory, e.g. by updating to null and back to tip to touch all files.
 
 The extension uses an optional ``[eol]`` section read from both the
 normal Mercurial configuration files and the ``.hgeol`` file, with the
