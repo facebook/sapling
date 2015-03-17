@@ -2122,7 +2122,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     def difffn(opts, losedata):
         return trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
-                       copy, getfilectx, opts, losedata, prefix)
+                       copy, getfilectx, opts, losedata, prefix, '')
     if opts.upgrade and not opts.git:
         try:
             def losedata(fn):
@@ -2230,13 +2230,16 @@ def _filepairs(ctx1, modified, added, removed, copy, opts):
         yield f1, f2, copyop
 
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
-            copy, getfilectx, opts, losedatafn, prefix):
+            copy, getfilectx, opts, losedatafn, prefix, relroot):
     '''given input data, generate a diff and yield it in blocks
 
     If generating a diff would lose data like flags or binary data and
     losedatafn is not None, it will be called.
 
-    prefix is added to every path in the diff output.'''
+    relroot is removed and prefix is added to every path in the diff output.
+
+    If relroot is not empty, this function expects every path in modified,
+    added, removed and copy to start with it.'''
 
     def gitindex(text):
         if not text:
@@ -2260,6 +2263,13 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     date2 = util.datestr(ctx2.date())
 
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
+
+    if relroot != '' and (repo.ui.configbool('devel', 'all')
+                          or repo.ui.configbool('devel', 'check-relroot')):
+        for f in modified + added + removed + copy.keys() + copy.values():
+            if f is not None and not f.startswith(relroot):
+                raise AssertionError(
+                    "file %s doesn't start with relroot %s" % (f, relroot))
 
     for f1, f2, copyop in _filepairs(
             ctx1, modified, added, removed, copy, opts):
@@ -2293,8 +2303,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 (f1 and f2 and flag1 != flag2)):
                 losedatafn(f2 or f1)
 
-        path1 = posixpath.join(prefix, f1 or f2)
-        path2 = posixpath.join(prefix, f2 or f1)
+        path1 = f1 or f2
+        path2 = f2 or f1
+        path1 = posixpath.join(prefix, path1[len(relroot):])
+        path2 = posixpath.join(prefix, path2[len(relroot):])
         header = []
         if opts.git:
             header.append('diff --git %s%s %s%s' %
