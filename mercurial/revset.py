@@ -980,7 +980,7 @@ def _follow(repo, subset, x, name, followfirst=False):
 
 def follow(repo, subset, x):
     """``follow([file])``
-    An alias for ``::.`` (ancestors of the working copy's first parent).
+    An alias for ``::.`` (ancestors of the working directory's first parent).
     If a filename is specified, the history of the given file is followed,
     including copies.
     """
