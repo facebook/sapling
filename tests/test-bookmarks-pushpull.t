@@ -164,6 +164,27 @@ divergent bookmarks
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
    * foobar                    1:9b140be10808
+
+(test that too many divergence of bookmark)
+
+  $ cat > $TESTTMP/seq.py <<EOF
+  > import sys
+  > for i in xrange(*[int(a) for a in sys.argv[1:]]):
+  >     print i
+  > EOF
+  $ python $TESTTMP/seq.py 1 100 | while read i; do hg bookmarks -r 000000000000 "X@${i}"; done
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  no changes found
+  warning: failed to assign numbered name to divergent bookmark X
+  divergent bookmark @ stored as @1
+  $ hg bookmarks | grep '^   X' | grep -v ':000000000000'
+     X                         1:9b140be10808
+     X@foo                     2:0d2164f0ce0d
+  $ python $TESTTMP/seq.py 1 100 | while read i; do hg bookmarks -d "X@${i}"; done
+  $ hg bookmarks -d "@1"
+
   $ hg push -f ../a
   pushing to ../a
   searching for changes

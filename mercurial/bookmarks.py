@@ -363,6 +363,11 @@ def compare(repo, srcmarks, dstmarks,
     return results
 
 def _diverge(ui, b, path, localmarks):
+    '''Return appropriate diverged bookmark for specified ``path``
+
+    This returns None, if it is failed to assign any divergent
+    bookmark name.
+    '''
     if b == '@':
         b = ''
     # find a unique @ suffix
@@ -370,6 +375,8 @@ def _diverge(ui, b, path, localmarks):
         n = '%s@%d' % (b, x)
         if n not in localmarks:
             break
+    else:
+        n = None
     # try to use an @pathalias suffix
     # if an @pathalias already exists, we overwrite (update) it
     if path.startswith("file:"):
@@ -411,9 +418,13 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
                             _("importing bookmark %s\n") % (b)))
         else:
             db = _diverge(ui, b, path, localmarks)
-            changed.append((db, bin(scid), warn,
-                            _("divergent bookmark %s stored as %s\n")
-                            % (b, db)))
+            if db:
+                changed.append((db, bin(scid), warn,
+                                _("divergent bookmark %s stored as %s\n") %
+                                (b, db)))
+            else:
+                warn(_("warning: failed to assign numbered name "
+                       "to divergent bookmark %s\n") % (b))
     for b, scid, dcid in adddst + advdst:
         if b in explicit:
             explicit.discard(b)
