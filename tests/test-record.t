@@ -47,7 +47,7 @@ Record help
                             committing
       --close-branch        mark a branch as closed, hiding it from the branch
                             list
-      --amend               amend the parent of the working dir
+      --amend               amend the parent of the working directory
    -s --secret              use the secret phase for committing
    -e --edit                invoke editor on commit messages
    -I --include PATTERN [+] include names matching the given patterns

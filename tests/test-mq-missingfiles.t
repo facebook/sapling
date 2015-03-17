@@ -44,7 +44,7 @@ Push patch with missing target:
   unable to find 'b' for patching
   2 out of 2 hunks FAILED -- saving rejects to file b.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh changeb
   [2]
 
@@ -97,7 +97,7 @@ Test missing renamed file
   2 out of 2 hunks FAILED -- saving rejects to file bb.rej
   b not tracked!
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh changebb
   [2]
   $ cat a
@@ -149,7 +149,7 @@ Push git patch with missing target:
   unable to find 'b' for patching
   1 out of 1 hunks FAILED -- saving rejects to file b.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh changeb
   [2]
   $ hg st

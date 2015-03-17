@@ -284,7 +284,7 @@ test qpush --force and backup files
   b
   committing manifest
   committing changelog
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh p3
   [2]
   $ cat a.orig

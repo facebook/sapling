@@ -60,7 +60,7 @@ should fail in strict mode
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh eol.diff
   [2]
   $ hg qpop
@@ -72,7 +72,7 @@ invalid eol
   $ hg --config patch.eol='LFCR' qpush
   applying eol.diff
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh eol.diff
   [2]
   $ hg qpop
@@ -169,7 +169,7 @@ Test .rej file EOL are left unchanged
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh patch1
   [2]
   $ hg qpop
@@ -192,7 +192,7 @@ Test .rej file EOL are left unchanged
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh patch1
   [2]
   $ hg qpop

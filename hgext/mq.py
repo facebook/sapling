@@ -930,7 +930,8 @@ class queue(object):
                 self.applied.append(statusentry(n, patchname))
 
             if patcherr:
-                self.ui.warn(_("patch failed, rejects left in working dir\n"))
+                self.ui.warn(_("patch failed, rejects left in working "
+                               "directory\n"))
                 err = 2
                 break
 

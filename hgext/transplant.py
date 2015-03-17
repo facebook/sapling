@@ -342,9 +342,8 @@ class transplanter(object):
         try:
             p1, p2 = repo.dirstate.parents()
             if p1 != parent:
-                raise util.Abort(
-                    _('working dir not at transplant parent %s') %
-                                 revlog.hex(parent))
+                raise util.Abort(_('working directory not at transplant '
+                                   'parent %s') % revlog.hex(parent))
             if merge:
                 repo.setparents(p1, parents[1])
             modified, added, removed, deleted = repo.status()[:4]

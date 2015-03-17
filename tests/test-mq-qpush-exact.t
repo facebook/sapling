@@ -203,7 +203,7 @@ qpush --exact --force with changes to a patched file
   file fp0 already exists
   1 out of 1 hunks FAILED -- saving rejects to file fp0.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh p0
   [2]
   $ cat fp0
@@ -230,7 +230,7 @@ qpush --exact --force with changes to a patched file
   file fp1 already exists
   1 out of 1 hunks FAILED -- saving rejects to file fp1.rej
   patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  patch failed, rejects left in working directory
   errors during apply, please fix and refresh p1
   [2]
   $ cat fp1

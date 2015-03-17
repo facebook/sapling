@@ -1386,7 +1386,7 @@ def clone(ui, source, dest=None, **opts):
      _('mark new/missing files as added/removed before committing')),
     ('', 'close-branch', None,
      _('mark a branch as closed, hiding it from the branch list')),
-    ('', 'amend', None, _('amend the parent of the working dir')),
+    ('', 'amend', None, _('amend the parent of the working directory')),
     ('s', 'secret', None, _('use the secret phase for committing')),
     ('e', 'edit', None, _('invoke editor on commit messages')),
     ('i', 'interactive', None, _('use interactive mode')),
