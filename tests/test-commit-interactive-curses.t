@@ -1,3 +1,4 @@
+#require tic
 Set up a repo
 
   $ cat <<EOF >> $HGRCPATH
