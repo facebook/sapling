@@ -6,11 +6,11 @@
  * This software may be used and distributed according to the terms of
  * the GNU General Public License, incorporated herein by reference.
  */
+#include <Python.h>
+
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-
-#include <Python.h>
 
 /* VC9 doesn't include bool and lacks stdbool.h based on my searching */
 #ifdef _MSC_VER
