@@ -164,8 +164,8 @@ class manifestdict(object):
             return self.copy()
 
         files = match.files()
-        if ((match.matchfn == match.exact and len(files) < 100) or
-            (not match.anypats() and util.all(fn in self for fn in files))):
+        if (len(files) < 100 and (match.matchfn == match.exact or
+            (not match.anypats() and util.all(fn in self for fn in files)))):
             return self.intersectfiles(files)
 
         lm = manifestdict('')
