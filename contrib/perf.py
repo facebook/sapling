@@ -293,6 +293,25 @@ def perfparents(ui, repo):
     timer(d)
     fm.end()
 
+@command('perfctxfiles')
+def perfparents(ui, repo, x):
+    x = int(x)
+    timer, fm = gettimer(ui)
+    def d():
+        len(repo[x].files())
+    timer(d)
+    fm.end()
+
+@command('perfrawfiles')
+def perfparents(ui, repo, x):
+    x = int(x)
+    timer, fm = gettimer(ui)
+    cl = repo.changelog
+    def d():
+        len(cl.read(x)[3])
+    timer(d)
+    fm.end()
+
 @command('perflookup')
 def perflookup(ui, repo, rev):
     timer, fm = gettimer(ui)
