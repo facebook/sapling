@@ -594,7 +594,7 @@ class changectx(basectx):
 
         # avoid the entire walk if we're only looking for specific files
         if fset and not match.anypats():
-            if util.all([fn in self for fn in fset]):
+            if util.all(fn in self for fn in fset):
                 for fn in sorted(fset):
                     if match(fn):
                         yield fn
