@@ -122,6 +122,7 @@ testpats = [
     (r'sed (-e )?\'(\d+|/[^/]*/)i(?!\\\n)',
      "put a backslash-escaped newline after sed 'i' command"),
     (r'^diff *-\w*u.*$\n(^  \$ |^$)', "prefix diff -u with cmp"),
+    (r'seq ', "don't use 'seq', use $TESTDIR/seq.py")
   ],
   # warnings
   [
