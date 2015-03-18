@@ -299,7 +299,7 @@ Can re-add file after being deleted + censored
 
 Can censor after revlog has expanded to no longer permit inline storage
 
-  $ for x in `seq 0 50000`
+  $ for x in `python $TESTDIR/seq.py 0 50000`
   > do
   >   echo "Password: hunter$x" >> target
   > done

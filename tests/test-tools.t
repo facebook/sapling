@@ -43,7 +43,7 @@ Tests of the file helper tool
   foo: mode=644
 #endif
 
-  $ seq 10 > bar
+  $ python $TESTDIR/seq.py 10 > bar
 #if unix-permissions symlink
   $ chmod +x bar
   $ f bar --newer foo --mode --type --size --dump --links --bytes 7

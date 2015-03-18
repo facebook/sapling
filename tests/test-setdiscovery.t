@@ -364,9 +364,9 @@ Issue 4438 - test coverage for 3ef893520a85 issues.
 #if false
 generate new bundles:
   $ hg init r1
-  $ for i in `seq 101`; do hg -R r1 up -qr null && hg -R r1 branch -q b$i && hg -R r1 ci -qmb$i; done
+  $ for i in `python $TESTDIR/seq.py 101`; do hg -R r1 up -qr null && hg -R r1 branch -q b$i && hg -R r1 ci -qmb$i; done
   $ hg clone -q r1 r2
-  $ for i in `seq 10`; do hg -R r1 up -qr null && hg -R r1 branch -q c$i && hg -R r1 ci -qmc$i; done
+  $ for i in `python $TESTDIR/seq.py 10`; do hg -R r1 up -qr null && hg -R r1 branch -q c$i && hg -R r1 ci -qmc$i; done
   $ hg -R r2 branch -q r2change && hg -R r2 ci -qmr2change
   $ hg -R r1 bundle -qa $TESTDIR/bundles/issue4438-r1.hg
   $ hg -R r2 bundle -qa $TESTDIR/bundles/issue4438-r2.hg

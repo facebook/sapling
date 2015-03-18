@@ -167,12 +167,7 @@ divergent bookmarks
 
 (test that too many divergence of bookmark)
 
-  $ cat > $TESTTMP/seq.py <<EOF
-  > import sys
-  > for i in xrange(*[int(a) for a in sys.argv[1:]]):
-  >     print i
-  > EOF
-  $ python $TESTTMP/seq.py 1 100 | while read i; do hg bookmarks -r 000000000000 "X@${i}"; done
+  $ python $TESTDIR/seq.py 1 100 | while read i; do hg bookmarks -r 000000000000 "X@${i}"; done
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -200,7 +195,7 @@ divergent bookmarks
      @1                        2:0d2164f0ce0d
      @foo                      2:0d2164f0ce0d
 
-  $ python $TESTTMP/seq.py 1 100 | while read i; do hg bookmarks -d "X@${i}"; done
+  $ python $TESTDIR/seq.py 1 100 | while read i; do hg bookmarks -d "X@${i}"; done
   $ hg bookmarks -d "@1"
 
   $ hg push -f ../a

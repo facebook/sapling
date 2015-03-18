@@ -44,7 +44,7 @@ Committing some changes
 Committing only one file
 
   $ echo "a" >> a
-  $ seq 1 10 > b
+  $ python $TESTDIR/seq.py 1 10 > b
   $ hg add b
   $ cat <<EOF >testModeCommands
   > TOGGLE
