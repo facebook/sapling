@@ -22,10 +22,22 @@
   $ hg cat -r 1 b
   1
 
-Test fileset
+Test multiple files
 
   $ echo 3 > c
   $ hg ci -Am addmore c
+  $ hg cat b c
+  1
+  3
+  $ hg cat .
+  1
+  3
+  $ hg cat . c
+  1
+  3
+
+Test fileset
+
   $ hg cat 'set:not(b) or a'
   3
   $ hg cat 'set:c or b'

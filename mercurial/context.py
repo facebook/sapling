@@ -588,10 +588,6 @@ class changectx(basectx):
 
     def walk(self, match):
         fset = set(match.files())
-        # for dirstate.walk, files=['.'] means "walk the whole tree".
-        # follow that here, too
-        fset.discard('.')
-
         # avoid the entire walk if we're only looking for specific files
         if fset and not match.anypats():
             if util.all(fn in self for fn in fset):
@@ -606,6 +602,9 @@ class changectx(basectx):
                 fset.remove(fn)
             if match(fn):
                 yield fn
+        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # follow that here, too
+        fset.discard('.')
         for fn in sorted(fset):
             if not self.hasdir(fn):
                 match.bad(fn, _('no such file in rev %s') % self)
