@@ -78,7 +78,14 @@ def parseoptions(ui, cmdoptions, args):
                 flag = '-' + ex.opt
             else:
                 raise GitUnknownError("unknown option %s" % ex.opt)
-            args.remove(flag)
+            try:
+              args.remove(flag)
+            except:
+              raise GitUnknownError(
+                "unknown option {0} packed with other options\n"
+                "Please try passing the option as it's own flag: -{0}" \
+                .format(ex.opt))
+
             ui.warn("ignoring unknown option %s\n" % flag)
 
     args = list([convert(x) for x in args])
