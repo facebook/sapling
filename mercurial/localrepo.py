@@ -1232,11 +1232,15 @@ class localrepository(object):
         """
 
         fname = fctx.path()
-        text = fctx.data()
-        flog = self.file(fname)
         fparent1 = manifest1.get(fname, nullid)
         fparent2 = manifest2.get(fname, nullid)
+        if isinstance(fctx, context.filectx):
+            node = fctx.filenode()
+            if node in [fparent1, fparent2]:
+                self.ui.debug('reusing %s filelog entry\n' % fname)
+                return node
 
+        flog = self.file(fname)
         meta = {}
         copy = fctx.renamed()
         if copy and copy[0] != fname:
@@ -1298,6 +1302,7 @@ class localrepository(object):
                 fparent2 = nullid
 
         # is the file changed?
+        text = fctx.data()
         if fparent2 != nullid or flog.cmp(fparent1, text) or meta:
             changelist.append(fname)
             return flog.add(text, meta, tr, linkrev, fparent1, fparent2)
