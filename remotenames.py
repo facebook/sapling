@@ -940,7 +940,7 @@ def distancefromtracked(repo, bookmark):
     remotename = ''
     distance = (0, 0)
 
-    if bookmark and bookmark in tracking:
+    if bookmark and bookmark in repo and bookmark in tracking:
         remotename = tracking[bookmark]
 
     if not remotename:
@@ -987,9 +987,6 @@ def writedistance(repo):
 
             try:
                 distancefromtracked(repo, bmark)
-            except error.RepoLookupError:
-                # bookmark may have been deleted
-                continue
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     raise

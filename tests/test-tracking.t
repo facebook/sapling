@@ -235,3 +235,11 @@ Test implicit rebase destination
   |
   o  0 07199ae38cd5
   
+Test when a local bookmark that was tracking goes missing
+
+  $ hg book -v
+   * c                         5:045b4e9d5205            [remote/a: 1 ahead, 0 behind]
+  $ rm .hg/bookmarks
+  $ hg book d
+  $ hg book -v
+   * d                         5:045b4e9d5205
