@@ -1594,6 +1594,10 @@ class committablefilectx(basefilectx):
     def __nonzero__(self):
         return True
 
+    def linkrev(self):
+        # linked to self._changectx no matter if file is modified or not
+        return self.rev()
+
     def parents(self):
         '''return parent filectxs, following copies if necessary'''
         def filenode(ctx, path):
