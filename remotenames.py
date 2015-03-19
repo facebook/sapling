@@ -444,7 +444,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     revs = opts.get('rev')
     to = opts.get('to')
 
-    paths = set(path for path, ignore in ui.configitems('paths'))
+    paths = dict((path, url) for path, url in ui.configitems('paths'))
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
 
     origdest = dest
@@ -468,6 +468,10 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     # to push to default, change dest to default-push, if available
     if not origdest and dest == 'default' and 'default-push' in paths:
         dest = 'default-push'
+
+    # hgsubversion does funcky things on push. Just call it directly
+    if dest in paths and paths[dest].startswith('svn+ssh'):
+        orig(ui, repo, dest, **opts)
 
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
