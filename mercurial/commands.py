@@ -5736,6 +5736,11 @@ def status(ui, repo, *pats, **opts):
 
           hg status --rev 9353
 
+      - show changes in the working directory relative to the
+        current directory (see :hg:`help patterns` for more information)::
+
+          hg status re:
+
       - show all changes including copies in an existing changeset::
 
           hg status --copies --change 9353
