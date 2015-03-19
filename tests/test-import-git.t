@@ -626,6 +626,29 @@ Prefix with strip, renames, creates etc
   adding dir/d
   adding dir/dir2/b
   adding dir/dir2/c
+  $ hg import --no-commit --prefix dir/ - <<EOF
+  > diff --git a/a b/a
+  > --- /dev/null
+  > +++ b/a
+  > @@ -0,0 +1 @@
+  > +aaa
+  > diff --git a/d b/d
+  > --- a/d
+  > +++ b/d
+  > @@ -1,1 +1,2 @@
+  >  d
+  > +dd
+  > EOF
+  applying patch from stdin
+  $ cat dir/a
+  aaa
+  $ cat dir/d
+  d
+  dd
+  $ hg revert -aC
+  forgetting dir/a (glob)
+  reverting dir/d (glob)
+  $ rm dir/a
 (test that prefixes are relative to the root)
   $ mkdir tmpdir
   $ cd tmpdir

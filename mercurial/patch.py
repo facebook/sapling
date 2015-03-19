@@ -1465,6 +1465,8 @@ def pathtransform(path, strip, prefix):
     ('', '   a/b/c')
     >>> pathtransform('   a/b/c   ', 2, '')
     ('a/b/', 'c')
+    >>> pathtransform('a/b/c', 0, 'd/e/')
+    ('', 'd/e/a/b/c')
     >>> pathtransform('   a//b/c   ', 2, 'd/e/')
     ('a//b/', 'd/e/c')
     >>> pathtransform('a/b/c', 3, '')
@@ -1474,7 +1476,7 @@ def pathtransform(path, strip, prefix):
     pathlen = len(path)
     i = 0
     if strip == 0:
-        return '', path.rstrip()
+        return '', prefix + path.rstrip()
     count = strip
     while count > 0:
         i = path.find('/', i)
