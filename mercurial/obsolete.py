@@ -1164,8 +1164,12 @@ def _computedivergentset(repo):
     for ctx in repo.set('(not public()) - obsolete()'):
         mark = obsstore.precursors.get(ctx.node(), ())
         toprocess = set(mark)
+        seen = set()
         while toprocess:
             prec = toprocess.pop()[0]
+            if prec in seen:
+                continue # emergency cycle hanging prevention
+            seen.add(prec)
             if prec not in newermap:
                 successorssets(repo, prec, newermap)
             newer = [n for n in newermap[prec] if n]
