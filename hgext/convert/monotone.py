@@ -280,7 +280,7 @@ class monotone_source(converter_source, commandline):
             for fromfile in renamed.values():
                 files[fromfile] = rev
 
-        return (files.items(), copies)
+        return (files.items(), copies, set())
 
     def getfile(self, name, rev):
         if not self.mtnisfile(name, rev):

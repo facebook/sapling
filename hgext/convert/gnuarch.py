@@ -171,7 +171,7 @@ class gnuarch_source(converter_source, commandline):
             copies.update(cps)
 
         self.lastrev = rev
-        return sorted(set(changes)), copies
+        return sorted(set(changes)), copies, set()
 
     def getcommit(self, rev):
         changes = self.changes[rev]

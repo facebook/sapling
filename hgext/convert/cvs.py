@@ -262,7 +262,7 @@ class convert_cvs(converter_source):
         if full:
             raise util.Abort(_("convert from cvs do not support --full"))
         self._parse()
-        return sorted(self.files[rev].iteritems()), {}
+        return sorted(self.files[rev].iteritems()), {}, set()
 
     def getcommit(self, rev):
         self._parse()

@@ -397,7 +397,7 @@ class converter(object):
                 dest = self.map[changes]
             self.map[rev] = dest
             return
-        files, copies = changes
+        files, copies, cleanp2 = changes
         pbranches = []
         if commit.parents:
             for prev in commit.parents:
@@ -413,6 +413,8 @@ class converter(object):
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
+        if len(pbranches) != 2:
+            cleanp2 = set()
         if len(parents) < 3:
             source = progresssource(self.ui, self.source, len(files))
         else:
@@ -423,7 +425,7 @@ class converter(object):
             source = progresssource(self.ui, self.source,
                                     len(files) * (len(parents) - 1))
         newnode = self.dest.putcommit(files, copies, parents, commit,
-                                      source, self.map, full)
+                                      source, self.map, full, cleanp2)
         source.close()
         self.source.converted(rev, newnode)
         self.map[rev] = newnode

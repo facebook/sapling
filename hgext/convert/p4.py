@@ -195,7 +195,7 @@ class p4_source(converter_source):
     def getchanges(self, rev, full):
         if full:
             raise util.Abort(_("convert from p4 do not support --full"))
-        return self.files[rev], {}
+        return self.files[rev], {}, set()
 
     def getcommit(self, rev):
         return self.changeset[rev]

@@ -143,7 +143,8 @@ class bzr_source(converter_source):
         parentids = self._parentids.pop(version)
         # only diff against first parent id
         prevtree = self.sourcerepo.revision_tree(parentids[0])
-        return self._gettreechanges(self._revtree, prevtree)
+        files, changes = self._gettreechanges(self._revtree, prevtree)
+        return files, changes, set()
 
     def getcommit(self, version):
         rev = self.sourcerepo.get_revision(version)

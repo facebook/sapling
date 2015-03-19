@@ -384,12 +384,15 @@ class filemap_source(converter_source):
         # Get the real changes and do the filtering/mapping. To be
         # able to get the files later on in getfile, we hide the
         # original filename in the rev part of the return value.
-        changes, copies = self.base.getchanges(rev, full)
+        changes, copies, cleanp2 = self.base.getchanges(rev, full)
         files = {}
+        ncleanp2 = set(cleanp2)
         for f, r in changes:
             newf = self.filemapper(f)
             if newf and (newf != f or newf not in files):
                 files[newf] = (f, r)
+                if newf != f:
+                    ncleanp2.discard(f)
         files = sorted(files.items())
 
         ncopies = {}
@@ -400,7 +403,7 @@ class filemap_source(converter_source):
                 if newsource:
                     ncopies[newc] = newsource
 
-        return files, ncopies
+        return files, ncopies, ncleanp2
 
     def getfile(self, name, rev):
         realname, realrev = rev

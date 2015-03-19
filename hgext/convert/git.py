@@ -264,7 +264,7 @@ class convert_git(converter_source):
             else:
                 self.retrievegitmodules(version)
                 changes.append(('.hgsubstate', ''))
-        return (changes, copies)
+        return (changes, copies, set())
 
     def getcommit(self, version):
         c = self.catfile(version, "commit") # read the commit hash

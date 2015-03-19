@@ -474,7 +474,7 @@ class svn_source(converter_source):
             (files, copies) = self._getchanges(rev, full)
             # caller caches the result, so free it here to release memory
             del self.paths[rev]
-        return (files, copies)
+        return (files, copies, set())
 
     def getchangedfiles(self, rev, i):
         # called from filemap - cache computed values for reuse in getchanges
@@ -1240,7 +1240,8 @@ class svn_sink(converter_sink, commandline):
     def revid(self, rev):
         return u"svn:%s@%s" % (self.uuid, rev)
 
-    def putcommit(self, files, copies, parents, commit, source, revmap, full):
+    def putcommit(self, files, copies, parents, commit, source, revmap, full,
+                  cleanp2):
         for parent in parents:
             try:
                 return self.revid(self.childmap[parent])

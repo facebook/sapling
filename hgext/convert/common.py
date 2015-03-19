@@ -97,7 +97,7 @@ class converter_source(object):
         raise NotImplementedError
 
     def getchanges(self, version, full):
-        """Returns a tuple of (files, copies).
+        """Returns a tuple of (files, copies, cleanp2).
 
         files is a sorted list of (filename, id) tuples for all files
         changed between version and its first parent returned by
@@ -105,6 +105,10 @@ class converter_source(object):
         id is the source revision id of the file.
 
         copies is a dictionary of dest: source
+
+        cleanp2 is the set of files filenames that are clean against p2.
+        (Files that are clean against p1 are already not in files (unless
+        full). This makes it possible to handle p2 clean files similarly.)
         """
         raise NotImplementedError
 
@@ -215,7 +219,8 @@ class converter_sink(object):
         mapping equivalent authors identifiers for each system."""
         return None
 
-    def putcommit(self, files, copies, parents, commit, source, revmap, full):
+    def putcommit(self, files, copies, parents, commit, source, revmap, full,
+                  cleanp2):
         """Create a revision with all changed files listed in 'files'
         and having listed parents. 'commit' is a commit object
         containing at a minimum the author, date, and message for this
@@ -225,6 +230,8 @@ class converter_sink(object):
         of source revisions to converted revisions. Only getfile() and
         lookuprev() should be called on 'source'. 'full' means that 'files'
         is complete and all other files should be removed.
+        'cleanp2' is a set of the filenames that are unchanged from p2
+        (only in the common merge case where there two parents).
 
         Note that the sink repository is not told to update itself to
         a particular revision (or even what that revision would be)
