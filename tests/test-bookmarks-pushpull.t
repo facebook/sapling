@@ -494,6 +494,13 @@ pushing a new bookmark on a new head does not require -f if -B is specified
   $ hg -R ../b id -r W
   cc978a373a53 tip W
 
+Check summary output for incoming/outgoing bookmarks
+
+  $ hg bookmarks -d X
+  $ hg bookmarks -d Y
+  $ hg summary --remote | grep '^remote:'
+  remote: *, 2 incoming bookmarks, 1 outgoing bookmarks (glob)
+
   $ cd ..
 
 pushing an unchanged bookmark should result in no changes

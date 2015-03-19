@@ -498,6 +498,16 @@ def outgoing(ui, repo, other):
 
     return 0
 
+def summary(repo, other):
+    '''Compare bookmarks between repo and other for "hg summary" output
+
+    This returns "(# of incoming, # of outgoing)" tuple.
+    '''
+    r = compare(repo, other.listkeys('bookmarks'), repo._bookmarks,
+                dsthex=hex)
+    addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = r
+    return (len(addsrc), len(adddst))
+
 def validdest(repo, old, new):
     """Is the new bookmark destination a valid update from the old one"""
     repo = repo.unfiltered()

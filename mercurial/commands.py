@@ -5982,14 +5982,11 @@ def summary(ui, repo, **opts):
             t.append(_('%d outgoing') % len(o))
         other = dother or sother
         if 'bookmarks' in other.listkeys('namespaces'):
-            lmarks = repo.listkeys('bookmarks')
-            rmarks = other.listkeys('bookmarks')
-            diff = set(rmarks) - set(lmarks)
-            if len(diff) > 0:
-                t.append(_('%d incoming bookmarks') % len(diff))
-            diff = set(lmarks) - set(rmarks)
-            if len(diff) > 0:
-                t.append(_('%d outgoing bookmarks') % len(diff))
+            counts = bookmarks.summary(repo, other)
+            if counts[0] > 0:
+                t.append(_('%d incoming bookmarks') % counts[0])
+            if counts[1] > 0:
+                t.append(_('%d outgoing bookmarks') % counts[1])
 
         if t:
             # i18n: column positioning for "hg summary"
