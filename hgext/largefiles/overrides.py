@@ -376,8 +376,8 @@ def overridelog(orig, ui, repo, *pats, **opts):
     # The magic matchandpats override should be used for case (1) but not for
     # case (2).
     def overridemakelogfilematcher(repo, pats, opts):
-        pctx = repo[None]
-        match, pats = oldmatchandpats(pctx, pats, opts)
+        wctx = repo[None]
+        match, pats = oldmatchandpats(wctx, pats, opts)
         return lambda rev: match
 
     oldmatchandpats = installmatchandpatsfn(overridematchandpats)

@@ -1918,12 +1918,12 @@ def _makelogrevset(repo, pats, opts, revs):
     # _matchfiles() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
     # platforms without shell expansion (windows).
-    pctx = repo[None]
-    match, pats = scmutil.matchandpats(pctx, pats, opts)
+    wctx = repo[None]
+    match, pats = scmutil.matchandpats(wctx, pats, opts)
     slowpath = match.anypats() or (match.files() and opts.get('removed'))
     if not slowpath:
         for f in match.files():
-            if follow and f not in pctx:
+            if follow and f not in wctx:
                 # If the file exists, it may be a directory, so let it
                 # take the slow path.
                 if os.path.exists(repo.wjoin(f)):
