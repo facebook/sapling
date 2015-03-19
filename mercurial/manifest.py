@@ -328,6 +328,228 @@ def _addlistdelta(addlist, x):
                    + content for start, end, content in x)
     return deltatext, newaddlist
 
+def _splittopdir(f):
+    if '/' in f:
+        dir, subpath = f.split('/', 1)
+        return dir + '/', subpath
+    else:
+        return '', f
+
+class treemanifest(object):
+    def __init__(self, text=''):
+        self._dirs = {}
+        # Using _lazymanifest here is a little slower than plain old dicts
+        self._files = {}
+        self._flags = {}
+        lm = _lazymanifest(text)
+        for f, n, fl in lm.iterentries():
+            self[f] = n
+            if fl:
+                self.setflag(f, fl)
+
+    def __len__(self):
+        size = len(self._files)
+        for m in self._dirs.values():
+            size += m.__len__()
+        return size
+
+    def iteritems(self):
+        for p, n in sorted(self._dirs.items() + self._files.items()):
+            if p in self._files:
+                yield p, n
+            else:
+                for sf, sn in n.iteritems():
+                    yield p + sf, sn
+
+    def iterkeys(self):
+        for p in sorted(self._dirs.keys() + self._files.keys()):
+            if p in self._files:
+                yield p
+            else:
+                for f in self._dirs[p].iterkeys():
+                    yield p + f
+
+    def keys(self):
+        return list(self.iterkeys())
+
+    def __iter__(self):
+        return self.iterkeys()
+
+    def __contains__(self, f):
+        if f is None:
+            return False
+        dir, subpath = _splittopdir(f)
+        if dir:
+            if dir not in self._dirs:
+                return False
+            return self._dirs[dir].__contains__(subpath)
+        else:
+            return f in self._files
+
+    def get(self, f, default=None):
+        dir, subpath = _splittopdir(f)
+        if dir:
+            if dir not in self._dirs:
+                return default
+            return self._dirs[dir].get(subpath, default)
+        else:
+            return self._files.get(f, default)
+
+    def __getitem__(self, f):
+        dir, subpath = _splittopdir(f)
+        if dir:
+            return self._dirs[dir].__getitem__(subpath)
+        else:
+            return self._files[f]
+
+    def flags(self, f):
+        dir, subpath = _splittopdir(f)
+        if dir:
+            if dir not in self._dirs:
+                return ''
+            return self._dirs[dir].flags(subpath)
+        else:
+            if f in self._dirs:
+                return ''
+            return self._flags.get(f, '')
+
+    def find(self, f):
+        dir, subpath = _splittopdir(f)
+        if dir:
+            return self._dirs[dir].find(subpath)
+        else:
+            return self._files[f], self._flags.get(f, '')
+
+    def __delitem__(self, f):
+        dir, subpath = _splittopdir(f)
+        if dir:
+            self._dirs[dir].__delitem__(subpath)
+            # If the directory is now empty, remove it
+            if not self._dirs[dir]._dirs and not self._dirs[dir]._files:
+                del self._dirs[dir]
+        else:
+            del self._files[f]
+            if f in self._flags:
+                del self._flags[f]
+
+    def __setitem__(self, f, n):
+        assert n is not None
+        dir, subpath = _splittopdir(f)
+        if dir:
+            if dir not in self._dirs:
+                self._dirs[dir] = treemanifest()
+            self._dirs[dir].__setitem__(subpath, n)
+        else:
+            self._files[f] = n
+
+    def setflag(self, f, flags):
+        """Set the flags (symlink, executable) for path f."""
+        dir, subpath = _splittopdir(f)
+        if dir:
+            if dir not in self._dirs:
+                self._dirs[dir] = treemanifest()
+            self._dirs[dir].setflag(subpath, flags)
+        else:
+            self._flags[f] = flags
+
+    def copy(self):
+        copy = treemanifest()
+        for d in self._dirs:
+            copy._dirs[d] = self._dirs[d].copy()
+        copy._files = dict.copy(self._files)
+        copy._flags = dict.copy(self._flags)
+        return copy
+
+    def intersectfiles(self, files):
+        '''make a new treemanifest with the intersection of self with files
+
+        The algorithm assumes that files is much smaller than self.'''
+        ret = treemanifest()
+        for fn in files:
+            if fn in self:
+                ret[fn] = self[fn]
+                flags = self.flags(fn)
+                if flags:
+                    ret.setflag(fn, flags)
+        return ret
+
+    def filesnotin(self, m2):
+        '''Set of files in this manifest that are not in the other'''
+        files = set(self.iterkeys())
+        files.difference_update(m2.iterkeys())
+        return files
+
+    @propertycache
+    def _alldirs(self):
+        return scmutil.dirs(self)
+
+    def dirs(self):
+        return self._alldirs
+
+    def hasdir(self, dir):
+        return dir in self._alldirs
+
+    def matches(self, match):
+        '''generate a new manifest filtered by the match argument'''
+        if match.always():
+            return self.copy()
+
+        files = match.files()
+        if (match.matchfn == match.exact or
+            (not match.anypats() and util.all(fn in self for fn in files))):
+            return self.intersectfiles(files)
+
+        m = self.copy()
+        for fn in m.keys():
+            if not match(fn):
+                del m[fn]
+        return m
+
+    def diff(self, m2, clean=False):
+        '''Finds changes between the current manifest and m2.
+
+        Args:
+          m2: the manifest to which this manifest should be compared.
+          clean: if true, include files unchanged between these manifests
+                 with a None value in the returned dictionary.
+
+        The result is returned as a dict with filename as key and
+        values of the form ((n1,fl1),(n2,fl2)), where n1/n2 is the
+        nodeid in the current/other manifest and fl1/fl2 is the flag
+        in the current/other manifest. Where the file does not exist,
+        the nodeid will be None and the flags will be the empty
+        string.
+        '''
+        diff = {}
+
+        for fn, n1 in self.iteritems():
+            fl1 = self.flags(fn)
+            n2 = m2.get(fn, None)
+            fl2 = m2.flags(fn)
+            if n2 is None:
+                fl2 = ''
+            if n1 != n2 or fl1 != fl2:
+                diff[fn] = ((n1, fl1), (n2, fl2))
+            elif clean:
+                diff[fn] = None
+
+        for fn, n2 in m2.iteritems():
+            if fn not in self:
+                fl2 = m2.flags(fn)
+                diff[fn] = ((None, ''), (n2, fl2))
+
+        return diff
+
+    def text(self):
+        """Get the full data of this manifest as a bytestring."""
+        fl = self.keys()
+        _checkforbidden(fl)
+
+        hex, flags = revlog.hex, self.flags
+        # if this is changed to support newlines in filenames,
+        # be sure to check the templates/ dir again (especially *-raw.tmpl)
+        return ''.join("%s\0%s%s\n" % (f, hex(self[f]), flags(f)) for f in fl)
+
 class manifest(revlog.revlog):
     def __init__(self, opener):
         # During normal operations, we expect to deal with not more than four
