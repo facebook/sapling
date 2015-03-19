@@ -470,6 +470,34 @@ def incoming(ui, repo, other):
 
     return 0
 
+def outgoing(ui, repo, other):
+    '''Show bookmarks outgoing from repo to other
+    '''
+    ui.status(_("searching for changed bookmarks\n"))
+
+    r = compare(repo, repo._bookmarks, other.listkeys('bookmarks'),
+                srchex=hex)
+    addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = r
+
+    outgoings = []
+    if ui.debugflag:
+        getid = lambda id: id
+    else:
+        getid = lambda id: id[:12]
+    def add(b, id):
+        outgoings.append("   %-25s %s\n" % (b, getid(id)))
+    for b, scid, dcid in addsrc:
+        add(b, scid)
+
+    if not outgoings:
+        ui.status(_("no changed bookmarks found\n"))
+        return 1
+
+    for s in sorted(outgoings):
+        ui.write(s)
+
+    return 0
+
 def diff(ui, dst, src):
     ui.status(_("searching for changed bookmarks\n"))
 

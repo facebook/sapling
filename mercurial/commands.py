@@ -4757,7 +4757,7 @@ def outgoing(ui, repo, dest=None, **opts):
             ui.warn(_("remote doesn't support bookmarks\n"))
             return 0
         ui.status(_('comparing with %s\n') % util.hidepassword(dest))
-        return bookmarks.diff(ui, other, repo)
+        return bookmarks.outgoing(ui, repo, other)
 
     repo._subtoppath = ui.expandpath(dest or 'default-push', dest or 'default')
     try:
