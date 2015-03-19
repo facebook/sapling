@@ -304,7 +304,10 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         replace = {'local': a, 'base': b, 'other': c, 'output': out}
         args = util.interpolate(r'\$', replace, args,
                                 lambda s: util.shellquote(util.localpath(s)))
-        r = ui.system(toolpath + ' ' + args, cwd=repo.root, environ=env)
+        cmd = toolpath + ' ' + args
+        repo.ui.debug('launching merge tool: %s\n' % cmd)
+        r = ui.system(cmd, cwd=repo.root, environ=env)
+        repo.ui.debug('merge tool returned: %s\n' % r)
         return True, r
     return False, 0
 
