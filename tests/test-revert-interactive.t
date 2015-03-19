@@ -18,7 +18,7 @@ Revert interactive tests
   > EOF
 
 
-  $ mkdir -p a/{folder1,folder2}
+  $ mkdir -p a/folder1 a/folder2
   $ cd a
   $ hg init
   $ python $TESTDIR/seq.py 1 5 > f ; hg add f ; hg commit -m "adding f"
