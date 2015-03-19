@@ -556,16 +556,24 @@ class manifest(revlog.revlog):
         # revs at a time (such as during commit --amend). When rebasing large
         # stacks of commits, the number can go up, hence the config knob below.
         cachesize = 4
+        usetreemanifest = False
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
+            usetreemanifest = opts.get('usetreemanifest', usetreemanifest)
         self._mancache = util.lrucachedict(cachesize)
         revlog.revlog.__init__(self, opener, "00manifest.i")
+        self._usetreemanifest = usetreemanifest
+
+    def _newmanifest(self, data=''):
+        if self._usetreemanifest:
+            return treemanifest(data)
+        return manifestdict(data)
 
     def readdelta(self, node):
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
-        return manifestdict(d)
+        return self._newmanifest(d)
 
     def readfast(self, node):
         '''use the faster of readdelta or read'''
@@ -577,12 +585,12 @@ class manifest(revlog.revlog):
 
     def read(self, node):
         if node == revlog.nullid:
-            return manifestdict() # don't upset local cache
+            return self._newmanifest() # don't upset local cache
         if node in self._mancache:
             return self._mancache[node][0]
         text = self.revision(node)
         arraytext = array.array('c', text)
-        m = manifestdict(text)
+        m = self._newmanifest(text)
         self._mancache[node] = (m, arraytext)
         return m
 
@@ -596,7 +604,7 @@ class manifest(revlog.revlog):
             return None, None
 
     def add(self, m, transaction, link, p1, p2, added, removed):
-        if p1 in self._mancache:
+        if p1 in self._mancache and not self._usetreemanifest:
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
             # manifest up-front, which may save time later for the

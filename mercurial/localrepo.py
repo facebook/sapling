@@ -331,6 +331,9 @@ class localrepository(object):
         manifestcachesize = self.ui.configint('format', 'manifestcachesize')
         if manifestcachesize is not None:
             self.svfs.options['manifestcachesize'] = manifestcachesize
+        usetreemanifest = self.ui.configbool('experimental', 'treemanifest')
+        if usetreemanifest is not None:
+            self.svfs.options['usetreemanifest'] = usetreemanifest
 
     def _writerequirements(self):
         reqfile = self.vfs("requires", "w")
