@@ -13,6 +13,8 @@
   >     tr = repo.transaction('buggy')
   >     lo = repo.lock()
   >     wl = repo.wlock()
+  >     wl.release()
+  >     lo.release()
   > EOF
 
   $ cat << EOF >> $HGRCPATH
