@@ -25,8 +25,13 @@ Issue2232: committing a subrepo without .hgsub
   abort: can't commit subrepos without .hgsub
   [255]
 
+  $ hg -R s add s/a
+  $ hg files -S
+  .hgsub
+  a
+  s/a (glob)
+
   $ hg -R s ci -Ams0
-  adding a
   $ hg sum
   parent: 0:f7b1eb17ad24 tip
    0

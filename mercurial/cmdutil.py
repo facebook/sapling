@@ -2261,7 +2261,7 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(f for f in forget if f not in rejected)
     return bad, forgot
 
-def files(ui, ctx, m, fm, fmt):
+def files(ui, ctx, m, fm, fmt, subrepos):
     rev = ctx.rev()
     ret = 1
     ds = ctx.repo().dirstate
@@ -2276,6 +2276,17 @@ def files(ui, ctx, m, fm, fmt):
         fm.data(abspath=f)
         fm.write('path', fmt, m.rel(f))
         ret = 0
+
+    if subrepos:
+        for subpath in sorted(ctx.substate):
+            sub = ctx.sub(subpath)
+            try:
+                submatch = matchmod.narrowmatcher(subpath, m)
+                if sub.printfiles(ui, submatch, fm, fmt) == 0:
+                    ret = 0
+            except error.LookupError:
+                ui.status(_("skipping missing subrepository: %s\n")
+                               % m.abs(subpath))
 
     return ret
 

@@ -469,6 +469,10 @@ class abstractsubrepo(object):
         """return file flags"""
         return ''
 
+    def printfiles(self, ui, m, fm, fmt):
+        """handle the files command for this subrepo"""
+        return 1
+
     def archive(self, archiver, prefix, match=None):
         if match is not None:
             files = [f for f in self.files() if match(f)]
@@ -847,6 +851,17 @@ class hgsubrepo(abstractsubrepo):
         rev = self._state[1]
         ctx = self._repo[rev]
         return ctx.flags(name)
+
+    @annotatesubrepoerror
+    def printfiles(self, ui, m, fm, fmt):
+        # If the parent context is a workingctx, use the workingctx here for
+        # consistency.
+        if self._ctx.rev() is None:
+            ctx = self._repo[None]
+        else:
+            rev = self._state[1]
+            ctx = self._repo[rev]
+        return cmdutil.files(ui, ctx, m, fm, fmt, True)
 
     def walk(self, match):
         ctx = self._repo[None]

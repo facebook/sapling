@@ -186,6 +186,24 @@ Test relative path printing + subrepos
   adding foo/bar/abc
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)
+
+  $ hg forget sub1/sub2/sub2
+  $ echo x > sub1/sub2/x.txt
+  $ hg add sub1/sub2/x.txt
+
+Files sees uncommitted adds and removes in subrepos
+  $ hg files -S
+  .hgsub
+  .hgsubstate
+  foo/bar/abc (glob)
+  main
+  sub1/.hgsub (glob)
+  sub1/.hgsubstate (glob)
+  sub1/foo (glob)
+  sub1/sub1 (glob)
+  sub1/sub2/folder/bar (glob)
+  sub1/sub2/x.txt (glob)
+
   $ hg rollback -q
   $ hg up -Cq
 
@@ -393,6 +411,7 @@ largefile and a normal file.  Then a largefile that hasn't been committed yet.
   R sub1/sub2/test.txt
   ? foo/bar/abc
   ? sub1/sub2/untracked.txt
+  ? sub1/sub2/x.txt
   $ hg add sub1/sub2
   $ hg ci -Sqm 'forget testing'
 

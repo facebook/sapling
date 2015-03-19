@@ -3225,7 +3225,7 @@ def export(ui, repo, *changesets, **opts):
 @command('files',
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
      ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
-    ] + walkopts + formatteropts,
+    ] + walkopts + formatteropts + subrepoopts,
     _('[OPTION]... [PATTERN]...'))
 def files(ui, repo, *pats, **opts):
     """list tracked files
@@ -3280,7 +3280,7 @@ def files(ui, repo, *pats, **opts):
     fmt = '%s' + end
 
     m = scmutil.match(ctx, pats, opts)
-    ret = cmdutil.files(ui, ctx, m, fm, fmt)
+    ret = cmdutil.files(ui, ctx, m, fm, fmt, opts.get('subrepos'))
 
     fm.end()
 

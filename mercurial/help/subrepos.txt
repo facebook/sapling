@@ -109,6 +109,10 @@ Interaction with Mercurial Commands
     elements. Git subrepositories do not support --include/--exclude.
     Subversion subrepositories are currently silently ignored.
 
+:files: files does not recurse into subrepos unless -S/--subrepos is
+    specified.  Git and Subversion subrepositories are currently
+    silently ignored.
+
 :forget: forget currently only handles exact file matches in subrepos.
     Git and Subversion subrepositories are currently silently ignored.
 
