@@ -410,7 +410,9 @@ def expushdiscoverybookmarks(pushop):
 
 def _pushrevs(repo, ui, rev):
     pushrev = ui.config('remotenames', 'pushrev')
-    if pushrev:
+    if pushrev == '!':
+        return []
+    elif pushrev:
         return [repo.lookup(pushrev)]
     if rev:
         return [repo.lookup(rev)]
