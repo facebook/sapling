@@ -519,6 +519,7 @@ class hgsubrepo(abstractsubrepo):
         super(hgsubrepo, self).__init__(ctx.repo().ui)
         self._path = path
         self._state = state
+        self._ctx = ctx
         r = ctx.repo()
         root = r.wjoin(path)
         create = not r.wvfs.exists('%s/.hg' % path)
