@@ -498,25 +498,6 @@ def outgoing(ui, repo, other):
 
     return 0
 
-def diff(ui, dst, src):
-    ui.status(_("searching for changed bookmarks\n"))
-
-    smarks = src.listkeys('bookmarks')
-    dmarks = dst.listkeys('bookmarks')
-
-    diff = sorted(set(smarks) - set(dmarks))
-    for k in diff:
-        if ui.debugflag:
-            mark = smarks[k]
-        else:
-            mark = smarks[k][:12]
-        ui.write("   %-25s %s\n" % (k, mark))
-
-    if len(diff) <= 0:
-        ui.status(_("no changed bookmarks found\n"))
-        return 1
-    return 0
-
 def validdest(repo, old, new):
     """Is the new bookmark destination a valid update from the old one"""
     repo = repo.unfiltered()
