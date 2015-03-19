@@ -739,20 +739,27 @@ def copyfile(src, dest, hardlink=False):
         except shutil.Error, inst:
             raise Abort(str(inst))
 
-def copyfiles(src, dst, hardlink=None):
-    """Copy a directory tree using hardlinks if possible"""
+def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
+    """Copy a directory tree using hardlinks if possible."""
+    num = 0
 
     if hardlink is None:
         hardlink = (os.stat(src).st_dev ==
                     os.stat(os.path.dirname(dst)).st_dev)
+    if hardlink:
+        topic = _('linking')
+    else:
+        topic = _('copying')
 
-    num = 0
     if os.path.isdir(src):
         os.mkdir(dst)
         for name, kind in osutil.listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
-            hardlink, n = copyfiles(srcname, dstname, hardlink)
+            def nprog(t, pos):
+                if pos is not None:
+                    return progress(t, pos + num)
+            hardlink, n = copyfiles(srcname, dstname, hardlink, progress=nprog)
             num += n
     else:
         if hardlink:
@@ -764,6 +771,8 @@ def copyfiles(src, dst, hardlink=None):
         else:
             shutil.copy(src, dst)
         num += 1
+        progress(topic, num)
+    progress(topic, None)
 
     return hardlink, num
 
