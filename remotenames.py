@@ -933,6 +933,9 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
 def distancefromtracked(repo, bookmark):
     """return the (ahead, behind) distance between the tracked names"""
 
+    if not repo.ui.configbool('remotenames', 'calculatedistance', True):
+        return (0, 0)
+
     tracking = _readtracking(repo)
     remotename = ''
     distance = (0, 0)
@@ -960,6 +963,18 @@ def distancefromtracked(repo, bookmark):
     return (remotename, distance)
 
 def writedistance(repo):
+    """
+    Caclulate and cache the distance between bookmarks and what they
+    track, plus the distance from the tipmost head on current topological
+    branch. This can be an expensive operation especially in repositories
+    with a high commit rate, so it can be turned off in your hgrc:
+
+        [remotenames]
+        cachedistance = False
+    """
+    if not repo.ui.configbool('remotenames', 'cachedistance', True):
+        return
+
     wlock = repo.wlock()
     try:
         for bmark, remotename in _readtracking(repo).iteritems():
