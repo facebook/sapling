@@ -4066,7 +4066,7 @@ def identify(ui, repo, source=None, rev=None,
     ('', 'exact', None,
      _('apply patch to the nodes from which it was generated')),
     ('', 'prefix', '',
-     _('apply patch to directory relative to the root'), _('DIR')),
+     _('apply patch to subdirectory'), _('DIR')),
     ('', 'import-branch', None,
      _('use any branch information in patch (implied by --exact)'))] +
     commitopts + commitopts2 + similarityopts,

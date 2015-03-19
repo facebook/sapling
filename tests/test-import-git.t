@@ -626,6 +626,33 @@ Prefix with strip, renames, creates etc
   adding dir/d
   adding dir/dir2/b
   adding dir/dir2/c
+
+prefix '.' is the same as no prefix
+  $ hg import --no-commit --prefix . - <<EOF
+  > diff --git a/dir/a b/dir/a
+  > --- /dev/null
+  > +++ b/dir/a
+  > @@ -0,0 +1 @@
+  > +aaaa
+  > diff --git a/dir/d b/dir/d
+  > --- a/dir/d
+  > +++ b/dir/d
+  > @@ -1,1 +1,2 @@
+  >  d
+  > +dddd
+  > EOF
+  applying patch from stdin
+  $ cat dir/a
+  aaaa
+  $ cat dir/d
+  d
+  dddd
+  $ hg revert -aC
+  forgetting dir/a (glob)
+  reverting dir/d (glob)
+  $ rm dir/a
+
+prefix with default strip
   $ hg import --no-commit --prefix dir/ - <<EOF
   > diff --git a/a b/a
   > --- /dev/null
@@ -649,10 +676,10 @@ Prefix with strip, renames, creates etc
   forgetting dir/a (glob)
   reverting dir/d (glob)
   $ rm dir/a
-(test that prefixes are relative to the root)
+(test that prefixes are relative to the cwd)
   $ mkdir tmpdir
   $ cd tmpdir
-  $ hg import --no-commit -p2 --prefix dir/ - <<EOF
+  $ hg import --no-commit -p2 --prefix ../dir/ - <<EOF
   > diff --git a/foo/a b/foo/a
   > new file mode 100644
   > --- /dev/null

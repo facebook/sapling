@@ -17,6 +17,7 @@ from i18n import _
 from node import hex, short
 import cStringIO
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
+import pathutil
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 tabsplitter = re.compile(r'(\t+|[^\t]+)')
@@ -1795,8 +1796,10 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
                eolmode='strict'):
 
     if prefix:
-        # clean up double slashes, lack of trailing slashes, etc
-        prefix = util.normpath(prefix) + '/'
+        prefix = pathutil.canonpath(backend.repo.root, backend.repo.getcwd(),
+                                    prefix)
+        if prefix != '':
+            prefix += '/'
     def pstrip(p):
         return pathtransform(p, strip - 1, prefix)[1]
 
