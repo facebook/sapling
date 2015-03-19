@@ -620,7 +620,7 @@ class Test(unittest.TestCase):
                 f.write(line)
             f.close()
 
-        vlog("# Ret was:", self._ret)
+        vlog("# Ret was:", self._ret, '(%s)' % self.name)
 
     def _run(self, env):
         # This should be implemented in child classes to run tests.
