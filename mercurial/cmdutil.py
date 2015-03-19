@@ -1669,6 +1669,44 @@ def walkfilerevs(repo, match, follow, revs, fncache):
 
     return wanted
 
+class _followfilter(object):
+    def __init__(self, repo, onlyfirst=False):
+        self.repo = repo
+        self.startrev = nullrev
+        self.roots = set()
+        self.onlyfirst = onlyfirst
+
+    def match(self, rev):
+        def realparents(rev):
+            if self.onlyfirst:
+                return self.repo.changelog.parentrevs(rev)[0:1]
+            else:
+                return filter(lambda x: x != nullrev,
+                              self.repo.changelog.parentrevs(rev))
+
+        if self.startrev == nullrev:
+            self.startrev = rev
+            return True
+
+        if rev > self.startrev:
+            # forward: all descendants
+            if not self.roots:
+                self.roots.add(self.startrev)
+            for parent in realparents(rev):
+                if parent in self.roots:
+                    self.roots.add(rev)
+                    return True
+        else:
+            # backwards: all parents
+            if not self.roots:
+                self.roots.update(realparents(self.startrev))
+            if rev in self.roots:
+                self.roots.remove(rev)
+                self.roots.update(realparents(rev))
+                return True
+
+        return False
+
 def walkchangerevs(repo, match, opts, prepare):
     '''Iterate over files and the revs in which they changed.
 
@@ -1757,48 +1795,11 @@ def walkchangerevs(repo, match, opts, prepare):
 
         wanted = lazywantedset()
 
-    class followfilter(object):
-        def __init__(self, onlyfirst=False):
-            self.startrev = nullrev
-            self.roots = set()
-            self.onlyfirst = onlyfirst
-
-        def match(self, rev):
-            def realparents(rev):
-                if self.onlyfirst:
-                    return repo.changelog.parentrevs(rev)[0:1]
-                else:
-                    return filter(lambda x: x != nullrev,
-                                  repo.changelog.parentrevs(rev))
-
-            if self.startrev == nullrev:
-                self.startrev = rev
-                return True
-
-            if rev > self.startrev:
-                # forward: all descendants
-                if not self.roots:
-                    self.roots.add(self.startrev)
-                for parent in realparents(rev):
-                    if parent in self.roots:
-                        self.roots.add(rev)
-                        return True
-            else:
-                # backwards: all parents
-                if not self.roots:
-                    self.roots.update(realparents(self.startrev))
-                if rev in self.roots:
-                    self.roots.remove(rev)
-                    self.roots.update(realparents(rev))
-                    return True
-
-            return False
-
     # it might be worthwhile to do this in the iterator if the rev range
     # is descending and the prune args are all within that range
     for rev in opts.get('prune', ()):
         rev = repo[rev].rev()
-        ff = followfilter()
+        ff = _followfilter(repo)
         stop = min(revs[0], revs[-1])
         for x in xrange(rev, stop - 1, -1):
             if ff.match(x):
@@ -1808,7 +1809,7 @@ def walkchangerevs(repo, match, opts, prepare):
     # revision range, yielding only revisions in wanted.
     def iterate():
         if follow and not match.files():
-            ff = followfilter(onlyfirst=opts.get('follow_first'))
+            ff = _followfilter(repo, onlyfirst=opts.get('follow_first'))
             def want(rev):
                 return ff.match(rev) and rev in wanted
         else:
