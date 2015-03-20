@@ -123,6 +123,7 @@ def exsetcurrent(orig, repo, mark):
     writedistance(repo)
     return res
 
+
 def reposetup(ui, repo):
     if not repo.local():
         return
@@ -133,43 +134,53 @@ def reposetup(ui, repo):
 
     loadremotenames(repo)
 
-    # cache this so we don't iterate over new values
-    items = list(repo.names.iteritems())
-    for nsname, ns in items:
-        d = _remotenames.get(nsname)
-        if not d:
-            continue
+    ns = namespaces.namespace
 
-        rname = 'remote' + nsname
-        rtmpl = 'remote' + ns.templatename
+    mark2nodes = _remotenames.get('bookmarks')
+    node2marks = {}
+    for name, node in mark2nodes.iteritems():
+        node2marks.setdefault(node[0], []).append(name)
+    remotebookmarkns = ns(
+            'remotebookmarks',
+            templatename='remotebookmarks',
+            logname='bookmark',
+            colorname='remotebookmarks',
+            listnames=lambda repo: mark2nodes.keys(),
+            namemap=lambda repo, name: mark2nodes.get(name),
+            nodemap=lambda repo, node: node2marks.get(node, []))
+    repo.names.addnamespace(remotebookmarkns)
 
-        if nsname == 'bookmarks' and hoist:
-            def names(rp, d=d):
-                l = d.keys()
-                for name in l:
-                    if name.startswith(hoist):
-                        l.append(name[len(hoist):])
-                return l
+    if hoist:
+        hoist2nodes = {}
+        node2hoists = {}
+        for name, node in mark2nodes.iteritems():
+            if name.startswith(hoist):
+                hoist2nodes[name[len(hoist):]] = node
+                node2hoists.setdefault(node[0], []).append(name)
+        hoistedmarkns = ns(
+                'hoistedbookmarks',
+                templatename='hoistedbookmarks',
+                logname='hoistedname',
+                colorname='hoistedname',
+                listnames=lambda repo: hoist2nodes.keys(),
+                namemap=lambda repo, name: hoist2nodes.get(name),
+                nodemap=lambda repo, node: node2hoists.get(name, []))
+        repo.names.addnamespace(hoistedmarkns)
 
-            def namemap(rp, name, d=d):
-                if name in d:
-                    return d[name]
-                return d.get(hoist + name)
-
-            # we don't hoist nodemap because we don't want hoisted names
-            # to show up in logs, which is the primary use case here
-        else:
-            names = lambda rp, d=d: d.keys()
-            namemap = lambda rp, name, d=d: d.get(name)
-
-        nodemap = lambda rp, node, d=d: [name for name, n in d.iteritems()
-                                         for n2 in n if n2 == node]
-
-        n = namespaces.namespace(rname, templatename=rtmpl,
-                                 logname=ns.templatename, colorname=rtmpl,
-                                 listnames=names, namemap=namemap,
-                                 nodemap=nodemap)
-        repo.names.addnamespace(n)
+    branch2nodes = _remotenames.get('branches')
+    node2branch = {}
+    for name, nodes in branch2nodes.iteritems():
+        for node in nodes:
+            node2branch[node] = [name]
+    remotebranchns = ns(
+            'remotebranches',
+            templatename='remotebranches',
+            logname='branch',
+            colorname='remotebranch',
+            listnames=lambda repo: branch2nodes.keys(),
+            namemap=lambda repo, name: branch2nodes.get(name),
+            nodemap=lambda repo, node: node2branch.get(node, []))
+    repo.names.addnamespace(remotebranchns)
 
 def _tracking(ui):
     # omg default true
