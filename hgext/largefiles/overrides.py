@@ -734,7 +734,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 # commits. Update the standins then run the original revert, changing
 # the matcher to hit standins instead of largefiles. Based on the
 # resulting standins update the largefiles.
-def overriderevert(orig, ui, repo, *pats, **opts):
+def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
     # Because we put the standins in a bad state (by updating them)
     # and then return them to a correct state we need to lock to
     # prevent others from changing them in their incorrect state.
@@ -751,19 +751,20 @@ def overriderevert(orig, ui, repo, *pats, **opts):
 
         oldstandins = lfutil.getstandinsstate(repo)
 
-        def overridematch(ctx, pats=[], opts={}, globbed=False,
+        def overridematch(mctx, pats=[], opts={}, globbed=False,
                 default='relpath'):
-            match = oldmatch(ctx, pats, opts, globbed, default)
+            match = oldmatch(mctx, pats, opts, globbed, default)
             m = copy.copy(match)
 
             # revert supports recursing into subrepos, and though largefiles
             # currently doesn't work correctly in that case, this match is
             # called, so the lfdirstate above may not be the correct one for
             # this invocation of match.
-            lfdirstate = lfutil.openlfdirstate(ctx.repo().ui, ctx.repo(), False)
+            lfdirstate = lfutil.openlfdirstate(mctx.repo().ui, mctx.repo(),
+                                               False)
 
             def tostandin(f):
-                if lfutil.standin(f) in ctx:
+                if lfutil.standin(f) in mctx:
                     return lfutil.standin(f)
                 elif lfutil.standin(f) in repo[None] or lfdirstate[f] == 'r':
                     return None
@@ -775,13 +776,13 @@ def overriderevert(orig, ui, repo, *pats, **opts):
             def matchfn(f):
                 if lfutil.isstandin(f):
                     return (origmatchfn(lfutil.splitstandin(f)) and
-                            (f in repo[None] or f in ctx))
+                            (f in repo[None] or f in mctx))
                 return origmatchfn(f)
             m.matchfn = matchfn
             return m
         oldmatch = installmatchfn(overridematch)
         try:
-            orig(ui, repo, *pats, **opts)
+            orig(ui, repo, ctx, parents, *pats, **opts)
         finally:
             restorematchfn()
 
