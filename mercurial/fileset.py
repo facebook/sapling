@@ -256,6 +256,16 @@ def hgignore(mctx, x):
     ignore = mctx.ctx.repo().dirstate._ignore
     return [f for f in mctx.subset if ignore(f)]
 
+def portable(mctx, x):
+    """``portable()``
+    File that has a portable name. (This doesn't include filenames with case
+    collisions.)
+    """
+    # i18n: "portable" is a keyword
+    getargs(x, 0, 0, _("portable takes no arguments"))
+    checkwinfilename = util.checkwinfilename
+    return [f for f in mctx.subset if checkwinfilename(f) is None]
+
 def grep(mctx, x):
     """``grep(regex)``
     File contains the given regular expression.
@@ -416,6 +426,7 @@ symbols = {
     'ignored': ignored,
     'hgignore': hgignore,
     'modified': modified,
+    'portable': portable,
     'removed': removed,
     'resolved': resolved,
     'size': size,
