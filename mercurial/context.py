@@ -774,13 +774,13 @@ class basefilectx(object):
         # hack to reuse ancestor computation when searching for renames
         memberanc = getattr(self, '_ancestrycontext', None)
         iteranc = None
+        revs = [srcrev]
         if memberanc is None:
-            memberanc = iteranc = cl.ancestors([srcrev], lkr,
-                                               inclusive=inclusive)
+            memberanc = iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
         # check if this linkrev is an ancestor of srcrev
         if lkr not in memberanc:
             if iteranc is None:
-                iteranc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
+                iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
             for a in iteranc:
                 ac = cl.read(a) # get changeset data (we avoid object creation)
                 if path in ac[3]: # checking the 'files' field.
