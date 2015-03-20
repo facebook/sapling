@@ -428,9 +428,9 @@ class localrepository(object):
         store = obsolete.obsstore(self.svfs, readonly=readonly,
                                   **kwargs)
         if store and readonly:
-            # message is rare enough to not be translated
-            msg = 'obsolete feature not enabled but %i markers found!\n'
-            self.ui.warn(msg % len(list(store)))
+            self.ui.warn(
+                _('obsolete feature not enabled but %i markers found!\n')
+                % len(list(store)))
         return store
 
     @storecache('00changelog.i')
