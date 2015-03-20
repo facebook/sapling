@@ -775,13 +775,19 @@ class basefilectx(object):
         # hack to reuse ancestor computation when searching for renames
         memberanc = getattr(self, '_ancestrycontext', None)
         iteranc = None
+        if srcrev is None:
+            # wctx case, used by workingfilectx during mergecopy
+            revs = [p.rev() for p in self._repo[None].parents()]
+            inclusive = True # we skipped the real (revless) source
+        else:
+            revs = [srcrev]
         if memberanc is None:
-            memberanc = iteranc = cl.ancestors([srcrev], lkr,
+            memberanc = iteranc = cl.ancestors(revs, lkr,
                                                inclusive=inclusive)
         # check if this linkrev is an ancestor of srcrev
         if lkr not in memberanc:
             if iteranc is None:
-                iteranc = cl.ancestors([srcrev], lkr, inclusive=inclusive)
+                iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
             for a in iteranc:
                 ac = cl.read(a) # get changeset data (we avoid object creation)
                 if path in ac[3]: # checking the 'files' field.
@@ -914,6 +920,8 @@ class basefilectx(object):
         introrev = self.introrev()
         if self.rev() != introrev:
             base = self.filectx(self.filenode(), changeid=introrev)
+            ac = self._repo.changelog.ancestors([introrev], inclusive=True)
+            base._ancestrycontext = ac
 
         # This algorithm would prefer to be recursive, but Python is a
         # bit recursion-hostile. Instead we do an iterative

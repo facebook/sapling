@@ -266,14 +266,41 @@ def mergecopies(repo, c1, c2, ca):
     m2 = c2.manifest()
     ma = ca.manifest()
 
-    def makectx(f, n):
-        if len(n) != 20: # in a working context?
-            if c1.rev() is None:
-                return c1.filectx(f)
-            return c2.filectx(f)
-        return repo.filectx(f, fileid=n)
 
-    ctx = util.lrucachefunc(makectx)
+    def setupctx(ctx):
+        """return a 'makectx' function suitable for checkcopies usage from ctx
+
+        We have to re-setup the function building 'filectx' for each
+        'checkcopies' to ensure the linkrev adjustement is properly setup for
+        each. Linkrev adjustment is important to avoid bug in rename
+        detection. Moreover, having a proper '_ancestrycontext' setup ensures
+        the performance impact of this adjustment is kept limited. Without it,
+        each file could do a full dag traversal making the time complexity of
+        the operation explode (see issue4537).
+
+        This function exists here mostly to limit the impact on stable. Feel
+        free to refactor on default.
+        """
+        rev = ctx.rev()
+        ac = getattr(ctx, '_ancestrycontext', None)
+        if ac is None:
+            revs = [rev]
+            if rev is None:
+                revs = [p.rev() for p in ctx.parents()]
+            ac = ctx._repo.changelog.ancestors(revs, inclusive=True)
+            ctx._ancestrycontext = ac
+        def makectx(f, n):
+            if len(n) != 20:  # in a working context?
+                if c1.rev() is None:
+                    return c1.filectx(f)
+                return c2.filectx(f)
+            fctx = repo.filectx(f, fileid=n)
+            # setup only needed for filectx not create from a changectx
+            fctx._ancestrycontext = ac
+            fctx._descendantrev = rev
+            return fctx
+        return util.lrucachefunc(makectx)
+
     copy = {}
     movewithdir = {}
     fullcopy = {}
@@ -286,9 +313,11 @@ def mergecopies(repo, c1, c2, ca):
     u1, u2 = _computenonoverlap(repo, m1, m2, addedinm1, addedinm2)
 
     for f in u1:
+        ctx = setupctx(c1)
         checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
 
     for f in u2:
+        ctx = setupctx(c2)
         checkcopies(ctx, f, m2, m1, ca, limit, diverge, copy, fullcopy)
 
     renamedelete = {}
@@ -311,7 +340,9 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(bothnew))
     bothdiverge, _copy, _fullcopy = {}, {}, {}
     for f in bothnew:
+        ctx = setupctx(c1)
         checkcopies(ctx, f, m1, m2, ca, limit, bothdiverge, _copy, _fullcopy)
+        ctx = setupctx(c2)
         checkcopies(ctx, f, m2, m1, ca, limit, bothdiverge, _copy, _fullcopy)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
