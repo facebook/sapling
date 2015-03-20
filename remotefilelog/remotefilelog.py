@@ -440,18 +440,22 @@ class remotefilelog(object):
         ma = repo.manifest
 
         newmapping = {}
-        def _fixsinglelinknode(path, fnode, source, autoaccept=False):
-            """Given a file node and a source commit, fills in the newmapping
-            with the valid history of that file node, relative to the source
-            commit."""
+
+        # Given a file node and a source commit, fills in the newmapping
+        # with the valid history of that file node, relative to the source
+        # commit.
+        # Can't use recursion here since it might exceed the callstack depth.
+        stack = [(self.filename, node, relativeto, False)]
+        while stack:
+            path, fnode, source, autoaccept = stack.pop()
             if fnode == nullid or fnode in newmapping:
-                return
+                continue
 
             p1, p2, linknode, copyfrom = mapping[fnode]
             if autoaccept or cl.ancestor(linknode, source) == linknode:
                 newmapping[fnode] = p1, p2, linknode, copyfrom
-                _fixsinglelinknode(copyfrom or path, p1, linknode, autoaccept=True)
-                _fixsinglelinknode(path, p2, linknode, autoaccept=True)
+                stack.append((path, p2, linknode, True))
+                stack.append((copyfrom or path, p1, linknode, True))
             else:
                 srcrev = cl.rev(source)
                 iteranc = cl.ancestors([srcrev], inclusive=True)
@@ -463,23 +467,19 @@ class remotefilelog(object):
                         if fnode == ma.readfast(ac[0]).get(path):
                             linknode = cl.node(a)
                             newmapping[fnode] = p1, p2, linknode, copyfrom
-                            _fixsinglelinknode(copyfrom or path, p1, linknode)
-                            _fixsinglelinknode(path, p2, linknode)
-                            return
+                            stack.append((path, p2, linknode, False))
+                            stack.append((copyfrom or path, p1, linknode, False))
+                            break
+                else:
+                    # This shouldn't happen, but if for some reason we are unable to
+                    # resolve a correct mapping, give up and let the _ancestormap()
+                    # above try a new method.
+                    msg = ("remotefilelog: unable to find valid history for "
+                        "%s:%s" % (path, hex(fnode)))
+                    repo.ui.warn(msg)
+                    return None
 
-                # This shouldn't happen, but if for some reason we are unable to
-                # resolve a correct mapping, give up and let the _ancestormap()
-                # above try a new method.
-                msg = ("remotefilelog: unable to find valid history for "
-                    "%s:%s" % (path, hex(fnode)))
-                repo.ui.warn(msg)
-                raise KeyError(msg)
-
-        try:
-            _fixsinglelinknode(self.filename, node, relativeto)
-            return newmapping
-        except KeyError:
-            return None
+        return newmapping
 
     def ancestor(self, a, b):
         if a == nullid or b == nullid:
