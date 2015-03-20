@@ -128,59 +128,61 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    hoist = ui.config('remotenames', 'hoist')
-    if hoist:
-        hoist += '/'
-
     loadremotenames(repo)
-
     ns = namespaces.namespace
 
-    mark2nodes = _remotenames.get('bookmarks')
-    node2marks = {}
-    for name, node in mark2nodes.iteritems():
-        node2marks.setdefault(node[0], []).append(name)
-    remotebookmarkns = ns(
-            'remotebookmarks',
-            templatename='remotebookmarks',
-            logname='bookmark',
-            colorname='remotebookmarks',
-            listnames=lambda repo: mark2nodes.keys(),
-            namemap=lambda repo, name: mark2nodes.get(name),
-            nodemap=lambda repo, node: node2marks.get(node, []))
-    repo.names.addnamespace(remotebookmarkns)
-
-    if hoist:
-        hoist2nodes = {}
-        node2hoists = {}
+    if ui.configbool('remotenames', 'bookmarks', True):
+        mark2nodes = _remotenames.get('bookmarks')
+        node2marks = {}
         for name, node in mark2nodes.iteritems():
-            if name.startswith(hoist):
-                hoist2nodes[name[len(hoist):]] = node
-                node2hoists.setdefault(node[0], []).append(name)
-        hoistedmarkns = ns(
-                'hoistedbookmarks',
-                templatename='hoistedbookmarks',
-                logname='hoistedname',
-                colorname='hoistedname',
-                listnames=lambda repo: hoist2nodes.keys(),
-                namemap=lambda repo, name: hoist2nodes.get(name),
-                nodemap=lambda repo, node: node2hoists.get(name, []))
-        repo.names.addnamespace(hoistedmarkns)
+            node2marks.setdefault(node[0], []).append(name)
+        remotebookmarkns = ns(
+                'remotebookmarks',
+                templatename='remotebookmarks',
+                logname='bookmark',
+                colorname='remotebookmarks',
+                listnames=lambda repo: mark2nodes.keys(),
+                namemap=lambda repo, name: mark2nodes.get(name),
+                nodemap=lambda repo, node: node2marks.get(node, []))
+        repo.names.addnamespace(remotebookmarkns)
 
-    branch2nodes = _remotenames.get('branches')
-    node2branch = {}
-    for name, nodes in branch2nodes.iteritems():
-        for node in nodes:
-            node2branch[node] = [name]
-    remotebranchns = ns(
-            'remotebranches',
-            templatename='remotebranches',
-            logname='branch',
-            colorname='remotebranch',
-            listnames=lambda repo: branch2nodes.keys(),
-            namemap=lambda repo, name: branch2nodes.get(name),
-            nodemap=lambda repo, node: node2branch.get(node, []))
-    repo.names.addnamespace(remotebranchns)
+        # hoisting only works if there are remote bookmarks
+        hoist = ui.config('remotenames', 'hoist')
+        if hoist:
+            hoist += '/'
+
+        if hoist:
+            hoist2nodes = {}
+            node2hoists = {}
+            for name, node in mark2nodes.iteritems():
+                if name.startswith(hoist):
+                    hoist2nodes[name[len(hoist):]] = node
+                    node2hoists.setdefault(node[0], []).append(name)
+            hoistedmarkns = ns(
+                    'hoistedbookmarks',
+                    templatename='hoistedbookmarks',
+                    logname='hoistedname',
+                    colorname='hoistedname',
+                    listnames=lambda repo: hoist2nodes.keys(),
+                    namemap=lambda repo, name: hoist2nodes.get(name),
+                    nodemap=lambda repo, node: node2hoists.get(name, []))
+            repo.names.addnamespace(hoistedmarkns)
+
+    if ui.configbool('remotenames', 'branches', True):
+        branch2nodes = _remotenames.get('branches')
+        node2branch = {}
+        for name, nodes in branch2nodes.iteritems():
+            for node in nodes:
+                node2branch[node] = [name]
+        remotebranchns = ns(
+                'remotebranches',
+                templatename='remotebranches',
+                logname='branch',
+                colorname='remotebranch',
+                listnames=lambda repo: branch2nodes.keys(),
+                namemap=lambda repo, name: branch2nodes.get(name),
+                nodemap=lambda repo, node: node2branch.get(node, []))
+        repo.names.addnamespace(remotebranchns)
 
 def _tracking(ui):
     # omg default true
