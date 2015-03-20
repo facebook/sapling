@@ -147,7 +147,7 @@ def reposetup(ui, repo):
         repo.names.addnamespace(remotebookmarkns)
 
         # hoisting only works if there are remote bookmarks
-        hoist = ui.config('remotenames', 'hoist')
+        hoist = ui.config('remotenames', 'hoist', 'default')
         if hoist:
             hoist += '/'
 
