@@ -774,9 +774,15 @@ class basefilectx(object):
         # hack to reuse ancestor computation when searching for renames
         memberanc = getattr(self, '_ancestrycontext', None)
         iteranc = None
-        revs = [srcrev]
+        if srcrev is None:
+            # wctx case, used by workingfilectx during mergecopy
+            revs = [p.rev() for p in self._repo[None].parents()]
+            inclusive = True # we skipped the real (revless) source
+        else:
+            revs = [srcrev]
         if memberanc is None:
-            memberanc = iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
+            memberanc = iteranc = cl.ancestors(revs, lkr,
+                                               inclusive=inclusive)
         # check if this linkrev is an ancestor of srcrev
         if lkr not in memberanc:
             if iteranc is None:
