@@ -913,6 +913,8 @@ class basefilectx(object):
         introrev = self.introrev()
         if self.rev() != introrev:
             base = self.filectx(self.filenode(), changeid=introrev)
+            ac = self._repo.changelog.ancestors([introrev], inclusive=True)
+            base._ancestrycontext = ac
 
         # This algorithm would prefer to be recursive, but Python is a
         # bit recursion-hostile. Instead we do an iterative
