@@ -32,8 +32,9 @@ else:
 try:
     curses
 except NameError:
-    raise util.Abort(
-        _('the python curses/wcurses module is not available/installed'))
+    if os.name != 'nt':  # Temporary hack to get running on Windows again
+        raise util.Abort(
+            _('the python curses/wcurses module is not available/installed'))
 
 _origstdout = sys.__stdout__ # used by gethw()
 
