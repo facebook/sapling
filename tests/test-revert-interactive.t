@@ -21,13 +21,17 @@ Revert interactive tests
   $ mkdir -p a/folder1 a/folder2
   $ cd a
   $ hg init
-  $ python $TESTDIR/seq.py 1 5 > f ; hg add f ; hg commit -m "adding f"
+  >>> open('f', 'wb').write("1\n2\n3\n4\n5\n")
+  $ hg add f ; hg commit -m "adding f"
   $ cat f > folder1/g ; hg add folder1/g ; hg commit -m "adding folder1/g"
   $ cat f > folder2/h ; hg add folder2/h ; hg commit -m "adding folder2/h"
   $ cat f > folder1/i ; hg add folder1/i ; hg commit -m "adding folder1/i"
-  $ echo "a" > f ; python $TESTDIR/seq.py 1 5 >> f ; echo "b" >> f ; hg commit -m "modifying f"
-  $ echo "c" > folder1/g ; python $TESTDIR/seq.py 1 5 >> folder1/g ; echo "d" >> folder1/g ; hg commit -m "modifying folder1/g"
-  $ echo "e" > folder2/h ; python $TESTDIR/seq.py 1 5 >> folder2/h ; echo "f" >> folder2/h ; hg commit -m "modifying folder2/h"
+  >>> open('f', 'wb').write("a\n1\n2\n3\n4\n5\nb\n")
+  $ hg commit -m "modifying f"
+  >>> open('folder1/g', 'wb').write("c\n1\n2\n3\n4\n5\nd\n")
+  $ hg commit -m "modifying folder1/g"
+  >>> open('folder2/h', 'wb').write("e\n1\n2\n3\n4\n5\nf\n")
+  $ hg commit -m "modifying folder2/h"
   $ hg tip
   changeset:   6:59dd6e4ab63a
   tag:         tip
