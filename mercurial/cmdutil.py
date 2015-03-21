@@ -16,7 +16,6 @@ import bookmarks
 import encoding
 import crecord as crecordmod
 import lock as lockmod
-import crecord as crecordmod
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
