@@ -12,7 +12,7 @@ from i18n import _
 import patch as patchmod
 import util, encoding
 
-import os, re, sys, fcntl, struct, termios, signal, tempfile, locale, cStringIO
+import os, re, sys, struct, signal, tempfile, locale, cStringIO
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
@@ -20,10 +20,14 @@ locale.setlocale(locale.LC_ALL, '')
 
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
 if os.name == 'posix':
-    import curses
+    import curses, fcntl, termios
 else:
     # I have no idea if wcurses works with crecord...
-    import wcurses as curses
+    try:
+        import wcurses as curses
+    except ImportError:
+        # wcurses is not shipped on Windows by default
+        pass
 
 try:
     curses
