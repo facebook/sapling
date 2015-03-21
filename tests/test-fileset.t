@@ -247,6 +247,9 @@ Test with a revision
   bar 
   baz\
   con.xml
+  $ hg forget 'bar '
+  $ hg forget 'baz\'
+  $ hg forget 'con.xml'
 #endif
 
   $ fileset -r4 'subrepo("re:su.*")'
@@ -271,10 +274,7 @@ Test with a revision
   a1
   b1
   b2
-  bar 
-  baz\
   c1
-  con.xml
   mixed
   $ fileset 'eol(mac)'
   mac
