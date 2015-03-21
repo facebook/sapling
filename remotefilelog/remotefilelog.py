@@ -452,7 +452,8 @@ class remotefilelog(object):
                 continue
 
             p1, p2, linknode, copyfrom = mapping[fnode]
-            if autoaccept or cl.ancestor(linknode, source) == linknode:
+            if (autoaccept or
+                (linknode in cl and cl.ancestor(linknode, source) == linknode)):
                 newmapping[fnode] = p1, p2, linknode, copyfrom
                 stack.append((path, p2, linknode, True))
                 stack.append((copyfrom or path, p1, linknode, True))
