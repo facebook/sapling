@@ -239,8 +239,9 @@ h3 {
 
 .sourcelines > span {
   display: inline-block;
+  box-sizing: border-box;
   width: 100%;
-  padding: 1px 0px;
+  padding: 1px 0px 1px 5em;
   counter-increment: lineno;
 }
 
@@ -251,8 +252,8 @@ h3 {
   -ms-user-select: none;
   user-select: none;
   display: inline-block;
+  margin-left: -5em;
   width: 4em;
-  margin-right: 1em;
   font-size: smaller;
   color: #999;
   text-align: right;
