@@ -113,24 +113,9 @@ Test files properties
 
 #if no-windows
   $ echo foo > con.xml
-  $ echo bar > 'bar '
-  $ echo baz > 'baz\'
-  $ ls
-  b1
-  b2
-  b2link
-  bar 
-  baz\
-  bin
-  c1
-  c2
-  c3
-  con.xml
   $ fileset 'not portable()'
-  bar 
-  baz\
   con.xml
-  $ hg --config ui.portablefilenames=ignore add con.xml 'bar ' 'baz\'
+  $ hg --config ui.portablefilenames=ignore add con.xml
 #endif
 
   >>> file('1k', 'wb').write(' '*1024)
@@ -244,11 +229,7 @@ Test with a revision
 
 #if no-windows
   $ fileset -r1 'not portable()'
-  bar 
-  baz\
   con.xml
-  $ hg forget 'bar '
-  $ hg forget 'baz\'
   $ hg forget 'con.xml'
 #endif
 
