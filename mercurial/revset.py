@@ -1169,18 +1169,7 @@ def limit(repo, subset, x, order):
     if ofs < 0:
         raise error.ParseError(_("negative offset"))
     os = getset(repo, fullreposet(repo), args['set'])
-    result = []
-    it = iter(os)
-    for x in xrange(ofs):
-        y = next(it, None)
-        if y is None:
-            break
-    for x in xrange(lim):
-        y = next(it, None)
-        if y is None:
-            break
-        result.append(y)
-    ls = baseset(result, datarepr=('<limit n=%d, offset=%d, %r>', lim, ofs, os))
+    ls = os.slice(ofs, ofs + lim)
     if order == followorder and lim > 1:
         return subset & ls
     return ls & subset
@@ -1199,14 +1188,7 @@ def last(repo, subset, x, order):
         raise error.ParseError(_("negative number to select"))
     os = getset(repo, fullreposet(repo), l[0])
     os.reverse()
-    result = []
-    it = iter(os)
-    for x in xrange(lim):
-        y = next(it, None)
-        if y is None:
-            break
-        result.append(y)
-    ls = baseset(result, datarepr=('<last n=%d, %r>', lim, os))
+    ls = os.slice(0, lim)
     if order == followorder and lim > 1:
         return subset & ls
     ls.reverse()

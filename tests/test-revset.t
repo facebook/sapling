@@ -1016,14 +1016,34 @@ Test first (=limit) and last
   8
   9
 
+Test smartset.slice() by first/last()
+
+ (using unoptimized set, filteredset as example)
+
+  $ hg debugrevspec --no-show-revs -s '0:7 & branch("re:")'
+  * set:
+  <filteredset
+    <spanset+ 0:8>,
+    <branch 're:'>>
+  $ log 'limit(0:7 & branch("re:"), 3, 4)'
+  4
+  5
+  6
+  $ log 'limit(7:0 & branch("re:"), 3, 4)'
+  3
+  2
+  1
+  $ log 'last(0:7 & branch("re:"), 2)'
+  6
+  7
+
 Test order of first/last revisions
 
   $ hg debugrevspec -s 'first(4:0, 3) & 3:'
   * set:
   <filteredset
-    <baseset
-      <limit n=3, offset=0,
-        <spanset- 0:5>>>,
+    <baseset slice=0:3
+      <spanset- 0:5>>,
     <spanset+ 3:10>>
   4
   3
@@ -1032,18 +1052,16 @@ Test order of first/last revisions
   * set:
   <filteredset
     <spanset+ 3:10>,
-    <baseset
-      <limit n=3, offset=0,
-        <spanset- 0:5>>>>
+    <baseset slice=0:3
+      <spanset- 0:5>>>
   3
   4
 
   $ hg debugrevspec -s 'last(4:0, 3) & :1'
   * set:
   <filteredset
-    <baseset
-      <last n=3,
-        <spanset+ 0:5>>>,
+    <baseset slice=0:3
+      <spanset+ 0:5>>,
     <spanset+ 0:2>>
   1
   0
@@ -1052,9 +1070,8 @@ Test order of first/last revisions
   * set:
   <filteredset
     <spanset+ 0:2>,
-    <baseset
-      <last n=3,
-        <spanset+ 0:5>>>>
+    <baseset slice=0:3
+      <spanset+ 0:5>>>
   0
   1
 
@@ -1950,9 +1967,8 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <baseset
-      <limit n=1, offset=0,
-        <baseset [1, 0, 2]>>>,
+    <baseset slice=0:1
+      <baseset [1, 0, 2]>>,
     <spanset- 0:3>>
   1
 
@@ -1987,9 +2003,8 @@ ordering defined by it.
   <filteredset
     <spanset- 0:3>,
     <not
-      <baseset
-        <last n=1,
-          <baseset [1, 2, 0]>>>>>
+      <baseset slice=0:1
+        <baseset [1, 2, 0]>>>>
   2
   0
 
@@ -3613,9 +3628,8 @@ issue2549 - correct optimizations
       ('symbol', '2')))
   * set:
   <filteredset
-    <baseset
-      <limit n=2, offset=0,
-        <baseset [1, 2, 3]>>>,
+    <baseset slice=0:2
+      <baseset [1, 2, 3]>>,
     <not
       <baseset [2]>>>
   1
@@ -3669,9 +3683,8 @@ issue2549 - correct optimizations
       ('symbol', '2')))
   * set:
   <filteredset
-    <baseset
-      <last n=1,
-        <baseset [2, 1]>>>,
+    <baseset slice=0:1
+      <baseset [2, 1]>>,
     <not
       <baseset [2]>>>
 

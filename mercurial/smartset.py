@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from . import (
+    error,
     util,
 )
 
@@ -154,6 +155,28 @@ class abstractsmartset(object):
         if cache and util.safehasattr(condition, 'func_code'):
             condition = util.cachefunc(condition)
         return filteredset(self, condition, condrepr)
+
+    def slice(self, start, stop):
+        """Return new smartset that contains selected elements from this set"""
+        if start < 0 or stop < 0:
+            raise error.ProgrammingError('negative index not allowed')
+        return self._slice(start, stop)
+
+    def _slice(self, start, stop):
+        # sub classes may override this. start and stop must not be negative,
+        # but start > stop is allowed, which should be an empty set.
+        ys = []
+        it = iter(self)
+        for x in xrange(start):
+            y = next(it, None)
+            if y is None:
+                break
+        for x in xrange(stop - start):
+            y = next(it, None)
+            if y is None:
+                break
+            ys.append(y)
+        return baseset(ys, datarepr=('slice=%d:%d %r', start, stop, self))
 
 class baseset(abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
