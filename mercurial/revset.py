@@ -1284,24 +1284,33 @@ def keyword(repo, subset, x):
     return subset.filter(matches)
 
 def limit(repo, subset, x):
-    """``limit(set, [n])``
-    First n members of set, defaulting to 1.
+    """``limit(set[, n[, offset]])``
+    First n members of set, defaulting to 1, starting from offset.
     """
-    args = getargsdict(x, 'limit', 'set n')
+    args = getargsdict(x, 'limit', 'set n offset')
     if 'set' not in args:
         # i18n: "limit" is a keyword
-        raise error.ParseError(_("limit requires one or two arguments"))
+        raise error.ParseError(_("limit requires one to three arguments"))
     try:
-        lim = 1
+        lim, ofs = 1, 0
         if 'n' in args:
             # i18n: "limit" is a keyword
             lim = int(getstring(args['n'], _("limit requires a number")))
+        if 'offset' in args:
+            # i18n: "limit" is a keyword
+            ofs = int(getstring(args['offset'], _("limit requires a number")))
+        if ofs < 0:
+            raise error.ParseError(_("negative offset"))
     except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
     os = getset(repo, fullreposet(repo), args['set'])
     result = []
     it = iter(os)
+    for x in xrange(ofs):
+        y = next(it, None)
+        if y is None:
+            break
     for x in xrange(lim):
         y = next(it, None)
         if y is None:
