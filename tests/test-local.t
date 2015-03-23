@@ -61,7 +61,7 @@
   $ echo xxx > x
   $ echo yyy > y
   $ hg commit -m a
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  ? files fetched over 1 fetches - (? misses, 0.00% hit ratio) over *s (glob)
 
 # local commit where the dirstate is clean -- ensure that we do just one fetch
 # (update to a commit on the server first)
