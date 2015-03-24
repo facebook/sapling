@@ -764,9 +764,10 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
                                                False)
 
             def tostandin(f):
-                if lfutil.standin(f) in mctx:
-                    return lfutil.standin(f)
-                elif lfutil.standin(f) in repo[None] or lfdirstate[f] == 'r':
+                standin = lfutil.standin(f)
+                if standin in mctx:
+                    return standin
+                elif standin in repo[None] or lfdirstate[f] == 'r':
                     return None
                 return f
             m._files = [tostandin(f) for f in m._files]
