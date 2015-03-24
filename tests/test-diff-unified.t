@@ -286,4 +286,51 @@ Git diff, removing space
   -b
   +a
 
+showfunc diff
+  $ cat > f1 << EOF
+  > int main() {
+  >     int a = 0;
+  >     int b = 1;
+  >     int c = 2;
+  >     int d = 3;
+  >     return a + b + c + d;
+  > }
+  > EOF
+  $ hg commit -m addfunction
+  $ cat > f1 << EOF
+  > int main() {
+  >     int a = 0;
+  >     int b = 1;
+  >     int c = 2;
+  >     int e = 3;
+  >     return a + b + c + e;
+  > }
+  > EOF
+  $ hg diff --git
+  diff --git a/f1 b/f1
+  --- a/f1
+  +++ b/f1
+  @@ -2,6 +2,6 @@
+       int a = 0;
+       int b = 1;
+       int c = 2;
+  -    int d = 3;
+  -    return a + b + c + d;
+  +    int e = 3;
+  +    return a + b + c + e;
+   }
+  $ hg diff --config diff.showfunc=True --git
+  diff --git a/f1 b/f1
+  --- a/f1
+  +++ b/f1
+  @@ -2,6 +2,6 @@ int main() {
+       int a = 0;
+       int b = 1;
+       int c = 2;
+  -    int d = 3;
+  -    return a + b + c + d;
+  +    int e = 3;
+  +    return a + b + c + e;
+   }
+
   $ cd ..
