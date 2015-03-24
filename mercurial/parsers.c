@@ -911,6 +911,111 @@ static int check_filter(PyObject *filter, unsigned long arg) {
 	}
 }
 
+static Py_ssize_t add_roots_get_min(indexObject *self, PyObject *list,
+                                    int marker, char *phases)
+{
+	PyObject *iter = NULL;
+	PyObject *iter_item = NULL;
+	Py_ssize_t min_idx = index_length(self) + 1;
+	long iter_item_long;
+
+	if (PyList_GET_SIZE(list) != 0) {
+		iter = PyObject_GetIter(list);
+		if (iter == NULL)
+			return -2;
+		while ((iter_item = PyIter_Next(iter)))
+		{
+			iter_item_long = PyInt_AS_LONG(iter_item);
+			Py_DECREF(iter_item);
+			if (iter_item_long < min_idx)
+				min_idx = iter_item_long;
+			phases[iter_item_long] = marker;
+		}
+		Py_DECREF(iter);
+	}
+
+	return min_idx;
+}
+
+static inline void set_phase_from_parents(char *phases, int parent_1,
+                                          int parent_2, int i)
+{
+	if (parent_1 >= 0 && phases[parent_1] > phases[i])
+		phases[i] = phases[parent_1];
+	if (parent_2 >= 0 && phases[parent_2] > phases[i])
+		phases[i] = phases[parent_2];
+}
+
+static PyObject *compute_phases(indexObject *self, PyObject *args)
+{
+	PyObject *roots = Py_None;
+	PyObject *phaseslist = NULL;
+	PyObject *phaseroots = NULL;
+	PyObject *rev = NULL;
+	PyObject *p1 = NULL;
+	PyObject *p2 = NULL;
+	Py_ssize_t addlen = self->added ? PyList_GET_SIZE(self->added) : 0;
+	Py_ssize_t len = index_length(self) - 1;
+	Py_ssize_t numphase = 0;
+	Py_ssize_t minrevallphases = 0;
+	Py_ssize_t minrevphase = 0;
+	Py_ssize_t i = 0;
+	long parent_1, parent_2;
+	char *phases = NULL;
+	const char *data;
+
+	if (!PyArg_ParseTuple(args, "O", &roots))
+		goto release_none;
+	if (roots == NULL || !PyList_Check(roots))
+		goto release_none;
+
+	phases = calloc(len, 1); /* phase per rev: {0: public, 1: draft, 2: secret} */
+	if (phases == NULL)
+		goto release_none;
+	/* Put the phase information of all the roots in phases */
+	numphase = PyList_GET_SIZE(roots)+1;
+	minrevallphases = len + 1;
+	for (i = 0; i < numphase-1; i++) {
+		phaseroots = PyList_GET_ITEM(roots, i);
+		if (!PyList_Check(phaseroots))
+			goto release_phases;
+		minrevphase = add_roots_get_min(self, phaseroots, i+1, phases);
+		if (minrevphase == -2) /* Error from add_roots_get_min */
+			goto release_phases;
+		minrevallphases = MIN(minrevallphases, minrevphase);
+	}
+	/* Propagate the phase information from the roots to the revs */
+	if (minrevallphases != -1) {
+		for (i = minrevallphases; i < self->raw_length; i++) {
+			data = index_deref(self, i);
+			set_phase_from_parents(phases, getbe32(data+24), getbe32(data+28), i);
+		}
+		for (i = 0; i < addlen; i++) {
+			rev = PyList_GET_ITEM(self->added, i);
+			p1 = PyTuple_GET_ITEM(rev, 5);
+			p2 = PyTuple_GET_ITEM(rev, 6);
+			if (!PyInt_Check(p1) || !PyInt_Check(p2)) {
+				PyErr_SetString(PyExc_TypeError, "revlog parents are invalid");
+				goto release_phases;
+			}
+			parent_1 = PyInt_AS_LONG(p1);
+			parent_2 = PyInt_AS_LONG(p2);
+			set_phase_from_parents(phases, parent_1, parent_2, i+self->raw_length);
+		}
+	}
+	/* Transform phase list to a python list */
+	phaseslist = PyList_New(len);
+	if (phaseslist == NULL)
+		goto release_phases;
+	for (i = 0; i < len; i++)
+		PyList_SET_ITEM(phaseslist, i, PyInt_FromLong(phases[i]));
+
+release_phases:
+	free(phases);
+release_none:
+	return phaseslist;
+}
+
 static PyObject *index_headrevs(indexObject *self, PyObject *args)
 {
 	Py_ssize_t i, len, addlen;
@@ -2043,6 +2148,8 @@ static PyMethodDef index_methods[] = {
 	 "clear the index caches"},
 	{"get", (PyCFunction)index_m_get, METH_VARARGS,
 	 "get an index entry"},
+	{"computephases", (PyCFunction)compute_phases, METH_VARARGS,
+		"compute phases"},
 	{"headrevs", (PyCFunction)index_headrevs, METH_VARARGS,
 	 "get head revisions"}, /* Can do filtering since 3.2 */
 	{"headrevsfiltered", (PyCFunction)index_headrevs, METH_VARARGS,
