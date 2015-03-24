@@ -2811,7 +2811,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         wctx = repo[None]
         m = scmutil.match(wctx, pats, opts)
-        if not m.always() or node != parent:
+        if not m.always():
             m.bad = lambda x, y: False
             for abs in repo.walk(m):
                 names[abs] = m.rel(abs), m.exact(abs)
@@ -2840,7 +2840,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             changes = repo.status(node1=node, match=m,
                                   unknown=True, ignored=True, clean=True)
         else:
-            changes = repo.status(match=m)
+            changes = repo.status(node1=node, match=m)
             for kind in changes:
                 for abs in kind:
                     names[abs] = m.rel(abs), m.exact(abs)
