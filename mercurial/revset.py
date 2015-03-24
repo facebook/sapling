@@ -2493,6 +2493,10 @@ def parse(spec, lookup=None):
     p = parser.parser(tokenize, elements)
     return p.parse(spec, lookup=lookup)
 
+def posttreebuilthook(tree, repo):
+    # hook for extensions to execute code on the optimized tree
+    pass
+
 def match(ui, spec, repo=None):
     if not spec:
         raise error.ParseError(_("empty query"))
@@ -2506,6 +2510,7 @@ def match(ui, spec, repo=None):
         tree = findaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
     weight, tree = optimize(tree, True)
+    posttreebuilthook(tree, repo)
     def mfunc(repo, subset=None):
         if subset is None:
             subset = fullreposet(repo)
