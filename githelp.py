@@ -655,6 +655,24 @@ def rebase(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def reflog(ui, repo, *args, **kwargs):
+    cmdoptions = [
+        ('', 'all', None, ''),
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    cmd = Command('reflog')
+    if opts.get('all'):
+        cmd['--all'] = None
+    if len(args) > 0:
+        cmd.append(args[0])
+
+    ui.status(cmd, "\n\n")
+    ui.status("note: in hg commits can be deleted from repo but we always"
+              " have backups.\n"
+              "Please use 'hg backups --restore' or 'hg reset' to restore from backups."
+              "\n")
+
 def reset(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('', 'soft', None, ''),
@@ -881,6 +899,7 @@ gitcommands = {
     'pull': pull,
     'push': push,
     'rebase': rebase,
+    'reflog': reflog,
     'reset': reset,
     'revert': revert,
     'rev-parse': revparse,
