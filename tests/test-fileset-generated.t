@@ -141,39 +141,34 @@ Test log
   
 Test revert
 
-BROKEN: the files that get undeleted were not modified, they were removed,
-and content1_content2_missing-tracked was also not modified, it was deleted
-
   $ hg revert 'set:modified()'
   reverting content1_content1_content3-tracked
   reverting content1_content2_content1-tracked
-  undeleting content1_content2_content1-untracked
-  undeleting content1_content2_content2-untracked
   reverting content1_content2_content3-tracked
-  undeleting content1_content2_content3-untracked
-  reverting content1_content2_missing-tracked
-  undeleting content1_content2_missing-untracked
   reverting missing_content2_content3-tracked
-
-BROKEN: only the files that get forgotten are correct
 
   $ hg revert 'set:added()'
   forgetting content1_missing_content1-tracked
   forgetting content1_missing_content3-tracked
-  undeleting missing_content2_content2-untracked
-  undeleting missing_content2_content3-untracked
-  reverting missing_content2_missing-tracked
-  undeleting missing_content2_missing-untracked
   forgetting missing_missing_content3-tracked
 
   $ hg revert 'set:removed()'
   undeleting content1_content1_content1-untracked
   undeleting content1_content1_content3-untracked
   undeleting content1_content1_missing-untracked
+  undeleting content1_content2_content1-untracked
+  undeleting content1_content2_content2-untracked
+  undeleting content1_content2_content3-untracked
+  undeleting content1_content2_missing-untracked
+  undeleting missing_content2_content2-untracked
+  undeleting missing_content2_content3-untracked
+  undeleting missing_content2_missing-untracked
 
   $ hg revert 'set:deleted()'
   reverting content1_content1_missing-tracked
+  reverting content1_content2_missing-tracked
   forgetting content1_missing_missing-tracked
+  reverting missing_content2_missing-tracked
   forgetting missing_missing_missing-tracked
 
   $ hg revert 'set:unknown()'

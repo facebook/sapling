@@ -765,7 +765,7 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
 
             def tostandin(f):
                 standin = lfutil.standin(f)
-                if standin in mctx:
+                if standin in ctx or standin in mctx:
                     return standin
                 elif standin in repo[None] or lfdirstate[f] == 'r':
                     return None
@@ -777,7 +777,7 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
             def matchfn(f):
                 if lfutil.isstandin(f):
                     return (origmatchfn(lfutil.splitstandin(f)) and
-                            (f in repo[None] or f in mctx))
+                            (f in ctx or f in mctx))
                 return origmatchfn(f)
             m.matchfn = matchfn
             return m

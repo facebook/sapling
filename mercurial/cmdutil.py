@@ -2828,7 +2828,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         return
                 ui.warn("%s: %s\n" % (m.rel(path), msg))
 
-            m = scmutil.match(ctx, pats, opts)
             m.bad = badfn
             for abs in ctx.walk(m):
                 if abs not in names:
