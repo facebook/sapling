@@ -2809,7 +2809,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         ## filling of the `names` mapping
         # walk dirstate to fill `names`
 
-        m = scmutil.match(repo[None], pats, opts)
+        wctx = repo[None]
+        m = scmutil.match(wctx, pats, opts)
         if not m.always() or node != parent:
             m.bad = lambda x, y: False
             for abs in repo.walk(m):
@@ -3012,7 +3013,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             (unknown,       actions['unknown'],  discard),
             )
 
-        wctx = repo[None]
         for abs, (rel, exact) in sorted(names.items()):
             # target file to be touch on disk (relative to cwd)
             target = repo.wjoin(abs)
