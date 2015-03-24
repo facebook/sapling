@@ -5845,7 +5845,8 @@ def status(ui, repo, *pats, **opts):
                        opts.get('subrepos'))
     changestates = zip(states, 'MAR!?IC', stat)
 
-    if (opts.get('all') or opts.get('copies')) and not opts.get('no_status'):
+    if (opts.get('all') or opts.get('copies')
+        or ui.configbool('ui', 'statuscopies')) and not opts.get('no_status'):
         copy = copies.pathcopies(repo[node1], repo[node2])
 
     fm = ui.formatter('status', opts)

@@ -158,7 +158,7 @@ class ui(object):
 
         if self.plain():
             for k in ('debug', 'fallbackencoding', 'quiet', 'slash',
-                      'logtemplate', 'style',
+                      'logtemplate', 'statuscopies', 'style',
                       'traceback', 'verbose'):
                 if k in cfg['ui']:
                     del cfg['ui'][k]

@@ -1432,6 +1432,9 @@ User interface controls.
     backslash character (``\``)).
     Default is False.
 
+``statuscopies``
+    Display copies in the status command.
+
 ``ssh``
     command to use for SSH connections. Default is ``ssh``.
 

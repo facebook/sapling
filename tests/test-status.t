@@ -438,6 +438,15 @@ without force
     b
   R b
 
+using ui.statuscopies setting
+  $ hg st --config ui.statuscopies=true
+  M a
+    b
+  R b
+  $ hg st --config ui.statuscopies=false
+  M a
+  R b
+
 Other "bug" highlight, the revision status does not report the copy information.
 This is buggy behavior.
 
