@@ -514,6 +514,15 @@ def _intree(funcs, tree):
                 return True
     return False
 
+def _buildsubset(ctx, status):
+    if status:
+        subset = []
+        for c in status:
+            subset.extend(c)
+        return subset
+    else:
+        return list(ctx.walk(ctx.match([])))
+
 def getfileset(ctx, expr):
     tree = parse(expr)
 
@@ -528,13 +537,10 @@ def getfileset(ctx, expr):
         r = ctx.repo()
         status = r.status(ctx.p1(), ctx,
                           unknown=unknown, ignored=ignored, clean=True)
-        subset = []
-        for c in status:
-            subset.extend(c)
     else:
         status = None
-        subset = list(ctx.walk(ctx.match([])))
 
+    subset = _buildsubset(ctx, status)
     return getset(fullmatchctx(ctx, subset, status), tree)
 
 def prettyformat(tree):
