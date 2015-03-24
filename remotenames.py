@@ -165,7 +165,7 @@ def reposetup(ui, repo):
                     colorname='hoistedname',
                     listnames=lambda repo: hoist2nodes.keys(),
                     namemap=lambda repo, name: hoist2nodes.get(name),
-                    nodemap=lambda repo, node: node2hoists.get(name, []))
+                    nodemap=lambda repo, node: node2hoists.get(node, []))
             repo.names.addnamespace(hoistedmarkns)
 
     if ui.configbool('remotenames', 'branches', True):
