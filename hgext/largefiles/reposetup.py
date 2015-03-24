@@ -44,7 +44,7 @@ def reposetup(ui, repo):
                         return [lfutil.splitstandin(f) or f for f in filenames]
                     def manifest(self):
                         man1 = super(lfilesctx, self).manifest()
-                        class lfilesmanifest(man1.__class):
+                        class lfilesmanifest(man1.__class__):
                             def __contains__(self, filename):
                                 orig = super(lfilesmanifest, self).__contains__
                                 return (orig(filename) or
