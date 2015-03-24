@@ -5152,6 +5152,9 @@ def push(ui, repo, dest=None, **opts):
 
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
+        if not revs:
+            raise util.Abort(_("specified revisions evaluate to an empty set"),
+                             hint=_("use different revision arguments"))
 
     repo._subtoppath = dest
     try:

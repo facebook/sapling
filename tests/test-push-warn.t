@@ -19,6 +19,14 @@
   $ hg add t3
   $ hg commit -m "3"
 
+Specifying a revset that evaluates to null will abort
+
+  $ hg push -r '0 & 1' ../a
+  pushing to ../a
+  abort: specified revisions evaluate to an empty set
+  (use different revision arguments)
+  [255]
+
   $ hg push ../a
   pushing to ../a
   searching for changes
