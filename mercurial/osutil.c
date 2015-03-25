@@ -24,6 +24,11 @@
 #include <unistd.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/attr.h>
+#include <sys/vnode.h>
+#endif
+
 #include "util.h"
 
 /* some platforms lack the PATH_MAX definition (eg. GNU/Hurd) */
@@ -392,8 +397,195 @@ error_value:
 	return ret;
 }
 
+#ifdef __APPLE__
+
+typedef struct {
+	u_int32_t length;
+	attrreference_t name;
+	fsobj_type_t obj_type;
+	struct timespec mtime;
+#if __LITTLE_ENDIAN__
+	mode_t access_mask;
+	uint16_t padding;
+#else
+	uint16_t padding;
+	mode_t access_mask;
+#endif
+	off_t size;
+} __attribute__((packed)) attrbuf_entry;
+
+int attrkind(attrbuf_entry *entry)
+{
+	switch (entry->obj_type) {
+	case VREG: return S_IFREG;
+	case VDIR: return S_IFDIR;
+	case VLNK: return S_IFLNK;
+	case VBLK: return S_IFBLK;
+	case VCHR: return S_IFCHR;
+	case VFIFO: return S_IFIFO;
+	case VSOCK: return S_IFSOCK;
+	}
+	return -1;
+}
+
+/* get these many entries at a time */
+#define LISTDIR_BATCH_SIZE 50
+
+static PyObject *_listdir_batch(char *path, int pathlen, int keepstat,
+				char *skip, bool *fallback)
+{
+	PyObject *list, *elem, *stat = NULL, *ret = NULL;
+	int kind, err;
+	unsigned long index;
+	unsigned int count, old_state, new_state;
+	bool state_seen = false;
+	attrbuf_entry *entry;
+	/* from the getattrlist(2) man page: a path can be no longer than
+	   (NAME_MAX * 3 + 1) bytes. Also, "The getattrlist() function will
+	   silently truncate attribute data if attrBufSize is too small." So
+	   pass in a buffer big enough for the worst case. */
+	char attrbuf[LISTDIR_BATCH_SIZE * (sizeof(attrbuf_entry) + NAME_MAX * 3 + 1)];
+	unsigned int basep_unused;
+
+	struct stat st;
+	int dfd = -1;
+
+	/* these must match the attrbuf_entry struct, otherwise you'll end up
+	   with garbage */
+	struct attrlist requested_attr = {0};
+	requested_attr.bitmapcount = ATTR_BIT_MAP_COUNT;
+	requested_attr.commonattr = (ATTR_CMN_NAME | ATTR_CMN_OBJTYPE |
+				     ATTR_CMN_MODTIME | ATTR_CMN_ACCESSMASK);
+	requested_attr.fileattr = ATTR_FILE_TOTALSIZE;
+
+	*fallback = false;
+
+	if (pathlen >= PATH_MAX) {
+		errno = ENAMETOOLONG;
+		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
+		goto error_value;
+	}
+
+	dfd = open(path, O_RDONLY);
+	if (dfd == -1) {
+		PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
+		goto error_value;
+	}
+
+	list = PyList_New(0);
+	if (!list)
+		goto error_dir;
+
+	do {
+		count = LISTDIR_BATCH_SIZE;
+		err = getdirentriesattr(dfd, &requested_attr, &attrbuf,
+					sizeof(attrbuf), &count, &basep_unused,
+					&new_state, 0);
+		if (err < 0) {
+			if (errno == ENOTSUP) {
+				/* We're on a filesystem that doesn't support
+				   getdirentriesattr. Fall back to the
+				   stat-based implementation. */
+				*fallback = true;
+			} else
+				PyErr_SetFromErrnoWithFilename(PyExc_OSError, path);
+			goto error;
+		}
+
+		if (!state_seen) {
+			old_state = new_state;
+			state_seen = true;
+		} else if (old_state != new_state) {
+			/* There's an edge case with getdirentriesattr. Consider
+			   the following initial list of files:
+
+			   a
+			   b
+			   <--
+			   c
+			   d
+
+			   If the iteration is paused at the arrow, and b is
+			   deleted before it is resumed, getdirentriesattr will
+			   not return d at all!  Ordinarily we're expected to
+			   restart the iteration from the beginning. To avoid
+			   getting stuck in a retry loop here, fall back to
+			   stat. */
+			*fallback = true;
+			goto error;
+		}
+
+		entry = (attrbuf_entry *)attrbuf;
+
+		for (index = 0; index < count; index++) {
+			char *filename = ((char *)&entry->name) +
+				entry->name.attr_dataoffset;
+
+			if (!strcmp(filename, ".") || !strcmp(filename, ".."))
+				continue;
+
+			kind = attrkind(entry);
+			if (kind == -1) {
+				PyErr_Format(PyExc_OSError,
+					     "unknown object type %u for file "
+					     "%s%s!",
+					     entry->obj_type, path, filename);
+				goto error;
+			}
+
+			/* quit early? */
+			if (skip && kind == S_IFDIR && !strcmp(filename, skip)) {
+				ret = PyList_New(0);
+				goto error;
+			}
+
+			if (keepstat) {
+				/* from the getattrlist(2) man page: "Only the
+				   permission bits ... are valid". */
+				st.st_mode = (entry->access_mask & ~S_IFMT) | kind;
+				st.st_mtime = entry->mtime.tv_sec;
+				st.st_size = entry->size;
+				stat = makestat(&st);
+				if (!stat)
+					goto error;
+				elem = Py_BuildValue("siN", filename, kind, stat);
+			} else
+				elem = Py_BuildValue("si", filename, kind);
+			if (!elem)
+				goto error;
+			stat = NULL;
+
+			PyList_Append(list, elem);
+			Py_DECREF(elem);
+
+			entry = (attrbuf_entry *)((char *)entry + entry->length);
+		}
+	} while (err == 0);
+
+	ret = list;
+	Py_INCREF(ret);
+
+error:
+	Py_DECREF(list);
+	Py_XDECREF(stat);
+error_dir:
+	close(dfd);
+error_value:
+	return ret;
+}
+
+#endif /* __APPLE__ */
+
 static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 {
+#ifdef __APPLE__
+	PyObject *ret;
+	bool fallback = false;
+
+	ret = _listdir_batch(path, pathlen, keepstat, skip, &fallback);
+	if (ret != NULL || !fallback)
+		return ret;
+#endif
 	return _listdir_stat(path, pathlen, keepstat, skip);
 }
 
