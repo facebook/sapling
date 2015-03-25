@@ -161,7 +161,7 @@ Cases are run as shown in that table, row by row.
   M foo
 
   $ revtest '-c dirtysub linear'   dirtysub 1 2 -c
-  abort: uncommitted changes
+  abort: uncommitted changes in subrepository 'sub'
   parent=1
   M sub/suba
 

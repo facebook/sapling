@@ -6337,9 +6337,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         rev = cmdutil.finddate(ui, repo, date)
 
     if check:
-        c = repo[None]
-        if c.dirty(merge=False, branch=False, missing=True):
-            raise util.Abort(_("uncommitted changes"))
+        cmdutil.bailifchanged(repo, merge=False)
         if rev is None:
             rev = repo[repo[None].branch()].rev()
 
