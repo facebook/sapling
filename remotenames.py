@@ -1,3 +1,18 @@
+"""
+remotenames: a mercurial extension for improving client/server workflows
+
+The remotenames extension provides additional information to clients that is
+particularly useful when pushing and pulling to peer repositories.
+
+Before diving in to using remotebookmarks, we suggest you read the included
+README file, which explains the changes to expect, the configuration knobs
+available (note: almost everything is configurable), and gives examples of
+how to set up the configuration options in useful ways.
+
+This extension is the work of Sean Farley forked from Augie Fackler's seminal
+remotebranches extension. Ryan McElroy of Facebook also contributed.
+"""
+
 import os
 import errno
 
