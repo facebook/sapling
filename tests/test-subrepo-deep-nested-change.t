@@ -458,4 +458,85 @@ Test a directory commit with a changed largefile and a changed normal file
   R a.dat
   R foo/bar/abc
 
+
+  $ echo foo > main
+  $ hg ci -m "mod parent only"
+  $ hg init sub3
+  $ echo "sub3 = sub3" >> .hgsub
+  $ echo xyz > sub3/a.txt
+  $ hg add sub3/a.txt
+  $ hg ci -Sm "add sub3"
+  committing subrepository sub3
+  $ cat .hgsub | grep -v sub3 > .hgsub1
+  $ mv .hgsub1 .hgsub
+  $ hg ci -m "remove sub3"
+
+  $ hg log -r "subrepo()" --style compact
+  0   7f491f53a367   1970-01-01 00:00 +0000   test
+    main import
+  
+  1   ffe6649062fe   1970-01-01 00:00 +0000   test
+    deep nested modif should trigger a commit
+  
+  2   9bb10eebee29   1970-01-01 00:00 +0000   test
+    add test.txt
+  
+  3   7c64f035294f   1970-01-01 00:00 +0000   test
+    add large files
+  
+  4   f734a59e2e35   1970-01-01 00:00 +0000   test
+    forget testing
+  
+  11   9685a22af5db   1970-01-01 00:00 +0000   test
+    add sub3
+  
+  12[tip]   2e0485b475b9   1970-01-01 00:00 +0000   test
+    remove sub3
+  
+  $ hg log -r "subrepo('sub3')" --style compact
+  11   9685a22af5db   1970-01-01 00:00 +0000   test
+    add sub3
+  
+  12[tip]   2e0485b475b9   1970-01-01 00:00 +0000   test
+    remove sub3
+  
+  $ hg log -r "subrepo('bogus')" --style compact
+
+
+Test .hgsubstate in the R state
+
+  $ hg rm .hgsub .hgsubstate
+  $ hg ci -m 'trash subrepo tracking'
+
+  $ hg log -r "subrepo('re:sub\d+')" --style compact
+  0   7f491f53a367   1970-01-01 00:00 +0000   test
+    main import
+  
+  1   ffe6649062fe   1970-01-01 00:00 +0000   test
+    deep nested modif should trigger a commit
+  
+  2   9bb10eebee29   1970-01-01 00:00 +0000   test
+    add test.txt
+  
+  3   7c64f035294f   1970-01-01 00:00 +0000   test
+    add large files
+  
+  4   f734a59e2e35   1970-01-01 00:00 +0000   test
+    forget testing
+  
+  11   9685a22af5db   1970-01-01 00:00 +0000   test
+    add sub3
+  
+  12   2e0485b475b9   1970-01-01 00:00 +0000   test
+    remove sub3
+  
+  13[tip]   a68b2c361653   1970-01-01 00:00 +0000   test
+    trash subrepo tracking
+  
+
+Restore the trashed subrepo tracking
+
+  $ hg rollback -q
+  $ hg update -Cq .
+
   $ cd ..

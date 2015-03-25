@@ -1755,6 +1755,49 @@ def sort(repo, subset, x):
     l.sort()
     return baseset([e[-1] for e in l])
 
+def subrepo(repo, subset, x):
+    """``subrepo([pattern])``
+    Changesets that add, modify or remove the given subrepo.  If no subrepo
+    pattern is named, any subrepo changes are returned.
+    """
+    # i18n: "subrepo" is a keyword
+    args = getargs(x, 0, 1, _('subrepo takes at most one argument'))
+    if len(args) != 0:
+        pat = getstring(args[0], _("subrepo requires a pattern"))
+
+    m = matchmod.exact(repo.root, repo.root, ['.hgsubstate'])
+
+    def submatches(names):
+        k, p, m = _stringmatcher(pat)
+        for name in names:
+            if m(name):
+                yield name
+
+    def matches(x):
+        c = repo[x]
+        s = repo.status(c.p1().node(), c.node(), match=m)
+
+        if len(args) == 0:
+            return s.added or s.modified or s.removed
+
+        if s.added:
+            return util.any(submatches(c.substate.keys()))
+
+        if s.modified:
+            subs = set(c.p1().substate.keys())
+            subs.update(c.substate.keys())
+
+            for path in submatches(subs):
+                if c.p1().substate.get(path) != c.substate.get(path):
+                    return True
+
+        if s.removed:
+            return util.any(submatches(c.p1().substate.keys()))
+
+        return False
+
+    return subset.filter(matches)
+
 def _stringmatcher(pattern):
     """
     accepts a string, possibly starting with 're:' or 'literal:' prefix.
@@ -1952,6 +1995,7 @@ symbols = {
     "roots": roots,
     "sort": sort,
     "secret": secret,
+    "subrepo": subrepo,
     "matching": matching,
     "tag": tag,
     "tagged": tagged,
