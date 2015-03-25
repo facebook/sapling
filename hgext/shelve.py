@@ -226,6 +226,7 @@ def createcmd(ui, repo, pats, opts):
             raise util.Abort(_('shelved change names may not contain slashes'))
         if name.startswith('.'):
             raise util.Abort(_("shelved change names may not start with '.'"))
+        interactive = opts.get('interactive', False)
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
 
@@ -649,6 +650,8 @@ def unshelve(ui, repo, *shelved, **opts):
            _('use the given name for the shelved commit'), _('NAME')),
           ('p', 'patch', None,
            _('show patch')),
+          ('i', 'interactive', None,
+           _('interactive mode, only works while creating a shelve')),
           ('', 'stat', None,
            _('output diffstat-style summary of changes'))] + commands.walkopts,
          _('hg shelve [OPTION]... [FILE]...'))
