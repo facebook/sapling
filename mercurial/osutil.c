@@ -343,7 +343,7 @@ static PyObject *_listdir_stat(char *path, int pathlen, int keepstat,
 #else
 			strncpy(fullpath + pathlen + 1, ent->d_name,
 				PATH_MAX - pathlen);
-			fullpath[PATH_MAX] = 0;
+			fullpath[PATH_MAX] = '\0';
 			err = lstat(fullpath, &st);
 #endif
 			if (err == -1) {
