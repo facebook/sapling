@@ -18,12 +18,61 @@ import error
 import errno
 import time
 
+# The tags cache stores information about heads and the history of tags.
+#
+# The cache file consists of two parts. The first part maps head nodes
+# to .hgtags filenodes. The second part is a history of tags. The two
+# parts are separated by an empty line.
+#
+# The first part consists of lines of the form:
+#
+#   <headrev> <headnode> [<hgtagsnode>]
+#
+# <headrev> is an integer revision and <headnode> is a 40 character hex
+# node for that changeset. These redundantly identify a repository
+# head from the time the cache was written.
+#
+# <tagnode> is the filenode of .hgtags on that head. Heads with no .hgtags
+# file will have no <hgtagsnode> (just 2 values per line).
+#
+# The filenode cache is ordered from tip to oldest (which is part of why
+# <headrev> is there: a quick check of the tip from when the cache was
+# written against the current tip is all that is needed to check whether
+# the cache is up to date).
+#
+# The purpose of the filenode cache is to avoid the most expensive part
+# of finding global tags, which is looking up the .hgtags filenode in the
+# manifest for each head. This can take over a minute on repositories
+# that have large manifests and many heads.
+#
+# The second part of the tags cache consists of lines of the form:
+#
+#   <node> <tag>
+#
+# (This format is identical to that of .hgtags files.)
+#
+# <tag> is the tag name and <node> is the 40 character hex changeset
+# the tag is associated with.
+#
+# Tags are written sorted by tag name.
+#
+# Tags associated with multiple changesets have an entry for each changeset.
+# The most recent changeset (in terms of revlog ordering for the head
+# setting it) for each tag is last.
+
 def findglobaltags(ui, repo, alltags, tagtypes):
-    '''Find global tags in repo by reading .hgtags from every head that
-    has a distinct version of it, using a cache to avoid excess work.
-    Updates the dicts alltags, tagtypes in place: alltags maps tag name
-    to (node, hist) pair (see _readtags() below), and tagtypes maps tag
-    name to tag type ("global" in this case).'''
+    '''Find global tags in a repo.
+
+    "alltags" maps tag name to (node, hist) 2-tuples.
+
+    "tagtypes" maps tag name to tag type. Global tags always have the
+    "global" tag type.
+
+    The "alltags" and "tagtypes" dicts are updated in place. Empty dicts
+    should be passed in.
+
+    The tags cache is read and updated as a side-effect of calling.
+    '''
     # This is so we can be lazy and assume alltags contains only global
     # tags when we pass it to _writetagcache().
     assert len(alltags) == len(tagtypes) == 0, \
@@ -38,9 +87,9 @@ def findglobaltags(ui, repo, alltags, tagtypes):
         _updatetags(cachetags, 'global', alltags, tagtypes)
         return
 
-    seen = set()                    # set of fnode
+    seen = set()  # set of fnode
     fctx = None
-    for head in reversed(heads):        # oldest to newest
+    for head in reversed(heads):  # oldest to newest
         assert head in repo.changelog.nodemap, \
                "tag cache returned bogus head %s" % short(head)
 
@@ -60,7 +109,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
         _writetagcache(ui, repo, heads, tagfnode, alltags)
 
 def readlocaltags(ui, repo, alltags, tagtypes):
-    '''Read local tags in repo.  Update alltags and tagtypes.'''
+    '''Read local tags in repo. Update alltags and tagtypes.'''
     try:
         data = repo.vfs.read("localtags")
     except IOError, inst:
@@ -86,14 +135,18 @@ def readlocaltags(ui, repo, alltags, tagtypes):
 
 def _readtaghist(ui, repo, lines, fn, recode=None, calcnodelines=False):
     '''Read tag definitions from a file (or any source of lines).
+
     This function returns two sortdicts with similar information:
+
     - the first dict, bintaghist, contains the tag information as expected by
       the _readtags function, i.e. a mapping from tag name to (node, hist):
         - node is the node id from the last line read for that name,
         - hist is the list of node ids previously associated with it (in file
-          order).  All node ids are binary, not hex.
+          order). All node ids are binary, not hex.
+
     - the second dict, hextaglines, is a mapping from tag name to a list of
       [hexnode, line number] pairs, ordered from the oldest to the newest node.
+
     When calcnodelines is False the hextaglines dict is not calculated (an
     empty dict is returned). This is done to improve this function's
     performance in cases where the line numbers are not needed.
@@ -139,10 +192,13 @@ def _readtaghist(ui, repo, lines, fn, recode=None, calcnodelines=False):
 
 def _readtags(ui, repo, lines, fn, recode=None, calcnodelines=False):
     '''Read tag definitions from a file (or any source of lines).
-    Return a mapping from tag name to (node, hist): node is the node id
-    from the last line read for that name, and hist is the list of node
-    ids previously associated with it (in file order).  All node ids are
-    binary, not hex.'''
+
+    Returns a mapping from tag name to (node, hist).
+
+    "node" is the node id from the last line read for that name. "hist"
+    is the list of node ids previously associated with it (in file order).
+    All node ids are binary, not hex.
+    '''
     filetags, nodelines = _readtaghist(ui, repo, lines, fn, recode=recode,
                                        calcnodelines=calcnodelines)
     for tag, taghist in filetags.items():
@@ -174,23 +230,23 @@ def _updatetags(filetags, tagtype, alltags, tagtypes):
         ahist.extend([n for n in bhist if n not in ahist])
         alltags[name] = anode, ahist
 
-
-# The tag cache only stores info about heads, not the tag contents
-# from each head.  I.e. it doesn't try to squeeze out the maximum
-# performance, but is simpler has a better chance of actually
-# working correctly.  And this gives the biggest performance win: it
-# avoids looking up .hgtags in the manifest for every head, and it
-# can avoid calling heads() at all if there have been no changes to
-# the repo.
-
 def _readtagcache(ui, repo):
-    '''Read the tag cache and return a tuple (heads, fnodes, cachetags,
-    shouldwrite).  If the cache is completely up-to-date, cachetags is a
-    dict of the form returned by _readtags(); otherwise, it is None and
-    heads and fnodes are set.  In that case, heads is the list of all
-    heads currently in the repository (ordered from tip to oldest) and
-    fnodes is a mapping from head to .hgtags filenode.  If those two are
-    set, caller is responsible for reading tag info from each head.'''
+    '''Read the tag cache.
+
+    Returns a tuple (heads, fnodes, cachetags, shouldwrite).
+
+    If the cache is completely up-to-date, "cachetags" is a dict of the
+    form returned by _readtags() and "heads" and "fnodes" are None and
+    "shouldwrite" is False.
+
+    If the cache is not up to date, "cachetags" is None. "heads" is a list
+    of all heads currently in the repository, ordered from tip to oldest.
+    "fnodes" is a mapping from head to .hgtags filenode. "shouldwrite" is
+    True.
+
+    If the cache is not up to date, the caller is responsible for reading tag
+    info from each returned head. (See findglobaltags().)
+    '''
 
     try:
         cachefile = repo.vfs('cache/tags', 'r')
@@ -199,21 +255,9 @@ def _readtagcache(ui, repo):
     except IOError:
         cachefile = None
 
-    # The cache file consists of lines like
-    #   <headrev> <headnode> [<tagnode>]
-    # where <headrev> and <headnode> redundantly identify a repository
-    # head from the time the cache was written, and <tagnode> is the
-    # filenode of .hgtags on that head.  Heads with no .hgtags file will
-    # have no <tagnode>.  The cache is ordered from tip to oldest (which
-    # is part of why <headrev> is there: a quick visual check is all
-    # that's required to ensure correct order).
-    #
-    # This information is enough to let us avoid the most expensive part
-    # of finding global tags, which is looking up <tagnode> in the
-    # manifest for each head.
-    cacherevs = []                      # list of headrev
-    cacheheads = []                     # list of headnode
-    cachefnode = {}                     # map headnode to filenode
+    cacherevs = []  # list of headrev
+    cacheheads = [] # list of headnode
+    cachefnode = {} # map headnode to filenode
     if cachefile:
         try:
             for line in cachelines:
@@ -301,7 +345,6 @@ def _readtagcache(ui, repo):
     return (repoheads, cachefnode, None, True)
 
 def _writetagcache(ui, repo, heads, tagfnode, cachetags):
-
     try:
         cachefile = repo.vfs('cache/tags', 'w', atomictemp=True)
     except (OSError, IOError):
