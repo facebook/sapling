@@ -186,9 +186,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
             # Make all of the pathnames absolute.
             newfiles = [repo.wjoin(nf) for nf in newfiles]
-            commitfunc(ui, repo, *newfiles, **opts)
-
-            return 0
+            return commitfunc(ui, repo, *newfiles, **opts)
         finally:
             # 5. finally restore backed-up files
             try:
