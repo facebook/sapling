@@ -228,8 +228,15 @@ def createcmd(ui, repo, pats, opts):
             raise util.Abort(_("shelved change names may not start with '.'"))
         interactive = opts.get('interactive', False)
 
-        node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
-
+        def interactivecommitfunc(ui, repo, *pats, **opts):
+            match = scmutil.match(repo['.'], pats, {})
+            message = opts['message']
+            return commitfunc(ui, repo, message, match, opts)
+        if not interactive:
+            node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
+        else:
+            node = cmdutil.dorecord(ui, repo, interactivecommitfunc, 'commit',
+                                    False, cmdutil.recordfilter, *pats, **opts)
         if not node:
             stat = repo.status(match=scmutil.match(repo[None], pats, opts))
             if stat.deleted:

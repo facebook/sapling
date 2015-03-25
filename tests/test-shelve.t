@@ -791,4 +791,76 @@ is a no-op), works (issue4398)
   abort: options '--delete' and '--name' may not be used together
   [255]
 
+Test interactive shelve
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interactive = true
+  > EOF
+  $ echo 'a' >> a/b
+  $ cat a/a >> a/b
+  $ echo 'x' >> a/b
+  $ mv a/b a/a
+  $ echo 'a' >> foo/foo
+  $ hg st
+  M a/a
+  ? a/a.orig
+  ? foo/foo
+  $ cat a/a
+  a
+  a
+  c
+  x
+  x
+  $ cat foo/foo
+  foo
+  a
+  $ hg shelve --interactive << EOF
+  > y
+  > y
+  > n
+  > EOF
+  diff --git a/a/a b/a/a
+  2 hunks, 2 lines changed
+  examine changes to 'a/a'? [Ynesfdaq?] y
+  
+  @@ -1,3 +1,4 @@
+  +a
+   a
+   c
+   x
+  record change 1/2 to 'a/a'? [Ynesfdaq?] y
+  
+  @@ -1,3 +2,4 @@
+   a
+   c
+   x
+  +x
+  record change 2/2 to 'a/a'? [Ynesfdaq?] n
+  
+  shelved as test
+  merging a/a
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  $ cat a/a
+  a
+  c
+  x
+  x
+  $ cat foo/foo
+  foo
+  a
+  $ hg st
+  M a/a
+  ? foo/foo
+  $ hg unshelve
+  unshelving change 'test'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 6:65b5d1c34c34 "changes to 'create conflict'" (tip)
+  merging a/a
+  $ cat a/a
+  a
+  a
+  c
+  x
+  x
   $ cd ..
