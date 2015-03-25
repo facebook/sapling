@@ -82,26 +82,26 @@ diffstat within directories:
    dir2/new |  1 +
    2 files changed, 2 insertions(+), 0 deletions(-)
 
-  $ hg diff --stat --relative dir1
+  $ hg diff --stat --root dir1
    new |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
 
-  $ hg diff --stat --relative dir1 dir2
+  $ hg diff --stat --root dir1 dir2
   warning: dir2 not inside relative root dir1
 
-  $ hg diff --stat --relative dir1 -I dir1/old
+  $ hg diff --stat --root dir1 -I dir1/old
 
   $ cd dir1
   $ hg diff --stat .
    dir1/new |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-  $ hg diff --stat --relative .
+  $ hg diff --stat --root .
    new |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
 
-  $ hg diff --stat --relative ../dir1 ../dir2
+  $ hg diff --stat --root ../dir1 ../dir2
   warning: ../dir2 not inside relative root .
 
-  $ hg diff --stat --relative . -I old
+  $ hg diff --stat --root . -I old
 
   $ cd ..

@@ -1008,7 +1008,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
 def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                    changes=None, stat=False, fp=None, prefix='',
-                   relative='', listsubrepos=False):
+                   root='', listsubrepos=False):
     '''show diff or diffstat.'''
     if fp is None:
         write = ui.write
@@ -1016,8 +1016,8 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         def write(s, **kw):
             fp.write(s)
 
-    if relative:
-        relroot = pathutil.canonpath(repo.root, repo.getcwd(), relative)
+    if root:
+        relroot = pathutil.canonpath(repo.root, repo.getcwd(), root)
     else:
         relroot = ''
     if relroot != '':

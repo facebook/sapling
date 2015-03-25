@@ -47,7 +47,7 @@ inside beta
 relative to beta
 
   $ cd ..
-  $ hg diff --nodates --relative beta
+  $ hg diff --nodates --root beta
   diff -r 7d5ef1aea329 two
   --- a/two
   +++ b/two
@@ -57,7 +57,7 @@ relative to beta
 inside beta
 
   $ cd beta
-  $ hg diff --nodates --relative .
+  $ hg diff --nodates --root .
   diff -r 7d5ef1aea329 two
   --- a/two
   +++ b/two

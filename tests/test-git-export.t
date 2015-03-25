@@ -45,11 +45,11 @@ Copy:
 
 Cross and same-directory copies with a relative root:
 
-  $ hg diff --git --relative .. -r 1:tip
+  $ hg diff --git --root .. -r 1:tip
   abort: .. not under root '$TESTTMP'
   [255]
-  $ hg diff --git --relative doesnotexist -r 1:tip
-  $ hg diff --git --relative . -r 1:tip
+  $ hg diff --git --root doesnotexist -r 1:tip
+  $ hg diff --git --root . -r 1:tip
   diff --git a/dir1/new b/dir1/copy
   copy from dir1/new
   copy to dir1/copy
@@ -66,7 +66,7 @@ Cross and same-directory copies with a relative root:
   @@ -1,1 +1,2 @@
    new
   +copy2
-  $ hg diff --git --relative dir1 -r 1:tip
+  $ hg diff --git --root dir1 -r 1:tip
   diff --git a/new b/copy
   copy from new
   copy to copy
@@ -76,7 +76,7 @@ Cross and same-directory copies with a relative root:
    new
   +copy1
 
-  $ hg diff --git --relative dir2/ -r 1:tip
+  $ hg diff --git --root dir2/ -r 1:tip
   diff --git a/copy b/copy
   new file mode 100644
   --- /dev/null
@@ -85,7 +85,7 @@ Cross and same-directory copies with a relative root:
   +new
   +copy2
 
-  $ hg diff --git --relative dir1 -r 1:tip -I '**/copy'
+  $ hg diff --git --root dir1 -r 1:tip -I '**/copy'
   diff --git a/new b/copy
   copy from new
   copy to copy
@@ -95,14 +95,14 @@ Cross and same-directory copies with a relative root:
    new
   +copy1
 
-  $ hg diff --git --relative dir1 -r 1:tip dir2
+  $ hg diff --git --root dir1 -r 1:tip dir2
   warning: dir2 not inside relative root dir1
 
-  $ hg diff --git --relative dir1 -r 1:tip 'dir2/{copy}'
+  $ hg diff --git --root dir1 -r 1:tip 'dir2/{copy}'
   warning: dir2/{copy} not inside relative root dir1
 
   $ cd dir1
-  $ hg diff --git --relative .. -r 1:tip
+  $ hg diff --git --root .. -r 1:tip
   diff --git a/dir1/new b/dir1/copy
   copy from dir1/new
   copy to dir1/copy
@@ -120,11 +120,11 @@ Cross and same-directory copies with a relative root:
    new
   +copy2
 
-  $ hg diff --git --relative ../.. -r 1:tip
+  $ hg diff --git --root ../.. -r 1:tip
   abort: ../.. not under root '$TESTTMP'
   [255]
-  $ hg diff --git --relative ../doesnotexist -r 1:tip
-  $ hg diff --git --relative .. -r 1:tip
+  $ hg diff --git --root ../doesnotexist -r 1:tip
+  $ hg diff --git --root .. -r 1:tip
   diff --git a/dir1/new b/dir1/copy
   copy from dir1/new
   copy to dir1/copy
@@ -142,7 +142,7 @@ Cross and same-directory copies with a relative root:
    new
   +copy2
 
-  $ hg diff --git --relative . -r 1:tip
+  $ hg diff --git --root . -r 1:tip
   diff --git a/new b/copy
   copy from new
   copy to copy
@@ -151,7 +151,7 @@ Cross and same-directory copies with a relative root:
   @@ -1,1 +1,2 @@
    new
   +copy1
-  $ hg diff --git --relative . -r 1:tip copy
+  $ hg diff --git --root . -r 1:tip copy
   diff --git a/new b/copy
   copy from new
   copy to copy
@@ -160,9 +160,9 @@ Cross and same-directory copies with a relative root:
   @@ -1,1 +1,2 @@
    new
   +copy1
-  $ hg diff --git --relative . -r 1:tip ../dir2
+  $ hg diff --git --root . -r 1:tip ../dir2
   warning: ../dir2 not inside relative root .
-  $ hg diff --git --relative . -r 1:tip '../dir2/*'
+  $ hg diff --git --root . -r 1:tip '../dir2/*'
   warning: ../dir2/* not inside relative root .
   $ cd ..
 
@@ -195,7 +195,7 @@ Rename:
 
 Cross and same-directory renames with a relative root:
 
-  $ hg diff --relative dir1 --git -r 2:tip
+  $ hg diff --root dir1 --git -r 2:tip
   diff --git a/copy b/rename1
   rename from copy
   rename to rename1
@@ -214,7 +214,7 @@ Cross and same-directory renames with a relative root:
   +copy2
   +rename2
 
-  $ hg diff --relative dir2 --git -r 2:tip
+  $ hg diff --root dir2 --git -r 2:tip
   diff --git a/copy b/copy
   deleted file mode 100644
   --- a/copy
@@ -223,7 +223,7 @@ Cross and same-directory renames with a relative root:
   -new
   -copy2
 
-  $ hg diff --relative dir1 --git -r 2:tip -I '**/copy'
+  $ hg diff --root dir1 --git -r 2:tip -I '**/copy'
   diff --git a/copy b/copy
   deleted file mode 100644
   --- a/copy
@@ -232,7 +232,7 @@ Cross and same-directory renames with a relative root:
   -new
   -copy1
 
-  $ hg diff --relative dir1 --git -r 2:tip -I '**/rename*'
+  $ hg diff --root dir1 --git -r 2:tip -I '**/rename*'
   diff --git a/copy b/rename1
   copy from copy
   copy to rename1
