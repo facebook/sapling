@@ -286,7 +286,8 @@ static PyObject *makestat(const struct stat *st)
 	return stat;
 }
 
-static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
+static PyObject *_listdir_stat(char *path, int pathlen, int keepstat,
+			       char *skip)
 {
 	PyObject *list, *elem, *stat = NULL, *ret = NULL;
 	char fullpath[PATH_MAX + 10];
@@ -389,6 +390,11 @@ error_dir:
 #endif
 error_value:
 	return ret;
+}
+
+static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
+{
+	return _listdir_stat(path, pathlen, keepstat, skip);
 }
 
 static PyObject *statfiles(PyObject *self, PyObject *args)
