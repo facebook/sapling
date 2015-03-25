@@ -23,10 +23,8 @@ def checksubstate(repo, baserev=None):
     else:
         bctx = wctx.parents()[0]
     for s in sorted(wctx.substate):
-        if wctx.sub(s).dirty(True):
-            raise util.Abort(
-                _("uncommitted changes in subrepository %s") % s)
-        elif s not in bctx.substate or bctx.sub(s).dirty():
+        wctx.sub(s).bailifchanged(True)
+        if s not in bctx.substate or bctx.sub(s).dirty():
             inclsubs.append(s)
     return inclsubs
 

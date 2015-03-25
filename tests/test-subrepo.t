@@ -96,7 +96,7 @@ commands that require a clean repo should respect subrepos
 
   $ echo b >> s/a
   $ hg backout tip
-  abort: uncommitted changes in subrepo s
+  abort: uncommitted changes in subrepository 's'
   [255]
   $ hg revert -C -R s s/a
 

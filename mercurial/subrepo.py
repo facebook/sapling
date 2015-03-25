@@ -402,6 +402,13 @@ class abstractsubrepo(object):
             return _("uncommitted changes in subrepository '%s'"
                      ) % subrelpath(self)
 
+    def bailifchanged(self, ignoreupdate=False):
+        """raise Abort if subrepository is ``dirty()``
+        """
+        dirtyreason = self.dirtyreason(ignoreupdate=ignoreupdate)
+        if dirtyreason:
+            raise util.Abort(dirtyreason)
+
     def basestate(self):
         """current working directory base state, disregarding .hgsubstate
         state and working directory modifications"""

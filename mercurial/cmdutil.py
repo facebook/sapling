@@ -282,8 +282,7 @@ def bailifchanged(repo):
         raise util.Abort(_('uncommitted changes'))
     ctx = repo[None]
     for s in sorted(ctx.substate):
-        if ctx.sub(s).dirty():
-            raise util.Abort(_("uncommitted changes in subrepo %s") % s)
+        ctx.sub(s).bailifchanged()
 
 def logmessage(ui, opts):
     """ get the log message according to -m and -l option """

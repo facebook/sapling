@@ -102,7 +102,7 @@ handle subrepos safely on qnew
   A .hgsub
   A sub/a
   % qnew -X path:no-effect -m0 0.diff
-  abort: uncommitted changes in subrepository sub
+  abort: uncommitted changes in subrepository 'sub'
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
@@ -117,7 +117,7 @@ handle subrepos safely on qnew
   M .hgsub
   A sub2/a
   % qnew --cwd .. -R repo-2499-qnew -X path:no-effect -m1 1.diff
-  abort: uncommitted changes in subrepository sub2
+  abort: uncommitted changes in subrepository 'sub2'
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
@@ -161,7 +161,7 @@ handle subrepos safely on qrefresh
   A .hgsub
   A sub/a
   % qrefresh
-  abort: uncommitted changes in subrepository sub
+  abort: uncommitted changes in subrepository 'sub'
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
@@ -177,7 +177,7 @@ handle subrepos safely on qrefresh
   M .hgsub
   A sub2/a
   % qrefresh
-  abort: uncommitted changes in subrepository sub2
+  abort: uncommitted changes in subrepository 'sub2'
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
@@ -300,7 +300,7 @@ handle subrepos safely on qrecord
   record this change to '.hgsub'? [Ynesfdaq?] y
   
   warning: subrepo spec file .hgsub not found
-  abort: uncommitted changes in subrepository sub
+  abort: uncommitted changes in subrepository 'sub'
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
@@ -335,7 +335,7 @@ handle subrepos safely on qrecord
   +sub2 = sub2
   record this change to '.hgsub'? [Ynesfdaq?] y
   
-  abort: uncommitted changes in subrepository sub2
+  abort: uncommitted changes in subrepository 'sub2'
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub

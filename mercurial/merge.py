@@ -1045,9 +1045,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 raise util.Abort(_("uncommitted changes"),
                                  hint=_("use 'hg status' to list changes"))
             for s in sorted(wc.substate):
-                if wc.sub(s).dirty():
-                    raise util.Abort(_("uncommitted changes in "
-                                       "subrepository '%s'") % s)
+                wc.sub(s).bailifchanged()
 
         elif not overwrite:
             if p1 == p2: # no-op update

@@ -50,7 +50,7 @@ qnew on repo w/svn subrepo
   $ cd ..
   $ hg status -S        # doesn't show status for svn subrepos (yet)
   $ hg qnew -m1 1.diff
-  abort: uncommitted changes in subrepository sub
+  abort: uncommitted changes in subrepository 'sub'
   [255]
 
   $ cd ..
