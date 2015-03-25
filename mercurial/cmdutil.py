@@ -274,8 +274,8 @@ def findrepo(p):
 
     return p
 
-def bailifchanged(repo):
-    if repo.dirstate.p2() != nullid:
+def bailifchanged(repo, merge=True):
+    if merge and repo.dirstate.p2() != nullid:
         raise util.Abort(_('outstanding uncommitted merge'))
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:

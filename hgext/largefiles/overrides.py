@@ -1029,8 +1029,8 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
 # standin until a commit. cmdutil.bailifchanged() raises an exception
 # if the repo has uncommitted changes. Wrap it to also check if
 # largefiles were changed. This is used by bisect, backout and fetch.
-def overridebailifchanged(orig, repo):
-    orig(repo)
+def overridebailifchanged(orig, repo, *args, **kwargs):
+    orig(repo, *args, **kwargs)
     repo.lfstatus = True
     s = repo.status()
     repo.lfstatus = False
