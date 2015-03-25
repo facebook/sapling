@@ -181,4 +181,23 @@ Editing patch of newly added file
   This is the second line
   This is the third line
 
+Newly added files can be selected with the curses interface
+
+  $ hg update -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "hello" > x
+  $ hg add x
+  $ cat <<EOF >testModeCommands
+  > TOGGLE
+  > TOGGLE
+  > X
+  > EOF
+  $ hg st
+  A x
+  ? editor.sh
+  ? testModeCommands
+  $ hg commit -i  -m "newly added file" -d "0 0"
+  $ hg st
+  ? editor.sh
+  ? testModeCommands
 
