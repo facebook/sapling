@@ -209,4 +209,13 @@ static inline double getbefloat64(const char *c)
 	return ret;
 }
 
+/* VC9 doesn't include bool and lacks stdbool.h based on my searching */
+#ifdef _MSC_VER
+#define true 1
+#define false 0
+typedef unsigned char bool;
+#else
+#include <stdbool.h>
+#endif
+
 #endif /* _HG_UTIL_H_ */
