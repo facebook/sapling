@@ -919,7 +919,8 @@ def transition(repo, ui):
     Allows deleting matching local bookmarks defined in a config file:
 
     [remotenames]
-    transitionbookmarks = master, stable
+    transitionbookmarks = master
+        stable
     """
     transmarks = ui.configlist('remotenames', 'transitionbookmarks')
     localmarks = repo._bookmarks

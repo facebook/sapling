@@ -220,6 +220,31 @@ Setting this will drop the remotebranch name ``smf/default`` into just ``smf``.
 It is another way to reduce the nubmer of times that ``default`` shows up in
 the UI.
 
+------------------
+Transition Helpers
+------------------
+
+Using remotenames can be a big departure from previous workflows, so in addition
+to renaming and aliasing, the remotenames extension offers a few other options
+to make migrating to a remotenames easier. First is the ``transitionbookmarks``
+configuration option:
+
+  [remotenames]
+  transitionbookmarks = @
+      foo
+
+With this setting, remotenames will delete the local bookmarks ``@`` and ``foo``
+the first time the extension is run (and pulls the remotenames from a peer).
+In order to prevent these bookmarks from being re-created and causing confusion,
+you can set the ``disllowedbookmarks`` config:
+
+  [remotenames]
+  disallowedbookmarks = @
+      foo
+
+At which point mercurial's ``bookmarks`` command will refuse to create new
+bookmarks with these names.
+
 -------
 Revsets
 -------
