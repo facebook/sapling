@@ -69,6 +69,10 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(want, m['a'])
         self.assertEqual('a\0' + HASH_1 + '\n' + A_SHORT_MANIFEST,
                          m.text())
+
+    def testCopy(self):
+        m = manifestmod._lazymanifest(A_SHORT_MANIFEST)
+        m['a'] =  binascii.unhexlify(HASH_1), ''
         m2 = m.copy()
         del m
         del m2 # make sure we don't double free() anything
