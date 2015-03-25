@@ -205,3 +205,53 @@ Revert interactive tests
   4
   5
   f
+  $ hg st
+  M f
+  M folder1/g
+  R folder1/i
+  $ hg revert --interactive f << EOF
+  > y
+  > y
+  > n
+  > n
+  > EOF
+  diff -r 59dd6e4ab63a f
+  2 hunks, 2 lines changed
+  examine changes to 'f'? [Ynesfdaq?] y
+  
+  @@ -1,5 +1,6 @@
+  +a
+   1
+   2
+   3
+   4
+   5
+  record change 1/2 to 'f'? [Ynesfdaq?] y
+  
+  @@ -1,5 +2,6 @@
+   1
+   2
+   3
+   4
+   5
+  +b
+  record change 2/2 to 'f'? [Ynesfdaq?] n
+  
+  $ hg st
+  M f
+  M folder1/g
+  R folder1/i
+  ? f.orig
+  $ cat f
+  a
+  1
+  2
+  3
+  4
+  5
+  $ cat f.orig
+  1
+  2
+  3
+  4
+  5

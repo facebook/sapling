@@ -2810,6 +2810,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         ## filling of the `names` mapping
         # walk dirstate to fill `names`
 
+        interactive = opts.get('interactive', False)
         wctx = repo[None]
         m = scmutil.match(wctx, pats, opts)
         if not m.always():
@@ -3031,7 +3032,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                             ui.note(_('saving current version of %s as %s\n') %
                                     (rel, bakname))
                             if not opts.get('dry_run'):
-                                util.rename(target, bakname)
+                                if interactive:
+                                    util.copyfile(target, bakname)
+                                else:
+                                    util.rename(target, bakname)
                     if ui.verbose or not exact:
                         if not isinstance(msg, basestring):
                             msg = msg(abs)
@@ -3044,7 +3048,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         if not opts.get('dry_run'):
             needdata = ('revert', 'add', 'undelete')
             _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
-            interactive = opts.get('interactive', False)
             _performrevert(repo, parents, ctx, actions, interactive)
 
         # get the list of subrepos that must be reverted
