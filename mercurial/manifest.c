@@ -12,6 +12,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "util.h"
+
 /* VC9 doesn't include bool and lacks stdbool.h based on my searching */
 #ifdef _MSC_VER
 #define true 1
