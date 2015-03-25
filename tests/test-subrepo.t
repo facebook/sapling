@@ -146,7 +146,7 @@ leave sub dirty (and check ui.commitsubrepos=no aborts the commit)
 
   $ echo c > s/a
   $ hg --config ui.commitsubrepos=no ci -m4
-  abort: uncommitted changes in subrepo s
+  abort: uncommitted changes in subrepository 's'
   (use --subrepos for recursive commit)
   [255]
   $ hg id

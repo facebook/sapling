@@ -1372,10 +1372,10 @@ class localrepository(object):
                         if not force:
                             raise util.Abort(
                                 _("commit with new subrepo %s excluded") % s)
-                    if wctx.sub(s).dirty(True):
+                    dirtyreason = wctx.sub(s).dirtyreason(True)
+                    if dirtyreason:
                         if not self.ui.configbool('ui', 'commitsubrepos'):
-                            raise util.Abort(
-                                _("uncommitted changes in subrepo %s") % s,
+                            raise util.Abort(dirtyreason,
                                 hint=_("use --subrepos for recursive commit"))
                         subs.append(s)
                         commitsubs.add(s)

@@ -59,7 +59,7 @@ Test recursive diff without committing anything:
 Commits:
 
   $ hg commit -m fails
-  abort: uncommitted changes in subrepo foo
+  abort: uncommitted changes in subrepository 'foo'
   (use --subrepos for recursive commit)
   [255]
 

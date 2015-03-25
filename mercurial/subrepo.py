@@ -390,6 +390,18 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
+    def dirtyreason(self, ignoreupdate=False):
+        """return reason string if it is ``dirty()``
+
+        Returned string should have enough information for the message
+        of exception.
+
+        This returns None, otherwise.
+        """
+        if self.dirty(ignoreupdate=ignoreupdate):
+            return _("uncommitted changes in subrepository '%s'"
+                     ) % subrelpath(self)
+
     def basestate(self):
         """current working directory base state, disregarding .hgsubstate
         state and working directory modifications"""

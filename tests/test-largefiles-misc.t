@@ -248,7 +248,7 @@ verify that large files in subrepos handled properly
   commit: 1 subrepos
   update: (current)
   $ hg ci -m "this commit should fail without -S"
-  abort: uncommitted changes in subrepo subrepo
+  abort: uncommitted changes in subrepository 'subrepo'
   (use --subrepos for recursive commit)
   [255]
 
