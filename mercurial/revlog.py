@@ -1129,7 +1129,12 @@ class revlog(object):
                               % self.indexfile)
 
         trindex = trinfo[2]
-        dataoff = self.start(trindex)
+        if trindex is not None:
+            dataoff = self.start(trindex)
+        else:
+            # revlog was stripped at start of transaction, use all leftover data
+            trindex = len(self) - 1
+            dataoff = self.end(-2)
 
         tr.add(self.datafile, dataoff)
 
