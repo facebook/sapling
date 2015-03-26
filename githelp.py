@@ -616,6 +616,7 @@ def rebase(ui, repo, *args, **kwargs):
         ('', 'onto', '', ''),
         ('', 'abort', None, ''),
         ('', 'continue', None, ''),
+        ('', 'skip', None, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -632,9 +633,13 @@ def rebase(ui, repo, *args, **kwargs):
         ui.status(cmd, "\n")
         return
 
+    if opts.get('skip'):
+        cmd = Command('revert --all -r .')
+        ui.status(cmd, "\n")
+
     cmd = Command('rebase')
 
-    if opts.get('continue'):
+    if opts.get('continue') or opts.get('skip'):
         cmd['--continue'] = None
     if opts.get('abort'):
         cmd['--abort'] = None

@@ -29,3 +29,8 @@ githelp on a command with unrecognized option packed with other options should f
   If this is a valid git command, please log a task for the source_control oncall.
   
   [255]
+githelp for git rebase --skip
+  $ hg githelp -- git rebase --skip
+  hg revert --all -r .
+  hg rebase --continue
+
