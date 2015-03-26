@@ -447,7 +447,7 @@ class treemanifest(object):
                 self._dirs[dir] = treemanifest(self._subpath(dir))
             self._dirs[dir].__setitem__(subpath, n)
         else:
-            self._files[f] = n
+            self._files[f] = n[:21] # to match manifestdict's behavior
 
     def setflag(self, f, flags):
         """Set the flags (symlink, executable) for path f."""
