@@ -171,7 +171,8 @@ def reposetup(ui, repo):
             node2hoists = {}
             for name, node in mark2nodes.iteritems():
                 if name.startswith(hoist):
-                    hoist2nodes[name[len(hoist):]] = node
+                    name = name[len(hoist):]
+                    hoist2nodes[name] = node
                     node2hoists.setdefault(node[0], []).append(name)
             hoistedmarkns = ns(
                     'hoistedbookmarks',

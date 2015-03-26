@@ -53,13 +53,13 @@ Test hoisting name lookup
   $ hg log -r . -T '{hoistedbookmarks}\n'
   
   $ hg pull
-  pulling from $TESTTMP/repo1
+  pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   $ hg log -r bm1 -T '{node|short} - {bookmarks} - {hoistedbookmarks} - {remotebookmarks}\n'
-  cb9a9f314b8b -  - remote/bm1 remote/bm2 - remote/bm1 remote/bm2
+  cb9a9f314b8b -  - bm1 bm2 - remote/bm1 remote/bm2
   $ hg log -r bm2 -T '{node|short} - {bookmarks} - {hoistedbookmarks} - {remotebookmarks}\n'
-  cb9a9f314b8b -  - remote/bm1 remote/bm2 - remote/bm1 remote/bm2
+  cb9a9f314b8b -  - bm1 bm2 - remote/bm1 remote/bm2
 
 Test transition bookmark deletion
   $ rm .hg/remotenames
