@@ -966,15 +966,25 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
         f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
     f.close()
 
+def calculatedistance(repo, fromrev, torev):
+    """
+    Return the (ahead, behind) distance between `fromrev` and `torev`.
+    The returned tuple will contain ints if calculated, Nones otherwise.
+    """
+    if not repo.ui.configbool('remotenames', 'calculatedistance', True):
+        return (None, None)
+
+    ahead = len(repo.revs('only(%d, %d)' % (fromrev, torev)))
+    behind = len(repo.revs('only(%d, %d)' % (torev, fromrev)))
+
+    return (ahead, behind)
+
 def distancefromtracked(repo, bookmark):
     """return the (ahead, behind) distance between the tracked names"""
 
-    if not repo.ui.configbool('remotenames', 'calculatedistance', True):
-        return (0, 0)
-
     tracking = _readtracking(repo)
     remotename = ''
-    distance = (0, 0)
+    distance = (None, None)
 
     if bookmark and bookmark in repo and bookmark in tracking:
         remotename = tracking[bookmark]
@@ -992,8 +1002,7 @@ def distancefromtracked(repo, bookmark):
     if remotename in repo:
         rev1 = repo[bookmark].rev()
         rev2 = repo[remotename].rev()
-        distance = (str(len(repo.revs('only(%d, %d)' % (rev1, rev2)))),
-                    str(len(repo.revs('only(%d, %d)' % (rev2, rev1)))))
+        distance = calculatedistance(rev1, rev2)
         # save in a cache
         repo.vfs.write('cache/tracking.%s' % bookmark, ' '.join(distance))
     return (remotename, distance)
