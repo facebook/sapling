@@ -3055,7 +3055,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         if targetsubs:
             # Revert the subrepos on the revert list
             for sub in targetsubs:
-                ctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
+                try:
+                    ctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
+                except KeyError:
+                    raise util.Abort("subrepository '%s' does not exist in %s!"
+                                      % (sub, short(ctx.node())))
     finally:
         wlock.release()
 
