@@ -136,7 +136,6 @@ class testmanifest(unittest.TestCase):
         m2 = m.matches(match)
         self.assertEqual(want, m2['foo'])
         self.assertEqual(1, len(m2))
-        self.assertEqual(('foo\0%s\n' % HASH_1), m2.text())
         m2 = m.copy()
         self.assertEqual(want, m2['foo'])
         # suffix with iteration
