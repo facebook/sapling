@@ -3049,14 +3049,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             _performrevert(repo, parents, ctx, actions, interactive)
 
         # get the list of subrepos that must be reverted
-        subrepomatch = scmutil.match(ctx, pats, opts)
-        targetsubs = sorted(s for s in ctx.substate if subrepomatch(s))
+        subrepomatch = scmutil.match(wctx, pats, opts)
+        targetsubs = sorted(s for s in wctx.substate if subrepomatch(s))
 
         if targetsubs:
             # Revert the subrepos on the revert list
             for sub in targetsubs:
                 try:
-                    ctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
+                    wctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
                 except KeyError:
                     raise util.Abort("subrepository '%s' does not exist in %s!"
                                       % (sub, short(ctx.node())))

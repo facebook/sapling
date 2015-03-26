@@ -528,9 +528,19 @@ The subrepo must sorts after the explicit filename.
   $ hg init test
   $ cd test
   $ hg init x
+  $ echo abc > abc.txt
+  $ hg ci -Am "abc"
+  adding abc.txt
   $ echo "x = x" >> .hgsub
   $ hg add .hgsub
   $ touch a x/a
   $ hg add a x/a
+
+  $ hg ci -Sm "added x"
+  committing subrepository x
+  $ echo abc > x/a
+  $ hg revert --rev '.^' "set:subrepo('glob:x*')"
+  abort: subrepository 'x' does not exist in 25ac2c9b3180!
+  [255]
 
   $ cd ..
