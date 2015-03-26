@@ -155,7 +155,7 @@ def reposetup(ui, repo):
                 'remotebookmarks',
                 templatename='remotebookmarks',
                 logname='bookmark',
-                colorname='remotebookmarks',
+                colorname='remotebookmark',
                 listnames=lambda repo: mark2nodes.keys(),
                 namemap=lambda repo, name: mark2nodes.get(name),
                 nodemap=lambda repo, node: node2marks.get(node, []))
@@ -174,15 +174,15 @@ def reposetup(ui, repo):
                     name = name[len(hoist):]
                     hoist2nodes[name] = node
                     node2hoists.setdefault(node[0], []).append(name)
-            hoistedmarkns = ns(
-                    'hoistedbookmarks',
-                    templatename='hoistedbookmarks',
+            hoistednamens = ns(
+                    'hoistednames',
+                    templatename='hoistednames',
                     logname='hoistedname',
                     colorname='hoistedname',
                     listnames=lambda repo: hoist2nodes.keys(),
                     namemap=lambda repo, name: hoist2nodes.get(name),
                     nodemap=lambda repo, node: node2hoists.get(node, []))
-            repo.names.addnamespace(hoistedmarkns)
+            repo.names.addnamespace(hoistednamens)
 
     if ui.configbool('remotenames', 'branches', True):
         branch2nodes = _remotenames.get('branches')
