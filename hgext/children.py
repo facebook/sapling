@@ -39,11 +39,13 @@ def children(ui, repo, file_=None, **opts):
     """
     rev = opts.get('rev')
     if file_:
-        ctx = repo.filectx(file_, changeid=rev)
+        fctx = repo.filectx(file_, changeid=rev)
+        childctxs = [fcctx.changectx() for fcctx in fctx.children()]
     else:
         ctx = repo[rev]
+        childctxs = ctx.children()
 
     displayer = cmdutil.show_changeset(ui, repo, opts)
-    for cctx in ctx.children():
+    for cctx in childctxs:
         displayer.show(cctx)
     displayer.close()

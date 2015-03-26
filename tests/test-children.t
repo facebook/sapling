@@ -122,4 +122,12 @@ hg children file0 at revision 0 (should be 2)
   summary:     2
   
 
+should be compatible with templater (don't pass fctx to displayer)
+  $ hg children file0 -Tdefault
+  changeset:   2:8f5eea5023c2
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     2
+  
+
   $ cd ..
