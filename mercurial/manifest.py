@@ -480,19 +480,6 @@ class treemanifest(object):
         copy._flags = dict.copy(self._flags)
         return copy
 
-    def _intersectfiles(self, files):
-        '''make a new treemanifest with the intersection of self with files
-
-        The algorithm assumes that files is much smaller than self.'''
-        ret = treemanifest()
-        for fn in files:
-            if fn in self:
-                ret[fn] = self[fn]
-                flags = self.flags(fn)
-                if flags:
-                    ret.setflag(fn, flags)
-        return ret
-
     def filesnotin(self, m2):
         '''Set of files in this manifest that are not in the other'''
         files = set()
@@ -530,11 +517,6 @@ class treemanifest(object):
         '''generate a new manifest filtered by the match argument'''
         if match.always():
             return self.copy()
-
-        files = match.files()
-        if (match.isexact() or
-            (not match.anypats() and util.all(fn in self for fn in files))):
-            return self._intersectfiles(files)
 
         m = self.copy()
         for fn in m.keys():
