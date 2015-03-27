@@ -11,6 +11,26 @@ import array, struct
 
 propertycache = util.propertycache
 
+def _parse(data):
+    """Generates (path, node, flags) tuples from a manifest text"""
+    # This method does a little bit of excessive-looking
+    # precondition checking. This is so that the behavior of this
+    # class exactly matches its C counterpart to try and help
+    # prevent surprise breakage for anyone that develops against
+    # the pure version.
+    if data and data[-1] != '\n':
+        raise ValueError('Manifest did not end in a newline.')
+    prev = None
+    for l in data.splitlines():
+        if prev is not None and prev > l:
+            raise ValueError('Manifest lines not in sorted order.')
+        prev = l
+        f, n = l.split('\0')
+        if len(n) > 40:
+            yield f, revlog.bin(n[:40]), n[40:]
+        else:
+            yield f, revlog.bin(n), ''
+
 class _lazymanifest(dict):
     """This is the pure implementation of lazymanifest.
 
@@ -18,24 +38,9 @@ class _lazymanifest(dict):
     """
 
     def __init__(self, data):
-        # This init method does a little bit of excessive-looking
-        # precondition checking. This is so that the behavior of this
-        # class exactly matches its C counterpart to try and help
-        # prevent surprise breakage for anyone that develops against
-        # the pure version.
-        if data and data[-1] != '\n':
-            raise ValueError('Manifest did not end in a newline.')
         dict.__init__(self)
-        prev = None
-        for l in data.splitlines():
-            if prev is not None and prev > l:
-                raise ValueError('Manifest lines not in sorted order.')
-            prev = l
-            f, n = l.split('\0')
-            if len(n) > 40:
-                self[f] = revlog.bin(n[:40]), n[40:]
-            else:
-                self[f] = revlog.bin(n), ''
+        for f, n, fl in _parse(data):
+            self[f] = n, fl
 
     def __setitem__(self, k, v):
         node, flag = v
@@ -342,8 +347,7 @@ class treemanifest(object):
         # Using _lazymanifest here is a little slower than plain old dicts
         self._files = {}
         self._flags = {}
-        lm = _lazymanifest(text)
-        for f, n, fl in lm.iterentries():
+        for f, n, fl in _parse(text):
             self[f] = n
             if fl:
                 self.setflag(f, fl)
