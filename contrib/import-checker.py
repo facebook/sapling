@@ -191,7 +191,7 @@ def rotatecycle(cycle):
     """
     lowest = min(cycle)
     idx = cycle.index(lowest)
-    return cycle[idx:] + cycle[1:idx] + [lowest]
+    return cycle[idx:-1] + cycle[:idx] + [lowest]
 
 def find_cycles(imports):
     """Find cycles in an already-loaded import graph.
@@ -201,8 +201,8 @@ def find_cycles(imports):
     ...            'top.baz': ['foo'],
     ...            'top.qux': ['foo']}
     >>> print '\\n'.join(sorted(find_cycles(imports)))
-    top.bar -> top.baz -> top.foo -> top.bar -> top.bar
-    top.foo -> top.qux -> top.foo -> top.foo
+    top.bar -> top.baz -> top.foo -> top.bar
+    top.foo -> top.qux -> top.foo
     """
     cycles = {}
     for mod in sorted(imports.iterkeys()):
