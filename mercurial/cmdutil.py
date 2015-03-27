@@ -2811,6 +2811,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         interactive = opts.get('interactive', False)
         wctx = repo[None]
         m = scmutil.match(wctx, pats, opts)
+
+        # we'll need this later
+        targetsubs = sorted(s for s in wctx.substate if m(s))
+
         if not m.always():
             m.bad = lambda x, y: False
             for abs in repo.walk(m):
@@ -3047,10 +3051,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             needdata = ('revert', 'add', 'undelete')
             _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
             _performrevert(repo, parents, ctx, actions, interactive)
-
-        # get the list of subrepos that must be reverted
-        subrepomatch = scmutil.match(wctx, pats, opts)
-        targetsubs = sorted(s for s in wctx.substate if subrepomatch(s))
 
         if targetsubs:
             # Revert the subrepos on the revert list
