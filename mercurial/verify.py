@@ -169,7 +169,7 @@ def _verify(repo):
             for f, fn in mf.readdelta(n).iteritems():
                 if not f:
                     err(lr, _("file without name in manifest"))
-                elif f != "/dev/null":
+                elif f != "/dev/null": # ignore this in very old repos
                     filenodes.setdefault(_normpath(f), {}).setdefault(fn, lr)
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
