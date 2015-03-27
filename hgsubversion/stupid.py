@@ -194,7 +194,12 @@ def patchrepo(ui, meta, parentctx, patchfp):
         backend = svnbackend(ui, meta.repo, parentctx, store)
 
         try:
-            ret = patch.patchbackend(ui, backend, patchfp, 0, touched)
+            try:
+                ret = patch.patchbackend(ui, backend, patchfp, 0, files=touched)
+            except TypeError:
+                # Mercurial >= 3.4 have an extra prefix parameter
+                ret = patch.patchbackend(ui, backend, patchfp, 0, '',
+                                         files=touched)
             if ret < 0:
                 raise BadPatchApply('patching failed')
             if ret > 0:
