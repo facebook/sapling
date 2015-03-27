@@ -31,6 +31,21 @@ def _parse(data):
         else:
             yield f, revlog.bin(n), ''
 
+def _text(it):
+    """Given an iterator over (path, node, flags) tuples, returns a manifest
+    text"""
+    files = []
+    lines = []
+    _hex = revlog.hex
+    for f, n, fl in it:
+        files.append(f)
+        # if this is changed to support newlines in filenames,
+        # be sure to check the templates/ dir again (especially *-raw.tmpl)
+        lines.append("%s\0%s%s\n" % (f, _hex(n), fl))
+
+    _checkforbidden(files)
+    return ''.join(lines)
+
 class _lazymanifest(dict):
     """This is the pure implementation of lazymanifest.
 
@@ -92,13 +107,7 @@ class _lazymanifest(dict):
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
-        fl = self.iterentries()
-
-        _hex = revlog.hex
-        # if this is changed to support newlines in filenames,
-        # be sure to check the templates/ dir again (especially *-raw.tmpl)
-        return ''.join("%s\0%s%s\n" % (
-            f, _hex(n[:20]), flag) for f, n, flag in fl)
+        return _text(self.iterentries())
 
 try:
     _lazymanifest = parsers.lazymanifest
@@ -578,13 +587,8 @@ class treemanifest(object):
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
-        fl = self.keys()
-        _checkforbidden(fl)
-
-        hex, flags = revlog.hex, self.flags
-        # if this is changed to support newlines in filenames,
-        # be sure to check the templates/ dir again (especially *-raw.tmpl)
-        return ''.join("%s\0%s%s\n" % (f, hex(self[f]), flags(f)) for f in fl)
+        flags = self.flags
+        return _text((f, self[f], flags(f)) for f in self.keys())
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
