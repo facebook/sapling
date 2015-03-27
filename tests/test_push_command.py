@@ -267,8 +267,8 @@ class PushTests(test_util.TestBase):
         commands.push(repo.ui, repo)
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0].node(), oldtiphash)
         self.assertEqual(self.repo['tip'].files(), ['delta', ])
-        self.assertEqual(self.repo['tip'].manifest().keys(),
-                         ['alpha', 'beta', 'gamma', 'delta'])
+        self.assertEqual(sorted(self.repo['tip'].manifest().keys()),
+                         ['alpha', 'beta', 'delta', 'gamma'])
 
     def test_push_two_revs(self):
         # set up some work for us
@@ -419,8 +419,9 @@ class PushTests(test_util.TestBase):
         self.assert_('@' in self.repo['tip'].user())
         self.assertEqual(tip['gamma'].flags(), 'x')
         self.assertEqual(tip['gamma'].data(), 'foo')
-        self.assertEqual([x for x in tip.manifest().keys() if 'x' not in
-                          tip[x].flags()], ['alpha', 'beta', 'adding_file', ])
+        self.assertEqual(sorted([x for x in tip.manifest().keys() if 'x' not in
+                                tip[x].flags()]),
+                         ['adding_file', 'alpha', 'beta', ])
 
     def test_push_symlink_file(self):
         self.test_push_to_default(commit=True)
@@ -451,8 +452,9 @@ class PushTests(test_util.TestBase):
         self.assertNotEqual(tip.node(), new_hash)
         self.assertEqual(tip['gamma'].flags(), 'l')
         self.assertEqual(tip['gamma'].data(), 'foo')
-        self.assertEqual([x for x in tip.manifest().keys() if 'l' not in
-                          tip[x].flags()], ['alpha', 'beta', 'adding_file', ])
+        self.assertEqual(sorted([x for x in tip.manifest().keys() if 'l' not in
+                                 tip[x].flags()]),
+                         ['adding_file', 'alpha', 'beta', ])
 
         def file_callback2(repo, memctx, path):
             if path == 'gamma':
@@ -636,7 +638,7 @@ class PushTests(test_util.TestBase):
         parent = self.repo['tip'].rev()
         self.commitchanges(changes, parent=parent)
         self.pushrevisions()
-        self.assertEqual({}, self.repo['tip'].manifest())
+        self.assertEqual(len(self.repo['tip'].manifest()), 0)
 
         # Try to re-add a file after emptying the branch
         changes = [

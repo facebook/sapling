@@ -66,8 +66,8 @@ class TestPushRenames(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.repo['tip'].manifest().keys(),
-                         ['a', 'c', 'b', 'e', 'd',
+        self.assertEqual(sorted(self.repo['tip'].manifest().keys()),
+                         ['a', 'b', 'c', 'd', 'e',
                           'random2/dir with space/file with space'])
 
     def test_push_rename_tree(self):

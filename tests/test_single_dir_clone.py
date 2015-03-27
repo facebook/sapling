@@ -21,15 +21,15 @@ class TestSingleDirClone(test_util.TestBase):
                                             subdir='')
         self.assertEqual(compathacks.branchset(repo),
                          set(['default']))
-        self.assertEqual(repo['tip'].manifest().keys(),
-                         ['trunk/beta',
+        self.assertEqual(sorted(repo['tip'].manifest().keys()),
+                         ['branches/branch_from_tag/alpha',
+                          'branches/branch_from_tag/beta',
                           'tags/copied_tag/alpha',
-                          'trunk/alpha',
                           'tags/copied_tag/beta',
-                          'branches/branch_from_tag/alpha',
                           'tags/tag_r3/alpha',
                           'tags/tag_r3/beta',
-                          'branches/branch_from_tag/beta'])
+                          'trunk/alpha',
+                          'trunk/beta'])
 
     def test_auto_detect_single(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',

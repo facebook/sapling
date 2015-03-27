@@ -82,8 +82,8 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_branch_create_with_dir_delete_works(self):
         repo = self._load_fixture_and_fetch('branch_create_with_dir_delete.svndump')
-        self.assertEqual(repo['tip'].manifest().keys(),
-                         ['alpha', 'beta', 'iota', 'gamma', ])
+        self.assertEqual(sorted(repo['tip'].manifest().keys()),
+                         ['alpha', 'beta', 'gamma', 'iota', ])
 
     def test_branch_tip_update_to_default(self):
         repo = self._load_fixture_and_fetch('unorderedbranch.svndump',
