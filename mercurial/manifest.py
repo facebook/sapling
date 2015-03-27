@@ -597,13 +597,16 @@ class manifest(revlog.revlog):
         # stacks of commits, the number can go up, hence the config knob below.
         cachesize = 4
         usetreemanifest = False
+        usemanifestv2 = False
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
             usetreemanifest = opts.get('usetreemanifest', usetreemanifest)
+            usemanifestv2 = opts.get('usemanifestv2', usemanifestv2)
         self._mancache = util.lrucachedict(cachesize)
         revlog.revlog.__init__(self, opener, "00manifest.i")
         self._usetreemanifest = usetreemanifest
+        self._usemanifestv2 = usemanifestv2
 
     def _newmanifest(self, data=''):
         if self._usetreemanifest:

@@ -334,6 +334,9 @@ class localrepository(object):
         usetreemanifest = self.ui.configbool('experimental', 'treemanifest')
         if usetreemanifest is not None:
             self.svfs.options['usetreemanifest'] = usetreemanifest
+        usemanifestv2 = self.ui.configbool('experimental', 'manifestv2')
+        if usemanifestv2 is not None:
+            self.svfs.options['usemanifestv2'] = usemanifestv2
 
     def _writerequirements(self):
         reqfile = self.vfs("requires", "w")
