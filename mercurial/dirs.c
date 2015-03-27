@@ -9,6 +9,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <string.h>
 #include "util.h"
 
 /*
@@ -32,23 +33,19 @@ static inline Py_ssize_t _finddir(PyObject *path, Py_ssize_t pos)
 {
 	const char *s = PyString_AS_STRING(path);
 
-	while (pos != -1) {
-		if (s[pos] == '/')
-			break;
-		pos -= 1;
-	}
-
-	return pos;
+	const char *ret = strchr(s + pos, '/');
+	return (ret != NULL) ? (ret - s) : -1;
 }
 
 static int _addpath(PyObject *dirs, PyObject *path)
 {
-	const char *cpath = PyString_AS_STRING(path);
-	Py_ssize_t pos = PyString_GET_SIZE(path);
+	char *cpath = PyString_AS_STRING(path);
+	Py_ssize_t len = PyString_GET_SIZE(path);
+	Py_ssize_t pos = -1;
 	PyObject *key = NULL;
 	int ret = -1;
 
-	while ((pos = _finddir(path, pos - 1)) != -1) {
+	while ((pos = _finddir(path, pos + 1)) != -1) {
 		PyObject *val;
 
 		/* It's likely that every prefix already has an entry
@@ -56,10 +53,18 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		   deallocating a string for each prefix we check. */
 		if (key != NULL)
 			((PyStringObject *)key)->ob_shash = -1;
-		else {
-			/* Force Python to not reuse a small shared string. */
-			key = PyString_FromStringAndSize(cpath,
-							 pos < 2 ? 2 : pos);
+		else if (pos != 0) {
+			/* pos >= 1, which means that len >= 2. This is
+			   guaranteed to produce a non-interned string. */
+			key = PyString_FromStringAndSize(cpath, len);
+			if (key == NULL)
+				goto bail;
+		} else {
+			/* pos == 0, which means we need to increment the dir
+			   count for the empty string. We need to make sure we
+			   don't muck around with interned strings, so throw it
+			   away later. */
+			key = PyString_FromString("");
 			if (key == NULL)
 				goto bail;
 		}
@@ -69,6 +74,10 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
 			PyInt_AS_LONG(val) += 1;
+			if (pos != 0)
+				PyString_AS_STRING(key)[pos] = '/';
+			else
+				key = NULL;
 			continue;
 		}
 
@@ -83,6 +92,11 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		Py_DECREF(val);
 		if (ret == -1)
 			goto bail;
+
+		if (pos != 0)
+			PyString_AS_STRING(key)[pos] = '/';
+		else
+			key = NULL;
 		Py_CLEAR(key);
 	}
 	ret = 0;
@@ -95,11 +109,11 @@ bail:
 
 static int _delpath(PyObject *dirs, PyObject *path)
 {
-	Py_ssize_t pos = PyString_GET_SIZE(path);
+	Py_ssize_t pos = -1;
 	PyObject *key = NULL;
 	int ret = -1;
 
-	while ((pos = _finddir(path, pos - 1)) != -1) {
+	while ((pos = _finddir(path, pos + 1)) != -1) {
 		PyObject *val;
 
 		key = PyString_FromStringAndSize(PyString_AS_STRING(path), pos);
