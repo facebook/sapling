@@ -169,7 +169,6 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                 mergemod.update(repo, repo.dirstate.p1(),
                         False, True, choices)
 
-
             # 3b. (apply)
             if dopatch:
                 try:
@@ -673,7 +672,6 @@ def copy(ui, repo, pats, opts, rename=False):
                     res = lambda p: dest
         return res
 
-
     pats = scmutil.expandpats(pats)
     if not pats:
         raise util.Abort(_('no source or destination specified'))
@@ -979,7 +977,6 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         else:
             def write(s, **kw):
                 fp.write(s)
-
 
         write("# HG changeset patch\n")
         write("# User %s\n" % ctx.user())
@@ -1651,7 +1648,6 @@ def walkfilerevs(repo, match, follow, revs, fncache):
             last = len(filelog) - 1
         else:
             last = filelog.rev(node)
-
 
         # keep track of all ancestors of the file
         ancestors = set([filelog.linkrev(last)])
@@ -3045,7 +3041,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 elif exact:
                     ui.warn(msg % rel)
                 break
-
 
         if not opts.get('dry_run'):
             needdata = ('revert', 'add', 'undelete')
