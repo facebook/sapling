@@ -96,6 +96,10 @@ Template should precede style option
 
 Default style is like normal output:
 
+  $ echo c >> c
+  $ hg add c
+  $ hg commit -qm ' '
+
   $ hg log > log.out
   $ hg log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
@@ -134,6 +138,8 @@ Default style should also preserve color information (issue2866):
   $ cmp log.out style.out || diff -u log.out style.out
 
   $ mv $HGRCPATH-bak $HGRCPATH
+
+  $ hg --config extensions.strip= strip -q .
 
 Revision with no copies (used to print a traceback):
 

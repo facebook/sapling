@@ -58,8 +58,8 @@ bookmark = '{label("log.bookmark",
 user = '{label("log.user",
                "user:        {author}")}\n'
 
-summary = '{label("log.summary",
-                  "summary:     {desc|firstline}")}\n'
+summary = '{if(desc|strip, "{label('log.summary',
+                                   'summary:     {desc|firstline}')}\n")}'
 
 ldate = '{label("log.date",
                 "date:        {date|date}")}\n'
@@ -67,7 +67,7 @@ ldate = '{label("log.date",
 extra = '{label("ui.debug log.extra",
                 "extra:       {key}={value|stringescape}")}\n'
 
-description = '{label("ui.note log.description",
-                       "description:")}
-               {label("ui.note log.description",
-                       "{desc|strip}")}\n\n'
+description = '{if(desc|strip, "{label('ui.note log.description',
+                                       'description:')}
+                                {label('ui.note log.description',
+                                       '{desc|strip}')}\n\n")}'
