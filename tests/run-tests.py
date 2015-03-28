@@ -76,6 +76,8 @@ processlock = threading.Lock()
 if sys.version_info < (2, 5):
     subprocess._cleanup = lambda: None
 
+wifexited = getattr(os, "WIFEXITED", lambda x: False)
+
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
     processlock.acquire()
@@ -720,6 +722,51 @@ class Test(unittest.TestCase):
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
 
+    def _runcommand(self, cmd, wd, replacements, env, debug=False,
+                    timeout=None):
+        """Run command in a sub-process, capturing the output (stdout and
+        stderr).
+
+        Return a tuple (exitcode, output). output is None in debug mode.
+        """
+        if debug:
+            proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
+            ret = proc.wait()
+            return (ret, None)
+
+        proc = Popen4(cmd, wd, timeout, env)
+        def cleanup():
+            terminate(proc)
+            ret = proc.wait()
+            if ret == 0:
+                ret = signal.SIGTERM << 8
+            killdaemons(env['DAEMON_PIDS'])
+            return ret
+
+        output = ''
+        proc.tochild.close()
+
+        try:
+            output = proc.fromchild.read()
+        except KeyboardInterrupt:
+            vlog('# Handling keyboard interrupt')
+            cleanup()
+            raise
+
+        ret = proc.wait()
+        if wifexited(ret):
+            ret = os.WEXITSTATUS(ret)
+
+        if proc.timeout:
+            ret = 'timeout'
+
+        if ret:
+            killdaemons(env['DAEMON_PIDS'])
+
+        for s, r in replacements:
+            output = re.sub(s, r, output)
+        return ret, output.splitlines(True)
+
 class PythonTest(Test):
     """A Python-based test."""
 
@@ -733,8 +780,8 @@ class PythonTest(Test):
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        result = run(cmd, self._testtmp, replacements, env,
-                   debug=self._debug, timeout=self._timeout)
+        result = self._runcommand(cmd, self._testtmp, replacements, env,
+                                  debug=self._debug, timeout=self._timeout)
         if self._aborted:
             raise KeyboardInterrupt()
 
@@ -781,8 +828,9 @@ class TTest(Test):
         cmd = '%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = run(cmd, self._testtmp, replacements, env,
-                               debug=self._debug, timeout=self._timeout)
+        exitcode, output = self._runcommand(cmd, self._testtmp, replacements,
+                                            env, debug=self._debug,
+                                            timeout=self._timeout)
 
         if self._aborted:
             raise KeyboardInterrupt()
@@ -1074,49 +1122,6 @@ class TTest(Test):
     @staticmethod
     def _stringescape(s):
         return TTest.ESCAPESUB(TTest._escapef, s)
-
-
-wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, replacements, env, debug=False, timeout=None):
-    """Run command in a sub-process, capturing the output (stdout and stderr).
-    Return a tuple (exitcode, output).  output is None in debug mode."""
-    if debug:
-        proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
-        ret = proc.wait()
-        return (ret, None)
-
-    proc = Popen4(cmd, wd, timeout, env)
-    def cleanup():
-        terminate(proc)
-        ret = proc.wait()
-        if ret == 0:
-            ret = signal.SIGTERM << 8
-        killdaemons(env['DAEMON_PIDS'])
-        return ret
-
-    output = ''
-    proc.tochild.close()
-
-    try:
-        output = proc.fromchild.read()
-    except KeyboardInterrupt:
-        vlog('# Handling keyboard interrupt')
-        cleanup()
-        raise
-
-    ret = proc.wait()
-    if wifexited(ret):
-        ret = os.WEXITSTATUS(ret)
-
-    if proc.timeout:
-        ret = 'timeout'
-
-    if ret:
-        killdaemons(env['DAEMON_PIDS'])
-
-    for s, r in replacements:
-        output = re.sub(s, r, output)
-    return ret, output.splitlines(True)
 
 iolock = threading.RLock()
 
