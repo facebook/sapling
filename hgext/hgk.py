@@ -335,15 +335,6 @@ def revlist(ui, repo, *revs, **opts):
     copy = [x for x in revs]
     revtree(ui, copy, repo, full, opts['max_count'], opts['parents'])
 
-@command('debug-config', [], _('hg debug-config'))
-def config(ui, repo, **opts):
-    """print extension options"""
-    def writeopt(name, value):
-        ui.write(('k=%s\nv=%s\n' % (name, value)))
-
-    writeopt('vdiff', ui.config('hgk', 'vdiff', ''))
-
-
 @command('view',
     [('l', 'limit', '',
      _('limit number of changes displayed'), _('NUM'))],

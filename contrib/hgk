@@ -4051,13 +4051,15 @@ proc doquit {} {
 
 proc getconfig {} {
     global env
-
-    set lines [exec $env(HG) debug-config]
-    regsub -all "\r\n" $lines "\n" config
     set config {}
-    foreach line [split $lines "\n"] {
-	regsub "^(k|v)=" $line "" line
-	lappend config $line
+
+    set lines [exec $env(HG) debugconfig]
+    foreach line [split $lines \n] {
+	set line [string trimright $line \r]
+	if {[string match hgk.* $line]} {
+	    regexp {(.*)=(.*)} $line - k v
+	    lappend config $k $v
+	}
     }
     return $config
 }
@@ -4121,8 +4123,9 @@ set redisplaying 0
 set stuffsaved 0
 set patchnum 0
 
+set config(hgk.vdiff) ""
 array set config [getconfig]
-set hgvdiff $config(vdiff)
+set hgvdiff $config(hgk.vdiff)
 setcoords
 makewindow
 readrefs
