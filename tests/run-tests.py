@@ -1951,8 +1951,14 @@ class TestRunner(object):
             rc = os.path.join(self._testdir, '.coveragerc')
             vlog('# Installing coverage rc to %s' % rc)
             os.environ['COVERAGE_PROCESS_START'] = rc
-            fn = os.path.join(self._installdir, '..', '.coverage')
-            os.environ['COVERAGE_FILE'] = fn
+            covdir = os.path.join(self._installdir, '..', 'coverage')
+            try:
+                os.mkdir(covdir)
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            os.environ['COVERAGE_DIR'] = covdir
 
     def _checkhglib(self, verb):
         """Ensure that the 'mercurial' package imported by python is
@@ -1991,9 +1997,9 @@ class TestRunner(object):
         # chdir is the easiest way to get short, relative paths in the
         # output.
         os.chdir(self._pythondir)
-        covdir = os.path.join(self._installdir, '..')
-        cov = coverage(data_file=os.path.join(covdir, '.coverage'))
-        cov.load()
+        covdir = os.path.join(self._installdir, '..', 'coverage')
+        cov = coverage(data_file=os.path.join(covdir, 'cov'))
+        cov.combine()
 
         omit = [os.path.join(x, '*') for x in [self._bindir, self._testdir]]
         cov.report(ignore_errors=True, omit=omit)
