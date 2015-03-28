@@ -162,10 +162,6 @@ def verify_stdlib_on_own_line(source):
 class CircularImport(Exception):
     pass
 
-
-def cyclekey(names):
-    return tuple(sorted(names))
-
 def checkmod(mod, imports):
     shortest = {}
     visit = [[mod]]
@@ -203,14 +199,14 @@ def find_cycles(imports):
     top.bar -> top.baz -> top.foo -> top.bar
     top.foo -> top.qux -> top.foo
     """
-    cycles = {}
+    cycles = set()
     for mod in sorted(imports.iterkeys()):
         try:
             checkmod(mod, imports)
         except CircularImport, e:
             cycle = e.args[0]
-            cycles[cyclekey(cycle)] = ' -> '.join(rotatecycle(cycle))
-    return cycles.values()
+            cycles.add(" -> ".join(rotatecycle(cycle)))
+    return cycles
 
 def _cycle_sortkey(c):
     return len(c), c
