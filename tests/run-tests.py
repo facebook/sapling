@@ -543,14 +543,13 @@ class Test(unittest.TestCase):
 
         This will return a tuple describing the result of the test.
         """
-        replacements = self._getreplacements()
         env = self._getenv()
         self._daemonpids.append(env['DAEMON_PIDS'])
         self._createhgrc(env['HGRCPATH'])
 
         vlog('# Test', self.name)
 
-        ret, out = self._run(replacements, env)
+        ret, out = self._run(env)
         self._finished = True
         self._ret = ret
         self._out = out
@@ -623,7 +622,7 @@ class Test(unittest.TestCase):
 
         vlog("# Ret was:", self._ret)
 
-    def _run(self, replacements, env):
+    def _run(self, env):
         # This should be implemented in child classes to run tests.
         raise SkipTest('unknown test type')
 
@@ -722,7 +721,7 @@ class Test(unittest.TestCase):
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
 
-    def _runcommand(self, cmd, replacements, env, normalizenewlines=False):
+    def _runcommand(self, cmd, env, normalizenewlines=False):
         """Run command in a sub-process, capturing the output (stdout and
         stderr).
 
@@ -763,7 +762,7 @@ class Test(unittest.TestCase):
         if ret:
             killdaemons(env['DAEMON_PIDS'])
 
-        for s, r in replacements:
+        for s, r in self._getreplacements():
             output = re.sub(s, r, output)
 
         if normalizenewlines:
@@ -778,12 +777,12 @@ class PythonTest(Test):
     def refpath(self):
         return os.path.join(self._testdir, '%s.out' % self.name)
 
-    def _run(self, replacements, env):
+    def _run(self, env):
         py3kswitch = self._py3kwarnings and ' -3' or ''
         cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self.path)
         vlog("# Running", cmd)
         normalizenewlines = os.name == 'nt'
-        result = self._runcommand(cmd, replacements, env,
+        result = self._runcommand(cmd, env,
                                   normalizenewlines=normalizenewlines)
         if self._aborted:
             raise KeyboardInterrupt()
@@ -814,7 +813,7 @@ class TTest(Test):
     def refpath(self):
         return os.path.join(self._testdir, self.name)
 
-    def _run(self, replacements, env):
+    def _run(self, env):
         f = open(self.path, 'rb')
         lines = f.readlines()
         f.close()
@@ -831,7 +830,7 @@ class TTest(Test):
         cmd = '%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = self._runcommand(cmd, replacements, env)
+        exitcode, output = self._runcommand(cmd, env)
 
         if self._aborted:
             raise KeyboardInterrupt()
