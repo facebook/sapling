@@ -164,7 +164,7 @@ class CircularImport(Exception):
 
 
 def cyclekey(names):
-    return tuple(sorted((names)))
+    return tuple(sorted(names))
 
 def check_one_mod(mod, imports, path=None, ignore=None):
     if path is None:
