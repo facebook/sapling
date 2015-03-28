@@ -11,8 +11,7 @@ import array, struct
 
 propertycache = util.propertycache
 
-def _parse(data):
-    """Generates (path, node, flags) tuples from a manifest text"""
+def _parsev1(data):
     # This method does a little bit of excessive-looking
     # precondition checking. This is so that the behavior of this
     # class exactly matches its C counterpart to try and help
@@ -30,6 +29,34 @@ def _parse(data):
             yield f, revlog.bin(n[:40]), n[40:]
         else:
             yield f, revlog.bin(n), ''
+
+def _parsev2(data):
+    metadataend = data.find('\n')
+    # Just ignore metadata for now
+    pos = metadataend + 1
+    prevf = ''
+    while pos < len(data):
+        end = data.find('\n', pos + 1) # +1 to skip stem length byte
+        if end == -1:
+            raise ValueError('Manifest ended with incomplete file entry.')
+        stemlen = ord(data[pos])
+        items = data[pos + 1:end].split('\0')
+        f = prevf[:stemlen] + items[0]
+        if prevf > f:
+            raise ValueError('Manifest entries not in sorted order.')
+        fl = items[1]
+        # Just ignore metadata (items[2:] for now)
+        n = data[end + 1:end + 21]
+        yield f, n, fl
+        pos = end + 22
+        prevf = f
+
+def _parse(data):
+    """Generates (path, node, flags) tuples from a manifest text"""
+    if data.startswith('\0'):
+        return iter(_parsev2(data))
+    else:
+        return iter(_parsev1(data))
 
 def _text(it):
     """Given an iterator over (path, node, flags) tuples, returns a manifest
@@ -116,7 +143,13 @@ except AttributeError:
 
 class manifestdict(object):
     def __init__(self, data=''):
-        self._lm = _lazymanifest(data)
+        if data.startswith('\0'):
+            #_lazymanifest can not parse v2
+            self._lm = _lazymanifest('')
+            for f, n, fl in _parsev2(data):
+                self._lm[f] = n, fl
+        else:
+            self._lm = _lazymanifest(data)
 
     def __getitem__(self, key):
         return self._lm[key][0]

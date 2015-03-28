@@ -8,6 +8,7 @@ from mercurial import manifest as manifestmod
 from mercurial import match as matchmod
 
 EMTPY_MANIFEST = ''
+EMTPY_MANIFEST_V2 = '\0\n'
 
 HASH_1 = '1' * 40
 BIN_HASH_1 = binascii.unhexlify(HASH_1)
@@ -22,6 +23,42 @@ A_SHORT_MANIFEST = (
          'flag1': '',
          'hash2': HASH_2,
          'flag2': 'l',
+         }
+
+# Same data as A_SHORT_MANIFEST
+A_SHORT_MANIFEST_V2 = (
+    '\0\n'
+    '\x00bar/baz/qux.py\0%(flag2)s\n%(hash2)s\n'
+    '\x00foo\0%(flag1)s\n%(hash1)s\n'
+    ) % {'hash1': BIN_HASH_1,
+         'flag1': '',
+         'hash2': BIN_HASH_2,
+         'flag2': 'l',
+         }
+
+# Same data as A_SHORT_MANIFEST
+A_METADATA_MANIFEST = (
+    '\0foo\0bar\n'
+    '\x00bar/baz/qux.py\0%(flag2)s\0foo\0bar\n%(hash2)s\n' # flag and metadata
+    '\x00foo\0%(flag1)s\0foo\n%(hash1)s\n' # no flag, but metadata
+    ) % {'hash1': BIN_HASH_1,
+         'flag1': '',
+         'hash2': BIN_HASH_2,
+         'flag2': 'l',
+         }
+
+A_STEM_COMPRESSED_MANIFEST = (
+    '\0\n'
+    '\x00bar/baz/qux.py\0%(flag2)s\n%(hash2)s\n'
+    '\x04qux/foo.py\0%(flag1)s\n%(hash1)s\n' # simple case of 4 stem chars
+    '\x0az.py\0%(flag1)s\n%(hash1)s\n' # tricky newline = 10 stem characters
+    '\x00%(verylongdir)sx/x\0\n%(hash1)s\n'
+    '\xffx/y\0\n%(hash2)s\n' # more than 255 stem chars
+    ) % {'hash1': BIN_HASH_1,
+         'flag1': '',
+         'hash2': BIN_HASH_2,
+         'flag2': 'l',
+         'verylongdir': 255 * 'x',
          }
 
 A_DEEPER_MANIFEST = (
@@ -77,6 +114,11 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
+    def testEmptyManifestv2(self):
+        m = parsemanifest(EMTPY_MANIFEST_V2)
+        self.assertEqual(0, len(m))
+        self.assertEqual([], list(m))
+
     def testManifest(self):
         m = parsemanifest(A_SHORT_MANIFEST)
         self.assertEqual(['bar/baz/qux.py', 'foo'], list(m))
@@ -85,6 +127,25 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(BIN_HASH_1, m['foo'])
         self.assertEqual('', m.flags('foo'))
         self.assertRaises(KeyError, lambda : m['wat'])
+
+    def testParseManifestV2(self):
+        m1 = parsemanifest(A_SHORT_MANIFEST)
+        m2 = parsemanifest(A_SHORT_MANIFEST_V2)
+        # Should have same content as A_SHORT_MANIFEST
+        self.assertEqual(m1.text(), m2.text())
+
+    def testParseManifestMetadata(self):
+        # Metadata is for future-proofing and should be accepted but ignored
+        m = parsemanifest(A_METADATA_MANIFEST)
+        self.assertEqual(A_SHORT_MANIFEST, m.text())
+
+    def testParseManifestStemCompression(self):
+        m = parsemanifest(A_STEM_COMPRESSED_MANIFEST)
+        self.assertIn('bar/baz/qux.py', m)
+        self.assertIn('bar/qux/foo.py', m)
+        self.assertIn('bar/qux/foz.py', m)
+        self.assertIn(256 * 'x' + '/x', m)
+        self.assertIn(256 * 'x' + '/y', m)
 
     def testSetItem(self):
         want = BIN_HASH_1
