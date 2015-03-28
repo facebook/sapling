@@ -337,7 +337,7 @@ proc readcommit {id} {
 
 proc parsecommit {id contents listed olds} {
     global commitinfo children nchildren parents nparents cdate ncleft
-    global firstparents
+    global firstparents obsolete
 
     set inhdr 1
     set comment {}
@@ -389,6 +389,8 @@ proc parsecommit {id contents listed olds} {
 		    set branch [join [lrange $line 1 end]]
         } elseif {$tag == "bookmark"} {
 		    set bookmark [join [lrange $line 1 end]]
+        } elseif {$tag == "obsolete"} {
+		    set obsolete($id) ""
         }
 	    }
 	} else {
@@ -1139,7 +1141,7 @@ proc drawcommitline {level} {
     global lineno lthickness mainline mainlinearrow sidelines
     global commitlisted rowtextx idpos lastuse displist
     global oldnlines olddlevel olddisplist
-    global aucolormap curid curidfont
+    global aucolormap curid curidfont obsolete
 
     incr numcommits
     incr lineno
@@ -1154,6 +1156,9 @@ proc drawcommitline {level} {
 	    set commitinfo($id) {"No commit information available"}
 	    set nparents($id) 0
 	}
+    }
+    if {[info exists obsolete($id)]} {
+	set ofill darkgrey
     }
     assigncolor $id
     set currentparents {}

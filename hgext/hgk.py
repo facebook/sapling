@@ -35,7 +35,7 @@ vdiff on hovered and selected revisions.
 '''
 
 import os
-from mercurial import cmdutil, commands, patch, revlog, scmutil
+from mercurial import cmdutil, commands, patch, revlog, scmutil, obsolete
 from mercurial.node import nullid, nullrev, short
 from mercurial.i18n import _
 
@@ -128,6 +128,9 @@ def catcommit(ui, repo, n, prefix, ctx=None):
         ui.write(("committer %s %s %s\n" % (committer, int(date[0]), date[1])))
     ui.write(("revision %d\n" % ctx.rev()))
     ui.write(("branch %s\n" % ctx.branch()))
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        if ctx.obsolete():
+            ui.write(("obsolete\n"))
     ui.write(("phase %s\n\n" % ctx.phasestr()))
 
     if prefix != "":
