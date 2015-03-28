@@ -613,7 +613,21 @@ class manifest(revlog.revlog):
             return treemanifest('', data)
         return manifestdict(data)
 
+    def _slowreaddelta(self, node):
+        r0 = self.deltaparent(self.rev(node))
+        m0 = self.read(self.node(r0))
+        m1 = self.read(node)
+        md = self._newmanifest()
+        for f, ((n0, fl0), (n1, fl1)) in m0.diff(m1).iteritems():
+            if n1:
+                md[f] = n1
+                if fl1:
+                    md.setflag(f, fl1)
+        return md
+
     def readdelta(self, node):
+        if self._usemanifestv2:
+            return self._slowreaddelta(node)
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
         return self._newmanifest(d)
