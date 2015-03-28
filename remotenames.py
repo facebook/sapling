@@ -980,32 +980,21 @@ def calculatedistance(repo, fromrev, torev):
     return (ahead, behind)
 
 def distancefromtracked(repo, bookmark):
-    """return the (ahead, behind) distance between the tracked names"""
-
-    tracking = _readtracking(repo)
-    remotename = ''
+    """
+    Returns the name and distance between a bookmark and what it tracks as
+    a tuple of the form (tracked_name, (ahead, behind)).
+    Returns (None, (None, None)) when the bookmark is not tracked.
+    """
+    tracked = None
     distance = (None, None)
-
+    tracking = _readtracking(repo)
     if bookmark and bookmark in repo and bookmark in tracking:
-        remotename = tracking[bookmark]
-
-    if not remotename:
-        return (remotename, distance)
-
-    # load the cache
-    try:
-        distance = repo.vfs.read('cache/tracking.%s' % bookmark).strip()
-        return (remotename, tuple(int(d) for d in distance.split(' ')))
-    except IOError:
-        pass
-
-    if remotename in repo:
-        rev1 = repo[bookmark].rev()
-        rev2 = repo[remotename].rev()
-        distance = calculatedistance(rev1, rev2)
-        # save in a cache
-        repo.vfs.write('cache/tracking.%s' % bookmark, ' '.join(distance))
-    return (remotename, distance)
+        tracked = tracking[bookmark]
+        if tracked in repo:
+            rev1 = repo[bookmark].rev()
+            rev2 = repo[tracked].rev()
+            distance = calculatedistance(repo, rev1, rev2)
+    return (tracked, distance)
 
 def writedistance(repo):
     """
