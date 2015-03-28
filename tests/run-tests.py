@@ -722,7 +722,7 @@ class Test(unittest.TestCase):
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
 
-    def _runcommand(self, cmd, replacements, env):
+    def _runcommand(self, cmd, replacements, env, normalizenewlines=False):
         """Run command in a sub-process, capturing the output (stdout and
         stderr).
 
@@ -765,6 +765,10 @@ class Test(unittest.TestCase):
 
         for s, r in replacements:
             output = re.sub(s, r, output)
+
+        if normalizenewlines:
+            output = output.replace('\r\n', '\n')
+
         return ret, output.splitlines(True)
 
 class PythonTest(Test):
@@ -778,9 +782,9 @@ class PythonTest(Test):
         py3kswitch = self._py3kwarnings and ' -3' or ''
         cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self.path)
         vlog("# Running", cmd)
-        if os.name == 'nt':
-            replacements.append((r'\r\n', '\n'))
-        result = self._runcommand(cmd, replacements, env)
+        normalizenewlines = os.name == 'nt'
+        result = self._runcommand(cmd, replacements, env,
+                                  normalizenewlines=normalizenewlines)
         if self._aborted:
             raise KeyboardInterrupt()
 
