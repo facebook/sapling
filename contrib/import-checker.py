@@ -164,7 +164,7 @@ class CircularImport(Exception):
 
 
 def cyclekey(names):
-    return tuple(sorted(set(names)))
+    return tuple(sorted((names)))
 
 def check_one_mod(mod, imports, path=None, ignore=None):
     if path is None:
@@ -177,7 +177,7 @@ def check_one_mod(mod, imports, path=None, ignore=None):
             i = mod.rsplit('.', 1)[0] + '.' + i
         if i in path:
             firstspot = path.index(i)
-            cycle = path[firstspot:] + [i]
+            cycle = path[firstspot:]
             if cyclekey(cycle) not in ignore:
                 raise CircularImport(cycle)
             continue
@@ -186,12 +186,12 @@ def check_one_mod(mod, imports, path=None, ignore=None):
 def rotatecycle(cycle):
     """arrange a cycle so that the lexicographically first module listed first
 
-    >>> rotatecycle(['foo', 'bar', 'foo'])
+    >>> rotatecycle(['foo', 'bar'])
     ['bar', 'foo', 'bar']
     """
     lowest = min(cycle)
     idx = cycle.index(lowest)
-    return cycle[idx:-1] + cycle[:idx] + [lowest]
+    return cycle[idx:] + cycle[:idx] + [lowest]
 
 def find_cycles(imports):
     """Find cycles in an already-loaded import graph.
