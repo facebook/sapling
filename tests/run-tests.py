@@ -1985,27 +1985,27 @@ class TestRunner(object):
 
     def _outputcoverage(self):
         """Produce code coverage output."""
+        from coverage import coverage
+
         vlog('# Producing coverage report')
+        # chdir is the easiest way to get short, relative paths in the
+        # output.
         os.chdir(self._pythondir)
+        covdir = os.path.join(self._installdir, '..')
+        cov = coverage(data_file=os.path.join(covdir, '.coverage'))
+        cov.load()
 
-        def covrun(*args):
-            cmd = 'coverage %s' % ' '.join(args)
-            vlog('# Running: %s' % cmd)
-            os.system(cmd)
+        omit = [os.path.join(x, '*') for x in [self._bindir, self._testdir]]
+        cov.report(ignore_errors=True, omit=omit)
 
-        covrun('-c')
-        omit = ','.join(os.path.join(x, '*') for x in
-                        [self._bindir, self._testdir])
-        covrun('-i', '-r', '"--omit=%s"' % omit) # report
         if self.options.htmlcov:
             htmldir = os.path.join(self._testdir, 'htmlcov')
-            covrun('-i', '-b', '"--directory=%s"' % htmldir,
-                   '"--omit=%s"' % omit)
+            cov.html_report(directory=htmldir, omit=omit)
         if self.options.annotate:
             adir = os.path.join(self._testdir, 'annotated')
             if not os.path.isdir(adir):
                 os.mkdir(adir)
-            covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
+            cov.annotate(directory=adir, omit=omit)
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
