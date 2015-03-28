@@ -18,6 +18,7 @@
       deltas    :  0 ( 0.00%)
   
   avg chain length  : 0
+  max chain length  : 0
   compression ratio : 0
   
   uncompressed data size (min/max/avg) : 43 / 43 / 43

@@ -2843,6 +2843,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
         deltasize[2] /= numrevs - numfull
     totalsize = fulltotal + deltatotal
     avgchainlen = sum(chainlengths) / numrevs
+    maxchainlen = max(chainlengths)
     compratio = totalrawsize / totalsize
 
     basedfmtstr = '%%%dd\n'
@@ -2875,6 +2876,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
     ui.write('\n')
     fmt = dfmtstr(max(avgchainlen, compratio))
     ui.write(('avg chain length  : ') + fmt % avgchainlen)
+    ui.write(('max chain length  : ') + fmt % maxchainlen)
     ui.write(('compression ratio : ') + fmt % compratio)
 
     if format > 0:
