@@ -150,6 +150,9 @@ log on directory
   summary:     e
   
 
+  $ hg log -f -l1 --style phases -q
+  4:7e4639b4691b
+
 -f, but no args
 
   $ hg log -f
