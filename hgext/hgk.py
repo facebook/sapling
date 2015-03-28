@@ -301,22 +301,6 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
                 break
             count += 1
 
-@command('debug-rev-parse',
-    [('', 'default', '', _('ignored'))],
-    _('REV'))
-def revparse(ui, repo, *revs, **opts):
-    """parse given revisions"""
-    def revstr(rev):
-        if rev == 'HEAD':
-            rev = 'tip'
-        return revlog.hex(repo.lookup(rev))
-
-    for r in revs:
-        revrange = r.split(':', 1)
-        ui.write('%s\n' % revstr(revrange[0]))
-        if len(revrange) == 2:
-            ui.write('^%s\n' % revstr(revrange[1]))
-
 # git rev-list tries to order things by date, and has the ability to stop
 # at a given commit without walking the whole repo.  TODO add the stop
 # parameter

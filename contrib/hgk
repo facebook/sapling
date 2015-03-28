@@ -190,8 +190,8 @@ proc getcommits {rargs} {
 	}
     }
     if [catch {
-	set parse_args [concat --default HEAD $revargs]
-	set parse_temp [eval exec {$env(HG)} --config ui.report_untrusted=false debug-rev-parse $parse_args]
+	set parse_args [concat tip $revargs]
+	set parse_temp [eval exec {$env(HG)} --config ui.report_untrusted=false log --template '{node}\n' $parse_args]
 	regsub -all "\r\n" $parse_temp "\n" parse_temp
 	set parsed_args [split $parse_temp "\n"]
     } err] {
