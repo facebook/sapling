@@ -722,19 +722,19 @@ class Test(unittest.TestCase):
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
 
-    def _runcommand(self, cmd, wd, replacements, env, debug=False,
-                    timeout=None):
+    def _runcommand(self, cmd, replacements, env):
         """Run command in a sub-process, capturing the output (stdout and
         stderr).
 
         Return a tuple (exitcode, output). output is None in debug mode.
         """
-        if debug:
-            proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
+        if self._debug:
+            proc = subprocess.Popen(cmd, shell=True, cwd=self._testtmp,
+                                    env=env)
             ret = proc.wait()
             return (ret, None)
 
-        proc = Popen4(cmd, wd, timeout, env)
+        proc = Popen4(cmd, self._testtmp, self._timeout, env)
         def cleanup():
             terminate(proc)
             ret = proc.wait()
@@ -780,8 +780,7 @@ class PythonTest(Test):
         vlog("# Running", cmd)
         if os.name == 'nt':
             replacements.append((r'\r\n', '\n'))
-        result = self._runcommand(cmd, self._testtmp, replacements, env,
-                                  debug=self._debug, timeout=self._timeout)
+        result = self._runcommand(cmd, replacements, env)
         if self._aborted:
             raise KeyboardInterrupt()
 
@@ -828,9 +827,7 @@ class TTest(Test):
         cmd = '%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = self._runcommand(cmd, self._testtmp, replacements,
-                                            env, debug=self._debug,
-                                            timeout=self._timeout)
+        exitcode, output = self._runcommand(cmd, replacements, env)
 
         if self._aborted:
             raise KeyboardInterrupt()
