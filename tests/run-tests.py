@@ -260,6 +260,10 @@ def parseargs(args, parser):
         parser.error("sorry, coverage options do not work when --local "
                      "is specified")
 
+    if options.anycoverage and options.with_hg:
+        parser.error("sorry, coverage options do not work when --with-hg "
+                     "is specified")
+
     global verbose
     if options.verbose:
         verbose = ''
@@ -1567,6 +1571,7 @@ class TestRunner(object):
 
     def __init__(self):
         self.options = None
+        self._hgroot = None
         self._testdir = None
         self._hgtmp = None
         self._installdir = None
@@ -1872,6 +1877,7 @@ class TestRunner(object):
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
         hgroot = os.path.dirname(os.path.dirname(script))
+        self._hgroot = hgroot
         os.chdir(hgroot)
         nohome = '--home=""'
         if os.name == 'nt':
@@ -1996,9 +2002,13 @@ class TestRunner(object):
         vlog('# Producing coverage report')
         # chdir is the easiest way to get short, relative paths in the
         # output.
-        os.chdir(self._pythondir)
+        os.chdir(self._hgroot)
         covdir = os.path.join(self._installdir, '..', 'coverage')
         cov = coverage(data_file=os.path.join(covdir, 'cov'))
+
+        # Map install directory paths back to source directory.
+        cov.config.paths['srcdir'] = ['.', self._pythondir]
+
         cov.combine()
 
         omit = [os.path.join(x, '*') for x in [self._bindir, self._testdir]]
