@@ -87,7 +87,7 @@ class _lazymanifest(dict):
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
-        fl = sorted(self.iterentries())
+        fl = self.iterentries()
 
         _hex = revlog.hex
         # if this is changed to support newlines in filenames,
