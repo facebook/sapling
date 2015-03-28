@@ -50,7 +50,7 @@ testedwith = 'internal'
     ('s', 'stdin', None, _('stdin')),
     ('C', 'copy', None, _('detect copies')),
     ('S', 'search', "", _('search'))],
-    ('hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]...'),
+    ('[OPTION]... NODE1 NODE2 [FILE]...'),
     inferrepo=True)
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
@@ -138,7 +138,7 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     if prefix:
         ui.write('\0')
 
-@command('debug-merge-base', [], _('hg debug-merge-base REV REV'))
+@command('debug-merge-base', [], _('REV REV'))
 def base(ui, repo, node1, node2):
     """output common ancestor information"""
     node1 = repo.lookup(node1)
@@ -148,7 +148,7 @@ def base(ui, repo, node1, node2):
 
 @command('debug-cat-file',
     [('s', 'stdin', None, _('stdin'))],
-    _('hg debug-cat-file [OPTION]... TYPE FILE'),
+    _('[OPTION]... TYPE FILE'),
     inferrepo=True)
 def catfile(ui, repo, type=None, r=None, **opts):
     """cat a specific revision"""
@@ -300,7 +300,7 @@ def revtree(ui, args, repo, full="tree", maxnr=0, parents=False):
 
 @command('debug-rev-parse',
     [('', 'default', '', _('ignored'))],
-    _('hg debug-rev-parse REV'))
+    _('REV'))
 def revparse(ui, repo, *revs, **opts):
     """parse given revisions"""
     def revstr(rev):
@@ -322,7 +322,7 @@ def revparse(ui, repo, *revs, **opts):
     ('t', 'topo-order', None, _('topo-order')),
     ('p', 'parents', None, _('parents')),
     ('n', 'max-count', 0, _('max-count'))],
-    ('hg debug-rev-list [OPTION]... REV...'))
+    ('[OPTION]... REV...'))
 def revlist(ui, repo, *revs, **opts):
     """print revisions"""
     if opts['header']:
@@ -344,7 +344,7 @@ def config(ui, repo, **opts):
 @command('view',
     [('l', 'limit', '',
      _('limit number of changes displayed'), _('NUM'))],
-    _('hg view [-l LIMIT] [REVRANGE]'))
+    _('[-l LIMIT] [REVRANGE]'))
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     os.chdir(repo.root)
