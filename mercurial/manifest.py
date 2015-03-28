@@ -647,7 +647,8 @@ class manifest(revlog.revlog):
             return None, None
 
     def add(self, m, transaction, link, p1, p2, added, removed):
-        if p1 in self._mancache and not self._usetreemanifest:
+        if (p1 in self._mancache and not self._usetreemanifest
+            and not self._usemanifestv2):
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
             # manifest up-front, which may save time later for the
