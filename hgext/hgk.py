@@ -349,6 +349,9 @@ def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
     os.chdir(repo.root)
     optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
+    if repo.filtername is None:
+        optstr += '--hidden'
+
     cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
     ui.system(cmd)

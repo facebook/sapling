@@ -177,12 +177,15 @@ proc getcommits {rargs} {
     set ncmupdate 1
     set limit 0
     set revargs {}
+    set showhidden no
     for {set i 0} {$i < [llength $rargs]} {incr i} {
 	set opt [lindex $rargs $i]
-	if {$opt == "--limit"} {
+	switch -- $opt --limit {
 	    incr i
 	    set limit [lindex $rargs $i]
-	} else {
+	} --hidden {
+	    set showhidden yes
+	} default {
 	    lappend revargs $opt
 	}
     }
@@ -200,6 +203,9 @@ proc getcommits {rargs} {
     }
     if {$limit > 0} {
 	set parsed_args [concat -n $limit $parsed_args]
+    }
+    if {$showhidden} {
+	append parsed_args --hidden
     }
     if [catch {
 	set commfd [open "|{$env(HG)} --config ui.report_untrusted=false debug-rev-list --header --topo-order --parents $parsed_args" r]
