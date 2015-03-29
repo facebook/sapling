@@ -375,25 +375,25 @@ proc parsecommit {id contents listed olds} {
 		set inhdr 0
 	    } else {
 		set tag [lindex $line 0]
-		if {$tag == "author"} {
+		switch -- $tag "author" {
 		    set x [expr {[llength $line] - 2}]
 		    set audate [lindex $line $x]
 		    set auname [join [lrange $line 1 [expr {$x - 1}]]]
-		} elseif {$tag == "committer"} {
+		} "committer" {
 		    set x [expr {[llength $line] - 2}]
 		    set comdate [lindex $line $x]
 		    set comname [join [lrange $line 1 [expr {$x - 1}]]]
-		} elseif {$tag == "revision"} {
+		} "revision" {
 		    set rev [lindex $line 1]
-        } elseif {$tag == "branch"} {
+		} "branch" {
 		    set branch [join [lrange $line 1 end]]
-        } elseif {$tag == "bookmark"} {
+		} "bookmark" {
 		    set bookmark [join [lrange $line 1 end]]
-        } elseif {$tag == "obsolete"} {
+		} "obsolete" {
 		    set obsolete($id) ""
-        } elseif {$tag == "phase"} {
+		} "phase" {
 		    set phase [lindex $line 1 end]
-        }
+		}
 	    }
 	} else {
 	    if {$comment == {}} {
