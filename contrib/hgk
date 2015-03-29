@@ -1152,7 +1152,8 @@ proc drawcommitline {level} {
     set lineid($lineno) $id
     set idline($id) $lineno
     set shape oval
-    set ofill [expr {[info exists commitlisted($id)]? "blue": "white"}]
+    set outline #000080
+    set ofill [expr {[info exists commitlisted($id)]? "#7f7fff": "white"}]
     if {![info exists commitinfo($id)]} {
 	readcommit $id
 	if {![info exists commitinfo($id)]} {
@@ -1160,12 +1161,16 @@ proc drawcommitline {level} {
 	    set nparents($id) 0
 	}
     } else {
-	if {[lindex $commitinfo($id) 9] eq "secret"} {
+	switch [lindex $commitinfo($id) 9] secret {
 	    set shape rect
+	} public {
+	    set outline black
+	    set ofill blue
 	}
     }
     if {[info exists obsolete($id)]} {
-	set ofill darkgrey
+	set outline darkgrey
+	set ofill lightgrey
     }
     assigncolor $id
     set currentparents {}
@@ -1195,7 +1200,7 @@ proc drawcommitline {level} {
     set orad [expr {$linespc / 3}]
     set t [$canv create $shape [expr $x - $orad] [expr $y1 - $orad] \
 	       [expr $x + $orad - 1] [expr $y1 + $orad - 1] \
-	       -fill $ofill -outline black -width 1]
+	       -fill $ofill -outline $outline -width 1]
     $canv raise $t
     $canv bind $t <1> {selcanvline {} %x %y}
     set xt [xcoord [llength $displist] $level $lineno]
