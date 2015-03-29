@@ -100,7 +100,7 @@ diffstat within directories:
    1 files changed, 1 insertions(+), 0 deletions(-)
 
   $ hg diff --stat --root ../dir1 ../dir2
-  warning: ../dir2 not inside relative root .
+  warning: ../dir2 not inside relative root . (glob)
 
   $ hg diff --stat --root . -I old
 
