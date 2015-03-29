@@ -391,6 +391,8 @@ proc parsecommit {id contents listed olds} {
 		    set bookmark [join [lrange $line 1 end]]
         } elseif {$tag == "obsolete"} {
 		    set obsolete($id) ""
+        } elseif {$tag == "phase"} {
+		    set phase [lindex $line 1 end]
         }
 	    }
 	} else {
@@ -415,7 +417,7 @@ proc parsecommit {id contents listed olds} {
 	set comdate [clock format $comdate]
     }
     set commitinfo($id) [list $headline $auname $audate \
-			     $comname $comdate $comment $rev $branch $bookmark]
+			     $comname $comdate $comment $rev $branch $bookmark $phase]
 
     if {[info exists firstparents]} {
         set i [lsearch $firstparents $id]
@@ -1149,12 +1151,17 @@ proc drawcommitline {level} {
     set lastuse($id) $lineno
     set lineid($lineno) $id
     set idline($id) $lineno
+    set shape oval
     set ofill [expr {[info exists commitlisted($id)]? "blue": "white"}]
     if {![info exists commitinfo($id)]} {
 	readcommit $id
 	if {![info exists commitinfo($id)]} {
 	    set commitinfo($id) {"No commit information available"}
 	    set nparents($id) 0
+	}
+    } else {
+	if {[lindex $commitinfo($id) 9] eq "secret"} {
+	    set shape rect
 	}
     }
     if {[info exists obsolete($id)]} {
@@ -1186,7 +1193,7 @@ proc drawcommitline {level} {
     }
     drawlines $id 0
     set orad [expr {$linespc / 3}]
-    set t [$canv create oval [expr $x - $orad] [expr $y1 - $orad] \
+    set t [$canv create $shape [expr $x - $orad] [expr $y1 - $orad] \
 	       [expr $x + $orad - 1] [expr $y1 + $orad - 1] \
 	       -fill $ofill -outline black -width 1]
     $canv raise $t
@@ -2531,6 +2538,12 @@ proc selectline {l isnew} {
 	    append comment "Child:  [commit_descriptor $c]\n"
 	}
     }
+
+    if {[lindex $info 9] eq "secret"} {
+	# for now, display phase for secret changesets only
+	append comment "Phase: [lindex $info 9]\n"
+    }
+
     append comment "\n"
     append comment [lindex $info 5]
 
