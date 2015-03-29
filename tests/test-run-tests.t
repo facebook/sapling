@@ -31,6 +31,10 @@ failing test
   > this test is still more bytes than success.
   > EOF
 
+  >>> fh = open('test-failure-unicode.t', 'wb')
+  >>> fh.write(u'  $ echo babar\u03b1\n'.encode('utf-8'))
+  >>> fh.write(u'  l\u03b5\u03b5t\n'.encode('utf-8'))
+
   $ $TESTDIR/run-tests.py --with-hg=`which hg`
   
   --- $TESTTMP/test-failure.t
@@ -44,10 +48,21 @@ failing test
   
   ERROR: test-failure.t output changed
   !.
+  --- $TESTTMP/test-failure-unicode.t
+  +++ $TESTTMP/test-failure-unicode.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar\xce\xb1 (esc)
+  -  l\xce\xb5\xce\xb5t (esc)
+  +  babar\xce\xb1 (esc)
+  
+  ERROR: test-failure-unicode.t output changed
+  !
   Failed test-failure.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  Failed test-failure-unicode.t: output changed
+  # Ran 3 tests, 0 skipped, 0 warned, 2 failed.
   python hash seed: * (glob)
   [1]
+
 test --xunit support
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --xunit=xunit.xml
   
@@ -62,14 +77,32 @@ test --xunit support
   
   ERROR: test-failure.t output changed
   !.
+  --- $TESTTMP/test-failure-unicode.t
+  +++ $TESTTMP/test-failure-unicode.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar\xce\xb1 (esc)
+  -  l\xce\xb5\xce\xb5t (esc)
+  +  babar\xce\xb1 (esc)
+  
+  ERROR: test-failure-unicode.t output changed
+  !
   Failed test-failure.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  Failed test-failure-unicode.t: output changed
+  # Ran 3 tests, 0 skipped, 0 warned, 2 failed.
   python hash seed: * (glob)
   [1]
   $ cat xunit.xml
   <?xml version="1.0" encoding="utf-8"?>
-  <testsuite errors="0" failures="1" name="run-tests" skipped="0" tests="2">
+  <testsuite errors="0" failures="2" name="run-tests" skipped="0" tests="3">
     <testcase name="test-success.t" time="*"/> (glob)
+    <testcase name="test-failure-unicode.t" time="*"> (glob)
+  <![CDATA[--- $TESTTMP/test-failure-unicode.t
+  +++ $TESTTMP/test-failure-unicode.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar\xce\xb1 (esc)
+  -  l\xce\xb5\xce\xb5t (esc)
+  +  babar\xce\xb1 (esc)
+  ]]>  </testcase>
     <testcase name="test-failure.t" time="*"> (glob)
   <![CDATA[--- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -81,6 +114,8 @@ test --xunit support
    this test is still more bytes than success.
   ]]>  </testcase>
   </testsuite>
+
+  $ rm test-failure-unicode.t
 
 test for --retest
 ====================

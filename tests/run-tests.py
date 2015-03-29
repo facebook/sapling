@@ -1469,7 +1469,11 @@ class TextTestRunner(unittest.TextTestRunner):
                     t = doc.createElement('testcase')
                     t.setAttribute('name', tc)
                     t.setAttribute('time', '%.3f' % timesd[tc])
-                    cd = doc.createCDATASection(cdatasafe(err))
+                    # createCDATASection expects a unicode or it will convert
+                    # using default conversion rules, which will fail if
+                    # string isn't ASCII.
+                    err = cdatasafe(err).decode('utf-8', 'replace')
+                    cd = doc.createCDATASection(err)
                     t.appendChild(cd)
                     s.appendChild(t)
                 xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
