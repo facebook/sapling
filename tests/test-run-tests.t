@@ -265,7 +265,8 @@ failures in parallel with --first should only print one failure
    this test is still more bytes than success.
   
   Failed test-failure*.t: output changed (glob)
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  Failed test-nothing.t: output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 2 failed.
   python hash seed: * (glob)
   [1]
 

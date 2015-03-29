@@ -1390,16 +1390,19 @@ class TestSuite(unittest.TestSuite):
                 done.put(('!', test, 'run-test raised an error, see traceback'))
                 raise
 
+        stoppedearly = False
+
         try:
             while tests or running:
                 if not done.empty() or running == self._jobs or not tests:
                     try:
                         done.get(True, 1)
+                        running -= 1
                         if result and result.shouldStop:
+                            stoppedearly = True
                             break
                     except queue.Empty:
                         continue
-                    running -= 1
                 if tests and not running == self._jobs:
                     test = tests.pop(0)
                     if self._loop:
@@ -1413,6 +1416,18 @@ class TestSuite(unittest.TestSuite):
                                          args=(test, result))
                     t.start()
                     running += 1
+
+            # If we stop early we still need to wait on started tests to
+            # finish. Otherwise, there is a race between the test completing
+            # and the test's cleanup code running. This could result in the
+            # test reporting incorrect.
+            if stoppedearly:
+                while running:
+                    try:
+                        done.get(True, 1)
+                        running -= 1
+                    except queue.Empty:
+                        continue
         except KeyboardInterrupt:
             for test in runtests:
                 test.abort()
