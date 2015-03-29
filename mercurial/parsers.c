@@ -912,7 +912,7 @@ static int check_filter(PyObject *filter, unsigned long arg) {
 }
 
 static Py_ssize_t add_roots_get_min(indexObject *self, PyObject *list,
-                                    int marker, char *phases)
+                                    Py_ssize_t marker, char *phases)
 {
 	PyObject *iter = NULL;
 	PyObject *iter_item = NULL;
@@ -938,7 +938,7 @@ static Py_ssize_t add_roots_get_min(indexObject *self, PyObject *list,
 }
 
 static inline void set_phase_from_parents(char *phases, int parent_1,
-                                          int parent_2, int i)
+                                          int parent_2, Py_ssize_t i)
 {
 	if (parent_1 >= 0 && phases[parent_1] > phases[i])
 		phases[i] = phases[parent_1];
@@ -960,7 +960,7 @@ static PyObject *compute_phases(indexObject *self, PyObject *args)
 	Py_ssize_t minrevallphases = 0;
 	Py_ssize_t minrevphase = 0;
 	Py_ssize_t i = 0;
-	long parent_1, parent_2;
+	int parent_1, parent_2;
 	char *phases = NULL;
 	const char *data;
 
@@ -998,8 +998,8 @@ static PyObject *compute_phases(indexObject *self, PyObject *args)
 				PyErr_SetString(PyExc_TypeError, "revlog parents are invalid");
 				goto release_phases;
 			}
-			parent_1 = PyInt_AS_LONG(p1);
-			parent_2 = PyInt_AS_LONG(p2);
+			parent_1 = (int)PyInt_AS_LONG(p1);
+			parent_2 = (int)PyInt_AS_LONG(p2);
 			set_phase_from_parents(phases, parent_1, parent_2, i+self->raw_length);
 		}
 	}
