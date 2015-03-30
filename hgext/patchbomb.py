@@ -186,7 +186,7 @@ def _getpatches(repo, revs, **opts):
     """
     ui = repo.ui
     prev = repo['.'].rev()
-    for r in scmutil.revrange(repo, revs):
+    for r in revs:
         if r == prev and (repo[None].files() or repo[None].deleted()):
             ui.warn(_('warning: working directory has '
                       'uncommitted changes\n'))
@@ -339,7 +339,7 @@ def _getoutgoing(repo, dest, revs):
     url = hg.parseurl(url)[0]
     ui.status(_('comparing with %s\n') % util.hidepassword(url))
 
-    revs = [r for r in scmutil.revrange(repo, revs) if r >= 0]
+    revs = [r for r in revs if r >= 0]
     if not revs:
         revs = [len(repo) - 1]
     revs = repo.revs('outgoing(%s) and ::%ld', dest or '', revs)
@@ -499,8 +499,9 @@ def patchbomb(ui, repo, *revs, **opts):
             raise util.Abort(_('use only one form to specify the revision'))
         revs = rev
 
+    revs = scmutil.revrange(repo, revs)
     if outgoing:
-        revs = _getoutgoing(repo, dest, rev)
+        revs = _getoutgoing(repo, dest, revs)
     if bundle:
         opts['revs'] = [str(r) for r in revs]
 
@@ -526,7 +527,6 @@ def patchbomb(ui, repo, *revs, **opts):
         bundleopts.pop('bundle', None)  # already processed
         msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
-        revs = [str(r) for r in revs]
         _patches = list(_getpatches(repo, revs, **opts))
         msgs = _getpatchmsgs(repo, sender, _patches, **opts)
 
