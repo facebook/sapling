@@ -889,9 +889,7 @@ test that `or` operation skips duplicated revisions from right-hand side
   * set:
   <addset
     <baseset [5, 3, 1]>,
-    <filteredset
-      <filteredset
-        <fullreposet+ 0:9>>>>
+    <generatorset+>>
   5
   3
   1
@@ -913,8 +911,7 @@ test that `or` operation skips duplicated revisions from right-hand side
   * set:
   <addset+
     <generatorset+>,
-    <filteredset
-      <baseset [5, 3, 1]>>>
+    <baseset [5, 3, 1]>>
   0
   1
   2
@@ -1432,8 +1429,7 @@ far away.
   <addset
     <baseset [9]>,
     <filteredset
-      <filteredset
-        <fullreposet+ 0:9>>>>
+      <fullreposet+ 0:9>>>
   9
 
   $ try 'd(2:5)'

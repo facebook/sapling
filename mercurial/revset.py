@@ -360,7 +360,7 @@ def andset(repo, subset, x, y):
 
 def orset(repo, subset, x, y):
     xl = getset(repo, subset, x)
-    yl = getset(repo, subset - xl, y)
+    yl = getset(repo, subset, y)
     return xl + yl
 
 def notset(repo, subset, x):
