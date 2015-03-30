@@ -345,8 +345,7 @@ def _getoutgoing(repo, dest, revs):
     revs = repo.revs('outgoing(%s) and ::%ld', dest or '', revs)
     if not revs:
         ui.status(_("no changes found\n"))
-        return []
-    return [str(r) for r in revs]
+    return revs
 
 emailopts = [
     ('', 'body', None, _('send patches as inline message text (default)')),
@@ -503,7 +502,7 @@ def patchbomb(ui, repo, *revs, **opts):
     if outgoing:
         revs = _getoutgoing(repo, dest, rev)
     if bundle:
-        opts['revs'] = revs
+        opts['revs'] = [str(r) for r in revs]
 
     # start
     if date:
@@ -527,6 +526,7 @@ def patchbomb(ui, repo, *revs, **opts):
         bundleopts.pop('bundle', None)  # already processed
         msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
+        revs = [str(r) for r in revs]
         _patches = list(_getpatches(repo, revs, **opts))
         msgs = _getpatchmsgs(repo, sender, _patches, **opts)
 
