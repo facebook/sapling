@@ -85,6 +85,8 @@ def load(ui, name, path):
         except ImportError, err:
             ui.debug('could not import hgext.%s (%s): trying %s\n'
                      % (name, err, name))
+            if ui.debugflag:
+                ui.traceback()
             mod = importh(name)
     _extensions[shortname] = mod
     _order.append(shortname)
@@ -110,6 +112,7 @@ def loadall(ui):
             else:
                 ui.warn(_("*** failed to import extension %s: %s\n")
                         % (name, inst))
+            ui.traceback()
 
     for name in _order[newindex:]:
         uisetup = getattr(_extensions[name], 'uisetup', None)
