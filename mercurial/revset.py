@@ -2944,6 +2944,64 @@ class addset(abstractsmartset):
     If the ascending attribute is set, that means the two structures are
     ordered in either an ascending or descending way. Therefore, we can add
     them maintaining the order by iterating over both at the same time
+
+    >>> xs = baseset([0, 3, 2])
+    >>> ys = baseset([5, 2, 4])
+
+    >>> rs = addset(xs, ys)
+    >>> bool(rs), 0 in rs, 1 in rs, 5 in rs, rs.first(), rs.last()
+    (True, True, False, True, 0, 4)
+    >>> rs = addset(xs, baseset([]))
+    >>> bool(rs), 0 in rs, 1 in rs, rs.first(), rs.last()
+    (True, True, False, 0, 2)
+    >>> rs = addset(baseset([]), baseset([]))
+    >>> bool(rs), 0 in rs, rs.first(), rs.last()
+    (False, False, None, None)
+
+    iterate unsorted:
+    >>> rs = addset(xs, ys)
+    >>> [x for x in rs]  # without _genlist
+    [0, 3, 2, 5, 4]
+    >>> assert not rs._genlist
+    >>> len(rs)
+    5
+    >>> [x for x in rs]  # with _genlist
+    [0, 3, 2, 5, 4]
+    >>> assert rs._genlist
+
+    iterate ascending:
+    >>> rs = addset(xs, ys, ascending=True)
+    >>> [x for x in rs], [x for x in rs.fastasc()]  # without _asclist
+    ([0, 2, 3, 4, 5], [0, 2, 3, 4, 5])
+    >>> assert not rs._asclist
+    >>> len(rs)  # BROKEN
+    6
+    >>> [x for x in rs], [x for x in rs.fastasc()]  # BROKEN with _asclist
+    ([0, 2, 2, 3, 4, 5], [0, 2, 2, 3, 4, 5])
+    >>> assert rs._asclist
+
+    iterate descending:
+    >>> rs = addset(xs, ys, ascending=False)
+    >>> [x for x in rs], [x for x in rs.fastdesc()]  # without _asclist
+    ([5, 4, 3, 2, 0], [5, 4, 3, 2, 0])
+    >>> assert not rs._asclist
+    >>> len(rs)  # BROKEN
+    6
+    >>> [x for x in rs], [x for x in rs.fastdesc()]  # BROKEN with _asclist
+    ([5, 4, 3, 2, 2, 0], [5, 4, 3, 2, 2, 0])
+    >>> assert rs._asclist
+
+    iterate ascending without fastasc:
+    >>> rs = addset(xs, generatorset(ys), ascending=True)
+    >>> assert rs.fastasc is None
+    >>> [x for x in rs]  # BROKEN
+    [0, 2, 2, 3, 4, 5]
+
+    iterate descending without fastdesc:
+    >>> rs = addset(generatorset(xs), ys, ascending=False)
+    >>> assert rs.fastdesc is None
+    >>> [x for x in rs]  # BROKEN
+    [5, 4, 3, 2, 2, 0]
     """
     def __init__(self, revs1, revs2, ascending=None):
         self._r1 = revs1

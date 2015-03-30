@@ -833,6 +833,54 @@ test that `or` operation combines elements in the right order:
   4
   5
 
+test that `or` operation skips duplicated revisions from right-hand side
+
+  $ try 'reverse(1::5) or ancestors(4)'
+  (or
+    (func
+      ('symbol', 'reverse')
+      (dagrange
+        ('symbol', '1')
+        ('symbol', '5')))
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '4')))
+  * set:
+  <addset
+    <baseset [5, 3, 1]>,
+    <filteredset
+      <filteredset
+        <fullreposet+ 0:9>>>>
+  5
+  3
+  1
+  0
+  2
+  4
+  $ try 'sort(ancestors(4) or reverse(1::5))'
+  (func
+    ('symbol', 'sort')
+    (or
+      (func
+        ('symbol', 'ancestors')
+        ('symbol', '4'))
+      (func
+        ('symbol', 'reverse')
+        (dagrange
+          ('symbol', '1')
+          ('symbol', '5')))))
+  * set:
+  <addset+
+    <generatorset+>,
+    <filteredset
+      <baseset [5, 3, 1]>>>
+  0
+  1
+  2
+  3
+  4
+  5
+
 check that conversion to only works
   $ try --optimize '::3 - ::1'
   (minus
