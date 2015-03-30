@@ -634,7 +634,9 @@ class dirstate(object):
 
         alldirs = None
         for ff in files:
-            if normalize:
+            # constructing the foldmap is expensive, so don't do it for the
+            # common case where files is ['.']
+            if normalize and ff != '.':
                 nf = normalize(ff, False, True)
             else:
                 nf = ff
