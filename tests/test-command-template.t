@@ -1871,6 +1871,16 @@ Count filter:
   o  0: children: 1, tags: 0, file_adds: 1, ancestors: 1
   
 
+Upper/lower filters:
+
+  $ hg log -r0 --template '{branch|upper}\n'
+  DEFAULT
+  $ hg log -r0 --template '{author|lower}\n'
+  user name <user@hostname>
+  $ hg log -r0 --template '{date|upper}\n'
+  abort: template filter 'upper' is not compatible with keyword 'date'
+  [255]
+
 Error on syntax:
 
   $ echo 'x = "f' >> t

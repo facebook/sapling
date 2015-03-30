@@ -234,6 +234,10 @@ def localdate(text):
     """:localdate: Date. Converts a date to local date."""
     return (util.parsedate(text)[0], util.makedate()[1])
 
+def lower(text):
+    """:lower: Any text. Converts the text to lowercase."""
+    return encoding.lower(text)
+
 def nonempty(str):
     """:nonempty: Any text. Returns '(none)' if the string is empty."""
     return str or "(none)"
@@ -344,6 +348,10 @@ def tabindent(text):
     """
     return indent(text, '\t')
 
+def upper(text):
+    """:upper: Any text. Converts the text to uppercase."""
+    return encoding.upper(text)
+
 def urlescape(text):
     """:urlescape: Any text. Escapes all "special" characters. For example,
     "foo bar" becomes "foo%20bar".
@@ -387,6 +395,7 @@ filters = {
     "json": json,
     "jsonescape": jsonescape,
     "localdate": localdate,
+    "lower": lower,
     "nonempty": nonempty,
     "obfuscate": obfuscate,
     "permissions": permissions,
@@ -402,6 +411,7 @@ filters = {
     "strip": strip,
     "stripdir": stripdir,
     "tabindent": tabindent,
+    "upper": upper,
     "urlescape": urlescape,
     "user": userfilter,
     "emailuser": emailuser,
