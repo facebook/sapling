@@ -464,6 +464,32 @@ class dirstate(object):
             self._droppath(f)
             del self._map[f]
 
+    def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
+        if exists is None:
+            exists = os.path.lexists(os.path.join(self._root, path))
+        if not exists:
+            # Maybe a path component exists
+            if not ignoremissing and '/' in path:
+                d, f = path.rsplit('/', 1)
+                d = self._normalize(d, False, ignoremissing, None)
+                folded = d + "/" + f
+            else:
+                # No path components, preserve original case
+                folded = path
+        else:
+            # recursively normalize leading directory components
+            # against dirstate
+            if '/' in normed:
+                d, f = normed.rsplit('/', 1)
+                d = self._normalize(d, False, ignoremissing, True)
+                r = self._root + "/" + d
+                folded = d + "/" + util.fspath(f, r)
+            else:
+                folded = util.fspath(normed, self._root)
+            storemap[normed] = folded
+
+        return folded
+
     def _normalize(self, path, isknown, ignoremissing=False, exists=None):
         normed = util.normcase(path)
         folded = self._foldmap.get(normed, None)
@@ -471,29 +497,8 @@ class dirstate(object):
             if isknown:
                 folded = path
             else:
-                if exists is None:
-                    exists = os.path.lexists(os.path.join(self._root, path))
-                if not exists:
-                    # Maybe a path component exists
-                    if not ignoremissing and '/' in path:
-                        d, f = path.rsplit('/', 1)
-                        d = self._normalize(d, isknown, ignoremissing, None)
-                        folded = d + "/" + f
-                    else:
-                        # No path components, preserve original case
-                        folded = path
-                else:
-                    # recursively normalize leading directory components
-                    # against dirstate
-                    if '/' in normed:
-                        d, f = normed.rsplit('/', 1)
-                        d = self._normalize(d, isknown, ignoremissing, True)
-                        r = self._root + "/" + d
-                        folded = d + "/" + util.fspath(f, r)
-                    else:
-                        folded = util.fspath(normed, self._root)
-                    self._foldmap[normed] = folded
-
+                folded = self._discoverpath(path, normed, ignoremissing, exists,
+                                            self._foldmap)
         return folded
 
     def normalize(self, path, isknown=False, ignoremissing=False):
