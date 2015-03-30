@@ -599,7 +599,6 @@ class dirstate(object):
         matchedir = match.explicitdir
         badfn = match.bad
         dmap = self._map
-        normpath = util.normpath
         lstat = os.lstat
         getkind = stat.S_IFMT
         dirkind = stat.S_IFDIR
@@ -636,9 +635,9 @@ class dirstate(object):
         alldirs = None
         for ff in files:
             if normalize:
-                nf = normalize(normpath(ff), False, True)
+                nf = normalize(ff, False, True)
             else:
-                nf = normpath(ff)
+                nf = ff
             if nf in results:
                 continue
 
