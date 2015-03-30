@@ -456,8 +456,12 @@ move changeset backward
   o  0 public A
   
 
-move changeset forward and backward
+move changeset forward and backward and test kill switch
 
+  $ cat <<EOF >> $HGRCPATH
+  > [experimental]
+  > nativephaseskillswitch = true
+  > EOF
   $ hg phase --draft --force 1::4
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
@@ -478,6 +482,10 @@ move changeset forward and backward
   
 test partial failure
 
+  $ cat <<EOF >> $HGRCPATH
+  > [experimental]
+  > nativephaseskillswitch = false
+  > EOF
   $ hg phase --public 7
   $ hg phase --draft '5 or 7'
   cannot move 1 changesets to a higher phase, use --force

@@ -195,7 +195,11 @@ class phasecache(object):
     def getphaserevs(self, repo):
         if self._phaserevs is None:
             try:
-                self._phaserevs = self.getphaserevsnative(repo)
+                if repo.ui.configbool('experimental',
+                                      'nativephaseskillswitch'):
+                    self.computephaserevspure(repo)
+                else:
+                    self._phaserevs = self.getphaserevsnative(repo)
             except AttributeError:
                 self.computephaserevspure(repo)
         return self._phaserevs
