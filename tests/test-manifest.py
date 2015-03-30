@@ -19,6 +19,32 @@ A_SHORT_MANIFEST = (
          'flag2': 'l',
          }
 
+A_DEEPER_MANIFEST = (
+    'a/b/c/bar.py\0%(hash3)s%(flag1)s\n'
+    'a/b/c/bar.txt\0%(hash1)s%(flag1)s\n'
+    'a/b/c/foo.py\0%(hash3)s%(flag1)s\n'
+    'a/b/c/foo.txt\0%(hash2)s%(flag2)s\n'
+    'a/b/d/baz.py\0%(hash3)s%(flag1)s\n'
+    'a/b/d/qux.py\0%(hash1)s%(flag2)s\n'
+    'a/b/d/ten.txt\0%(hash3)s%(flag2)s\n'
+    'a/b/dog.py\0%(hash3)s%(flag1)s\n'
+    'a/b/fish.py\0%(hash2)s%(flag1)s\n'
+    'a/c/london.py\0%(hash3)s%(flag2)s\n'
+    'a/c/paper.txt\0%(hash2)s%(flag2)s\n'
+    'a/c/paris.py\0%(hash2)s%(flag1)s\n'
+    'a/d/apple.py\0%(hash3)s%(flag1)s\n'
+    'a/d/pizza.py\0%(hash3)s%(flag2)s\n'
+    'a/green.py\0%(hash1)s%(flag2)s\n'
+    'a/purple.py\0%(hash2)s%(flag1)s\n'
+    'app.py\0%(hash3)s%(flag1)s\n'
+    'readme.txt\0%(hash2)s%(flag1)s\n'
+    ) % {'hash1': HASH_1,
+         'flag1': '',
+         'hash2': HASH_2,
+         'flag2': 'l',
+         'hash3': HASH_3,
+         }
+
 HUGE_MANIFEST_ENTRIES = 200001
 
 A_HUGE_MANIFEST = ''.join(sorted(
@@ -250,7 +276,10 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(HUGE_MANIFEST_ENTRIES, len(m))
         self.assertEqual(len(m), len(list(m)))
 
-    def testMatches(self):
+    def testMatchesMetadata(self):
+        '''Tests matches() for a few specific files to make sure that both
+        the set of files as well as their flags and nodeids are correct in
+        the resulting manifest.'''
         m = parsemanifest(A_HUGE_MANIFEST)
 
         match = matchmod.match('/', '',
@@ -261,6 +290,100 @@ class testmanifest(unittest.TestCase):
              'file200\0%sl\n'
              'file300\0%s\n') % (HASH_2, HASH_1, HASH_1)
         self.assertEqual(w, m2.text())
+
+    def testMatchesNonexistentFile(self):
+        '''Tests matches() for a small set of specific files, including one
+        nonexistent file to make sure in only matches against existing files.
+        '''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', '',
+                ['a/b/c/bar.txt', 'a/b/d/qux.py', 'readme.txt', 'nonexistent'],
+                exact=True)
+        m2 = m.matches(match)
+
+        self.assertEqual(
+                ['a/b/c/bar.txt', 'a/b/d/qux.py', 'readme.txt'],
+                m2.keys())
+
+    def testMatchesNonexistentDirectory(self):
+        '''Tests matches() for a relpath match on a directory that doesn't
+        actually exist.'''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', '', ['a/f'], default='relpath')
+        m2 = m.matches(match)
+
+        self.assertEqual([], m2.keys())
+
+    def testMatchesExactLarge(self):
+        '''Tests matches() for files matching a large list of exact files.
+        '''
+        m = parsemanifest(A_HUGE_MANIFEST)
+
+        flist = m.keys()[80:300]
+        match = matchmod.match('/', '', flist, exact=True)
+        m2 = m.matches(match)
+
+        self.assertEqual(flist, m2.keys())
+
+    def testMatchesFull(self):
+        '''Tests matches() for what should be a full match.'''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', '', [''])
+        m2 = m.matches(match)
+
+        self.assertEqual(m.keys(), m2.keys())
+
+    def testMatchesDirectory(self):
+        '''Tests matches() on a relpath match on a directory, which should
+        match against all files within said directory.'''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', '', ['a/b'], default='relpath')
+        m2 = m.matches(match)
+
+        self.assertEqual([
+            'a/b/c/bar.py', 'a/b/c/bar.txt', 'a/b/c/foo.py', 'a/b/c/foo.txt',
+            'a/b/d/baz.py', 'a/b/d/qux.py', 'a/b/d/ten.txt', 'a/b/dog.py',
+            'a/b/fish.py'], m2.keys())
+
+    def testMatchesExactPath(self):
+        '''Tests matches() on an exact match on a directory, which should
+        result in an empty manifest because you can't perform an exact match
+        against a directory.'''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', '', ['a/b'], exact=True)
+        m2 = m.matches(match)
+
+        self.assertEqual([], m2.keys())
+
+    def testMatchesCwd(self):
+        '''Tests matches() on a relpath match with the current directory ('.')
+        when not in the root directory.'''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', 'a/b', ['.'], default='relpath')
+        m2 = m.matches(match)
+
+        self.assertEqual([
+            'a/b/c/bar.py', 'a/b/c/bar.txt', 'a/b/c/foo.py', 'a/b/c/foo.txt',
+            'a/b/d/baz.py', 'a/b/d/qux.py', 'a/b/d/ten.txt', 'a/b/dog.py',
+            'a/b/fish.py'], m2.keys())
+
+    def testMatchesWithPattern(self):
+        '''Tests matches() for files matching a pattern that reside
+        deeper than the specified directory.'''
+        m = parsemanifest(A_DEEPER_MANIFEST)
+
+        match = matchmod.match('/', '', ['a/b/*/*.txt'])
+        m2 = m.matches(match)
+
+        self.assertEqual(
+                ['a/b/c/bar.txt', 'a/b/c/foo.txt', 'a/b/d/ten.txt'],
+                m2.keys())
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
