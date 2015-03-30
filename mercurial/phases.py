@@ -179,22 +179,25 @@ class phasecache(object):
             nativeroots.append(map(repo.changelog.rev, self.phaseroots[phase]))
         return repo.changelog.computephases(nativeroots)
 
+    def computephaserevspure(self, repo):
+        repo = repo.unfiltered()
+        revs = [public] * len(repo.changelog)
+        self._phaserevs = revs
+        self._populatephaseroots(repo)
+        for phase in trackedphases:
+            roots = map(repo.changelog.rev, self.phaseroots[phase])
+            if roots:
+                for rev in roots:
+                    revs[rev] = phase
+                for rev in repo.changelog.descendants(roots):
+                    revs[rev] = phase
+
     def getphaserevs(self, repo):
         if self._phaserevs is None:
             try:
                 self._phaserevs = self.getphaserevsnative(repo)
             except AttributeError:
-                repo = repo.unfiltered()
-                revs = [public] * len(repo.changelog)
-                self._phaserevs = revs
-                self._populatephaseroots(repo)
-                for phase in trackedphases:
-                    roots = map(repo.changelog.rev, self.phaseroots[phase])
-                    if roots:
-                        for rev in roots:
-                            revs[rev] = phase
-                        for rev in repo.changelog.descendants(roots):
-                            revs[rev] = phase
+                self.computephaserevspure(repo)
         return self._phaserevs
 
     def invalidate(self):
