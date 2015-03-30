@@ -172,14 +172,14 @@ class phasecache(object):
         for a in 'phaseroots dirty opener _phaserevs'.split():
             setattr(self, a, getattr(phcache, a))
 
-    def getphaserevsnative(self, repo):
+    def _getphaserevsnative(self, repo):
         repo = repo.unfiltered()
         nativeroots = []
         for phase in trackedphases:
             nativeroots.append(map(repo.changelog.rev, self.phaseroots[phase]))
         return repo.changelog.computephases(nativeroots)
 
-    def computephaserevspure(self, repo):
+    def _computephaserevspure(self, repo):
         repo = repo.unfiltered()
         revs = [public] * len(repo.changelog)
         self._phaserevs = revs
@@ -197,11 +197,11 @@ class phasecache(object):
             try:
                 if repo.ui.configbool('experimental',
                                       'nativephaseskillswitch'):
-                    self.computephaserevspure(repo)
+                    self._computephaserevspure(repo)
                 else:
-                    self._phaserevs = self.getphaserevsnative(repo)
+                    self._phaserevs = self._getphaserevsnative(repo)
             except AttributeError:
-                self.computephaserevspure(repo)
+                self._computephaserevspure(repo)
         return self._phaserevs
 
     def invalidate(self):
