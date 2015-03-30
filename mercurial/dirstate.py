@@ -744,10 +744,10 @@ class dirstate(object):
             skipstep3 = True
 
         if not exact and self._checkcase:
-            normalize = self._normalize
+            normalizefile = self._normalizefile
             skipstep3 = False
         else:
-            normalize = None
+            normalizefile = None
 
         # step 1: find all explicit files
         results, work, dirsnotfound = self._walkexplicit(match, subrepos)
@@ -772,8 +772,11 @@ class dirstate(object):
                     continue
                 raise
             for f, kind, st in entries:
-                if normalize:
-                    nf = normalize(nd and (nd + "/" + f) or f, True, True)
+                if normalizefile:
+                    # even though f might be a directory, we're only interested
+                    # in comparing it to files currently in the dmap --
+                    # therefore normalizefile is enough
+                    nf = normalizefile(nd and (nd + "/" + f) or f, True, True)
                 else:
                     nf = nd and (nd + "/" + f) or f
                 if nf not in results:
