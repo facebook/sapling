@@ -998,16 +998,33 @@ def distancefromtracked(repo, bookmark):
 
 def writedistancecache(repo, name, distance):
     try:
-        repo.vfs.write('cache/tracking.%s' % name, '%s %s' % distance)
+        repo.vfs.makedirs('cache/distance')
+        repo.vfs.write('cache/distance/%s' % name, '%s %s' % distance)
     except (IOError, OSError):
         pass
 
 def readdistancecache(repo, name):
     try:
-        data = repo.vfs.read('cache/tracking.%s' % name).strip()
+        data = repo.vfs.read('cache/distance/%s' % name).strip()
         return tuple(int(d) for d in data.split(' '))
     except (IOError, OSError):
         return None
+
+def invalidatedistancecache(repo):
+    """Try to invalidate any existing distance caches"""
+    error = False
+    try:
+        for filename, filetype in repo.vfs.readdir('cache/distance/'):
+            try:
+                repo.vfs.unlink('cache/distance/' + filename)
+            except (OSError, IOError):
+                error = True
+    except (OSError, IOError), inst:
+        if inst.errno != errno.ENOENT:
+            error = True
+    if error:
+        repo.ui.warn(_('Unable to invalidate tracking cache; ' +
+                       'distance displayed may be incorrect'))
 
 def writedistance(repo):
     """
