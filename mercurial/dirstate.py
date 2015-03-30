@@ -629,7 +629,7 @@ class dirstate(object):
             j += 1
 
         if not files or '.' in files:
-            files = ['']
+            files = ['.']
         results = dict.fromkeys(subrepos)
         results['.hg'] = None
 
