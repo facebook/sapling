@@ -87,15 +87,21 @@ class dirstate(object):
         return self._copymap
 
     @propertycache
-    def _foldmap(self):
+    def _filefoldmap(self):
         f = {}
         normcase = util.normcase
         for name, s in self._map.iteritems():
             if s[0] != 'r':
                 f[normcase(name)] = name
+        f['.'] = '.' # prevents useless util.fspath() invocation
+        return f
+
+    @propertycache
+    def _dirfoldmap(self):
+        f = {}
+        normcase = util.normcase
         for name in self._dirs:
             f[normcase(name)] = name
-        f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
     @repocache('branch')
@@ -332,8 +338,8 @@ class dirstate(object):
             self._pl = p
 
     def invalidate(self):
-        for a in ("_map", "_copymap", "_foldmap", "_branch", "_pl", "_dirs",
-                "_ignore"):
+        for a in ("_map", "_copymap", "_filefoldmap", "_dirfoldmap", "_branch",
+                  "_pl", "_dirs", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
         self._lastnormaltime = 0
@@ -492,24 +498,27 @@ class dirstate(object):
 
     def _normalizefile(self, path, isknown, ignoremissing=False, exists=None):
         normed = util.normcase(path)
-        folded = self._foldmap.get(normed, None)
+        folded = self._filefoldmap.get(normed, None)
         if folded is None:
             if isknown:
                 folded = path
             else:
                 folded = self._discoverpath(path, normed, ignoremissing, exists,
-                                            self._foldmap)
+                                            self._filefoldmap)
         return folded
 
     def _normalize(self, path, isknown, ignoremissing=False, exists=None):
         normed = util.normcase(path)
-        folded = self._foldmap.get(normed, None)
+        folded = self._filefoldmap.get(normed,
+                                       self._dirfoldmap.get(normed, None))
         if folded is None:
             if isknown:
                 folded = path
             else:
+                # store discovered result in dirfoldmap so that future
+                # normalizefile calls don't start matching directories
                 folded = self._discoverpath(path, normed, ignoremissing, exists,
-                                            self._foldmap)
+                                            self._dirfoldmap)
         return folded
 
     def normalize(self, path, isknown=False, ignoremissing=False):
