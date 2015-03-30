@@ -250,9 +250,13 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(HUGE_MANIFEST_ENTRIES, len(m))
         self.assertEqual(len(m), len(list(m)))
 
-    def testIntersectFiles(self):
+    def testMatches(self):
         m = parsemanifest(A_HUGE_MANIFEST)
-        m2 = m.intersectfiles(['file1', 'file200', 'file300'])
+
+        match = matchmod.match('/', '',
+                ['file1', 'file200', 'file300'], exact=True)
+        m2 = m.matches(match)
+
         w = ('file1\0%sx\n'
              'file200\0%sl\n'
              'file300\0%s\n') % (HASH_2, HASH_1, HASH_1)

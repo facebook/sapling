@@ -131,7 +131,7 @@ class manifestdict(object):
     def keys(self):
         return list(self.iterkeys())
 
-    def intersectfiles(self, files):
+    def _intersectfiles(self, files):
         '''make a new lazymanifest with the intersection of self with files
 
         The algorithm assumes that files is much smaller than self.'''
@@ -166,7 +166,7 @@ class manifestdict(object):
         files = match.files()
         if (len(files) < 100 and (match.isexact() or
             (not match.anypats() and util.all(fn in self for fn in files)))):
-            return self.intersectfiles(files)
+            return self._intersectfiles(files)
 
         lm = manifestdict('')
         lm._lm = self._lm.filtercopy(match)
@@ -467,7 +467,7 @@ class treemanifest(object):
         copy._flags = dict.copy(self._flags)
         return copy
 
-    def intersectfiles(self, files):
+    def _intersectfiles(self, files):
         '''make a new treemanifest with the intersection of self with files
 
         The algorithm assumes that files is much smaller than self.'''
@@ -521,7 +521,7 @@ class treemanifest(object):
         files = match.files()
         if (match.isexact() or
             (not match.anypats() and util.all(fn in self for fn in files))):
-            return self.intersectfiles(files)
+            return self._intersectfiles(files)
 
         m = self.copy()
         for fn in m.keys():
