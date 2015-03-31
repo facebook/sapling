@@ -777,8 +777,8 @@ class dirstate(object):
                     # even though f might be a directory, we're only interested
                     # in comparing it to files currently in the dmap --
                     # therefore normalizefile is enough
-                    f = d and (d + "/" + f) or f
                     nf = normalizefile(nd and (nd + "/" + f) or f, True, True)
+                    f = d and (d + "/" + f) or f
                 else:
                     nf = nd and (nd + "/" + f) or f
                     f = nf
