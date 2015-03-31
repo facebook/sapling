@@ -40,7 +40,7 @@
   $ hg buggylocking --traceback
   transaction with no lock
    at:
-   */hg:* in <module> (glob)
+   */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)
    */mercurial/dispatch.py:* in _runcatch (glob)
@@ -53,7 +53,7 @@
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
   "lock" taken before "wlock"
    at:
-   */hg:* in <module> (glob)
+   */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)
    */mercurial/dispatch.py:* in _runcatch (glob)
