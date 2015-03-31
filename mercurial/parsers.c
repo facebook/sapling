@@ -93,7 +93,8 @@ PyObject *unhexlify(const char *str, int len)
 	return ret;
 }
 
-static inline PyObject *_asciilower(PyObject *str_obj)
+static inline PyObject *_asciitransform(PyObject *str_obj,
+					const char table[128])
 {
 	char *str, *newstr;
 	Py_ssize_t i, len;
@@ -119,7 +120,7 @@ static inline PyObject *_asciilower(PyObject *str_obj)
 			Py_XDECREF(err);
 			goto quit;
 		}
-		newstr[i] = lowertable[(unsigned char)c];
+		newstr[i] = table[(unsigned char)c];
 	}
 
 	ret = newobj;
@@ -134,7 +135,7 @@ static PyObject *asciilower(PyObject *self, PyObject *args)
 	PyObject *str_obj;
 	if (!PyArg_ParseTuple(args, "O!:asciilower", &PyBytes_Type, &str_obj))
 		return NULL;
-	return _asciilower(str_obj);
+	return _asciitransform(str_obj, lowertable);
 }
 
 /*
