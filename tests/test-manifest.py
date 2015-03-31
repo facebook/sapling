@@ -10,8 +10,11 @@ from mercurial import match as matchmod
 EMTPY_MANIFEST = ''
 
 HASH_1 = '1' * 40
+BIN_HASH_1 = binascii.unhexlify(HASH_1)
 HASH_2 = 'f' * 40
+BIN_HASH_2 = binascii.unhexlify(HASH_2)
 HASH_3 = '1234567890abcdef0987654321deadbeef0fcafe'
+BIN_HASH_3 = binascii.unhexlify(HASH_3)
 A_SHORT_MANIFEST = (
     'bar/baz/qux.py\0%(hash2)s%(flag2)s\n'
     'foo\0%(hash1)s%(flag1)s\n'
@@ -77,14 +80,14 @@ class testmanifest(unittest.TestCase):
     def testManifest(self):
         m = parsemanifest(A_SHORT_MANIFEST)
         self.assertEqual(['bar/baz/qux.py', 'foo'], list(m))
-        self.assertEqual(binascii.unhexlify(HASH_2), m['bar/baz/qux.py'])
+        self.assertEqual(BIN_HASH_2, m['bar/baz/qux.py'])
         self.assertEqual('l', m.flags('bar/baz/qux.py'))
-        self.assertEqual(binascii.unhexlify(HASH_1), m['foo'])
+        self.assertEqual(BIN_HASH_1, m['foo'])
         self.assertEqual('', m.flags('foo'))
         self.assertRaises(KeyError, lambda : m['wat'])
 
     def testSetItem(self):
-        want = binascii.unhexlify(HASH_1)
+        want = BIN_HASH_1
 
         m = parsemanifest(EMTPY_MANIFEST)
         m['a'] = want
@@ -103,14 +106,14 @@ class testmanifest(unittest.TestCase):
 
         m = parsemanifest(EMTPY_MANIFEST)
         # first add a file; a file-less flag makes no sense
-        m['a'] = binascii.unhexlify(HASH_1)
+        m['a'] = BIN_HASH_1
         m.setflag('a', want)
         self.assertEqual(want, m.flags('a'))
         self.assertEqual('a\0' + HASH_1 + want + '\n', m.text())
 
         m = parsemanifest(A_SHORT_MANIFEST)
         # first add a file; a file-less flag makes no sense
-        m['a'] = binascii.unhexlify(HASH_1)
+        m['a'] = BIN_HASH_1
         m.setflag('a', want)
         self.assertEqual(want, m.flags('a'))
         self.assertEqual('a\0' + HASH_1 + want + '\n' + A_SHORT_MANIFEST,
@@ -118,7 +121,7 @@ class testmanifest(unittest.TestCase):
 
     def testCopy(self):
         m = parsemanifest(A_SHORT_MANIFEST)
-        m['a'] =  binascii.unhexlify(HASH_1)
+        m['a'] =  BIN_HASH_1
         m2 = m.copy()
         del m
         del m2 # make sure we don't double free() anything
@@ -152,8 +155,8 @@ class testmanifest(unittest.TestCase):
         # Merge code wants to set 21-byte fake hashes at times
         m['foo'] = want
         self.assertEqual(want, m['foo'])
-        self.assertEqual([('bar/baz/qux.py', binascii.unhexlify(HASH_2)),
-                          ('foo', binascii.unhexlify(HASH_1) + 'a')],
+        self.assertEqual([('bar/baz/qux.py', BIN_HASH_2),
+                          ('foo', BIN_HASH_1 + 'a')],
                          list(m.iteritems()))
         # Sometimes it even tries a 22-byte fake hash, but we can
         # return 21 and it'll work out
@@ -167,7 +170,7 @@ class testmanifest(unittest.TestCase):
         m2 = m.copy()
         self.assertEqual(want, m2['foo'])
         # suffix with iteration
-        self.assertEqual([('bar/baz/qux.py', binascii.unhexlify(HASH_2)),
+        self.assertEqual([('bar/baz/qux.py', BIN_HASH_2),
                           ('foo', want)],
                          list(m.iteritems()))
 
@@ -204,32 +207,32 @@ class testmanifest(unittest.TestCase):
             A_SHORT_MANIFEST.replace(HASH_1, HASH_3 + 'x') + addl)
         right = parsemanifest(A_SHORT_MANIFEST + addr)
         want = {
-            'foo': ((binascii.unhexlify(HASH_3), 'x'),
-                    (binascii.unhexlify(HASH_1), '')),
-            'z-only-in-left': ((binascii.unhexlify(HASH_1), ''), MISSING),
-            'z-only-in-right': (MISSING, (binascii.unhexlify(HASH_2), 'x')),
+            'foo': ((BIN_HASH_3, 'x'),
+                    (BIN_HASH_1, '')),
+            'z-only-in-left': ((BIN_HASH_1, ''), MISSING),
+            'z-only-in-right': (MISSING, (BIN_HASH_2, 'x')),
             }
         self.assertEqual(want, left.diff(right))
 
         want = {
-            'bar/baz/qux.py': (MISSING, (binascii.unhexlify(HASH_2), 'l')),
-            'foo': (MISSING, (binascii.unhexlify(HASH_3), 'x')),
-            'z-only-in-left': (MISSING, (binascii.unhexlify(HASH_1), '')),
+            'bar/baz/qux.py': (MISSING, (BIN_HASH_2, 'l')),
+            'foo': (MISSING, (BIN_HASH_3, 'x')),
+            'z-only-in-left': (MISSING, (BIN_HASH_1, '')),
             }
         self.assertEqual(want, parsemanifest(EMTPY_MANIFEST).diff(left))
 
         want = {
-            'bar/baz/qux.py': ((binascii.unhexlify(HASH_2), 'l'), MISSING),
-            'foo': ((binascii.unhexlify(HASH_3), 'x'), MISSING),
-            'z-only-in-left': ((binascii.unhexlify(HASH_1), ''), MISSING),
+            'bar/baz/qux.py': ((BIN_HASH_2, 'l'), MISSING),
+            'foo': ((BIN_HASH_3, 'x'), MISSING),
+            'z-only-in-left': ((BIN_HASH_1, ''), MISSING),
             }
         self.assertEqual(want, left.diff(parsemanifest(EMTPY_MANIFEST)))
         copy = right.copy()
         del copy['z-only-in-right']
         del right['foo']
         want = {
-            'foo': (MISSING, (binascii.unhexlify(HASH_1), '')),
-            'z-only-in-right': ((binascii.unhexlify(HASH_2), 'x'), MISSING),
+            'foo': (MISSING, (BIN_HASH_1, '')),
+            'z-only-in-right': ((BIN_HASH_2, 'x'), MISSING),
             }
         self.assertEqual(want, right.diff(copy))
 
@@ -237,16 +240,16 @@ class testmanifest(unittest.TestCase):
         pruned = short.copy()
         del pruned['foo']
         want = {
-            'foo': ((binascii.unhexlify(HASH_1), ''), MISSING),
+            'foo': ((BIN_HASH_1, ''), MISSING),
             }
         self.assertEqual(want, short.diff(pruned))
         want = {
-            'foo': (MISSING, (binascii.unhexlify(HASH_1), '')),
+            'foo': (MISSING, (BIN_HASH_1, '')),
             }
         self.assertEqual(want, pruned.diff(short))
         want = {
             'bar/baz/qux.py': None,
-            'foo': (MISSING, (binascii.unhexlify(HASH_1), '')),
+            'foo': (MISSING, (BIN_HASH_1, '')),
             }
         self.assertEqual(want, pruned.diff(short, True))
 
