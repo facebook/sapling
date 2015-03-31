@@ -522,11 +522,28 @@ class treemanifest(object):
         if match.always():
             return self.copy()
 
-        m = self.copy()
-        for fn in m.keys():
-            if not match(fn):
-                del m[fn]
-        return m
+        return self._matches(match)
+
+    def _matches(self, match):
+        '''recursively generate a new manifest filtered by the match argument.
+        '''
+
+        ret = treemanifest(self._dir)
+
+        for fn in self._files:
+            fullp = self._subpath(fn)
+            if not match(fullp):
+                continue
+            ret._files[fn] = self._files[fn]
+            if fn in self._flags:
+                ret._flags[fn] = self._flags[fn]
+
+        for dir, subm in self._dirs.iteritems():
+            m = subm._matches(match)
+            if not m._isempty():
+                ret._dirs[dir] = m
+
+        return ret
 
     def diff(self, m2, clean=False):
         '''Finds changes between the current manifest and m2.
