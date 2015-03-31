@@ -296,6 +296,22 @@ def asciilower(s):
     asciilower = impl
     return impl(s)
 
+def _asciiupper(s):
+    '''convert a string to uppercase if ASCII
+
+    Raises UnicodeDecodeError if non-ASCII characters are found.'''
+    s.decode('ascii')
+    return s.upper()
+
+def asciiupper(s):
+    # delay importing avoids cyclic dependency around "parsers" in
+    # pure Python build (util => i18n => encoding => parsers => util)
+    import parsers
+    impl = getattr(parsers, 'asciiupper', _asciiupper)
+    global asciiupper
+    asciiupper = impl
+    return impl(s)
+
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
@@ -320,8 +336,7 @@ def lower(s):
 def upper(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
-        s.decode('ascii') # throw exception for non-ASCII character
-        return s.upper()
+        return asciiupper(s)
     except UnicodeDecodeError:
         pass
     try:
