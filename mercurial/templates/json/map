@@ -14,7 +14,15 @@ tagentry = '\{
   "node": {node|json},
   "date": {date|json}
   }'
-bookmarks = '"not yet implemented"'
+bookmarks = '\{
+  "node": {node|json},
+  "bookmarks": [{join(entries%bookmarkentry, ", ")}]
+  }'
+bookmarkentry = '\{
+  "bookmark": {bookmark|json},
+  "node": {node|json},
+  "date": {date|json}
+  }'
 branches = '"not yet implemented"'
 summary = '"not yet implemented"'
 filediff = '"not yet implemented"'
