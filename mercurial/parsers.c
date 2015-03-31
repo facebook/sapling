@@ -56,6 +56,27 @@ static char lowertable[128] = {
 	'\x78', '\x79', '\x7a', '\x7b', '\x7c', '\x7d', '\x7e', '\x7f'
 };
 
+static char uppertable[128] = {
+	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
+	'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
+	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
+	'\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d', '\x1e', '\x1f',
+	'\x20', '\x21', '\x22', '\x23', '\x24', '\x25', '\x26', '\x27',
+	'\x28', '\x29', '\x2a', '\x2b', '\x2c', '\x2d', '\x2e', '\x2f',
+	'\x30', '\x31', '\x32', '\x33', '\x34', '\x35', '\x36', '\x37',
+	'\x38', '\x39', '\x3a', '\x3b', '\x3c', '\x3d', '\x3e', '\x3f',
+	'\x40', '\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47',
+	'\x48', '\x49', '\x4a', '\x4b', '\x4c', '\x4d', '\x4e', '\x4f',
+	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57',
+	'\x58', '\x59', '\x5a', '\x5b', '\x5c', '\x5d', '\x5e', '\x5f',
+	'\x60',
+		'\x41', '\x42', '\x43', '\x44', '\x45', '\x46', '\x47', /* a-g */
+	'\x48', '\x49', '\x4a', '\x4b', '\x4c', '\x4d', '\x4e', '\x4f', /* h-o */
+	'\x50', '\x51', '\x52', '\x53', '\x54', '\x55', '\x56', '\x57', /* p-w */
+	'\x58', '\x59', '\x5a', 					/* x-z */
+				'\x7b', '\x7c', '\x7d', '\x7e', '\x7f'
+};
+
 static inline int hexdigit(const char *p, Py_ssize_t off)
 {
 	int8_t val = hextable[(unsigned char)p[off]];
@@ -136,6 +157,14 @@ static PyObject *asciilower(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O!:asciilower", &PyBytes_Type, &str_obj))
 		return NULL;
 	return _asciitransform(str_obj, lowertable);
+}
+
+static PyObject *asciiupper(PyObject *self, PyObject *args)
+{
+	PyObject *str_obj;
+	if (!PyArg_ParseTuple(args, "O!:asciiupper", &PyBytes_Type, &str_obj))
+		return NULL;
+	return _asciitransform(str_obj, uppertable);
 }
 
 /*
@@ -2427,6 +2456,7 @@ static PyMethodDef methods[] = {
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
 	{"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
+	{"asciiupper", asciiupper, METH_VARARGS, "uppercase an ASCII string\n"},
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
 	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
