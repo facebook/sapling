@@ -179,6 +179,9 @@ Test that adding a directory doesn't require case matching (issue4578)
   $ hg add -v capsdir1/capsdir
   adding CapsDir1/CapsDir/AbC.txt (glob)
   adding CapsDir1/CapsDir/SubDir/Def.txt (glob)
+
+  $ hg forget capsdir1/capsdir/abc.txt
+  removing CapsDir1/CapsDir/AbC.txt (glob)
 #endif
 
   $ cd ..

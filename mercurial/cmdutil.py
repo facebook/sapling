@@ -2240,6 +2240,12 @@ def forget(ui, repo, match, prefix, explicitonly):
             if f not in repo.dirstate and not repo.wvfs.isdir(f):
                 if f not in forgot:
                     if repo.wvfs.exists(f):
+                        # Don't complain if the exact case match wasn't given.
+                        # But don't do this until after checking 'forgot', so
+                        # that subrepo files aren't normalized, and this op is
+                        # purely from data cached by the status walk above.
+                        if repo.dirstate.normalize(f) in repo.dirstate:
+                            continue
                         ui.warn(_('not removing %s: '
                                   'file is already untracked\n')
                                 % match.rel(f))
