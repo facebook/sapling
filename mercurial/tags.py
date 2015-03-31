@@ -272,7 +272,6 @@ def _readtagcache(ui, repo):
                     cachefnode[headnode] = fnode
         except Exception:
             # corruption of the tags cache, just recompute it
-            ui.warn(_('.hg/cache/tags is corrupt, rebuilding it\n'))
             cacheheads = []
             cacherevs = []
             cachefnode = {}

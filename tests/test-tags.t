@@ -38,7 +38,6 @@ Try corrupting the cache
 
   $ printf 'a b' > .hg/cache/tags
   $ hg identify
-  .hg/cache/tags is corrupt, rebuilding it
   acb14030fe0a tip
   $ cacheexists
   tag cache exists
