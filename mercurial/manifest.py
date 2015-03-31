@@ -370,6 +370,10 @@ class treemanifest(object):
             size += m.__len__()
         return size
 
+    def _isempty(self):
+        return (not self._files and (not self._dirs or
+                util.all(m._isempty() for m in self._dirs.values())))
+
     def __str__(self):
         return '<treemanifest dir=%s>' % self._dir
 
@@ -445,7 +449,7 @@ class treemanifest(object):
         if dir:
             self._dirs[dir].__delitem__(subpath)
             # If the directory is now empty, remove it
-            if not self._dirs[dir]._dirs and not self._dirs[dir]._files:
+            if self._dirs[dir]._isempty():
                 del self._dirs[dir]
         else:
             del self._files[f]
