@@ -234,8 +234,6 @@ def _modesetup(ui, coloropt):
         if os.name == 'nt':
             term = os.environ.get('TERM')
             # TERM won't be defined in a vanilla cmd.exe environment.
-            if not term:
-                realmode = 'win32'
 
             # UNIX-like environments on Windows such as Cygwin and MSYS will
             # set TERM. They appear to make a best effort attempt at setting it
@@ -244,7 +242,7 @@ def _modesetup(ui, coloropt):
             # gibberish, we error on the side of selecting "win32". However, if
             # w32effects is not defined, we almost certainly don't support
             # "win32", so don't even try.
-            if 'xterm' in term or not w32effects:
+            if (term and 'xterm' in term) or not w32effects:
                 realmode = 'ansi'
             else:
                 realmode = 'win32'
