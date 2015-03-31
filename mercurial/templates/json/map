@@ -23,7 +23,15 @@ bookmarkentry = '\{
   "node": {node|json},
   "date": {date|json}
   }'
-branches = '"not yet implemented"'
+branches = '\{
+  "branches": [{join(entries%branchentry, ", ")}]
+  }'
+branchentry = '\{
+  "branch": {branch|json},
+  "node": {node|json},
+  "date": {date|json},
+  "status": {status|json}
+  }'
 summary = '"not yet implemented"'
 filediff = '"not yet implemented"'
 filecomparison = '"not yet implemented"'

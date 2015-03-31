@@ -218,7 +218,28 @@ branches/ shows branches info
   $ request json-branches
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "branches": [
+      {
+        "branch": "test-branch",
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "status": "open"
+      },
+      {
+        "branch": "default",
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "status": "open"
+      }
+    ]
+  }
 
 summary/ shows a summary of repository state
 
