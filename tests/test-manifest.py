@@ -7,6 +7,8 @@ import silenttestrunner
 from mercurial import manifest as manifestmod
 from mercurial import match as matchmod
 
+EMTPY_MANIFEST = ''
+
 HASH_1 = '1' * 40
 HASH_2 = 'f' * 40
 HASH_3 = '1234567890abcdef0987654321deadbeef0fcafe'
@@ -68,7 +70,7 @@ class testmanifest(unittest.TestCase):
         self.assert_(thing in container, msg)
 
     def testEmptyManifest(self):
-        m = parsemanifest('')
+        m = parsemanifest(EMTPY_MANIFEST)
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
@@ -84,7 +86,7 @@ class testmanifest(unittest.TestCase):
     def testSetItem(self):
         want = binascii.unhexlify(HASH_1)
 
-        m = parsemanifest('')
+        m = parsemanifest(EMTPY_MANIFEST)
         m['a'] = want
         self.assertIn('a', m)
         self.assertEqual(want, m['a'])
@@ -99,7 +101,7 @@ class testmanifest(unittest.TestCase):
     def testSetFlag(self):
         want = 'x'
 
-        m = parsemanifest('')
+        m = parsemanifest(EMTPY_MANIFEST)
         # first add a file; a file-less flag makes no sense
         m['a'] = binascii.unhexlify(HASH_1)
         m.setflag('a', want)
@@ -214,14 +216,14 @@ class testmanifest(unittest.TestCase):
             'foo': (MISSING, (binascii.unhexlify(HASH_3), 'x')),
             'z-only-in-left': (MISSING, (binascii.unhexlify(HASH_1), '')),
             }
-        self.assertEqual(want, parsemanifest('').diff(left))
+        self.assertEqual(want, parsemanifest(EMTPY_MANIFEST).diff(left))
 
         want = {
             'bar/baz/qux.py': ((binascii.unhexlify(HASH_2), 'l'), MISSING),
             'foo': ((binascii.unhexlify(HASH_3), 'x'), MISSING),
             'z-only-in-left': ((binascii.unhexlify(HASH_1), ''), MISSING),
             }
-        self.assertEqual(want, left.diff(parsemanifest('')))
+        self.assertEqual(want, left.diff(parsemanifest(EMTPY_MANIFEST)))
         copy = right.copy()
         del copy['z-only-in-right']
         del right['foo']
