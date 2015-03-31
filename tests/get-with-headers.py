@@ -6,6 +6,14 @@ a subset of the headers plus the body of the result."""
 import httplib, sys
 
 try:
+    import json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        json = None
+
+try:
     import msvcrt, os
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
@@ -20,6 +28,10 @@ headeronly = False
 if '--headeronly' in sys.argv:
     sys.argv.remove('--headeronly')
     headeronly = True
+formatjson = False
+if '--json' in sys.argv:
+    sys.argv.remove('--json')
+    formatjson = True
 
 reasons = {'Not modified': 'Not Modified'} # python 2.4
 
@@ -44,7 +56,23 @@ def request(host, path, show):
     if not headeronly:
         print
         data = response.read()
-        sys.stdout.write(data)
+
+        # Pretty print JSON. This also has the beneficial side-effect
+        # of verifying emitted JSON is well-formed.
+        if formatjson:
+            if not json:
+                print 'no json module not available'
+                print 'did you forget a #require json?'
+                sys.exit(1)
+
+            # json.dumps() will print trailing newlines. Eliminate them
+            # to make tests easier to write.
+            data = json.loads(data)
+            lines = json.dumps(data, sort_keys=True, indent=2).splitlines()
+            for line in lines:
+                print line.rstrip()
+        else:
+            sys.stdout.write(data)
 
         if twice and response.getheader('ETag', None):
             tag = response.getheader('ETag')
