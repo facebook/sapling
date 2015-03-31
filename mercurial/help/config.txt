@@ -1368,13 +1368,13 @@ User interface controls.
     format.
     Defaults to showing the hash, tags, branches, bookmarks, author, and
     the first line of the commit description.
-    You have to pay attention to encodings of managed files, if you
-    use non-ASCII characters in tags, branches, bookmarks, author
-    and/or commit descriptions. At template expansion, non-ASCII
-    characters use the encoding specified by ``--encoding`` global
-    option, ``HGENCODING`` or other locale setting environment
-    variables. The difference of encoding between merged file and
-    conflict markers causes serious problem.
+    If you use non-ASCII characters in names for tags, branches, bookmarks,
+    authors, and/or commit descriptions, you must pay attention to encodings of
+    managed files. At template expansion, non-ASCII characters use the encoding
+    specified by the ``--encoding`` global option, ``HGENCODING`` or other
+    environment variables that govern your locale. If the encoding of the merge
+    markers is different from the encoding of the merged files,
+    serious problems may occur.
 
 ``portablefilenames``
     Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.
