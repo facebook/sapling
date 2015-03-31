@@ -146,6 +146,12 @@ class testmanifest(unittest.TestCase):
         self.assertIn('bar/qux/foz.py', m)
         self.assertIn(256 * 'x' + '/x', m)
         self.assertIn(256 * 'x' + '/y', m)
+        self.assertEqual(A_STEM_COMPRESSED_MANIFEST, m.text(usemanifestv2=True))
+
+    def testTextV2(self):
+        m1 = parsemanifest(A_SHORT_MANIFEST)
+        v2text = m1.text(usemanifestv2=True)
+        self.assertEqual(A_SHORT_MANIFEST_V2, v2text)
 
     def testSetItem(self):
         want = BIN_HASH_1

@@ -8,6 +8,7 @@
 from i18n import _
 import mdiff, parsers, error, revlog, util, scmutil
 import array, struct
+import os
 
 propertycache = util.propertycache
 
@@ -58,9 +59,15 @@ def _parse(data):
     else:
         return iter(_parsev1(data))
 
-def _text(it):
+def _text(it, usemanifestv2):
     """Given an iterator over (path, node, flags) tuples, returns a manifest
     text"""
+    if usemanifestv2:
+        return _textv2(it)
+    else:
+        return _textv1(it)
+
+def _textv1(it):
     files = []
     lines = []
     _hex = revlog.hex
@@ -70,6 +77,19 @@ def _text(it):
         # be sure to check the templates/ dir again (especially *-raw.tmpl)
         lines.append("%s\0%s%s\n" % (f, _hex(n), fl))
 
+    _checkforbidden(files)
+    return ''.join(lines)
+
+def _textv2(it):
+    files = []
+    lines = ['\0\n']
+    prevf = ''
+    for f, n, fl in it:
+        files.append(f)
+        stem = os.path.commonprefix([prevf, f])
+        stemlen = min(len(stem), 255)
+        lines.append("%c%s\0%s\n%s\n" % (stemlen, f[stemlen:], fl, n))
+        prevf = f
     _checkforbidden(files)
     return ''.join(lines)
 
@@ -134,7 +154,7 @@ class _lazymanifest(dict):
 
     def text(self):
         """Get the full data of this manifest as a bytestring."""
-        return _text(self.iterentries())
+        return _textv1(self.iterentries())
 
 try:
     _lazymanifest = parsers.lazymanifest
@@ -259,8 +279,12 @@ class manifestdict(object):
     def iteritems(self):
         return (x[:2] for x in self._lm.iterentries())
 
-    def text(self):
-        return self._lm.text()
+    def text(self, usemanifestv2=False):
+        if usemanifestv2:
+            return _textv2(self._lm.iterentries())
+        else:
+            # use (probably) native version for v1
+            return self._lm.text()
 
     def fastdelta(self, base, changes):
         """Given a base manifest text as an array.array and a list of changes
@@ -621,10 +645,11 @@ class treemanifest(object):
         _diff(self, m2)
         return result
 
-    def text(self):
+    def text(self, usemanifestv2=False):
         """Get the full data of this manifest as a bytestring."""
         flags = self.flags
-        return _text((f, self[f], flags(f)) for f in self.keys())
+        return _text(((f, self[f], flags(f)) for f in self.keys()),
+                     usemanifestv2)
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
@@ -720,7 +745,7 @@ class manifest(revlog.revlog):
             # just encode a fulltext of the manifest and pass that
             # through to the revlog layer, and let it handle the delta
             # process.
-            text = m.text()
+            text = m.text(self._usemanifestv2)
             arraytext = array.array('c', text)
             cachedelta = None
 

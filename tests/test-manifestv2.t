@@ -23,9 +23,9 @@ Check that 'hg verify', which uses manifest.readdelta(), works
   checking files
   3 files, 2 changesets, 4 total revisions
 
-TODO: Check that manifest revlog is smaller than for v1
+Check that manifest revlog is smaller than for v1
 
   $ hg debugindex -m
      rev    offset  length   base linkrev nodeid       p1           p2
-       0         0     106      0       0 f6279f9f8b31 000000000000 000000000000
-       1       106      59      0       1 cd20459b75e6 f6279f9f8b31 000000000000
+       0         0      81      0       0 57361477c778 000000000000 000000000000
+       1        81      33      0       1 aeaab5a2ef74 57361477c778 000000000000
