@@ -164,7 +164,27 @@ tags/ shows tags info
   $ request json-tags
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+    "tags": [
+      {
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "f2890a05fea49bfaf9fb27ed5490894eba32da78",
+        "tag": "tag2"
+      },
+      {
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+        "tag": "tag1"
+      }
+    ]
+  }
 
 bookmarks/ shows bookmarks info
 

@@ -5,7 +5,15 @@ shortlog = '"not yet implemented"'
 changelog = '"not yet implemented"'
 changeset = '"not yet implemented"'
 manifest = '"not yet implemented"'
-tags = '"not yet implemented"'
+tags = '\{
+  "node": {node|json},
+  "tags": [{join(entriesnotip%tagentry, ", ")}]
+  }'
+tagentry = '\{
+  "tag": {tag|json},
+  "node": {node|json},
+  "date": {date|json}
+  }'
 bookmarks = '"not yet implemented"'
 branches = '"not yet implemented"'
 summary = '"not yet implemented"'
