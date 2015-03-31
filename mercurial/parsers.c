@@ -93,14 +93,14 @@ PyObject *unhexlify(const char *str, int len)
 	return ret;
 }
 
-static PyObject *asciilower(PyObject *self, PyObject *args)
+static inline PyObject *_asciilower(PyObject *str_obj)
 {
 	char *str, *newstr;
-	int i, len;
+	Py_ssize_t i, len;
 	PyObject *newobj = NULL;
 
-	if (!PyArg_ParseTuple(args, "s#", &str, &len))
-		goto quit;
+	str = PyBytes_AS_STRING(str_obj);
+	len = PyBytes_GET_SIZE(str_obj);
 
 	newobj = PyBytes_FromStringAndSize(NULL, len);
 	if (!newobj)
@@ -125,6 +125,14 @@ static PyObject *asciilower(PyObject *self, PyObject *args)
 quit:
 	Py_XDECREF(newobj);
 	return NULL;
+}
+
+static PyObject *asciilower(PyObject *self, PyObject *args)
+{
+	PyObject *str_obj;
+	if (!PyArg_ParseTuple(args, "O!:asciilower", &PyBytes_Type, &str_obj))
+		return NULL;
+	return _asciilower(str_obj);
 }
 
 /*
