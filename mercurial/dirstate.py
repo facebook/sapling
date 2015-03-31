@@ -651,7 +651,7 @@ class dirstate(object):
                         results[nf] = None
                     if matchedir:
                         matchedir(nf)
-                    foundadd(nf)
+                    foundadd((nf, ff))
                 elif kind == regkind or kind == lnkkind:
                     results[nf] = st
                 else:
@@ -727,15 +727,16 @@ class dirstate(object):
         results, work, dirsnotfound = self._walkexplicit(match, subrepos)
 
         skipstep3 = skipstep3 and not (work or dirsnotfound)
-        work = [d for d in work if not dirignore(d)]
+        work = [d for d in work if not dirignore(d[0])]
         wadd = work.append
 
         # step 2: visit subdirectories
         while work:
-            nd = work.pop()
+            nd, d = work.pop()
             skip = None
             if nd == '.':
                 nd = ''
+                d = ''
             else:
                 skip = '.hg'
             try:
@@ -748,21 +749,23 @@ class dirstate(object):
             for f, kind, st in entries:
                 if normalize:
                     nf = normalize(nd and (nd + "/" + f) or f, True, True)
+                    f = d and (d + "/" + f) or f
                 else:
                     nf = nd and (nd + "/" + f) or f
+                    f = nf
                 if nf not in results:
                     if kind == dirkind:
                         if not ignore(nf):
                             if matchtdir:
                                 matchtdir(nf)
-                            wadd(nf)
+                            wadd((nf, f))
                         if nf in dmap and (matchalways or matchfn(nf)):
                             results[nf] = None
                     elif kind == regkind or kind == lnkkind:
                         if nf in dmap:
                             if matchalways or matchfn(nf):
                                 results[nf] = st
-                        elif (matchalways or matchfn(nf)) and not ignore(nf):
+                        elif (matchalways or matchfn(f)) and not ignore(nf):
                             results[nf] = st
                     elif nf in dmap and (matchalways or matchfn(nf)):
                         results[nf] = None

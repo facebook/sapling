@@ -169,4 +169,16 @@ forgotten before file with same name is added
   $ cat d
   file d
 
+Test that adding a directory doesn't require case matching (issue4578)
+#if icasefs
+  $ mkdir -p CapsDir1/CapsDir
+  $ echo abc > CapsDir1/CapsDir/AbC.txt
+  $ mkdir CapsDir1/CapsDir/SubDir
+  $ echo def > CapsDir1/CapsDir/SubDir/Def.txt
+
+  $ hg add -v capsdir1/capsdir
+  adding CapsDir1/CapsDir/AbC.txt (glob)
+  adding CapsDir1/CapsDir/SubDir/Def.txt (glob)
+#endif
+
   $ cd ..
