@@ -91,14 +91,14 @@
 
 file/{revision}/{path} shows file revision
 
-  $ request json-rev/06e557f3edf6/foo
+  $ request json-file/06e557f3edf6/foo
   200 Script output follows
   
   "not yet implemented"
 
 file/{revision} shows root directory info
 
-  $ request json-rev/06e557f3edf6
+  $ request json-file/06e557f3edf6
   200 Script output follows
   
   "not yet implemented"
