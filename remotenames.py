@@ -994,6 +994,8 @@ def distancefromtracked(repo, bookmark):
             rev1 = repo[bookmark].rev()
             rev2 = repo[tracked].rev()
             distance = calculatedistance(repo, rev1, rev2)
+            writedistancecache(repo, bookmark, distance)
+
     return (tracked, distance)
 
 def writedistancecache(repo, name, distance):
