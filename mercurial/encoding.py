@@ -354,6 +354,19 @@ def upper(s):
     except LookupError, k:
         raise error.Abort(k, hint="please check your locale settings")
 
+class normcasespecs(object):
+    '''what a platform's normcase does to ASCII strings
+
+    This is specified per platform, and should be consistent with what normcase
+    on that platform actually does.
+
+    lower: normcase lowercases ASCII strings
+    upper: normcase uppercases ASCII strings
+    other: the fallback function should always be called'''
+    lower = -1
+    upper = 1
+    other = 0
+
 _jsonmap = {}
 
 def jsonescape(s):
