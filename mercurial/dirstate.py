@@ -88,6 +88,14 @@ class dirstate(object):
 
     @propertycache
     def _filefoldmap(self):
+        try:
+            makefilefoldmap = parsers.make_file_foldmap
+        except AttributeError:
+            pass
+        else:
+            return makefilefoldmap(self._map, util.normcasespec,
+                                   util.normcasefallback)
+
         f = {}
         normcase = util.normcase
         for name, s in self._map.iteritems():
