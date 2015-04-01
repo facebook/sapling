@@ -338,7 +338,9 @@ def upper(s):
     try:
         return asciiupper(s)
     except UnicodeDecodeError:
-        pass
+        return upperfallback(s)
+
+def upperfallback(s):
     try:
         if isinstance(s, localstr):
             u = s._utf8.decode("utf-8")
