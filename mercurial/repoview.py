@@ -6,6 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import collections
 import copy
 import error
 import phases
@@ -13,6 +14,7 @@ import util
 import obsolete
 import struct
 import tags as tagsmod
+from node import nullrev
 
 def hideablerevs(repo):
     """Revisions candidates to be hidden
@@ -20,23 +22,37 @@ def hideablerevs(repo):
     This is a standalone function to help extensions to wrap it."""
     return obsolete.getrevs(repo, 'obsolete')
 
-def _getstaticblockers(repo):
+def _getstatichidden(repo):
     """Cacheable revisions blocking hidden changesets from being filtered.
 
     Additional non-cached hidden blockers are computed in _getdynamicblockers.
     This is a standalone function to help extensions to wrap it."""
     assert not repo.changelog.filteredrevs
     hideable = hideablerevs(repo)
-    blockers = set()
     if hideable:
-        # We use cl to avoid recursive lookup from repo[xxx]
-        cl = repo.changelog
-        firsthideable = min(hideable)
-        revs = cl.revs(start=firsthideable)
-        tofilter = repo.revs(
-            '(%ld) and children(%ld)', list(revs), list(hideable))
-        blockers.update([r for r in tofilter if r not in hideable])
-    return blockers
+        actuallyhidden = {}
+        getphase = repo._phasecache.phase
+        getparentrevs = repo.changelog.parentrevs
+        queue = collections.deque((r, False) for r in repo.changelog.headrevs())
+        while queue:
+            rev, blocked = queue.popleft()
+            phase = getphase(repo, rev)
+            # Skip nodes which are public (guaranteed to not be hidden) and
+            # nodes which have already been processed and won't be blocked by
+            # the previous node.
+            if phase == 0 or (not blocked and rev in actuallyhidden):
+                continue
+            if rev in hideable:
+                if blocked:
+                    actuallyhidden[rev] = False
+                else:
+                    actuallyhidden.setdefault(rev, True)
+            else:
+                blocked = True
+
+            for parent in (p for p in getparentrevs(rev) if p != nullrev):
+                queue.append((parent, blocked))
+    return set(rev for rev, hidden in actuallyhidden.iteritems() if hidden)
 
 def _getdynamicblockers(repo):
     """Non-cacheable revisions blocking hidden changesets from being filtered.
@@ -137,8 +153,7 @@ def computehidden(repo):
         cl = repo.changelog
         hidden = tryreadcache(repo, hideable)
         if hidden is None:
-            blocked = cl.ancestors(_getstaticblockers(repo), inclusive=True)
-            hidden = frozenset(r for r in hideable if r not in blocked)
+            hidden = frozenset(_getstatichidden(repo))
             trywritehiddencache(repo, hideable, hidden)
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
