@@ -22,6 +22,7 @@
   $ hg mv foo foo-new
   $ hg commit -m 'move foo'
   $ hg tag -m 'create tag' tag1
+  $ hg phase --public -r .
   $ echo baz > da/foo
   $ hg commit -m 'another commit to da/foo'
   $ hg tag -m 'create tag2' tag2
@@ -162,6 +163,7 @@ changeset/ renders the tip changeset
       "ceed296fe500c3fac9541e31dad860cb49c89e45",
       "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
     ],
+    "phase": "draft",
     "tags": [
       "tip"
     ],
@@ -185,6 +187,7 @@ changeset/{revision} shows tags
     "parents": [
       "8d7c456572acf3557e8ed8a07286b10c408bcec5"
     ],
+    "phase": "public",
     "tags": [
       "tag1"
     ],
@@ -210,6 +213,7 @@ changeset/{revision} shows bookmarks
     "parents": [
       "f8bbb9024b10f93cdbb8d940337398291d40dea8"
     ],
+    "phase": "public",
     "tags": [],
     "user": "test"
   }
@@ -231,6 +235,7 @@ changeset/{revision} shows branches
     "parents": [
       "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
     ],
+    "phase": "draft",
     "tags": [],
     "user": "test"
   }

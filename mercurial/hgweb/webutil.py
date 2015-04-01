@@ -324,6 +324,7 @@ def changesetentry(web, req, tmpl, ctx):
         desc=ctx.description(),
         extra=ctx.extra(),
         date=ctx.date(),
+        phase=ctx.phasestr(),
         files=files,
         diffsummary=lambda **x: diffsummary(diffstatsgen),
         diffstat=diffstats,

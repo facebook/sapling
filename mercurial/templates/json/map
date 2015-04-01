@@ -11,7 +11,8 @@ changeset = '\{
   "bookmarks": [{join(changesetbookmark, ", ")}],
   "tags": [{join(changesettag, ", ")}],
   "user": {author|json},
-  "parents": [{join(parent%changesetparent, ", ")}]
+  "parents": [{join(parent%changesetparent, ", ")}],
+  "phase": {phase|json}
   }'
 changesetbranch = '{name|json}'
 changesetbookmark = '{bookmark|json}'
