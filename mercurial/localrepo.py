@@ -174,10 +174,10 @@ class locallegacypeer(localpeer):
 
 class localrepository(object):
 
-    supportedformats = set(('revlogv1', 'generaldelta'))
+    supportedformats = set(('revlogv1', 'generaldelta', 'manifestv2'))
     _basesupported = supportedformats | set(('store', 'fncache', 'shared',
                                              'dotencode'))
-    openerreqs = set(('revlogv1', 'generaldelta'))
+    openerreqs = set(('revlogv1', 'generaldelta', 'manifestv2'))
     requirements = ['revlogv1']
     filtername = None
 
@@ -241,6 +241,8 @@ class localrepository(object):
                     )
                 if self.ui.configbool('format', 'generaldelta', False):
                     requirements.append("generaldelta")
+                if self.ui.configbool('experimental', 'manifestv2', False):
+                    requirements.append("manifestv2")
                 requirements = set(requirements)
             else:
                 raise error.RepoError(_("repository %s not found") % path)
@@ -334,9 +336,6 @@ class localrepository(object):
         usetreemanifest = self.ui.configbool('experimental', 'treemanifest')
         if usetreemanifest is not None:
             self.svfs.options['usetreemanifest'] = usetreemanifest
-        usemanifestv2 = self.ui.configbool('experimental', 'manifestv2')
-        if usemanifestv2 is not None:
-            self.svfs.options['usemanifestv2'] = usemanifestv2
 
     def _writerequirements(self):
         reqfile = self.vfs("requires", "w")

@@ -605,7 +605,7 @@ class manifest(revlog.revlog):
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
             usetreemanifest = opts.get('usetreemanifest', usetreemanifest)
-            usemanifestv2 = opts.get('usemanifestv2', usemanifestv2)
+            usemanifestv2 = opts.get('manifestv2', usemanifestv2)
         self._mancache = util.lrucachedict(cachesize)
         revlog.revlog.__init__(self, opener, "00manifest.i")
         self._usetreemanifest = usetreemanifest
