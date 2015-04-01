@@ -754,50 +754,54 @@ class dirstate(object):
 
         skipstep3 = skipstep3 and not (work or dirsnotfound)
         work = [d for d in work if not dirignore(d[0])]
-        wadd = work.append
 
         # step 2: visit subdirectories
-        while work:
-            nd, d = work.pop()
-            skip = None
-            if nd == '.':
-                nd = ''
-                d = ''
-            else:
-                skip = '.hg'
-            try:
-                entries = listdir(join(nd), stat=True, skip=skip)
-            except OSError, inst:
-                if inst.errno in (errno.EACCES, errno.ENOENT):
-                    match.bad(self.pathto(nd), inst.strerror)
-                    continue
-                raise
-            for f, kind, st in entries:
-                if normalizefile:
-                    # even though f might be a directory, we're only interested
-                    # in comparing it to files currently in the dmap --
-                    # therefore normalizefile is enough
-                    nf = normalizefile(nd and (nd + "/" + f) or f, True, True)
-                    f = d and (d + "/" + f) or f
+        def traverse(work):
+            wadd = work.append
+            while work:
+                nd, d = work.pop()
+                skip = None
+                if nd == '.':
+                    nd = ''
+                    d = ''
                 else:
-                    nf = nd and (nd + "/" + f) or f
-                    f = nf
-                if nf not in results:
-                    if kind == dirkind:
-                        if not ignore(nf):
-                            if matchtdir:
-                                matchtdir(nf)
-                            wadd((nf, f))
-                        if nf in dmap and (matchalways or matchfn(nf)):
-                            results[nf] = None
-                    elif kind == regkind or kind == lnkkind:
-                        if nf in dmap:
-                            if matchalways or matchfn(nf):
+                    skip = '.hg'
+                try:
+                    entries = listdir(join(nd), stat=True, skip=skip)
+                except OSError, inst:
+                    if inst.errno in (errno.EACCES, errno.ENOENT):
+                        match.bad(self.pathto(nd), inst.strerror)
+                        continue
+                    raise
+                for f, kind, st in entries:
+                    if normalizefile:
+                        # even though f might be a directory, we're only
+                        # interested in comparing it to files currently in the
+                        # dmap -- therefore normalizefile is enough
+                        nf = normalizefile(nd and (nd + "/" + f) or f, True,
+                                           True)
+                        f = d and (d + "/" + f) or f
+                    else:
+                        nf = nd and (nd + "/" + f) or f
+                        f = nf
+                    if nf not in results:
+                        if kind == dirkind:
+                            if not ignore(nf):
+                                if matchtdir:
+                                    matchtdir(nf)
+                                wadd((nf, f))
+                            if nf in dmap and (matchalways or matchfn(nf)):
+                                results[nf] = None
+                        elif kind == regkind or kind == lnkkind:
+                            if nf in dmap:
+                                if matchalways or matchfn(nf):
+                                    results[nf] = st
+                            elif (matchalways or matchfn(f)) and not ignore(nf):
                                 results[nf] = st
-                        elif (matchalways or matchfn(f)) and not ignore(nf):
-                            results[nf] = st
-                    elif nf in dmap and (matchalways or matchfn(nf)):
-                        results[nf] = None
+                        elif nf in dmap and (matchalways or matchfn(nf)):
+                            results[nf] = None
+
+        traverse(work)
 
         for s in subrepos:
             del results[s]
