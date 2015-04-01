@@ -173,6 +173,72 @@ static PyObject *asciiupper(PyObject *self, PyObject *args)
 	return _asciitransform(str_obj, uppertable, NULL);
 }
 
+static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
+{
+	PyObject *dmap, *spec_obj, *normcase_fallback;
+	PyObject *file_foldmap = NULL;
+	enum normcase_spec spec;
+	PyObject *k, *v;
+	dirstateTupleObject *tuple;
+	Py_ssize_t pos = 0;
+	const char *table;
+
+	if (!PyArg_ParseTuple(args, "O!O!O!:make_file_foldmap",
+			      &PyDict_Type, &dmap,
+			      &PyInt_Type, &spec_obj,
+			      &PyFunction_Type, &normcase_fallback))
+		goto quit;
+
+	spec = PyInt_AS_LONG(spec_obj);
+	switch (spec) {
+	case NORMCASE_LOWER:
+		table = lowertable;
+		break;
+	case NORMCASE_UPPER:
+		table = uppertable;
+		break;
+	case NORMCASE_OTHER:
+		table = NULL;
+		break;
+	default:
+		PyErr_SetString(PyExc_TypeError, "invalid normcasespec");
+		goto quit;
+	}
+
+	file_foldmap = PyDict_New();
+	if (file_foldmap == NULL)
+		goto quit;
+
+	while (PyDict_Next(dmap, &pos, &k, &v)) {
+		if (!dirstate_tuple_check(v)) {
+			PyErr_SetString(PyExc_TypeError,
+					"expected a dirstate tuple");
+			goto quit;
+		}
+
+		tuple = (dirstateTupleObject *)v;
+		if (tuple->state != 'r') {
+			PyObject *normed;
+			if (table != NULL) {
+				normed = _asciitransform(k, table,
+					normcase_fallback);
+			} else {
+				normed = PyObject_CallFunctionObjArgs(
+					normcase_fallback, k, NULL);
+			}
+
+			if (normed == NULL)
+				goto quit;
+			if (PyDict_SetItem(file_foldmap, normed, k) == -1)
+				goto quit;
+		}
+	}
+	return file_foldmap;
+quit:
+	Py_XDECREF(file_foldmap);
+	return NULL;
+}
+
 /*
  * This code assumes that a manifest is stitched together with newline
  * ('\n') characters.
@@ -2463,6 +2529,8 @@ static PyMethodDef methods[] = {
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
 	{"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
 	{"asciiupper", asciiupper, METH_VARARGS, "uppercase an ASCII string\n"},
+	{"make_file_foldmap", make_file_foldmap, METH_VARARGS,
+	 "make file foldmap\n"},
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
 	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
