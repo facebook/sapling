@@ -129,21 +129,298 @@ changelog/ shows information about several changesets
   $ request json-changelog
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "changeset_count": 10,
+    "changesets": [
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "merge test-branch into default",
+        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "tags": [
+          "tip"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "another commit in test-branch",
+        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create test branch",
+        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [
+          "bookmark2"
+        ],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create tag2",
+        "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "another commit to da/foo",
+        "node": "f2890a05fea49bfaf9fb27ed5490894eba32da78",
+        "tags": [
+          "tag2"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create tag",
+        "node": "93a8ce14f89156426b7fa981af8042da53f03aa0",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "move foo",
+        "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+        "tags": [
+          "tag1"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [
+          "bookmark1"
+        ],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify da/foo",
+        "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify foo",
+        "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "initial",
+        "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "tags": [],
+        "user": "test"
+      }
+    ],
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+  }
 
-changelog/{revision} shows information about a single changeset
+changelog/{revision} shows information starting at a specific changeset
 
-  $ request json-changelog/06e557f3edf6
+  $ request json-changelog/f8bbb9024b10
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "changeset_count": 10,
+    "changesets": [
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify foo",
+        "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "initial",
+        "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "tags": [],
+        "user": "test"
+      }
+    ],
+    "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+  }
 
 shortlog/ shows information about a set of changesets
 
   $ request json-shortlog
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "changeset_count": 10,
+    "changesets": [
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "merge test-branch into default",
+        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "tags": [
+          "tip"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "another commit in test-branch",
+        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create test branch",
+        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [
+          "bookmark2"
+        ],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create tag2",
+        "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "another commit to da/foo",
+        "node": "f2890a05fea49bfaf9fb27ed5490894eba32da78",
+        "tags": [
+          "tag2"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create tag",
+        "node": "93a8ce14f89156426b7fa981af8042da53f03aa0",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "move foo",
+        "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+        "tags": [
+          "tag1"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [
+          "bookmark1"
+        ],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify da/foo",
+        "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify foo",
+        "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "initial",
+        "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "tags": [],
+        "user": "test"
+      }
+    ],
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+  }
 
 changeset/ renders the tip changeset
 

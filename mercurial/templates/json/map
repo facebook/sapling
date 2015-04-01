@@ -1,8 +1,19 @@
 mimetype = 'application/json'
 filerevision = '"not yet implemented"'
 search = '"not yet implemented"'
-shortlog = '"not yet implemented"'
-changelog = '"not yet implemented"'
+# changelog and shortlog are the same web API but with different
+# number of entries.
+changelog = changelist.tmpl
+shortlog = changelist.tmpl
+changelistentry = '\{
+  "node": {node|json},
+  "date": {date|json},
+  "desc": {desc|json},
+  "bookmarks": [{join(bookmarks%changelistentryname, ", ")}],
+  "tags": [{join(tags%changelistentryname, ", ")}],
+  "user": {author|json}
+  }'
+changelistentryname = '{name|json}'
 changeset = '\{
   "node": {node|json},
   "date": {date|json},
