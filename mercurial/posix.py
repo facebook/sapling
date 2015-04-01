@@ -200,6 +200,11 @@ def samedevice(fpath1, fpath2):
 def normcase(path):
     return path.lower()
 
+# what normcase does to ASCII strings
+normcasespec = encoding.normcasespecs.lower
+# fallback normcase function for non-ASCII strings
+normcasefallback = normcase
+
 if sys.platform == 'darwin':
 
     def normcase(path):
