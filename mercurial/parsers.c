@@ -98,6 +98,7 @@ static inline PyObject *_asciilower(PyObject *str_obj)
 	char *str, *newstr;
 	Py_ssize_t i, len;
 	PyObject *newobj = NULL;
+	PyObject *ret = NULL;
 
 	str = PyBytes_AS_STRING(str_obj);
 	len = PyBytes_GET_SIZE(str_obj);
@@ -121,10 +122,11 @@ static inline PyObject *_asciilower(PyObject *str_obj)
 		newstr[i] = lowertable[(unsigned char)c];
 	}
 
-	return newobj;
+	ret = newobj;
+	Py_INCREF(ret);
 quit:
 	Py_XDECREF(newobj);
-	return NULL;
+	return ret;
 }
 
 static PyObject *asciilower(PyObject *self, PyObject *args)
