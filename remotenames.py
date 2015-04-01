@@ -72,7 +72,7 @@ def pullremotenames(repo, remote):
         lock.release()
 
     loadremotenames(repo)
-    invalidatedistancecache(repo)
+    precachedistance(repo)
 
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
@@ -125,17 +125,17 @@ def exclone(orig, ui, *args, **opts):
 
 def excommit(orig, repo, *args, **opts):
     res = orig(repo, *args, **opts)
-    invalidatedistancecache(repo)
+    precachedistance(repo)
     return res
 
 def exupdate(orig, repo, *args, **opts):
     res = orig(repo, *args, **opts)
-    invalidatedistancecache(repo)
+    precachedistance(repo)
     return res
 
 def exsetcurrent(orig, repo, mark):
     res = orig(repo, mark)
-    invalidatedistancecache(repo)
+    precachedistance(repo)
     return res
 
 
@@ -223,12 +223,12 @@ def exrebase(orig, ui, repo, **opts):
 
 def exstrip(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
-    invalidatedistancecache(repo)
+    precachedistance(repo)
     return ret
 
 def exhistedit(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
-    invalidatedistancecache(repo)
+    precachedistance(repo)
     return ret
 
 def expaths(orig, ui, repo, *args, **opts):
@@ -251,7 +251,7 @@ def expaths(orig, ui, repo, *args, **opts):
                 f.write(line)
         f.close()
         saveremotenames(repo, delete)
-        invalidatedistancecache(repo)
+        precachedistance(repo)
         return
 
     if add:
@@ -678,7 +678,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
                 tracking[arg] = track
             _writetracking(repo, tracking)
             # update the cache
-            invalidatedistancecache(repo)
+            precachedistance(repo)
 
         # also remove tracking for a deleted bookmark, if it exists
         if delete:
@@ -1032,7 +1032,7 @@ def invalidatedistancecache(repo):
         repo.ui.warn(_('Unable to invalidate tracking cache; ' +
                        'distance displayed may be incorrect'))
 
-def writedistance(repo):
+def precachedistance(repo):
     """
     Caclulate and cache the distance between bookmarks and what they
     track, plus the distance from the tipmost head on current topological
@@ -1040,46 +1040,28 @@ def writedistance(repo):
     with a high commit rate, so it can be turned off in your hgrc:
 
         [remotenames]
-        cachedistance = False
+        precachedistance = False
+        precachecurrent = False
     """
-    if not repo.ui.configbool('remotenames', 'cachedistance', True):
-        return
-
-    wlock = repo.wlock()
     try:
-        for bmark, remotename in _readtracking(repo).iteritems():
-            # delete the cache if it exists
-            try:
-                repo.vfs.unlink('cache/tracking.%s' % bmark)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
+        wlock = repo.wlock()
+        invalidatedistancecache(repo)
 
-            try:
+        if repo.ui.configbool('remotenames', 'precachedistance', True):
+            for bmark, remotename in _readtracking(repo).iteritems():
                 distancefromtracked(repo, bmark)
-            except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    raise
 
-        # are we on a 'branch' but not at the head, i.e. is there a bookmark
-        # that we are heading towards?
-        try:
-            repo.vfs.unlink('cache/tracking.current')
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                raise
-
-        try:
+        if repo.ui.configbool('remotenames', 'precachecurrent', True):
+            # are we on a 'branch' but not at the head?
+            # i.e. is there a bookmark that we are heading towards?
             revs = list(repo.revs('limit(.:: and bookmark() - ., 1)'))
             if revs:
-                # if we are here then we have one or more bookmarks and we'll
-                # pick the first one for now
+                # if we are here then we have one or more bookmarks
+                # and we'll pick the first one for now
                 bmark = repo[revs[0]].bookmarks()[0]
-                d = len(repo.revs('only(%d, .)' % revs[0]))
-                repo.vfs.write('cache/tracking.current', '%s %d' % (bmark, d))
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                raise
+                distance = len(repo.revs('only(%d, .)' % revs[0]))
+                repo.vfs.write('cache/tracking.current',
+                               '%s %d' % (bmark, distance))
 
     finally:
         wlock.release()
