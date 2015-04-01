@@ -30,46 +30,66 @@
   $ hg -q branch test-branch
   $ echo branch > foo
   $ hg commit -m 'create test branch'
+  $ echo branch_commit_2 > foo
+  $ hg commit -m 'another commit in test-branch'
+  $ hg -q up default
+  $ hg merge --tool :local test-branch
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m 'merge test-branch into default'
 
   $ hg log -G
-  @  changeset:   7:6ab967a8ab34
-  |  branch:      test-branch
-  |  tag:         tip
-  |  parent:      0:06e557f3edf6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     create test branch
-  |
-  | o  changeset:   6:ceed296fe500
+  @    changeset:   9:cc725e08502a
+  |\   tag:         tip
+  | |  parent:      6:ceed296fe500
+  | |  parent:      8:ed66c30e87eb
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge test-branch into default
+  | |
+  | o  changeset:   8:ed66c30e87eb
+  | |  branch:      test-branch
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     another commit in test-branch
+  | |
+  | o  changeset:   7:6ab967a8ab34
+  | |  branch:      test-branch
+  | |  parent:      0:06e557f3edf6
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     create test branch
+  | |
+  o |  changeset:   6:ceed296fe500
   | |  bookmark:    bookmark2
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     create tag2
   | |
-  | o  changeset:   5:f2890a05fea4
+  o |  changeset:   5:f2890a05fea4
   | |  tag:         tag2
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     another commit to da/foo
   | |
-  | o  changeset:   4:93a8ce14f891
+  o |  changeset:   4:93a8ce14f891
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     create tag
   | |
-  | o  changeset:   3:78896eb0e102
+  o |  changeset:   3:78896eb0e102
   | |  tag:         tag1
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     move foo
   | |
-  | o  changeset:   2:8d7c456572ac
+  o |  changeset:   2:8d7c456572ac
   | |  bookmark:    bookmark1
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     modify da/foo
   | |
-  | o  changeset:   1:f8bbb9024b10
+  o |  changeset:   1:f8bbb9024b10
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     modify foo
@@ -129,28 +149,91 @@ changeset/ renders the tip changeset
   $ request json-rev
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "bookmarks": [],
+    "branch": "default",
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "merge test-branch into default",
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+    "parents": [
+      "ceed296fe500c3fac9541e31dad860cb49c89e45",
+      "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+    ],
+    "tags": [
+      "tip"
+    ],
+    "user": "test"
+  }
 
 changeset/{revision} shows tags
 
   $ request json-rev/78896eb0e102
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "bookmarks": [],
+    "branch": "default",
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "move foo",
+    "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+    "parents": [
+      "8d7c456572acf3557e8ed8a07286b10c408bcec5"
+    ],
+    "tags": [
+      "tag1"
+    ],
+    "user": "test"
+  }
 
 changeset/{revision} shows bookmarks
 
   $ request json-rev/8d7c456572ac
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "bookmarks": [
+      "bookmark1"
+    ],
+    "branch": "default",
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "modify da/foo",
+    "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5",
+    "parents": [
+      "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+    ],
+    "tags": [],
+    "user": "test"
+  }
 
 changeset/{revision} shows branches
 
   $ request json-rev/6ab967a8ab34
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "bookmarks": [],
+    "branch": "test-branch",
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "create test branch",
+    "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+    "parents": [
+      "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+    ],
+    "tags": [],
+    "user": "test"
+  }
 
 manifest/{revision}/{path} shows info about a directory at a revision
 
@@ -165,7 +248,7 @@ tags/ shows tags info
   200 Script output follows
   
   {
-    "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
     "tags": [
       {
         "date": [
@@ -210,7 +293,7 @@ bookmarks/ shows bookmarks info
         "node": "ceed296fe500c3fac9541e31dad860cb49c89e45"
       }
     ],
-    "node": "6ab967a8ab3489227a83f80e920faa039a71819f"
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
   }
 
 branches/ shows branches info
@@ -221,22 +304,22 @@ branches/ shows branches info
   {
     "branches": [
       {
-        "branch": "test-branch",
-        "date": [
-          0.0,
-          0
-        ],
-        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
-        "status": "open"
-      },
-      {
         "branch": "default",
         "date": [
           0.0,
           0
         ],
-        "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
         "status": "open"
+      },
+      {
+        "branch": "test-branch",
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "status": "inactive"
       }
     ]
   }

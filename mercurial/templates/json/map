@@ -3,7 +3,20 @@ filerevision = '"not yet implemented"'
 search = '"not yet implemented"'
 shortlog = '"not yet implemented"'
 changelog = '"not yet implemented"'
-changeset = '"not yet implemented"'
+changeset = '\{
+  "node": {node|json},
+  "date": {date|json},
+  "desc": {desc|json},
+  "branch": {if(branch, branch%changesetbranch, "default"|json)},
+  "bookmarks": [{join(changesetbookmark, ", ")}],
+  "tags": [{join(changesettag, ", ")}],
+  "user": {author|json},
+  "parents": [{join(parent%changesetparent, ", ")}]
+  }'
+changesetbranch = '{name|json}'
+changesetbookmark = '{bookmark|json}'
+changesettag = '{tag|json}'
+changesetparent = '{node|json}'
 manifest = '"not yet implemented"'
 tags = '\{
   "node": {node|json},
