@@ -438,13 +438,14 @@ def expushdiscoverybookmarks(pushop):
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
 
 def _pushrevs(repo, ui, rev):
+    """Given configuration and default rev, return the revs to be pushed"""
     pushrev = ui.config('remotenames', 'pushrev')
     if pushrev == '!':
         return []
     elif pushrev:
-        return [repo.lookup(pushrev)]
+        return [repo[pushrev].rev()]
     if rev:
-        return [repo.lookup(rev)]
+        return [repo[rev].rev()]
     return []
 
 def expullcmd(orig, ui, repo, source="default", **opts):
@@ -548,13 +549,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             raise
 
     # all checks pass, go for it!
+    node = repo.lookup(rev)
     ui.status(_('pushing rev %s to destination %s bookmark %s\n') % (
-              short(rev), dest, to))
+              short(node), dest, to))
 
     # TODO: subrepo stuff
 
-    pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
-                           bookmarks=(to,))
+    force = opts.get('force')
+    # NB: despite the name, 'revs' doesn't work if it's a numeric rev
+    pushop = exchange.push(repo, other, force, revs=[node], bookmarks=(to,))
 
     result = not pushop.cgresult
     if pushop.bkresult is not None:

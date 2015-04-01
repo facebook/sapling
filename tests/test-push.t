@@ -117,3 +117,16 @@ remote or local repo
   searching for changes
   no changes found
   [1]
+
+Test pushrev configuration option
+
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "pushrev = ." >> $HGRCPATH
+  $ echo d >> a
+  $ hg commit -qm 'da'
+  $ hg push
+  pushing to ssh://user@dummy/repo1
+  searching for changes
+  abort: push would create new anonymous heads (7481df5f123a)
+  (use --force to override this warning)
+  [255]
