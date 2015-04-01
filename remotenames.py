@@ -1025,6 +1025,7 @@ def invalidatedistancecache(repo):
                 repo.vfs.unlink('cache/distance/' + filename)
             except (OSError, IOError):
                 error = True
+        repo.vfs.unlink('cache/distance.current')
     except (OSError, IOError), inst:
         if inst.errno != errno.ENOENT:
             error = True
@@ -1060,7 +1061,7 @@ def precachedistance(repo):
                 # and we'll pick the first one for now
                 bmark = repo[revs[0]].bookmarks()[0]
                 distance = len(repo.revs('only(%d, .)' % revs[0]))
-                repo.vfs.write('cache/tracking.current',
+                repo.vfs.write('cache/distance.current',
                                '%s %d' % (bmark, distance))
 
     finally:

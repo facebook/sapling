@@ -235,6 +235,28 @@ Test implicit rebase destination
   |
   o  0 07199ae38cd5
   
+
+Test distance to tip calculation
+
+  $ test -f .hg/cache/distance.current
+  [1]
+  $ hg up 3
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark c)
+  $ cat .hg/cache/distance.current
+  c 1 (no-eol)
+  $ hg up 2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat .hg/cache/distance.current
+  c 2 (no-eol)
+  $ hg up 4
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ test -f .hg/cache/distance.current
+  [1]
+  $ hg up c
+  3 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark c)
+
 Test when a local bookmark that was tracking goes missing
 
   $ hg book -v
