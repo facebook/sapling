@@ -991,10 +991,14 @@ def distancefromtracked(repo, bookmark):
     if bookmark and bookmark in repo and bookmark in tracking:
         tracked = tracking[bookmark]
         if tracked in repo:
-            rev1 = repo[bookmark].rev()
-            rev2 = repo[tracked].rev()
-            distance = calculatedistance(repo, rev1, rev2)
-            writedistancecache(repo, bookmark, distance)
+            cached = readdistancecache(repo, bookmark)
+            if cached:
+                distance = cached
+            else:
+                rev1 = repo[bookmark].rev()
+                rev2 = repo[tracked].rev()
+                distance = calculatedistance(repo, rev1, rev2)
+                writedistancecache(repo, bookmark, distance)
 
     return (tracked, distance)
 
