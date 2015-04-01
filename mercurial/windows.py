@@ -141,6 +141,10 @@ def normpath(path):
 def normcase(path):
     return encoding.upper(path)
 
+# see posix.py for definitions
+normcasespec = encoding.normcasespecs.upper
+normcasefallback = encoding.upperfallback
+
 def samestat(s1, s2):
     return False
 
