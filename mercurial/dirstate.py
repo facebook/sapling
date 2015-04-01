@@ -744,9 +744,11 @@ class dirstate(object):
             skipstep3 = True
 
         if not exact and self._checkcase:
+            normalize = self._normalize
             normalizefile = self._normalizefile
             skipstep3 = False
         else:
+            normalize = self._normalize
             normalizefile = None
 
         # step 1: find all explicit files
@@ -756,14 +758,13 @@ class dirstate(object):
         work = [d for d in work if not dirignore(d[0])]
 
         # step 2: visit subdirectories
-        def traverse(work):
+        def traverse(work, alreadynormed):
             wadd = work.append
             while work:
-                nd, d = work.pop()
+                nd = work.pop()
                 skip = None
                 if nd == '.':
                     nd = ''
-                    d = ''
                 else:
                     skip = '.hg'
                 try:
@@ -780,28 +781,34 @@ class dirstate(object):
                         # dmap -- therefore normalizefile is enough
                         nf = normalizefile(nd and (nd + "/" + f) or f, True,
                                            True)
-                        f = d and (d + "/" + f) or f
                     else:
                         nf = nd and (nd + "/" + f) or f
-                        f = nf
                     if nf not in results:
                         if kind == dirkind:
                             if not ignore(nf):
                                 if matchtdir:
                                     matchtdir(nf)
-                                wadd((nf, f))
+                                wadd(nf)
                             if nf in dmap and (matchalways or matchfn(nf)):
                                 results[nf] = None
                         elif kind == regkind or kind == lnkkind:
                             if nf in dmap:
                                 if matchalways or matchfn(nf):
                                     results[nf] = st
-                            elif (matchalways or matchfn(f)) and not ignore(nf):
+                            elif ((matchalways or matchfn(nf))
+                                  and not ignore(nf)):
+                                # unknown file -- normalize if necessary
+                                if not alreadynormed:
+                                    nf = normalize(nf, False, True)
                                 results[nf] = st
                         elif nf in dmap and (matchalways or matchfn(nf)):
                             results[nf] = None
 
-        traverse(work)
+        for nd, d in work:
+            # alreadynormed means that processwork doesn't have to do any
+            # expensive directory normalization
+            alreadynormed = not normalize or nd == d
+            traverse([d], alreadynormed)
 
         for s in subrepos:
             del results[s]
