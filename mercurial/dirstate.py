@@ -509,8 +509,9 @@ class dirstate(object):
 
     def _normalize(self, path, isknown, ignoremissing=False, exists=None):
         normed = util.normcase(path)
-        folded = self._filefoldmap.get(normed,
-                                       self._dirfoldmap.get(normed, None))
+        folded = self._filefoldmap.get(normed, None)
+        if folded is None:
+            folded = self._dirfoldmap.get(normed, None)
         if folded is None:
             if isknown:
                 folded = path
