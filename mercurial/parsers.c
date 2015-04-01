@@ -1071,14 +1071,17 @@ static inline void set_phase_from_parents(char *phases, int parent_1,
 		phases[i] = phases[parent_2];
 }
 
-static PyObject *compute_phases(indexObject *self, PyObject *args)
+static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 {
 	PyObject *roots = Py_None;
+	PyObject *ret = NULL;
 	PyObject *phaseslist = NULL;
 	PyObject *phaseroots = NULL;
 	PyObject *rev = NULL;
 	PyObject *p1 = NULL;
 	PyObject *p2 = NULL;
+	PyObject *phaseset = NULL;
+	PyObject *phasessetlist = NULL;
 	Py_ssize_t addlen = self->added ? PyList_GET_SIZE(self->added) : 0;
 	Py_ssize_t len = index_length(self) - 1;
 	Py_ssize_t numphase = 0;
@@ -1088,6 +1091,7 @@ static PyObject *compute_phases(indexObject *self, PyObject *args)
 	int parent_1, parent_2;
 	char *phases = NULL;
 	const char *data;
+	long phase;
 
 	if (!PyArg_ParseTuple(args, "O", &roots))
 		goto release_none;
@@ -1100,13 +1104,24 @@ static PyObject *compute_phases(indexObject *self, PyObject *args)
 	/* Put the phase information of all the roots in phases */
 	numphase = PyList_GET_SIZE(roots)+1;
 	minrevallphases = len + 1;
+	phasessetlist = PyList_New(numphase);
+	if (phasessetlist == NULL)
+		goto release_none;
+
+	PyList_SET_ITEM(phasessetlist, 0, Py_None);
+	Py_INCREF(Py_None);
+
 	for (i = 0; i < numphase-1; i++) {
 		phaseroots = PyList_GET_ITEM(roots, i);
+		phaseset = PySet_New(NULL);
+		if (phaseset == NULL)
+			goto release_phasesetlist;
+		PyList_SET_ITEM(phasessetlist, i+1, phaseset);
 		if (!PyList_Check(phaseroots))
-			goto release_phases;
+			goto release_phasesetlist;
 		minrevphase = add_roots_get_min(self, phaseroots, i+1, phases);
 		if (minrevphase == -2) /* Error from add_roots_get_min */
-			goto release_phases;
+			goto release_phasesetlist;
 		minrevallphases = MIN(minrevallphases, minrevphase);
 	}
 	/* Propagate the phase information from the roots to the revs */
@@ -1121,7 +1136,7 @@ static PyObject *compute_phases(indexObject *self, PyObject *args)
 			p2 = PyTuple_GET_ITEM(rev, 6);
 			if (!PyInt_Check(p1) || !PyInt_Check(p2)) {
 				PyErr_SetString(PyExc_TypeError, "revlog parents are invalid");
-				goto release_phases;
+				goto release_phasesetlist;
 			}
 			parent_1 = (int)PyInt_AS_LONG(p1);
 			parent_2 = (int)PyInt_AS_LONG(p2);
@@ -1131,14 +1146,35 @@ static PyObject *compute_phases(indexObject *self, PyObject *args)
 	/* Transform phase list to a python list */
 	phaseslist = PyList_New(len);
 	if (phaseslist == NULL)
-		goto release_phases;
-	for (i = 0; i < len; i++)
-		PyList_SET_ITEM(phaseslist, i, PyInt_FromLong(phases[i]));
+		goto release_phasesetlist;
+	for (i = 0; i < len; i++) {
+		phase = phases[i];
+		/* We only store the sets of phase for non public phase, the public phase
+		 * is computed as a difference */
+		if (phase != 0) {
+			phaseset = PyList_GET_ITEM(phasessetlist, phase);
+			PySet_Add(phaseset, PyInt_FromLong(i));
+		}
+		PyList_SET_ITEM(phaseslist, i, PyInt_FromLong(phase));
+	}
+	ret = PyList_New(2);
+	if (ret == NULL)
+		goto release_phaseslist;
 
+	PyList_SET_ITEM(ret, 0, phaseslist);
+	PyList_SET_ITEM(ret, 1, phasessetlist);
+	/* We don't release phaseslist and phasessetlist as we return them to
+	 * python */
+	goto release_phases;
+
+release_phaseslist:
+	Py_XDECREF(phaseslist);
+release_phasesetlist:
+	Py_XDECREF(phasessetlist);
 release_phases:
 	free(phases);
 release_none:
-	return phaseslist;
+	return ret;
 }
 
 static PyObject *index_headrevs(indexObject *self, PyObject *args)
@@ -2278,8 +2314,8 @@ static PyMethodDef index_methods[] = {
 	 "clear the index caches"},
 	{"get", (PyCFunction)index_m_get, METH_VARARGS,
 	 "get an index entry"},
-	{"computephases", (PyCFunction)compute_phases, METH_VARARGS,
-		"compute phases"},
+	{"computephasesmapsets", (PyCFunction)compute_phases_map_sets,
+			METH_VARARGS, "compute phases"},
 	{"headrevs", (PyCFunction)index_headrevs, METH_VARARGS,
 	 "get head revisions"}, /* Can do filtering since 3.2 */
 	{"headrevsfiltered", (PyCFunction)index_headrevs, METH_VARARGS,

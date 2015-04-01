@@ -155,6 +155,7 @@ class phasecache(object):
             # Cheap trick to allow shallow-copy without copy module
             self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
             self._phaserevs = None
+            self._phasesets = None
             self.filterunknown(repo)
             self.opener = repo.svfs
 
@@ -177,7 +178,7 @@ class phasecache(object):
         nativeroots = []
         for phase in trackedphases:
             nativeroots.append(map(repo.changelog.rev, self.phaseroots[phase]))
-        return repo.changelog.computephases(nativeroots)
+        return repo.changelog.computephasesmapsets(nativeroots)
 
     def _computephaserevspure(self, repo):
         repo = repo.unfiltered()
@@ -199,7 +200,8 @@ class phasecache(object):
                                       'nativephaseskillswitch'):
                     self._computephaserevspure(repo)
                 else:
-                    self._phaserevs = self._getphaserevsnative(repo)
+                    res = self._getphaserevsnative(repo)
+                    self._phaserevs, self._phasesets = res
             except AttributeError:
                 self._computephaserevspure(repo)
         return self._phaserevs
