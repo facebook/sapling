@@ -996,6 +996,12 @@ def distancefromtracked(repo, bookmark):
             distance = calculatedistance(repo, rev1, rev2)
     return (tracked, distance)
 
+def writedistancecache(repo, name, distance):
+    try:
+        repo.vfs.write('cache/tracking.%s' % name, '%s %s' % distance)
+    except (IOError, OSError):
+        pass
+
 def writedistance(repo):
     """
     Caclulate and cache the distance between bookmarks and what they
