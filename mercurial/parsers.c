@@ -115,7 +115,8 @@ PyObject *unhexlify(const char *str, int len)
 }
 
 static inline PyObject *_asciitransform(PyObject *str_obj,
-					const char table[128])
+					const char table[128],
+					PyObject *fallback_fn)
 {
 	char *str, *newstr;
 	Py_ssize_t i, len;
@@ -134,11 +135,16 @@ static inline PyObject *_asciitransform(PyObject *str_obj,
 	for (i = 0; i < len; i++) {
 		char c = str[i];
 		if (c & 0x80) {
-			PyObject *err = PyUnicodeDecodeError_Create(
-				"ascii", str, len, i, (i + 1),
-				"unexpected code byte");
-			PyErr_SetObject(PyExc_UnicodeDecodeError, err);
-			Py_XDECREF(err);
+			if (fallback_fn != NULL) {
+				ret = PyObject_CallFunctionObjArgs(fallback_fn,
+					str_obj, NULL);
+			} else {
+				PyObject *err = PyUnicodeDecodeError_Create(
+					"ascii", str, len, i, (i + 1),
+					"unexpected code byte");
+				PyErr_SetObject(PyExc_UnicodeDecodeError, err);
+				Py_XDECREF(err);
+			}
 			goto quit;
 		}
 		newstr[i] = table[(unsigned char)c];
@@ -156,7 +162,7 @@ static PyObject *asciilower(PyObject *self, PyObject *args)
 	PyObject *str_obj;
 	if (!PyArg_ParseTuple(args, "O!:asciilower", &PyBytes_Type, &str_obj))
 		return NULL;
-	return _asciitransform(str_obj, lowertable);
+	return _asciitransform(str_obj, lowertable, NULL);
 }
 
 static PyObject *asciiupper(PyObject *self, PyObject *args)
@@ -164,7 +170,7 @@ static PyObject *asciiupper(PyObject *self, PyObject *args)
 	PyObject *str_obj;
 	if (!PyArg_ParseTuple(args, "O!:asciiupper", &PyBytes_Type, &str_obj))
 		return NULL;
-	return _asciitransform(str_obj, uppertable);
+	return _asciitransform(str_obj, uppertable, NULL);
 }
 
 /*
