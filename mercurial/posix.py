@@ -311,6 +311,9 @@ if sys.platform == 'cygwin':
 
         return encoding.upper(path)
 
+    normcasespec = encoding.normcasespecs.other
+    normcasefallback = normcase
+
     # Cygwin translates native ACLs to POSIX permissions,
     # but these translations are not supported by native
     # tools, so the exec bit tends to be set erroneously.
