@@ -72,7 +72,7 @@ def pullremotenames(repo, remote):
         lock.release()
 
     loadremotenames(repo)
-    writedistance(repo)
+    invalidatedistancecache(repo)
 
 def blockerhook(orig, repo, *args, **kwargs):
     blockers = orig(repo)
@@ -125,17 +125,17 @@ def exclone(orig, ui, *args, **opts):
 
 def excommit(orig, repo, *args, **opts):
     res = orig(repo, *args, **opts)
-    writedistance(repo)
+    invalidatedistancecache(repo)
     return res
 
 def exupdate(orig, repo, *args, **opts):
     res = orig(repo, *args, **opts)
-    writedistance(repo)
+    invalidatedistancecache(repo)
     return res
 
 def exsetcurrent(orig, repo, mark):
     res = orig(repo, mark)
-    writedistance(repo)
+    invalidatedistancecache(repo)
     return res
 
 
@@ -223,12 +223,12 @@ def exrebase(orig, ui, repo, **opts):
 
 def exstrip(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
-    writedistance(repo)
+    invalidatedistancecache(repo)
     return ret
 
 def exhistedit(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
-    writedistance(repo)
+    invalidatedistancecache(repo)
     return ret
 
 def expaths(orig, ui, repo, *args, **opts):
@@ -251,7 +251,7 @@ def expaths(orig, ui, repo, *args, **opts):
                 f.write(line)
         f.close()
         saveremotenames(repo, delete)
-        writedistance(repo)
+        invalidatedistancecache(repo)
         return
 
     if add:
@@ -678,7 +678,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
                 tracking[arg] = track
             _writetracking(repo, tracking)
             # update the cache
-            writedistance(repo)
+            invalidatedistancecache(repo)
 
         # also remove tracking for a deleted bookmark, if it exists
         if delete:
