@@ -228,7 +228,11 @@ if sys.platform == 'darwin':
         try:
             return encoding.asciilower(path)  # exception for non-ASCII
         except UnicodeDecodeError:
-            pass
+            return normcasefallback(path)
+
+    normcasespec = encoding.normcasespecs.lower
+
+    def normcasefallback(path):
         try:
             u = path.decode('utf-8')
         except UnicodeDecodeError:
