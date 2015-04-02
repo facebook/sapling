@@ -41,39 +41,7 @@ Note that a filter is nothing more than a function call, i.e.
 
 In addition to filters, there are some basic built-in functions:
 
-- date(date[, fmt])
-
-- diff([includepattern [, excludepattern]])
-
-- fill(text[, width])
-
-- get(dict, key)
-
-- if(expr, then[, else])
-
-- ifcontains(expr, expr, then[, else])
-
-- ifeq(expr, expr, then[, else])
-
-- join(list, sep)
-
-- label(label, expr)
-
-- pad(text, width[, fillchar, right])
-
-- revset(query[, formatargs])
-
-- rstdoc(text, style)
-
-- shortest(node)
-
-- startswith(string, text)
-
-- strip(text[, chars])
-
-- sub(pat, repl, expr)
-
-- word(number, text[, separator])
+.. functionsmarker
 
 Also, for any expression that returns a list, there is a list operator:
 

@@ -9,6 +9,7 @@ from i18n import gettext, _
 import itertools, os, textwrap
 import error
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
+import templater
 import encoding, util, minirst
 import cmdutil
 import hgweb.webcommands as webcommands
@@ -209,6 +210,7 @@ addtopicsymbols('merge-tools', '.. internaltoolsmarker',
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.dockeywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
+addtopicsymbols('templates', '.. functionsmarker', templater.funcs)
 addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands,
                 dedent=True)
 
