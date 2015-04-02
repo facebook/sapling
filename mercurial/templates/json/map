@@ -29,7 +29,27 @@ changesetbranch = '{name|json}'
 changesetbookmark = '{bookmark|json}'
 changesettag = '{tag|json}'
 changesetparent = '{node|json}'
-manifest = '"not yet implemented"'
+manifest = '\{
+  "node": {node|json},
+  "abspath": {path|json},
+  "directories": [{join(dentries%direntry, ", ")}],
+  "files": [{join(fentries%fileentry, ", ")}],
+  "bookmarks": [{join(bookmarks%name, ", ")}],
+  "tags": [{join(tags%name, ", ")}]
+  }'
+name = '{name|json}'
+direntry = '\{
+  "abspath": {path|json},
+  "basename": {basename|json},
+  "emptydirs": {emptydirs|json}
+  }'
+fileentry = '\{
+  "abspath": {file|json},
+  "basename": {basename|json},
+  "date": {date|json},
+  "size": {size|json},
+  "flags": {permissions|json}
+  }'
 tags = '\{
   "node": {node|json},
   "tags": [{join(entriesnotip%tagentry, ", ")}]

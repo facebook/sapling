@@ -119,10 +119,46 @@ file/{revision}/{path} shows file revision
 
 file/{revision} shows root directory info
 
-  $ request json-file/06e557f3edf6
+  $ request json-file/cc725e08502a
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "abspath": "/",
+    "bookmarks": [],
+    "directories": [
+      {
+        "abspath": "/da",
+        "basename": "da",
+        "emptydirs": ""
+      }
+    ],
+    "files": [
+      {
+        "abspath": ".hgtags",
+        "basename": ".hgtags",
+        "date": [
+          0.0,
+          0
+        ],
+        "flags": "",
+        "size": 92
+      },
+      {
+        "abspath": "foo-new",
+        "basename": "foo-new",
+        "date": [
+          0.0,
+          0
+        ],
+        "flags": "",
+        "size": 4
+      }
+    ],
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+    "tags": [
+      "tip"
+    ]
+  }
 
 changelog/ shows information about several changesets
 
@@ -522,7 +558,31 @@ manifest/{revision}/{path} shows info about a directory at a revision
   $ request json-manifest/06e557f3edf6/
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "abspath": "/",
+    "bookmarks": [],
+    "directories": [
+      {
+        "abspath": "/da",
+        "basename": "da",
+        "emptydirs": ""
+      }
+    ],
+    "files": [
+      {
+        "abspath": "foo",
+        "basename": "foo",
+        "date": [
+          0.0,
+          0
+        ],
+        "flags": "",
+        "size": 4
+      }
+    ],
+    "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+    "tags": []
+  }
 
 tags/ shows tags info
 
