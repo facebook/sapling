@@ -1002,7 +1002,7 @@ since we ignore the staging area
   $ cd s
   $ rm snake.python
 (remove leftover .hg so Mercurial doesn't look for a root here)
-  $ rm -r .hg
+  $ rm -rf .hg
   $ hg status --subrepos --all .
   R snake.python
   ? barfoo
