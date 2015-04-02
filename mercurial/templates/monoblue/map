@@ -103,7 +103,7 @@ annotateline = '
 difflineplus = '<span class="difflineplus"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
 difflineminus = '<span class="difflineminus"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
 difflineat = '<span class="difflineat"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
-diffline = '<a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}'
+diffline = '<span><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
 
 comparisonblock ='
   <tbody class="block">
