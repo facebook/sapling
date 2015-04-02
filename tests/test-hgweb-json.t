@@ -1003,4 +1003,7 @@ help/{topic} shows an individual help topic
   $ request json-help/phases
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "rawdoc": "Working with Phases\n*", (glob)
+    "topic": "phases"
+  }

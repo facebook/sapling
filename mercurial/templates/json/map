@@ -92,6 +92,9 @@ helptopicentry = '\{
   "topic": {topic|json},
   "summary": {summary|json}
   }'
-help = '"not yet implemented"'
+help = '\{
+  "topic": {topic|json},
+  "rawdoc": {doc|json}
+  }'
 filenodelink = ''
 filenolink = ''
