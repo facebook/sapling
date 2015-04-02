@@ -130,3 +130,59 @@ Test pushrev configuration option
   abort: push would create new anonymous heads (7481df5f123a)
   (use --force to override this warning)
   [255]
+
+Test traditional push with subrepo
+
+  $ cd ../repo1
+  $ hg init nested
+  $ cd nested
+  $ hg bookmark @
+  $ cd ..
+  $ cd ../repo2
+  $ hg init nested
+  $ cd nested
+  $ echo a > a
+  $ hg commit -qAm 'aa'
+  $ hg bookmark @
+  $ cd ..
+  $ echo nested=nested > .hgsub
+  $ hg add .hgsub
+  $ hg commit -m sub
+  $ hg push
+  pushing to ssh://user@dummy/repo1
+  pushing subrepo nested to ssh://user@dummy/repo1/nested
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  updating bookmark @
+  searching for changes
+  abort: push would create new anonymous heads (296c645d2a63)
+  (use --force to override this warning)
+  [255]
+  $ hg bookmark @
+  $ hg push
+  pushing to ssh://user@dummy/repo1
+  no changes made to subrepo nested since last push to ssh://user@dummy/repo1/nested
+  searching for changes
+  abort: push would create new anonymous heads (296c645d2a63)
+  (use --force to override this warning)
+  [255]
+  $ hg push --to @
+  pushing rev 296c645d2a63 to destination ssh://user@dummy/repo1 bookmark @
+  searching for changes
+  abort: not creating new bookmark
+  (use --force to create a new bookmark)
+  [255]
+  $ hg push -B @
+  pushing to ssh://user@dummy/repo1
+  no changes made to subrepo nested since last push to ssh://user@dummy/repo1/nested
+  searching for changes
+  remote has heads on branch 'default' that are not known locally: 2d95304fed5d
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 3 changes to 3 files (+1 heads)
+  exporting bookmark @
+
