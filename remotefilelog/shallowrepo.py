@@ -26,6 +26,13 @@ def wraprepo(repo):
                      repo.ui.config("remotefilelog", "fallbackrepo",
                        repo.ui.config("paths", "default")))
 
+        def sparsematch(self, *revs):
+            baseinstance = super(shallowrepository, self)
+            if util.safehasattr(baseinstance, 'sparsematch'):
+                return baseinstance.sparsematch(*revs)
+
+            return None
+
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]
@@ -91,6 +98,7 @@ def wraprepo(repo):
                 ctx = repo[rev]
                 if pats:
                     m = scmutil.match(ctx, pats, opts)
+                sparsematch = repo.sparsematch(rev)
 
                 mfnode = ctx.manifestnode()
                 mfrev = mf.rev(mfnode)
@@ -103,7 +111,11 @@ def wraprepo(repo):
                 else:
                     mfdict = mf.read(mfnode)
 
-                diff = (pf for pf in mfdict.iteritems() if not pats or m(pf[0]))
+                diff = mfdict.iteritems()
+                if pats:
+                    diff = (pf for pf in diff if m(pf[0]))
+                if sparsematch:
+                    diff = (pf for pf in diff if sparsematch(pf[0]))
                 if rev not in localrevs:
                     serverfiles.update(diff)
                 else:

@@ -171,14 +171,20 @@ def onetimeclientsetup(ui):
     wrapfunction(merge, 'applyupdates', applyupdates)
 
     # prefetch files before mergecopies check
-    def computenonoverlap(orig, repo, m1, m2, addedinm1, addedinm2):
-        u1, u2 = orig(repo, m1, m2, addedinm1, addedinm2)
+    def computenonoverlap(orig, repo, c1, c2, addedinm1, addedinm2):
+        u1, u2 = orig(repo, c1, c2, addedinm1, addedinm2)
         if shallowrepo.requirement in repo.requirements:
+            m1 = c1.manifest()
+            m2 = c2.manifest()
+            sparsematch1 = repo.sparsematch(c1.rev())
             files = []
             for f in u1:
-                files.append((f, hex(m1[f])))
+                if not sparsematch1 or sparsematch1(f):
+                    files.append((f, hex(m1[f])))
+            sparsematch2 = repo.sparsematch(c2.rev())
             for f in u2:
-                files.append((f, hex(m2[f])))
+                if not sparsematch2 or sparsematch2(f):
+                    files.append((f, hex(m2[f])))
 
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
@@ -192,9 +198,11 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             mb = b.manifest()
 
+            sparsematch = repo.sparsematch(b.rev())
             files = []
             for f in missing:
-                files.append((f, hex(mb[f])))
+                if not sparsematch or sparsematch(f):
+                    files.append((f, hex(mb[f])))
 
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
@@ -590,9 +598,11 @@ def _revertprefetch(orig, repo, ctx, *files):
     if shallowrepo.requirement in repo.requirements:
         allfiles = []
         mf = ctx.manifest()
+        sparsematch = repo.sparsematch(ctx.rev())
         for f in files:
             for path in f:
-                allfiles.append((path, hex(mf[path])))
+                if not sparsematch or sparsematch(path):
+                    allfiles.append((path, hex(mf[path])))
         repo.fileservice.prefetch(allfiles)
     return orig(repo, ctx, *files)
 
