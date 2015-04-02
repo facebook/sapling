@@ -717,7 +717,286 @@ help/ shows help topics
   $ request json-help
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "earlycommands": [
+      {
+        "summary": "add the specified files on the next commit",
+        "topic": "add"
+      },
+      {
+        "summary": "show changeset information by line for each file",
+        "topic": "annotate"
+      },
+      {
+        "summary": "make a copy of an existing repository",
+        "topic": "clone"
+      },
+      {
+        "summary": "commit the specified files or all outstanding changes",
+        "topic": "commit"
+      },
+      {
+        "summary": "diff repository (or selected files)",
+        "topic": "diff"
+      },
+      {
+        "summary": "dump the header and diffs for one or more changesets",
+        "topic": "export"
+      },
+      {
+        "summary": "forget the specified files on the next commit",
+        "topic": "forget"
+      },
+      {
+        "summary": "create a new repository in the given directory",
+        "topic": "init"
+      },
+      {
+        "summary": "show revision history of entire repository or files",
+        "topic": "log"
+      },
+      {
+        "summary": "merge another revision into working directory",
+        "topic": "merge"
+      },
+      {
+        "summary": "pull changes from the specified source",
+        "topic": "pull"
+      },
+      {
+        "summary": "push changes to the specified destination",
+        "topic": "push"
+      },
+      {
+        "summary": "remove the specified files on the next commit",
+        "topic": "remove"
+      },
+      {
+        "summary": "start stand-alone webserver",
+        "topic": "serve"
+      },
+      {
+        "summary": "show changed files in the working directory",
+        "topic": "status"
+      },
+      {
+        "summary": "summarize working directory state",
+        "topic": "summary"
+      },
+      {
+        "summary": "update working directory (or switch revisions)",
+        "topic": "update"
+      }
+    ],
+    "othercommands": [
+      {
+        "summary": "add all new files, delete all missing files",
+        "topic": "addremove"
+      },
+      {
+        "summary": "create an unversioned archive of a repository revision",
+        "topic": "archive"
+      },
+      {
+        "summary": "reverse effect of earlier changeset",
+        "topic": "backout"
+      },
+      {
+        "summary": "subdivision search of changesets",
+        "topic": "bisect"
+      },
+      {
+        "summary": "create a new bookmark or list existing bookmarks",
+        "topic": "bookmarks"
+      },
+      {
+        "summary": "set or show the current branch name",
+        "topic": "branch"
+      },
+      {
+        "summary": "list repository named branches",
+        "topic": "branches"
+      },
+      {
+        "summary": "create a changegroup file",
+        "topic": "bundle"
+      },
+      {
+        "summary": "output the current or given revision of files",
+        "topic": "cat"
+      },
+      {
+        "summary": "show combined config settings from all hgrc files",
+        "topic": "config"
+      },
+      {
+        "summary": "mark files as copied for the next commit",
+        "topic": "copy"
+      },
+      {
+        "summary": "list tracked files",
+        "topic": "files"
+      },
+      {
+        "summary": "copy changes from other branches onto the current branch",
+        "topic": "graft"
+      },
+      {
+        "summary": "search for a pattern in specified files and revisions",
+        "topic": "grep"
+      },
+      {
+        "summary": "show branch heads",
+        "topic": "heads"
+      },
+      {
+        "summary": "show help for a given topic or a help overview",
+        "topic": "help"
+      },
+      {
+        "summary": "identify the working directory or specified revision",
+        "topic": "identify"
+      },
+      {
+        "summary": "import an ordered set of patches",
+        "topic": "import"
+      },
+      {
+        "summary": "show new changesets found in source",
+        "topic": "incoming"
+      },
+      {
+        "summary": "output the current or given revision of the project manifest",
+        "topic": "manifest"
+      },
+      {
+        "summary": "show changesets not found in the destination",
+        "topic": "outgoing"
+      },
+      {
+        "summary": "show aliases for remote repositories",
+        "topic": "paths"
+      },
+      {
+        "summary": "set or show the current phase name",
+        "topic": "phase"
+      },
+      {
+        "summary": "roll back an interrupted transaction",
+        "topic": "recover"
+      },
+      {
+        "summary": "rename files; equivalent of copy + remove",
+        "topic": "rename"
+      },
+      {
+        "summary": "redo merges or set/view the merge status of files",
+        "topic": "resolve"
+      },
+      {
+        "summary": "restore files to their checkout state",
+        "topic": "revert"
+      },
+      {
+        "summary": "print the root (top) of the current working directory",
+        "topic": "root"
+      },
+      {
+        "summary": "add one or more tags for the current or given revision",
+        "topic": "tag"
+      },
+      {
+        "summary": "list repository tags",
+        "topic": "tags"
+      },
+      {
+        "summary": "apply one or more changegroup files",
+        "topic": "unbundle"
+      },
+      {
+        "summary": "verify the integrity of the repository",
+        "topic": "verify"
+      },
+      {
+        "summary": "output version and copyright information",
+        "topic": "version"
+      }
+    ],
+    "topics": [
+      {
+        "summary": "Configuration Files",
+        "topic": "config"
+      },
+      {
+        "summary": "Date Formats",
+        "topic": "dates"
+      },
+      {
+        "summary": "Diff Formats",
+        "topic": "diffs"
+      },
+      {
+        "summary": "Environment Variables",
+        "topic": "environment"
+      },
+      {
+        "summary": "Using Additional Features",
+        "topic": "extensions"
+      },
+      {
+        "summary": "Specifying File Sets",
+        "topic": "filesets"
+      },
+      {
+        "summary": "Glossary",
+        "topic": "glossary"
+      },
+      {
+        "summary": "Syntax for Mercurial Ignore Files",
+        "topic": "hgignore"
+      },
+      {
+        "summary": "Configuring hgweb",
+        "topic": "hgweb"
+      },
+      {
+        "summary": "Merge Tools",
+        "topic": "merge-tools"
+      },
+      {
+        "summary": "Specifying Multiple Revisions",
+        "topic": "multirevs"
+      },
+      {
+        "summary": "File Name Patterns",
+        "topic": "patterns"
+      },
+      {
+        "summary": "Working with Phases",
+        "topic": "phases"
+      },
+      {
+        "summary": "Specifying Single Revisions",
+        "topic": "revisions"
+      },
+      {
+        "summary": "Specifying Revision Sets",
+        "topic": "revsets"
+      },
+      {
+        "summary": "Subrepositories",
+        "topic": "subrepos"
+      },
+      {
+        "summary": "Template Usage",
+        "topic": "templating"
+      },
+      {
+        "summary": "URL Paths",
+        "topic": "urls"
+      }
+    ]
+  }
 
 help/{topic} shows an individual help topic
 

@@ -83,7 +83,15 @@ filecomparison = '"not yet implemented"'
 fileannotate = '"not yet implemented"'
 filelog = '"not yet implemented"'
 graph = '"not yet implemented"'
-helptopics = '"not yet implemented"'
+helptopics = '\{
+  "topics": [{join(topics%helptopicentry, ", ")}],
+  "earlycommands": [{join(earlycommands%helptopicentry, ", ")}],
+  "othercommands": [{join(othercommands%helptopicentry, ", ")}]
+  }'
+helptopicentry = '\{
+  "topic": {topic|json},
+  "summary": {summary|json}
+  }'
 help = '"not yet implemented"'
 filenodelink = ''
 filenolink = ''
