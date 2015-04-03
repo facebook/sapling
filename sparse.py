@@ -249,6 +249,10 @@ def _wraprepo(ui, repo):
                         continue
                     visited.add(profile)
 
+                    if not profile in ctx:
+                        repo.ui.warn("warning: sparse profile '%s' not found "
+                            "in rev %s - ignoring it\n" % (profile, ctx))
+                        continue
                     raw = repo.filectx(profile, changeid=rev).data()
                     pincludes, pexcludes, subprofs = \
                         self.readsparseconfig(raw)

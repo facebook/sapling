@@ -176,3 +176,21 @@ Verify resolving conflict removes the temporary union too
   index.html
   readme.txt
   webpage.sparse
+
+Test checking out a commit that does not contain the sparse profile
+
+  $ hg sparse --reset
+  $ hg rm *.sparse
+  $ hg commit -m "delete profiles"
+  $ hg up -q .^
+  $ hg sparse --enable-profile backend.sparse
+  $ ls
+  index.html
+  readme.txt
+  $ hg up tip
+  warning: sparse profile 'backend.sparse' not found in rev fc8633b149dc - ignoring it
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ ls
+  data.py
+  index.html
+  readme.txt
