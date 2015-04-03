@@ -38,7 +38,8 @@ def _getstatichidden(repo):
     if hidden:
         getphase = repo._phasecache.phase
         getparentrevs = repo.changelog.parentrevs
-        heap = [-r for r in repo.changelog.headrevs()]
+        # Skip heads which are public (guaranteed to not be hidden)
+        heap = [-r for r in repo.changelog.headrevs() if getphase(repo, r)]
         heapq.heapify(heap)
         heappop = heapq.heappop
         heappush = heapq.heappush
