@@ -189,14 +189,25 @@ def perfdirstatedirs(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfdirstatefoldmap')
-def perffoldmap(ui, repo):
+@command('perffilefoldmap')
+def perffilefoldmap(ui, repo):
     timer, fm = gettimer(ui)
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
-        dirstate._foldmap.get('a')
-        del dirstate._foldmap
+        dirstate._filefoldmap.get('a')
+        del dirstate._filefoldmap
+    timer(d)
+    fm.end()
+
+@command('perfdirfoldmap')
+def perfdirfoldmap(ui, repo):
+    timer, fm = gettimer(ui)
+    dirstate = repo.dirstate
+    'a' in dirstate
+    def d():
+        dirstate._dirfoldmap.get('a')
+        del dirstate._dirfoldmap
         del dirstate._dirs
     timer(d)
     fm.end()
