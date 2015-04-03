@@ -118,6 +118,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	  hgext/*.py hgext/*/__init__.py \
 	  mercurial/fileset.py mercurial/revset.py \
 	  mercurial/templatefilters.py mercurial/templatekw.py \
+	  mercurial/templater.py \
 	  mercurial/filemerge.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain

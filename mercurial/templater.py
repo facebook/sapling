@@ -793,3 +793,6 @@ def stylemap(styles, paths=None):
                     return style, mapfile
 
     raise RuntimeError("No hgweb templates found in %r" % paths)
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = funcs.values()
