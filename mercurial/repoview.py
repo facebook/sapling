@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import collections
+import heapq
 import copy
 import error
 import phases
@@ -39,9 +39,13 @@ def _getstatichidden(repo):
         actuallyhidden = {}
         getphase = repo._phasecache.phase
         getparentrevs = repo.changelog.parentrevs
-        queue = collections.deque((r, False) for r in repo.changelog.headrevs())
-        while queue:
-            rev, blocked = queue.popleft()
+        heap = [(-r, False) for r in repo.changelog.headrevs()]
+        heapq.heapify(heap)
+        heappop = heapq.heappop
+        heappush = heapq.heappush
+        while heap:
+            rev, blocked = heappop(heap)
+            rev = - rev
             phase = getphase(repo, rev)
             # Skip nodes which are public (guaranteed to not be hidden) and
             # nodes which have already been processed and won't be blocked by
@@ -57,7 +61,7 @@ def _getstatichidden(repo):
                 blocked = True
 
             for parent in (p for p in getparentrevs(rev) if p != nullrev):
-                queue.append((parent, blocked))
+                heappush(heap, (- parent, blocked))
     return set(rev for rev, hidden in actuallyhidden.iteritems() if hidden)
 
 def _getdynamicblockers(repo):
