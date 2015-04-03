@@ -43,6 +43,7 @@ def _getstatichidden(repo):
         heapq.heapify(heap)
         heappop = heapq.heappop
         heappush = heapq.heappush
+        seen = set() # no need to init it with heads, they have no children
         while heap:
             rev = -heappop(heap)
             # All children have been processed so at that point, if no children
@@ -54,8 +55,11 @@ def _getstatichidden(repo):
                 if blocker:
                     # If visible, ensure parent will be visible too
                     hidden.discard(parent)
-                # Skip nodes which are public (guaranteed to not be hidden)
-                if getphase(repo, rev):
+                # - Avoid adding the same revision twice
+                # - Skip nodes which are public (guaranteed to not be hidden)
+                pre = len(seen)
+                seen.add(parent)
+                if pre < len(seen) and getphase(repo, rev):
                     heappush(heap, -parent)
     return hidden
 
