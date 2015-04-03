@@ -343,6 +343,7 @@ Test archiving to zip file (unzip output is unstable):
 Test archiving a revision that references a subrepo that is not yet
 cloned:
 
+#if hardlink
   $ hg clone -U . ../empty
   \r (no-eol) (esc)
   linking [ <=>                                           ] 1\r (no-eol) (esc)
@@ -354,7 +355,14 @@ cloned:
   linking [       <=>                                     ] 7\r (no-eol) (esc)
   linking [        <=>                                    ] 8\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+#else
+  $ hg clone -U . ../empty
+  \r (no-eol) (esc)
+  linking [ <=>                                           ] 1 (no-eol)
+#endif
+
   $ cd ../empty
+#if hardlink
   $ hg archive --subrepos -r tip ../archive.tar.gz
   \r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
@@ -402,6 +410,29 @@ cloned:
                                                               \r (no-eol) (esc)
   cloning subrepo foo from $TESTTMP/repo/foo
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
+#else
+Note there's a slight output glitch on non-hardlink systems: the last
+"linking" progress topic never gets closed, leading to slight output corruption on that platform.
+  $ hg archive --subrepos -r tip ../archive.tar.gz
+  \r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  linking [ <=>                                           ] 1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  linking [  <=>                                          ] 1cloning subrepo foo from $TESTTMP/repo/foo
+  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
+#endif
 
 The newly cloned subrepos contain no working copy:
 
