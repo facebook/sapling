@@ -92,7 +92,7 @@ class gitdirstate(dirstate.dirstate):
             if name == 'ignore' or name.startswith('ignore.'):
                   files.append(util.expandpath(path))
         patterns = []
-        # Only use .gitignore if there's no .hgignore 
+        # Only use .gitignore if there's no .hgignore
         try:
             fp = open(files[0])
             fp.close()
@@ -109,10 +109,10 @@ class gitdirstate(dirstate.dirstate):
                     self._ui.warn("%s: %s\n" % (fn, warning))
                 patterns.extend(pats)
         return ignore.ignore(self._root, files, self._ui.warn, extrapatterns=patterns)
-    
+
     def _finddotgitignores(self):
         """A copy of dirstate.walk. This is called from the new _ignore method,
-        which is called by dirstate.walk, which would cause infinite recursion, 
+        which is called by dirstate.walk, which would cause infinite recursion,
         except _finddotgitignores calls the superclass _ignore directly."""
         match = matchmod.match(self._root, self.getcwd(), ['relglob:.gitignore'])
         #TODO: need subrepos?
