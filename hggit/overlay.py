@@ -190,7 +190,10 @@ class overlaychangectx(context.changectx):
         return self.commit.message
 
     def parents(self):
-        return [overlaychangectx(self.repo, sha) for sha in self.commit.parents]
+        parents = self.commit.parents
+        if not parents:
+            return [self.repo['null']]
+        return [overlaychangectx(self.repo, sha) for sha in parents]
 
     def manifestnode(self):
         return bin(self.commit.tree)
