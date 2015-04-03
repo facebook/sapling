@@ -34,35 +34,30 @@ def _getstatichidden(repo):
 
     """
     assert not repo.changelog.filteredrevs
-    hideable = hideablerevs(repo)
-    if hideable:
-        actuallyhidden = {}
+    hidden = set(hideablerevs(repo))
+    if hidden:
         getphase = repo._phasecache.phase
         getparentrevs = repo.changelog.parentrevs
-        heap = [(-r, False) for r in repo.changelog.headrevs()]
+        heap = [-r for r in repo.changelog.headrevs()]
         heapq.heapify(heap)
         heappop = heapq.heappop
         heappush = heapq.heappush
         while heap:
-            rev, blocked = heappop(heap)
-            rev = - rev
-            phase = getphase(repo, rev)
-            # Skip nodes which are public (guaranteed to not be hidden) and
-            # nodes which have already been processed and won't be blocked by
-            # the previous node.
-            if phase == 0 or (not blocked and rev in actuallyhidden):
+            rev = -heappop(heap)
+            # Skip nodes which are public (guaranteed to not be hidden)
+            if not getphase(repo, rev):
                 continue
-            if rev in hideable:
-                if blocked:
-                    actuallyhidden[rev] = False
-                else:
-                    actuallyhidden.setdefault(rev, True)
-            else:
-                blocked = True
-
-            for parent in (p for p in getparentrevs(rev) if p != nullrev):
-                heappush(heap, (- parent, blocked))
-    return set(rev for rev, hidden in actuallyhidden.iteritems() if hidden)
+            # All children have been processed so at that point, if no children
+            # removed 'rev' from the 'hidden' set, 'rev' is going to be hidden.
+            blocker = rev not in hidden
+            for parent in getparentrevs(rev):
+                if parent == nullrev:
+                    continue
+                if blocker:
+                    # If visible, ensure parent will be visible too
+                    hidden.discard(parent)
+                heappush(heap, -parent)
+    return hidden
 
 def _getdynamicblockers(repo):
     """Non-cacheable revisions blocking hidden changesets from being filtered.
