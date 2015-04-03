@@ -79,7 +79,7 @@ def validaterevset(repo, revset):
 def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if not outgoing.missing:
         raise util.Abort(_('no commits to rebase'))
-    
+
     if rebaseparttype not in bundle2.bundle2caps(peer):
         raise util.Abort(_('no server support for %r') % rebaseparttype)
 
@@ -108,7 +108,7 @@ def _checkheads(orig, repo, remote, *args, **kwargs):
         return
     else:
         return orig(repo, remote, *args, **kwargs)
-    
+
 def _push(orig, ui, repo, *args, **opts):
     oldonto = ui.backupconfig(experimental, configonto)
     oldphasemove = None
@@ -132,7 +132,7 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
     Since these are going to be mutated on the server, they aren't really being
     published, their successors are.  If we mark these as public now, hg evolve
     will refuse to fix them for us later."""
-    
+
     if phase != phases.public:
         orig(pushop, nodes, phase)
 
@@ -160,7 +160,7 @@ def partgen(pushop, bundler):
         pushop.ui.note(_('no changes to push'))
         pushop.cgresult = 0
         return
-    
+
     rebasepart = getrebasepart(pushop.repo,
                                pushop.remote,
                                pushop.outgoing,
@@ -181,7 +181,7 @@ def _makebundlefile(part):
     """constructs a temporary bundle file
 
     part.data should be an uncompressed v1 changegroup"""
-    
+
     fp = None
     fd, bundlefile = tempfile.mkstemp()
     try: # guards bundlefile
@@ -221,8 +221,8 @@ def _getrevs(bundle, onto):
 
         # Is there a more efficient way to do this check?
         files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
-        commonmanifest = tail.p1().manifest().intersectfiles(files)
-        ontomanifest = onto.manifest().intersectfiles(files)
+        commonmanifest = tail.p1().manifest()._intersectfiles(files)
+        ontomanifest = onto.manifest()._intersectfiles(files)
         conflicts = ontomanifest.diff(commonmanifest).keys()
         if conflicts:
             raise util.Abort(_('conflicting changes in %r') % conflicts)
@@ -259,7 +259,7 @@ def _addpushbackchangegroup(repo, reply, outgoing):
     if not cgversions:
         cgversions.add('01')
     version = max(cgversions & set(changegroup.packermap.keys()))
-    
+
     cg = changegroup.getlocalchangegroupraw(repo,
                                             'rebase:reply',
                                             outgoing,
@@ -363,7 +363,7 @@ def bundle2pushkey(orig, op, part):
                              for record
                              in op.records[rebaseparttype]],
                             []))
-    
+
     namespace = pushkey.decode(part.params['namespace'])
     if namespace == 'phases':
         key = pushkey.decode(part.params['key'])
