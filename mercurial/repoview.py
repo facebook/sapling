@@ -23,10 +23,16 @@ def hideablerevs(repo):
     return obsolete.getrevs(repo, 'obsolete')
 
 def _getstatichidden(repo):
-    """Cacheable revisions blocking hidden changesets from being filtered.
+    """Revision to be hidden (disregarding dynamic blocker)
 
-    Additional non-cached hidden blockers are computed in _getdynamicblockers.
-    This is a standalone function to help extensions to wrap it."""
+    To keep a consistent graph, we cannot hide any revisions with
+    non-hidden descendants. This function computes the set of
+    revisions that could be hidden while keeping the graph consistent.
+
+    A second pass will be done to apply "dynamic blocker" like bookmarks or
+    working directory parents.
+
+    """
     assert not repo.changelog.filteredrevs
     hideable = hideablerevs(repo)
     if hideable:
