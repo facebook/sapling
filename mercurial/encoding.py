@@ -364,7 +364,9 @@ class normcasespecs(object):
 
     lower: normcase lowercases ASCII strings
     upper: normcase uppercases ASCII strings
-    other: the fallback function should always be called'''
+    other: the fallback function should always be called
+
+    This should be kept in sync with normcase_spec in util.h.'''
     lower = -1
     upper = 1
     other = 0

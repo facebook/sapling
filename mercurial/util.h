@@ -209,6 +209,13 @@ static inline double getbefloat64(const char *c)
 	return ret;
 }
 
+/* This should be kept in sync with normcasespecs in encoding.py. */
+enum normcase_spec {
+	NORMCASE_LOWER = -1,
+	NORMCASE_UPPER = 1,
+	NORMCASE_OTHER = 0
+};
+
 #define MIN(a, b) (((a)<(b))?(a):(b))
 /* VC9 doesn't include bool and lacks stdbool.h based on my searching */
 #ifdef _MSC_VER
