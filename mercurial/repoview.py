@@ -45,9 +45,6 @@ def _getstatichidden(repo):
         heappush = heapq.heappush
         while heap:
             rev = -heappop(heap)
-            # Skip nodes which are public (guaranteed to not be hidden)
-            if not getphase(repo, rev):
-                continue
             # All children have been processed so at that point, if no children
             # removed 'rev' from the 'hidden' set, 'rev' is going to be hidden.
             blocker = rev not in hidden
@@ -57,7 +54,9 @@ def _getstatichidden(repo):
                 if blocker:
                     # If visible, ensure parent will be visible too
                     hidden.discard(parent)
-                heappush(heap, -parent)
+                # Skip nodes which are public (guaranteed to not be hidden)
+                if getphase(repo, rev):
+                    heappush(heap, -parent)
     return hidden
 
 def _getdynamicblockers(repo):
