@@ -117,15 +117,11 @@ def catcommit(ui, repo, n, prefix, ctx=None):
 
     date = ctx.date()
     description = ctx.description().replace("\0", "")
-    lines = description.splitlines()
-    if lines and lines[-1].startswith('committer:'):
-        committer = lines[-1].split(': ')[1].rstrip()
-    else:
-        committer = ""
-
     ui.write(("author %s %s %s\n" % (ctx.user(), int(date[0]), date[1])))
-    if committer != '':
-        ui.write(("committer %s %s %s\n" % (committer, int(date[0]), date[1])))
+
+    if 'committer' in ctx.extra():
+        ui.write(("committer %s\n" % ctx.extra()['committer']))
+
     ui.write(("revision %d\n" % ctx.rev()))
     ui.write(("branch %s\n" % ctx.branch()))
     if obsolete.isenabled(repo, obsolete.createmarkersopt):

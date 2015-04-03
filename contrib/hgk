@@ -2516,6 +2516,9 @@ proc selectline {l isnew} {
     }
     $ctext insert end "User: [lindex $info 1]\n"
     $ctext insert end "Date: [lindex $info 2]\n"
+    if {[lindex $info 3] ne ""} {
+	$ctext insert end "Committer: [lindex $info 3]\n"
+    }
     if {[info exists idbookmarks($id)]} {
 	$ctext insert end "Bookmarks:"
 	foreach bookmark $idbookmarks($id) {
