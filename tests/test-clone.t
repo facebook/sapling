@@ -76,6 +76,14 @@ No update, with debug option:
   linked 8 files
 #else
   $ hg --debug clone -U . ../c
+  linking: 1
+  copying: 2
+  copying: 3
+  copying: 4
+  copying: 5
+  copying: 6
+  copying: 7
+  copying: 8
   copied 8 files
 #endif
   $ cd ../c
