@@ -445,9 +445,9 @@ class vfs(abstractvfs):
         else:
             self.write(dst, src)
 
-    def join(self, path):
+    def join(self, path, *insidef):
         if path:
-            return os.path.join(self.base, path)
+            return os.path.join(self.base, path, *insidef)
         else:
             return self.base
 
@@ -475,9 +475,9 @@ class filtervfs(abstractvfs, auditvfs):
     def __call__(self, path, *args, **kwargs):
         return self.vfs(self._filter(path), *args, **kwargs)
 
-    def join(self, path):
+    def join(self, path, *insidef):
         if path:
-            return self.vfs.join(self._filter(path))
+            return self.vfs.join(self._filter(self.vfs.reljoin(path, *insidef)))
         else:
             return self.vfs.join(path)
 
