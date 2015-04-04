@@ -147,6 +147,34 @@ qnew should fail while we're in the middle of the edit step
   $ hg cat e
   a
 
+Stripping necessary commits should not break --abort
+
+  $ hg histedit 1a60820cd1f6 --commands - 2>&1 << EOF| fixbundle
+  > edit 1a60820cd1f6 wat
+  > pick a5e1ba2f7afb foobaz
+  > pick b5f70786f9b0 g
+  > EOF
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+
+  $ mv .hg/histedit-state .hg/histedit-state.bak
+  $ hg strip -q -r b5f70786f9b0
+  $ mv .hg/histedit-state.bak .hg/histedit-state
+  $ hg histedit --abort
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 3 files
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r .
+  changeset:   6:b5f70786f9b0
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     f
+  
+
 check histedit_source
 
   $ hg log --debug --rev 5

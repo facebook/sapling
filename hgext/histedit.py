@@ -163,8 +163,10 @@ import sys
 from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
+from mercurial import changegroup
 from mercurial import copies
 from mercurial import context
+from mercurial import exchange
 from mercurial import extensions
 from mercurial import hg
 from mercurial import node
@@ -206,6 +208,7 @@ class histeditstate(object):
         self.parentctxnode = parentctxnode
         self.lock = lock
         self.wlock = wlock
+        self.backupfile = None
         if replacements is None:
             self.replacements = []
         else:
@@ -223,15 +226,17 @@ class histeditstate(object):
         try:
             data = pickle.load(fp)
             parentctxnode, rules, keep, topmost, replacements = data
+            backupfile = None
         except pickle.UnpicklingError:
             data = self._load()
-            parentctxnode, rules, keep, topmost, replacements = data
+            parentctxnode, rules, keep, topmost, replacements, backupfile = data
 
         self.parentctxnode = parentctxnode
         self.rules = rules
         self.keep = keep
         self.topmost = topmost
         self.replacements = replacements
+        self.backupfile = backupfile
 
     def write(self):
         fp = self.repo.vfs('histedit-state', 'w')
@@ -246,6 +251,7 @@ class histeditstate(object):
         for replacement in self.replacements:
             fp.write('%s%s\n' % (node.hex(replacement[0]), ''.join(node.hex(r)
                 for r in replacement[1])))
+        fp.write('%s\n' % self.backupfile)
         fp.close()
 
     def _load(self):
@@ -288,9 +294,12 @@ class histeditstate(object):
             replacements.append((original, succ))
             index += 1
 
+        backupfile = lines[index]
+        index += 1
+
         fp.close()
 
-        return parentctxnode, rules, keep, topmost, replacements
+        return parentctxnode, rules, keep, topmost, replacements, backupfile
 
     def clear(self):
         self.repo.vfs.unlink('histedit-state')
@@ -695,6 +704,16 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.read()
         mapping, tmpnodes, leafs, _ntm = processreplacement(state)
         ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
+
+        # Recover our old commits if necessary
+        if not state.topmost in repo and state.backupfile:
+            backupfile = repo.join(state.backupfile)
+            f = hg.openpath(ui, backupfile)
+            gen = exchange.readbundle(ui, f, backupfile)
+            changegroup.addchangegroup(repo, gen, 'histedit',
+                                       'bundle:' + backupfile)
+            os.remove(backupfile)
+
         # check whether we should update away
         parentnodes = [c.node() for c in repo[None].parents()]
         for n in leafs | set([state.parentctxnode]):
@@ -752,6 +771,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.keep = keep
         state.topmost = topmost
         state.replacements = replacements
+
+        # Create a backup so we can always abort completely.
+        backupfile = None
+        if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+            backupfile = repair._bundle(repo, [parentctxnode], [topmost], root,
+                                        'histedit')
+        state.backupfile = backupfile
 
     while state.rules:
         state.write()
