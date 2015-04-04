@@ -145,7 +145,7 @@ class changelog(revlog.revlog):
 
     def __contains__(self, rev):
         """filtered version of revlog.__contains__"""
-        return (revlog.revlog.__contains__(self, rev)
+        return (0 <= rev < len(self)
                 and rev not in self.filteredrevs)
 
     def __iter__(self):
