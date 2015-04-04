@@ -157,6 +157,7 @@ try:
 except ImportError:
     import pickle
 import errno
+import inspect
 import os
 import sys
 
@@ -849,8 +850,12 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.write()
         action, ha = state.rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha[:12]))
-        actfunc = actiontable[action]
-        parentctx, replacement_ = actfunc(ui, state, ha, opts)
+        act = actiontable[action]
+        if inspect.isclass(act):
+            actobj = act.fromrule(state, ha)
+            parentctx, replacement_ = actobj.run()
+        else:
+            parentctx, replacement_ = act(ui, state, ha, opts)
         state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
     state.write()
@@ -905,61 +910,73 @@ def gatherchildren(repo, ctx):
 
 def bootstrapcontinue(ui, state, opts):
     repo, parentctxnode = state.repo, state.parentctxnode
-    parentctx = repo[parentctxnode]
     action, currentnode = state.rules.pop(0)
-    ctx = repo[currentnode]
 
-    newchildren = gatherchildren(repo, parentctx)
-
-    # Commit dirty working directory if necessary
-    new = None
     s = repo.status()
-    if s.modified or s.added or s.removed or s.deleted:
-        # prepare the message for the commit to comes
-        if action in ('f', 'fold', 'r', 'roll'):
-            message = 'fold-temp-revision %s' % currentnode[:12]
-        else:
-            message = ctx.description()
-        editopt = action in ('e', 'edit', 'm', 'mess')
-        canonaction = {'e': 'edit', 'm': 'mess', 'p': 'pick'}
-        editform = 'histedit.%s' % canonaction.get(action, action)
-        editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
-        commit = commitfuncfor(repo, ctx)
-        new = commit(text=message, user=ctx.user(), date=ctx.date(),
-                     extra=ctx.extra(), editor=editor)
-        if new is not None:
-            newchildren.append(new)
-
     replacements = []
-    # track replacements
-    if ctx.node() not in newchildren:
-        # note: new children may be empty when the changeset is dropped.
-        # this happen e.g during conflicting pick where we revert content
-        # to parent.
-        replacements.append((ctx.node(), tuple(newchildren)))
 
-    if action in ('f', 'fold', 'r', 'roll'):
-        if newchildren:
-            # finalize fold operation if applicable
-            if new is None:
-                new = newchildren[-1]
+    act = actiontable[action]
+    if inspect.isclass(act):
+        actobj = act.fromrule(state, currentnode)
+        if s.modified or s.added or s.removed or s.deleted:
+            actobj.continuedirty()
+            s = repo.status()
+            if s.modified or s.added or s.removed or s.deleted:
+                raise util.Abort(_("working copy still dirty"))
+
+        parentctx, replacements_ = actobj.continueclean()
+        replacements.extend(replacements_)
+    else:
+        parentctx = repo[parentctxnode]
+        ctx = repo[currentnode]
+        newchildren = gatherchildren(repo, parentctx)
+        # Commit dirty working directory if necessary
+        new = None
+        if s.modified or s.added or s.removed or s.deleted:
+            # prepare the message for the commit to comes
+            if action in ('f', 'fold', 'r', 'roll'):
+                message = 'fold-temp-revision %s' % currentnode[:12]
             else:
-                newchildren.pop()  # remove new from internal changes
-            foldopts = opts
-            if action in ('r', 'roll'):
-                foldopts = foldopts.copy()
-                foldopts['rollup'] = True
-            parentctx, repl = finishfold(ui, repo, parentctx, ctx, new,
-                                         foldopts, newchildren)
-            replacements.extend(repl)
-        else:
-            # newchildren is empty if the fold did not result in any commit
-            # this happen when all folded change are discarded during the
-            # merge.
-            replacements.append((ctx.node(), (parentctx.node(),)))
-    elif newchildren:
-        # otherwise update "parentctx" before proceeding to further operation
-        parentctx = repo[newchildren[-1]]
+                message = ctx.description()
+            editopt = action in ('e', 'edit', 'm', 'mess')
+            canonaction = {'e': 'edit', 'm': 'mess', 'p': 'pick'}
+            editform = 'histedit.%s' % canonaction.get(action, action)
+            editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
+            commit = commitfuncfor(repo, ctx)
+            new = commit(text=message, user=ctx.user(), date=ctx.date(),
+                         extra=ctx.extra(), editor=editor)
+            if new is not None:
+                newchildren.append(new)
+
+        # track replacements
+        if ctx.node() not in newchildren:
+            # note: new children may be empty when the changeset is dropped.
+            # this happen e.g during conflicting pick where we revert content
+            # to parent.
+            replacements.append((ctx.node(), tuple(newchildren)))
+
+        if action in ('f', 'fold', 'r', 'roll'):
+            if newchildren:
+                # finalize fold operation if applicable
+                if new is None:
+                    new = newchildren[-1]
+                else:
+                    newchildren.pop()  # remove new from internal changes
+                foldopts = opts
+                if action in ('r', 'roll'):
+                    foldopts = foldopts.copy()
+                    foldopts['rollup'] = True
+                parentctx, repl = finishfold(ui, repo, parentctx, ctx, new,
+                                             foldopts, newchildren)
+                replacements.extend(repl)
+            else:
+                # newchildren is empty if the fold did not result in any commit
+                # this happen when all folded change are discarded during the
+                # merge.
+                replacements.append((ctx.node(), (parentctx.node(),)))
+        elif newchildren:
+            # otherwise update "parentctx" before proceeding further
+            parentctx = repo[newchildren[-1]]
 
     state.parentctxnode = parentctx.node()
     state.replacements.extend(replacements)
