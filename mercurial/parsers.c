@@ -189,7 +189,7 @@ static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 			      &PyFunction_Type, &normcase_fallback))
 		goto quit;
 
-	spec = PyInt_AS_LONG(spec_obj);
+	spec = (int)PyInt_AS_LONG(spec_obj);
 	switch (spec) {
 	case NORMCASE_LOWER:
 		table = lowertable;
