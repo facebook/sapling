@@ -546,52 +546,52 @@ class fold(histeditaction):
         if isinstance(self, rollup):
             foldopts['rollup'] = True
 
-        return finishfold(repo.ui, repo, parentctx, rulectx, ctx.node(),
-                          foldopts, middlecommits)
+        return self.finishfold(repo.ui, repo, parentctx, rulectx, ctx.node(),
+                               foldopts, middlecommits)
+
+    def finishfold(self, ui, repo, ctx, oldctx, newnode, opts, internalchanges):
+        parent = ctx.parents()[0].node()
+        hg.update(repo, parent)
+        ### prepare new commit data
+        commitopts = opts.copy()
+        commitopts['user'] = ctx.user()
+        # commit message
+        if opts.get('rollup'):
+            newmessage = ctx.description()
+        else:
+            newmessage = '\n***\n'.join(
+                [ctx.description()] +
+                [repo[r].description() for r in internalchanges] +
+                [oldctx.description()]) + '\n'
+        commitopts['message'] = newmessage
+        # date
+        commitopts['date'] = max(ctx.date(), oldctx.date())
+        extra = ctx.extra().copy()
+        # histedit_source
+        # note: ctx is likely a temporary commit but that the best we can do
+        #       here. This is sufficient to solve issue3681 anyway.
+        extra['histedit_source'] = '%s,%s' % (ctx.hex(), oldctx.hex())
+        commitopts['extra'] = extra
+        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
+        try:
+            phasemin = max(ctx.phase(), oldctx.phase())
+            repo.ui.setconfig('phases', 'new-commit', phasemin, 'histedit')
+            n = collapse(repo, ctx, repo[newnode], commitopts)
+        finally:
+            repo.ui.restoreconfig(phasebackup)
+        if n is None:
+            return ctx, []
+        hg.update(repo, n)
+        replacements = [(oldctx.node(), (newnode,)),
+                        (ctx.node(), (n,)),
+                        (newnode, (n,)),
+                       ]
+        for ich in internalchanges:
+            replacements.append((ich, (n,)))
+        return repo[n], replacements
 
 class rollup(fold):
     pass
-
-def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
-    parent = ctx.parents()[0].node()
-    hg.update(repo, parent)
-    ### prepare new commit data
-    commitopts = opts.copy()
-    commitopts['user'] = ctx.user()
-    # commit message
-    if opts.get('rollup'):
-        newmessage = ctx.description()
-    else:
-        newmessage = '\n***\n'.join(
-            [ctx.description()] +
-            [repo[r].description() for r in internalchanges] +
-            [oldctx.description()]) + '\n'
-    commitopts['message'] = newmessage
-    # date
-    commitopts['date'] = max(ctx.date(), oldctx.date())
-    extra = ctx.extra().copy()
-    # histedit_source
-    # note: ctx is likely a temporary commit but that the best we can do here
-    #       This is sufficient to solve issue3681 anyway
-    extra['histedit_source'] = '%s,%s' % (ctx.hex(), oldctx.hex())
-    commitopts['extra'] = extra
-    phasebackup = repo.ui.backupconfig('phases', 'new-commit')
-    try:
-        phasemin = max(ctx.phase(), oldctx.phase())
-        repo.ui.setconfig('phases', 'new-commit', phasemin, 'histedit')
-        n = collapse(repo, ctx, repo[newnode], commitopts)
-    finally:
-        repo.ui.restoreconfig(phasebackup)
-    if n is None:
-        return ctx, []
-    hg.update(repo, n)
-    replacements = [(oldctx.node(), (newnode,)),
-                    (ctx.node(), (n,)),
-                    (newnode, (n,)),
-                   ]
-    for ich in internalchanges:
-        replacements.append((ich, (n,)))
-    return repo[n], replacements
 
 class drop(histeditaction):
     def run(self):
