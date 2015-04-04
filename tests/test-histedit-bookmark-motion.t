@@ -92,7 +92,7 @@
   histedit: moving bookmarks two from 177f92b77385 to b346ab9a313d
   histedit: moving bookmarks will-move-backwards from d2ae7f538514 to cb9a9f314b8b
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-48787b8d-backup.hg (glob)
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-60cea58b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-3c6c5d92-backup.hg (glob)
   $ hg log --graph
   @  changeset:   3:cacdfd884a93
   |  bookmark:    five

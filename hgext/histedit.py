@@ -510,26 +510,47 @@ class edit(histeditaction):
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.edit')
 
-def rollup(ui, state, ha, opts):
-    rollupopts = opts.copy()
-    rollupopts['rollup'] = True
-    return fold(ui, state, ha, rollupopts)
+class fold(histeditaction):
+    def continuedirty(self):
+        repo = self.repo
+        rulectx = repo[self.node]
 
-def fold(ui, state, ha, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    ctx = repo[ctxnode]
-    oldctx = repo[ha]
-    hg.update(repo, ctx.node())
-    stats = applychanges(ui, repo, oldctx, opts)
-    if stats and stats[3] > 0:
-        raise error.InterventionRequired(
-            _('Fix up the change and run hg histedit --continue'))
-    n = repo.commit(text='fold-temp-revision %s' % ha[:12], user=oldctx.user(),
-                    date=oldctx.date(), extra=oldctx.extra())
-    if n is None:
-        ui.warn(_('%s: empty changeset') % ha[:12])
-        return ctx, []
-    return finishfold(ui, repo, ctx, oldctx, n, opts, [])
+        commit = commitfuncfor(repo, rulectx)
+        commit(text='fold-temp-revision %s' % node.short(self.node),
+               user=rulectx.user(), date=rulectx.date(),
+               extra=rulectx.extra())
+
+    def continueclean(self):
+        repo = self.repo
+        ctx = repo['.']
+        rulectx = repo[self.node]
+        parentctxnode = self.state.parentctxnode
+        if ctx.node() == parentctxnode:
+            repo.ui.warn(_('%s: empty changeset\n') %
+                              node.short(self.node))
+            return ctx, [(self.node, (parentctxnode,))]
+
+        parentctx = repo[parentctxnode]
+        newcommits = set(c.node() for c in repo.set('(%d::. - %d)', parentctx,
+                                                 parentctx))
+        if not newcommits:
+            repo.ui.warn(_('%s: cannot fold - working copy is not a '
+                           'descendant of previous commit %s\n') %
+                           (node.short(self.node), node.short(parentctxnode)))
+            return ctx, [(self.node, (ctx.node(),))]
+
+        middlecommits = newcommits.copy()
+        middlecommits.discard(ctx.node())
+
+        foldopts = {}
+        if isinstance(self, rollup):
+            foldopts['rollup'] = True
+
+        return finishfold(repo.ui, repo, parentctx, rulectx, ctx.node(),
+                          foldopts, middlecommits)
+
+class rollup(fold):
+    pass
 
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     parent = ctx.parents()[0].node()
@@ -907,10 +928,7 @@ def bootstrapcontinue(ui, state, opts):
         new = None
         if s.modified or s.added or s.removed or s.deleted:
             # prepare the message for the commit to comes
-            if action in ('f', 'fold', 'r', 'roll'):
-                message = 'fold-temp-revision %s' % currentnode[:12]
-            else:
-                message = ctx.description()
+            message = ctx.description()
             editor = cmdutil.getcommiteditor()
             commit = commitfuncfor(repo, ctx)
             new = commit(text=message, user=ctx.user(), date=ctx.date(),
@@ -925,26 +943,7 @@ def bootstrapcontinue(ui, state, opts):
             # to parent.
             replacements.append((ctx.node(), tuple(newchildren)))
 
-        if action in ('f', 'fold', 'r', 'roll'):
-            if newchildren:
-                # finalize fold operation if applicable
-                if new is None:
-                    new = newchildren[-1]
-                else:
-                    newchildren.pop()  # remove new from internal changes
-                foldopts = opts
-                if action in ('r', 'roll'):
-                    foldopts = foldopts.copy()
-                    foldopts['rollup'] = True
-                parentctx, repl = finishfold(ui, repo, parentctx, ctx, new,
-                                             foldopts, newchildren)
-                replacements.extend(repl)
-            else:
-                # newchildren is empty if the fold did not result in any commit
-                # this happen when all folded change are discarded during the
-                # merge.
-                replacements.append((ctx.node(), (parentctx.node(),)))
-        elif newchildren:
+        if newchildren:
             # otherwise update "parentctx" before proceeding further
             parentctx = repo[newchildren[-1]]
 

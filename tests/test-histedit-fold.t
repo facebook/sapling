@@ -307,6 +307,7 @@ should effectively drop the changes from +6.
   $ hg resolve --mark file
   (no more unresolved files)
   $ hg histedit --continue
+  251d831eeec5: empty changeset
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
   $ hg logt --graph

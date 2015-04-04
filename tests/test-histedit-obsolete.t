@@ -64,7 +64,7 @@ Enable obsolete
   > fold e860deea161a 4 e
   > pick 652413bf663e 5 f
   > EOF
-  saved backup bundle to $TESTTMP/base/.hg/strip-backup/96e494a2d553-60cea58b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/base/.hg/strip-backup/96e494a2d553-3c6c5d92-backup.hg (glob)
   $ hg log --graph --hidden
   @  8:cacdfd884a93 f
   |
@@ -427,9 +427,9 @@ Note that there is a few reordering in this series for more extensive test
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/folding/.hg/strip-backup/58019c66f35f-be4b3835-backup.hg (glob)
-  saved backup bundle to $TESTTMP/folding/.hg/strip-backup/83d1858e070b-08306a6b-backup.hg (glob)
-  saved backup bundle to $TESTTMP/folding/.hg/strip-backup/859969f5ed7e-86c99c41-backup.hg (glob)
+  saved backup bundle to $TESTTMP/folding/.hg/strip-backup/58019c66f35f-96092fce-backup.hg (glob)
+  saved backup bundle to $TESTTMP/folding/.hg/strip-backup/83d1858e070b-f3469cf8-backup.hg (glob)
+  saved backup bundle to $TESTTMP/folding/.hg/strip-backup/859969f5ed7e-d89a19d7-backup.hg (glob)
   $ hg log -G
   @  19:f9daec13fb98 (secret) i
   |
