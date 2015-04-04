@@ -304,6 +304,72 @@ class histeditstate(object):
     def clear(self):
         self.repo.vfs.unlink('histedit-state')
 
+class histeditaction(object):
+    def __init__(self, state, node):
+        self.state = state
+        self.repo = state.repo
+        self.node = node
+
+    @classmethod
+    def fromrule(cls, state, rule):
+        """Parses the given rule, returning an instance of the histeditaction.
+        """
+        repo = state.repo
+        rulehash = rule.strip().split(' ', 1)[0]
+        try:
+            node = repo[rulehash].node()
+        except error.RepoError:
+            raise util.Abort(_('unknown changeset %s listed') % rulehash[:12])
+        return cls(state, node)
+
+    def run(self):
+        """Runs the action. The default behavior is simply apply the action's
+        rulectx onto the current parentctx."""
+        self.applychange()
+        self.continuedirty()
+        return self.continueclean()
+
+    def applychange(self):
+        """Applies the changes from this action's rulectx onto the current
+        parentctx, but does not commit them."""
+        repo = self.repo
+        rulectx = repo[self.node]
+        hg.update(repo, self.state.parentctxnode)
+        stats = applychanges(repo.ui, repo, rulectx, {})
+        if stats and stats[3] > 0:
+            raise error.InterventionRequired(_('Fix up the change and run '
+                                            'hg histedit --continue'))
+
+    def continuedirty(self):
+        """Continues the action when changes have been applied to the working
+        copy. The default behavior is to commit the dirty changes."""
+        repo = self.repo
+        rulectx = repo[self.node]
+
+        editor = self.commiteditor()
+        commit = commitfuncfor(repo, rulectx)
+
+        commit(text=rulectx.description(), user=rulectx.user(),
+               date=rulectx.date(), extra=rulectx.extra(), editor=editor)
+
+    def commiteditor(self):
+        """The editor to be used to edit the commit message."""
+        return False
+
+    def continueclean(self):
+        """Continues the action when the working copy is clean. The default
+        behavior is to accept the current commit as the new version of the
+        rulectx."""
+        ctx = self.repo['.']
+        if ctx.node() == self.state.parentctxnode:
+            self.repo.ui.warn(_('%s: empty changeset\n') %
+                              node.short(self.node))
+            return ctx, [(self.node, tuple())]
+        if ctx.node() == self.node:
+            # Nothing changed
+            return ctx, []
+        return ctx, [(self.node, (ctx.node(),))]
+
 def commitfuncfor(repo, src):
     """Build a commit function for the replacement of <src>
 
