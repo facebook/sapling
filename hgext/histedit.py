@@ -833,11 +833,7 @@ def gatherchildren(repo, ctx):
     newchildren = [c.node() for c in repo.set('(%d::.)', ctx)]
     if ctx.node() != node.nullid:
         if not newchildren:
-            # `ctx` should match but no result. This means that
-            # currentnode is not a descendant from ctx.
-            msg = _('%s is not an ancestor of working directory')
-            hint = _('use "histedit --abort" to clear broken state')
-            raise util.Abort(msg % ctx, hint=hint)
+            return []
         newchildren.pop(0)  # remove ctx
     return newchildren
 
