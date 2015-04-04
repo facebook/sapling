@@ -168,7 +168,7 @@ def instore(repo, hash):
     return os.path.exists(storepath(repo, hash))
 
 def storepath(repo, hash):
-    return repo.join(os.path.join(longname, hash))
+    return repo.join(longname, hash)
 
 def copyfromcache(repo, hash, filename):
     '''Copy the specified largefile from the repo or system cache to
