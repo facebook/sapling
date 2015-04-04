@@ -542,21 +542,20 @@ class fold(histeditaction):
         middlecommits = newcommits.copy()
         middlecommits.discard(ctx.node())
 
-        foldopts = {}
-        if isinstance(self, rollup):
-            foldopts['rollup'] = True
-
         return self.finishfold(repo.ui, repo, parentctx, rulectx, ctx.node(),
-                               foldopts, middlecommits)
+                               middlecommits)
 
-    def finishfold(self, ui, repo, ctx, oldctx, newnode, opts, internalchanges):
+    def skipprompt(self):
+        return False
+
+    def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
         parent = ctx.parents()[0].node()
         hg.update(repo, parent)
         ### prepare new commit data
-        commitopts = opts.copy()
+        commitopts = {}
         commitopts['user'] = ctx.user()
         # commit message
-        if opts.get('rollup'):
+        if self.skipprompt():
             newmessage = ctx.description()
         else:
             newmessage = '\n***\n'.join(
@@ -591,7 +590,8 @@ class fold(histeditaction):
         return repo[n], replacements
 
 class rollup(fold):
-    pass
+    def skipprompt(self):
+        return True
 
 class drop(histeditaction):
     def run(self):
