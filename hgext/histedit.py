@@ -568,11 +568,10 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
         replacements.append((ich, (n,)))
     return repo[n], replacements
 
-def drop(ui, state, ha, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    ctx = repo[ctxnode]
-    return ctx, [(repo[ha].node(), ())]
-
+class drop(histeditaction):
+    def run(self):
+        parentctx = self.repo[self.state.parentctxnode]
+        return parentctx, [(self.node, tuple())]
 
 def message(ui, state, ha, opts):
     repo, ctxnode = state.repo, state.parentctxnode
