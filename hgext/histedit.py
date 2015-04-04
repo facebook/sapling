@@ -573,25 +573,9 @@ class drop(histeditaction):
         parentctx = self.repo[self.state.parentctxnode]
         return parentctx, [(self.node, tuple())]
 
-def message(ui, state, ha, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    ctx = repo[ctxnode]
-    oldctx = repo[ha]
-    hg.update(repo, ctx.node())
-    stats = applychanges(ui, repo, oldctx, opts)
-    if stats and stats[3] > 0:
-        raise error.InterventionRequired(
-            _('Fix up the change and run hg histedit --continue'))
-    message = oldctx.description()
-    commit = commitfuncfor(repo, oldctx)
-    editor = cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
-    new = commit(text=message, user=oldctx.user(), date=oldctx.date(),
-                 extra=oldctx.extra(), editor=editor)
-    newctx = repo[new]
-    if oldctx.node() != newctx.node():
-        return newctx, [(oldctx.node(), (new,))]
-    # We didn't make an edit, so just indicate no replaced nodes
-    return newctx, []
+class message(histeditaction):
+    def commiteditor(self):
+        return cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
 
 def findoutgoing(ui, repo, remote=None, force=False, opts={}):
     """utility function to find the first outgoing changeset
@@ -923,8 +907,8 @@ def bootstrapcontinue(ui, state, opts):
                 message = 'fold-temp-revision %s' % currentnode[:12]
             else:
                 message = ctx.description()
-            editopt = action in ('e', 'edit', 'm', 'mess')
-            canonaction = {'e': 'edit', 'm': 'mess'}
+            editopt = action in ('e', 'edit')
+            canonaction = {'e': 'edit'}
             editform = 'histedit.%s' % canonaction.get(action, action)
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             commit = commitfuncfor(repo, ctx)
