@@ -55,9 +55,9 @@ class localstore(basestore.basestore):
             return False
 
         expecthash = fctx.data()[0:40]
-        storepath = lfutil.storepath(self.remote, expecthash)
+        storepath, exists = lfutil.findstorepath(self.remote, expecthash)
         verified.add(key)
-        if not lfutil.instore(self.remote, expecthash):
+        if not exists:
             self.ui.warn(
                 _('changeset %s: %s references missing %s\n')
                 % (cset, filename, storepath))
