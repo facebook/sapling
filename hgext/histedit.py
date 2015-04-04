@@ -487,28 +487,14 @@ def collapse(repo, first, last, commitopts):
                          editor=editor)
     return repo.commitctx(new)
 
-def pick(ui, state, ha, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    ctx = repo[ctxnode]
-    oldctx = repo[ha]
-    if oldctx.parents()[0] == ctx:
-        ui.debug('node %s unchanged\n' % ha[:12])
-        return oldctx, []
-    hg.update(repo, ctx.node())
-    stats = applychanges(ui, repo, oldctx, opts)
-    if stats and stats[3] > 0:
-        raise error.InterventionRequired(_('Fix up the change and run '
-                                           'hg histedit --continue'))
-    # drop the second merge parent
-    commit = commitfuncfor(repo, oldctx)
-    n = commit(text=oldctx.description(), user=oldctx.user(),
-               date=oldctx.date(), extra=oldctx.extra())
-    if n is None:
-        ui.warn(_('%s: empty changeset\n') % ha[:12])
-        return ctx, []
-    new = repo[n]
-    return new, [(oldctx.node(), (n,))]
+class pick(histeditaction):
+    def run(self):
+        rulectx = self.repo[self.node]
+        if rulectx.parents()[0].node() == self.state.parentctxnode:
+            self.repo.ui.debug('node %s unchanged\n' % node.short(self.node))
+            return rulectx, []
 
+        return super(pick, self).run()
 
 def edit(ui, state, ha, opts):
     repo, ctxnode = state.repo, state.parentctxnode
@@ -939,7 +925,7 @@ def bootstrapcontinue(ui, state, opts):
             else:
                 message = ctx.description()
             editopt = action in ('e', 'edit', 'm', 'mess')
-            canonaction = {'e': 'edit', 'm': 'mess', 'p': 'pick'}
+            canonaction = {'e': 'edit', 'm': 'mess'}
             editform = 'histedit.%s' % canonaction.get(action, action)
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             commit = commitfuncfor(repo, ctx)

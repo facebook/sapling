@@ -170,6 +170,7 @@ just continue this time
   $ hg resolve --mark e
   (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
+  7b4e2f4b7bcd: empty changeset
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -253,6 +254,7 @@ second edit also fails, but just continue
   $ hg resolve --mark e
   (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
+  7b4e2f4b7bcd: empty changeset
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
