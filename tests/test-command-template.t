@@ -3252,3 +3252,21 @@ Test word for invalid numbers
   $ hg log -Gv -R a --template "{word('a', desc)}"
   hg: parse error: word expects an integer index
   [255]
+
+Test indent and not adding to empty lines
+
+  $ hg log -T "-----\n{indent(desc, '>> ', ' > ')}\n" -r 0:1 -R a
+  -----
+   > line 1
+  >> line 2
+  -----
+   > other 1
+  >> other 2
+  
+  >> other 3
+
+Test with non-strings like dates
+
+  $ hg log -T "{indent(date, '   ')}\n" -r 2:3 -R a
+     1200000.00
+     1300000.00

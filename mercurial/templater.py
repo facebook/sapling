@@ -327,6 +327,26 @@ def pad(context, mapping, args):
     else:
         return text.ljust(width, fillchar)
 
+def indent(context, mapping, args):
+    """:indent(text, indentchars[, firstline]): Indents all non-empty lines
+    with the characters given in the indentchars string. An optional
+    third parameter will override the indent for the first line only
+    if present."""
+    if not (2 <= len(args) <= 3):
+        # i18n: "indent" is a keyword
+        raise error.ParseError(_("indent() expects two or three arguments"))
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    indent = stringify(args[1][0](context, mapping, args[1][1]))
+
+    if len(args) == 3:
+        firstline = stringify(args[2][0](context, mapping, args[2][1]))
+    else:
+        firstline = indent
+
+    # the indent function doesn't indent the first line, so we do it here
+    return templatefilters.indent(firstline + text, indent)
+
 def get(context, mapping, args):
     """:get(dict, key): Get an attribute/key from an object. Some keywords
     are complex types. This function allows you to obtain the value of an
@@ -607,6 +627,7 @@ funcs = {
     "if": if_,
     "ifcontains": ifcontains,
     "ifeq": ifeq,
+    "indent": indent,
     "join": join,
     "label": label,
     "pad": pad,
