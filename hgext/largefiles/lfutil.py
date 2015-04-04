@@ -170,6 +170,13 @@ def instore(repo, hash):
 def storepath(repo, hash):
     return repo.join(longname, hash)
 
+def findstorepath(repo, hash):
+    '''Search through the local store path(s) to find the file for the given
+    hash.  If the file is not found, its path in the primary store is returned.
+    The return value is a tuple of (path, exists(path)).
+    '''
+    return (storepath(repo, hash), instore(repo, hash))
+
 def copyfromcache(repo, hash, filename):
     '''Copy the specified largefile from the repo or system cache to
     filename in the repository. Return true on success or false if the
