@@ -1030,8 +1030,9 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if os.path.exists(os.path.join(repo.path, 'histedit-state')):
         state = histeditstate(repo)
         state.read()
-        histedit_nodes = set([ctx for (action, ctx) in state.rules])
-        strip_nodes = set([repo[n].hex() for n in nodelist])
+        histedit_nodes = set([repo[rulehash].node() for (action, rulehash)
+                             in state.rules if rulehash in repo])
+        strip_nodes = set([repo[n].node() for n in nodelist])
         common_nodes = histedit_nodes & strip_nodes
         if common_nodes:
             raise util.Abort(_("histedit in progress, can't strip %s")

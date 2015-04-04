@@ -87,8 +87,8 @@ Go at a random point and try to continue
   [255]
 
 Try to delete necessary commit
-  $ hg strip -r 652413bf663e
-  abort: histedit in progress, can't strip 363532343133
+  $ hg strip -r 652413b
+  abort: histedit in progress, can't strip 652413bf663e
   [255]
 
 commit, then edit the revision
