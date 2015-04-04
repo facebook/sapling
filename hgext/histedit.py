@@ -157,7 +157,6 @@ try:
 except ImportError:
     import pickle
 import errno
-import inspect
 import os
 import sys
 
@@ -844,12 +843,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.write()
         action, ha = state.rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha[:12]))
-        act = actiontable[action]
-        if inspect.isclass(act):
-            actobj = act.fromrule(state, ha)
-            parentctx, replacement_ = actobj.run()
-        else:
-            parentctx, replacement_ = act(ui, state, ha, opts)
+        actobj = actiontable[action].fromrule(state, ha)
+        parentctx, replacement_ = actobj.run()
         state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
     state.write()
@@ -890,62 +885,20 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
 
-def gatherchildren(repo, ctx):
-    # is there any new commit between the expected parent and "."
-    #
-    # note: does not take non linear new change in account (but previous
-    #       implementation didn't used them anyway (issue3655)
-    newchildren = [c.node() for c in repo.set('(%d::.)', ctx)]
-    if ctx.node() != node.nullid:
-        if not newchildren:
-            return []
-        newchildren.pop(0)  # remove ctx
-    return newchildren
-
 def bootstrapcontinue(ui, state, opts):
-    repo, parentctxnode = state.repo, state.parentctxnode
+    repo = state.repo
     action, currentnode = state.rules.pop(0)
 
+    actobj = actiontable[action].fromrule(state, currentnode)
+
     s = repo.status()
-    replacements = []
-
-    act = actiontable[action]
-    if inspect.isclass(act):
-        actobj = act.fromrule(state, currentnode)
+    if s.modified or s.added or s.removed or s.deleted:
+        actobj.continuedirty()
+        s = repo.status()
         if s.modified or s.added or s.removed or s.deleted:
-            actobj.continuedirty()
-            s = repo.status()
-            if s.modified or s.added or s.removed or s.deleted:
-                raise util.Abort(_("working copy still dirty"))
+            raise util.Abort(_("working copy still dirty"))
 
-        parentctx, replacements_ = actobj.continueclean()
-        replacements.extend(replacements_)
-    else:
-        parentctx = repo[parentctxnode]
-        ctx = repo[currentnode]
-        newchildren = gatherchildren(repo, parentctx)
-        # Commit dirty working directory if necessary
-        new = None
-        if s.modified or s.added or s.removed or s.deleted:
-            # prepare the message for the commit to comes
-            message = ctx.description()
-            editor = cmdutil.getcommiteditor()
-            commit = commitfuncfor(repo, ctx)
-            new = commit(text=message, user=ctx.user(), date=ctx.date(),
-                         extra=ctx.extra(), editor=editor)
-            if new is not None:
-                newchildren.append(new)
-
-        # track replacements
-        if ctx.node() not in newchildren:
-            # note: new children may be empty when the changeset is dropped.
-            # this happen e.g during conflicting pick where we revert content
-            # to parent.
-            replacements.append((ctx.node(), tuple(newchildren)))
-
-        if newchildren:
-            # otherwise update "parentctx" before proceeding further
-            parentctx = repo[newchildren[-1]]
+    parentctx, replacements = actobj.continueclean()
 
     state.parentctxnode = parentctx.node()
     state.replacements.extend(replacements)
