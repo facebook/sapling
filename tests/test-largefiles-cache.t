@@ -153,3 +153,29 @@ for a forget.)
   ENOENT: * (glob)
   not removing z: file is already untracked
   [1]
+
+Largefiles are accessible from the share's store
+  $ cd ..
+  $ hg share -q src share_dst --config extensions.share=
+  $ hg -R share_dst update -r0
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ echo modified > share_dst/large
+  $ hg -R share_dst ci -m modified
+  created new head
+
+Only dirstate is in the local store for the share, and the largefile is in the
+share source's local store.  Avoid the extra largefiles added in the unix
+conditional above.
+  $ hash=`hg -R share_dst cat share_dst/.hglf/large`
+  $ echo $hash
+  e2fb5f2139d086ded2cb600d5a91a196e76bf020
+
+  $ find share_dst/.hg/largefiles/* | sort
+  share_dst/.hg/largefiles/dirstate
+
+  $ find src/.hg/largefiles/* | egrep "(dirstate|$hash)" | sort
+  src/.hg/largefiles/dirstate
+  src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020
