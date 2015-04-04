@@ -260,6 +260,8 @@ Enable progress extension for archive tests:
   > [progress]
   > assume-tty = 1
   > delay = 0
+  > # set changedelay really large so we don't see nested topics
+  > changedelay = 30000
   > format = topic bar number
   > refresh = 0
   > width = 60
