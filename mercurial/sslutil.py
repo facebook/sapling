@@ -129,9 +129,9 @@ def _plainapplepython():
       for using system certificate store CAs in addition to the provided
       cacerts file
     """
-    if sys.platform != 'darwin' or util.mainfrozen():
+    if sys.platform != 'darwin' or util.mainfrozen() or not sys.executable:
         return False
-    exe = (sys.executable or '').lower()
+    exe = os.path.realpath(sys.executable).lower()
     return (exe.startswith('/usr/bin/python') or
             exe.startswith('/system/library/frameworks/python.framework/'))
 
