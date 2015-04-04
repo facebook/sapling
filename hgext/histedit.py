@@ -496,15 +496,19 @@ class pick(histeditaction):
 
         return super(pick, self).run()
 
-def edit(ui, state, ha, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    ctx = repo[ctxnode]
-    oldctx = repo[ha]
-    hg.update(repo, ctx.node())
-    applychanges(ui, repo, oldctx, opts)
-    raise error.InterventionRequired(
-        _('Make changes as needed, you may commit or record as needed now.\n'
-          'When you are finished, run hg histedit --continue to resume.'))
+class edit(histeditaction):
+    def run(self):
+        repo = self.repo
+        rulectx = repo[self.node]
+        hg.update(repo, self.state.parentctxnode)
+        applychanges(repo.ui, repo, rulectx, {})
+        raise error.InterventionRequired(
+            _('Make changes as needed, you may commit or record as needed '
+              'now.\nWhen you are finished, run hg histedit --continue to '
+              'resume.'))
+
+    def commiteditor(self):
+        return cmdutil.getcommiteditor(edit=True, editform='histedit.edit')
 
 def rollup(ui, state, ha, opts):
     rollupopts = opts.copy()
@@ -907,10 +911,7 @@ def bootstrapcontinue(ui, state, opts):
                 message = 'fold-temp-revision %s' % currentnode[:12]
             else:
                 message = ctx.description()
-            editopt = action in ('e', 'edit')
-            canonaction = {'e': 'edit'}
-            editform = 'histedit.%s' % canonaction.get(action, action)
-            editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
+            editor = cmdutil.getcommiteditor()
             commit = commitfuncfor(repo, ctx)
             new = commit(text=message, user=ctx.user(), date=ctx.date(),
                          extra=ctx.extra(), editor=editor)
