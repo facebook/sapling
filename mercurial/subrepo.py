@@ -70,11 +70,14 @@ def state(ctx, ui):
                 if err.errno != errno.ENOENT:
                     raise
                 # handle missing subrepo spec files as removed
-                ui.warn(_("warning: subrepo spec file %s not found\n") % f)
+                ui.warn(_("warning: subrepo spec file \'%s\' not found\n") %
+                        util.pathto(ctx.repo().root, ctx.repo().getcwd(), f))
                 return
             p.parse(f, data, sections, remap, read)
         else:
-            raise util.Abort(_("subrepo spec file %s not found") % f)
+            repo = ctx.repo()
+            raise util.Abort(_("subrepo spec file \'%s\' not found") %
+                             util.pathto(repo.root, repo.getcwd(), f))
 
     if '.hgsub' in ctx:
         read('.hgsub')
@@ -92,9 +95,11 @@ def state(ctx, ui):
                 try:
                     revision, path = l.split(" ", 1)
                 except ValueError:
+                    repo = ctx.repo()
                     raise util.Abort(_("invalid subrepository revision "
-                                       "specifier in .hgsubstate line %d")
-                                     % (i + 1))
+                                       "specifier in \'%s\' line %d")
+                                     % (util.pathto(repo.root, repo.getcwd(),
+                                        '.hgsubstate'), (i + 1)))
                 rev[path] = revision
         except IOError, err:
             if err.errno != errno.ENOENT:

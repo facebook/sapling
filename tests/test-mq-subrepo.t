@@ -299,7 +299,7 @@ handle subrepos safely on qrecord
   +sub = sub
   record this change to '.hgsub'? [Ynesfdaq?] y
   
-  warning: subrepo spec file .hgsub not found
+  warning: subrepo spec file '.hgsub' not found
   abort: uncommitted changes in subrepository 'sub'
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
@@ -313,7 +313,7 @@ handle subrepos safely on qrecord
   +sub = sub
   record this change to '.hgsub'? [Ynesfdaq?] y
   
-  warning: subrepo spec file .hgsub not found
+  warning: subrepo spec file '.hgsub' not found
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31

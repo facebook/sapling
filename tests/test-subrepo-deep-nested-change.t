@@ -141,9 +141,14 @@ Check that deep archiving works
   $ hg status -S
   $ hg remove sub1/sub2/folder/test.txt
   $ hg remove sub1/.hgsubstate
+  $ mv sub1/.hgsub sub1/x.hgsub
   $ hg status -S
+  warning: subrepo spec file 'sub1/.hgsub' not found (glob)
   R sub1/.hgsubstate
   R sub1/sub2/folder/test.txt
+  ! sub1/.hgsub
+  ? sub1/x.hgsub
+  $ mv sub1/x.hgsub sub1/.hgsub
   $ hg update -Cq
   $ touch sub1/foo
   $ hg forget sub1/sub2/folder/test.txt
