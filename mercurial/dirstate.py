@@ -793,9 +793,15 @@ class dirstate(object):
                 audit_path = pathutil.pathauditor(self._root)
 
                 for nf in iter(visit):
+                    # If a stat for the same file was already added with a
+                    # different case, don't add one for this, since that would
+                    # make it appear as if the file exists under both names
+                    # on disk.
+                    if normalize and normalize(nf, True, True) in results:
+                        results[nf] = None
                     # Report ignored items in the dmap as long as they are not
                     # under a symlink directory.
-                    if audit_path.check(nf):
+                    elif audit_path.check(nf):
                         try:
                             results[nf] = lstat(join(nf))
                             # file was just ignored, no links, and exists
