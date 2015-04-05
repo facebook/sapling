@@ -63,3 +63,8 @@ Test fileset
   tmp/h_45116003780e
   tmp/r_2
 
+Test working directory
+
+  $ echo b-wdir > b
+  $ hg cat -r 'wdir()' b
+  b-wdir

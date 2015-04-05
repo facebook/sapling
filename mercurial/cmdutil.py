@@ -2403,7 +2403,7 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
         file = matcher.files()[0]
         mf = repo.manifest
         mfnode = ctx.manifestnode()
-        if mf.find(mfnode, file)[0]:
+        if mfnode and mf.find(mfnode, file)[0]:
             write(file)
             return 0
 
