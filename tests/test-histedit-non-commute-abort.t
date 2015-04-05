@@ -70,8 +70,6 @@ edit the history
   > pick 652413bf663e f
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  remote changed e which local deleted
-  use (c)hanged version or leave (d)eleted? c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.

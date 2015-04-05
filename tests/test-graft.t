@@ -730,3 +730,29 @@ Empty graft
   $ hg graft -f 27
   grafting 27:3d35c4c79e5a "28"
   note: graft of 27:3d35c4c79e5a created no changes to commit
+
+  $ cd ..
+
+Graft to duplicate a commit
+
+  $ hg init graftsibling
+  $ cd graftsibling
+  $ touch a
+  $ hg commit -qAm a
+  $ touch b
+  $ hg commit -qAm b
+  $ hg log -G -T '{rev}\n'
+  @  1
+  |
+  o  0
+  
+  $ hg up -q 0
+  $ hg graft -r 1
+  grafting 1:0e067c57feba "b" (tip)
+  $ hg log -G -T '{rev}\n'
+  @  2
+  |
+  | o  1
+  |/
+  o  0
+  
