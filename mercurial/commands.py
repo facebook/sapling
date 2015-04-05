@@ -3547,9 +3547,12 @@ def graft(ui, repo, *revs, **opts):
                 continue
 
             source = ctx.extra().get('source')
-            if not source:
-                source = ctx.hex()
-            extra = {'source': source}
+            extra = {}
+            if source:
+                extra['source'] = source
+                extra['intermediate-source'] = ctx.hex()
+            else:
+                extra['source'] = ctx.hex()
             user = ctx.user()
             if opts.get('user'):
                 user = opts['user']

@@ -313,7 +313,7 @@ Graft again onto another branch should preserve the original source
   2:5c095ad7e90f871700f02dd1fa5012cb4498a2d4
 
   $ hg log --debug -r tip
-  changeset:   13:9db0f28fd3747e92c57d015f53b5593aeec53c2d
+  changeset:   13:7a4785234d87ec1aa420ed6b11afe40fa73e12a9
   tag:         tip
   phase:       draft
   parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
@@ -324,6 +324,7 @@ Graft again onto another branch should preserve the original source
   files+:      b
   files-:      a
   extra:       branch=default
+  extra:       intermediate-source=ef0ef43d49e79e81ddafdc7997401ba0041efc82
   extra:       source=5c095ad7e90f871700f02dd1fa5012cb4498a2d4
   description:
   2
@@ -338,10 +339,10 @@ Disallow grafting an already grafted cset onto its original branch
 Disallow grafting already grafted csets with the same origin onto each other
   $ hg up -q 13
   $ hg graft 2
-  skipping revision 2:5c095ad7e90f (already grafted to 13:9db0f28fd374)
+  skipping revision 2:5c095ad7e90f (already grafted to 13:7a4785234d87)
   [255]
   $ hg graft 7
-  skipping already grafted revision 7:ef0ef43d49e7 (13:9db0f28fd374 also has origin 2:5c095ad7e90f)
+  skipping already grafted revision 7:ef0ef43d49e7 (13:7a4785234d87 also has origin 2:5c095ad7e90f)
   [255]
 
   $ hg up -q 7
@@ -349,7 +350,7 @@ Disallow grafting already grafted csets with the same origin onto each other
   skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
   [255]
   $ hg graft tip
-  skipping already grafted revision 13:9db0f28fd374 (7:ef0ef43d49e7 also has origin 2:5c095ad7e90f)
+  skipping already grafted revision 13:7a4785234d87 (7:ef0ef43d49e7 also has origin 2:5c095ad7e90f)
   [255]
 
 Graft with --log
@@ -543,7 +544,7 @@ Test simple destination
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   13:9db0f28fd374
+  changeset:   13:7a4785234d87
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -578,7 +579,7 @@ Test simple destination
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   13:9db0f28fd374
+  changeset:   13:7a4785234d87
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -621,7 +622,7 @@ All copies of a cset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   13:9db0f28fd374
+  changeset:   13:7a4785234d87
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -637,7 +638,7 @@ All copies of a cset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   22:e95864da75a0
+  changeset:   22:d1cb6591fa4b
   branch:      dev
   tag:         tip
   user:        foo
@@ -649,11 +650,11 @@ graft works on complex revset
 
   $ hg graft 'origin(13) or destination(origin(13))'
   skipping ancestor revision 21:7e61b508e709
-  skipping ancestor revision 22:e95864da75a0
-  skipping revision 2:5c095ad7e90f (already grafted to 22:e95864da75a0)
+  skipping ancestor revision 22:d1cb6591fa4b
+  skipping revision 2:5c095ad7e90f (already grafted to 22:d1cb6591fa4b)
   grafting 7:ef0ef43d49e7 "2"
   warning: can't find ancestor for 'b' copied from 'a'!
-  grafting 13:9db0f28fd374 "2"
+  grafting 13:7a4785234d87 "2"
   warning: can't find ancestor for 'b' copied from 'a'!
   grafting 19:9627f653b421 "2"
   merging b
@@ -664,7 +665,7 @@ graft with --force (still doesn't graft merges)
   $ hg graft 19 0 6
   skipping ungraftable merge revision 6
   skipping ancestor revision 0:68795b066622
-  skipping already grafted revision 19:9627f653b421 (22:e95864da75a0 also has origin 2:5c095ad7e90f)
+  skipping already grafted revision 19:9627f653b421 (22:d1cb6591fa4b also has origin 2:5c095ad7e90f)
   [255]
   $ hg graft 19 0 6 --force
   skipping ungraftable merge revision 6
@@ -679,12 +680,12 @@ graft --force after backout
   $ hg ci -m 28
   $ hg backout 28
   reverting a
-  changeset 29:8389853bba65 backs out changeset 28:cd42a33e1848
+  changeset 29:53177ba928f6 backs out changeset 28:50a516bb8b57
   $ hg graft 28
-  skipping ancestor revision 28:cd42a33e1848
+  skipping ancestor revision 28:50a516bb8b57
   [255]
   $ hg graft 28 --force
-  grafting 28:cd42a33e1848 "28"
+  grafting 28:50a516bb8b57 "28"
   merging a
   $ cat a
   abc
@@ -694,7 +695,7 @@ graft --continue after --force
   $ echo def > a
   $ hg ci -m 31
   $ hg graft 28 --force --tool internal:fail
-  grafting 28:cd42a33e1848 "28"
+  grafting 28:50a516bb8b57 "28"
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
@@ -707,7 +708,7 @@ graft --continue after --force
   $ hg resolve -m a
   (no more unresolved files)
   $ hg graft -c
-  grafting 28:cd42a33e1848 "28"
+  grafting 28:50a516bb8b57 "28"
   $ cat a
   abc
 
@@ -719,7 +720,7 @@ but do some destructive editing of the repo:
   $ hg --config extensions.strip= strip 2
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/5c095ad7e90f-d323a1e4-backup.hg (glob)
   $ hg graft tmp
-  skipping already grafted revision 8:9db0f28fd374 (2:ef0ef43d49e7 also has unknown origin 5c095ad7e90f)
+  skipping already grafted revision 8:7a4785234d87 (2:ef0ef43d49e7 also has unknown origin 5c095ad7e90f)
   [255]
 
 Empty graft
@@ -728,8 +729,8 @@ Empty graft
   $ hg tag -f something
   $ hg graft -qr 27
   $ hg graft -f 27
-  grafting 27:3d35c4c79e5a "28"
-  note: graft of 27:3d35c4c79e5a created no changes to commit
+  grafting 27:ed6c7e54e319 "28"
+  note: graft of 27:ed6c7e54e319 created no changes to commit
 
   $ cd ..
 
@@ -752,6 +753,20 @@ Graft to duplicate a commit
   $ hg log -G -T '{rev}\n'
   @  2
   |
+  | o  1
+  |/
+  o  0
+  
+Graft to duplicate a commit twice
+
+  $ hg up -q 0
+  $ hg graft -r 2
+  grafting 2:044ec77f6389 "b" (tip)
+  $ hg log -G -T '{rev}\n'
+  @  3
+  |
+  | o  2
+  |/
   | o  1
   |/
   o  0
