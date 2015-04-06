@@ -581,11 +581,19 @@ class treemanifest(object):
 
         return self._matches(match)
 
-    def _matches(self, match):
+    def _matches(self, match, alldirs=False):
         '''recursively generate a new manifest filtered by the match argument.
-        '''
+
+        Will visit all subdirectories if alldirs is True, otherwise it will
+        only visit subdirectories for which match.visitdir is True.'''
 
         ret = treemanifest(self._dir)
+        if not alldirs:
+            # substring to strip trailing slash
+            visit = match.visitdir(self._dir[:-1] or '.')
+            if not visit:
+                return ret
+            alldirs = (visit == 'all')
 
         for fn in self._files:
             fullp = self._subpath(fn)
@@ -596,7 +604,7 @@ class treemanifest(object):
                 ret._flags[fn] = self._flags[fn]
 
         for dir, subm in self._dirs.iteritems():
-            m = subm._matches(match)
+            m = subm._matches(match, alldirs)
             if not m._isempty():
                 ret._dirs[dir] = m
 

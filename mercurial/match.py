@@ -9,6 +9,8 @@ import re
 import util, pathutil
 from i18n import _
 
+propertycache = util.propertycache
+
 def _rematcher(regex):
     '''compile the regexp with the best available regexp engine and return a
     matcher function'''
@@ -156,6 +158,20 @@ class match(object):
         if not .anypats(): list all files and dirs,
         else: optimal roots'''
         return self._files
+
+    @propertycache
+    def _dirs(self):
+        return set(util.dirs(self._fmap)) | set(['.'])
+
+    def visitdir(self, dir):
+        '''Helps while traversing a directory tree. Returns the string 'all' if
+        the given directory and all subdirectories should be visited. Otherwise
+        returns True or False indicating whether the given directory should be
+        visited. If 'all' is returned, calling this method on a subdirectory
+        gives an undefined result.'''
+        if not self._fmap or self.exact(dir):
+            return 'all'
+        return dir in self._dirs
 
     def exact(self, f):
         '''Returns True if f is in .files().'''
