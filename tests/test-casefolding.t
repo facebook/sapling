@@ -37,6 +37,15 @@ Case-changing renames should work:
   $ hg mv A a
   $ hg st
 
+addremove after case-changing rename has no effect (issue4590)
+
+  $ hg mv a A
+  $ hg addremove
+  recording removal of a as rename to A (100% similar)
+  $ hg revert --all
+  forgetting A
+  undeleting a
+
 test changing case of path components
 
   $ mkdir D
