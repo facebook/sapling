@@ -523,7 +523,16 @@ class unpackermixin(object):
 
 def getunbundler(ui, fp, header=None):
     """return a valid unbundler object for a given header"""
-    return unbundle20(ui, fp, header)
+    if header is None:
+        header = changegroup.readexactly(fp, 4)
+        magic, version = header[0:2], header[2:4]
+        if magic != 'HG':
+            raise util.Abort(_('not a Mercurial bundle'))
+        if version != '2Y':
+            raise util.Abort(_('unknown bundle version %s') % version)
+    unbundler = unbundle20(ui, fp)
+    ui.debug('start processing of %s stream\n' % header)
+    return unbundler
 
 class unbundle20(unpackermixin):
     """interpret a bundle2 stream
@@ -531,18 +540,10 @@ class unbundle20(unpackermixin):
     This class is fed with a binary stream and yields parts through its
     `iterparts` methods."""
 
-    def __init__(self, ui, fp, header=None):
+    def __init__(self, ui, fp):
         """If header is specified, we do not read it out of the stream."""
         self.ui = ui
         super(unbundle20, self).__init__(fp)
-        if header is None:
-            header = self._readexact(4)
-            magic, version = header[0:2], header[2:4]
-            if magic != 'HG':
-                raise util.Abort(_('not a Mercurial bundle'))
-            if version != '2Y':
-                raise util.Abort(_('unknown bundle version %s') % version)
-        self.ui.debug('start processing of %s stream\n' % header)
 
     @util.propertycache
     def params(self):
