@@ -93,11 +93,11 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		if (ret == -1)
 			goto bail;
 
-		if (pos != 0)
-			PyString_AS_STRING(key)[pos] = '/';
-		else
-			key = NULL;
-		Py_CLEAR(key);
+		/* Clear the key out since we've already exposed it to Python
+		   and can't mutate it further. key's refcount is currently 2 so
+		   we can't just use Py_CLEAR. */
+		Py_DECREF(key);
+		key = NULL;
 	}
 	ret = 0;
 
