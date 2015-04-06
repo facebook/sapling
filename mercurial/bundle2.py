@@ -521,6 +521,10 @@ class unpackermixin(object):
         if util.safehasattr(self._fp, 'close'):
             return self._fp.close()
 
+def getunbundler(ui, fp, header=None):
+    """return a valid unbundler object for a given header"""
+    return unbundle20(ui, fp, header)
+
 class unbundle20(unpackermixin):
     """interpret a bundle2 stream
 

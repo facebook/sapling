@@ -114,7 +114,7 @@ class localpeer(peer.peerrepository):
             # When requesting a bundle2, getbundle returns a stream to make the
             # wire level function happier. We need to build a proper object
             # from it in local peer.
-            cg = bundle2.unbundle20(self.ui, cg)
+            cg = bundle2.getunbundler(self.ui, cg)
         return cg
 
     # TODO We might want to move the next two calls into legacypeer and add
@@ -132,7 +132,7 @@ class localpeer(peer.peerrepository):
                 # This little dance should be dropped eventually when the API
                 # is finally improved.
                 stream = util.chunkbuffer(ret.getchunks())
-                ret = bundle2.unbundle20(self.ui, stream)
+                ret = bundle2.getunbundler(self.ui, stream)
             return ret
         except error.PushRaced, exc:
             raise error.ResponseError(_('push failed:'), str(exc))

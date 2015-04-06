@@ -364,7 +364,7 @@ class wirepeer(peer.peerrepository):
         f = self._callcompressable("getbundle", **opts)
         bundlecaps = kwargs.get('bundlecaps')
         if bundlecaps is not None and 'HG2Y' in bundlecaps:
-            return bundle2.unbundle20(self.ui, f)
+            return bundle2.getunbundler(self.ui, f)
         else:
             return changegroupmod.cg1unpacker(f, 'UN')
 
@@ -401,7 +401,7 @@ class wirepeer(peer.peerrepository):
         else:
             # bundle2 push. Send a stream, fetch a stream.
             stream = self._calltwowaystream('unbundle', cg, heads=heads)
-            ret = bundle2.unbundle20(self.ui, stream)
+            ret = bundle2.getunbundler(self.ui, stream)
         return ret
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):

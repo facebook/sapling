@@ -157,7 +157,7 @@ Create an extension to test bundle2 API
   >         lock = repo.lock()
   >         tr = repo.transaction('processbundle')
   >         try:
-  >             unbundler = bundle2.unbundle20(ui, sys.stdin)
+  >             unbundler = bundle2.getunbundler(ui, sys.stdin)
   >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
   >             tr.close()
   >         except error.BundleValueError, exc:
@@ -183,7 +183,7 @@ Create an extension to test bundle2 API
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
   >     """print statistic on the bundle2 container read from stdin"""
-  >     unbundler = bundle2.unbundle20(ui, sys.stdin)
+  >     unbundler = bundle2.getunbundler(ui, sys.stdin)
   >     try:
   >         params = unbundler.params
   >     except error.BundleValueError, exc:
