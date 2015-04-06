@@ -6,14 +6,12 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.node import nullid
-from mercurial import util
 import struct, zlib, cStringIO
 
 _pack = struct.pack
 _unpack = struct.unpack
 _compress = zlib.compress
 _decompress = zlib.decompress
-_sha = util.sha1
 
 # Some code below makes tuples directly because it's more convenient. However,
 # code outside this module should always use dirstatetuple.
