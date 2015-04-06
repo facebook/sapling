@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import mdiff, parsers, error, revlog, util, scmutil
+import mdiff, parsers, error, revlog, util
 import array, struct
 import os
 
@@ -217,7 +217,7 @@ class manifestdict(object):
 
     @propertycache
     def _dirs(self):
-        return scmutil.dirs(self)
+        return util.dirs(self)
 
     def dirs(self):
         return self._dirs
@@ -561,7 +561,7 @@ class treemanifest(object):
 
     @propertycache
     def _alldirs(self):
-        return scmutil.dirs(self)
+        return util.dirs(self)
 
     def dirs(self):
         return self._alldirs

@@ -15,7 +15,7 @@ hide platform-specific details from the core.
 
 import i18n
 _ = i18n._
-import error, osutil, encoding
+import error, osutil, encoding, parsers
 import errno, shutil, sys, tempfile, traceback
 import re as remod
 import os, time, datetime, calendar, textwrap, signal, collections
@@ -2239,6 +2239,51 @@ def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
         for fnln, func in entries:
             f.write(' %-*s in %s\n' % (fnmax, fnln, func))
     f.flush()
+
+class dirs(object):
+    '''a multiset of directory names from a dirstate or manifest'''
+
+    def __init__(self, map, skip=None):
+        self._dirs = {}
+        addpath = self.addpath
+        if safehasattr(map, 'iteritems') and skip is not None:
+            for f, s in map.iteritems():
+                if s[0] != skip:
+                    addpath(f)
+        else:
+            for f in map:
+                addpath(f)
+
+    def addpath(self, path):
+        dirs = self._dirs
+        for base in finddirs(path):
+            if base in dirs:
+                dirs[base] += 1
+                return
+            dirs[base] = 1
+
+    def delpath(self, path):
+        dirs = self._dirs
+        for base in finddirs(path):
+            if dirs[base] > 1:
+                dirs[base] -= 1
+                return
+            del dirs[base]
+
+    def __iter__(self):
+        return self._dirs.iterkeys()
+
+    def __contains__(self, d):
+        return d in self._dirs
+
+if safehasattr(parsers, 'dirs'):
+    dirs = parsers.dirs
+
+def finddirs(path):
+    pos = path.rfind('/')
+    while pos != -1:
+        yield path[:pos]
+        pos = path.rfind('/', 0, pos)
 
 # convenient shortcut
 dst = debugstacktrace

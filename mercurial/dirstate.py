@@ -139,7 +139,7 @@ class dirstate(object):
 
     @propertycache
     def _dirs(self):
-        return scmutil.dirs(self._map, 'r')
+        return util.dirs(self._map, 'r')
 
     def dirs(self):
         return self._dirs
@@ -381,7 +381,7 @@ class dirstate(object):
             if f in self._dirs:
                 raise util.Abort(_('directory %r already in dirstate') % f)
             # shadows
-            for d in scmutil.finddirs(f):
+            for d in util.finddirs(f):
                 if d in self._dirs:
                     break
                 if d in self._map and self[d] != 'r':
@@ -601,7 +601,7 @@ class dirstate(object):
             return False
         if self._ignore(f):
             return True
-        for p in scmutil.finddirs(f):
+        for p in util.finddirs(f):
             if self._ignore(p):
                 return True
         return False
@@ -698,7 +698,7 @@ class dirstate(object):
                     results[nf] = None
                 else: # does it match a missing directory?
                     if alldirs is None:
-                        alldirs = scmutil.dirs(dmap)
+                        alldirs = util.dirs(dmap)
                     if nf in alldirs:
                         if matchedir:
                             matchedir(nf)

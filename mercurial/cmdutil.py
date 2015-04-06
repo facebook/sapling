@@ -2328,7 +2328,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
                                % join(subpath))
 
     # warn about failure to delete explicit files/dirs
-    deleteddirs = scmutil.dirs(deleted)
+    deleteddirs = util.dirs(deleted)
     for f in m.files():
         def insubrepo():
             for subpath in wctx.substate:

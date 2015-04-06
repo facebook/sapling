@@ -7,7 +7,7 @@
 
 from i18n import _
 from mercurial.node import nullrev
-import util, error, osutil, revset, similar, encoding, phases, parsers
+import util, error, osutil, revset, similar, encoding, phases
 import pathutil
 import match as matchmod
 import os, errno, re, glob, tempfile
@@ -1083,48 +1083,3 @@ class filecache(object):
             del obj.__dict__[self.name]
         except KeyError:
             raise AttributeError(self.name)
-
-class dirs(object):
-    '''a multiset of directory names from a dirstate or manifest'''
-
-    def __init__(self, map, skip=None):
-        self._dirs = {}
-        addpath = self.addpath
-        if util.safehasattr(map, 'iteritems') and skip is not None:
-            for f, s in map.iteritems():
-                if s[0] != skip:
-                    addpath(f)
-        else:
-            for f in map:
-                addpath(f)
-
-    def addpath(self, path):
-        dirs = self._dirs
-        for base in finddirs(path):
-            if base in dirs:
-                dirs[base] += 1
-                return
-            dirs[base] = 1
-
-    def delpath(self, path):
-        dirs = self._dirs
-        for base in finddirs(path):
-            if dirs[base] > 1:
-                dirs[base] -= 1
-                return
-            del dirs[base]
-
-    def __iter__(self):
-        return self._dirs.iterkeys()
-
-    def __contains__(self, d):
-        return d in self._dirs
-
-if util.safehasattr(parsers, 'dirs'):
-    dirs = parsers.dirs
-
-def finddirs(path):
-    pos = path.rfind('/')
-    while pos != -1:
-        yield path[:pos]
-        pos = path.rfind('/', 0, pos)
