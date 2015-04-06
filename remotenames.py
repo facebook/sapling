@@ -204,10 +204,8 @@ def _tracking(ui):
     # omg default true
     return ui.configbool('remotenames', 'tracking', True)
 
-def _setuprebase(rebase):
-    extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebase)
 
-def exrebase(orig, ui, repo, **opts):
+def exrebasecmd(orig, ui, repo, **opts):
     dest = opts['dest']
     source = opts['source']
     revs = opts['rev']
@@ -299,12 +297,15 @@ def extsetup(ui):
         entry[1].append(('u', 'untrack', None,
                          'remove tracking for this bookmark',
                          'BOOKMARK'))
+
         try:
             rebase = extensions.find('rebase')
+            def afterload(loaded):
+                extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebasecmd)
             if rebase:
-                _setuprebase(rebase)
+                extensions.afterloaded('tweakdefaults', afterload)
         except KeyError:
-            # rebase isn't on
+            # rebase isn't on, that's fine
             pass
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
