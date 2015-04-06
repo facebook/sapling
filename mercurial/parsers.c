@@ -1319,6 +1319,11 @@ static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen,
 static int nt_new(indexObject *self)
 {
 	if (self->ntlength == self->ntcapacity) {
+		if (self->ntcapacity >= INT_MAX / (sizeof(nodetree) * 2)) {
+			PyErr_SetString(PyExc_MemoryError,
+					"overflow in nt_new");
+			return -1;
+		}
 		self->ntcapacity *= 2;
 		self->nt = realloc(self->nt,
 				   self->ntcapacity * sizeof(nodetree));
@@ -1380,7 +1385,7 @@ static int nt_insert(indexObject *self, const char *node, int rev)
 static int nt_init(indexObject *self)
 {
 	if (self->nt == NULL) {
-		if (self->raw_length > INT_MAX) {
+		if (self->raw_length > INT_MAX / sizeof(nodetree)) {
 			PyErr_SetString(PyExc_ValueError, "overflow in nt_init");
 			return -1;
 		}
