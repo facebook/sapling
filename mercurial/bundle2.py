@@ -162,8 +162,6 @@ from i18n import _
 _pack = struct.pack
 _unpack = struct.unpack
 
-_magicstring = 'HG2Y'
-
 _fstreamparamsize = '>i'
 _fpartheadersize = '>i'
 _fparttypesize = '>B'
@@ -410,6 +408,8 @@ class bundle20(object):
     populate it. Then call `getchunks` to retrieve all the binary chunks of
     data that compose the bundle2 container."""
 
+    _magicstring = 'HG2Y'
+
     def __init__(self, ui, capabilities=()):
         self.ui = ui
         self._params = []
@@ -453,8 +453,8 @@ class bundle20(object):
 
     # methods used to generate the bundle2 stream
     def getchunks(self):
-        self.ui.debug('start emission of %s stream\n' % _magicstring)
-        yield _magicstring
+        self.ui.debug('start emission of %s stream\n' % self._magicstring)
+        yield self._magicstring
         param = self._paramchunk()
         self.ui.debug('bundle parameter: %s\n' % param)
         yield _pack(_fstreamparamsize, len(param))
