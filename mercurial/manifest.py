@@ -609,13 +609,6 @@ class treemanifest(object):
         '''
         fset = set(match.files())
 
-        # avoid the entire walk if we're only looking for specific files
-        if fset and not match.anypats():
-            if util.all(fn in self for fn in fset):
-                for fn in sorted(fset):
-                    yield fn
-                raise StopIteration
-
         for fn in self._walk(match):
             if fn in fset:
                 # specified pattern is the exact name
@@ -630,8 +623,18 @@ class treemanifest(object):
             if not self.hasdir(fn):
                 match.bad(fn, None)
 
-    def _walk(self, match):
-        '''Recursively generates matching file names for walk().'''
+    def _walk(self, match, alldirs=False):
+        '''Recursively generates matching file names for walk().
+
+        Will visit all subdirectories if alldirs is True, otherwise it will
+        only visit subdirectories for which match.visitdir is True.'''
+
+        if not alldirs:
+            # substring to strip trailing slash
+            visit = match.visitdir(self._dir[:-1] or '.')
+            if not visit:
+                return
+            alldirs = (visit == 'all')
 
         # yield this dir's files and walk its submanifests
         for p in sorted(self._dirs.keys() + self._files.keys()):
@@ -640,7 +643,7 @@ class treemanifest(object):
                 if match(fullp):
                     yield fullp
             else:
-                for f in self._dirs[p]._walk(match):
+                for f in self._dirs[p]._walk(match, alldirs):
                     yield f
 
     def matches(self, match):

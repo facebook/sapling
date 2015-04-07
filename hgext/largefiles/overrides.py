@@ -1274,6 +1274,20 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         if not f in notbad:
             origbadfn(f, msg)
     m.bad = lfbadfn
+
+    origvisitdirfn = m.visitdir
+    def lfvisitdirfn(dir):
+        if dir == lfutil.shortname:
+            return True
+        ret = origvisitdirfn(dir)
+        if ret:
+            return ret
+        lf = lfutil.splitstandin(dir)
+        if lf is None:
+            return False
+        return origvisitdirfn(lf)
+    m.visitdir = lfvisitdirfn
+
     for f in ctx.walk(m):
         fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
                                  pathname=f)
