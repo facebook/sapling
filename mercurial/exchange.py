@@ -984,8 +984,6 @@ def _pullbundle2(pullop):
             kwargs['obsmarkers'] = True
             pullop.stepsdone.add('obsmarkers')
     _pullbundle2extraprepare(pullop, kwargs)
-    if kwargs.keys() == ['format']:
-        return # nothing to pull
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
