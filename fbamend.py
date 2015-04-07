@@ -36,18 +36,6 @@ amendopts = [
 ]
 
 def uisetup(ui):
-    if obsolete._enabled:
-        msg = ('fbamend and evolve extension are imcompatible, '
-               'fbamend deactivated.\n'
-               'You can either disable it globally:\n'
-               '- type `hg config --edit`\n'
-               '- drop the `fbamend=` line from the `[extensions]` section\n'
-               'or disable it for a specific repo:\n'
-               '- type `hg config --local --edit`\n'
-               '- add a `fbamend=!%s` line in the `[extensions]` section\n')
-        msg %= ui.config('extensions', 'fbamend')
-        ui.write_err(msg)
-        return
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
@@ -72,6 +60,17 @@ def commit(orig, ui, repo, *pats, **opts):
 def amend(ui, repo, *pats, **opts):
     '''amend the current commit with more changes
     '''
+    if obsolete.isenabled(repo, 'allnewcommands'):
+        msg = ('fbamend and evolve extension are incompatible, '
+               'fbamend deactivated.\n'
+               'You can either disable it globally:\n'
+               '- type `hg config --edit`\n'
+               '- drop the `fbamend=` line from the `[extensions]` section\n'
+               'or disable it for a specific repo:\n'
+               '- type `hg config --local --edit`\n'
+               '- add a `fbamend=!%s` line in the `[extensions]` section\n')
+        msg %= ui.config('extensions', 'fbamend')
+        ui.write_err(msg)
     rebase = opts.get('rebase')
 
     if rebase and _histediting(repo):
