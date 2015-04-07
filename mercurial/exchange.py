@@ -52,6 +52,14 @@ def buildobsmarkerspart(bundler, markers):
         return bundler.newpart('b2x:obsmarkers', data=stream)
     return None
 
+def _canusebundle2(op):
+    """return true if a pull/push can use bundle2
+
+    Feel free to nuke this function when we drop the experimental option"""
+    return (op.repo.ui.configbool('experimental', 'bundle2-exp', False)
+            and op.remote.capable('bundle2-exp'))
+
+
 class pushoperation(object):
     """A object that represent a single push operation
 
@@ -217,9 +225,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
             lock = pushop.remote.lock()
         try:
             _pushdiscovery(pushop)
-            if (pushop.repo.ui.configbool('experimental', 'bundle2-exp',
-                                          False)
-                and pushop.remote.capable('bundle2-exp')):
+            if _canusebundle2(pushop):
                 _pushbundle2(pushop)
             _pushchangeset(pushop)
             _pushsyncphase(pushop)
@@ -876,8 +882,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
     try:
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
         _pulldiscovery(pullop)
-        if (pullop.repo.ui.configbool('experimental', 'bundle2-exp', False)
-            and pullop.remote.capable('bundle2-exp')):
+        if _canusebundle2(pullop):
             _pullbundle2(pullop)
         _pullchangeset(pullop)
         _pullphase(pullop)
