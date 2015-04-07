@@ -525,12 +525,13 @@ def getunbundler(ui, fp, header=None):
     """return a valid unbundler object for a given header"""
     if header is None:
         header = changegroup.readexactly(fp, 4)
-        magic, version = header[0:2], header[2:4]
-        if magic != 'HG':
-            raise util.Abort(_('not a Mercurial bundle'))
-        if version != '2Y':
-            raise util.Abort(_('unknown bundle version %s') % version)
-    unbundler = unbundle20(ui, fp)
+    magic, version = header[0:2], header[2:4]
+    if magic != 'HG':
+        raise util.Abort(_('not a Mercurial bundle'))
+    unbundlerclass = formatmap.get(version)
+    if unbundlerclass is None:
+        raise util.Abort(_('unknown bundle version %s') % version)
+    unbundler = unbundlerclass(ui, fp)
     ui.debug('start processing of %s stream\n' % header)
     return unbundler
 
@@ -614,6 +615,8 @@ class unbundle20(unpackermixin):
 
     def compressed(self):
         return False
+
+formatmap = {'2Y': unbundle20}
 
 class bundlepart(object):
     """A bundle2 part contains application level payload
