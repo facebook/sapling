@@ -623,12 +623,11 @@ class treemanifest(object):
                     yield fn
                 raise StopIteration
 
-        for fn in self:
+        for fn in self._walk(match):
             if fn in fset:
                 # specified pattern is the exact name
                 fset.remove(fn)
-            if match(fn):
-                yield fn
+            yield fn
 
         # for dirstate.walk, files=['.'] means "walk the whole tree".
         # follow that here, too
@@ -637,6 +636,19 @@ class treemanifest(object):
         for fn in sorted(fset):
             if not self.hasdir(fn):
                 match.bad(fn, None)
+
+    def _walk(self, match):
+        '''Recursively generates matching file names for walk().'''
+
+        # yield this dir's files and walk its submanifests
+        for p in sorted(self._dirs.keys() + self._files.keys()):
+            if p in self._files:
+                fullp = self._subpath(p)
+                if match(fullp):
+                    yield fullp
+            else:
+                for f in self._dirs[p]._walk(match):
+                    yield f
 
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''
