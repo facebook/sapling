@@ -32,7 +32,7 @@ def readbundle(ui, fh, fname, vfs=None):
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
         return changegroup.cg1unpacker(fh, alg)
-    elif version == '2Y':
+    elif version.startswith('2'):
         return bundle2.getunbundler(ui, fh, header=magic + version)
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
@@ -1168,7 +1168,10 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     when the API of bundle is refined.
     """
     # bundle10 case
-    if bundlecaps is None or 'HG2Y' not in bundlecaps:
+    usebundle2 = False
+    if bundlecaps is not None:
+        usebundle2 = util.any((cap.startswith('HG2') for cap in bundlecaps))
+    if not usebundle2:
         if bundlecaps and not kwargs.get('cg', True):
             raise ValueError(_('request for bundle10 must include changegroup'))
 
