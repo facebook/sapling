@@ -460,5 +460,9 @@ class testmanifestdict(unittest.TestCase, basemanifesttests):
     def parsemanifest(self, text):
         return manifestmod.manifestdict(text)
 
+class testtreemanifest(unittest.TestCase, basemanifesttests):
+    def parsemanifest(self, text):
+        return manifestmod.treemanifest('', text)
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
