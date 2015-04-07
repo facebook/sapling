@@ -258,6 +258,18 @@ Test interaction with histedit
   |
   o  cb9a9f314b8b a
   
+Test that --message is respected
+
+  $ hg amend
+  nothing changed
+  [1]
+  $ hg amend --message foo
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f83a9508203-7d2a99ee-amend-backup.hg (glob)
+  $ hg amend -m bar
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/29272a1da891-35a82ce4-amend-backup.hg (glob)
+  $ hg amend
+  nothing changed
+  [1]
 
 Test that the extension disables itself when evolution is enabled
 
