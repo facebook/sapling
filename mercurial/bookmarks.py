@@ -460,6 +460,12 @@ def incoming(ui, repo, other):
         incomings.append("   %-25s %s\n" % (b, getid(id)))
     for b, scid, dcid in addsrc:
         add(b, scid)
+    for b, scid, dcid in advsrc:
+        add(b, scid)
+    for b, scid, dcid in diverge:
+        add(b, scid)
+    for b, scid, dcid in differ:
+        add(b, scid)
 
     if not incomings:
         ui.status(_("no changed bookmarks found\n"))

@@ -414,6 +414,8 @@ hgweb
   $ hg in -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/
   searching for changed bookmarks
+     @                         9b140be10808
+     X                         9b140be10808
      Z                         0d2164f0ce0d
      foo                       000000000000
      foobar                    9b140be10808
