@@ -95,9 +95,9 @@ A_HUGE_MANIFEST = ''.join(sorted(
                    itertools.cycle((HASH_1, HASH_2)),
                    itertools.cycle(('', 'x', 'l')))))
 
-class testmanifest(unittest.TestCase):
+class basemanifesttests(object):
     def parsemanifest(self, text):
-        return manifestmod.manifestdict(text)
+        raise NotImplementedError('parsemanifest not implemented by test case')
 
     def assertIn(self, thing, container, msg=None):
         # assertIn new in 2.7, use it if available, otherwise polyfill
@@ -455,6 +455,10 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(
                 ['a/b/c/bar.txt', 'a/b/c/foo.txt', 'a/b/d/ten.txt'],
                 m2.keys())
+
+class testmanifestdict(unittest.TestCase, basemanifesttests):
+    def parsemanifest(self, text):
+        return manifestmod.manifestdict(text)
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
