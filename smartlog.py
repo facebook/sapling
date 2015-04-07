@@ -408,11 +408,6 @@ Excludes:
     masterrevset = _masterrevset(ui, repo, masterstring)
 
     revs = set()
-    rev = repo.changelog.rev
-    branchinfo = repo.changelog.branchinfo
-    ancestor = repo.changelog.ancestor
-    node = repo.changelog.node
-    parentrevs = repo.changelog.parentrevs
 
     global hiddenchanges
     hiddenchanges = 0
@@ -436,6 +431,15 @@ Excludes:
 
     if -1 in revs:
         revs.remove(-1)
+
+    # It's important that these function caches come after the revsets above,
+    # because the revsets may cause extra nodes to become visible, which in turn
+    # invalidates the changelog instance.
+    rev = repo.changelog.rev
+    branchinfo = repo.changelog.branchinfo
+    ancestor = repo.changelog.ancestor
+    node = repo.changelog.node
+    parentrevs = repo.changelog.parentrevs
 
     # get common ancestor
     anc = None
