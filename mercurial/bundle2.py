@@ -597,18 +597,18 @@ class unpackermixin(object):
         if util.safehasattr(self._fp, 'close'):
             return self._fp.close()
 
-def getunbundler(ui, fp, header=None):
-    """return a valid unbundler object for a given header"""
-    if header is None:
-        header = changegroup.readexactly(fp, 4)
-    magic, version = header[0:2], header[2:4]
+def getunbundler(ui, fp, magicstring=None):
+    """return a valid unbundler object for a given magicstring"""
+    if magicstring is None:
+        magicstring = changegroup.readexactly(fp, 4)
+    magic, version = magicstring[0:2], magicstring[2:4]
     if magic != 'HG':
         raise util.Abort(_('not a Mercurial bundle'))
     unbundlerclass = formatmap.get(version)
     if unbundlerclass is None:
         raise util.Abort(_('unknown bundle version %s') % version)
     unbundler = unbundlerclass(ui, fp)
-    indebug(ui, 'start processing of %s stream' % header)
+    indebug(ui, 'start processing of %s stream' % magicstring)
     return unbundler
 
 class unbundle20(unpackermixin):

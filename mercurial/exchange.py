@@ -36,7 +36,7 @@ def readbundle(ui, fh, fname, vfs=None):
             alg = changegroup.readexactly(fh, 2)
         return changegroup.cg1unpacker(fh, alg)
     elif version.startswith('2'):
-        return bundle2.getunbundler(ui, fh, header=magic + version)
+        return bundle2.getunbundler(ui, fh, magicstring=magic + version)
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
