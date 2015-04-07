@@ -95,10 +95,9 @@ A_HUGE_MANIFEST = ''.join(sorted(
                    itertools.cycle((HASH_1, HASH_2)),
                    itertools.cycle(('', 'x', 'l')))))
 
-def parsemanifest(text):
-    return manifestmod.manifestdict(text)
-
 class testmanifest(unittest.TestCase):
+    def parsemanifest(self, text):
+        return manifestmod.manifestdict(text)
 
     def assertIn(self, thing, container, msg=None):
         # assertIn new in 2.7, use it if available, otherwise polyfill
@@ -110,17 +109,17 @@ class testmanifest(unittest.TestCase):
         self.assert_(thing in container, msg)
 
     def testEmptyManifest(self):
-        m = parsemanifest(EMTPY_MANIFEST)
+        m = self.parsemanifest(EMTPY_MANIFEST)
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
     def testEmptyManifestv2(self):
-        m = parsemanifest(EMTPY_MANIFEST_V2)
+        m = self.parsemanifest(EMTPY_MANIFEST_V2)
         self.assertEqual(0, len(m))
         self.assertEqual([], list(m))
 
     def testManifest(self):
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         self.assertEqual(['bar/baz/qux.py', 'foo'], list(m))
         self.assertEqual(BIN_HASH_2, m['bar/baz/qux.py'])
         self.assertEqual('l', m.flags('bar/baz/qux.py'))
@@ -129,18 +128,18 @@ class testmanifest(unittest.TestCase):
         self.assertRaises(KeyError, lambda : m['wat'])
 
     def testParseManifestV2(self):
-        m1 = parsemanifest(A_SHORT_MANIFEST)
-        m2 = parsemanifest(A_SHORT_MANIFEST_V2)
+        m1 = self.parsemanifest(A_SHORT_MANIFEST)
+        m2 = self.parsemanifest(A_SHORT_MANIFEST_V2)
         # Should have same content as A_SHORT_MANIFEST
         self.assertEqual(m1.text(), m2.text())
 
     def testParseManifestMetadata(self):
         # Metadata is for future-proofing and should be accepted but ignored
-        m = parsemanifest(A_METADATA_MANIFEST)
+        m = self.parsemanifest(A_METADATA_MANIFEST)
         self.assertEqual(A_SHORT_MANIFEST, m.text())
 
     def testParseManifestStemCompression(self):
-        m = parsemanifest(A_STEM_COMPRESSED_MANIFEST)
+        m = self.parsemanifest(A_STEM_COMPRESSED_MANIFEST)
         self.assertIn('bar/baz/qux.py', m)
         self.assertIn('bar/qux/foo.py', m)
         self.assertIn('bar/qux/foz.py', m)
@@ -149,20 +148,20 @@ class testmanifest(unittest.TestCase):
         self.assertEqual(A_STEM_COMPRESSED_MANIFEST, m.text(usemanifestv2=True))
 
     def testTextV2(self):
-        m1 = parsemanifest(A_SHORT_MANIFEST)
+        m1 = self.parsemanifest(A_SHORT_MANIFEST)
         v2text = m1.text(usemanifestv2=True)
         self.assertEqual(A_SHORT_MANIFEST_V2, v2text)
 
     def testSetItem(self):
         want = BIN_HASH_1
 
-        m = parsemanifest(EMTPY_MANIFEST)
+        m = self.parsemanifest(EMTPY_MANIFEST)
         m['a'] = want
         self.assertIn('a', m)
         self.assertEqual(want, m['a'])
         self.assertEqual('a\0' + HASH_1 + '\n', m.text())
 
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         m['a'] = want
         self.assertEqual(want, m['a'])
         self.assertEqual('a\0' + HASH_1 + '\n' + A_SHORT_MANIFEST,
@@ -171,14 +170,14 @@ class testmanifest(unittest.TestCase):
     def testSetFlag(self):
         want = 'x'
 
-        m = parsemanifest(EMTPY_MANIFEST)
+        m = self.parsemanifest(EMTPY_MANIFEST)
         # first add a file; a file-less flag makes no sense
         m['a'] = BIN_HASH_1
         m.setflag('a', want)
         self.assertEqual(want, m.flags('a'))
         self.assertEqual('a\0' + HASH_1 + want + '\n', m.text())
 
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         # first add a file; a file-less flag makes no sense
         m['a'] = BIN_HASH_1
         m.setflag('a', want)
@@ -187,7 +186,7 @@ class testmanifest(unittest.TestCase):
                          m.text())
 
     def testCopy(self):
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         m['a'] =  BIN_HASH_1
         m2 = m.copy()
         del m
@@ -196,7 +195,7 @@ class testmanifest(unittest.TestCase):
     def testCompaction(self):
         unhex = binascii.unhexlify
         h1, h2 = unhex(HASH_1), unhex(HASH_2)
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         m['alpha'] = h1
         m['beta'] = h2
         del m['foo']
@@ -214,8 +213,8 @@ class testmanifest(unittest.TestCase):
         self.assertRaises(KeyError, lambda : m['foo'])
 
     def testSetGetNodeSuffix(self):
-        clean = parsemanifest(A_SHORT_MANIFEST)
-        m = parsemanifest(A_SHORT_MANIFEST)
+        clean = self.parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         h = m['foo']
         f = m.flags('foo')
         want = h + 'a'
@@ -246,7 +245,7 @@ class testmanifest(unittest.TestCase):
         self.assertEqual({'foo': ((h, ''), (want, f))}, clean.diff(m))
 
     def testMatchException(self):
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         match = matchmod.match('', '', ['re:.*'])
         def filt(path):
             if path == 'foo':
@@ -256,7 +255,7 @@ class testmanifest(unittest.TestCase):
         self.assertRaises(AssertionError, m.matches, match)
 
     def testRemoveItem(self):
-        m = parsemanifest(A_SHORT_MANIFEST)
+        m = self.parsemanifest(A_SHORT_MANIFEST)
         del m['foo']
         self.assertRaises(KeyError, lambda : m['foo'])
         self.assertEqual(1, len(m))
@@ -270,9 +269,9 @@ class testmanifest(unittest.TestCase):
         MISSING = (None, '')
         addl = 'z-only-in-left\0' + HASH_1 + '\n'
         addr = 'z-only-in-right\0' + HASH_2 + 'x\n'
-        left = parsemanifest(
+        left = self.parsemanifest(
             A_SHORT_MANIFEST.replace(HASH_1, HASH_3 + 'x') + addl)
-        right = parsemanifest(A_SHORT_MANIFEST + addr)
+        right = self.parsemanifest(A_SHORT_MANIFEST + addr)
         want = {
             'foo': ((BIN_HASH_3, 'x'),
                     (BIN_HASH_1, '')),
@@ -286,14 +285,14 @@ class testmanifest(unittest.TestCase):
             'foo': (MISSING, (BIN_HASH_3, 'x')),
             'z-only-in-left': (MISSING, (BIN_HASH_1, '')),
             }
-        self.assertEqual(want, parsemanifest(EMTPY_MANIFEST).diff(left))
+        self.assertEqual(want, self.parsemanifest(EMTPY_MANIFEST).diff(left))
 
         want = {
             'bar/baz/qux.py': ((BIN_HASH_2, 'l'), MISSING),
             'foo': ((BIN_HASH_3, 'x'), MISSING),
             'z-only-in-left': ((BIN_HASH_1, ''), MISSING),
             }
-        self.assertEqual(want, left.diff(parsemanifest(EMTPY_MANIFEST)))
+        self.assertEqual(want, left.diff(self.parsemanifest(EMTPY_MANIFEST)))
         copy = right.copy()
         del copy['z-only-in-right']
         del right['foo']
@@ -303,7 +302,7 @@ class testmanifest(unittest.TestCase):
             }
         self.assertEqual(want, right.diff(copy))
 
-        short = parsemanifest(A_SHORT_MANIFEST)
+        short = self.parsemanifest(A_SHORT_MANIFEST)
         pruned = short.copy()
         del pruned['foo']
         want = {
@@ -324,27 +323,27 @@ class testmanifest(unittest.TestCase):
         backwards = ''.join(
             l + '\n' for l in reversed(A_SHORT_MANIFEST.split('\n')) if l)
         try:
-            parsemanifest(backwards)
+            self.parsemanifest(backwards)
             self.fail('Should have raised ValueError')
         except ValueError, v:
             self.assertIn('Manifest lines not in sorted order.', str(v))
 
     def testNoTerminalNewline(self):
         try:
-            parsemanifest(A_SHORT_MANIFEST + 'wat')
+            self.parsemanifest(A_SHORT_MANIFEST + 'wat')
             self.fail('Should have raised ValueError')
         except ValueError, v:
             self.assertIn('Manifest did not end in a newline.', str(v))
 
     def testNoNewLineAtAll(self):
         try:
-            parsemanifest('wat')
+            self.parsemanifest('wat')
             self.fail('Should have raised ValueError')
         except ValueError, v:
             self.assertIn('Manifest did not end in a newline.', str(v))
 
     def testHugeManifest(self):
-        m = parsemanifest(A_HUGE_MANIFEST)
+        m = self.parsemanifest(A_HUGE_MANIFEST)
         self.assertEqual(HUGE_MANIFEST_ENTRIES, len(m))
         self.assertEqual(len(m), len(list(m)))
 
@@ -352,7 +351,7 @@ class testmanifest(unittest.TestCase):
         '''Tests matches() for a few specific files to make sure that both
         the set of files as well as their flags and nodeids are correct in
         the resulting manifest.'''
-        m = parsemanifest(A_HUGE_MANIFEST)
+        m = self.parsemanifest(A_HUGE_MANIFEST)
 
         match = matchmod.match('/', '',
                 ['file1', 'file200', 'file300'], exact=True)
@@ -367,7 +366,7 @@ class testmanifest(unittest.TestCase):
         '''Tests matches() for a small set of specific files, including one
         nonexistent file to make sure in only matches against existing files.
         '''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', '',
                 ['a/b/c/bar.txt', 'a/b/d/qux.py', 'readme.txt', 'nonexistent'],
@@ -381,7 +380,7 @@ class testmanifest(unittest.TestCase):
     def testMatchesNonexistentDirectory(self):
         '''Tests matches() for a relpath match on a directory that doesn't
         actually exist.'''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', '', ['a/f'], default='relpath')
         m2 = m.matches(match)
@@ -391,7 +390,7 @@ class testmanifest(unittest.TestCase):
     def testMatchesExactLarge(self):
         '''Tests matches() for files matching a large list of exact files.
         '''
-        m = parsemanifest(A_HUGE_MANIFEST)
+        m = self.parsemanifest(A_HUGE_MANIFEST)
 
         flist = m.keys()[80:300]
         match = matchmod.match('/', '', flist, exact=True)
@@ -401,7 +400,7 @@ class testmanifest(unittest.TestCase):
 
     def testMatchesFull(self):
         '''Tests matches() for what should be a full match.'''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', '', [''])
         m2 = m.matches(match)
@@ -411,7 +410,7 @@ class testmanifest(unittest.TestCase):
     def testMatchesDirectory(self):
         '''Tests matches() on a relpath match on a directory, which should
         match against all files within said directory.'''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', '', ['a/b'], default='relpath')
         m2 = m.matches(match)
@@ -425,7 +424,7 @@ class testmanifest(unittest.TestCase):
         '''Tests matches() on an exact match on a directory, which should
         result in an empty manifest because you can't perform an exact match
         against a directory.'''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', '', ['a/b'], exact=True)
         m2 = m.matches(match)
@@ -435,7 +434,7 @@ class testmanifest(unittest.TestCase):
     def testMatchesCwd(self):
         '''Tests matches() on a relpath match with the current directory ('.')
         when not in the root directory.'''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', 'a/b', ['.'], default='relpath')
         m2 = m.matches(match)
@@ -448,7 +447,7 @@ class testmanifest(unittest.TestCase):
     def testMatchesWithPattern(self):
         '''Tests matches() for files matching a pattern that reside
         deeper than the specified directory.'''
-        m = parsemanifest(A_DEEPER_MANIFEST)
+        m = self.parsemanifest(A_DEEPER_MANIFEST)
 
         match = matchmod.match('/', '', ['a/b/*/*.txt'])
         m2 = m.matches(match)
