@@ -592,8 +592,7 @@ class changectx(basectx):
         if fset and not match.anypats():
             if util.all(fn in self for fn in fset):
                 for fn in sorted(fset):
-                    if match(fn):
-                        yield fn
+                    yield fn
                 raise StopIteration
 
         for fn in self:
