@@ -225,6 +225,38 @@ class manifestdict(object):
     def hasdir(self, dir):
         return dir in self._dirs
 
+    def walk(self, match):
+        '''Generates matching file names.
+
+        Equivalent to manifest.matches(match).iterkeys(), but without creating
+        an entirely new manifest.
+
+        It also reports nonexistent files by marking them bad with match.bad().
+        '''
+        fset = set(match.files())
+
+        # avoid the entire walk if we're only looking for specific files
+        if fset and not match.anypats():
+            if util.all(fn in self for fn in fset):
+                for fn in sorted(fset):
+                    yield fn
+                raise StopIteration
+
+        for fn in self:
+            if fn in fset:
+                # specified pattern is the exact name
+                fset.remove(fn)
+            if match(fn):
+                yield fn
+
+        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # follow that here, too
+        fset.discard('.')
+
+        for fn in sorted(fset):
+            if not self.hasdir(fn):
+                match.bad(fn, None)
+
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''
         if match.always():
@@ -573,6 +605,38 @@ class treemanifest(object):
                 return self._dirs[topdir].hasdir(subdir)
             return False
         return (dir + '/') in self._dirs
+
+    def walk(self, match):
+        '''Generates matching file names.
+
+        Equivalent to manifest.matches(match).iterkeys(), but without creating
+        an entirely new manifest.
+
+        It also reports nonexistent files by marking them bad with match.bad().
+        '''
+        fset = set(match.files())
+
+        # avoid the entire walk if we're only looking for specific files
+        if fset and not match.anypats():
+            if util.all(fn in self for fn in fset):
+                for fn in sorted(fset):
+                    yield fn
+                raise StopIteration
+
+        for fn in self:
+            if fn in fset:
+                # specified pattern is the exact name
+                fset.remove(fn)
+            if match(fn):
+                yield fn
+
+        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # follow that here, too
+        fset.discard('.')
+
+        for fn in sorted(fset):
+            if not self.hasdir(fn):
+                match.bad(fn, None)
 
     def matches(self, match):
         '''generate a new manifest filtered by the match argument'''

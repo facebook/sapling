@@ -587,26 +587,15 @@ class changectx(basectx):
         return self._repo.changelog.descendant(self._rev, other._rev)
 
     def walk(self, match):
-        fset = set(match.files())
-        # avoid the entire walk if we're only looking for specific files
-        if fset and not match.anypats():
-            if util.all(fn in self for fn in fset):
-                for fn in sorted(fset):
-                    yield fn
-                raise StopIteration
+        '''Generates matching file names.'''
 
-        for fn in self:
-            if fn in fset:
-                # specified pattern is the exact name
-                fset.remove(fn)
-            if match(fn):
-                yield fn
-        # for dirstate.walk, files=['.'] means "walk the whole tree".
-        # follow that here, too
-        fset.discard('.')
-        for fn in sorted(fset):
-            if not self.hasdir(fn):
-                match.bad(fn, _('no such file in rev %s') % self)
+        # Override match.bad method to have message with nodeid
+        oldbad = match.bad
+        def bad(fn, msg):
+            oldbad(fn, _('no such file in rev %s') % self)
+        match.bad = bad
+
+        return self._manifest.walk(match)
 
     def matches(self, match):
         return self.walk(match)
@@ -1268,6 +1257,7 @@ class committablectx(basectx):
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):
+        '''Generates matching file names.'''
         return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
                                                True, False))
 
