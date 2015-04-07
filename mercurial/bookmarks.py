@@ -494,6 +494,14 @@ def outgoing(ui, repo, other):
         outgoings.append("   %-25s %s\n" % (b, getid(id)))
     for b, scid, dcid in addsrc:
         add(b, scid)
+    for b, scid, dcid in adddst:
+        add(b, ' ' * 40)
+    for b, scid, dcid in advsrc:
+        add(b, scid)
+    for b, scid, dcid in diverge:
+        add(b, scid)
+    for b, scid, dcid in differ:
+        add(b, scid)
 
     if not outgoings:
         ui.status(_("no changed bookmarks found\n"))

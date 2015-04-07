@@ -402,8 +402,11 @@ hgweb
   $ hg out -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/
   searching for changed bookmarks
-  no changed bookmarks found
-  [1]
+     @                         0d2164f0ce0d
+     X                         0d2164f0ce0d
+     Z                         0d2164f0ce0d
+     foo                                   
+     foobar                                
   $ hg push -B Z http://localhost:$HGPORT/
   pushing to http://localhost:$HGPORT/
   searching for changes
