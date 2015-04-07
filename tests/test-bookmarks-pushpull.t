@@ -534,13 +534,13 @@ be excahnged)
   $ hg -R repo1 outgoing -B repo2 -v
   comparing with repo2
   searching for changed bookmarks
-     ADD_ON_REPO1              66f7d451a68b
-     ADD_ON_REPO2                          
-     ADV_ON_REPO1              fa942426a6fd
-     DIFF_ADV_ON_REPO1         6100d3090acf
-     DIFF_ADV_ON_REPO2         1ea73414a91b
-     DIFF_DIVERGED             6100d3090acf
-     DIVERGED                  66f7d451a68b
+     ADD_ON_REPO1              66f7d451a68b added
+     ADD_ON_REPO2                           deleted
+     ADV_ON_REPO1              fa942426a6fd advanced
+     DIFF_ADV_ON_REPO1         6100d3090acf advanced
+     DIFF_ADV_ON_REPO2         1ea73414a91b changed
+     DIFF_DIVERGED             6100d3090acf changed
+     DIVERGED                  66f7d451a68b diverged
 
   $ hg -R repo2 incoming -B repo1 -v
   comparing with repo1
@@ -553,13 +553,13 @@ be excahnged)
   $ hg -R repo2 outgoing -B repo1 -v
   comparing with repo1
   searching for changed bookmarks
-     ADD_ON_REPO1                          
-     ADD_ON_REPO2              66f7d451a68b
-     ADV_ON_REPO2              66f7d451a68b
-     DIFF_ADV_ON_REPO1         1ea73414a91b
-     DIFF_ADV_ON_REPO2         e7bd5218ca15
-     DIFF_DIVERGED             e7bd5218ca15
-     DIVERGED                  fa942426a6fd
+     ADD_ON_REPO1                           deleted
+     ADD_ON_REPO2              66f7d451a68b added
+     ADV_ON_REPO2              66f7d451a68b advanced
+     DIFF_ADV_ON_REPO1         1ea73414a91b changed
+     DIFF_ADV_ON_REPO2         e7bd5218ca15 advanced
+     DIFF_DIVERGED             e7bd5218ca15 changed
+     DIVERGED                  fa942426a6fd diverged
 
   $ cd ..
 

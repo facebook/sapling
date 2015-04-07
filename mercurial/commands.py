@@ -4795,6 +4795,31 @@ def outgoing(ui, repo, dest=None, **opts):
 
     See pull for details of valid destination formats.
 
+    .. container:: verbose
+
+      With -B/--bookmarks, the result of bookmark comparison between
+      local and remote repositories is displayed. With -v/--verbose,
+      status is also displayed for each bookmark like below::
+
+        BM1               01234567890a added
+        BM2                            deleted
+        BM3               234567890abc advanced
+        BM4               34567890abcd diverged
+        BM5               4567890abcde changed
+
+      The action taken when pushing depends on the
+      status of each bookmark:
+
+      :``added``: push with ``-B`` will create it
+      :``deleted``: push with ``-B`` will delete it
+      :``advanced``: push will update it
+      :``diverged``: push with ``-B`` will update it
+      :``changed``: push with ``-B`` will update it
+
+      From the point of view of pushing behavior, bookmarks
+      existing only in the remote repository are treated as
+      ``deleted``, even if it is in fact added remotely.
+
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
     if opts.get('graph'):

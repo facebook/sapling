@@ -494,18 +494,22 @@ def outgoing(ui, repo, other):
         getid = lambda id: id
     else:
         getid = lambda id: id[:12]
-    def add(b, id):
-        outgoings.append("   %-25s %s\n" % (b, getid(id)))
+    if ui.verbose:
+        def add(b, id, st):
+            outgoings.append("   %-25s %s %s\n" % (b, getid(id), st))
+    else:
+        def add(b, id, st):
+            outgoings.append("   %-25s %s\n" % (b, getid(id)))
     for b, scid, dcid in addsrc:
-        add(b, scid)
+        add(b, scid, _('added'))
     for b, scid, dcid in adddst:
-        add(b, ' ' * 40)
+        add(b, ' ' * 40, _('deleted'))
     for b, scid, dcid in advsrc:
-        add(b, scid)
+        add(b, scid, _('advanced'))
     for b, scid, dcid in diverge:
-        add(b, scid)
+        add(b, scid, _('diverged'))
     for b, scid, dcid in differ:
-        add(b, scid)
+        add(b, scid, _('changed'))
 
     if not outgoings:
         ui.status(_("no changed bookmarks found\n"))
