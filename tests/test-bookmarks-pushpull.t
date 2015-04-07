@@ -448,6 +448,121 @@ hgweb
 
   $ cd ..
 
+Test to show result of bookmarks comparision
+
+  $ mkdir bmcomparison
+  $ cd bmcomparison
+
+  $ hg init source
+  $ hg -R source debugbuilddag '+2*2*3*4'
+  $ hg -R source log -G --template '{rev}:{node|short}'
+  o  4:e7bd5218ca15
+  |
+  | o  3:6100d3090acf
+  |/
+  | o  2:fa942426a6fd
+  |/
+  | o  1:66f7d451a68b
+  |/
+  o  0:1ea73414a91b
+  
+  $ hg -R source bookmarks -r 0 SAME
+  $ hg -R source bookmarks -r 0 ADV_ON_REPO1
+  $ hg -R source bookmarks -r 0 ADV_ON_REPO2
+  $ hg -R source bookmarks -r 0 DIFF_ADV_ON_REPO1
+  $ hg -R source bookmarks -r 0 DIFF_ADV_ON_REPO2
+  $ hg -R source bookmarks -r 1 DIVERGED
+
+  $ hg clone -U source repo1
+
+(test that incoming/outgoing exit with 1, if there is no bookmark to
+be excahnged)
+
+  $ hg -R repo1 incoming -B
+  comparing with $TESTTMP/bmcomparison/source
+  searching for changed bookmarks
+  no changed bookmarks found
+  [1]
+  $ hg -R repo1 outgoing -B
+  comparing with $TESTTMP/bmcomparison/source
+  searching for changed bookmarks
+  no changed bookmarks found
+  [1]
+
+  $ hg -R repo1 bookmarks -f -r 1 ADD_ON_REPO1
+  $ hg -R repo1 bookmarks -f -r 2 ADV_ON_REPO1
+  $ hg -R repo1 bookmarks -f -r 3 DIFF_ADV_ON_REPO1
+  $ hg -R repo1 bookmarks -f -r 3 DIFF_DIVERGED
+  $ hg -R repo1 -q --config extensions.mq= strip 4
+  $ hg -R repo1 log -G --template '{node|short} ({bookmarks})'
+  o  6100d3090acf (DIFF_ADV_ON_REPO1 DIFF_DIVERGED)
+  |
+  | o  fa942426a6fd (ADV_ON_REPO1)
+  |/
+  | o  66f7d451a68b (ADD_ON_REPO1 DIVERGED)
+  |/
+  o  1ea73414a91b (ADV_ON_REPO2 DIFF_ADV_ON_REPO2 SAME)
+  
+
+  $ hg clone -U source repo2
+  $ hg -R repo2 bookmarks -f -r 1 ADD_ON_REPO2
+  $ hg -R repo2 bookmarks -f -r 1 ADV_ON_REPO2
+  $ hg -R repo2 bookmarks -f -r 2 DIVERGED
+  $ hg -R repo2 bookmarks -f -r 4 DIFF_ADV_ON_REPO2
+  $ hg -R repo2 bookmarks -f -r 4 DIFF_DIVERGED
+  $ hg -R repo2 -q --config extensions.mq= strip 3
+  $ hg -R repo2 log -G --template '{node|short} ({bookmarks})'
+  o  e7bd5218ca15 (DIFF_ADV_ON_REPO2 DIFF_DIVERGED)
+  |
+  | o  fa942426a6fd (DIVERGED)
+  |/
+  | o  66f7d451a68b (ADD_ON_REPO2 ADV_ON_REPO2)
+  |/
+  o  1ea73414a91b (ADV_ON_REPO1 DIFF_ADV_ON_REPO1 SAME)
+  
+
+(test that difference of bookmarks between repositories are fully shown)
+
+  $ hg -R repo1 incoming -B repo2 -v
+  comparing with repo2
+  searching for changed bookmarks
+     ADD_ON_REPO2              66f7d451a68b
+     ADV_ON_REPO2              66f7d451a68b
+     DIFF_ADV_ON_REPO2         e7bd5218ca15
+     DIFF_DIVERGED             e7bd5218ca15
+     DIVERGED                  fa942426a6fd
+  $ hg -R repo1 outgoing -B repo2 -v
+  comparing with repo2
+  searching for changed bookmarks
+     ADD_ON_REPO1              66f7d451a68b
+     ADD_ON_REPO2                          
+     ADV_ON_REPO1              fa942426a6fd
+     DIFF_ADV_ON_REPO1         6100d3090acf
+     DIFF_ADV_ON_REPO2         1ea73414a91b
+     DIFF_DIVERGED             6100d3090acf
+     DIVERGED                  66f7d451a68b
+
+  $ hg -R repo2 incoming -B repo1 -v
+  comparing with repo1
+  searching for changed bookmarks
+     ADD_ON_REPO1              66f7d451a68b
+     ADV_ON_REPO1              fa942426a6fd
+     DIFF_ADV_ON_REPO1         6100d3090acf
+     DIFF_DIVERGED             6100d3090acf
+     DIVERGED                  66f7d451a68b
+  $ hg -R repo2 outgoing -B repo1 -v
+  comparing with repo1
+  searching for changed bookmarks
+     ADD_ON_REPO1                          
+     ADD_ON_REPO2              66f7d451a68b
+     ADV_ON_REPO2              66f7d451a68b
+     DIFF_ADV_ON_REPO1         1ea73414a91b
+     DIFF_ADV_ON_REPO2         e7bd5218ca15
+     DIFF_DIVERGED             e7bd5218ca15
+     DIVERGED                  fa942426a6fd
+
+  $ cd ..
+
 Pushing a bookmark should only push the changes required by that
 bookmark, not all outgoing changes:
   $ hg clone http://localhost:$HGPORT/ addmarks
