@@ -107,7 +107,7 @@ class localpeer(peer.peerrepository):
         return self._repo.known(nodes)
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None,
-                  format='HG10', **kwargs):
+                  **kwargs):
         cg = exchange.getbundle(self._repo, source, heads=heads,
                                 common=common, bundlecaps=bundlecaps, **kwargs)
         if bundlecaps is not None and 'HG2Y' in bundlecaps:
