@@ -4300,6 +4300,29 @@ def incoming(ui, repo, source="default", **opts):
 
     .. container:: verbose
 
+      With -B/--bookmarks, the result of bookmark comparison between
+      local and remote repositories is displayed. With -v/--verbose,
+      status is also displayed for each bookmark like below::
+
+        BM1               01234567890a added
+        BM2               1234567890ab advanced
+        BM3               234567890abc diverged
+        BM4               34567890abcd changed
+
+      The action taken locally when pulling depends on the
+      status of each bookmark:
+
+      :``added``: pull will create it
+      :``advanced``: pull will update it
+      :``diverged``: pull will create a divergent bookmark
+      :``changed``: result depends on remote changesets
+
+      From the point of view of pulling behavior, bookmark
+      existing only in the remote repository are treated as ``added``,
+      even if it is in fact locally deleted.
+
+    .. container:: verbose
+
       For remote repository, using --bundle avoids downloading the
       changesets twice if the incoming is followed by a pull.
 
