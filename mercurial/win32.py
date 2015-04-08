@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import ctypes, errno, os, subprocess, random
+import ctypes, errno, msvcrt, os, subprocess, random
 
 _kernel32 = ctypes.windll.kernel32
 _advapi32 = ctypes.windll.advapi32
@@ -26,6 +26,7 @@ _INVALID_HANDLE_VALUE = _HANDLE(-1).value
 _ERROR_SUCCESS = 0
 _ERROR_NO_MORE_FILES = 18
 _ERROR_INVALID_PARAMETER = 87
+_ERROR_BROKEN_PIPE = 109
 _ERROR_INSUFFICIENT_BUFFER = 122
 
 # WPARAM is defined as UINT_PTR (unsigned type)
@@ -211,6 +212,10 @@ _user32.EnumWindows.restype = _BOOL
 _kernel32.CreateToolhelp32Snapshot.argtypes = [_DWORD, _DWORD]
 _kernel32.CreateToolhelp32Snapshot.restype = _BOOL
 
+_kernel32.PeekNamedPipe.argtypes = [_HANDLE, ctypes.c_void_p, _DWORD,
+    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+_kernel32.PeekNamedPipe.restype = _BOOL
+
 _kernel32.Process32First.argtypes = [_HANDLE, ctypes.c_void_p]
 _kernel32.Process32First.restype = _BOOL
 
@@ -259,6 +264,19 @@ def samedevice(path1, path2):
     res1 = _getfileinfo(path1)
     res2 = _getfileinfo(path2)
     return res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
+
+def peekpipe(pipe):
+    handle = msvcrt.get_osfhandle(pipe.fileno())
+    avail = _DWORD()
+
+    if not _kernel32.PeekNamedPipe(handle, None, 0, None, ctypes.byref(avail),
+                                   None):
+        err = _kernel32.GetLastError()
+        if err == _ERROR_BROKEN_PIPE:
+            return 0
+        raise ctypes.WinError(err)
+
+    return avail.value
 
 def testpid(pid):
     '''return True if pid is still running or unable to
