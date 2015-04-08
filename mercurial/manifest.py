@@ -228,7 +228,7 @@ class manifestdict(object):
         if fset and not match.anypats() and util.all(fn in self for fn in fset):
             for fn in sorted(fset):
                 yield fn
-            raise StopIteration
+            return
 
         for fn in self:
             if fn in fset:
