@@ -363,7 +363,7 @@ def readpipe(pipe):
     """Read all available data from a pipe."""
     chunks = []
     while True:
-        size = os.fstat(pipe.fileno()).st_size
+        size = win32.peekpipe(pipe)
         if not size:
             break
 
