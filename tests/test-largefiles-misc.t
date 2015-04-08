@@ -336,6 +336,12 @@ Lock in subrepo, otherwise the change isn't archived
   ../lf_subrepo_archive/subrepo
   ../lf_subrepo_archive/subrepo/large.txt
   ../lf_subrepo_archive/subrepo/normal.txt
+  $ cat ../lf_subrepo_archive/.hg_archival.txt
+  repo: 41bd42f10efa43698cc02052ea0977771cba506d
+  node: d56a95e6522858bc08a724c4fe2bdee066d1c30b
+  branch: default
+  latesttag: null
+  latesttagdistance: 4
 
 Test update with subrepos.
 
