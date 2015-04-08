@@ -230,7 +230,7 @@ class manifestdict(object):
         fset = set(match.files())
 
         # avoid the entire walk if we're only looking for specific files
-        if fset and not match.anypats() and util.all(fn in self for fn in fset):
+        if not match.anypats() and util.all(fn in self for fn in fset):
             for fn in sorted(fset):
                 yield fn
             return
