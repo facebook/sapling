@@ -222,6 +222,11 @@ class manifestdict(object):
 
         It also reports nonexistent files by marking them bad with match.bad().
         '''
+        if match.always():
+            for f in iter(self):
+                yield f
+            return
+
         fset = set(match.files())
 
         # avoid the entire walk if we're only looking for specific files
@@ -607,6 +612,11 @@ class treemanifest(object):
 
         It also reports nonexistent files by marking them bad with match.bad().
         '''
+        if match.always():
+            for f in iter(self):
+                yield f
+            return
+
         fset = set(match.files())
 
         for fn in self._walk(match):
