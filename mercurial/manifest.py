@@ -214,6 +214,13 @@ class manifestdict(object):
     def hasdir(self, dir):
         return dir in self._dirs
 
+    def _filesfastpath(self, match):
+        '''Checks whether we can correctly and quickly iterate over matcher
+        files instead of over manifest files.'''
+        files = match.files()
+        return (len(files) < 100 and (match.isexact() or
+            (not match.anypats() and util.all(fn in self for fn in files))))
+
     def walk(self, match):
         '''Generates matching file names.
 
@@ -230,7 +237,7 @@ class manifestdict(object):
         fset = set(match.files())
 
         # avoid the entire walk if we're only looking for specific files
-        if not match.anypats() and util.all(fn in self for fn in fset):
+        if self._filesfastpath(match):
             for fn in sorted(fset):
                 yield fn
             return
@@ -255,9 +262,7 @@ class manifestdict(object):
         if match.always():
             return self.copy()
 
-        files = match.files()
-        if (len(files) < 100 and (match.isexact() or
-            (not match.anypats() and util.all(fn in self for fn in files)))):
+        if self._filesfastpath(match):
             m = manifestdict()
             lm = self._lm
             for fn in match.files():
