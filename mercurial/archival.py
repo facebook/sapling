@@ -54,6 +54,27 @@ def guesskind(dest):
             return kind
     return None
 
+def buildmetadata(ctx):
+    '''build content of .hg_archival.txt'''
+    repo = ctx.repo()
+    base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
+        repo[0].hex(), ctx.hex(), encoding.fromlocal(ctx.branch()))
+
+    tags = ''.join('tag: %s\n' % t for t in ctx.tags()
+                   if repo.tagtype(t) == 'global')
+    if not tags:
+        repo.ui.pushbuffer()
+        opts = {'template': '{latesttag}\n{latesttagdistance}',
+                'style': '', 'patch': None, 'git': None}
+        cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
+        ltags, dist = repo.ui.popbuffer().split('\n')
+        ltags = ltags.split(':')
+        changessince = len(repo.revs('only(.,%s)', ltags[0]))
+        tags = ''.join('latesttag: %s\n' % t for t in ltags)
+        tags += 'latesttagdistance: %s\n' % dist
+        tags += 'changessincelatesttag: %s\n' % changessince
+
+    return base + tags
 
 class tarit(object):
     '''write archive to tar file or stream.  can write uncompressed,
@@ -263,29 +284,9 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     archiver = archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta", True):
-        def metadata():
-            base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
-                repo[0].hex(), ctx.hex(), encoding.fromlocal(ctx.branch()))
-
-            tags = ''.join('tag: %s\n' % t for t in ctx.tags()
-                           if repo.tagtype(t) == 'global')
-            if not tags:
-                repo.ui.pushbuffer()
-                opts = {'template': '{latesttag}\n{latesttagdistance}',
-                        'style': '', 'patch': None, 'git': None}
-                cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
-                ltags, dist = repo.ui.popbuffer().split('\n')
-                ltags = ltags.split(':')
-                changessince = len(repo.revs('only(.,%s)', ltags[0]))
-                tags = ''.join('latesttag: %s\n' % t for t in ltags)
-                tags += 'latesttagdistance: %s\n' % dist
-                tags += 'changessincelatesttag: %s\n' % changessince
-
-            return base + tags
-
         name = '.hg_archival.txt'
         if not matchfn or matchfn(name):
-            write(name, 0644, False, metadata)
+            write(name, 0644, False, lambda: buildmetadata(ctx))
 
     if matchfn:
         files = [f for f in ctx.manifest().keys() if matchfn(f)]
