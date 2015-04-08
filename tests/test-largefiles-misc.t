@@ -342,6 +342,7 @@ Lock in subrepo, otherwise the change isn't archived
   branch: default
   latesttag: null
   latesttagdistance: 4
+  changessincelatesttag: 4
 
 Test update with subrepos.
 

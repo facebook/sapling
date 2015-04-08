@@ -14,7 +14,6 @@ import copy
 from mercurial import hg, util, cmdutil, scmutil, match as match_, \
         archival, pathutil, revset
 from mercurial.i18n import _
-from mercurial.node import hex
 
 import lfutil
 import lfcommands
@@ -900,24 +899,8 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     archiver = archival.archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta", True):
-        def metadata():
-            base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
-                hex(repo.changelog.node(0)), hex(node), ctx.branch())
-
-            tags = ''.join('tag: %s\n' % t for t in ctx.tags()
-                           if repo.tagtype(t) == 'global')
-            if not tags:
-                repo.ui.pushbuffer()
-                opts = {'template': '{latesttag}\n{latesttagdistance}',
-                        'style': '', 'patch': None, 'git': None}
-                cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
-                ltags, dist = repo.ui.popbuffer().split('\n')
-                tags = ''.join('latesttag: %s\n' % t for t in ltags.split(':'))
-                tags += 'latesttagdistance: %s\n' % dist
-
-            return base + tags
-
-        write('.hg_archival.txt', 0644, False, metadata)
+        write('.hg_archival.txt', 0644, False,
+              lambda: archival.buildmetadata(ctx))
 
     for f in ctx:
         ff = ctx.flags(f)
