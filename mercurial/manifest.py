@@ -198,17 +198,6 @@ class manifestdict(object):
     def keys(self):
         return list(self.iterkeys())
 
-    def _intersectfiles(self, files):
-        '''make a new lazymanifest with the intersection of self with files
-
-        The algorithm assumes that files is much smaller than self.'''
-        ret = manifestdict()
-        lm = self._lm
-        for fn in files:
-            if fn in lm:
-                ret._lm[fn] = lm[fn]
-        return ret
-
     def filesnotin(self, m2):
         '''Set of files in this manifest that are not in the other'''
         files = set(self)
@@ -265,7 +254,12 @@ class manifestdict(object):
         files = match.files()
         if (len(files) < 100 and (match.isexact() or
             (not match.anypats() and util.all(fn in self for fn in files)))):
-            return self._intersectfiles(files)
+            m = manifestdict()
+            lm = self._lm
+            for fn in match.files():
+                if fn in lm:
+                    m._lm[fn] = lm[fn]
+            return m
 
         m = manifestdict('')
         m._lm = self._lm.filtercopy(match)
