@@ -94,10 +94,8 @@ static int _addpath(PyObject *dirs, PyObject *path)
 			goto bail;
 
 		/* Clear the key out since we've already exposed it to Python
-		   and can't mutate it further. key's refcount is currently 2 so
-		   we can't just use Py_CLEAR. */
-		Py_DECREF(key);
-		key = NULL;
+		   and can't mutate it further. */
+		Py_CLEAR(key);
 	}
 	ret = 0;
 
