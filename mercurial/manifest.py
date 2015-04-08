@@ -267,9 +267,9 @@ class manifestdict(object):
             (not match.anypats() and util.all(fn in self for fn in files)))):
             return self._intersectfiles(files)
 
-        lm = manifestdict('')
-        lm._lm = self._lm.filtercopy(match)
-        return lm
+        m = manifestdict('')
+        m._lm = self._lm.filtercopy(match)
+        return m
 
     def diff(self, m2, clean=False):
         '''Finds changes between the current manifest and m2.
