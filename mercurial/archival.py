@@ -54,11 +54,17 @@ def guesskind(dest):
             return kind
     return None
 
+def _rootctx(repo):
+    # repo[0] may be hidden
+    for rev in repo:
+        return repo[rev]
+    return repo['null']
+
 def buildmetadata(ctx):
     '''build content of .hg_archival.txt'''
     repo = ctx.repo()
     base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
-        repo[0].hex(), ctx.hex(), encoding.fromlocal(ctx.branch()))
+        _rootctx(repo).hex(), ctx.hex(), encoding.fromlocal(ctx.branch()))
 
     tags = ''.join('tag: %s\n' % t for t in ctx.tags()
                    if repo.tagtype(t) == 'global')

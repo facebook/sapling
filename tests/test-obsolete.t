@@ -250,6 +250,30 @@ We need to create a clone of 5 and add a special marker with a flag
   o  0:1f0dee641bb7 (public) [ ] add a
   
 
+  $ cd ..
+
+Revision 0 is hidden
+--------------------
+
+  $ hg init rev0hidden
+  $ cd rev0hidden
+
+  $ mkcommit kill0
+  $ hg up -q null
+  $ hg debugobsolete `getid kill0`
+  $ mkcommit a
+  $ mkcommit b
+
+Should pick the first visible revision as "repo" node
+
+  $ hg archive ../archive-null
+  $ cat ../archive-null/.hg_archival.txt
+  repo: 1f0dee641bb7258c56bd60e93edfa2405381c41e
+  node: 7c3bad9141dcb46ff89abf5f61856facd56e476c
+  branch: default
+  latesttag: null
+  latesttagdistance: 2
+  changessincelatesttag: 2
 
 
   $ cd ..
