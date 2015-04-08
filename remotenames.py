@@ -760,7 +760,6 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         fm.end()
 
 def activepath(ui, remote):
-    realpath = ''
     local = None
     try:
         local = remote.local()
@@ -782,6 +781,7 @@ def activepath(ui, remote):
         except AttributeError:
             rpath = remote.url
 
+    candidates = []
     for path, uri in ui.configitems('paths'):
         uri = ui.expandpath(expandscheme(ui, uri))
         if local:
@@ -801,13 +801,26 @@ def activepath(ui, remote):
             continue
         rpath = rpath.rstrip('/')
         if uri == rpath:
-            realpath = path
-            # prefer a non-default name to default
-            if path != 'default' and path != 'default-push':
-                break
+            candidates.append(path)
+
+    if not candidates:
+        return ''
+
+    # be stable under different orderings of paths in config files
+    # prefer any name other than 'default' and 'default-push' if available
+    # prefer shortest name of remaining names, and break ties by alphabetizing
+    cset = set(candidates)
+    cset.discard('default')
+    cset.discard('default-push')
+    if cset:
+        candidates = list(cset)
+
+    candidates.sort() # alphabetical
+    candidates.sort(key=len) # sort is stable so first will be the correct one
+    bestpath = candidates[0]
 
     renames = _getrenames(ui)
-    realpath = renames.get(realpath, realpath)
+    realpath = renames.get(bestpath, bestpath)
     return realpath
 
 # memoization

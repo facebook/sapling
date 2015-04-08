@@ -13,6 +13,12 @@ Set up extension and repos
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
+  $ echo "[paths]" >> .hg/hgrc
+  $ echo "default-push=$TESTTMP/repo1" >> .hg/hgrc
+  $ hg pull
+  pulling from $TESTTMP/repo1
+  searching for changes
+  no changes found
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
   cb9a9f314b8b default/bm1 default/bm2 default/default
 
