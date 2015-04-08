@@ -206,7 +206,7 @@ class manifestdict(object):
         lm = self._lm
         for fn in files:
             if fn in lm:
-                ret._lm[fn] = self._lm[fn]
+                ret._lm[fn] = lm[fn]
         return ret
 
     def filesnotin(self, m2):
