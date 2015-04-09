@@ -552,6 +552,12 @@ class abstractsubrepo(object):
     def shortid(self, revid):
         return revid
 
+    @propertycache
+    def wvfs(self):
+        """return vfs to access the working directory of this subrepository
+        """
+        return scmutil.vfs(self._ctx.repo().wvfs.join(self._path))
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         super(hgsubrepo, self).__init__(ctx, path)
@@ -943,6 +949,12 @@ class hgsubrepo(abstractsubrepo):
 
     def shortid(self, revid):
         return revid[:12]
+
+    @propertycache
+    def wvfs(self):
+        """return own wvfs for efficiency and consitency
+        """
+        return self._repo.wvfs
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
