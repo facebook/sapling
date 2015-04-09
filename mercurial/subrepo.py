@@ -509,7 +509,7 @@ class abstractsubrepo(object):
             flags = self.fileflags(name)
             mode = 'x' in flags and 0755 or 0644
             symlink = 'l' in flags
-            archiver.addfile(os.path.join(prefix, self._path, name),
+            archiver.addfile(self.wvfs.reljoin(prefix, self._path, name),
                              mode, symlink, self.filedata(name))
             self.ui.progress(_('archiving (%s)') % relpath, i + 1,
                              unit=_('files'), total=total)
@@ -667,8 +667,8 @@ class hgsubrepo(abstractsubrepo):
     @annotatesubrepoerror
     def add(self, ui, match, prefix, explicitonly, **opts):
         return cmdutil.add(ui, self._repo, match,
-                           os.path.join(prefix, self._path), explicitonly,
-                           **opts)
+                           self.wvfs.reljoin(prefix, self._path),
+                           explicitonly, **opts)
 
     @annotatesubrepoerror
     def addremove(self, m, prefix, opts, dry_run, similarity):
@@ -678,7 +678,7 @@ class hgsubrepo(abstractsubrepo):
         opts = copy.copy(opts)
         opts['subrepos'] = True
         return scmutil.addremove(self._repo, m,
-                                 os.path.join(prefix, self._path), opts,
+                                 self.wvfs.reljoin(prefix, self._path), opts,
                                  dry_run, similarity)
 
     @annotatesubrepoerror
@@ -725,7 +725,7 @@ class hgsubrepo(abstractsubrepo):
             s = subrepo(ctx, subpath)
             submatch = matchmod.narrowmatcher(subpath, match)
             total += s.archive(
-                archiver, os.path.join(prefix, self._path), submatch)
+                archiver, self.wvfs.reljoin(prefix, self._path), submatch)
         return total
 
     @annotatesubrepoerror
@@ -909,13 +909,13 @@ class hgsubrepo(abstractsubrepo):
     @annotatesubrepoerror
     def forget(self, match, prefix):
         return cmdutil.forget(self.ui, self._repo, match,
-                              os.path.join(prefix, self._path), True)
+                              self.wvfs.reljoin(prefix, self._path), True)
 
     @annotatesubrepoerror
     def removefiles(self, matcher, prefix, after, force, subrepos):
         return cmdutil.remove(self.ui, self._repo, matcher,
-                              os.path.join(prefix, self._path), after, force,
-                              subrepos)
+                              self.wvfs.reljoin(prefix, self._path),
+                              after, force, subrepos)
 
     @annotatesubrepoerror
     def revert(self, substate, *pats, **opts):
@@ -981,7 +981,8 @@ class svnsubrepo(abstractsubrepo):
                 cmd.append('--non-interactive')
         cmd.extend(commands)
         if filename is not None:
-            path = os.path.join(self._ctx.repo().origroot, self._path, filename)
+            path = self.wvfs.reljoin(self._ctx.repo().origroot,
+                                     self._path, filename)
             cmd.append(path)
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
@@ -1663,7 +1664,7 @@ class gitsubrepo(abstractsubrepo):
                 data = info.linkname
             else:
                 data = tar.extractfile(info).read()
-            archiver.addfile(os.path.join(prefix, self._path, info.name),
+            archiver.addfile(self.wvfs.reljoin(prefix, self._path, info.name),
                              info.mode, info.issym(), data)
             total += 1
             self.ui.progress(_('archiving (%s)') % relpath, i + 1,
@@ -1685,7 +1686,7 @@ class gitsubrepo(abstractsubrepo):
             output = self._gitcommand(["show", "%s:%s" % (rev, f)])
             fp = cmdutil.makefileobj(self._subparent, opts.get('output'),
                                      self._ctx.node(),
-                                     pathname=os.path.join(prefix, f))
+                                     pathname=self.wvfs.reljoin(prefix, f))
             fp.write(output)
             fp.close()
         return 0
@@ -1768,7 +1769,7 @@ class gitsubrepo(abstractsubrepo):
             # for Git, this also implies '-p'
             cmd.append('-U%d' % diffopts.context)
 
-        gitprefix = os.path.join(prefix, self._path)
+        gitprefix = self.wvfs.reljoin(prefix, self._path)
 
         if diffopts.noprefix:
             cmd.extend(['--src-prefix=%s/' % gitprefix,
