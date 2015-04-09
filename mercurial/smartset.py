@@ -372,6 +372,18 @@ class baseset(abstractsmartset):
     def __sub__(self, other):
         return self._fastsetop(other, '__sub__')
 
+    def _slice(self, start, stop):
+        # creating new list should be generally cheaper than iterating items
+        if self._ascending is None:
+            return baseset(self._list[start:stop], istopo=self._istopo)
+
+        data = self._asclist
+        if not self._ascending:
+            start, stop = max(len(data) - stop, 0), max(len(data) - start, 0)
+        s = baseset(data[start:stop], istopo=self._istopo)
+        s._ascending = self._ascending
+        return s
+
     def __repr__(self):
         d = {None: '', False: '-', True: '+'}[self._ascending]
         s = _formatsetrepr(self._datarepr)

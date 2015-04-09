@@ -1037,6 +1037,49 @@ Test smartset.slice() by first/last()
   6
   7
 
+ (using baseset)
+
+  $ hg debugrevspec --no-show-revs -s 0+1+2+3+4+5+6+7
+  * set:
+  <baseset [0, 1, 2, 3, 4, 5, 6, 7]>
+  $ hg debugrevspec --no-show-revs -s 0::7
+  * set:
+  <baseset+ [0, 1, 2, 3, 4, 5, 6, 7]>
+  $ log 'limit(0+1+2+3+4+5+6+7, 3, 4)'
+  4
+  5
+  6
+  $ log 'limit(sort(0::7, rev), 3, 4)'
+  4
+  5
+  6
+  $ log 'limit(sort(0::7, -rev), 3, 4)'
+  3
+  2
+  1
+  $ log 'last(sort(0::7, rev), 2)'
+  6
+  7
+  $ hg debugrevspec -s 'limit(sort(0::7, rev), 3, 6)'
+  * set:
+  <baseset+ [6, 7]>
+  6
+  7
+  $ hg debugrevspec -s 'limit(sort(0::7, rev), 3, 9)'
+  * set:
+  <baseset+ []>
+  $ hg debugrevspec -s 'limit(sort(0::7, -rev), 3, 6)'
+  * set:
+  <baseset- [0, 1]>
+  1
+  0
+  $ hg debugrevspec -s 'limit(sort(0::7, -rev), 3, 9)'
+  * set:
+  <baseset- []>
+  $ hg debugrevspec -s 'limit(0::7, 0)'
+  * set:
+  <baseset+ []>
+
 Test order of first/last revisions
 
   $ hg debugrevspec -s 'first(4:0, 3) & 3:'
@@ -1967,8 +2010,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <baseset slice=0:1
-      <baseset [1, 0, 2]>>,
+    <baseset [1]>,
     <spanset- 0:3>>
   1
 
@@ -2003,8 +2045,7 @@ ordering defined by it.
   <filteredset
     <spanset- 0:3>,
     <not
-      <baseset slice=0:1
-        <baseset [1, 2, 0]>>>>
+      <baseset [1]>>>
   2
   0
 
@@ -3628,8 +3669,7 @@ issue2549 - correct optimizations
       ('symbol', '2')))
   * set:
   <filteredset
-    <baseset slice=0:2
-      <baseset [1, 2, 3]>>,
+    <baseset [1, 2]>,
     <not
       <baseset [2]>>>
   1
@@ -3683,8 +3723,7 @@ issue2549 - correct optimizations
       ('symbol', '2')))
   * set:
   <filteredset
-    <baseset slice=0:1
-      <baseset [2, 1]>>,
+    <baseset [2]>,
     <not
       <baseset [2]>>>
 
