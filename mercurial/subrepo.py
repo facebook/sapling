@@ -378,8 +378,18 @@ def newcommitphase(ui, ctx):
 
 class abstractsubrepo(object):
 
-    def __init__(self, ui):
-        self.ui = ui
+    def __init__(self, ctx, path):
+        """Initialize abstractsubrepo part
+
+        ``ctx`` is the context referring this subrepository in the
+        parent repository.
+
+        ``path`` is the path to this subrepositiry as seen from
+        innermost repository.
+        """
+        self.ui = ctx.repo().ui
+        self._ctx = ctx
+        self._path = path
 
     def storeclean(self, path):
         """
@@ -544,10 +554,8 @@ class abstractsubrepo(object):
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        super(hgsubrepo, self).__init__(ctx.repo().ui)
-        self._path = path
+        super(hgsubrepo, self).__init__(ctx, path)
         self._state = state
-        self._ctx = ctx
         r = ctx.repo()
         root = r.wjoin(path)
         create = not r.wvfs.exists('%s/.hg' % path)
@@ -938,10 +946,8 @@ class hgsubrepo(abstractsubrepo):
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        super(svnsubrepo, self).__init__(ctx.repo().ui)
-        self._path = path
+        super(svnsubrepo, self).__init__(ctx, path)
         self._state = state
-        self._ctx = ctx
         self._exe = util.findexe('svn')
         if not self._exe:
             raise util.Abort(_("'svn' executable not found for subrepo '%s'")
@@ -1168,10 +1174,8 @@ class svnsubrepo(abstractsubrepo):
 
 class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        super(gitsubrepo, self).__init__(ctx.repo().ui)
+        super(gitsubrepo, self).__init__(ctx, path)
         self._state = state
-        self._ctx = ctx
-        self._path = path
         self._relpath = os.path.join(reporelpath(ctx.repo()), path)
         self._abspath = ctx.repo().wjoin(path)
         self._subparent = ctx.repo()
