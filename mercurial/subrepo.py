@@ -280,11 +280,7 @@ def reporelpath(repo):
 
 def subrelpath(sub):
     """return path to this subrepo as seen from outermost repo"""
-    if util.safehasattr(sub, '_relpath'):
-        return sub._relpath
-    if not util.safehasattr(sub, '_repo'):
-        return sub._path
-    return reporelpath(sub._repo)
+    return sub._relpath
 
 def _abssource(repo, push=False, abort=True):
     """return pull/push path of repo - either based on parent repo .hgsub info
@@ -557,6 +553,12 @@ class abstractsubrepo(object):
         """return vfs to access the working directory of this subrepository
         """
         return scmutil.vfs(self._ctx.repo().wvfs.join(self._path))
+
+    @propertycache
+    def _relpath(self):
+        """return path to this subrepository as seen from outermost repository
+        """
+        return self.wvfs.reljoin(reporelpath(self._ctx.repo()), self._path)
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
@@ -1188,7 +1190,6 @@ class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         super(gitsubrepo, self).__init__(ctx, path)
         self._state = state
-        self._relpath = os.path.join(reporelpath(ctx.repo()), path)
         self._abspath = ctx.repo().wjoin(path)
         self._subparent = ctx.repo()
         self._ensuregit()
