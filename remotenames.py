@@ -48,7 +48,10 @@ def pullremotenames(repo, remote):
             bmap = {}
             repo = repo.unfiltered()
             for branch, nodes in remote.branchmap().iteritems():
-                bmap[branch] = [n for n in nodes if not repo[n].obsolete()]
+                bmap[branch] = []
+                for node in nodes:
+                    if node in repo and not repo[node].obsolete():
+                        bmap[branch].append(node)
             saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
     finally:
         lock.release()
@@ -353,25 +356,25 @@ def expushdiscoverybookmarks(pushop):
                 rev = repo.lookup(bookmark)
                 if rev in revs:
                     revs.remove(rev)
-            # remove heads that already have a remote bookmark
-            for bookmark, node in remotemarks.iteritems():
-                rev = repo.lookup(node)
-                if rev in revs:
-                    revs.remove(rev)
-            # remove heads that already advance bookmarks (old mercurial
-            # behavior)
+            # remove heads that advance bookmarks (old mercurial behavior)
             for bookmark, old, new in pushop.outbookmarks:
                 rev = repo.lookup(new)
                 if rev in revs:
                     revs.remove(rev)
 
-            revs = [short(r) for r in revs
-                    if not repo[r].obsolete()
-                    and not repo[r].closesbranch()]
-            if revs:
+            anonheads = []
+            knownlist = pushop.remote.known(revs)
+            for node, known in zip(revs, knownlist):
+                obs = repo[node].obsolete()
+                closes = repo[node].closesbranch()
+                if known or obs or closes:
+                    continue
+                anonheads.append(short(node))
+
+            if anonheads:
                 msg = _("push would create new anonymous heads (%s)")
                 hint = _("use --force to override this warning")
-                raise util.Abort(msg % ', '.join(sorted(revs)), hint=hint)
+                raise util.Abort(msg % ', '.join(sorted(anonheads)), hint=hint)
         return ret
 
     bookmark = pushop.bookmarks[0]
