@@ -61,6 +61,8 @@ def list_stdlib_modules():
     for m in 'ctypes', 'email':
         yield m
     yield 'builtins' # python3 only
+    for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
+        yield m
     stdlib_prefixes = set([sys.prefix, sys.exec_prefix])
     # We need to supplement the list of prefixes for the search to work
     # when run from within a virtualenv.
