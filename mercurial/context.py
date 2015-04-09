@@ -1191,6 +1191,8 @@ class committablectx(basectx):
     def subrev(self, subpath):
         return None
 
+    def manifestnode(self):
+        return None
     def user(self):
         return self._user or self._repo.ui.username()
     def date(self):
