@@ -16,7 +16,7 @@ Set up extension and repos
   $ echo "[paths]" >> .hg/hgrc
   $ echo "default-push=$TESTTMP/repo1" >> .hg/hgrc
   $ hg pull
-  pulling from $TESTTMP/repo1
+  pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   $ hg log -l 1 -T '{node|short} {remotenames}\n'
