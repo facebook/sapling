@@ -1056,6 +1056,18 @@ class _spanset(abstractsmartset):
             return x
         return None
 
+    def _slice(self, start, stop):
+        if self._hiddenrevs:
+            # unoptimized since all hidden revisions in range has to be scanned
+            return super(_spanset, self)._slice(start, stop)
+        if self._ascending:
+            x = min(self._start + start, self._end)
+            y = min(self._start + stop, self._end)
+        else:
+            x = max(self._end - stop, self._start)
+            y = max(self._end - start, self._start)
+        return _spanset(x, y, self._ascending, self._hiddenrevs)
+
     def __repr__(self):
         d = {False: '-', True: '+'}[self._ascending]
         return '<%s%s %d:%d>' % (type(self).__name__.lstrip('_'), d,

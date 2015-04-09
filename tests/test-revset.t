@@ -1080,13 +1080,54 @@ Test smartset.slice() by first/last()
   * set:
   <baseset+ []>
 
+ (using spanset)
+
+  $ hg debugrevspec --no-show-revs -s 0:7
+  * set:
+  <spanset+ 0:8>
+  $ log 'limit(0:7, 3, 4)'
+  4
+  5
+  6
+  $ log 'limit(7:0, 3, 4)'
+  3
+  2
+  1
+  $ log 'limit(0:7, 3, 6)'
+  6
+  7
+  $ log 'limit(7:0, 3, 6)'
+  1
+  0
+  $ log 'last(0:7, 2)'
+  6
+  7
+  $ hg debugrevspec -s 'limit(0:7, 3, 6)'
+  * set:
+  <spanset+ 6:8>
+  6
+  7
+  $ hg debugrevspec -s 'limit(0:7, 3, 9)'
+  * set:
+  <spanset+ 8:8>
+  $ hg debugrevspec -s 'limit(7:0, 3, 6)'
+  * set:
+  <spanset- 0:2>
+  1
+  0
+  $ hg debugrevspec -s 'limit(7:0, 3, 9)'
+  * set:
+  <spanset- 0:0>
+  $ hg debugrevspec -s 'limit(0:7, 0)'
+  * set:
+  <spanset+ 0:0>
+
 Test order of first/last revisions
 
   $ hg debugrevspec -s 'first(4:0, 3) & 3:'
   * set:
   <filteredset
-    <baseset slice=0:3
-      <spanset- 0:5>>,
+    <spanset- 2:5>,
     <spanset+ 3:10>>
   4
   3
@@ -1095,16 +1136,14 @@ Test order of first/last revisions
   * set:
   <filteredset
     <spanset+ 3:10>,
-    <baseset slice=0:3
-      <spanset- 0:5>>>
+    <spanset- 2:5>>
   3
   4
 
   $ hg debugrevspec -s 'last(4:0, 3) & :1'
   * set:
   <filteredset
-    <baseset slice=0:3
-      <spanset+ 0:5>>,
+    <spanset- 0:3>,
     <spanset+ 0:2>>
   1
   0
@@ -1113,8 +1152,7 @@ Test order of first/last revisions
   * set:
   <filteredset
     <spanset+ 0:2>,
-    <baseset slice=0:3
-      <spanset+ 0:5>>>
+    <spanset+ 0:3>>
   0
   1
 
