@@ -218,7 +218,7 @@
   
   $ hg debugbundle .hg/strip-backup/*
   Stream params: {}
-  b2x:changegroup -- "{'version': '02'}"
+  changegroup -- "{'version': '02'}"
       264128213d290d868c54642d13aeaa3675551a78
   $ hg incoming .hg/strip-backup/*
   comparing with .hg/strip-backup/264128213d29-0b39d6bf-backup.hg
@@ -244,7 +244,7 @@
   
   $ hg debugbundle .hg/strip-backup/*
   Stream params: {}
-  b2x:changegroup -- "{'version': '02'}"
+  changegroup -- "{'version': '02'}"
       264128213d290d868c54642d13aeaa3675551a78
   $ hg pull .hg/strip-backup/*
   pulling from .hg/strip-backup/264128213d29-0b39d6bf-backup.hg

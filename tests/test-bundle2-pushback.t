@@ -6,21 +6,21 @@
   > from mercurial import bundle2, pushkey, exchange, util
   > def _newhandlechangegroup(op, inpart):
   >     """This function wraps the changegroup part handler for getbundle.
-  >     It issues an additional b2x:pushkey part to send a new
+  >     It issues an additional pushkey part to send a new
   >     bookmark back to the client"""
   >     result = bundle2.handlechangegroup(op, inpart)
-  >     if 'b2x:pushback' in op.reply.capabilities:
+  >     if 'pushback' in op.reply.capabilities:
   >         params = {'namespace': 'bookmarks',
   >                   'key': 'new-server-mark',
   >                   'old': '',
   >                   'new': 'tip'}
   >         encodedparams = [(k, pushkey.encode(v)) for (k,v) in params.items()]
-  >         op.reply.newpart('b2x:pushkey', mandatoryparams=encodedparams)
+  >         op.reply.newpart('pushkey', mandatoryparams=encodedparams)
   >     else:
-  >         op.reply.newpart('b2x:output', data='pushback not enabled')
+  >         op.reply.newpart('output', data='pushback not enabled')
   >     return result
   > _newhandlechangegroup.params = bundle2.handlechangegroup.params
-  > bundle2.parthandlermapping['b2x:changegroup'] = _newhandlechangegroup
+  > bundle2.parthandlermapping['changegroup'] = _newhandlechangegroup
   > EOF
 
   $ cat >> $HGRCPATH <<EOF

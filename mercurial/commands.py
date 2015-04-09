@@ -1221,7 +1221,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     btypes = {'none': 'HG10UN',
               'bzip2': 'HG10BZ',
               'gzip': 'HG10GZ',
-              'bundle2': 'HG2Y'}
+              'bundle2': 'HG20'}
     bundletype = btypes.get(bundletype)
     if bundletype not in changegroup.bundletypes:
         raise util.Abort(_('unknown bundle type specified with --type'))
@@ -1918,7 +1918,7 @@ def _debugbundle2(ui, gen, **opts):
     ui.write(('Stream params: %s\n' % repr(gen.params)))
     for part in gen.iterparts():
         ui.write('%s -- %r\n' % (part.type, repr(part.params)))
-        if part.type == 'b2x:changegroup':
+        if part.type == 'changegroup':
             version = part.params.get('version', '01')
             cg = changegroup.packermap[version][1](part, 'UN')
             chunkdata = cg.changelogheader()
@@ -2211,7 +2211,7 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     btypes = {'none': 'HG10UN',
               'bzip2': 'HG10BZ',
               'gzip': 'HG10GZ',
-              'bundle2': 'HG2Y'}
+              'bundle2': 'HG20'}
     bundletype = btypes.get(bundletype)
     if bundletype not in changegroup.bundletypes:
         raise util.Abort(_('unknown bundle type specified with --type'))

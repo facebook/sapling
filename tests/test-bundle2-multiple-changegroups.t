@@ -14,13 +14,13 @@ Create an extension to test bundle2 with multiple changegroups
   >     intermediates = [repo[r].p1().node() for r in heads]
   >     cg = changegroup.getchangegroup(repo, source, heads=intermediates,
   >                                      common=common, bundlecaps=bundlecaps)
-  >     bundler.newpart('b2x:output', data='changegroup1')
-  >     bundler.newpart('b2x:changegroup', data=cg.getchunks())
+  >     bundler.newpart('output', data='changegroup1')
+  >     bundler.newpart('changegroup', data=cg.getchunks())
   >     cg = changegroup.getchangegroup(repo, source, heads=heads,
   >                                      common=common + intermediates,
   >                                      bundlecaps=bundlecaps)
-  >     bundler.newpart('b2x:output', data='changegroup2')
-  >     bundler.newpart('b2x:changegroup', data=cg.getchunks())
+  >     bundler.newpart('output', data='changegroup2')
+  >     bundler.newpart('changegroup', data=cg.getchunks())
   > 
   > def _pull(repo, *args, **kwargs):
   >   pullop = _orig_pull(repo, *args, **kwargs)

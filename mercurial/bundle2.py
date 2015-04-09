@@ -358,7 +358,7 @@ def _processpart(op, part):
             if output is not None:
                 output = op.ui.popbuffer()
         if output:
-            outpart = op.reply.newpart('b2x:output', data=output,
+            outpart = op.reply.newpart('output', data=output,
                                        mandatory=False)
             outpart.addparam('in-reply-to', str(part.id), mandatory=False)
     finally:
@@ -408,7 +408,7 @@ class bundle20(object):
     populate it. Then call `getchunks` to retrieve all the binary chunks of
     data that compose the bundle2 container."""
 
-    _magicstring = 'HG2Y'
+    _magicstring = 'HG20'
 
     def __init__(self, ui, capabilities=()):
         self.ui = ui
@@ -616,7 +616,7 @@ class unbundle20(unpackermixin):
     def compressed(self):
         return False
 
-formatmap = {'2Y': unbundle20}
+formatmap = {'20': unbundle20}
 
 class bundlepart(object):
     """A bundle2 part contains application level payload
@@ -734,7 +734,7 @@ class bundlepart(object):
             # backup exception data for later
             exc_info = sys.exc_info()
             msg = 'unexpected error: %s' % exc
-            interpart = bundlepart('b2x:error:abort', [('message', msg)],
+            interpart = bundlepart('error:abort', [('message', msg)],
                                    mandatory=False)
             interpart.id = 0
             yield _pack(_fpayloadsize, -1)
@@ -982,11 +982,11 @@ class unbundlepart(unpackermixin):
                 raise util.Abort(_('Seek failed\n'))
             self._pos = newpos
 
-capabilities = {'HG2Y': (),
-                'b2x:listkeys': (),
-                'b2x:pushkey': (),
+capabilities = {'HG20': (),
+                'listkeys': (),
+                'pushkey': (),
                 'digests': tuple(sorted(util.DIGESTS.keys())),
-                'b2x:remote-changegroup': ('http', 'https'),
+                'remote-changegroup': ('http', 'https'),
                }
 
 def getrepocaps(repo, allowpushback=False):
@@ -995,29 +995,29 @@ def getrepocaps(repo, allowpushback=False):
     Exists to allow extensions (like evolution) to mutate the capabilities.
     """
     caps = capabilities.copy()
-    caps['b2x:changegroup'] = tuple(sorted(changegroup.packermap.keys()))
+    caps['changegroup'] = tuple(sorted(changegroup.packermap.keys()))
     if obsolete.isenabled(repo, obsolete.exchangeopt):
         supportedformat = tuple('V%i' % v for v in obsolete.formats)
-        caps['b2x:obsmarkers'] = supportedformat
+        caps['obsmarkers'] = supportedformat
     if allowpushback:
-        caps['b2x:pushback'] = ()
+        caps['pushback'] = ()
     return caps
 
 def bundle2caps(remote):
     """return the bundle capabilities of a peer as dict"""
-    raw = remote.capable('bundle2-exp')
+    raw = remote.capable('bundle2')
     if not raw and raw != '':
         return {}
-    capsblob = urllib.unquote(remote.capable('bundle2-exp'))
+    capsblob = urllib.unquote(remote.capable('bundle2'))
     return decodecaps(capsblob)
 
 def obsmarkersversion(caps):
     """extract the list of supported obsmarkers versions from a bundle2caps dict
     """
-    obscaps = caps.get('b2x:obsmarkers', ())
+    obscaps = caps.get('obsmarkers', ())
     return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
-@parthandler('b2x:changegroup', ('version',))
+@parthandler('changegroup', ('version',))
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
@@ -1041,14 +1041,14 @@ def handlechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
-        part = op.reply.newpart('b2x:reply:changegroup', mandatory=False)
+        part = op.reply.newpart('reply:changegroup', mandatory=False)
         part.addparam('in-reply-to', str(inpart.id), mandatory=False)
         part.addparam('return', '%i' % ret, mandatory=False)
     assert not inpart.read()
 
 _remotechangegroupparams = tuple(['url', 'size', 'digests'] +
     ['digest:%s' % k for k in util.DIGESTS.keys()])
-@parthandler('b2x:remote-changegroup', _remotechangegroupparams)
+@parthandler('remote-changegroup', _remotechangegroupparams)
 def handleremotechangegroup(op, inpart):
     """apply a bundle10 on the repo, given an url and validation information
 
@@ -1070,7 +1070,7 @@ def handleremotechangegroup(op, inpart):
     except KeyError:
         raise util.Abort(_('remote-changegroup: missing "%s" param') % 'url')
     parsed_url = util.url(raw_url)
-    if parsed_url.scheme not in capabilities['b2x:remote-changegroup']:
+    if parsed_url.scheme not in capabilities['remote-changegroup']:
         raise util.Abort(_('remote-changegroup does not support %s urls') %
             parsed_url.scheme)
 
@@ -1110,7 +1110,7 @@ def handleremotechangegroup(op, inpart):
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
-        part = op.reply.newpart('b2x:reply:changegroup')
+        part = op.reply.newpart('reply:changegroup')
         part.addparam('in-reply-to', str(inpart.id), mandatory=False)
         part.addparam('return', '%i' % ret, mandatory=False)
     try:
@@ -1120,13 +1120,13 @@ def handleremotechangegroup(op, inpart):
             (util.hidepassword(raw_url), str(e)))
     assert not inpart.read()
 
-@parthandler('b2x:reply:changegroup', ('return', 'in-reply-to'))
+@parthandler('reply:changegroup', ('return', 'in-reply-to'))
 def handlereplychangegroup(op, inpart):
     ret = int(inpart.params['return'])
     replyto = int(inpart.params['in-reply-to'])
     op.records.add('changegroup', {'return': ret}, replyto)
 
-@parthandler('b2x:check:heads')
+@parthandler('check:heads')
 def handlecheckheads(op, inpart):
     """check that head of the repo did not change
 
@@ -1142,13 +1142,13 @@ def handlecheckheads(op, inpart):
         raise error.PushRaced('repository changed while pushing - '
                               'please try again')
 
-@parthandler('b2x:output')
+@parthandler('output')
 def handleoutput(op, inpart):
     """forward output captured on the server to the client"""
     for line in inpart.read().splitlines():
         op.ui.write(('remote: %s\n' % line))
 
-@parthandler('b2x:replycaps')
+@parthandler('replycaps')
 def handlereplycaps(op, inpart):
     """Notify that a reply bundle should be created
 
@@ -1157,12 +1157,12 @@ def handlereplycaps(op, inpart):
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 
-@parthandler('b2x:error:abort', ('message', 'hint'))
+@parthandler('error:abort', ('message', 'hint'))
 def handlereplycaps(op, inpart):
     """Used to transmit abort error over the wire"""
     raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
 
-@parthandler('b2x:error:unsupportedcontent', ('parttype', 'params'))
+@parthandler('error:unsupportedcontent', ('parttype', 'params'))
 def handlereplycaps(op, inpart):
     """Used to transmit unknown content error over the wire"""
     kwargs = {}
@@ -1175,19 +1175,19 @@ def handlereplycaps(op, inpart):
 
     raise error.UnsupportedPartError(**kwargs)
 
-@parthandler('b2x:error:pushraced', ('message',))
+@parthandler('error:pushraced', ('message',))
 def handlereplycaps(op, inpart):
     """Used to transmit push race error over the wire"""
     raise error.ResponseError(_('push failed:'), inpart.params['message'])
 
-@parthandler('b2x:listkeys', ('namespace',))
+@parthandler('listkeys', ('namespace',))
 def handlelistkeys(op, inpart):
     """retrieve pushkey namespace content stored in a bundle2"""
     namespace = inpart.params['namespace']
     r = pushkey.decodekeys(inpart.read())
     op.records.add('listkeys', (namespace, r))
 
-@parthandler('b2x:pushkey', ('namespace', 'key', 'old', 'new'))
+@parthandler('pushkey', ('namespace', 'key', 'old', 'new'))
 def handlepushkey(op, inpart):
     """process a pushkey request"""
     dec = pushkey.decode
@@ -1202,18 +1202,18 @@ def handlepushkey(op, inpart):
               'new': new}
     op.records.add('pushkey', record)
     if op.reply is not None:
-        rpart = op.reply.newpart('b2x:reply:pushkey')
+        rpart = op.reply.newpart('reply:pushkey')
         rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
         rpart.addparam('return', '%i' % ret, mandatory=False)
 
-@parthandler('b2x:reply:pushkey', ('return', 'in-reply-to'))
+@parthandler('reply:pushkey', ('return', 'in-reply-to'))
 def handlepushkeyreply(op, inpart):
     """retrieve the result of a pushkey request"""
     ret = int(inpart.params['return'])
     partid = int(inpart.params['in-reply-to'])
     op.records.add('pushkey', {'return': ret}, partid)
 
-@parthandler('b2x:obsmarkers')
+@parthandler('obsmarkers')
 def handleobsmarker(op, inpart):
     """add a stream of obsmarkers to the repo"""
     tr = op.gettransaction()
@@ -1222,12 +1222,12 @@ def handleobsmarker(op, inpart):
         op.repo.ui.status(_('%i new obsolescence markers\n') % new)
     op.records.add('obsmarkers', {'new': new})
     if op.reply is not None:
-        rpart = op.reply.newpart('b2x:reply:obsmarkers')
+        rpart = op.reply.newpart('reply:obsmarkers')
         rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
         rpart.addparam('new', '%i' % new, mandatory=False)
 
 
-@parthandler('b2x:reply:obsmarkers', ('new', 'in-reply-to'))
+@parthandler('reply:obsmarkers', ('new', 'in-reply-to'))
 def handlepushkeyreply(op, inpart):
     """retrieve the result of a pushkey request"""
     ret = int(inpart.params['new'])

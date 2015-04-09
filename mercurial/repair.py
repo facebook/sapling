@@ -42,7 +42,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
 
     if usebundle2:
-        bundletype = "HG2Y"
+        bundletype = "HG20"
     elif compress:
         bundletype = "HG10BZ"
     else:

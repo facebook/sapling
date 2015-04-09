@@ -240,7 +240,7 @@ class bundlerepository(localrepo.localrepository):
 
         if isinstance(self.bundle, bundle2.unbundle20):
             cgparts = [part for part in self.bundle.iterparts()
-                       if (part.type == 'b2x:changegroup')
+                       if (part.type == 'changegroup')
                        and (part.params.get('version', '01')
                             in changegroup.packermap)]
 

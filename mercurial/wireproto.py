@@ -617,7 +617,7 @@ def _capabilities(repo, proto):
             caps.append('streamreqs=%s' % ','.join(requiredformats))
     if repo.ui.configbool('experimental', 'bundle2-exp', False):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
-        caps.append('bundle2-exp=' + urllib.quote(capsblob))
+        caps.append('bundle2=' + urllib.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
     caps.append('httpheader=1024')
     return caps
@@ -843,7 +843,7 @@ def unbundle(repo, proto, heads):
             os.unlink(tempname)
     except error.BundleValueError, exc:
             bundler = bundle2.bundle20(repo.ui)
-            errpart = bundler.newpart('b2x:error:unsupportedcontent')
+            errpart = bundler.newpart('error:unsupportedcontent')
             if exc.parttype is not None:
                 errpart.addparam('parttype', exc.parttype)
             if exc.params:
@@ -860,7 +860,7 @@ def unbundle(repo, proto, heads):
             advargs = []
             if inst.hint is not None:
                 advargs.append(('hint', inst.hint))
-            bundler.addpart(bundle2.bundlepart('b2x:error:abort',
+            bundler.addpart(bundle2.bundlepart('error:abort',
                                                manargs, advargs))
             return streamres(bundler.getchunks())
         else:
@@ -869,7 +869,7 @@ def unbundle(repo, proto, heads):
     except error.PushRaced, exc:
         if getattr(exc, 'duringunbundle2', False):
             bundler = bundle2.bundle20(repo.ui)
-            bundler.newpart('b2x:error:pushraced', [('message', str(exc))])
+            bundler.newpart('error:pushraced', [('message', str(exc))])
             return streamres(bundler.getchunks())
         else:
             return pusherr(str(exc))

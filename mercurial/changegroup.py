@@ -71,7 +71,7 @@ bundletypes = {
     "": ("", nocompress), # only when using unbundle on ssh and old http servers
                           # since the unification ssh accepts a header but there
                           # is no capability signaling it.
-    "HG2Y": (), # special-cased below
+    "HG20": (), # special-cased below
     "HG10UN": ("HG10UN", nocompress),
     "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor()),
     "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
@@ -102,10 +102,10 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
             fh = os.fdopen(fd, "wb")
         cleanup = filename
 
-        if bundletype == "HG2Y":
+        if bundletype == "HG20":
             import bundle2
             bundle = bundle2.bundle20(ui)
-            part = bundle.newpart('b2x:changegroup', data=cg.getchunks())
+            part = bundle.newpart('changegroup', data=cg.getchunks())
             part.addparam('version', cg.version)
             z = nocompress()
             chunkiter = bundle.getchunks()
