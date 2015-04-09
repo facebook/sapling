@@ -88,6 +88,15 @@ Test transition bookmark deletion
   $ hg bookmarks
      notdeleted                1:d2ae7f538514
 
+Test message
+  $ rm .hg/remotenames
+  $ echo "[remotenames]" >> $HGRCPATH
+  $ echo "transitionmessage = Test transition message" >> $HGRCPATH
+  $ echo "    with newline" >> $HGRCPATH
+  $ hg pull -q
+  Test transition message
+  with newline
+
 Test transition bookmark disallowed
   $ echo "[remotenames]" >> $HGRCPATH
   $ echo "disallowedbookmarks = master, stable, other, notdeleted" >> $HGRCPATH

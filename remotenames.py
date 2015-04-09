@@ -947,6 +947,10 @@ def transition(repo, ui):
             del localmarks[mark]
     localmarks.write()
 
+    message = ui.config('remotenames', 'transitionmessage')
+    if message:
+        ui.warn(message + '\n')
+
 def saveremotenames(repo, remote, branches={}, bookmarks={}):
     # delete old files
     try:
