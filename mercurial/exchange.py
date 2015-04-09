@@ -851,15 +851,6 @@ class transactionmanager(object):
     def close(self):
         """close transaction if created"""
         if self._tr is not None:
-            repo = self.repo
-            p = lambda: self._tr.writepending() and repo.root or ""
-            repo.hook('b2x-pretransactionclose', throw=True, pending=p,
-                      **self._tr.hookargs)
-            hookargs = dict(self._tr.hookargs)
-            def runhooks():
-                repo.hook('b2x-transactionclose', **hookargs)
-            self._tr.addpostclose('b2x-hook-transactionclose',
-                                  lambda tr: repo._afterlock(runhooks))
             self._tr.close()
 
     def release(self):
@@ -1290,14 +1281,6 @@ def unbundle(repo, cg, heads, source, url):
                 tr.hookargs['url'] = url
                 tr.hookargs['bundle2'] = '1'
                 r = bundle2.processbundle(repo, cg, lambda: tr).reply
-                p = lambda: tr.writepending() and repo.root or ""
-                repo.hook('b2x-pretransactionclose', throw=True, pending=p,
-                          **tr.hookargs)
-                hookargs = dict(tr.hookargs)
-                def runhooks():
-                    repo.hook('b2x-transactionclose', **hookargs)
-                tr.addpostclose('b2x-hook-transactionclose',
-                                lambda tr: repo._afterlock(runhooks))
                 tr.close()
             except Exception, exc:
                 exc.duringunbundle2 = True
