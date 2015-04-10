@@ -169,13 +169,15 @@ class GitHandler(object):
         return self._map_hg.get(hgsha)
 
     def load_map(self):
-        self._map_git_real = {}
-        self._map_hg_real = {}
+        map_git_real = {}
+        map_hg_real = {}
         if os.path.exists(self.repo.join(self.map_file)):
             for line in self.repo.opener(self.map_file):
                 gitsha, hgsha = line.strip().split(' ', 1)
-                self._map_git_real[gitsha] = hgsha
-                self._map_hg_real[hgsha] = gitsha
+                map_git_real[gitsha] = hgsha
+                map_hg_real[hgsha] = gitsha
+        self._map_git_real = map_git_real
+        self._map_hg_real = map_hg_real
 
     def save_map(self):
         file = self.repo.opener(self.map_file, 'w+', atomictemp=True)
