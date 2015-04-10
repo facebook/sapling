@@ -1626,11 +1626,10 @@ class gitsubrepo(abstractsubrepo):
         for f, kind in self.wvfs.readdir():
             if f == '.git':
                 continue
-            path = os.path.join(self._abspath, f)
             if kind == stat.S_IFDIR:
                 self.wvfs.rmtree(f)
             else:
-                os.remove(path)
+                self.wvfs.unlink(f)
 
     def archive(self, archiver, prefix, match=None):
         total = 0
