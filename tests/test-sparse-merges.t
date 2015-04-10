@@ -1,4 +1,4 @@
-test sparse
+test merging things outside of the sparse checkout
 
   $ hg init myrepo
   $ cd myrepo
@@ -22,5 +22,26 @@ test sparse
   $ hg sparse --exclude 'bar**'
 
   $ hg merge feature
-  abort: cannot merge because bar is outside the sparse checkout
-  [255]
+  temporarily included 1 file(s) in the sparse checkout for merging
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+Verify bar was merged temporarily
+
+  $ ls
+  bar
+  foo
+  $ hg status
+  M bar
+
+Verify bar disappears automatically when the working copy becomes clean
+
+  $ hg commit -m "merged"
+  cleaned up 1 temporarily added file(s) from the sparse checkout
+  $ hg status
+  $ ls
+  foo
+
+  $ hg cat -r . bar
+  bar
+  bar2

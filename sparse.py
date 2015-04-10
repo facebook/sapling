@@ -85,26 +85,56 @@ def _setupupdates(ui):
         oldsparsematch = repo.sparsematch(*oldrevs)
 
         if branchmerge:
-            # If we're merging, union both matches
-            sparsematch = repo.sparsematch(wctx.parents()[0].rev(), mctx.rev())
+            # If we're merging, use the wctx filter, since we're merging into
+            # the wctx.
+            sparsematch = repo.sparsematch(wctx.parents()[0].rev())
         else:
+            # If we're updating, use the target context's filter, since we're
+            # moving to the target context.
             sparsematch = repo.sparsematch(mctx.rev())
 
+        temporaryfiles = []
         for file, action in actions.iteritems():
             type, args, msg = action
             files.add(file)
             if sparsematch(file):
                 prunedactions[file] = action
-            elif type == 'm' or (branchmerge and type != 'k'):
-                raise util.Abort(_("cannot merge because %s is outside " +
-                    "the sparse checkout") % file)
+            elif type == 'm':
+                temporaryfiles.append(file)
+                prunedactions[file] = action
+            elif branchmerge:
+                if type != 'k':
+                    temporaryfiles.append(file)
+                    prunedactions[file] = action
             elif file in wctx:
                 prunedactions[file] = ('r', args, msg)
 
-        # If an active profile changed during the update, refresh the checkout.
+        if len(temporaryfiles) > 0:
+            ui.status("temporarily included %d file(s) in the sparse checkout for "
+                "merging\n" % len(temporaryfiles))
+            repo.addtemporaryincludes(temporaryfiles)
+
+            # Add the new files to the working copy so they can be merged, etc
+            actions = []
+            message = 'temporarily adding to sparse checkout'
+            for file in temporaryfiles:
+                fctx = repo[None][file]
+                actions.append((file, (fctx.flags(),), message))
+
+            typeactions = collections.defaultdict(list)
+            typeactions['g'] = actions
+            mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
+
+            dirstate = repo.dirstate
+            for file in temporaryfiles:
+                dirstate.normal(file)
+
         profiles = repo.getactiveprofiles()
         changedprofiles = profiles & files
-        if changedprofiles:
+        # If an active profile changed during the update, refresh the checkout.
+        # Don't do this during a branch merge, since all incoming changes should
+        # have been handled by the temporary includes above.
+        if changedprofiles and not branchmerge:
             mf = mctx.manifest()
             for file in mf:
                 if file not in files:

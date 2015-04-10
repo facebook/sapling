@@ -63,6 +63,8 @@ Verify that a profile is updated across multiple commits
   > *.txt
   > EOF
 
+  $ echo foo >> data.py
+
   $ hg ci -m 'edit profile'
   $ ls
   backend.sparse
@@ -90,6 +92,7 @@ Introduce a conflicting .hgsparse change
   > [include]
   > *.html
   > EOF
+  $ echo bar >> data.py
 
   $ hg ci -qAm "edit profile other"
   $ ls
@@ -97,13 +100,17 @@ Introduce a conflicting .hgsparse change
   index.html
   webpage.sparse
 
-Verify conflicting merge unions the parent profiles
+Verify conflicting merge pulls in the conflicting changes
 
   $ hg merge 1
+  temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   warning: conflicts during merge.
   merging backend.sparse incomplete! (edit conflicts, then use 'hg resolve --mark')
-  2 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  merging data.py
+  warning: conflicts during merge.
+  merging data.py incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
@@ -112,19 +119,23 @@ Verify conflicting merge unions the parent profiles
   backend.sparse
   data.py
   index.html
-  readme.txt
   webpage.sparse
 
 Verify resolving the merge removes the temporarily unioned files
-(*.py in this case)
 
   $ cat > backend.sparse <<EOF
   > [include]
   > *.html
   > *.txt
   > EOF
-
   $ hg resolve -m backend.sparse
+
+  $ cat > data.py <<EOF
+  > x
+  > foo
+  > bar
+  > EOF
+  $ hg resolve -m data.py
   (no more unresolved files)
 
   $ hg ci -qAm "merge profiles"
@@ -134,6 +145,11 @@ Verify resolving the merge removes the temporarily unioned files
   readme.txt
   webpage.sparse
 
+  $ hg cat -r . data.py
+  x
+  foo
+  bar
+
 Verify stripping refreshes dirstate
 
   $ hg strip -q -r .
@@ -142,13 +158,24 @@ Verify stripping refreshes dirstate
   index.html
   webpage.sparse
 
-Verify rebase conflicts unions parent profiles too
+Verify rebase conflicts pulls in the conflicting changes
 
-  $ hg rebase -d 1
-  rebasing 2:348a944c437a "edit profile other" (tip)
+  $ hg up -q 1
+  $ ls
+  backend.sparse
+  data.py
+  readme.txt
+  webpage.sparse
+
+  $ hg rebase -d 2
+  rebasing 1:ac501d43ae16 "edit profile"
+  temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   warning: conflicts during merge.
   merging backend.sparse incomplete! (edit conflicts, then use 'hg resolve --mark')
+  merging data.py
+  warning: conflicts during merge.
+  merging data.py incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ rm *.orig
@@ -156,18 +183,23 @@ Verify rebase conflicts unions parent profiles too
   backend.sparse
   data.py
   index.html
-  readme.txt
   webpage.sparse
 
-Verify resolving conflict removes the temporary union too
+Verify resolving conflict removes the temporary files
 
   $ cat > backend.sparse <<EOF
   > [include]
   > *.html
   > *.txt
   > EOF
-
   $ hg resolve -m backend.sparse
+
+  $ cat > data.py <<EOF
+  > x
+  > foo
+  > bar
+  > EOF
+  $ hg resolve -m data.py
   (no more unresolved files)
 
   $ hg rebase -q --continue
@@ -176,6 +208,11 @@ Verify resolving conflict removes the temporary union too
   index.html
   readme.txt
   webpage.sparse
+
+  $ hg cat -r . data.py
+  x
+  foo
+  bar
 
 Test checking out a commit that does not contain the sparse profile
 
@@ -188,7 +225,7 @@ Test checking out a commit that does not contain the sparse profile
   index.html
   readme.txt
   $ hg up tip
-  warning: sparse profile 'backend.sparse' not found in rev fc8633b149dc - ignoring it
+  warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ ls
   data.py

@@ -57,7 +57,6 @@ Verify 'hg sparse' default output
   [exclude]
   
   
-
 Verify update only writes included files
 
   $ hg up -q 0
@@ -130,23 +129,73 @@ Verify adding sparseness hides files
   show
   show2
 
-Verify rebase fails if moving excluded files
+Verify rebase temporarily includes excluded files
 
   $ hg rebase -d 1 -r 2 --config extensions.rebase=
   rebasing 2:b91df4f39e75 "edit hide" (tip)
-  abort: cannot merge because hide is outside the sparse checkout
-  [255]
+  temporarily included 1 file(s) in the sparse checkout for merging
+  merging hide
+  warning: conflicts during merge.
+  merging hide incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ hg sparse
+  [include]
+  
+  [exclude]
+  hide*
+  
+  Temporarily Included Files (for merge/rebase):
+  hide
+
+  $ cat hide
+  <<<<<<< dest:   39278f7c08a9  - test: two
+  y
+  =======
+  z
+  >>>>>>> source: b91df4f39e75 - test: edit hide
+
+Verify aborting a rebase cleans up temporary files
 
   $ hg rebase --abort --config extensions.rebase=
+  cleaned up 1 temporarily added file(s) from the sparse checkout
   rebase aborted
+  $ rm hide.orig
+
+  $ ls
+  show
+  show2
 
 Verify merge fails if merging excluded files
 
   $ hg up -q 1
   $ hg merge -r 2
-  abort: cannot merge because hide is outside the sparse checkout
-  [255]
-  $ hg up -qC .
+  temporarily included 1 file(s) in the sparse checkout for merging
+  merging hide
+  warning: conflicts during merge.
+  merging hide incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ hg sparse
+  [include]
+  
+  [exclude]
+  hide*
+  
+  Temporarily Included Files (for merge/rebase):
+  hide
+
+  $ hg up -C .
+  cleaned up 1 temporarily added file(s) from the sparse checkout
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg sparse
+  [include]
+  
+  [exclude]
+  hide*
+  
 
 Verify strip -k resets dirstate correctly
 
