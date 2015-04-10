@@ -191,8 +191,8 @@ def _setupdirstate(ui, repo):
         def _wrapper(orig, self, *args):
             repo = self.repo
             dirstate = repo.dirstate
+            sparsematch = repo.sparsematch()
             for f in args:
-                sparsematch = repo.sparsematch()
                 if not sparsematch(f) and f not in dirstate:
                     raise util.Abort(_("cannot add '%s' - it is outside the " +
                         "sparse checkout") % f)
@@ -232,7 +232,7 @@ def _wraprepo(ui, repo):
             given rev.
             """
             if not self.opener.exists('sparse'):
-                return [], [], []
+                return set(), set(), []
             if rev is None:
                 raise util.Abort(_("cannot parse sparse patterns from " +
                     "working copy"))
@@ -277,8 +277,8 @@ def _wraprepo(ui, repo):
                 revs = [self.changelog.rev(node) for node in
                     self.dirstate.parents() if node != nullid]
 
-            sparsepath = self.opener.join('sparse')
             try:
+                sparsepath = self.opener.join('sparse')
                 mtime = os.stat(sparsepath).st_mtime
             except OSError:
                 mtime = 0
