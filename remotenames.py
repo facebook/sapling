@@ -362,6 +362,8 @@ def expushdiscoverybookmarks(pushop):
                 if rev in revs:
                     revs.remove(rev)
 
+            # we use known() instead of lookup() due to lookup throwing an
+            # aborting error causing the connection to close
             anonheads = []
             knownlist = pushop.remote.known(revs)
             for node, known in zip(revs, knownlist):
