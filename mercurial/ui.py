@@ -809,7 +809,7 @@ class ui(object):
             environ = {'HGUSER': user}
             if 'transplant_source' in extra:
                 environ.update({'HGREVISION': hex(extra['transplant_source'])})
-            for label in ('source', 'rebase_source'):
+            for label in ('intermediate-source', 'source', 'rebase_source'):
                 if label in extra:
                     environ.update({'HGREVISION': extra[label]})
                     break
