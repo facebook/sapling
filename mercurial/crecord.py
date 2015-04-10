@@ -20,7 +20,8 @@ locale.setlocale(locale.LC_ALL, '')
 
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
 if os.name == 'posix':
-    import curses, fcntl, termios
+    import curses
+    import fcntl, termios
 else:
     # I have no idea if wcurses works with crecord...
     try:
