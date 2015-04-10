@@ -187,8 +187,11 @@ class GitHandler(object):
 
     def save_map(self, map_file):
         file = self.repo.opener(map_file, 'w+', atomictemp=True)
-        for hgsha, gitsha in sorted(self._map_hg.iteritems()):
-            file.write("%s %s\n" % (gitsha, hgsha))
+        map_hg = self._map_hg
+        hgshas = map_hg.keys()
+        hgshas.sort()
+        for hgsha in hgshas:
+            file.write("%s %s\n" % (map_hg[hgsha], hgsha))
         # If this complains, atomictempfile no longer has close
         file.close()
 
