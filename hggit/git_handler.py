@@ -190,8 +190,13 @@ class GitHandler(object):
         map_hg = self._map_hg
         hgshas = map_hg.keys()
         hgshas.sort()
+        import cStringIO
+        buf = cStringIO.StringIO()
+        bwrite = buf.write
         for hgsha in hgshas:
-            file.write("%s %s\n" % (map_hg[hgsha], hgsha))
+            bwrite("%s %s\n" % (map_hg[hgsha], hgsha))
+        file.write(buf.getvalue())
+        buf.close()
         # If this complains, atomictempfile no longer has close
         file.close()
 
