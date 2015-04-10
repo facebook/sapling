@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import copy
-import errno, os, re, shutil, posixpath, sys
+import errno, os, re, posixpath, sys
 import xml.dom.minidom
 import stat, subprocess, tarfile
 from i18n import _
@@ -779,7 +779,8 @@ class hgsubrepo(abstractsubrepo):
             self.ui.status(_('cloning subrepo %s from %s\n')
                            % (subrelpath(self), srcurl))
             parentrepo = self._repo._subparent
-            shutil.rmtree(self._repo.path)
+            # use self._repo.vfs instead of self.wvfs to remove .hg only
+            self._repo.vfs.rmtree()
             other, cloned = hg.clone(self._repo._subparent.baseui, {},
                                      other, self._repo.root,
                                      update=False)
@@ -1114,18 +1115,8 @@ class svnsubrepo(abstractsubrepo):
             return
         self.ui.note(_('removing subrepo %s\n') % self._path)
 
-        def onerror(function, path, excinfo):
-            if function is not os.remove:
-                raise
-            # read-only files cannot be unlinked under Windows
-            s = os.stat(path)
-            if (s.st_mode & stat.S_IWRITE) != 0:
-                raise
-            os.chmod(path, stat.S_IMODE(s.st_mode) | stat.S_IWRITE)
-            os.remove(path)
-
         path = self._ctx.repo().wjoin(self._path)
-        shutil.rmtree(path, onerror=onerror)
+        self.wvfs.rmtree(forcibly=True)
         try:
             os.removedirs(os.path.dirname(path))
         except OSError:
@@ -1637,7 +1628,7 @@ class gitsubrepo(abstractsubrepo):
                 continue
             path = os.path.join(self._abspath, f)
             if kind == stat.S_IFDIR:
-                shutil.rmtree(path)
+                self.wvfs.rmtree(f)
             else:
                 os.remove(path)
 
