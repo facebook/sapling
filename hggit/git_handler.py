@@ -173,7 +173,13 @@ class GitHandler(object):
         map_hg_real = {}
         if os.path.exists(self.repo.join(self.map_file)):
             for line in self.repo.opener(self.map_file):
-                gitsha, hgsha = line.strip().split(' ', 1)
+                # format is <40 hex digits> <40 hex digits>\n
+                if len(line) != 82:
+                    raise ValueError(
+                        _('corrupt mapfile: incorrect line length %d') %
+                        len(line))
+                gitsha = line[:40]
+                hgsha = line[41:81]
                 map_git_real[gitsha] = hgsha
                 map_hg_real[hgsha] = gitsha
         self._map_git_real = map_git_real
