@@ -6,7 +6,7 @@ available.
 '''
 
 from mercurial import cmdutil
-import time, os
+import time, os, tempfile
 import functools
 
 cmdtable = {}
@@ -68,4 +68,16 @@ def _timer(fm, func, title=None):
 def perfgitloadmap(ui, repo):
     timer, fm = gettimer(ui)
     timer(repo.githandler.load_map)
+    fm.end()
+
+@command('perfgitsavemap')
+def perfgitsavemap(ui, repo):
+    timer, fm = gettimer(ui)
+    repo.githandler.load_map()
+    fd, f = tempfile.mkstemp(prefix='.git-mapfile-', dir=repo.path)
+    basename = os.path.basename(f)
+    try:
+        timer(lambda: repo.githandler.save_map(basename))
+    finally:
+        os.unlink(f)
     fm.end()
