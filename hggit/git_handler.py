@@ -185,8 +185,8 @@ class GitHandler(object):
         self._map_git_real = map_git_real
         self._map_hg_real = map_hg_real
 
-    def save_map(self):
-        file = self.repo.opener(self.map_file, 'w+', atomictemp=True)
+    def save_map(self, map_file):
+        file = self.repo.opener(map_file, 'w+', atomictemp=True)
         for hgsha, gitsha in sorted(self._map_hg.iteritems()):
             file.write("%s %s\n" % (gitsha, hgsha))
         # If this complains, atomictempfile no longer has close
@@ -232,7 +232,7 @@ class GitHandler(object):
         filteredrefs = self.filter_min_date(refs)
         self.import_git_objects(remote_name, filteredrefs)
         self.update_hg_bookmarks(refs)
-        self.save_map()
+        self.save_map(self.map_file)
 
     def fetch(self, remote, heads):
         refs = self.fetch_pack(remote, heads)
@@ -258,7 +258,7 @@ class GitHandler(object):
                 if bms:
                     bookmarks.setcurrent(self.repo, bms[0])
 
-        self.save_map()
+        self.save_map(self.map_file)
 
         if imported == 0:
             return 0
@@ -283,7 +283,7 @@ class GitHandler(object):
             self.export_hg_tags()
             self.update_references()
         finally:
-            self.save_map()
+            self.save_map(self.map_file)
 
     def get_refs(self, remote):
         self.export_commits()
