@@ -120,6 +120,17 @@ def _setupupdates(ui):
 
     extensions.wrapfunction(mergemod, 'calculateupdates', _calculateupdates)
 
+    def _update(orig, repo, node, branchmerge, *args, **kwargs):
+        results = orig(repo, node, branchmerge, *args, **kwargs)
+
+        # If we're updating to a location, clean up any stale temporary includes
+        # (ex: this happens during hg rebase --abort).
+        if not branchmerge:
+            repo.prunetemporaryincludes()
+        return results
+
+    extensions.wrapfunction(mergemod, 'update', _update)
+
 def _setupcommit(ui):
     def _refreshoncommit(orig, self, node):
         """Refresh the checkout when commits touch .hgsparse
@@ -132,6 +143,8 @@ def _setupcommit(ui):
             origstatus = repo.status()
             origsparsematch = repo.sparsematch()
             _refresh(repo.ui, repo, origstatus, origsparsematch, True)
+
+        repo.prunetemporaryincludes()
 
     extensions.wrapfunction(context.committablectx, 'markcommitted',
         _refreshoncommit)
