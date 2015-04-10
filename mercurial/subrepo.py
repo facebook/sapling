@@ -1632,11 +1632,11 @@ class gitsubrepo(abstractsubrepo):
         # local-only history
         self.ui.note(_('removing subrepo %s\n') % self._relpath)
         self._gitcommand(['config', 'core.bare', 'true'])
-        for f in os.listdir(self._abspath):
+        for f, kind in self.wvfs.readdir():
             if f == '.git':
                 continue
             path = os.path.join(self._abspath, f)
-            if os.path.isdir(path) and not os.path.islink(path):
+            if kind == stat.S_IFDIR:
                 shutil.rmtree(path)
             else:
                 os.remove(path)
