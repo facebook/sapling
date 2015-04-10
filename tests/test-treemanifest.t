@@ -78,9 +78,11 @@ Removing directory does not create an revlog entry
   $ rm before after
 
 Check that hg files (calls treemanifest.walk()) works
+without loading all directory revlogs
 
   $ hg co 'desc("add dir2")'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mv .hg/store/meta/dir2 .hg/store/meta/dir2-backup
   $ hg files -r . dir1
   dir1/a (glob)
   dir1/b (glob)
@@ -90,12 +92,14 @@ Check that hg files (calls treemanifest.walk()) works
   dir1/dir2/b (glob)
 
 Check that status between revisions works (calls treemanifest.matches())
+without loading all directory revlogs
 
   $ hg status --rev 'desc("add dir1")' --rev . dir1
   A dir1/dir1/a
   A dir1/dir1/b
   A dir1/dir2/a
   A dir1/dir2/b
+  $ mv .hg/store/meta/dir2-backup .hg/store/meta/dir2
 
 Merge creates 2-parent revision of directory revlog
 

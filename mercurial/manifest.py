@@ -441,10 +441,13 @@ def _splittopdir(f):
     else:
         return '', f
 
+_noop = lambda: None
+
 class treemanifest(object):
     def __init__(self, dir='', text=''):
         self._dir = dir
         self._node = revlog.nullid
+        self._load = _noop
         self._dirty = False
         self._dirs = {}
         # Using _lazymanifest here is a little slower than plain old dicts
@@ -461,18 +464,22 @@ class treemanifest(object):
         return self._dir + path
 
     def __len__(self):
+        self._load()
         size = len(self._files)
         for m in self._dirs.values():
             size += m.__len__()
         return size
 
     def _isempty(self):
+        self._load() # for consistency; already loaded by all callers
         return (not self._files and (not self._dirs or
                 all(m._isempty() for m in self._dirs.values())))
 
     def __str__(self):
-        return ('<treemanifest dir=%s, node=%s, dirty=%s>' %
-                (self._dir, revlog.hex(self._node), self._dirty))
+        return ('<treemanifest dir=%s, node=%s, loaded=%s, dirty=%s>' %
+                (self._dir, revlog.hex(self._node),
+                 bool(self._load is _noop),
+                 self._dirty))
 
     def dir(self):
         '''The directory that this tree manifest represents, including a
@@ -491,6 +498,7 @@ class treemanifest(object):
         self._dirty = False
 
     def iteritems(self):
+        self._load()
         for p, n in sorted(self._dirs.items() + self._files.items()):
             if p in self._files:
                 yield self._subpath(p), n
@@ -499,6 +507,7 @@ class treemanifest(object):
                     yield f, sn
 
     def iterkeys(self):
+        self._load()
         for p in sorted(self._dirs.keys() + self._files.keys()):
             if p in self._files:
                 yield self._subpath(p)
@@ -515,6 +524,7 @@ class treemanifest(object):
     def __contains__(self, f):
         if f is None:
             return False
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
@@ -524,6 +534,7 @@ class treemanifest(object):
             return f in self._files
 
     def get(self, f, default=None):
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
@@ -533,6 +544,7 @@ class treemanifest(object):
             return self._files.get(f, default)
 
     def __getitem__(self, f):
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             return self._dirs[dir].__getitem__(subpath)
@@ -540,6 +552,7 @@ class treemanifest(object):
             return self._files[f]
 
     def flags(self, f):
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
@@ -551,6 +564,7 @@ class treemanifest(object):
             return self._flags.get(f, '')
 
     def find(self, f):
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             return self._dirs[dir].find(subpath)
@@ -558,6 +572,7 @@ class treemanifest(object):
             return self._files[f], self._flags.get(f, '')
 
     def __delitem__(self, f):
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             self._dirs[dir].__delitem__(subpath)
@@ -572,6 +587,7 @@ class treemanifest(object):
 
     def __setitem__(self, f, n):
         assert n is not None
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
@@ -584,6 +600,7 @@ class treemanifest(object):
     def setflag(self, f, flags):
         """Set the flags (symlink, executable) for path f."""
         assert 'd' not in flags
+        self._load()
         dir, subpath = _splittopdir(f)
         if dir:
             if dir not in self._dirs:
@@ -597,10 +614,19 @@ class treemanifest(object):
         copy = treemanifest(self._dir)
         copy._node = self._node
         copy._dirty = self._dirty
-        for d in self._dirs:
-            copy._dirs[d] = self._dirs[d].copy()
-        copy._files = dict.copy(self._files)
-        copy._flags = dict.copy(self._flags)
+        def _load():
+            self._load()
+            for d in self._dirs:
+                copy._dirs[d] = self._dirs[d].copy()
+            copy._files = dict.copy(self._files)
+            copy._flags = dict.copy(self._flags)
+            copy._load = _noop
+        copy._load = _load
+        if self._load == _noop:
+            # Chaining _load if it's _noop is functionally correct, but the
+            # chain may end up excessively long (stack overflow), and
+            # will prevent garbage collection of 'self'.
+            copy._load()
         return copy
 
     def filesnotin(self, m2):
@@ -609,6 +635,8 @@ class treemanifest(object):
         def _filesnotin(t1, t2):
             if t1._node == t2._node and not t1._dirty and not t2._dirty:
                 return
+            t1._load()
+            t2._load()
             for d, m1 in t1._dirs.iteritems():
                 if d in t2._dirs:
                     m2 = t2._dirs[d]
@@ -631,6 +659,7 @@ class treemanifest(object):
         return self._alldirs
 
     def hasdir(self, dir):
+        self._load()
         topdir, subdir = _splittopdir(dir)
         if topdir:
             if topdir in self._dirs:
@@ -673,6 +702,7 @@ class treemanifest(object):
             return
 
         # yield this dir's files and walk its submanifests
+        self._load()
         for p in sorted(self._dirs.keys() + self._files.keys()):
             if p in self._files:
                 fullp = self._subpath(p)
@@ -697,6 +727,7 @@ class treemanifest(object):
         if not match.visitdir(self._dir[:-1] or '.'):
             return ret
 
+        self._load()
         for fn in self._files:
             fullp = self._subpath(fn)
             if not match(fullp):
@@ -734,6 +765,8 @@ class treemanifest(object):
         def _diff(t1, t2):
             if t1._node == t2._node and not t1._dirty and not t2._dirty:
                 return
+            t1._load()
+            t2._load()
             for d, m1 in t1._dirs.iteritems():
                 m2 = t2._dirs.get(d, emptytree)
                 _diff(m1, m2)
@@ -784,6 +817,7 @@ class treemanifest(object):
 
     def text(self, usemanifestv2=False):
         """Get the full data of this manifest as a bytestring."""
+        self._load()
         flags = self.flags
         return _text(((f, self[f], flags(f)) for f in self.keys()),
                      usemanifestv2)
@@ -792,12 +826,23 @@ class treemanifest(object):
         """Get the full data of this directory as a bytestring. Make sure that
         any submanifests have been written first, so their nodeids are correct.
         """
+        self._load()
         flags = self.flags
         dirs = [(d[:-1], self._dirs[d]._node, 'd') for d in self._dirs]
         files = [(f, self._files[f], flags(f)) for f in self._files]
         return _text(sorted(dirs + files), usemanifestv2)
 
+    def read(self, gettext, readsubtree):
+        def _load():
+            # Mark as loaded already here, so __setitem__ and setflag() don't
+            # cause infinite loops when they try to load.
+            self._load = _noop
+            self.parse(gettext(), readsubtree)
+            self._dirty = False
+        self._load = _load
+
     def writesubtrees(self, m1, m2, writesubtree):
+        self._load() # for consistency; should never have any effect here
         emptytree = treemanifest()
         for d, subm in self._dirs.iteritems():
             subp1 = m1._dirs.get(d, emptytree)._node
@@ -891,15 +936,17 @@ class manifest(revlog.revlog):
             return self._newmanifest() # don't upset local cache
         if node in self._mancache:
             return self._mancache[node][0]
-        text = self.revision(node)
         if self._treeondisk:
+            def gettext():
+                return self.revision(node)
             def readsubtree(dir, subm):
                 return self.dirlog(dir).read(subm)
             m = self._newmanifest()
-            m.parse(text, readsubtree)
+            m.read(gettext, readsubtree)
             m.setnode(node)
             arraytext = None
         else:
+            text = self.revision(node)
             m = self._newmanifest(text)
             arraytext = array.array('c', text)
         self._mancache[node] = (m, arraytext)
