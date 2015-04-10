@@ -305,11 +305,7 @@ def _wraprepo(ui, repo):
             elif len(matchers) == 1:
                 result = matchers[0]
             else:
-                def unionmatcher(value):
-                    for match in matchers:
-                        if match(value):
-                            return True
-                result = unionmatcher
+                result = unionmatcher(matchers)
 
             self.sparsecache[key] = result
 
@@ -546,3 +542,48 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     for file in lookup:
         # File exists on disk, and we're bringing it back in an unknown state.
         dirstate.normallookup(file)
+
+class forceincludematcher(object):
+    """A matcher that returns true for any of the forced includes before testing
+    against the actual matcher."""
+    def __init__(self, matcher, includes):
+        self._matcher = matcher
+        self._includes = includes
+
+    def __call__(self, value):
+        return value in self._includes or self._matcher(value)
+
+    def always(self):
+        return False
+
+    def files(self):
+        return []
+
+    def isexact(self):
+        return False
+
+    def anypats(self):
+        return True
+
+class unionmatcher(object):
+    """A matcher that is the union of several matchers."""
+    def __init__(self, matchers):
+        self._matchers = matchers
+
+    def __call__(self, value):
+        for match in self._matchers:
+            if match(value):
+                return True
+        return False
+
+    def always(self):
+        return False
+
+    def files(self):
+        return []
+
+    def isexact(self):
+        return False
+
+    def anypats(self):
+        return True
