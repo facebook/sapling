@@ -59,6 +59,7 @@ posixfile = platform.posixfile
 quotecommand = platform.quotecommand
 readpipe = platform.readpipe
 rename = platform.rename
+removedirs = platform.removedirs
 samedevice = platform.samedevice
 samefile = platform.samefile
 samestat = platform.samestat

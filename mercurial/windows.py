@@ -270,7 +270,7 @@ def groupname(gid=None):
     If gid is None, return the name of the current group."""
     return None
 
-def _removedirs(name):
+def removedirs(name):
     """special version of os.removedirs that does not remove symlinked
     directories or junction points if they actually contain files"""
     if osutil.listdir(name):
@@ -297,7 +297,7 @@ def unlinkpath(f, ignoremissing=False):
             raise
     # try removing directories that might now be empty
     try:
-        _removedirs(os.path.dirname(f))
+        removedirs(os.path.dirname(f))
     except OSError:
         pass
 

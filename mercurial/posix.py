@@ -16,6 +16,7 @@ samestat = os.path.samestat
 oslink = os.link
 unlink = os.unlink
 rename = os.rename
+removedirs = os.removedirs
 expandglobs = False
 
 umask = os.umask(0)
