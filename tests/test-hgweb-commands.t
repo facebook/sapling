@@ -1872,7 +1872,7 @@ capabilities
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
   200 Script output follows
   
-  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
+  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
 
 heads
 
@@ -2052,7 +2052,7 @@ capabilities
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
   200 Script output follows
   
-  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred stream unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
+  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred stream bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
 
 heads
 

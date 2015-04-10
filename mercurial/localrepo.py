@@ -312,9 +312,7 @@ class localrepository(object):
             self._revbranchcache.write()
 
     def _restrictcapabilities(self, caps):
-        # bundle2 is not ready for prime time, drop it unless explicitly
-        # required by the tests (or some brave tester)
-        if self.ui.configbool('experimental', 'bundle2-exp', False):
+        if self.ui.configbool('experimental', 'bundle2-advertise', True):
             caps = set(caps)
             capsblob = bundle2.encodecaps(bundle2.getrepocaps(self))
             caps.add('bundle2=' + urllib.quote(capsblob))

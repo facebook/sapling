@@ -615,7 +615,7 @@ def _capabilities(repo, proto):
         # otherwise, add 'streamreqs' detailing our local revlog format
         else:
             caps.append('streamreqs=%s' % ','.join(requiredformats))
-    if repo.ui.configbool('experimental', 'bundle2-exp', False):
+    if repo.ui.configbool('experimental', 'bundle2-advertise', True):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append('bundle2=' + urllib.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
