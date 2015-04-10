@@ -1115,10 +1115,9 @@ class svnsubrepo(abstractsubrepo):
             return
         self.ui.note(_('removing subrepo %s\n') % self._path)
 
-        path = self._ctx.repo().wjoin(self._path)
         self.wvfs.rmtree(forcibly=True)
         try:
-            os.removedirs(os.path.dirname(path))
+            self._ctx.repo().wvfs.removedirs(os.path.dirname(self._path))
         except OSError:
             pass
 
