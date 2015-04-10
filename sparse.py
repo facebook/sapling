@@ -329,6 +329,54 @@ def _wraprepo(ui, repo):
                 '\n'.join(exclude))
             self.opener.write("sparse", raw)
 
+        def addtemporaryincludes(self, files):
+            includes = self.gettemporaryincludes()
+            for file in files:
+                includes.add(file)
+            self._writetemporaryincludes(includes)
+
+        def gettemporaryincludes(self):
+            existingtemp = set()
+            if self.opener.exists('tempsparse'):
+                raw = self.opener.read('tempsparse')
+                existingtemp.update(raw.split('\n'))
+            return existingtemp
+
+        def _writetemporaryincludes(self, includes):
+            raw = '\n'.join(sorted(includes))
+            self.opener.write('tempsparse', raw)
+
+        def prunetemporaryincludes(self):
+            if repo.opener.exists('tempsparse'):
+                origstatus = self.status()
+                modified, added, removed, deleted, unknown, ignored, clean = origstatus
+                if modified or added or removed or deleted:
+                    # Still have pending changes. Don't bother trying to prune.
+                    return
+
+                sparsematch = self.sparsematch(includetemp=False)
+                dirstate = self.dirstate
+                actions = []
+                dropped = []
+                tempincludes = self.gettemporaryincludes()
+                for file in tempincludes:
+                    if file in dirstate and not sparsematch(file):
+                        message = 'dropping temporarily included sparse files'
+                        actions.append((file, None, message))
+                        dropped.append(file)
+
+                typeactions = collections.defaultdict(list)
+                typeactions['r'] = actions
+                mergemod.applyupdates(self, typeactions, self[None], self['.'], False)
+
+                # Fix dirstate
+                for file in dropped:
+                    dirstate.drop(file)
+
+                self.opener.unlink('tempsparse')
+                ui.status("cleaned up %d temporarily added file(s) from the sparse checkout\n" %
+                    len(tempincludes))
+
     repo.sparsecache = {}
     repo.__class__ = SparseRepo
 
@@ -392,6 +440,10 @@ def sparse(ui, repo, *pats, **opts):
     if count == 0:
         if repo.opener.exists('sparse'):
             ui.status(repo.opener.read("sparse") + "\n")
+            temporaryincludes = repo.gettemporaryincludes()
+            if temporaryincludes:
+                ui.status("Temporarily Included Files (for merge/rebase):\n")
+                ui.status("\n".join(temporaryincludes) + "\n")
         else:
             ui.status(_('repo is not sparse\n'))
         return
