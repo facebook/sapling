@@ -10,7 +10,7 @@ from mercurial.node import nullrev
 import util, error, osutil, revset, similar, encoding, phases
 import pathutil
 import match as matchmod
-import os, errno, re, glob, tempfile
+import os, errno, re, glob, tempfile, shutil, stat
 
 if os.name == 'nt':
     import scmwindows as scmplatform
@@ -315,6 +315,26 @@ class abstractvfs(object):
 
     def readlink(self, path):
         return os.readlink(self.join(path))
+
+    def rmtree(self, path=None, ignore_errors=False, forcibly=False):
+        """Remove a directory tree recursively
+
+        If ``forcibly``, this tries to remove READ-ONLY files, too.
+        """
+        if forcibly:
+            def onerror(function, path, excinfo):
+                if function is not os.remove:
+                    raise
+                # read-only files cannot be unlinked under Windows
+                s = os.stat(path)
+                if (s.st_mode & stat.S_IWRITE) != 0:
+                    raise
+                os.chmod(path, stat.S_IMODE(s.st_mode) | stat.S_IWRITE)
+                os.remove(path)
+        else:
+            onerror = None
+        return shutil.rmtree(self.join(path),
+                             ignore_errors=ignore_errors, onerror=onerror)
 
     def setflags(self, path, l, x):
         return util.setflags(self.join(path), l, x)
