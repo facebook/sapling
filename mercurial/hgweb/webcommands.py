@@ -927,6 +927,7 @@ def annotate(web, req, tmpl):
                    "file": f.path(),
                    "targetline": targetline,
                    "line": l,
+                   "lineno": lineno + 1,
                    "lineid": "l%d" % (lineno + 1),
                    "linenumber": "% 6d" % (lineno + 1),
                    "revdate": f.date()}

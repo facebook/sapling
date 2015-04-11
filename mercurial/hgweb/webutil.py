@@ -352,7 +352,7 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
     blockcount = countgen()
     def prettyprintlines(diff, blockno):
         for lineno, l in enumerate(diff.splitlines(True)):
-            lineno = "%d.%d" % (blockno, lineno + 1)
+            difflineno = "%d.%d" % (blockno, lineno + 1)
             if l.startswith('+'):
                 ltype = "difflineplus"
             elif l.startswith('-'):
@@ -363,8 +363,9 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
                 ltype = "diffline"
             yield tmpl(ltype,
                        line=l,
-                       lineid="l%s" % lineno,
-                       linenumber="% 8s" % lineno)
+                       lineno=lineno + 1,
+                       lineid="l%s" % difflineno,
+                       linenumber="% 8s" % difflineno)
 
     if files:
         m = match.exact(repo.root, repo.getcwd(), files)
@@ -405,8 +406,10 @@ def compare(tmpl, context, leftlines, rightlines):
         return tmpl('comparisonline',
                     type=type,
                     lineid=lineid,
+                    leftlineno=leftlineno,
                     leftlinenumber="% 6s" % (leftlineno or ''),
                     leftline=leftline or '',
+                    rightlineno=rightlineno,
                     rightlinenumber="% 6s" % (rightlineno or ''),
                     rightline=rightline or '')
 
