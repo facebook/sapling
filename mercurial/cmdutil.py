@@ -3123,11 +3123,6 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
             except patch.PatchError, err:
                 raise util.Abort(str(err))
         del fp
-
-        for f in actions['revert'][0]:
-            if normal:
-                normal(f)
-
     else:
         for f in actions['revert'][0]:
             checkout(f)
