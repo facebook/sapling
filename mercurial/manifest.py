@@ -796,7 +796,11 @@ class treemanifest(object):
             writesubtree(subm, subp1, subp2)
 
 class manifest(revlog.revlog):
-    def __init__(self, opener, dir=''):
+    def __init__(self, opener, dir='', dirlogcache=None):
+        '''The 'dir' and 'dirlogcache' arguments are for internal use by
+        manifest.manifest only. External users should create a root manifest
+        log with manifest.manifest(opener) and call dirlog() on it.
+        '''
         # During normal operations, we expect to deal with not more than four
         # revs at a time (such as during commit --amend). When rebasing large
         # stacks of commits, the number can go up, hence the config knob below.
@@ -820,11 +824,23 @@ class manifest(revlog.revlog):
             indexfile = "meta/" + dir + "00manifest.i"
         revlog.revlog.__init__(self, opener, indexfile)
         self._dir = dir
+        # The dirlogcache is kept on the root manifest log
+        if dir:
+            self._dirlogcache = dirlogcache
+        else:
+            self._dirlogcache = {'': self}
 
     def _newmanifest(self, data=''):
         if self._treeinmem:
             return treemanifest(self._dir, data)
         return manifestdict(data)
+
+    def dirlog(self, dir):
+        assert self._treeondisk
+        if dir not in self._dirlogcache:
+            self._dirlogcache[dir] = manifest(self.opener, dir,
+                                              self._dirlogcache)
+        return self._dirlogcache[dir]
 
     def _slowreaddelta(self, node):
         r0 = self.deltaparent(self.rev(node))
@@ -867,8 +883,7 @@ class manifest(revlog.revlog):
         text = self.revision(node)
         if self._treeondisk:
             def readsubtree(dir, subm):
-                sublog = manifest(self.opener, dir)
-                return sublog.read(subm)
+                return self.dirlog(dir).read(subm)
             m = self._newmanifest()
             m.parse(text, readsubtree)
             m.setnode(node)
@@ -929,7 +944,7 @@ class manifest(revlog.revlog):
 
     def _addtree(self, m, transaction, link, m1, m2):
         def writesubtree(subm, subp1, subp2):
-            sublog = manifest(self.opener, subm.dir())
+            sublog = self.dirlog(subm.dir())
             sublog.add(subm, transaction, link, subp1, subp2, None, None)
         m.writesubtrees(m1, m2, writesubtree)
         text = m.dirtext(self._usemanifestv2)

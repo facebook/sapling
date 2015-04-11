@@ -461,7 +461,7 @@ class localrepository(object):
         return manifest.manifest(self.svfs)
 
     def dirlog(self, dir):
-        return manifest.manifest(self.svfs, dir)
+        return self.manifest.dirlog(dir)
 
     @repofilecache('dirstate')
     def dirstate(self):
