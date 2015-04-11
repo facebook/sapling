@@ -1158,12 +1158,12 @@ def handlereplycaps(op, inpart):
         op.reply = bundle20(op.ui, caps)
 
 @parthandler('error:abort', ('message', 'hint'))
-def handlereplycaps(op, inpart):
+def handleerrorabort(op, inpart):
     """Used to transmit abort error over the wire"""
     raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
 
 @parthandler('error:unsupportedcontent', ('parttype', 'params'))
-def handlereplycaps(op, inpart):
+def handleerrorunsupportedcontent(op, inpart):
     """Used to transmit unknown content error over the wire"""
     kwargs = {}
     parttype = inpart.params.get('parttype')
@@ -1176,7 +1176,7 @@ def handlereplycaps(op, inpart):
     raise error.UnsupportedPartError(**kwargs)
 
 @parthandler('error:pushraced', ('message',))
-def handlereplycaps(op, inpart):
+def handleerrorpushraced(op, inpart):
     """Used to transmit push race error over the wire"""
     raise error.ResponseError(_('push failed:'), inpart.params['message'])
 
