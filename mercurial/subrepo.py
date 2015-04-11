@@ -303,7 +303,7 @@ def _abssource(repo, push=False, abort=True):
         raise util.Abort(_("default path for subrepository not found"))
 
 def _sanitize(ui, vfs, ignore):
-    for dirname, dirs, names in os.walk(vfs.base):
+    for dirname, dirs, names in vfs.walk():
         for i, d in enumerate(dirs):
             if d.lower() == ignore:
                 del dirs[i]
@@ -313,8 +313,8 @@ def _sanitize(ui, vfs, ignore):
         for f in names:
             if f.lower() == 'hgrc':
                 ui.warn(_("warning: removing potentially hostile 'hgrc' "
-                          "in '%s'\n") % dirname)
-                os.unlink(os.path.join(dirname, f))
+                          "in '%s'\n") % vfs.join(dirname))
+                vfs.unlink(vfs.reljoin(dirname, f))
 
 def subrepo(ctx, path):
     """return instance of the right subrepo class for subrepo in path"""
