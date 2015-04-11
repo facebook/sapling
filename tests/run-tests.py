@@ -1693,6 +1693,11 @@ class TestRunner(object):
 
         runtestdir = os.path.abspath(os.path.dirname(__file__))
         path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
+        if os.path.islink(__file__):
+            # test helper will likely be at the end of the symlink
+            realfile = os.path.realpath(__file__)
+            realdir = os.path.abspath(os.path.dirname(realfile))
+            path.insert(2, realdir)
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
         os.environ["PATH"] = os.pathsep.join(path)
