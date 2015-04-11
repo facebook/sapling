@@ -357,10 +357,10 @@ def _processpart(op, part):
         finally:
             if output is not None:
                 output = op.ui.popbuffer()
-        if output:
-            outpart = op.reply.newpart('output', data=output,
-                                       mandatory=False)
-            outpart.addparam('in-reply-to', str(part.id), mandatory=False)
+            if output:
+                outpart = op.reply.newpart('output', data=output,
+                                           mandatory=False)
+                outpart.addparam('in-reply-to', str(part.id), mandatory=False)
     finally:
         # consume the part content to not corrupt the stream.
         part.seek(0, 2)
