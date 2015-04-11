@@ -2402,7 +2402,7 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
     if len(matcher.files()) == 1 and not matcher.anypats():
         file = matcher.files()[0]
         mf = repo.manifest
-        mfnode = ctx._changeset[0]
+        mfnode = ctx.manifestnode()
         if mf.find(mfnode, file)[0]:
             write(file)
             return 0
