@@ -430,12 +430,12 @@ class Test(unittest.TestCase):
         shell is the shell to execute tests in.
         """
 
-        self.path = path
+        self.path = path.encode('utf-8')
         self.name = os.path.basename(path)
         self._testdir = os.path.dirname(path)
         self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
 
-        self._threadtmp = tmpdir
+        self._threadtmp = tmpdir.encode('utf-8')
         self._keeptmpdir = keeptmpdir
         self._debug = debug
         self._timeout = timeout
@@ -689,8 +689,8 @@ class Test(unittest.TestCase):
         env["HGPORT"] = str(self._startport)
         env["HGPORT1"] = str(self._startport + 1)
         env["HGPORT2"] = str(self._startport + 2)
-        env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
-        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
+        env["HGRCPATH"] = os.path.join(self._threadtmp, b'.hgrc')
+        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b'daemon.pids')
         env["HGEDITOR"] = ('"' + sys.executable + '"'
                            + ' -c "import sys; sys.exit(0)"')
         env["HGMERGE"] = "internal:merge"
@@ -721,27 +721,27 @@ class Test(unittest.TestCase):
     def _createhgrc(self, path):
         """Create an hgrc file for this test."""
         hgrc = open(path, 'wb')
-        hgrc.write('[ui]\n')
-        hgrc.write('slash = True\n')
-        hgrc.write('interactive = False\n')
-        hgrc.write('mergemarkers = detailed\n')
-        hgrc.write('promptecho = True\n')
-        hgrc.write('[defaults]\n')
-        hgrc.write('backout = -d "0 0"\n')
-        hgrc.write('commit = -d "0 0"\n')
-        hgrc.write('shelve = --date "0 0"\n')
-        hgrc.write('tag = -d "0 0"\n')
-        hgrc.write('[devel]\n')
-        hgrc.write('all = true\n')
-        hgrc.write('[largefiles]\n')
-        hgrc.write('usercache = %s\n' %
-                   (os.path.join(self._testtmp, '.cache/largefiles')))
+        hgrc.write(b'[ui]\n')
+        hgrc.write(b'slash = True\n')
+        hgrc.write(b'interactive = False\n')
+        hgrc.write(b'mergemarkers = detailed\n')
+        hgrc.write(b'promptecho = True\n')
+        hgrc.write(b'[defaults]\n')
+        hgrc.write(b'backout = -d "0 0"\n')
+        hgrc.write(b'commit = -d "0 0"\n')
+        hgrc.write(b'shelve = --date "0 0"\n')
+        hgrc.write(b'tag = -d "0 0"\n')
+        hgrc.write(b'[devel]\n')
+        hgrc.write(b'all = true\n')
+        hgrc.write(b'[largefiles]\n')
+        hgrc.write(b'usercache = %s\n' %
+                   (os.path.join(self._testtmp, b'.cache/largefiles')))
 
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
             assert '=' in key, ('extra config opt %s must '
                                 'have an = for assignment' % opt)
-            hgrc.write('[%s]\n%s\n' % (section, key))
+            hgrc.write(b'[%s]\n%s\n' % (section, key))
         hgrc.close()
 
     def fail(self, msg):
