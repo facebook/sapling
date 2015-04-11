@@ -78,7 +78,40 @@ branchentry = '\{
   "status": {status|json}
   }'
 summary = '"not yet implemented"'
-filediff = '"not yet implemented"'
+filediff = '\{
+  "path": {file|json},
+  "node": {node|json},
+  "date": {date|json},
+  "desc": {desc|json},
+  "author": {author|json},
+  "parents": [{join(parent%changesetparent, ", ")}],
+  "children": [{join(child%changesetparent, ", ")}],
+  "diff": [{join(diff%diffblock, ", ")}]
+  }'
+diffblock = '\{
+  "blockno": {blockno|json},
+  "lines": [{join(lines, ", ")}]
+  }'
+difflineplus = '\{
+  "t": "+",
+  "n": {lineno|json},
+  "l": {line|json}
+  }'
+difflineminus = '\{
+  "t": "-",
+  "n": {lineno|json},
+  "l": {line|json}
+  }'
+difflineat = '\{
+  "t": "@",
+  "n": {lineno|json},
+  "l": {line|json}
+  }'
+diffline = '\{
+  "t": "",
+  "n": {lineno|json},
+  "l": {line|json}
+  }'
 filecomparison = '"not yet implemented"'
 fileannotate = '"not yet implemented"'
 filelog = '"not yet implemented"'

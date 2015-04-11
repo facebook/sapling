@@ -678,7 +678,52 @@ filediff/{revision}/{path} shows changes to a file in a revision
   $ request json-diff/f8bbb9024b10/foo
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "author": "test",
+    "children": [],
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "modify foo",
+    "diff": [
+      {
+        "blockno": 1,
+        "lines": [
+          {
+            "l": "--- a/foo\tThu Jan 01 00:00:00 1970 +0000\n",
+            "n": 1,
+            "t": "-"
+          },
+          {
+            "l": "+++ b/foo\tThu Jan 01 00:00:00 1970 +0000\n",
+            "n": 2,
+            "t": "+"
+          },
+          {
+            "l": "@@ -1,1 +1,1 @@\n",
+            "n": 3,
+            "t": "@"
+          },
+          {
+            "l": "-foo\n",
+            "n": 4,
+            "t": "-"
+          },
+          {
+            "l": "+bar\n",
+            "n": 5,
+            "t": "+"
+          }
+        ]
+      }
+    ],
+    "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+    "parents": [
+      "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+    ],
+    "path": "foo"
+  }
 
 comparison/{revision}/{path} shows information about before and after for a file
 
