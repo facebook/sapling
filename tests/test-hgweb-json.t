@@ -765,7 +765,36 @@ annotate/{revision}/{path} shows annotations for each line
   $ request json-annotate/f8bbb9024b10/foo
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "abspath": "foo",
+    "annotate": [
+      {
+        "abspath": "foo",
+        "author": "test",
+        "desc": "modify foo",
+        "line": "bar\n",
+        "lineno": 1,
+        "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "revdate": [
+          0.0,
+          0
+        ],
+        "targetline": 1
+      }
+    ],
+    "author": "test",
+    "children": [],
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "modify foo",
+    "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+    "parents": [
+      "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+    ],
+    "permissions": ""
+  }
 
 filelog/{revision}/{path} shows history of a single file
 

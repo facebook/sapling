@@ -134,7 +134,27 @@ comparisonline = '\{
   "rn": {rightlineno|json},
   "rl": {rightline|json}
   }'
-fileannotate = '"not yet implemented"'
+fileannotate = '\{
+  "abspath": {file|json},
+  "node": {node|json},
+  "author": {author|json},
+  "date": {date|json},
+  "desc": {desc|json},
+  "parents": [{join(parent%changesetparent, ", ")}],
+  "children": [{join(child%changesetparent, ", ")}],
+  "permissions": {permissions|json},
+  "annotate": [{join(annotate%fileannotation, ", ")}]
+  }'
+fileannotation = '\{
+  "node": {node|json},
+  "author": {author|json},
+  "desc": {desc|json},
+  "abspath": {file|json},
+  "targetline": {targetline|json},
+  "line": {line|json},
+  "lineno": {lineno|json},
+  "revdate": {revdate|json}
+  }'
 filelog = '"not yet implemented"'
 graph = '"not yet implemented"'
 helptopics = '\{
