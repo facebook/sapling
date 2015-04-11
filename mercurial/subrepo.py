@@ -302,8 +302,8 @@ def _abssource(repo, push=False, abort=True):
     if abort:
         raise util.Abort(_("default path for subrepository not found"))
 
-def _sanitize(ui, path, ignore):
-    for dirname, dirs, names in os.walk(path):
+def _sanitize(ui, vfs, ignore):
+    for dirname, dirs, names in os.walk(vfs.base):
         for i, d in enumerate(dirs):
             if d.lower() == ignore:
                 del dirs[i]
@@ -1132,7 +1132,7 @@ class svnsubrepo(abstractsubrepo):
         # update to a directory which has since been deleted and recreated.
         args.append('%s@%s' % (state[0], state[1]))
         status, err = self._svncommand(args, failok=True)
-        _sanitize(self.ui, self._ctx.repo().wjoin(self._path), '.svn')
+        _sanitize(self.ui, self.wvfs, '.svn')
         if not re.search('Checked out revision [0-9]+.', status):
             if ('is already a working copy for a different URL' in err
                 and (self._wcchanged()[:2] == (False, False))):
@@ -1433,7 +1433,7 @@ class gitsubrepo(abstractsubrepo):
                 self._gitcommand(['reset', 'HEAD'])
                 cmd.append('-f')
             self._gitcommand(cmd + args)
-            _sanitize(self.ui, self._abspath, '.git')
+            _sanitize(self.ui, self.wvfs, '.git')
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
@@ -1482,7 +1482,7 @@ class gitsubrepo(abstractsubrepo):
             if tracking[remote] != self._gitcurrentbranch():
                 checkout([tracking[remote]])
             self._gitcommand(['merge', '--ff', remote])
-            _sanitize(self.ui, self._abspath, '.git')
+            _sanitize(self.ui, self.wvfs, '.git')
         else:
             # a real merge would be required, just checkout the revision
             rawcheckout()
@@ -1518,7 +1518,7 @@ class gitsubrepo(abstractsubrepo):
                 self.get(state) # fast forward merge
             elif base != self._state[1]:
                 self._gitcommand(['merge', '--no-commit', revision])
-            _sanitize(self.ui, self._abspath, '.git')
+            _sanitize(self.ui, self.wvfs, '.git')
 
         if self.dirty():
             if self._gitstate() != revision:
