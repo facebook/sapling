@@ -41,6 +41,8 @@
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
+from __future__ import print_function
+
 from distutils import version
 import difflib
 import errno
@@ -57,7 +59,10 @@ import random
 import re
 import threading
 import killdaemons as killmod
-import Queue as queue
+try:
+    import Queue as queue
+except ImportError:
+    import queue
 from xml.dom import minidom
 import unittest
 
@@ -86,7 +91,7 @@ def checkportisavailable(port):
         s.bind(('localhost', port))
         s.close()
         return True
-    except socket.error, exc:
+    except socket.error as exc:
         if not exc.errno == errno.EADDRINUSE:
             raise
         return False
@@ -135,11 +140,11 @@ def parselistfiles(files, listtype, warn=True):
         try:
             path = os.path.expanduser(os.path.expandvars(filename))
             f = open(path, "rb")
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             if warn:
-                print "warning: no such %s file: %s" % (listtype, filename)
+                print("warning: no such %s file: %s" % (listtype, filename))
             continue
 
         for line in f.readlines():
@@ -358,10 +363,10 @@ def log(*msg):
     """
     iolock.acquire()
     if verbose:
-        print verbose,
+        print(verbose, end=' ')
     for m in msg:
-        print m,
-    print
+        print(m, end=' ')
+    print()
     sys.stdout.flush()
     iolock.release()
 
@@ -475,7 +480,7 @@ class Test(unittest.TestCase):
 
         try:
             os.mkdir(self._threadtmp)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
 
@@ -487,7 +492,7 @@ class Test(unittest.TestCase):
         if os.path.exists(self.errpath):
             try:
                 os.remove(self.errpath)
-            except OSError, e:
+            except OSError as e:
                 # We might have raced another test to clean up a .err
                 # file, so ignore ENOENT when removing a previous .err
                 # file.
@@ -517,20 +522,20 @@ class Test(unittest.TestCase):
             except KeyboardInterrupt:
                 self._aborted = True
                 raise
-            except SkipTest, e:
+            except SkipTest as e:
                 result.addSkip(self, str(e))
                 # The base class will have already counted this as a
                 # test we "ran", but we want to exclude skipped tests
                 # from those we count towards those run.
                 result.testsRun -= 1
-            except IgnoreTest, e:
+            except IgnoreTest as e:
                 result.addIgnore(self, str(e))
                 # As with skips, ignores also should be excluded from
                 # the number of tests executed.
                 result.testsRun -= 1
-            except WarnTest, e:
+            except WarnTest as e:
                 result.addWarn(self, str(e))
-            except self.failureException, e:
+            except self.failureException as e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
                 # this decision could be revisited in the future,
@@ -873,7 +878,7 @@ class TTest(Test):
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
         if ret == 2:
-            print stdout
+            print(stdout)
             sys.exit(1)
 
         return ret == 0
@@ -1621,7 +1626,7 @@ class TestRunner(object):
 
     def run(self, args, parser=None):
         """Run the test suite."""
-        oldmask = os.umask(022)
+        oldmask = os.umask(0o22)
         try:
             parser = parser or getparser()
             options, args = parseargs(args, parser)
@@ -1643,7 +1648,7 @@ class TestRunner(object):
                 # run largest tests first, as they tend to take the longest
                 try:
                     val = -os.stat(f).st_size
-                except OSError, e:
+                except OSError as e:
                     if e.errno != errno.ENOENT:
                         raise
                     return -1e9 # file does not exist, tell early
@@ -1667,7 +1672,7 @@ class TestRunner(object):
                 # Meaning of tmpdir has changed since 1.3: we used to create
                 # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
                 # tmpdir already exists.
-                print "error: temp dir %r already exists" % tmpdir
+                print("error: temp dir %r already exists" % tmpdir)
                 return 1
 
                 # Automatically removing tmpdir sounds convenient, but could
@@ -1783,7 +1788,7 @@ class TestRunner(object):
                         break
                     tests.pop(0)
                 if not tests:
-                    print "running all tests"
+                    print("running all tests")
                     tests = orig
 
             tests = [self._gettest(t, i) for i, t in enumerate(tests)]
@@ -1815,7 +1820,7 @@ class TestRunner(object):
                 self._outputcoverage()
         except KeyboardInterrupt:
             failed = True
-            print "\ninterrupted!"
+            print("\ninterrupted!")
 
         if failed:
             return 1
@@ -1894,14 +1899,14 @@ class TestRunner(object):
                 if os.readlink(mypython) == sys.executable:
                     return
                 os.unlink(mypython)
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
             if self._findprogram(pyexename) != sys.executable:
                 try:
                     os.symlink(sys.executable, mypython)
                     self._createdfiles.append(mypython)
-                except OSError, err:
+                except OSError as err:
                     # child processes may race, which is harmless
                     if err.errno != errno.EEXIST:
                         raise
@@ -1914,7 +1919,7 @@ class TestRunner(object):
                 path.remove(exedir)
             os.environ['PATH'] = os.pathsep.join([exedir] + path)
             if not self._findprogram(pyexename):
-                print "WARNING: Cannot find %s in search path" % pyexename
+                print("WARNING: Cannot find %s in search path" % pyexename)
 
     def _installhg(self):
         """Install hg into the test environment.
@@ -1962,7 +1967,7 @@ class TestRunner(object):
         def makedirs(p):
             try:
                 os.makedirs(p)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise
         makedirs(self._pythondir)
@@ -2007,7 +2012,7 @@ class TestRunner(object):
                 f.write(data)
                 f.close()
             else:
-                print 'WARNING: cannot fix hg.bat reference to python.exe'
+                print('WARNING: cannot fix hg.bat reference to python.exe')
 
         if self.options.anycoverage:
             custom = os.path.join(self._testdir, 'sitecustomize.py')
@@ -2020,7 +2025,7 @@ class TestRunner(object):
             covdir = os.path.join(self._installdir, '..', 'coverage')
             try:
                 os.mkdir(covdir)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise
 
@@ -2100,7 +2105,7 @@ class TestRunner(object):
             if found:
                 vlog("# Found prerequisite", p, "at", found)
             else:
-                print "WARNING: Did not find prerequisite tool: %s " % p
+                print("WARNING: Did not find prerequisite tool: %s " % p)
 
 if __name__ == '__main__':
     runner = TestRunner()
