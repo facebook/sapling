@@ -1282,7 +1282,7 @@ def unbundle(repo, cg, heads, source, url):
         # push can proceed
         if util.safehasattr(cg, 'params'):
             try:
-                tr = repo.transaction('unbundle')
+                tr = repo.transaction(source)
                 tr.hookargs['source'] = source
                 tr.hookargs['url'] = url
                 tr.hookargs['bundle2'] = '1'

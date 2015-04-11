@@ -220,7 +220,7 @@ push
   lock:  free
   wlock: free
   postclose-tip:eea13746799a public book_eea1
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNNAME=unbundle HG_URL=push
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNNAME=push HG_URL=push
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -310,7 +310,7 @@ push over ssh
   remote: lock:  free
   remote: wlock: free
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
-  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_TXNNAME=unbundle HG_URL=remote:ssh:127.0.0.1
+  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_TXNNAME=serve HG_URL=remote:ssh:127.0.0.1
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_SOURCE=push-response HG_TXNNAME=push-response
