@@ -923,37 +923,37 @@ class TTest(Test):
             script.append('alias pwd="pwd -W"\n')
 
         for n, l in enumerate(lines):
-            if not l.endswith('\n'):
-                l += '\n'
-            if l.startswith('#require'):
+            if not l.endswith(b'\n'):
+                l += b'\n'
+            if l.startswith(b'#require'):
                 lsplit = l.split()
-                if len(lsplit) < 2 or lsplit[0] != '#require':
+                if len(lsplit) < 2 or lsplit[0] != b'#require':
                     after.setdefault(pos, []).append('  !!! invalid #require\n')
                 if not self._hghave(lsplit[1:]):
                     script = ["exit 80\n"]
                     break
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('#if'):
+            elif l.startswith(b'#if'):
                 lsplit = l.split()
-                if len(lsplit) < 2 or lsplit[0] != '#if':
+                if len(lsplit) < 2 or lsplit[0] != b'#if':
                     after.setdefault(pos, []).append('  !!! invalid #if\n')
                 if skipping is not None:
                     after.setdefault(pos, []).append('  !!! nested #if\n')
                 skipping = not self._hghave(lsplit[1:])
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('#else'):
+            elif l.startswith(b'#else'):
                 if skipping is None:
                     after.setdefault(pos, []).append('  !!! missing #if\n')
                 skipping = not skipping
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('#endif'):
+            elif l.startswith(b'#endif'):
                 if skipping is None:
                     after.setdefault(pos, []).append('  !!! missing #if\n')
                 skipping = None
                 after.setdefault(pos, []).append(l)
             elif skipping:
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('  >>> '): # python inlines
+            elif l.startswith(b'  >>> '): # python inlines
                 after.setdefault(pos, []).append(l)
                 prepos = pos
                 pos = n
@@ -964,10 +964,10 @@ class TTest(Test):
                     script.append('%s -m heredoctest <<EOF\n' % PYTHON)
                 addsalt(n, True)
                 script.append(l[2:])
-            elif l.startswith('  ... '): # python inlines
+            elif l.startswith(b'  ... '): # python inlines
                 after.setdefault(prepos, []).append(l)
                 script.append(l[2:])
-            elif l.startswith('  $ '): # commands
+            elif l.startswith(b'  $ '): # commands
                 if inpython:
                     script.append('EOF\n')
                     inpython = False
@@ -979,10 +979,10 @@ class TTest(Test):
                 if len(cmd) == 2 and cmd[0] == 'cd':
                     l = '  $ cd %s || exit 1\n' % cmd[1]
                 script.append(l[4:])
-            elif l.startswith('  > '): # continuations
+            elif l.startswith(b'  > '): # continuations
                 after.setdefault(prepos, []).append(l)
                 script.append(l[4:])
-            elif l.startswith('  '): # results
+            elif l.startswith(b'  '): # results
                 # Queue up a list of expected results.
                 expected.setdefault(pos, []).append(l[2:])
             else:
