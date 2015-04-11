@@ -121,6 +121,21 @@ Revert interactive tests
   4
   5
   f
+
+Test that --interactive lift the need for --all
+
+  $ echo q | hg revert -i -r 2
+  reverting folder1/g (glob)
+  reverting folder2/h (glob)
+  diff -r 89ac3d72e4a4 folder1/g
+  1 hunks, 1 lines changed
+  examine changes to 'folder1/g'? [Ynesfdaq?] q
+  
+  abort: user quit
+  [255]
+  $ rm folder1/g.orig
+
+
   $ hg update -C 6
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg revert -i -r 2 --all -- << EOF
