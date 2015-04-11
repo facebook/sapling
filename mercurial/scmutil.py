@@ -380,6 +380,22 @@ class abstractvfs(object):
     def utime(self, path=None, t=None):
         return os.utime(self.join(path), t)
 
+    def walk(self, path=None, onerror=None):
+        """Yield (dirpath, dirs, files) tuple for each directories under path
+
+        ``dirpath`` is relative one from the root of this vfs. This
+        uses ``os.sep`` as path separator, even you specify POSIX
+        style ``path``.
+
+        "The root of this vfs" is represented as empty ``dirpath``.
+        """
+        root = os.path.normpath(self.join(None))
+        # when dirpath == root, dirpath[prefixlen:] becomes empty
+        # because len(dirpath) < prefixlen.
+        prefixlen = len(pathutil.normasprefix(root))
+        for dirpath, dirs, files in os.walk(self.join(path), onerror=onerror):
+            yield (dirpath[prefixlen:], dirs, files)
+
 class vfs(abstractvfs):
     '''Operate files relative to a base directory
 
