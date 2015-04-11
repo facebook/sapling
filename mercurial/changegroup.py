@@ -891,6 +891,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
     finally:
         tr.release()
+        repo.ui.flush()
     # never return 0 here:
     if dh < 0:
         return dh - 1
