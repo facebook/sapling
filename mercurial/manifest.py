@@ -270,7 +270,7 @@ class manifestdict(object):
                     m._lm[fn] = lm[fn]
             return m
 
-        m = manifestdict('')
+        m = manifestdict()
         m._lm = self._lm.filtercopy(match)
         return m
 
@@ -307,7 +307,7 @@ class manifestdict(object):
             return default
 
     def copy(self):
-        c = manifestdict('')
+        c = manifestdict()
         c._lm = self._lm.copy()
         return c
 
