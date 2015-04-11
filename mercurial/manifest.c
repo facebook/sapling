@@ -440,6 +440,8 @@ static int internalsetitem(lazymanifest *self, line *new) {
 		else {
 			if (self->lines[pos].deleted)
 				self->livelines++;
+			if (self->lines[pos].from_malloc)
+				free(self->lines[pos].start);
 			start = pos;
 			goto finish;
 		}
