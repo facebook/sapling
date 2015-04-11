@@ -112,7 +112,28 @@ diffline = '\{
   "n": {lineno|json},
   "l": {line|json}
   }'
-filecomparison = '"not yet implemented"'
+filecomparison = '\{
+  "path": {file|json},
+  "node": {node|json},
+  "date": {date|json},
+  "desc": {desc|json},
+  "author": {author|json},
+  "parents": [{join(parent%changesetparent, ", ")}],
+  "children": [{join(child%changesetparent, ", ")}],
+  "leftnode": {leftnode|json},
+  "rightnode": {rightnode|json},
+  "comparison": [{join(comparison, ", ")}]
+  }'
+comparisonblock = '\{
+  "lines": [{join(lines, ", ")}]
+  }'
+comparisonline = '\{
+  "t": {type|json},
+  "ln": {leftlineno|json},
+  "ll": {leftline|json},
+  "rn": {rightlineno|json},
+  "rl": {rightline|json}
+  }'
 fileannotate = '"not yet implemented"'
 filelog = '"not yet implemented"'
 graph = '"not yet implemented"'

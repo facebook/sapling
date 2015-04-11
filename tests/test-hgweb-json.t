@@ -730,7 +730,35 @@ comparison/{revision}/{path} shows information about before and after for a file
   $ request json-comparison/f8bbb9024b10/foo
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "author": "test",
+    "children": [],
+    "comparison": [
+      {
+        "lines": [
+          {
+            "ll": "foo",
+            "ln": 1,
+            "rl": "bar",
+            "rn": 1,
+            "t": "replace"
+          }
+        ]
+      }
+    ],
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "modify foo",
+    "leftnode": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+    "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+    "parents": [
+      "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+    ],
+    "path": "foo",
+    "rightnode": "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+  }
 
 annotate/{revision}/{path} shows annotations for each line
 
