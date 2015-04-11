@@ -761,11 +761,12 @@ class manifest(revlog.revlog):
             usemanifestv2 = opts.get('manifestv2', usemanifestv2)
         self._mancache = util.lrucachedict(cachesize)
         revlog.revlog.__init__(self, opener, "00manifest.i")
-        self._usetreemanifest = usetreemanifest
+        self._treeinmem = usetreemanifest
+        self._treeondisk = usetreemanifest
         self._usemanifestv2 = usemanifestv2
 
     def _newmanifest(self, data=''):
-        if self._usetreemanifest:
+        if self._treeinmem:
             return treemanifest('', data)
         return manifestdict(data)
 
@@ -782,7 +783,7 @@ class manifest(revlog.revlog):
         return md
 
     def readdelta(self, node):
-        if self._usemanifestv2 or self._usetreemanifest:
+        if self._usemanifestv2 or self._treeondisk:
             return self._slowreaddelta(node)
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
@@ -817,7 +818,7 @@ class manifest(revlog.revlog):
             return None, None
 
     def add(self, m, transaction, link, p1, p2, added, removed):
-        if (p1 in self._mancache and not self._usetreemanifest
+        if (p1 in self._mancache and not self._treeinmem
             and not self._usemanifestv2):
             # If our first parent is in the manifest cache, we can
             # compute a delta here using properties we know about the
