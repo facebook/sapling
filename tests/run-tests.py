@@ -1709,8 +1709,15 @@ class TestRunner(object):
 
         if self.options.with_hg:
             self._installdir = None
-            self._bindir = os.path.dirname(os.path.realpath(
-                                           self.options.with_hg))
+            whg = self.options.with_hg
+            # If --with-hg is not specified, we have bytes already,
+            # but if it was specified in python3 we get a str, so we
+            # have to encode it back into a bytes.
+            if sys.version_info[0] == 3:
+                if not isinstance(whg, bytes):
+                    whg = whg.encode('utf-8')
+            self._bindir = os.path.dirname(os.path.realpath(whg))
+            assert isinstance(self._bindir, bytes)
             self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
             os.makedirs(self._tmpbindir)
 
