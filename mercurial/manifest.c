@@ -247,7 +247,7 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 		goto done;
 	}
 	ret = PyTuple_Pack(3, path, hash, flags);
- done:
+done:
 	Py_XDECREF(path);
 	Py_XDECREF(hash);
 	Py_XDECREF(flags);
@@ -672,7 +672,7 @@ static lazymanifest *lazymanifest_copy(lazymanifest *self)
 	copy->pydata = self->pydata;
 	Py_INCREF(copy->pydata);
 	return copy;
- nomem:
+nomem:
 	PyErr_NoMemory();
 	Py_XDECREF(copy);
 	return NULL;
@@ -724,7 +724,7 @@ static lazymanifest *lazymanifest_filtercopy(
 	}
 	copy->livelines = copy->numlines;
 	return copy;
- nomem:
+nomem:
 	PyErr_NoMemory();
 	Py_XDECREF(copy);
 	return NULL;
@@ -845,7 +845,7 @@ static PyObject *lazymanifest_diff(lazymanifest *self, PyObject *args)
 	}
 	Py_DECREF(emptyTup);
 	return ret;
- nomem:
+nomem:
 	PyErr_NoMemory();
 	Py_XDECREF(ret);
 	Py_XDECREF(emptyTup);
