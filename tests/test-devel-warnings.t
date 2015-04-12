@@ -54,8 +54,7 @@
   transaction with no lock
   "wlock" acquired after "lock"
   $ hg buggylocking --traceback
-  transaction with no lock
-   at:
+  transaction with no lock at:
    */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)
@@ -67,8 +66,7 @@
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
-  "wlock" acquired after "lock"
-   at:
+  "wlock" acquired after "lock" at:
    */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)

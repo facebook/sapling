@@ -177,7 +177,7 @@ def develwarn(tui, msg):
     if tui.tracebackflag:
         util.debugstacktrace(msg, 2)
     else:
-        tui.write_err(msg)
+        tui.write_err(msg + '\n')
 
 def filteredhash(repo, maxrev):
     """build hash of filtered revisions in the current repoview.
