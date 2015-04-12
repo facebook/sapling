@@ -408,11 +408,12 @@ class hginstalllib(install_lib):
                 # Persist executable bit (apply it to group and other if user
                 # has it)
                 if st[stat.ST_MODE] & stat.S_IXUSR:
-                    setmode = 0755
+                    setmode = int('0755', 8)
                 else:
-                    setmode = 0644
-                os.chmod(dst, (stat.S_IMODE(st[stat.ST_MODE]) & ~0777) |
-                         setmode)
+                    setmode = int('0644', 8)
+                m = stat.S_IMODE(st[stat.ST_MODE])
+                m = (m & ~int('0777', 8)) | setmode
+                os.chmod(dst, m)
         file_util.copy_file = copyfileandsetmode
         try:
             install_lib.run(self)
