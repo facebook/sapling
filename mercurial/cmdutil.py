@@ -1119,7 +1119,8 @@ class changeset_printer(object):
         self.lastheader = None
         self.footer = None
 
-    def flush(self, rev):
+    def flush(self, ctx):
+        rev = ctx.rev()
         if rev in self.header:
             h = self.header[rev]
             if h != self.lastheader:
@@ -2156,7 +2157,7 @@ def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
         lines = displayer.hunk.pop(rev).split('\n')
         if not lines[-1]:
             del lines[-1]
-        displayer.flush(rev)
+        displayer.flush(ctx)
         edges = edgefn(type, char, lines, seen, rev, parents)
         for type, char, lines, coldata in edges:
             graphmod.ascii(ui, state, type, char, lines, coldata)

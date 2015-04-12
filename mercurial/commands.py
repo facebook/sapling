@@ -4627,7 +4627,7 @@ def log(ui, repo, *pats, **opts):
         else:
             revmatchfn = None
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
-        if displayer.flush(rev):
+        if displayer.flush(ctx):
             count += 1
 
     displayer.close()
