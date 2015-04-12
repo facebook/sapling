@@ -31,6 +31,13 @@
   >     tr.close()
   >     lo.release()
   >     wl.release()
+  > 
+  > @command('nowaitlocking', [], '')
+  > def nowaitlocking(ui, repo):
+  >     lo = repo.lock()
+  >     wl = repo.wlock(wait=False)
+  >     wl.release()
+  >     lo.release()
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -79,4 +86,5 @@
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
   $ hg properlocking
+  $ hg nowaitlocking
   $ cd ..

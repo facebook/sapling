@@ -1212,8 +1212,10 @@ class localrepository(object):
             l.lock()
             return l
 
-        if (self.ui.configbool('devel', 'all')
-                or self.ui.configbool('devel', 'check-locks')):
+        # We do not need to check for non-waiting lock aquisition.  Such
+        # acquisition would not cause dead-lock as they would just fail.
+        if wait and (self.ui.configbool('devel', 'all')
+                     or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is not None and l.held:
                 scmutil.develwarn(self.ui, '"wlock" acquired after "lock"')
