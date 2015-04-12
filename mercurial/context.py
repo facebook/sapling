@@ -1427,6 +1427,18 @@ class workingctx(committablectx):
             finally:
                 wlock.release()
 
+    def match(self, pats=[], include=None, exclude=None, default='glob'):
+        r = self._repo
+
+        # Only a case insensitive filesystem needs magic to translate user input
+        # to actual case in the filesystem.
+        if not util.checkcase(r.root):
+            return matchmod.icasefsmatcher(r.root, r.getcwd(), pats, include,
+                                           exclude, default, r.auditor, self)
+        return matchmod.match(r.root, r.getcwd(), pats,
+                              include, exclude, default,
+                              auditor=r.auditor, ctx=self)
+
     def _filtersuspectsymlink(self, files):
         if not files or self._repo.dirstate._checklink:
             return files

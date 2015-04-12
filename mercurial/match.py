@@ -273,6 +273,34 @@ class narrowmatcher(match):
     def rel(self, f):
         return self._matcher.rel(self._path + "/" + f)
 
+class icasefsmatcher(match):
+    """A matcher for wdir on case insensitive filesystems, which normalizes the
+    given patterns to the case in the filesystem.
+    """
+
+    def __init__(self, root, cwd, patterns, include, exclude, default, auditor,
+                 ctx):
+        init = super(icasefsmatcher, self).__init__
+        self._dsnormalize = ctx.repo().dirstate.normalize
+
+        init(root, cwd, patterns, include, exclude, default, auditor=auditor,
+             ctx=ctx)
+
+        # m.exact(file) must be based off of the actual user input, otherwise
+        # inexact case matches are treated as exact, and not noted without -v.
+        if self._files:
+            self._fmap = set(_roots(self._kp))
+
+    def _normalize(self, patterns, default, root, cwd, auditor):
+        self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
+                                                          root, cwd, auditor)
+        kindpats = []
+        for kind, pats in self._kp:
+            if kind not in ('re', 'relre'):  # regex can't be normalized
+                pats = self._dsnormalize(pats)
+            kindpats.append((kind, pats))
+        return kindpats
+
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
     return _patsplit(pattern, default)[0]
