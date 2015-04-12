@@ -1213,7 +1213,7 @@ class localrepository(object):
                 or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is not None and l.held:
-                msg = '"lock" taken before "wlock"\n'
+                msg = '"wlock" acquired after "lock"\n'
                 if self.ui.tracebackflag:
                     util.debugstacktrace(msg, 1)
                 else:

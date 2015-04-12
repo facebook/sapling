@@ -44,7 +44,7 @@
   $ cd lock-checker
   $ hg buggylocking
   transaction with no lock
-  "lock" taken before "wlock"
+  "wlock" acquired after "lock"
   $ cat << EOF >> $HGRCPATH
   > [devel]
   > all=0
@@ -52,7 +52,7 @@
   > EOF
   $ hg buggylocking
   transaction with no lock
-  "lock" taken before "wlock"
+  "wlock" acquired after "lock"
   $ hg buggylocking --traceback
   transaction with no lock
    at:
@@ -67,7 +67,7 @@
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
-  "lock" taken before "wlock"
+  "wlock" acquired after "lock"
    at:
    */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
