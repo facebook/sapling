@@ -544,8 +544,8 @@ def unshelve(ui, repo, *shelved, **opts):
     oldquiet = ui.quiet
     wlock = lock = tr = None
     try:
-        lock = repo.lock()
         wlock = repo.wlock()
+        lock = repo.lock()
 
         tr = repo.transaction('unshelve', report=lambda x: None)
         oldtiprev = len(repo)
