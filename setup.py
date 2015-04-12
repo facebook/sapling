@@ -573,6 +573,8 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[0].splitlines()
     if version:
         version = version[0]
+        if sys.version_info[0] == 3:
+            version = version.decode('utf-8')
         xcode4 = (version.startswith('Xcode') and
                   StrictVersion(version.split()[1]) >= StrictVersion('4.0'))
         xcode51 = re.match(r'^Xcode\s+5\.1', version) is not None
