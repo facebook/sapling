@@ -267,9 +267,6 @@ def annotate(ui, repo, *pats, **opts):
     anyway, although the results will probably be neither useful
     nor desirable.
 
-    By default, annotate files in the parent of the working directory.
-    Use -r "wdir()" to annotate the working directory files.
-
     Returns 0 on success.
     """
     if not pats:

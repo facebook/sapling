@@ -1898,10 +1898,8 @@ def user(repo, subset, x):
     """
     return author(repo, subset, x)
 
+# experimental
 def wdir(repo, subset, x):
-    """``wdir()``
-    Working directory.
-    """
     # i18n: "wdir" is a keyword
     getargs(x, 0, 0, _("wdir takes no arguments"))
     if None in subset:
