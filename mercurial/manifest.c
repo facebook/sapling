@@ -232,7 +232,7 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 	size_t pl;
 	line *l;
 	Py_ssize_t consumed;
-	PyObject *path = NULL, *hash = NULL, *flags = NULL;
+	PyObject *ret = NULL, *path = NULL, *hash = NULL, *flags = NULL;
 	l = lmiter_nextline((lmIter *)o);
 	if (!l) {
 		goto bail;
@@ -246,12 +246,12 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 	if (!path || !hash || !flags) {
 		goto bail;
 	}
-	return PyTuple_Pack(3, path, hash, flags);
+	ret = PyTuple_Pack(3, path, hash, flags);
  bail:
 	Py_XDECREF(path);
 	Py_XDECREF(hash);
 	Py_XDECREF(flags);
-	return NULL;
+	return ret;
 }
 
 static PyTypeObject lazymanifestEntriesIterator = {
