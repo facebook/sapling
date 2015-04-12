@@ -1956,41 +1956,45 @@ class TestRunner(object):
         This will also configure hg with the appropriate testing settings.
         """
         vlog("# Performing temporary installation of HG")
-        installerrs = os.path.join("tests", "install.err")
+        installerrs = os.path.join(b"tests", b"install.err")
         compiler = ''
         if self.options.compiler:
             compiler = '--compiler ' + self.options.compiler
         if self.options.pure:
-            pure = "--pure"
+            pure = b"--pure"
         else:
-            pure = ""
+            pure = b""
         py3 = ''
-        if sys.version_info[0] == 3:
-            py3 = '--c2to3'
 
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
+        exe = sys.executable
+        if sys.version_info[0] == 3:
+            py3 = b'--c2to3'
+            compiler = compiler.encode('utf-8')
+            script = script.encode('utf-8')
+            exe = exe.encode('utf-8')
         hgroot = os.path.dirname(os.path.dirname(script))
         self._hgroot = hgroot
         os.chdir(hgroot)
-        nohome = '--home=""'
+        nohome = b'--home=""'
         if os.name == 'nt':
             # The --home="" trick works only on OS where os.sep == '/'
             # because of a distutils convert_path() fast-path. Avoid it at
             # least on Windows for now, deal with .pydistutils.cfg bugs
             # when they happen.
-            nohome = ''
-        cmd = ('%(exe)s setup.py %(py3)s %(pure)s clean --all'
-               ' build %(compiler)s --build-base="%(base)s"'
-               ' install --force --prefix="%(prefix)s"'
-               ' --install-lib="%(libdir)s"'
-               ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
-               % {'exe': sys.executable, 'py3': py3, 'pure': pure,
-                  'compiler': compiler,
-                  'base': os.path.join(self._hgtmp, b"build"),
-                  'prefix': self._installdir, 'libdir': self._pythondir,
-                  'bindir': self._bindir,
-                  'nohome': nohome, 'logfile': installerrs})
+            nohome = b''
+        cmd = (b'%(exe)s setup.py %(py3)s %(pure)s clean --all'
+               b' build %(compiler)s --build-base="%(base)s"'
+               b' install --force --prefix="%(prefix)s"'
+               b' --install-lib="%(libdir)s"'
+               b' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
+               % {b'exe': exe, b'py3': py3, b'pure': pure,
+                  b'compiler': compiler,
+                  b'base': os.path.join(self._hgtmp, b"build"),
+                  b'prefix': self._installdir, b'libdir': self._pythondir,
+                  b'bindir': self._bindir,
+                  b'nohome': nohome, b'logfile': installerrs})
 
         # setuptools requires install directories to exist.
         def makedirs(p):
@@ -2030,16 +2034,16 @@ class TestRunner(object):
                 f.write(line + '\n')
             f.close()
 
-        hgbat = os.path.join(self._bindir, 'hg.bat')
+        hgbat = os.path.join(self._bindir, b'hg.bat')
         if os.path.isfile(hgbat):
             # hg.bat expects to be put in bin/scripts while run-tests.py
             # installation layout put it in bin/ directly. Fix it
             f = open(hgbat, 'rb')
             data = f.read()
             f.close()
-            if '"%~dp0..\python" "%~dp0hg" %*' in data:
-                data = data.replace('"%~dp0..\python" "%~dp0hg" %*',
-                                    '"%~dp0python" "%~dp0hg" %*')
+            if b'"%~dp0..\python" "%~dp0hg" %*' in data:
+                data = data.replace(b'"%~dp0..\python" "%~dp0hg" %*',
+                                    b'"%~dp0python" "%~dp0hg" %*')
                 f = open(hgbat, 'wb')
                 f.write(data)
                 f.close()
@@ -2071,7 +2075,7 @@ class TestRunner(object):
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, 'mercurial')
+        expecthg = os.path.join(self._pythondir, b'mercurial')
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
