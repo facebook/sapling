@@ -235,7 +235,7 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 	PyObject *ret = NULL, *path = NULL, *hash = NULL, *flags = NULL;
 	l = lmiter_nextline((lmIter *)o);
 	if (!l) {
-		goto bail;
+		goto done;
 	}
 	pl = pathlen(l);
 	path = PyString_FromStringAndSize(l->start, pl);
@@ -244,10 +244,10 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 	flags = PyString_FromStringAndSize(l->start + consumed,
 									   l->len - consumed - 1);
 	if (!path || !hash || !flags) {
-		goto bail;
+		goto done;
 	}
 	ret = PyTuple_Pack(3, path, hash, flags);
- bail:
+ done:
 	Py_XDECREF(path);
 	Py_XDECREF(hash);
 	Py_XDECREF(flags);
