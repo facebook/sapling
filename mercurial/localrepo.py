@@ -926,11 +926,7 @@ class localrepository(object):
                 or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is None or not l.held:
-                msg = 'transaction with no lock\n'
-                if self.ui.tracebackflag:
-                    util.debugstacktrace(msg, 1)
-                else:
-                    self.ui.write_err(msg)
+                scmutil.develwarn(self.ui, 'transaction with no lock\n')
         tr = self.currenttransaction()
         if tr is not None:
             return tr.nest()
@@ -1220,11 +1216,7 @@ class localrepository(object):
                 or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is not None and l.held:
-                msg = '"wlock" acquired after "lock"\n'
-                if self.ui.tracebackflag:
-                    util.debugstacktrace(msg, 1)
-                else:
-                    self.ui.write_err(msg)
+                scmutil.develwarn(self.ui, '"wlock" acquired after "lock"\n')
 
         def unlock():
             if self.dirstate.pendingparentchange():

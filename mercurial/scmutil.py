@@ -172,6 +172,13 @@ class casecollisionauditor(object):
         self._loweredfiles.add(fl)
         self._newfiles.add(f)
 
+def develwarn(tui, msg):
+    """issue a developer warning message"""
+    if tui.tracebackflag:
+        util.debugstacktrace(msg, 2)
+    else:
+        tui.write_err(msg)
+
 def filteredhash(repo, maxrev):
     """build hash of filtered revisions in the current repoview.
 
