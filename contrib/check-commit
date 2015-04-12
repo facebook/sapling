@@ -20,7 +20,7 @@ import re, sys, os
 errors = [
     (r"[(]bc[)]", "(BC) needs to be uppercase"),
     (r"[(]issue \d\d\d", "no space allowed between issue and number"),
-    (r"[(]bug", "use (issueDDDD) instead of bug"),
+    (r"[(]bug(\d|\s)", "use (issueDDDD) instead of bug"),
     (r"^# User [^@\n]+$", "username is not an email address"),
     (r"^# .*\n(?!merge with )[^#]\S+[^:] ",
      "summary line doesn't start with 'topic: '"),
