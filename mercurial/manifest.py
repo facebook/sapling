@@ -836,6 +836,7 @@ class manifest(revlog.revlog):
             arraytext, deltatext = m.fastdelta(self._mancache[p1][1], work)
             cachedelta = self.rev(p1), deltatext
             text = util.buffer(arraytext)
+            n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         else:
             # The first parent manifest isn't already loaded, so we'll
             # just encode a fulltext of the manifest and pass that
@@ -843,9 +844,8 @@ class manifest(revlog.revlog):
             # process.
             text = m.text(self._usemanifestv2)
             arraytext = array.array('c', text)
-            cachedelta = None
+            n = self.addrevision(text, transaction, link, p1, p2)
 
-        n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         self._mancache[n] = (m, arraytext)
 
         return n
