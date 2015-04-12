@@ -15,6 +15,22 @@
   >     wl = repo.wlock()
   >     wl.release()
   >     lo.release()
+  > 
+  > @command('properlocking', [], '')
+  > def properlocking(ui, repo):
+  >     """check that reentrance is fine"""
+  >     wl = repo.wlock()
+  >     lo = repo.lock()
+  >     tr = repo.transaction('proper')
+  >     tr2 = repo.transaction('proper')
+  >     lo2 = repo.lock()
+  >     wl2 = repo.wlock()
+  >     wl2.release()
+  >     lo2.release()
+  >     tr2.close()
+  >     tr.close()
+  >     lo.release()
+  >     wl.release()
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -64,4 +80,5 @@
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
+  $ hg properlocking
   $ cd ..

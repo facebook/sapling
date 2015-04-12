@@ -1204,6 +1204,11 @@ class localrepository(object):
         '''Lock the non-store parts of the repository (everything under
         .hg except .hg/store) and return a weak reference to the lock.
         Use this before modifying files in .hg.'''
+        l = self._wlockref and self._wlockref()
+        if l is not None and l.held:
+            l.lock()
+            return l
+
         if (self.ui.configbool('devel', 'all')
                 or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
@@ -1213,10 +1218,6 @@ class localrepository(object):
                     util.debugstacktrace(msg, 1)
                 else:
                     self.ui.write_err(msg)
-        l = self._wlockref and self._wlockref()
-        if l is not None and l.held:
-            l.lock()
-            return l
 
         def unlock():
             if self.dirstate.pendingparentchange():
