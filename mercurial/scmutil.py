@@ -10,7 +10,7 @@ from mercurial.node import nullrev
 import util, error, osutil, revset, similar, encoding, phases
 import pathutil
 import match as matchmod
-import os, errno, re, glob, tempfile, shutil, stat
+import os, errno, re, glob, tempfile, shutil, stat, inspect
 
 if os.name == 'nt':
     import scmwindows as scmplatform
@@ -177,7 +177,9 @@ def develwarn(tui, msg):
     if tui.tracebackflag:
         util.debugstacktrace(msg, 2)
     else:
-        tui.write_err(msg + '\n')
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        tui.write_err('%s at: %s:%s (%s)\n' % ((msg,) + calframe[2][1:4]))
 
 def filteredhash(repo, maxrev):
     """build hash of filtered revisions in the current repoview.

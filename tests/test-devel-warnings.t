@@ -43,16 +43,16 @@
   $ hg init lock-checker
   $ cd lock-checker
   $ hg buggylocking
-  transaction with no lock
-  "wlock" acquired after "lock"
+  transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
+  "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
   $ cat << EOF >> $HGRCPATH
   > [devel]
   > all=0
   > check-locks=1
   > EOF
   $ hg buggylocking
-  transaction with no lock
-  "wlock" acquired after "lock"
+  transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
+  "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
   $ hg buggylocking --traceback
   transaction with no lock at:
    */hg:* in * (glob)
