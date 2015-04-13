@@ -1526,7 +1526,7 @@ class TextTestRunner(unittest.TextTestRunner):
                         t.setAttribute('name', tc.name)
                         t.setAttribute('time', '%.3f' % timesd[tc.name])
                         s.appendChild(t)
-                    for tc, err in sorted(result.faildata.iteritems()):
+                    for tc, err in sorted(result.faildata.items()):
                         t = doc.createElement('testcase')
                         t.setAttribute('name', tc)
                         t.setAttribute('time', '%.3f' % timesd[tc])
