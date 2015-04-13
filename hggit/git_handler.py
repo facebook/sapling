@@ -1,5 +1,5 @@
 import collections, itertools, os, math, urllib, urllib2, re
-import stat, posixpath, StringIO
+import cStringIO, stat, posixpath, StringIO
 
 from dulwich.errors import HangupException, GitProtocolError, UpdateRefsError
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone, S_IFGITLINK
@@ -190,7 +190,6 @@ class GitHandler(object):
         map_hg = self._map_hg
         hgshas = map_hg.keys()
         hgshas.sort()
-        import cStringIO
         buf = cStringIO.StringIO()
         bwrite = buf.write
         for hgsha in hgshas:
