@@ -1120,9 +1120,11 @@ class TTest(Test):
             return True
         if el:
             if el.endswith(b" (esc)\n"):
-                el = el[:-7].decode('string-escape') + '\n'
                 if sys.version_info[0] == 3:
-                    el.encode('utf-8')
+                    el = el[:-7].decode('unicode_escape') + '\n'
+                    el = el.encode('utf-8')
+                else:
+                    el = el[:-7].decode('string-escape') + '\n'
             if el == l or os.name == 'nt' and el[:-1] + b'\r\n' == l:
                 return True
             if el.endswith(b" (re)\n"):
