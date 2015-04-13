@@ -213,6 +213,12 @@ def checkout(ui, repo, *args, **kwargs):
         ('B', 'branch', '', ''),
         ('f', 'force', None, ''),
     ]
+    paths = []
+    if '--' in args:
+        sepindex = args.index('--')
+        paths.extend(args[sepindex + 1:])
+        args = args[:sepindex]
+
     args, opts = parseoptions(ui, cmdoptions, args)
 
     cmd = Command('update')
@@ -229,12 +235,17 @@ def checkout(ui, repo, *args, **kwargs):
             bookcmd = Command('bookmark')
             bookcmd.append(opts.get('branch'))
             cmd = cmd & bookcmd
+    elif len(args) > 1 or len(paths) > 0:
+        ui.status("note: use --no-backup to avoid creating .orig files\n\n")
+        cmd = Command('revert')
+        if len(args) > 0:
+            # first arg is a revision, the rest are paths
+            cmd['-r'] = args[0]
+            cmd.extend(args[1:])
+        if len(paths) > 0:
+            cmd.extend(paths)
     elif len(args) == 0:
         raise GitUnknownError("a commit must be specified")
-    elif len(args) > 1:
-        cmd = Command('revert')
-        cmd['-r'] = args[0]
-        cmd.extend(args[1:])
     else:
         cmd.append(args[0])
 

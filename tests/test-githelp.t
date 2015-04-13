@@ -41,3 +41,31 @@ githelp for git commit --amend (hg commit --amend pulls up an editor)
 githelp for git commit --amend --no-edit (hg amend does not pull up an editor)
   $ hg githelp -- commit --amend --no-edit
   hg amend
+
+githelp for git checkout -- . (checking out a directory)
+  $ hg githelp -- checkout -- .
+  note: use --no-backup to avoid creating .orig files
+  
+  hg revert .
+
+githelp for git checkout HEAD^ (should still work to pass a rev)
+  $ hg githelp -- checkout HEAD^
+  hg update .^
+
+githelp checkout: args after -- should be treated as paths no matter what
+  $ hg githelp -- checkout -- HEAD
+  note: use --no-backup to avoid creating .orig files
+  
+  hg revert HEAD
+
+githelp for git checkout with rev and path
+  $ hg githelp -- checkout HEAD^ -- file.txt
+  note: use --no-backup to avoid creating .orig files
+  
+  hg revert -r .^ file.txt
+
+githelp for git with rev and path, without separator
+  $ hg githelp -- checkout HEAD^ file.txt
+  note: use --no-backup to avoid creating .orig files
+  
+  hg revert -r .^ file.txt
