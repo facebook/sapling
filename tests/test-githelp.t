@@ -34,3 +34,10 @@ githelp for git rebase --skip
   hg revert --all -r .
   hg rebase --continue
 
+githelp for git commit --amend (hg commit --amend pulls up an editor)
+  $ hg githelp -- commit --amend
+  hg commit --amend
+
+githelp for git commit --amend --no-edit (hg amend does not pull up an editor)
+  $ hg githelp -- commit --amend --no-edit
+  hg amend

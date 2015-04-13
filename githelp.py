@@ -313,12 +313,19 @@ def commit(ui, repo, *args, **kwargs):
         ('', 'author', '', ''),
         ('', 'date', '', ''),
         ('', 'amend', None, ''),
+        ('', 'no-edit', None, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
     cmd = Command('commit')
     if opts.get('patch'):
         cmd = Command('record')
+
+    if opts.get('amend'):
+        if opts.get('no_edit'):
+            cmd = Command('amend')
+        else:
+            cmd['--amend'] = None
 
     if opts.get('message'):
         cmd['-m'] = "'%s'" % (opts.get('message'),)
@@ -336,9 +343,6 @@ def commit(ui, repo, *args, **kwargs):
 
     if opts.get('date'):
         cmd['-d'] = opts.get('date')
-
-    if opts.get('amend'):
-        cmd['--amend'] = None
 
     cmd.extend(args)
 
