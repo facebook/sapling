@@ -1,3 +1,11 @@
+setup
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > blackbox=
+  > mock=$TESTDIR/mockblackbox.py
+  > EOF
+
 Helper functions:
 
   $ cacheexists() {
@@ -81,6 +89,18 @@ And again, but now unable to write tag cache:
   b9154636be93 tip
   $ chmod 755 .hg
 #endif
+
+Tag cache debug info written to blackbox log
+
+  $ rm -f .hg/cache/tags
+  $ hg identify
+  b9154636be93 tip
+  $ hg blackbox -l 4
+  1970/01/01 00:00:00 bob> identify
+  1970/01/01 00:00:00 bob> resolved 1 tags cache entries from 1 manifests in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 1 heads and 1 tags
+  1970/01/01 00:00:00 bob> identify exited 0 after ?.?? seconds (glob)
+
 
 Create a branch:
 
