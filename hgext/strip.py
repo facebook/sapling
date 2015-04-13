@@ -7,7 +7,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid
 from mercurial.lock import release
 from mercurial import cmdutil, hg, scmutil, util
-from mercurial import repair, bookmarks
+from mercurial import repair, bookmarks, merge
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -205,6 +205,11 @@ def stripcmd(ui, repo, *revs, **opts):
 
             repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
             repo.dirstate.write()
+
+            # clear resolve state
+            ms = merge.mergestate(repo)
+            ms.reset(repo['.'].node())
+
             update = False
 
 

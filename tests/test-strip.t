@@ -496,10 +496,11 @@ applied patches after stripping ancestor of queue
 Verify strip protects against stripping wc parent when there are uncommitted mods
 
   $ echo b > b
+  $ echo bb > bar
   $ hg add b
   $ hg ci -m 'b'
   $ hg log --graph
-  @  changeset:   1:7519abd79d14
+  @  changeset:   1:76dcf9fab855
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -510,9 +511,24 @@ Verify strip protects against stripping wc parent when there are uncommitted mod
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
+  $ hg up 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo c > bar
+  $ hg up -t false
+  merging bar
+  merging bar failed!
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg sum
+  parent: 1:76dcf9fab855 tip
+   b
+  branch: default
+  commit: 1 modified, 1 unknown, 1 unresolved
+  update: (current)
+  mq:     3 unapplied
 
   $ echo c > b
-  $ echo c > bar
   $ hg strip tip
   abort: local changes found
   [255]
@@ -528,6 +544,16 @@ Verify strip protects against stripping wc parent when there are uncommitted mod
   $ hg status
   M bar
   ? b
+  ? bar.orig
+
+  $ rm bar.orig
+  $ hg sum
+  parent: 0:9ab35a2d17cb tip
+   a
+  branch: default
+  commit: 1 modified, 1 unknown
+  update: (current)
+  mq:     3 unapplied
 
 Strip adds, removes, modifies with --keep
 
