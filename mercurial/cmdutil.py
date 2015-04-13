@@ -450,14 +450,17 @@ def openrevlog(repo, cmd, file_, opts):
     """opens the changelog, manifest, a filelog or a given revlog"""
     cl = opts['changelog']
     mf = opts['manifest']
+    dir = opts['dir']
     msg = None
     if cl and mf:
         msg = _('cannot specify --changelog and --manifest at the same time')
+    elif cl and dir:
+        msg = _('cannot specify --changelog and --dir at the same time')
     elif cl or mf:
         if file_:
             msg = _('cannot specify filename with --changelog or --manifest')
         elif not repo:
-            msg = _('cannot specify --changelog or --manifest '
+            msg = _('cannot specify --changelog or --manifest or --dir '
                     'without a repository')
     if msg:
         raise util.Abort(msg)
@@ -466,6 +469,13 @@ def openrevlog(repo, cmd, file_, opts):
     if repo:
         if cl:
             r = repo.unfiltered().changelog
+        elif dir:
+            if 'treemanifest' not in repo.requirements:
+                raise util.Abort(_("--dir can only be used on repos with "
+                                   "treemanifest enabled"))
+            dirlog = repo.dirlog(file_)
+            if len(dirlog):
+                r = dirlog
         elif mf:
             r = repo.manifest
         elif file_:

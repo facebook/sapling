@@ -815,6 +815,8 @@ class manifest(revlog.revlog):
         indexfile = "00manifest.i"
         if dir:
             assert self._treeondisk
+            if not dir.endswith('/'):
+                dir = dir + '/'
             indexfile = "meta/" + dir + "00manifest.i"
         revlog.revlog.__init__(self, opener, indexfile)
         self._dir = dir

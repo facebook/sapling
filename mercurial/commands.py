@@ -2056,7 +2056,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 
 @command('debugdata',
     [('c', 'changelog', False, _('open changelog')),
-     ('m', 'manifest', False, _('open manifest'))],
+     ('m', 'manifest', False, _('open manifest')),
+     ('', 'dir', False, _('open directory manifest'))],
     _('-c|-m|FILE REV'))
 def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
@@ -2227,6 +2228,7 @@ def debugignore(ui, repo, *values, **opts):
 @command('debugindex',
     [('c', 'changelog', False, _('open changelog')),
      ('m', 'manifest', False, _('open manifest')),
+     ('', 'dir', False, _('open directory manifest')),
      ('f', 'format', 0, _('revlog format'), _('FORMAT'))],
     _('[-f FORMAT] -c|-m|FILE'),
     optionalrepo=True)
@@ -2729,6 +2731,7 @@ def debugrename(ui, repo, file1, *pats, **opts):
 @command('debugrevlog',
     [('c', 'changelog', False, _('open changelog')),
      ('m', 'manifest', False, _('open manifest')),
+     ('', 'dir', False, _('open directory manifest')),
      ('d', 'dump', False, _('dump index data'))],
     _('-c|-m|FILE'),
     optionalrepo=True)

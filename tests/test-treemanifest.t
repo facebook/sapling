@@ -30,7 +30,7 @@ Submanifest is stored in separate revlog
   b\x00362fef284ce2ca02aecc8de6d5e8a1c3af0556fe (esc)
   dir1\x008b3ffd73f901e83304c83d33132c8e774ceac44ed (esc)
   e\x00b8e02f6433738021a065f94175c7cd23db5f05be (esc)
-  $ hg debugdata .hg/store/meta/dir1/00manifest.i 0
+  $ hg debugdata --dir dir1 0
   a\x00b8e02f6433738021a065f94175c7cd23db5f05be (esc)
   b\x00b8e02f6433738021a065f94175c7cd23db5f05be (esc)
 
@@ -60,9 +60,9 @@ Revision is not created for unchanged directory
   $ echo 3 > dir2/a
   $ hg add dir2
   adding dir2/a
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i > before
+  $ hg debugindex --dir dir1 > before
   $ hg ci -qm 'add dir2'
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i > after
+  $ hg debugindex --dir dir1 > after
   $ diff before after
   $ rm before after
 
@@ -71,9 +71,9 @@ Removing directory does not create an revlog entry
   $ hg rm dir1/dir1
   removing dir1/dir1/a
   removing dir1/dir1/b
-  $ hg debugindex .hg/store/meta/dir1/dir1/00manifest.i > before
+  $ hg debugindex --dir dir1/dir1 > before
   $ hg ci -qm 'remove dir1/dir1'
-  $ hg debugindex .hg/store/meta/dir1/dir1/00manifest.i > after
+  $ hg debugindex --dir dir1/dir1 > after
   $ diff before after
   $ rm before after
 
@@ -113,7 +113,7 @@ Merge creates 2-parent revision of directory revlog
   5
   $ cat dir1/b
   6
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i
+  $ hg debugindex --dir dir1
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0      54      0       1 8b3ffd73f901 000000000000 000000000000
        1        54      68      0       2 b66d046c644f 8b3ffd73f901 000000000000
@@ -131,14 +131,14 @@ dir1's manifest does change, but only because dir1/a's filelog changes.)
   $ hg ci -m 'modify dir2/a'
   created new head
 
-  $ hg debugindex .hg/store/meta/dir2/00manifest.i > before
+  $ hg debugindex --dir dir2 > before
   $ hg merge 'desc("modify dir1/a")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg revert -r 'desc("modify dir2/a")' .
   reverting dir1/a (glob)
   $ hg ci -m 'merge, keeping parent 1'
-  $ hg debugindex .hg/store/meta/dir2/00manifest.i > after
+  $ hg debugindex --dir dir2 > after
   $ diff before after
   $ rm before after
 
@@ -147,7 +147,7 @@ dir2's manifest does change, but only because dir2/a's filelog changes.)
 
   $ hg co 'desc("modify dir2/a")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i > before
+  $ hg debugindex --dir dir1 > before
   $ hg merge 'desc("modify dir1/a")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -155,7 +155,7 @@ dir2's manifest does change, but only because dir2/a's filelog changes.)
   reverting dir2/a (glob)
   $ hg ci -m 'merge, keeping parent 2'
   created new head
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i > after
+  $ hg debugindex --dir dir1 > after
   $ diff before after
   $ rm before after
 

@@ -460,6 +460,9 @@ class localrepository(object):
     def manifest(self):
         return manifest.manifest(self.svfs)
 
+    def dirlog(self, dir):
+        return manifest.manifest(self.svfs, dir)
+
     @repofilecache('dirstate')
     def dirstate(self):
         warned = [0]
