@@ -220,7 +220,12 @@ class histeditstate(object):
                 raise
             raise util.Abort(_('no histedit in progress'))
 
-        parentctxnode, rules, keep, topmost, replacements = pickle.load(fp)
+        try:
+            data = pickle.load(fp)
+            parentctxnode, rules, keep, topmost, replacements = data
+        except pickle.UnpicklingError:
+            data = self._load()
+            parentctxnode, rules, keep, topmost, replacements = data
 
         self.parentctxnode = parentctxnode
         self.rules = rules
@@ -230,9 +235,62 @@ class histeditstate(object):
 
     def write(self):
         fp = self.repo.vfs('histedit-state', 'w')
-        pickle.dump((self.parentctxnode, self.rules, self.keep,
-                     self.topmost, self.replacements), fp)
+        fp.write('v1\n')
+        fp.write('%s\n' % node.hex(self.parentctxnode))
+        fp.write('%s\n' % node.hex(self.topmost))
+        fp.write('%s\n' % self.keep)
+        fp.write('%d\n' % len(self.rules))
+        for rule in self.rules:
+            fp.write('%s%s\n' % (rule[1], rule[0]))
+        fp.write('%d\n' % len(self.replacements))
+        for replacement in self.replacements:
+            fp.write('%s%s\n' % (node.hex(replacement[0]), ''.join(node.hex(r)
+                for r in replacement[1])))
         fp.close()
+
+    def _load(self):
+        fp = self.repo.vfs('histedit-state', 'r')
+        lines = [l[:-1] for l in fp.readlines()]
+
+        index = 0
+        lines[index] # version number
+        index += 1
+
+        parentctxnode = node.bin(lines[index])
+        index += 1
+
+        topmost = node.bin(lines[index])
+        index += 1
+
+        keep = lines[index] == 'True'
+        index += 1
+
+        # Rules
+        rules = []
+        rulelen = int(lines[index])
+        index += 1
+        for i in xrange(rulelen):
+            rule = lines[index]
+            rulehash = rule[:40]
+            ruleaction = rule[40:]
+            rules.append((ruleaction, rulehash))
+            index += 1
+
+        # Replacements
+        replacements = []
+        replacementlen = int(lines[index])
+        index += 1
+        for i in xrange(replacementlen):
+            replacement = lines[index]
+            original = node.bin(replacement[:40])
+            succ = [node.bin(replacement[i:i + 40]) for i in
+                    range(40, len(replacement), 40)]
+            replacements.append((original, succ))
+            index += 1
+
+        fp.close()
+
+        return parentctxnode, rules, keep, topmost, replacements
 
     def clear(self):
         self.repo.vfs.unlink('histedit-state')
