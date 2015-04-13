@@ -1278,8 +1278,11 @@ class TestResult(unittest._TextTestResult):
             if self._options.nodiff:
                 pass
             elif self._options.view:
-                os.system("%s %s %s" %
-                          (self._options.view, test.refpath, test.errpath))
+                v = self._options.view
+                if sys.version_info[0] == 3:
+                    v = v.encode('utf-8')
+                os.system(b"%s %s %s" %
+                          (v, test.refpath, test.errpath))
             else:
                 servefail, lines = getdiff(expected, got,
                                            test.refpath, test.errpath)
