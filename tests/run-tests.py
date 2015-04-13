@@ -1823,13 +1823,16 @@ class TestRunner(object):
 
             failed = False
             warned = False
+            kws = self.options.keywords
+            if kws is not None and sys.version_info[0] == 3:
+                kws = kws.encode('utf-8')
 
             suite = TestSuite(self._testdir,
                               jobs=self.options.jobs,
                               whitelist=self.options.whitelisted,
                               blacklist=self.options.blacklist,
                               retest=self.options.retest,
-                              keywords=self.options.keywords,
+                              keywords=kws,
                               loop=self.options.loop,
                               runs_per_test=self.options.runs_per_test,
                               tests=tests, loadtest=self._gettest)
