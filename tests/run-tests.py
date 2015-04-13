@@ -1405,7 +1405,7 @@ class TestSuite(unittest.TestSuite):
 
                 if self._keywords:
                     f = open(test.path, 'rb')
-                    t = f.read().lower() + test.name.lower()
+                    t = f.read().lower() + test.bname.lower()
                     f.close()
                     ignored = False
                     for k in self._keywords.lower().split():
