@@ -1011,6 +1011,12 @@ def readrequires(opener, supported):
                    " for more information"))
     return requirements
 
+def writerequires(opener, requirements):
+    reqfile = opener("requires", "w")
+    for r in sorted(requirements):
+        reqfile.write("%s\n" % r)
+    reqfile.close()
+
 class filecachesubentry(object):
     def __init__(self, path, stat):
         self.path = path

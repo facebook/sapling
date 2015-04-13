@@ -353,10 +353,7 @@ class localrepository(object):
             self.svfs.options['usetreemanifest'] = usetreemanifest
 
     def _writerequirements(self):
-        reqfile = self.vfs("requires", "w")
-        for r in sorted(self.requirements):
-            reqfile.write("%s\n" % r)
-        reqfile.close()
+        scmutil.writerequires(self.vfs, self.requirements)
 
     def _checknested(self, path):
         """Determine if path is a legal nested repository."""
