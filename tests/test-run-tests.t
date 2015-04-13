@@ -39,8 +39,8 @@ failing test
   > EOF
 
   >>> fh = open('test-failure-unicode.t', 'wb')
-  >>> fh.write(u'  $ echo babar\u03b1\n'.encode('utf-8'))
-  >>> fh.write(u'  l\u03b5\u03b5t\n'.encode('utf-8'))
+  >>> fh.write(u'  $ echo babar\u03b1\n'.encode('utf-8')) and None
+  >>> fh.write(u'  l\u03b5\u03b5t\n'.encode('utf-8')) and None
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg`
   
@@ -258,8 +258,8 @@ Parallel runs
 
 failures in parallel with --first should only print one failure
   >>> f = open('test-nothing.t', 'w')
-  >>> f.write('foo\n' * 1024)
-  >>> f.write('  $ sleep 1')
+  >>> f.write('foo\n' * 1024) and None
+  >>> f.write('  $ sleep 1') and None
   $ $TESTDIR/run-tests.py --with-hg=`which hg` --jobs 2 --first
   
   --- $TESTTMP/test-failure*.t (glob)
