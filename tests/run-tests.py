@@ -1400,7 +1400,7 @@ class TestSuite(unittest.TestSuite):
                 continue
 
             if not (self._whitelist and test.name in self._whitelist):
-                if self._blacklist and test.name in self._blacklist:
+                if self._blacklist and test.bname in self._blacklist:
                     result.addSkip(test, 'blacklisted')
                     continue
 
