@@ -448,10 +448,7 @@ class treemanifest(object):
         # Using _lazymanifest here is a little slower than plain old dicts
         self._files = {}
         self._flags = {}
-        for f, n, fl in _parse(text):
-            self[f] = n
-            if fl:
-                self.setflag(f, fl)
+        self.parse(text)
 
     def _subpath(self, path):
         return self._dir + path
@@ -739,6 +736,12 @@ class treemanifest(object):
 
         _diff(self, m2)
         return result
+
+    def parse(self, text):
+        for f, n, fl in _parse(text):
+            self[f] = n
+            if fl:
+                self.setflag(f, fl)
 
     def text(self, usemanifestv2=False):
         """Get the full data of this manifest as a bytestring."""
