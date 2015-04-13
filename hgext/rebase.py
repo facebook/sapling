@@ -231,7 +231,8 @@ def rebase(ui, repo, **opts):
                     hint = _('use "hg rebase --abort" to clear broken state')
                     raise util.Abort(msg, hint=hint)
             if abortf:
-                return abort(repo, originalwd, target, state)
+                return abort(repo, originalwd, target, state,
+                             activebookmark=activebookmark)
         else:
             if srcf and basef:
                 raise util.Abort(_('cannot specify both a '
@@ -852,8 +853,11 @@ def inrebase(repo, originalwd, state):
 
     return False
 
-def abort(repo, originalwd, target, state):
-    'Restore the repository to its original state'
+def abort(repo, originalwd, target, state, activebookmark=None):
+    '''Restore the repository to its original state.  Additional args:
+
+    activebookmark: the name of the bookmark that should be active after the
+        restore'''
     dstates = [s for s in state.values() if s >= 0]
     immutable = [d for d in dstates if not repo[d].mutable()]
     cleanup = True
@@ -882,6 +886,9 @@ def abort(repo, originalwd, target, state):
             strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
             # no backup of rebased cset versions needed
             repair.strip(repo.ui, repo, strippoints)
+
+    if activebookmark:
+        bookmarks.setcurrent(repo, activebookmark)
 
     clearstatus(repo)
     repo.ui.warn(_('rebase aborted\n'))

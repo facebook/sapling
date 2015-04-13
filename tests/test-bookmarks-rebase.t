@@ -66,3 +66,27 @@ rebase
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
+aborted rebase should restore active bookmark.
+
+  $ hg up 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark two)
+  $ echo 'e' > d
+  $ hg ci -A -m "4"
+  adding d
+  created new head
+  $ hg bookmark three
+  $ hg rebase -s three -d two
+  rebasing 4:dd7c838e8362 "4" (tip three)
+  merging d
+  warning: conflicts during merge.
+  merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+  $ hg bookmark
+     one                       1:925d80f479bb
+   * three                     4:dd7c838e8362
+     two                       3:42e5ed2cdcf4
+
