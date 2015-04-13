@@ -371,14 +371,13 @@ def log(*msg):
 
     Arguments are strings to print.
     """
-    iolock.acquire()
-    if verbose:
-        print(verbose, end=' ')
-    for m in msg:
-        print(m, end=' ')
-    print()
-    sys.stdout.flush()
-    iolock.release()
+    with iolock:
+        if verbose:
+            print(verbose, end=' ')
+        for m in msg:
+            print(m, end=' ')
+        print()
+        sys.stdout.flush()
 
 def terminate(proc):
     """Terminate subprocess (with fallback for Python versions < 2.6)"""
@@ -1209,18 +1208,16 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
         else:
-            iolock.acquire()
-            if not self._options.nodiff:
-                self.stream.write('\nERROR: %s output changed\n' % test)
+            with iolock:
+                if not self._options.nodiff:
+                    self.stream.write('\nERROR: %s output changed\n' % test)
 
-            self.stream.write('!')
-            self.stream.flush()
-            iolock.release()
+                self.stream.write('!')
+                self.stream.flush()
 
     def addSuccess(self, test):
-        iolock.acquire()
-        super(TestResult, self).addSuccess(test)
-        iolock.release()
+        with iolock:
+            super(TestResult, self).addSuccess(test)
         self.successes.append(test)
 
     def addError(self, test, err):
@@ -1231,26 +1228,24 @@ class TestResult(unittest._TextTestResult):
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
-        iolock.acquire()
-        if self.showAll:
-            self.stream.writeln('skipped %s' % reason)
-        else:
-            self.stream.write('s')
-            self.stream.flush()
-        iolock.release()
+        with iolock:
+            if self.showAll:
+                self.stream.writeln('skipped %s' % reason)
+            else:
+                self.stream.write('s')
+                self.stream.flush()
 
     def addIgnore(self, test, reason):
         self.ignored.append((test, reason))
-        iolock.acquire()
-        if self.showAll:
-            self.stream.writeln('ignored %s' % reason)
-        else:
-            if reason != 'not retesting' and reason != "doesn't match keyword":
-                self.stream.write('i')
+        with iolock:
+            if self.showAll:
+                self.stream.writeln('ignored %s' % reason)
             else:
-                self.testsRun += 1
-            self.stream.flush()
-        iolock.release()
+                if reason not in ('not retesting', "doesn't match keyword"):
+                    self.stream.write('i')
+                else:
+                    self.testsRun += 1
+                self.stream.flush()
 
     def addWarn(self, test, reason):
         self.warned.append((test, reason))
@@ -1258,13 +1253,12 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
 
-        iolock.acquire()
-        if self.showAll:
-            self.stream.writeln('warned %s' % reason)
-        else:
-            self.stream.write('~')
-            self.stream.flush()
-        iolock.release()
+        with iolock:
+            if self.showAll:
+                self.stream.writeln('warned %s' % reason)
+            else:
+                self.stream.write('~')
+                self.stream.flush()
 
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
@@ -1278,38 +1272,37 @@ class TestResult(unittest._TextTestResult):
         failed = False
         lines = []
 
-        iolock.acquire()
-        if self._options.nodiff:
-            pass
-        elif self._options.view:
-            os.system("%s %s %s" %
-                      (self._options.view, test.refpath, test.errpath))
-        else:
-            servefail, lines = getdiff(expected, got,
-                                       test.refpath, test.errpath)
-            if servefail:
-                self.addFailure(
-                    test,
-                    'server failed to start (HGPORT=%s)' % test._startport)
+        with iolock:
+            if self._options.nodiff:
+                pass
+            elif self._options.view:
+                os.system("%s %s %s" %
+                          (self._options.view, test.refpath, test.errpath))
             else:
-                self.stream.write('\n')
-                for line in lines:
-                    self.stream.write(line)
-                self.stream.flush()
-
-        # handle interactive prompt without releasing iolock
-        if self._options.interactive:
-            self.stream.write('Accept this change? [n] ')
-            answer = sys.stdin.readline().strip()
-            if answer.lower() in ('y', 'yes'):
-                if test.name.endswith('.t'):
-                    rename(test.errpath, test.path)
+                servefail, lines = getdiff(expected, got,
+                                           test.refpath, test.errpath)
+                if servefail:
+                    self.addFailure(
+                        test,
+                        'server failed to start (HGPORT=%s)' % test._startport)
                 else:
-                    rename(test.errpath, '%s.out' % test.path)
-                accepted = True
-        if not accepted and not failed:
-            self.faildata[test.name] = ''.join(lines)
-        iolock.release()
+                    self.stream.write('\n')
+                    for line in lines:
+                        self.stream.write(line)
+                    self.stream.flush()
+
+            # handle interactive prompt without releasing iolock
+            if self._options.interactive:
+                self.stream.write('Accept this change? [n] ')
+                answer = sys.stdin.readline().strip()
+                if answer.lower() in ('y', 'yes'):
+                    if test.name.endswith('.t'):
+                        rename(test.errpath, test.path)
+                    else:
+                        rename(test.errpath, '%s.out' % test.path)
+                    accepted = True
+            if not accepted and not failed:
+                self.faildata[test.name] = ''.join(lines)
 
         return accepted
 
@@ -1336,10 +1329,9 @@ class TestResult(unittest._TextTestResult):
                            ))
 
         if interrupted:
-            iolock.acquire()
-            self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
-                test.name, self.times[-1][3]))
-            iolock.release()
+            with iolock:
+                self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
+                    test.name, self.times[-1][3]))
 
 class TestSuite(unittest.TestSuite):
     """Custom unittest TestSuite that knows how to execute Mercurial tests."""
@@ -1502,91 +1494,91 @@ class TextTestRunner(unittest.TextTestRunner):
         skipped = len(result.skipped)
         ignored = len(result.ignored)
 
-        iolock.acquire()
-        self.stream.writeln('')
+        with iolock:
+            self.stream.writeln('')
 
-        if not self._runner.options.noskips:
-            for test, msg in result.skipped:
-                self.stream.writeln('Skipped %s: %s' % (test.name, msg))
-        for test, msg in result.warned:
-            self.stream.writeln('Warned %s: %s' % (test.name, msg))
-        for test, msg in result.failures:
-            self.stream.writeln('Failed %s: %s' % (test.name, msg))
-        for test, msg in result.errors:
-            self.stream.writeln('Errored %s: %s' % (test.name, msg))
+            if not self._runner.options.noskips:
+                for test, msg in result.skipped:
+                    self.stream.writeln('Skipped %s: %s' % (test.name, msg))
+            for test, msg in result.warned:
+                self.stream.writeln('Warned %s: %s' % (test.name, msg))
+            for test, msg in result.failures:
+                self.stream.writeln('Failed %s: %s' % (test.name, msg))
+            for test, msg in result.errors:
+                self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
-        if self._runner.options.xunit:
-            xuf = open(self._runner.options.xunit, 'wb')
-            try:
-                timesd = dict((t[0], t[3]) for t in result.times)
-                doc = minidom.Document()
-                s = doc.createElement('testsuite')
-                s.setAttribute('name', 'run-tests')
-                s.setAttribute('tests', str(result.testsRun))
-                s.setAttribute('errors', "0") # TODO
-                s.setAttribute('failures', str(failed))
-                s.setAttribute('skipped', str(skipped + ignored))
-                doc.appendChild(s)
-                for tc in result.successes:
-                    t = doc.createElement('testcase')
-                    t.setAttribute('name', tc.name)
-                    t.setAttribute('time', '%.3f' % timesd[tc.name])
-                    s.appendChild(t)
-                for tc, err in sorted(result.faildata.iteritems()):
-                    t = doc.createElement('testcase')
-                    t.setAttribute('name', tc)
-                    t.setAttribute('time', '%.3f' % timesd[tc])
-                    # createCDATASection expects a unicode or it will convert
-                    # using default conversion rules, which will fail if
-                    # string isn't ASCII.
-                    err = cdatasafe(err).decode('utf-8', 'replace')
-                    cd = doc.createCDATASection(err)
-                    t.appendChild(cd)
-                    s.appendChild(t)
-                xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
-            finally:
-                xuf.close()
+            if self._runner.options.xunit:
+                xuf = open(self._runner.options.xunit, 'wb')
+                try:
+                    timesd = dict((t[0], t[3]) for t in result.times)
+                    doc = minidom.Document()
+                    s = doc.createElement('testsuite')
+                    s.setAttribute('name', 'run-tests')
+                    s.setAttribute('tests', str(result.testsRun))
+                    s.setAttribute('errors', "0") # TODO
+                    s.setAttribute('failures', str(failed))
+                    s.setAttribute('skipped', str(skipped + ignored))
+                    doc.appendChild(s)
+                    for tc in result.successes:
+                        t = doc.createElement('testcase')
+                        t.setAttribute('name', tc.name)
+                        t.setAttribute('time', '%.3f' % timesd[tc.name])
+                        s.appendChild(t)
+                    for tc, err in sorted(result.faildata.iteritems()):
+                        t = doc.createElement('testcase')
+                        t.setAttribute('name', tc)
+                        t.setAttribute('time', '%.3f' % timesd[tc])
+                        # createCDATASection expects a unicode or it will
+                        # convert using default conversion rules, which will
+                        # fail if string isn't ASCII.
+                        err = cdatasafe(err).decode('utf-8', 'replace')
+                        cd = doc.createCDATASection(err)
+                        t.appendChild(cd)
+                        s.appendChild(t)
+                    xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
+                finally:
+                    xuf.close()
 
-        if self._runner.options.json:
-            if json is None:
-                raise ImportError("json module not installed")
-            jsonpath = os.path.join(self._runner._testdir, 'report.json')
-            fp = open(jsonpath, 'w')
-            try:
-                timesd = {}
-                for tdata in result.times:
-                    test = tdata[0]
-                    timesd[test] = tdata[1:]
+            if self._runner.options.json:
+                if json is None:
+                    raise ImportError("json module not installed")
+                jsonpath = os.path.join(self._runner._testdir, 'report.json')
+                fp = open(jsonpath, 'w')
+                try:
+                    timesd = {}
+                    for tdata in result.times:
+                        test = tdata[0]
+                        timesd[test] = tdata[1:]
 
-                outcome = {}
-                groups = [('success', ((tc, None) for tc in result.successes)),
-                          ('failure', result.failures),
-                          ('skip', result.skipped)]
-                for res, testcases in groups:
-                    for tc, __ in testcases:
-                        testresult = {'result': res,
-                                      'time': ('%0.3f' % timesd[tc.name][2]),
-                                      'cuser': ('%0.3f' % timesd[tc.name][0]),
-                                      'csys': ('%0.3f' % timesd[tc.name][1])}
-                        outcome[tc.name] = testresult
+                    outcome = {}
+                    groups = [('success', ((tc, None)
+                               for tc in result.successes)),
+                              ('failure', result.failures),
+                              ('skip', result.skipped)]
+                    for res, testcases in groups:
+                        for tc, __ in testcases:
+                            tres = {'result': res,
+                                    'time': ('%0.3f' % timesd[tc.name][2]),
+                                    'cuser': ('%0.3f' % timesd[tc.name][0]),
+                                    'csys': ('%0.3f' % timesd[tc.name][1])}
+                            outcome[tc.name] = tres
 
-                jsonout = json.dumps(outcome, sort_keys=True, indent=4)
-                fp.writelines(("testreport =", jsonout))
-            finally:
-                fp.close()
+                    jsonout = json.dumps(outcome, sort_keys=True, indent=4)
+                    fp.writelines(("testreport =", jsonout))
+                finally:
+                    fp.close()
 
-        self._runner._checkhglib('Tested')
+            self._runner._checkhglib('Tested')
 
-        self.stream.writeln('# Ran %d tests, %d skipped, %d warned, %d failed.'
-            % (result.testsRun,
-               skipped + ignored, warned, failed))
-        if failed:
-            self.stream.writeln('python hash seed: %s' %
-                os.environ['PYTHONHASHSEED'])
-        if self._runner.options.time:
-            self.printtimes(result.times)
-
-        iolock.release()
+            self.stream.writeln(
+                '# Ran %d tests, %d skipped, %d warned, %d failed.'
+                % (result.testsRun,
+                   skipped + ignored, warned, failed))
+            if failed:
+                self.stream.writeln('python hash seed: %s' %
+                    os.environ['PYTHONHASHSEED'])
+            if self._runner.options.time:
+                self.printtimes(result.times)
 
         return result
 
