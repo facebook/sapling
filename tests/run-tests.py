@@ -2101,6 +2101,8 @@ class TestRunner(object):
         pipe = os.popen(cmd % PYTHON)
         try:
             self._hgpath = pipe.read().strip()
+            if sys.version_info[0] == 3:
+                self._hgpath = self._hgpath.encode('utf-8')
         finally:
             pipe.close()
 
