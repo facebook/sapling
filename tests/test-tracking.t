@@ -265,3 +265,13 @@ Test when a local bookmark that was tracking goes missing
   $ hg book d
   $ hg book -v
    * d                         5:045b4e9d5205
+
+Test that -r sets up tracking
+
+  $ hg book -r remote/a foo -u
+  $ hg book -r remote/a bar
+  $ hg book -r remote/a baz -t remote/b
+  $ hg book -v
+     bar                       3:aff78bd8e592            [remote/a]
+     baz                       3:aff78bd8e592            [remote/b]
+   * d                         5:045b4e9d5205
