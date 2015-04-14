@@ -127,7 +127,7 @@ def Popen4(cmd, wd, timeout, env=None):
 
     return p
 
-PYTHON = sys.executable.replace('\\', '/')
+PYTHON = sys.executable.replace('\\', '/').encode('utf-8')
 IMPL_PATH = b'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = b'JYTHONPATH'
@@ -809,11 +809,11 @@ class PythonTest(Test):
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, '%s.out' % self.name)
+        return os.path.join(self._testdir, b'%s.out' % self.bname)
 
     def _run(self, env):
-        py3kswitch = self._py3kwarnings and ' -3' or ''
-        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self.path)
+        py3kswitch = self._py3kwarnings and b' -3' or b''
+        cmd = b'%s%s "%s"' % (PYTHON, py3kswitch, self.path)
         vlog("# Running", cmd)
         normalizenewlines = os.name == 'nt'
         result = self._runcommand(cmd, env,
@@ -971,7 +971,7 @@ class TTest(Test):
                     # We've just entered a Python block. Add the header.
                     inpython = True
                     addsalt(prepos, False) # Make sure we report the exit code.
-                    script.append('%s -m heredoctest <<EOF\n' % PYTHON)
+                    script.append(b'%s -m heredoctest <<EOF\n' % PYTHON)
                 addsalt(n, True)
                 script.append(l[2:])
             elif l.startswith(b'  ... '): # python inlines
@@ -1742,7 +1742,7 @@ class TestRunner(object):
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
         osenvironb[b"BINDIR"] = self._bindir
-        os.environ["PYTHON"] = PYTHON
+        osenvironb[b"PYTHON"] = PYTHON
 
         fileb = __file__.encode('utf-8')
         runtestdir = os.path.abspath(os.path.dirname(fileb))
@@ -2097,8 +2097,11 @@ class TestRunner(object):
         if self._hgpath is not None:
             return self._hgpath
 
-        cmd = '%s -c "import mercurial; print (mercurial.__path__[0])"'
-        pipe = os.popen(cmd % PYTHON)
+        cmd = b'%s -c "import mercurial; print (mercurial.__path__[0])"'
+        cmd = cmd % PYTHON
+        if sys.version_info[0] > 2:
+            cmd = cmd.decode('utf-8')
+        pipe = os.popen(cmd)
         try:
             self._hgpath = pipe.read().strip()
             if sys.version_info[0] == 3:
