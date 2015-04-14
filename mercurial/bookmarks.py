@@ -22,7 +22,7 @@ class bmstore(dict):
     {hash}\s{name}\n (the same format as localtags) in
     .hg/bookmarks. The mapping is stored as {name: nodeid}.
 
-    This class does NOT handle the "current" bookmark state at this
+    This class does NOT handle the "active" bookmark state at this
     time.
     """
 
@@ -137,8 +137,8 @@ def activate(repo, mark):
     if mark not in repo._bookmarks:
         raise AssertionError('bookmark %s does not exist!' % mark)
 
-    current = repo._activebookmark
-    if current == mark:
+    active = repo._activebookmark
+    if active == mark:
         return
 
     wlock = repo.wlock()
@@ -200,33 +200,33 @@ def calculateupdate(ui, repo, checkout):
     check out and where to move the active bookmark from, if needed.'''
     movemarkfrom = None
     if checkout is None:
-        curmark = repo._activebookmark
+        activemark = repo._activebookmark
         if isactivewdirparent(repo):
             movemarkfrom = repo['.'].node()
-        elif curmark:
-            ui.status(_("updating to active bookmark %s\n") % curmark)
-            checkout = curmark
+        elif activemark:
+            ui.status(_("updating to active bookmark %s\n") % activemark)
+            checkout = activemark
     return (checkout, movemarkfrom)
 
 def update(repo, parents, node):
     deletefrom = parents
     marks = repo._bookmarks
     update = False
-    cur = repo._activebookmark
-    if not cur:
+    active = repo._activebookmark
+    if not active:
         return False
 
-    if marks[cur] in parents:
+    if marks[active] in parents:
         new = repo[node]
         divs = [repo[b] for b in marks
-                if b.split('@', 1)[0] == cur.split('@', 1)[0]]
+                if b.split('@', 1)[0] == active.split('@', 1)[0]]
         anc = repo.changelog.ancestors([new.rev()])
         deletefrom = [b.node() for b in divs if b.rev() in anc or b == new]
-        if validdest(repo, repo[marks[cur]], new):
-            marks[cur] = new.node()
+        if validdest(repo, repo[marks[active]], new):
+            marks[active] = new.node()
             update = True
 
-    if deletedivergent(repo, deletefrom, cur):
+    if deletedivergent(repo, deletefrom, active):
         update = True
 
     if update:
