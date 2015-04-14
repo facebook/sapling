@@ -785,9 +785,57 @@ the output contains a regex, because git 1.7.10 and 1.7.11
   \s*foobar |\s*2 +- (re)
    2 files changed, 2 insertions\(\+\), 1 deletions?\(-\) (re)
 
-ensure adding include/exclude ignores the subrepo
+adding an include should ignore the other elements
   $ hg diff --subrepos -I s/foobar
+  diff --git a/s/foobar b/s/foobar
+  index 8a5a5e2..bd5812a 100644
+  --- a/s/foobar
+  +++ b/s/foobar
+  @@ -1,4 +1,4 @@
+  -woopwoop
+  +woop    woop
+   
+   foo
+   bar
+
+adding an exclude should ignore this element
   $ hg diff --subrepos -X s/foobar
+  diff --git a/s/barfoo b/s/barfoo
+  new file mode 100644
+  index 0000000..257cc56
+  --- /dev/null
+  +++ b/s/barfoo
+  @@ -0,0 +1 @@
+  +foo
+
+moving a file should show a removal and an add
+  $ hg revert --all
+  reverting subrepo ../gitroot
+  $ cd s
+  $ git mv foobar woop
+  $ cd ..
+  $ hg diff --subrepos
+  diff --git a/s/foobar b/s/foobar
+  deleted file mode 100644
+  index 8a5a5e2..0000000
+  --- a/s/foobar
+  +++ /dev/null
+  @@ -1,4 +0,0 @@
+  -woopwoop
+  -
+  -foo
+  -bar
+  diff --git a/s/woop b/s/woop
+  new file mode 100644
+  index 0000000..8a5a5e2
+  --- /dev/null
+  +++ b/s/woop
+  @@ -0,0 +1,4 @@
+  +woopwoop
+  +
+  +foo
+  +bar
+  $ rm s/woop
 
 revert the subrepository
   $ hg revert --all

@@ -1779,17 +1779,15 @@ class gitsubrepo(abstractsubrepo):
         if node2:
             cmd.append(node2)
 
-        if match.anypats():
-            return #No support for include/exclude yet
-
         output = ""
         if match.always():
             output += self._gitcommand(cmd) + '\n'
-        elif match.files():
-            for f in match.files():
-                output += self._gitcommand(cmd + [f]) + '\n'
-        elif match(gitprefix): #Subrepo is matched
-            output += self._gitcommand(cmd) + '\n'
+        else:
+            st = self.status(node2)[:3]
+            files = [f for sublist in st for f in sublist]
+            for f in files:
+                if match(f):
+                    output += self._gitcommand(cmd + ['--', f]) + '\n'
 
         if output.strip():
             ui.write(output)
