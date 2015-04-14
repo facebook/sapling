@@ -241,7 +241,8 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
                 yield ('symbol', sym, s)
             pos -= 1
         else:
-            raise error.ParseError(_("syntax error"), pos)
+            raise error.ParseError(_("syntax error in revset '%s'") %
+                                   program, pos)
         pos += 1
     yield ('end', None, pos)
 

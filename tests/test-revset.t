@@ -1535,7 +1535,7 @@ test in problematic encoding
 
 test error message of bad revset
   $ hg log -r 'foo\\'
-  hg: parse error at 3: syntax error
+  hg: parse error at 3: syntax error in revset 'foo\\'
   [255]
 
   $ cd ..
