@@ -66,6 +66,8 @@ except ImportError:
 from xml.dom import minidom
 import unittest
 
+osenvironb = getattr(os, 'environb', os.environ)
+
 try:
     import json
 except ImportError:
