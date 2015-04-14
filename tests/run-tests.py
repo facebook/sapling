@@ -928,9 +928,9 @@ class TTest(Test):
         inpython = False
 
         if self._debug:
-            script.append('set -x\n')
+            script.append(b'set -x\n')
         if os.getenv('MSYSTEM'):
-            script.append('alias pwd="pwd -W"\n')
+            script.append(b'alias pwd="pwd -W"\n')
 
         for n, l in enumerate(lines):
             if not l.endswith(b'\n'):
@@ -940,7 +940,7 @@ class TTest(Test):
                 if len(lsplit) < 2 or lsplit[0] != b'#require':
                     after.setdefault(pos, []).append('  !!! invalid #require\n')
                 if not self._hghave(lsplit[1:]):
-                    script = ["exit 80\n"]
+                    script = [b"exit 80\n"]
                     break
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b'#if'):
@@ -979,15 +979,15 @@ class TTest(Test):
                 script.append(l[2:])
             elif l.startswith(b'  $ '): # commands
                 if inpython:
-                    script.append('EOF\n')
+                    script.append(b'EOF\n')
                     inpython = False
                 after.setdefault(pos, []).append(l)
                 prepos = pos
                 pos = n
                 addsalt(n, False)
                 cmd = l[4:].split()
-                if len(cmd) == 2 and cmd[0] == 'cd':
-                    l = '  $ cd %s || exit 1\n' % cmd[1]
+                if len(cmd) == 2 and cmd[0] == b'cd':
+                    l = b'  $ cd %s || exit 1\n' % cmd[1]
                 script.append(l[4:])
             elif l.startswith(b'  > '): # continuations
                 after.setdefault(prepos, []).append(l)
@@ -997,13 +997,13 @@ class TTest(Test):
                 expected.setdefault(pos, []).append(l[2:])
             else:
                 if inpython:
-                    script.append('EOF\n')
+                    script.append(b'EOF\n')
                     inpython = False
                 # Non-command/result. Queue up for merged output.
                 after.setdefault(pos, []).append(l)
 
         if inpython:
-            script.append('EOF\n')
+            script.append(b'EOF\n')
         if skipping is not None:
             after.setdefault(pos, []).append('  !!! missing #endif\n')
         addsalt(n + 1, False)
