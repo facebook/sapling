@@ -542,6 +542,6 @@ def rollback(opener, vfsmap, file, report):
                         backupentries.append((l, f, b, bool(c)))
             else:
                 report(_("journal was created by a different version of "
-                         "Mercurial"))
+                         "Mercurial\n"))
 
     _playback(file, report, opener, vfsmap, entries, backupentries)

@@ -27151,8 +27151,8 @@ msgstr "ロールバックに失敗しました - 'hg recover' してくださ�
 msgid "couldn't read journal entry %r!\n"
 msgstr "ジャーナルファイル中のエントリ %r の解析に失敗\n"
 
-msgid "journal was created by a different version of Mercurial"
-msgstr "ジャーナルファイルは異なる版の mercurial で作成されたものです"
+msgid "journal was created by a different version of Mercurial\n"
+msgstr "ジャーナルファイルは異なる版の mercurial で作成されたものです\n"
 
 msgid "already have changeset "
 msgstr "既にあるリビジョンです "
