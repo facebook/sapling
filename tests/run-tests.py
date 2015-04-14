@@ -128,9 +128,9 @@ def Popen4(cmd, wd, timeout, env=None):
     return p
 
 PYTHON = sys.executable.replace('\\', '/')
-IMPL_PATH = 'PYTHONPATH'
+IMPL_PATH = b'PYTHONPATH'
 if 'java' in sys.platform:
-    IMPL_PATH = 'JYTHONPATH'
+    IMPL_PATH = b'JYTHONPATH'
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
@@ -153,7 +153,7 @@ def parselistfiles(files, listtype, warn=True):
             continue
 
         for line in f.readlines():
-            line = line.split('#', 1)[0].strip()
+            line = line.split(b'#', 1)[0].strip()
             if line:
                 entries[line] = filename
 
@@ -263,8 +263,8 @@ def parseargs(args, parser):
         if not os.path.basename(options.with_hg) == 'hg':
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
-        testdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-        hgbin = os.path.join(os.path.dirname(testdir), 'hg')
+        testdir = os.path.dirname(os.path.realpath(sys.argv[0]).encode('utf-8'))
+        hgbin = os.path.join(os.path.dirname(testdir), b'hg')
         if os.name != 'nt' and not os.access(hgbin, os.X_OK):
             parser.error('--local specified, but %r not found or not executable'
                          % hgbin)
@@ -666,20 +666,20 @@ class Test(unittest.TestCase):
         occur.
         """
         r = [
-            (r':%s\b' % self._startport, ':$HGPORT'),
-            (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
-            (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
-            (r'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
-             r'\1 (glob)'),
+            (br':%d\b' % self._startport, b':$HGPORT'),
+            (br':%d\b' % (self._startport + 1), b':$HGPORT1'),
+            (br':%d\b' % (self._startport + 2), b':$HGPORT2'),
+            (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
+             br'\1 (glob)'),
             ]
 
         if os.name == 'nt':
             r.append(
-                (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
-                    c in '/\\' and r'[/\\]' or c.isdigit() and c or '\\' + c
-                    for c in self._testtmp), '$TESTTMP'))
+                (b''.join(c.isalpha() and b'[%s%s]' % (c.lower(), c.upper()) or
+                    c in b'/\\' and br'[/\\]' or c.isdigit() and c or b'\\' + c
+                    for c in self._testtmp), b'$TESTTMP'))
         else:
-            r.append((re.escape(self._testtmp), '$TESTTMP'))
+            r.append((re.escape(self._testtmp), b'$TESTTMP'))
 
         return r
 
@@ -837,15 +837,15 @@ class TTest(Test):
 
     SKIPPED_PREFIX = 'skipped: '
     FAILED_PREFIX = 'hghave check failed: '
-    NEEDESCAPE = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
+    NEEDESCAPE = re.compile(br'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 
-    ESCAPESUB = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
-    ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256))
-    ESCAPEMAP.update({'\\': '\\\\', '\r': r'\r'})
+    ESCAPESUB = re.compile(br'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
+    ESCAPEMAP = dict((bchr(i), br'\x%02x' % i) for i in range(256))
+    ESCAPEMAP.update({b'\\': b'\\\\', b'\r': br'\r'})
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, self.name)
+        return os.path.join(self._testdir, self.bname)
 
     def _run(self, env):
         f = open(self.path, 'rb')
@@ -855,13 +855,13 @@ class TTest(Test):
         salt, script, after, expected = self._parsetest(lines)
 
         # Write out the generated script.
-        fname = '%s.sh' % self._testtmp
+        fname = b'%s.sh' % self._testtmp
         f = open(fname, 'wb')
         for l in script:
             f.write(l)
         f.close()
 
-        cmd = '%s "%s"' % (self._shell, fname)
+        cmd = b'%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
         exitcode, output = self._runcommand(cmd, env)
@@ -878,9 +878,9 @@ class TTest(Test):
 
     def _hghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
-        tdir = self._testdir.replace('\\', '/')
-        proc = Popen4('%s -c "%s/hghave %s"' %
-                      (self._shell, tdir, ' '.join(reqs)),
+        tdir = self._testdir.replace(b'\\', b'/')
+        proc = Popen4(b'%s -c "%s/hghave %s"' %
+                      (self._shell, tdir, b' '.join(reqs)),
                       self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
@@ -896,12 +896,12 @@ class TTest(Test):
         # We generate a shell script which outputs unique markers to line
         # up script results with our source. These markers include input
         # line number and the last return code.
-        salt = "SALT" + str(time.time())
+        salt = b"SALT%d" % time.time()
         def addsalt(line, inpython):
             if inpython:
-                script.append('%s %d 0\n' % (salt, line))
+                script.append(b'%s %d 0\n' % (salt, line))
             else:
-                script.append('echo %s %s $?\n' % (salt, line))
+                script.append(b'echo %s %d $?\n' % (salt, line))
 
         script = []
 
@@ -1020,8 +1020,8 @@ class TTest(Test):
                 lout, lcmd = l.split(salt, 1)
 
             if lout:
-                if not lout.endswith('\n'):
-                    lout += ' (no-eol)\n'
+                if not lout.endswith(b'\n'):
+                    lout += b' (no-eol)\n'
 
                 # Find the expected output at the current position.
                 el = None
@@ -1040,12 +1040,12 @@ class TTest(Test):
                         log('\ninfo, unknown linematch result: %r\n' % r)
                         r = False
                 if r:
-                    postout.append('  ' + el)
+                    postout.append(b'  ' + el)
                 else:
                     if self.NEEDESCAPE(lout):
-                        lout = TTest._stringescape('%s (esc)\n' %
-                                                   lout.rstrip('\n'))
-                    postout.append('  ' + lout) # Let diff deal with it.
+                        lout = TTest._stringescape(b'%s (esc)\n' %
+                                                   lout.rstrip(b'\n'))
+                    postout.append(b'  ' + lout) # Let diff deal with it.
                     if r != '': # If line failed.
                         warnonly = 3 # for sure not
                     elif warnonly == 1: # Is "not yet" and line is warn only.
@@ -1055,7 +1055,7 @@ class TTest(Test):
                 # Add on last return code.
                 ret = int(lcmd.split()[1])
                 if ret != 0:
-                    postout.append('  [%s]\n' % ret)
+                    postout.append(b'  [%d]\n' % ret)
                 if pos in after:
                     # Merge in non-active test bits.
                     postout += after.pop(pos)
@@ -1074,8 +1074,8 @@ class TTest(Test):
         try:
             # use \Z to ensure that the regex matches to the end of the string
             if os.name == 'nt':
-                return re.match(el + r'\r?\n\Z', l)
-            return re.match(el + r'\n\Z', l)
+                return re.match(el + br'\r?\n\Z', l)
+            return re.match(el + br'\n\Z', l)
         except re.error:
             # el is an invalid regex
             return False
@@ -1084,28 +1084,28 @@ class TTest(Test):
     def globmatch(el, l):
         # The only supported special characters are * and ? plus / which also
         # matches \ on windows. Escaping of these characters is supported.
-        if el + '\n' == l:
+        if el + b'\n' == l:
             if os.altsep:
                 # matching on "/" is not needed for this line
                 for pat in checkcodeglobpats:
                     if pat.match(el):
                         return True
-                return '-glob'
+                return b'-glob'
             return True
         i, n = 0, len(el)
-        res = ''
+        res = b''
         while i < n:
-            c = el[i]
+            c = el[i:i + 1]
             i += 1
-            if c == '\\' and i < n and el[i] in '*?\\/':
+            if c == b'\\' and i < n and el[i:i + 1] in b'*?\\/':
                 res += el[i - 1:i + 1]
                 i += 1
-            elif c == '*':
-                res += '.*'
-            elif c == '?':
-                res += '.'
-            elif c == '/' and os.altsep:
-                res += '[/\\\\]'
+            elif c == b'*':
+                res += b'.*'
+            elif c == b'?':
+                res += b'.'
+            elif c == b'/' and os.altsep:
+                res += b'[/\\\\]'
             else:
                 res += re.escape(c)
         return TTest.rematch(res, l)
@@ -1115,19 +1115,21 @@ class TTest(Test):
         if el == l: # perfect match (fast)
             return True
         if el:
-            if el.endswith(" (esc)\n"):
+            if el.endswith(b" (esc)\n"):
                 el = el[:-7].decode('string-escape') + '\n'
-            if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+                if sys.version_info[0] == 3:
+                    el.encode('utf-8')
+            if el == l or os.name == 'nt' and el[:-1] + b'\r\n' == l:
                 return True
-            if el.endswith(" (re)\n"):
+            if el.endswith(b" (re)\n"):
                 return TTest.rematch(el[:-6], l)
-            if el.endswith(" (glob)\n"):
+            if el.endswith(b" (glob)\n"):
                 # ignore '(glob)' added to l by 'replacements'
-                if l.endswith(" (glob)\n"):
-                    l = l[:-8] + "\n"
+                if l.endswith(b" (glob)\n"):
+                    l = l[:-8] + b"\n"
                 return TTest.globmatch(el[:-8], l)
-            if os.altsep and l.replace('\\', '/') == el:
-                return '+glob'
+            if os.altsep and l.replace(b'\\', b'/') == el:
+                return b'+glob'
         return False
 
     @staticmethod
@@ -1387,7 +1389,7 @@ class TestSuite(unittest.TestSuite):
             def get():
                 num_tests[0] += 1
                 if getattr(test, 'should_reload', False):
-                    return self._loadtest(test.name, num_tests[0])
+                    return self._loadtest(test.bname, num_tests[0])
                 return test
             if not os.path.exists(test.path):
                 result.addSkip(test, "Doesn't exist")
@@ -1603,19 +1605,19 @@ class TestRunner(object):
 
     # Programs required to run tests.
     REQUIREDTOOLS = [
-        os.path.basename(sys.executable),
-        'diff',
-        'grep',
-        'unzip',
-        'gunzip',
-        'bunzip2',
-        'sed',
+        os.path.basename(sys.executable).encode('utf-8'),
+        b'diff',
+        b'grep',
+        b'unzip',
+        b'gunzip',
+        b'bunzip2',
+        b'sed',
     ]
 
     # Maps file extensions to test class.
     TESTTYPES = [
-        ('.py', PythonTest),
-        ('.t', TTest),
+        (b'.py', PythonTest),
+        (b'.t', TTest),
     ]
 
     def __init__(self):
@@ -1639,6 +1641,7 @@ class TestRunner(object):
         try:
             parser = parser or getparser()
             options, args = parseargs(args, parser)
+            args = [a.encode('utf-8') for a in args]
             self.options = options
 
             self._checktools()
@@ -1652,7 +1655,7 @@ class TestRunner(object):
             random.shuffle(tests)
         else:
             # keywords for slow tests
-            slow = 'svn gendoc check-code-hg'.split()
+            slow = b'svn gendoc check-code-hg'.split()
             def sortkey(f):
                 # run largest tests first, as they tend to take the longest
                 try:
@@ -1667,7 +1670,8 @@ class TestRunner(object):
                 return val
             tests.sort(key=sortkey)
 
-        self._testdir = os.environ['TESTDIR'] = os.getcwd()
+        self._testdir = osenvironb[b'TESTDIR'] = getattr(
+            os, 'getcwdb', os.getcwd)()
 
         if 'PYTHONHASHSEED' not in os.environ:
             # use a random python hash seed all the time
@@ -1676,7 +1680,7 @@ class TestRunner(object):
 
         if self.options.tmpdir:
             self.options.keep_tmpdir = True
-            tmpdir = self.options.tmpdir
+            tmpdir = self.options.tmpdir.encode('utf-8')
             if os.path.exists(tmpdir):
                 # Meaning of tmpdir has changed since 1.3: we used to create
                 # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
@@ -1695,15 +1699,19 @@ class TestRunner(object):
             if os.name == 'nt':
                 # without this, we get the default temp dir location, but
                 # in all lowercase, which causes troubles with paths (issue3490)
-                d = os.getenv('TMP')
-            tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
-        self._hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
+                d = osenvironb.get(b'TMP', None)
+            # FILE BUG: mkdtemp works only on unicode in Python 3
+            tmpdir = tempfile.mkdtemp('', 'hgtests.',
+                                      d and d.decode('utf-8')).encode('utf-8')
+
+        self._hgtmp = osenvironb[b'HGTMP'] = (
+            os.path.realpath(tmpdir))
 
         if self.options.with_hg:
             self._installdir = None
             self._bindir = os.path.dirname(os.path.realpath(
                                            self.options.with_hg))
-            self._tmpbindir = os.path.join(self._hgtmp, 'install', 'bin')
+            self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
             os.makedirs(self._tmpbindir)
 
             # This looks redundant with how Python initializes sys.path from
@@ -1713,25 +1721,30 @@ class TestRunner(object):
             # ... which means it's not really redundant at all.
             self._pythondir = self._bindir
         else:
-            self._installdir = os.path.join(self._hgtmp, "install")
-            self._bindir = os.environ["BINDIR"] = \
-                os.path.join(self._installdir, "bin")
+            self._installdir = os.path.join(self._hgtmp, b"install")
+            self._bindir = osenvironb[b"BINDIR"] = \
+                os.path.join(self._installdir, b"bin")
             self._tmpbindir = self._bindir
-            self._pythondir = os.path.join(self._installdir, "lib", "python")
+            self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
-        os.environ["BINDIR"] = self._bindir
+        osenvironb[b"BINDIR"] = self._bindir
         os.environ["PYTHON"] = PYTHON
 
-        runtestdir = os.path.abspath(os.path.dirname(__file__))
-        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
+        fileb = __file__.encode('utf-8')
+        runtestdir = os.path.abspath(os.path.dirname(fileb))
+        if sys.version_info[0] == 3:
+            sepb = os.pathsep.encode('utf-8')
+        else:
+            sepb = os.pathsep
+        path = [self._bindir, runtestdir] + osenvironb[b"PATH"].split(sepb)
         if os.path.islink(__file__):
             # test helper will likely be at the end of the symlink
-            realfile = os.path.realpath(__file__)
+            realfile = os.path.realpath(fileb)
             realdir = os.path.abspath(os.path.dirname(realfile))
             path.insert(2, realdir)
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
-        os.environ["PATH"] = os.pathsep.join(path)
+        osenvironb[b"PATH"] = sepb.join(path)
 
         # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
         # can run .../tests/run-tests.py test-foo where test-foo
@@ -1742,20 +1755,20 @@ class TestRunner(object):
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
         # are in /opt/subversion.)
-        oldpypath = os.environ.get(IMPL_PATH)
+        oldpypath = osenvironb.get(IMPL_PATH)
         if oldpypath:
             pypath.append(oldpypath)
-        os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+        osenvironb[IMPL_PATH] = sepb.join(pypath)
 
         if self.options.pure:
             os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
 
-        self._coveragefile = os.path.join(self._testdir, '.coverage')
+        self._coveragefile = os.path.join(self._testdir, b'.coverage')
 
         vlog("# Using TESTDIR", self._testdir)
         vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
-        vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
+        vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])
 
         try:
             return self._runtests(tests) or 0
@@ -1774,13 +1787,13 @@ class TestRunner(object):
                 proc = Popen4('hg st --rev "%s" -man0 .' %
                               self.options.changed, None, 0)
                 stdout, stderr = proc.communicate()
-                args = stdout.strip('\0').split('\0')
+                args = stdout.strip(b'\0').split(b'\0')
             else:
-                args = os.listdir('.')
+                args = os.listdir(b'.')
 
         return [t for t in args
-                if os.path.basename(t).startswith('test-')
-                    and (t.endswith('.py') or t.endswith('.t'))]
+                if os.path.basename(t).startswith(b'test-')
+                    and (t.endswith(b'.py') or t.endswith(b'.t'))]
 
     def _runtests(self, tests):
         try:
@@ -1869,7 +1882,7 @@ class TestRunner(object):
                 break
 
         refpath = os.path.join(self._testdir, test)
-        tmpdir = os.path.join(self._hgtmp, 'child%d' % count)
+        tmpdir = os.path.join(self._hgtmp, b'child%d' % count)
 
         t = testcls(refpath, tmpdir,
                     keeptmpdir=self.options.keep_tmpdir,
@@ -1899,7 +1912,7 @@ class TestRunner(object):
     def _usecorrectpython(self):
         """Configure the environment to use the appropriate Python in tests."""
         # Tests must use the same interpreter as us or bad things will happen.
-        pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
+        pyexename = sys.platform == 'win32' and b'python.exe' or b'python'
         if getattr(os, 'symlink', None):
             vlog("# Making python executable in test path a symlink to '%s'" %
                  sys.executable)
@@ -1967,7 +1980,7 @@ class TestRunner(object):
                ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
                % {'exe': sys.executable, 'py3': py3, 'pure': pure,
                   'compiler': compiler,
-                  'base': os.path.join(self._hgtmp, "build"),
+                  'base': os.path.join(self._hgtmp, b"build"),
                   'prefix': self._installdir, 'libdir': self._pythondir,
                   'bindir': self._bindir,
                   'nohome': nohome, 'logfile': installerrs})
