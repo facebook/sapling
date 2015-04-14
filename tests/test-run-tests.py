@@ -3,6 +3,7 @@
 run-test.t only checks positive matches and can not see warnings
 (both by design)
 """
+from __future__ import print_function
 
 import os, re
 # this is hack to make sure no escape characters are inserted into the output
@@ -11,27 +12,37 @@ if 'TERM' in os.environ:
 import doctest
 run_tests = __import__('run-tests')
 
+def prn(ex):
+    m = ex.args[0]
+    if isinstance(m, str):
+        print(m)
+    else:
+        print(m.decode('utf-8'))
+
 def lm(expected, output):
     r"""check if output matches expected
 
     does it generally work?
-        >>> lm('H*e (glob)\n', 'Here\n')
+        >>> lm(b'H*e (glob)\n', b'Here\n')
         True
 
     fail on bad test data
-        >>> try: lm('a\n','a')
-        ... except AssertionError, ex: print ex
+        >>> try: lm(b'a\n',b'a')
+        ... except AssertionError as ex: print(ex)
         missing newline
-        >>> try: lm('single backslash\n', 'single \backslash\n')
-        ... except AssertionError, ex: print ex
+        >>> try: lm(b'single backslash\n', b'single \backslash\n')
+        ... except AssertionError as ex: prn(ex)
         single backslash or unknown char
     """
-    assert expected.endswith('\n') and output.endswith('\n'), 'missing newline'
-    assert not re.search(r'[^ \w\\/\r\n()*?]', expected + output), \
-           'single backslash or unknown char'
+    assert (expected.endswith(b'\n')
+            and output.endswith(b'\n')), 'missing newline'
+    assert not re.search(br'[^ \w\\/\r\n()*?]', expected + output), \
+           b'single backslash or unknown char'
     match = run_tests.TTest.linematch(expected, output)
     if isinstance(match, str):
         return 'special: ' + match
+    elif isinstance(match, bytes):
+        return 'special: ' + match.decode('utf-8')
     else:
         return bool(match) # do not return match object
 
@@ -43,15 +54,15 @@ def wintests():
         >>> os.altsep = True
 
     valid match on windows
-        >>> lm('g/a*/d (glob)\n', 'g\\abc/d\n')
+        >>> lm(b'g/a*/d (glob)\n', b'g\\abc/d\n')
         True
 
     direct matching, glob unnecessary
-        >>> lm('g/b (glob)\n', 'g/b\n')
+        >>> lm(b'g/b (glob)\n', b'g/b\n')
         'special: -glob'
 
     missing glob
-        >>> lm('/g/c/d/fg\n', '\\g\\c\\d/fg\n')
+        >>> lm(b'/g/c/d/fg\n', b'\\g\\c\\d/fg\n')
         'special: +glob'
 
     restore os.altsep
@@ -67,15 +78,15 @@ def otherostests():
         >>> os.altsep = False
 
     backslash does not match slash
-        >>> lm('h/a* (glob)\n', 'h\\ab\n')
+        >>> lm(b'h/a* (glob)\n', b'h\\ab\n')
         False
 
     direct matching glob can not be recognized
-        >>> lm('h/b (glob)\n', 'h/b\n')
+        >>> lm(b'h/b (glob)\n', b'h/b\n')
         True
 
     missing glob can not not be recognized
-        >>> lm('/h/c/df/g/\n', '\\h/c\\df/g\\\n')
+        >>> lm(b'/h/c/df/g/\n', b'\\h/c\\df/g\\\n')
         False
 
     restore os.altsep
