@@ -1290,8 +1290,13 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        self.stream.write(line)
-                    self.stream.flush()
+                        if sys.version_info[0] > 2:
+                            self.stream.flush()
+                            self.stream.buffer.write(line)
+                            self.stream.buffer.flush()
+                        else:
+                            self.stream.write(line)
+                            self.stream.flush()
 
             # handle interactive prompt without releasing iolock
             if self._options.interactive:
