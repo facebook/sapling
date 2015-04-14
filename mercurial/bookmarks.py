@@ -8,7 +8,7 @@
 import os
 from mercurial.i18n import _
 from mercurial.node import hex, bin
-from mercurial import encoding, error, util, obsolete, lock as lockmod
+from mercurial import encoding, util, obsolete, lock as lockmod
 import errno
 
 class bmstore(dict):
@@ -177,15 +177,6 @@ def iscurrent(repo, mark=None, parents=None):
         parents = [p.node() for p in repo[None].parents()]
     marks = repo._bookmarks
     return (mark in marks and marks[mark] in parents)
-
-def updatecurrentbookmark(repo, oldnode, curbranch):
-    try:
-        return update(repo, oldnode, repo.branchtip(curbranch))
-    except error.RepoLookupError:
-        if curbranch == "default": # no default branch!
-            return update(repo, oldnode, repo.lookup("tip"))
-        else:
-            raise util.Abort(_("branch %s not found") % curbranch)
 
 def deletedivergent(repo, deletefrom, bm):
     '''Delete divergent versions of bm on nodes in deletefrom.
