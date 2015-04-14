@@ -427,7 +427,7 @@ b2partsgenorder = []
 # This exists to help extensions wrap steps if necessary
 b2partsgenmapping = {}
 
-def b2partsgenerator(stepname):
+def b2partsgenerator(stepname, idx=None):
     """decorator for function generating bundle2 part
 
     The function is added to the step -> function mapping and appended to the
@@ -439,7 +439,10 @@ def b2partsgenerator(stepname):
     def dec(func):
         assert stepname not in b2partsgenmapping
         b2partsgenmapping[stepname] = func
-        b2partsgenorder.append(stepname)
+        if idx is None:
+            b2partsgenorder.append(stepname)
+        else:
+            b2partsgenorder.insert(idx, stepname)
         return func
     return dec
 
