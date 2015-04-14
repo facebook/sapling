@@ -691,21 +691,21 @@ def shelvecmd(ui, repo, *pats, **opts):
     cmdutil.checkunfinished(repo)
 
     allowables = [
-        ('addremove', 'create'), # 'create' is pseudo action
-        ('cleanup', 'cleanup'),
-#       ('date', 'create'), # ignored for passing '--date "0 0"' in tests
-        ('delete', 'delete'),
-        ('edit', 'create'),
-        ('list', 'list'),
-        ('message', 'create'),
-        ('name', 'create'),
-        ('patch', 'list'),
-        ('stat', 'list'),
+        ('addremove', set(['create'])), # 'create' is pseudo action
+        ('cleanup', set(['cleanup'])),
+#       ('date', set(['create'])), # ignored for passing '--date "0 0"' in tests
+        ('delete', set(['delete'])),
+        ('edit', set(['create'])),
+        ('list', set(['list'])),
+        ('message', set(['create'])),
+        ('name', set(['create'])),
+        ('patch', set(['list'])),
+        ('stat', set(['list'])),
     ]
     def checkopt(opt):
         if opts[opt]:
             for i, allowable in allowables:
-                if opts[i] and opt != allowable:
+                if opts[i] and opt not in allowable:
                     raise util.Abort(_("options '--%s' and '--%s' may not be "
                                        "used together") % (opt, i))
             return True
