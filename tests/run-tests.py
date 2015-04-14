@@ -826,6 +826,10 @@ checkcodeglobpats = [
     re.compile(r'^pulling from \$TESTTMP/.*[^)]$')
 ]
 
+bchr = chr
+if sys.version_info[0] == 3:
+    bchr = lambda x: bytes([x])
+
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
