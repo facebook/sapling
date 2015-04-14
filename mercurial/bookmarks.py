@@ -84,7 +84,7 @@ class bmstore(dict):
     def _writerepo(self, repo):
         """Factored out for extensibility"""
         if repo._bookmarkcurrent not in self:
-            unsetcurrent(repo)
+            deactivate(repo)
 
         wlock = repo.wlock()
         try:
@@ -151,7 +151,10 @@ def setcurrent(repo, mark):
         wlock.release()
     repo._bookmarkcurrent = mark
 
-def unsetcurrent(repo):
+def deactivate(repo):
+    """
+    Unset the active bookmark in this reposiotry.
+    """
     wlock = repo.wlock()
     try:
         try:

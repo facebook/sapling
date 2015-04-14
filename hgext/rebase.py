@@ -360,7 +360,7 @@ def rebase(ui, repo, **opts):
         currentbookmarks = repo._bookmarks.copy()
         activebookmark = activebookmark or repo._bookmarkcurrent
         if activebookmark:
-            bookmarks.unsetcurrent(repo)
+            bookmarks.deactivate(repo)
 
         extrafn = _makeextrafn(extrafns)
 
