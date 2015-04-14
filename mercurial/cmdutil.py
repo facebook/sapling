@@ -2721,7 +2721,7 @@ def buildcommittext(repo, ctx, subs, extramsg):
         edittext.append(_("HG: branch merge"))
     if ctx.branch():
         edittext.append(_("HG: branch '%s'") % ctx.branch())
-    if bookmarks.iscurrent(repo):
+    if bookmarks.isactivewdirparent(repo):
         edittext.append(_("HG: bookmark '%s'") % repo._activebookmark)
     edittext.extend([_("HG: subrepo %s") % s for s in subs])
     edittext.extend([_("HG: added %s") % f for f in added])

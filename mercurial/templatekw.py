@@ -226,7 +226,7 @@ def showcurrentbookmark(**args):
     associated with the changeset"""
     import bookmarks as bookmarks # to avoid circular import issues
     repo = args['repo']
-    if bookmarks.iscurrent(repo):
+    if bookmarks.isactivewdirparent(repo):
         current = repo._activebookmark
         if current in args['ctx'].bookmarks():
             return current

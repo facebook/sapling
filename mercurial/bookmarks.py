@@ -165,17 +165,18 @@ def deactivate(repo):
     finally:
         wlock.release()
 
-def iscurrent(repo, mark=None, parents=None):
-    '''Tell whether the current bookmark is also active
+def isactivewdirparent(repo):
+    """
+    Tell whether the 'active' bookmark (the one that follows new commits)
+    points to one of the parents of the current working directory (wdir).
 
-    I.e., the bookmark listed in .hg/bookmarks.current also points to a
-    parent of the working directory.
-    '''
-    if not mark:
-        mark = repo._activebookmark
-    if not parents:
-        parents = [p.node() for p in repo[None].parents()]
+    While this is normally the case, it can on occasion be false; for example,
+    immediately after a pull, the active bookmark can be moved to point
+    to a place different than the wdir. This is solved by running `hg update`.
+    """
+    mark = repo._activebookmark
     marks = repo._bookmarks
+    parents = [p.node() for p in repo[None].parents()]
     return (mark in marks and marks[mark] in parents)
 
 def deletedivergent(repo, deletefrom, bm):
@@ -201,7 +202,7 @@ def calculateupdate(ui, repo, checkout):
     movemarkfrom = None
     if checkout is None:
         curmark = repo._activebookmark
-        if iscurrent(repo):
+        if isactivewdirparent(repo):
             movemarkfrom = repo['.'].node()
         elif curmark:
             ui.status(_("updating to active bookmark %s\n") % curmark)
