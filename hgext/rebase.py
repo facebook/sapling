@@ -358,7 +358,7 @@ def rebase(ui, repo, **opts):
 
         # Keep track of the current bookmarks in order to reset them later
         currentbookmarks = repo._bookmarks.copy()
-        activebookmark = activebookmark or repo._bookmarkcurrent
+        activebookmark = activebookmark or repo._activebookmark
         if activebookmark:
             bookmarks.deactivate(repo)
 
@@ -1052,7 +1052,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 hg.update(repo, dest)
                 if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
                     ui.status(_("updating bookmark %s\n")
-                              % repo._bookmarkcurrent)
+                              % repo._activebookmark)
     else:
         if opts.get('tool'):
             raise util.Abort(_('--tool can only be used with --rebase'))

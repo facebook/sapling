@@ -60,7 +60,7 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmark=None):
 
         marks = repo._bookmarks
         if bookmark:
-            if bookmark == repo._bookmarkcurrent:
+            if bookmark == repo._activebookmark:
                 bookmarks.deactivate(repo)
             del marks[bookmark]
             marks.write()

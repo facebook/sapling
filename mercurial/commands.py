@@ -979,7 +979,7 @@ def bookmark(ui, repo, *names, **opts):
                     if mark not in marks:
                         raise util.Abort(_("bookmark '%s' does not exist") %
                                          mark)
-                    if mark == repo._bookmarkcurrent:
+                    if mark == repo._activebookmark:
                         bookmarks.deactivate(repo)
                     del marks[mark]
                 marks.write()
@@ -994,7 +994,7 @@ def bookmark(ui, repo, *names, **opts):
                     raise util.Abort(_("bookmark '%s' does not exist") % rename)
                 checkconflict(repo, mark, cur, force)
                 marks[mark] = marks[rename]
-                if repo._bookmarkcurrent == rename and not inactive:
+                if repo._activebookmark == rename and not inactive:
                     bookmarks.activate(repo, mark)
                 del marks[rename]
                 marks.write()
@@ -1005,7 +1005,7 @@ def bookmark(ui, repo, *names, **opts):
                     mark = checkformat(mark)
                     if newact is None:
                         newact = mark
-                    if inactive and mark == repo._bookmarkcurrent:
+                    if inactive and mark == repo._activebookmark:
                         bookmarks.deactivate(repo)
                         return
                     tgt = cur
@@ -1015,14 +1015,14 @@ def bookmark(ui, repo, *names, **opts):
                     marks[mark] = tgt
                 if not inactive and cur == marks[newact] and not rev:
                     bookmarks.activate(repo, newact)
-                elif cur != tgt and newact == repo._bookmarkcurrent:
+                elif cur != tgt and newact == repo._activebookmark:
                     bookmarks.deactivate(repo)
                 marks.write()
 
             elif inactive:
                 if len(marks) == 0:
                     ui.status(_("no bookmarks set\n"))
-                elif not repo._bookmarkcurrent:
+                elif not repo._activebookmark:
                     ui.status(_("no active bookmark\n"))
                 else:
                     bookmarks.deactivate(repo)
@@ -1035,7 +1035,7 @@ def bookmark(ui, repo, *names, **opts):
         if len(marks) == 0 and not fm:
             ui.status(_("no bookmarks set\n"))
         for bmark, n in sorted(marks.iteritems()):
-            current = repo._bookmarkcurrent
+            current = repo._activebookmark
             if bmark == current:
                 prefix, label = '*', 'bookmarks.current'
             else:
@@ -1506,7 +1506,7 @@ def commit(ui, repo, *pats, **opts):
                                match,
                                extra=extra)
 
-        current = repo._bookmarkcurrent
+        current = repo._activebookmark
         marks = old.bookmarks()
         node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
         if node == old.node():
@@ -4702,9 +4702,9 @@ def merge(ui, repo, node=None, **opts):
     if node:
         node = scmutil.revsingle(repo, node).node()
 
-    if not node and repo._bookmarkcurrent:
-        bmheads = repo.bookmarkheads(repo._bookmarkcurrent)
-        curhead = repo[repo._bookmarkcurrent].node()
+    if not node and repo._activebookmark:
+        bmheads = repo.bookmarkheads(repo._activebookmark)
+        curhead = repo[repo._activebookmark].node()
         if len(bmheads) == 2:
             if curhead == bmheads[0]:
                 node = bmheads[1]
@@ -4719,7 +4719,7 @@ def merge(ui, repo, node=None, **opts):
                 "please merge with an explicit rev or bookmark"),
                 hint=_("run 'hg heads' to see all heads"))
 
-    if not node and not repo._bookmarkcurrent:
+    if not node and not repo._activebookmark:
         branch = repo[None].branch()
         bheads = repo.branchheads(branch)
         nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
@@ -5049,7 +5049,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
             return 0
         if not ret and not checkout:
             if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
+                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
         return ret
     if modheads > 1:
         currentbranchheads = len(repo.branchheads())
@@ -5914,7 +5914,7 @@ def summary(ui, repo, **opts):
         ui.status(m, label='log.branch')
 
     if marks:
-        current = repo._bookmarkcurrent
+        current = repo._activebookmark
         # i18n: column positioning for "hg summary"
         ui.write(_('bookmarks:'), label='log.bookmark')
         if current is not None:
@@ -6405,14 +6405,14 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     if not ret and movemarkfrom:
         if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-            ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
+            ui.status(_("updating bookmark %s\n") % repo._activebookmark)
     elif brev in repo._bookmarks:
         bookmarks.activate(repo, brev)
         ui.status(_("(activating bookmark %s)\n") % brev)
     elif brev:
-        if repo._bookmarkcurrent:
+        if repo._activebookmark:
             ui.status(_("(leaving bookmark %s)\n") %
-                      repo._bookmarkcurrent)
+                      repo._activebookmark)
         bookmarks.deactivate(repo)
 
     return ret

@@ -83,7 +83,7 @@ class bmstore(dict):
 
     def _writerepo(self, repo):
         """Factored out for extensibility"""
-        if repo._bookmarkcurrent not in self:
+        if repo._activebookmark not in self:
             deactivate(repo)
 
         wlock = repo.wlock()
@@ -137,7 +137,7 @@ def activate(repo, mark):
     if mark not in repo._bookmarks:
         raise AssertionError('bookmark %s does not exist!' % mark)
 
-    current = repo._bookmarkcurrent
+    current = repo._activebookmark
     if current == mark:
         return
 
@@ -148,7 +148,7 @@ def activate(repo, mark):
         file.close()
     finally:
         wlock.release()
-    repo._bookmarkcurrent = mark
+    repo._activebookmark = mark
 
 def deactivate(repo):
     """
@@ -158,7 +158,7 @@ def deactivate(repo):
     try:
         try:
             repo.vfs.unlink('bookmarks.current')
-            repo._bookmarkcurrent = None
+            repo._activebookmark = None
         except OSError, inst:
             if inst.errno != errno.ENOENT:
                 raise
@@ -172,7 +172,7 @@ def iscurrent(repo, mark=None, parents=None):
     parent of the working directory.
     '''
     if not mark:
-        mark = repo._bookmarkcurrent
+        mark = repo._activebookmark
     if not parents:
         parents = [p.node() for p in repo[None].parents()]
     marks = repo._bookmarks
@@ -209,7 +209,7 @@ def calculateupdate(ui, repo, checkout):
     check out and where to move the active bookmark from, if needed.'''
     movemarkfrom = None
     if checkout is None:
-        curmark = repo._bookmarkcurrent
+        curmark = repo._activebookmark
         if iscurrent(repo):
             movemarkfrom = repo['.'].node()
         elif curmark:
@@ -221,7 +221,7 @@ def update(repo, parents, node):
     deletefrom = parents
     marks = repo._bookmarks
     update = False
-    cur = repo._bookmarkcurrent
+    cur = repo._activebookmark
     if not cur:
         return False
 

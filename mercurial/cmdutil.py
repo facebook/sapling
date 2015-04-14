@@ -2480,13 +2480,13 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # First, do a regular commit to record all changes in the working
             # directory (if there are any)
             ui.callhooks = False
-            currentbookmark = repo._bookmarkcurrent
+            currentbookmark = repo._activebookmark
             try:
-                repo._bookmarkcurrent = None
+                repo._activebookmark = None
                 opts['message'] = 'temporary amend commit for %s' % old
                 node = commit(ui, repo, commitfunc, pats, opts)
             finally:
-                repo._bookmarkcurrent = currentbookmark
+                repo._activebookmark = currentbookmark
                 ui.callhooks = True
             ctx = repo[node]
 
@@ -2722,7 +2722,7 @@ def buildcommittext(repo, ctx, subs, extramsg):
     if ctx.branch():
         edittext.append(_("HG: branch '%s'") % ctx.branch())
     if bookmarks.iscurrent(repo):
-        edittext.append(_("HG: bookmark '%s'") % repo._bookmarkcurrent)
+        edittext.append(_("HG: bookmark '%s'") % repo._activebookmark)
     edittext.extend([_("HG: subrepo %s") % s for s in subs])
     edittext.extend([_("HG: added %s") % f for f in added])
     edittext.extend([_("HG: changed %s") % f for f in modified])

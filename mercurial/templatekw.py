@@ -210,7 +210,7 @@ def showbookmarks(**args):
     """
     repo = args['ctx']._repo
     bookmarks = args['ctx'].bookmarks()
-    current = repo._bookmarkcurrent
+    current = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'current': current}
     f = _showlist('bookmark', bookmarks, **args)
     return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
@@ -227,7 +227,7 @@ def showcurrentbookmark(**args):
     import bookmarks as bookmarks # to avoid circular import issues
     repo = args['repo']
     if bookmarks.iscurrent(repo):
-        current = repo._bookmarkcurrent
+        current = repo._activebookmark
         if current in args['ctx'].bookmarks():
             return current
     return ''

@@ -415,7 +415,7 @@ class localrepository(object):
         return bookmarks.bmstore(self)
 
     @repofilecache('bookmarks.current')
-    def _bookmarkcurrent(self):
+    def _activebookmark(self):
         return bookmarks.readactive(self)
 
     def bookmarkheads(self, bookmark):

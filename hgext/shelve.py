@@ -163,7 +163,7 @@ def createcmd(ui, repo, pats, opts):
 
     # we never need the user, so we use a generic user for all shelve operations
     user = 'shelve@localhost'
-    label = repo._bookmarkcurrent or parent.branch() or 'default'
+    label = repo._activebookmark or parent.branch() or 'default'
 
     # slashes aren't allowed in filenames, therefore we rename it
     label = label.replace('/', '_')
