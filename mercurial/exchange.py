@@ -1135,7 +1135,7 @@ getbundle2partsorder = []
 # This exists to help extensions wrap steps if necessary
 getbundle2partsmapping = {}
 
-def getbundle2partsgenerator(stepname):
+def getbundle2partsgenerator(stepname, idx=None):
     """decorator for function generating bundle2 part for getbundle
 
     The function is added to the step -> function mapping and appended to the
@@ -1147,7 +1147,10 @@ def getbundle2partsgenerator(stepname):
     def dec(func):
         assert stepname not in getbundle2partsmapping
         getbundle2partsmapping[stepname] = func
-        getbundle2partsorder.append(stepname)
+        if idx is None:
+            getbundle2partsorder.append(stepname)
+        else:
+            getbundle2partsorder.insert(idx, stepname)
         return func
     return dec
 
