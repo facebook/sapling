@@ -497,7 +497,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 destrepo.ui.status(status)
                 _update(destrepo, uprev)
                 if update in destrepo._bookmarks:
-                    bookmarks.setcurrent(destrepo, update)
+                    bookmarks.activate(destrepo, update)
     finally:
         release(srclock, destlock)
         if cleandir is not None:

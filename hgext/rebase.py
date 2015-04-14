@@ -498,7 +498,7 @@ def rebase(ui, repo, **opts):
 
         if (activebookmark and
             repo['.'].node() == repo._bookmarks[activebookmark]):
-                bookmarks.setcurrent(repo, activebookmark)
+                bookmarks.activate(repo, activebookmark)
 
     finally:
         release(lock, wlock)
@@ -888,7 +888,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
             repair.strip(repo.ui, repo, strippoints)
 
     if activebookmark:
-        bookmarks.setcurrent(repo, activebookmark)
+        bookmarks.activate(repo, activebookmark)
 
     clearstatus(repo)
     repo.ui.warn(_('rebase aborted\n'))

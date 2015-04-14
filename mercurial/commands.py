@@ -995,7 +995,7 @@ def bookmark(ui, repo, *names, **opts):
                 checkconflict(repo, mark, cur, force)
                 marks[mark] = marks[rename]
                 if repo._bookmarkcurrent == rename and not inactive:
-                    bookmarks.setcurrent(repo, mark)
+                    bookmarks.activate(repo, mark)
                 del marks[rename]
                 marks.write()
 
@@ -1014,7 +1014,7 @@ def bookmark(ui, repo, *names, **opts):
                     checkconflict(repo, mark, cur, force, tgt)
                     marks[mark] = tgt
                 if not inactive and cur == marks[newact] and not rev:
-                    bookmarks.setcurrent(repo, newact)
+                    bookmarks.activate(repo, newact)
                 elif cur != tgt and newact == repo._bookmarkcurrent:
                     bookmarks.deactivate(repo)
                 marks.write()
@@ -1519,7 +1519,7 @@ def commit(ui, repo, *pats, **opts):
             for bm in marks:
                 newmarks[bm] = node
                 if bm == current:
-                    bookmarks.setcurrent(repo, bm)
+                    bookmarks.activate(repo, bm)
             newmarks.write()
     else:
         def commitfunc(ui, repo, message, match, opts):
@@ -6407,7 +6407,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
             ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
     elif brev in repo._bookmarks:
-        bookmarks.setcurrent(repo, brev)
+        bookmarks.activate(repo, brev)
         ui.status(_("(activating bookmark %s)\n") % brev)
     elif brev:
         if repo._bookmarkcurrent:

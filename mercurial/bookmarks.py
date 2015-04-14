@@ -129,12 +129,12 @@ def readcurrent(repo):
         file.close()
     return mark
 
-def setcurrent(repo, mark):
-    '''Set the name of the bookmark that we are currently on
-
-    Set the name of the bookmark that we are on (hg update <bookmark>).
+def activate(repo, mark):
+    """
+    Set the given bookmark to be 'active', meaning that this bookmark will
+    follow new commits that are made.
     The name is recorded in .hg/bookmarks.current
-    '''
+    """
     if mark not in repo._bookmarks:
         raise AssertionError('bookmark %s does not exist!' % mark)
 
