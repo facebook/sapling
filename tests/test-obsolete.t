@@ -616,6 +616,15 @@ List of both
 
 #if serve
 
+Test the debug output for exchange
+----------------------------------
+
+  $ hg pull ../tmpb --config 'experimental.obsmarkers-exchange-debug=True' --config 'experimental.bundle2-exp=True'
+  pulling from ../tmpb
+  searching for changes
+  no changes found
+  obsmarker-exchange: 346 bytes received
+
 check hgweb does not explode
 ====================================
 
