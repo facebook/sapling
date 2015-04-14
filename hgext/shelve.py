@@ -361,6 +361,17 @@ def listcmd(ui, repo, pats, opts):
         finally:
             fp.close()
 
+def singlepatchcmds(ui, repo, pats, opts, subcommand):
+    """subcommand that displays a single shelf"""
+    if len(pats) != 1:
+        raise util.Abort(_("--%s expects a single shelf") % subcommand)
+    shelfname = pats[0]
+
+    if not shelvedfile(repo, shelfname, 'patch').exists():
+        raise util.Abort(_("cannot find shelf %s") % shelfname)
+
+    listcmd(ui, repo, pats, opts)
+
 def checkparents(repo, state):
     """check parent while resuming an unshelve"""
     if state.parents != repo.dirstate.parents():
@@ -699,8 +710,8 @@ def shelvecmd(ui, repo, *pats, **opts):
         ('list', set(['list'])),
         ('message', set(['create'])),
         ('name', set(['create'])),
-        ('patch', set(['list'])),
-        ('stat', set(['list'])),
+        ('patch', set(['patch', 'list'])),
+        ('stat', set(['stat', 'list'])),
     ]
     def checkopt(opt):
         if opts[opt]:
@@ -717,11 +728,11 @@ def shelvecmd(ui, repo, *pats, **opts):
         return deletecmd(ui, repo, pats)
     elif checkopt('list'):
         return listcmd(ui, repo, pats, opts)
+    elif checkopt('patch'):
+        return singlepatchcmds(ui, repo, pats, opts, subcommand='patch')
+    elif checkopt('stat'):
+        return singlepatchcmds(ui, repo, pats, opts, subcommand='stat')
     else:
-        for i in ('patch', 'stat'):
-            if opts[i]:
-                raise util.Abort(_("option '--%s' may not be "
-                                   "used when shelving a change") % (i,))
         return createcmd(ui, repo, pats, opts)
 
 def extsetup(ui):

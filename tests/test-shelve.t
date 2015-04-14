@@ -862,4 +862,45 @@ Test interactive shelve
   c
   x
   x
-  $ cd ..
+
+shelve --patch and shelve --stat should work with a single valid shelfname
+
+  $ hg up --clean .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg shelve --list
+  $ echo 'patch a' > shelf-patch-a
+  $ hg add shelf-patch-a
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'patch b' > shelf-patch-b
+  $ hg add shelf-patch-b
+  $ hg shelve
+  shelved as default-01
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg shelve --patch default default-01
+  abort: --patch expects a single shelf
+  [255]
+  $ hg shelve --stat default default-01
+  abort: --stat expects a single shelf
+  [255]
+  $ hg shelve --patch default
+  default         (* ago)    changes to 'create conflict' (glob)
+  
+  diff --git a/shelf-patch-a b/shelf-patch-a
+  new file mode 100644
+  --- /dev/null
+  +++ b/shelf-patch-a
+  @@ -0,0 +1,1 @@
+  +patch a
+  $ hg shelve --stat default
+  default         (* ago)    changes to 'create conflict' (glob)
+   shelf-patch-a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  $ hg shelve --patch nonexistentshelf
+  abort: cannot find shelf nonexistentshelf
+  [255]
+  $ hg shelve --stat nonexistentshelf
+  abort: cannot find shelf nonexistentshelf
+  [255]
+
