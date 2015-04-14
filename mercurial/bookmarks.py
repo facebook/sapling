@@ -106,13 +106,12 @@ class bmstore(dict):
         for name, node in self.iteritems():
             fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
 
-def readcurrent(repo):
-    '''Get the current bookmark
-
-    If we use gittish branches we have a current bookmark that
-    we are on. This function returns the name of the bookmark. It
-    is stored in .hg/bookmarks.current
-    '''
+def readactive(repo):
+    """
+    Get the active bookmark. We can have an active bookmark that updates
+    itself as we commit. This function returns the name of that bookmark.
+    It is stored in .hg/bookmarks.current
+    """
     mark = None
     try:
         file = repo.vfs('bookmarks.current')
