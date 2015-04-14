@@ -354,7 +354,7 @@ def vlog(*msg):
 
 # Bytes that break XML even in a CDATA block: control characters 0-31
 # sans \t, \n and \r
-CDATA_EVIL = re.compile(r"[\000-\010\013\014\016-\037]")
+CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
@@ -364,7 +364,7 @@ def cdatasafe(data):
     replaces illegal bytes with ? and adds a space between the ]] so
     that it won't break the CDATA block.
     """
-    return CDATA_EVIL.sub('?', data).replace(']]>', '] ]>')
+    return CDATA_EVIL.sub(b'?', data).replace(b']]>', b'] ]>')
 
 def log(*msg):
     """Log something to stdout.
