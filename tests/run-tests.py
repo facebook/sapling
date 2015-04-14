@@ -431,20 +431,20 @@ class Test(unittest.TestCase):
 
         shell is the shell to execute tests in.
         """
-
-        self.path = path.encode('utf-8')
-        self.name = os.path.basename(path)
+        self.path = path
+        self.bname = os.path.basename(path)
+        self.name = self.bname.decode('utf-8')
         self._testdir = os.path.dirname(path)
-        self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
+        self.errpath = os.path.join(self._testdir, b'%s.err' % self.bname)
 
-        self._threadtmp = tmpdir.encode('utf-8')
+        self._threadtmp = tmpdir
         self._keeptmpdir = keeptmpdir
         self._debug = debug
         self._timeout = timeout
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
-        self._shell = shell
+        self._shell = shell.encode('utf-8')
 
         self._aborted = False
         self._daemonpids = []
