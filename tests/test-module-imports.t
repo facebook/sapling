@@ -32,7 +32,7 @@ these may expose other cycles.
      relative:  error, merge, util
   mercurial/revset.py mixed imports
      stdlib:    parser
-     relative:  discovery, error, hbisect, phases, util
+     relative:  error, hbisect, phases, util
   mercurial/templater.py mixed imports
      stdlib:    parser
      relative:  config, error, templatefilters, templatekw, util

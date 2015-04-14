@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import parser, util, error, discovery, hbisect, phases
+import parser, util, error, hbisect, phases
 import node
 import heapq
 import match as matchmod
@@ -1372,7 +1372,9 @@ def outgoing(repo, subset, x):
     Changesets not found in the specified destination repository, or the
     default push location.
     """
-    import hg # avoid start-up nasties
+    # Avoid cycles.
+    import discovery
+    import hg
     # i18n: "outgoing" is a keyword
     l = getargs(x, 0, 1, _("outgoing takes one or no arguments"))
     # i18n: "outgoing" is a keyword
