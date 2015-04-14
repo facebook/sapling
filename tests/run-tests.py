@@ -2099,7 +2099,13 @@ class TestRunner(object):
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
-        for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
+        if sys.version_info[0] > 2:
+            dpb = os.defpath.encode('utf-8')
+            sepb = os.pathsep.encode('utf-8')
+        else:
+            dpb = os.defpath
+            sepb = os.pathsep
+        for p in osenvironb.get(b'PATH', dpb).split(sepb):
             name = os.path.join(p, program)
             if os.name == 'nt' or os.access(name, os.X_OK):
                 return name
