@@ -827,9 +827,9 @@ class PythonTest(Test):
 # Windows, but check-code.py wants a glob on these lines unconditionally.  Don't
 # warn if that is the case for anything matching these lines.
 checkcodeglobpats = [
-    re.compile(r'^pushing to \$TESTTMP/.*[^)]$'),
-    re.compile(r'^moving \S+/.*[^)]$'),
-    re.compile(r'^pulling from \$TESTTMP/.*[^)]$')
+    re.compile(br'^pushing to \$TESTTMP/.*[^)]$'),
+    re.compile(br'^moving \S+/.*[^)]$'),
+    re.compile(br'^pulling from \$TESTTMP/.*[^)]$')
 ]
 
 bchr = chr
