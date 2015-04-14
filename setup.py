@@ -12,6 +12,7 @@ setup(
     keywords='fb hg mercurial',
     license='',
     py_modules=[
+        'b2xcompat',
         'backups',
         'chistedit',
         'fbamend',
