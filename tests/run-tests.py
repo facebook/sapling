@@ -1304,7 +1304,7 @@ class TestResult(unittest._TextTestResult):
                         rename(test.errpath, '%s.out' % test.path)
                     accepted = True
             if not accepted and not failed:
-                self.faildata[test.name] = ''.join(lines)
+                self.faildata[test.name] = b''.join(lines)
 
         return accepted
 
