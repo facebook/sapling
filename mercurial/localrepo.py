@@ -956,7 +956,7 @@ class localrepository(object):
             """will run pre-closing hooks"""
             pending = lambda: tr.writepending() and self.root or ""
             reporef().hook('pretxnclose', throw=True, pending=pending,
-                           xnname=desc)
+                           xnname=desc, **tr.hookargs)
 
         tr = transaction.transaction(rp, self.sopener, vfsmap,
                                      "journal",

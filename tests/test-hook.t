@@ -23,7 +23,7 @@ commit hooks can see env vars
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a
   0:cb9a9f314b8b
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_XNNAME=commit
+  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_XNNAME=commit
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNNAME=commit
   commit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
   commit.b hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
@@ -218,7 +218,7 @@ pushkey hook
   searching for changes
   no changes found
   pretxnopen hook: HG_TXNNAME=bookmarks
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_XNNAME=bookmarks
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_XNNAME=bookmarks
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNNAME=bookmarks
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1
   exporting bookmark foo
