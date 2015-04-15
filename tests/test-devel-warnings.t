@@ -50,18 +50,18 @@
   $ hg init lock-checker
   $ cd lock-checker
   $ hg buggylocking
-  transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
-  "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
+  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
+  devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
   $ cat << EOF >> $HGRCPATH
   > [devel]
   > all=0
   > check-locks=1
   > EOF
   $ hg buggylocking
-  transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
-  "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
+  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
+  devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
   $ hg buggylocking --traceback
-  transaction with no lock at:
+  devel-warn: transaction with no lock at:
    */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)
@@ -73,7 +73,7 @@
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
-  "wlock" acquired after "lock" at:
+  devel-warn: "wlock" acquired after "lock" at:
    */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
    */mercurial/dispatch.py:* in dispatch (glob)

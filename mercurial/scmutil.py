@@ -174,6 +174,7 @@ class casecollisionauditor(object):
 
 def develwarn(tui, msg):
     """issue a developer warning message"""
+    msg = 'devel-warn: ' + msg
     if tui.tracebackflag:
         util.debugstacktrace(msg, 2)
     else:
