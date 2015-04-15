@@ -1,8 +1,14 @@
-import collections, itertools, os, math, urllib, urllib2, re
-import cStringIO, stat, posixpath, StringIO
+import collections
+import itertools
+import os
+import urllib
+import urllib2
+import re
+import cStringIO
+import StringIO
 
-from dulwich.errors import HangupException, GitProtocolError, UpdateRefsError
-from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone, S_IFGITLINK
+from dulwich.errors import HangupException, GitProtocolError
+from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
 from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo, check_ref_format
 from dulwich import client
@@ -15,15 +21,10 @@ try:
     from mercurial import commands
 except ImportError:
     from hgext import bookmarks
-try:
-    from mercurial.error import RepoError
-except ImportError:
-    from mercurial.repo import RepoError
 
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import context, util as hgutil
-from mercurial import error
 from mercurial import url
 
 import _ssh
