@@ -271,6 +271,13 @@ def _updateprompt(ui, sub, dirty, local, remote):
                % (subrelpath(sub), local, remote))
     return ui.promptchoice(msg, 0)
 
+def reporelpath(repo):
+    """return path to this (sub)repo as seen from outermost repo"""
+    parent = repo
+    while util.safehasattr(parent, '_subparent'):
+        parent = parent._subparent
+    return repo.root[len(pathutil.normasprefix(parent.root)):]
+
 def subrelpath(sub):
     """return path to this subrepo as seen from outermost repo"""
     return sub._relpath
@@ -551,13 +558,7 @@ class abstractsubrepo(object):
     def _relpath(self):
         """return path to this subrepository as seen from outermost repository
         """
-        repo = self._ctx.repo()
-        parent = repo
-        while util.safehasattr(parent, '_subparent'):
-            parent = parent._subparent
-        reporelpath = repo.root[len(pathutil.normasprefix(parent.root)):]
-
-        return self.wvfs.reljoin(reporelpath, self._path)
+        return self.wvfs.reljoin(reporelpath(self._ctx.repo()), self._path)
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
