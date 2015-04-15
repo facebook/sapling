@@ -3090,12 +3090,12 @@ Test current bookmark templating
   2 bar* foo 
   1 
   0 
-  $ hg log --template "{rev} {currentbookmark}\n"
+  $ hg log --template "{rev} {activebookmark}\n"
   2 bar
   1 
   0 
   $ hg bookmarks --inactive bar
-  $ hg log --template "{rev} {currentbookmark}\n"
+  $ hg log --template "{rev} {activebookmark}\n"
   2 
   1 
   0 

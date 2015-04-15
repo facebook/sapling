@@ -302,7 +302,7 @@ test commit message content
   $ cd commitmsg
   $ echo changed > changed
   $ echo removed > removed
-  $ hg book currentbookmark
+  $ hg book activebookmark
   $ hg ci -qAm init
 
   $ hg rm removed
@@ -317,7 +317,7 @@ test commit message content
   HG: --
   HG: user: test
   HG: branch 'default'
-  HG: bookmark 'currentbookmark'
+  HG: bookmark 'activebookmark'
   HG: added added
   HG: changed changed
   HG: removed removed
@@ -354,7 +354,7 @@ test saving last-message.txt
   HG: --
   HG: user: test
   HG: branch 'default'
-  HG: bookmark 'currentbookmark'
+  HG: bookmark 'activebookmark'
   HG: subrepo sub
   HG: added .hgsub
   HG: added added
@@ -376,22 +376,22 @@ specific template keywords work well
   > [committemplate]
   > changeset.commit.normal = HG: this is "commit.normal" template
   >     HG: {extramsg}
-  >     {if(currentbookmark,
-  >    "HG: bookmark '{currentbookmark}' is activated\n",
+  >     {if(activebookmark,
+  >    "HG: bookmark '{activebookmark}' is activated\n",
   >    "HG: no bookmark is activated\n")}{subrepos %
   >    "HG: subrepo '{subrepo}' is changed\n"}
   > 
   > changeset.commit = HG: this is "commit" template
   >     HG: {extramsg}
-  >     {if(currentbookmark,
-  >    "HG: bookmark '{currentbookmark}' is activated\n",
+  >     {if(activebookmark,
+  >    "HG: bookmark '{activebookmark}' is activated\n",
   >    "HG: no bookmark is activated\n")}{subrepos %
   >    "HG: subrepo '{subrepo}' is changed\n"}
   > 
   > changeset = HG: this is customized commit template
   >     HG: {extramsg}
-  >     {if(currentbookmark,
-  >    "HG: bookmark '{currentbookmark}' is activated\n",
+  >     {if(activebookmark,
+  >    "HG: bookmark '{activebookmark}' is activated\n",
   >    "HG: no bookmark is activated\n")}{subrepos %
   >    "HG: subrepo '{subrepo}' is changed\n"}
   > EOF
@@ -404,7 +404,7 @@ specific template keywords work well
   $ HGEDITOR=cat hg commit -S -q
   HG: this is "commit.normal" template
   HG: Leave message empty to abort commit.
-  HG: bookmark 'currentbookmark' is activated
+  HG: bookmark 'activebookmark' is activated
   HG: subrepo 'sub' is changed
   HG: subrepo 'sub2' is changed
   abort: empty commit message
@@ -416,7 +416,7 @@ specific template keywords work well
   > # now, "changeset.commit" should be chosen for "hg commit"
   > EOF
 
-  $ hg bookmark --inactive currentbookmark
+  $ hg bookmark --inactive activebookmark
   $ hg forget .hgsub
   $ HGEDITOR=cat hg commit -q
   HG: this is "commit" template

@@ -376,8 +376,8 @@ one shown by default::
         HG: --
         HG: user: {author}\n{ifeq(p2rev, "-1", "",
        "HG: branch merge\n")
-       }HG: branch '{branch}'\n{if(currentbookmark,
-       "HG: bookmark '{currentbookmark}'\n")  }{subrepos %
+       }HG: branch '{branch}'\n{if(activebookmark,
+       "HG: bookmark '{activebookmark}'\n")   }{subrepos %
        "HG: subrepo {subrepo}\n"              }{file_adds %
        "HG: added {file}\n"                   }{file_mods %
        "HG: changed {file}\n"                 }{file_dels %
