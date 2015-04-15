@@ -227,9 +227,9 @@ def showcurrentbookmark(**args):
     import bookmarks as bookmarks # to avoid circular import issues
     repo = args['repo']
     if bookmarks.isactivewdirparent(repo):
-        current = repo._activebookmark
-        if current in args['ctx'].bookmarks():
-            return current
+        active = repo._activebookmark
+        if active in args['ctx'].bookmarks():
+            return active
     return ''
 
 def showdate(repo, ctx, templ, **args):
