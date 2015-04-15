@@ -36,7 +36,7 @@ Trigger tags cache population by doing something that accesses tags info
   o  0:55482a6fb4b1 test1 initial
   
 
-  $ cat .hg/cache/tags
+  $ cat .hg/cache/tags-visible
   4 042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41
   3 c3cb30f2d2cd0aae008cc91a07876e3c5131fd22 b3bce87817fe7ac9dca2834366c1d7534c095cf1
   
@@ -62,7 +62,7 @@ repopulation
 .hgtags filenodes for hidden heads should be visible (issue4550)
 (currently broken)
 
-  $ cat .hg/cache/tags
+  $ cat .hg/cache/tags-visible
   7 eb610439e10e0c6b296f97b59624c2e24fc59e30 b3bce87817fe7ac9dca2834366c1d7534c095cf1
   
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1

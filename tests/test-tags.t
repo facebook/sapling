@@ -9,7 +9,7 @@ setup
 Helper functions:
 
   $ cacheexists() {
-  >   [ -f .hg/cache/tags ] && echo "tag cache exists" || echo "no tag cache"
+  >   [ -f .hg/cache/tags-visible ] && echo "tag cache exists" || echo "no tag cache"
   > }
 
   $ fnodescacheexists() {
@@ -56,7 +56,7 @@ No fnodes cache because .hgtags file doesn't exist
 
 Try corrupting the cache
 
-  $ printf 'a b' > .hg/cache/tags
+  $ printf 'a b' > .hg/cache/tags-visible
   $ hg identify
   acb14030fe0a tip
   $ cacheexists
@@ -102,7 +102,7 @@ The cache should have an empty entry for rev 0 and a valid entry for rev 1.
 
 Repeat with cold tag cache:
 
-  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ rm -f .hg/cache/tags-visible .hg/cache/hgtagsfnodes1
   $ hg identify
   b9154636be93 tip
 
@@ -117,7 +117,7 @@ Repeat with cold tag cache:
 And again, but now unable to write tag cache:
 
 #if unix-permissions
-  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ rm -f .hg/cache/tags-visible .hg/cache/hgtagsfnodes1
   $ chmod 555 .hg/cache
   $ hg identify
   b9154636be93 tip
@@ -126,7 +126,7 @@ And again, but now unable to write tag cache:
 
 Tag cache debug info written to blackbox log
 
-  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ rm -f .hg/cache/tags-visible .hg/cache/hgtagsfnodes1
   $ hg identify
   b9154636be93 tip
   $ hg blackbox -l 5
@@ -138,7 +138,7 @@ Tag cache debug info written to blackbox log
 
 Failure to acquire lock results in no write
 
-  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ rm -f .hg/cache/tags-visible .hg/cache/hgtagsfnodes1
   $ echo 'foo:1' > .hg/wlock
   $ hg identify
   b9154636be93 tip
@@ -154,7 +154,7 @@ Failure to acquire lock results in no write
 
   $ rm .hg/wlock
 
-  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ rm -f .hg/cache/tags-visible .hg/cache/hgtagsfnodes1
   $ hg identify
   b9154636be93 tip
 
@@ -311,7 +311,7 @@ Detailed dump of tag info:
 
 Dump cache:
 
-  $ cat .hg/cache/tags
+  $ cat .hg/cache/tags-visible
   4 0c192d7d5e6b78a714de54a2e9627952a877e25a 0c04f2a8af31de17fab7422878ee5a2dadbc943d
   3 6fa450212aeb2a21ed616a54aea39a4a27894cd7 7d3b718c964ef37b89e550ebdafd5789e76ce1b0
   2 7a94127795a33c10a370c93f731fd9fea0b79af6 0c04f2a8af31de17fab7422878ee5a2dadbc943d
@@ -356,7 +356,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
   $ hg commit -m throwaway2
 
   $ chmod a-w .hg/cache/hgtagsfnodes1
-  $ rm -f .hg/cache/tags
+  $ rm -f .hg/cache/tags-visible
 
   $ hg tags
   tip                                6:b968051b5cf3
@@ -372,7 +372,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
   $ chmod a+w .hg/cache/hgtagsfnodes1
 #endif
 
-  $ rm -f .hg/cache/tags
+  $ rm -f .hg/cache/tags-visible
   $ hg tags
   tip                                6:b968051b5cf3
   bar                                1:78391a272241
@@ -524,7 +524,7 @@ Strip 2: destroy whole branch, no old head exposed
   $ hg tags                  # partly stale
   tip                                4:735c3ca72986
   bar                                0:bbd179dfa0a7
-  $ rm -f .hg/cache/tags
+  $ rm -f .hg/cache/tags-visible
   $ hg tags                  # cold cache
   tip                                4:735c3ca72986
   bar                                0:bbd179dfa0a7

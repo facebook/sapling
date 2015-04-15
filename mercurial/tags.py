@@ -246,6 +246,13 @@ def _updatetags(filetags, tagtype, alltags, tagtypes):
         ahist.extend([n for n in bhist if n not in ahist])
         alltags[name] = anode, ahist
 
+def _filename(repo):
+    """name of a tagcache file for a given repo or repoview"""
+    filename = 'cache/tags'
+    if repo.filtername:
+        filename = '%s-%s' % (filename, repo.filtername)
+    return filename
+
 def _readtagcache(ui, repo):
     '''Read the tag cache.
 
@@ -265,7 +272,7 @@ def _readtagcache(ui, repo):
     '''
 
     try:
-        cachefile = repo.vfs('cache/tags', 'r')
+        cachefile = repo.vfs(_filename(repo), 'r')
         # force reading the file for static-http
         cachelines = iter(cachefile)
     except IOError:
@@ -360,7 +367,7 @@ def _readtagcache(ui, repo):
 
 def _writetagcache(ui, repo, heads, tagfnode, cachetags):
     try:
-        cachefile = repo.vfs('cache/tags', 'w', atomictemp=True)
+        cachefile = repo.vfs(_filename(repo), 'w', atomictemp=True)
     except (OSError, IOError):
         return
 
