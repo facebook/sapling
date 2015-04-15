@@ -54,6 +54,8 @@ def uisetup(ui):
         entry[1].append(opt)
     # manual call of the decorator
     command('^amend', [
+            ('A', 'addremove', None,
+             _('mark new/missing files as added/removed before committing')),
            ('e', 'edit', None, _('prompt to edit the commit message')),
        ] + amendopts + commands.walkopts + commands.commitopts,
        _('hg amend [OPTION]...'))(amend)

@@ -18,6 +18,8 @@ Test functionality is present
   
   options ([+] can be repeated):
   
+   -A --addremove           mark new/missing files as added/removed before
+                            committing
    -e --edit                prompt to edit the commit message
       --rebase              rebases children commits after the amend
       --fixup               rebase children commits from a previous amend
@@ -270,6 +272,13 @@ Test that --message is respected
   $ hg amend
   nothing changed
   [1]
+
+Test that --addremove/-A works
+
+  $ echo new > new
+  $ hg amend -A
+  adding new
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/772f45f5a69d-90a7bd63-amend-backup.hg (glob)
 
 Test that the extension disables itself when evolution is enabled
 
