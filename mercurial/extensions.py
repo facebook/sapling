@@ -152,6 +152,18 @@ def afterloaded(extension, callback):
     else:
         _aftercallbacks.setdefault(extension, []).append(callback)
 
+def bind(func, *args):
+    '''Partial function application
+
+      Returns a new function that is the partial application of args and kwargs
+      to func.  For example,
+
+          f(1, 2, bar=3) === bind(f, 1)(2, bar=3)'''
+    assert callable(func)
+    def closure(*a, **kw):
+        return func(*(args + a), **kw)
+    return closure
+
 def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
     '''Wrap the command named `command' in table
 
@@ -189,9 +201,7 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
             break
 
     origfn = entry[0]
-    def wrap(*args, **kwargs):
-        return util.checksignature(wrapper)(
-            util.checksignature(origfn), *args, **kwargs)
+    wrap = bind(util.checksignature(wrapper), util.checksignature(origfn))
 
     wrap.__module__ = getattr(origfn, '__module__')
 
@@ -241,12 +251,10 @@ def wrapfunction(container, funcname, wrapper):
     subclass trick.
     '''
     assert callable(wrapper)
-    def wrap(*args, **kwargs):
-        return wrapper(origfn, *args, **kwargs)
 
     origfn = getattr(container, funcname)
     assert callable(origfn)
-    setattr(container, funcname, wrap)
+    setattr(container, funcname, bind(wrapper, origfn))
     return origfn
 
 def _disabledpaths(strip_init=False):
