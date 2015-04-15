@@ -1318,45 +1318,37 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
         # (*) don't care
         # (*1) deprecated, but used internally (e.g: "rebase --collapse")
 
-        linearmerge = not branchmerge and not force and not partial
+        lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
+        unsure, s = lfdirstate.status(match_.always(repo.root,
+                                                    repo.getcwd()),
+                                      [], False, False, False)
+        pctx = repo['.']
+        for lfile in unsure + s.modified:
+            lfileabs = repo.wvfs.join(lfile)
+            if not os.path.exists(lfileabs):
+                continue
+            lfhash = lfutil.hashrepofile(repo, lfile)
+            standin = lfutil.standin(lfile)
+            lfutil.writestandin(repo, standin, lfhash,
+                                lfutil.getexecutable(lfileabs))
+            if (standin in pctx and
+                lfhash == lfutil.readstandin(repo, lfile, '.')):
+                lfdirstate.normal(lfile)
+        for lfile in s.added:
+            lfutil.updatestandin(repo, lfutil.standin(lfile))
+        lfdirstate.write()
 
-        if linearmerge or (branchmerge and force and not partial):
-            # update standins for linear-merge or force-branch-merge,
-            # because largefiles in the working directory may be modified
-            lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-            unsure, s = lfdirstate.status(match_.always(repo.root,
-                                                        repo.getcwd()),
-                                          [], False, False, False)
-            pctx = repo['.']
-            for lfile in unsure + s.modified:
-                lfileabs = repo.wvfs.join(lfile)
-                if not os.path.exists(lfileabs):
-                    continue
-                lfhash = lfutil.hashrepofile(repo, lfile)
-                standin = lfutil.standin(lfile)
-                lfutil.writestandin(repo, standin, lfhash,
-                                    lfutil.getexecutable(lfileabs))
-                if (standin in pctx and
-                    lfhash == lfutil.readstandin(repo, lfile, '.')):
-                    lfdirstate.normal(lfile)
-            for lfile in s.added:
-                lfutil.updatestandin(repo, lfutil.standin(lfile))
-            lfdirstate.write()
-
-        if linearmerge:
-            # Only call updatelfiles on the standins that have changed
-            # to save time
-            oldstandins = lfutil.getstandinsstate(repo)
+        oldstandins = lfutil.getstandinsstate(repo)
 
         result = orig(repo, node, branchmerge, force, partial, *args, **kwargs)
 
-        filelist = None
-        if linearmerge:
-            newstandins = lfutil.getstandinsstate(repo)
-            filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
+        newstandins = lfutil.getstandinsstate(repo)
+        filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
+        if branchmerge or force or partial:
+            filelist.extend(s.deleted + s.removed)
 
         lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
-                                normallookup=partial, checked=linearmerge)
+                                normallookup=partial, checked=True)
 
         return result
     finally:

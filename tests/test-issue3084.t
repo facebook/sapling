@@ -113,8 +113,6 @@ Largefile in the working copy, keeping the largefile version:
   $ echo "l" | hg merge --config ui.interactive=Yes
   remote turned local largefile foo into a normal file
   keep (l)argefile or use (n)ormal file? l
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -249,8 +247,6 @@ swap
 
   $ hg up -Cqr large
   $ hg merge -r normal-id
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
@@ -271,8 +267,6 @@ swap
 
   $ hg up -Cqr large
   $ hg merge -r normal-same
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
@@ -307,8 +301,6 @@ swap
   $ hg merge -r normal2
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? l
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f
@@ -372,8 +364,6 @@ Ancestor: large   Parent: large2   Parent: normal  result: ?
   $ hg merge -r normal
   remote turned local largefile f into a normal file
   keep (l)argefile or use (n)ormal file? l
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat f

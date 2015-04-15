@@ -364,8 +364,6 @@ Test update with subrepos.
   $ hg update -C
   getting changed largefiles
   1 largefiles updated, 0 removed
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -S
 
@@ -805,8 +803,6 @@ merge action 'd' for 'local renamed directory to d2/g' which has no filename
   R d1/f
   $ hg merge
   merging d2/f and d1/f to d2/f
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cd ..

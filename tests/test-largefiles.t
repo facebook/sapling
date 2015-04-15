@@ -581,8 +581,6 @@ Test 3507 (both normal files and largefiles were a problem)
   C sub2/large6
   C sub2/large7
   $ hg up -C '.^'
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg remove large
   $ hg addremove --traceback
@@ -1431,8 +1429,6 @@ Rollback on largefiles.
 
 verify that largefile .orig file no longer is overwritten on every update -C:
   $ hg update --clean
-  getting changed largefiles
-  0 largefiles updated, 0 removed
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat sub2/large7.orig
   mistake
