@@ -201,8 +201,13 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
     if not pushop.remote.canpush():
         raise util.Abort(_("destination does not support push"))
     # get local lock as we might write phase data
-    locallock = None
+    localwlock = locallock = None
     try:
+        # bundle2 push may receive a reply bundle touching bookmarks or other
+        # things requiring the wlock. Take it now to ensure proper ordering.
+        maypushback = pushop.ui.configbool('experimental', 'bundle2.pushback')
+        if _canusebundle2(pushop) and maypushback:
+            localwlock = pushop.repo.wlock()
         locallock = pushop.repo.lock()
         pushop.locallocked = True
     except IOError, err:
@@ -242,6 +247,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
             pushop.trmanager.release()
         if locallock is not None:
             locallock.release()
+        if localwlock is not None:
+            localwlock.release()
 
     return pushop
 

@@ -91,7 +91,6 @@ With config
   $ hg push
   pushing to ssh://user@dummy/server
   searching for changes
-  "wlock" acquired after "lock" at: */mercurial/bookmarks.py:259 (pushbookmark) (glob)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
