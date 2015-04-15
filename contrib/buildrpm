@@ -74,6 +74,7 @@ fi
 $HG archive -t tgz $RPMBUILDDIR/SOURCES/mercurial-$version-$release.tar.gz
 if [ "$PYTHONVER" ]; then
 (
+    mkdir -p build
     cd build
     PYTHON_SRCFILE=Python-$PYTHONVER.tgz
     [ -f $PYTHON_SRCFILE ] || curl -Lo $PYTHON_SRCFILE http://www.python.org/ftp/python/$PYTHONVER/$PYTHON_SRCFILE
