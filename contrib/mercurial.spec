@@ -9,7 +9,7 @@
 %global docutilsname docutils-0.12
 %global docutilsmd5 4622263b62c5c771c03502afa3157768
 %global pythonhg python-hg
-%global hgpyprefix /usr/%{pythonhg}
+%global hgpyprefix /opt/%{pythonhg}
 # byte compilation will fail on some some Python /test/ files
 %global _python_bytecompile_errors_terminate_build 0
 
