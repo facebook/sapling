@@ -245,7 +245,6 @@ class GitHandler(object):
         refs = self.fetch_pack(remote, heads)
         remote_name = self.remote_name(remote)
 
-        oldrefs = self.git.get_refs()
         oldheads = self.repo.changelog.heads()
         imported = 0
         if refs:
@@ -428,7 +427,6 @@ class GitHandler(object):
 
         for i, ctx in enumerate(export):
             self.ui.progress('exporting', i, total=total)
-            state = ctx.extra().get('hg-git', None)
             self.export_hg_commit(ctx.node(), exporter)
         self.ui.progress('exporting', None, total=total)
 
@@ -900,12 +898,6 @@ class GitHandler(object):
             if gparents:
                 p1 = gparents.pop()
 
-        pa = None
-        if not (p2 == nullid):
-            node1 = self.repo.changectx(p1)
-            node2 = self.repo.changectx(p2)
-            pa = node1.ancestor(node2)
-
         # if named branch, add to extra
         if hg_branch:
             extra['branch'] = hg_branch
@@ -1085,7 +1077,7 @@ class GitHandler(object):
                                     f.write, progress.progress)
             if(f.pos != 0):
                 f.seek(0)
-                po = self.git.object_store.add_thin_pack(f.read, None)
+                self.git.object_store.add_thin_pack(f.read, None)
             progress.flush()
 
             # For empty repos dulwich gives us None, but since later
@@ -1302,7 +1294,6 @@ class GitHandler(object):
         for t in list(remote_refs):
             if t.startswith(remote_name + '/'):
                 del remote_refs[t]
-        store = self.git.object_store
         for ref_name, sha in refs.iteritems():
             if ref_name.startswith('refs/heads'):
                 hgsha = self.map_hg_get(sha)
