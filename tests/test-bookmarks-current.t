@@ -193,3 +193,12 @@ analogous to hg book -i <active bookmark>
   $ hg up -q .
   $ test -f .hg/bookmarks.current
   [1]
+
+issue 4552 -- simulate a pull moving the active bookmark
+
+  $ hg up -q X
+  $ printf "Z" > .hg/bookmarks.current
+  $ hg log -T '{activebookmark}\n' -r Z
+  Z
+  $ hg log -T '{bookmarks % "{active}\n"}' -r Z
+  Z

@@ -230,12 +230,9 @@ def showcurrentbookmark(**args):
 def showactivebookmark(**args):
     """:activetbookmark: String. The active bookmark, if it is
     associated with the changeset"""
-    import bookmarks as bookmarks # to avoid circular import issues
-    repo = args['repo']
-    if bookmarks.isactivewdirparent(repo):
-        active = repo._activebookmark
-        if active in args['ctx'].bookmarks():
-            return active
+    active = args['repo']._activebookmark
+    if active and active in args['ctx'].bookmarks():
+        return active
     return ''
 
 def showdate(repo, ctx, templ, **args):
