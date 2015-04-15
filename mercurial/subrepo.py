@@ -959,6 +959,13 @@ class hgsubrepo(abstractsubrepo):
         """
         return self._repo.wvfs
 
+    @propertycache
+    def _relpath(self):
+        """return path to this subrepository as seen from outermost repository
+        """
+        # Keep consistent dir separators by avoiding vfs.join(self._path)
+        return reporelpath(self._repo)
+
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         super(svnsubrepo, self).__init__(ctx, path)
