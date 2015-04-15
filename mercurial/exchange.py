@@ -10,6 +10,7 @@ from node import hex, nullid
 import errno, urllib
 import util, scmutil, changegroup, base85, error
 import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
+import lock as lockmod
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
@@ -1275,13 +1276,14 @@ def unbundle(repo, cg, heads, source, url):
     If the push was raced as PushRaced exception is raised."""
     r = 0
     # need a transaction when processing a bundle2 stream
-    tr = None
-    lock = repo.lock()
+    wlock = lock = tr = None
     try:
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
         if util.safehasattr(cg, 'params'):
             try:
+                wlock = repo.wlock()
+                lock = repo.lock()
                 tr = repo.transaction(source)
                 tr.hookargs['source'] = source
                 tr.hookargs['url'] = url
@@ -1292,9 +1294,8 @@ def unbundle(repo, cg, heads, source, url):
                 exc.duringunbundle2 = True
                 raise
         else:
+            lock = repo.lock()
             r = changegroup.addchangegroup(repo, cg, source, url)
     finally:
-        if tr is not None:
-            tr.release()
-        lock.release()
+        lockmod.release(tr, lock, wlock)
     return r

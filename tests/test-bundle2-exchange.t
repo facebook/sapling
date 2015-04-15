@@ -226,7 +226,6 @@ push
   remote: adding file changes
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
   remote: 1 new obsolescence markers
-  remote: "wlock" acquired after "lock" at: */mercurial/bookmarks.py:259 (pushbookmark) (glob)
   updating bookmark book_eea1
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
@@ -305,7 +304,6 @@ push over ssh
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
-  remote: "wlock" acquired after "lock" at: */mercurial/bookmarks.py:259 (pushbookmark) (glob)
   updating bookmark book_5fdd
   remote: pre-close-tip:5fddd98957c8 draft book_5fdd
   remote: pushkey: lock state after "bookmarks"
@@ -357,7 +355,6 @@ push over http
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
-  remote: "wlock" acquired after "lock" at: */mercurial/bookmarks.py:259 (pushbookmark) (glob)
   updating bookmark book_32af
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
