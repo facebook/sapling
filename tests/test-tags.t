@@ -12,6 +12,10 @@ Helper functions:
   >   [ -f .hg/cache/tags ] && echo "tag cache exists" || echo "no tag cache"
   > }
 
+  $ fnodescacheexists() {
+  >   [ -f .hg/cache/hgtagsfnodes1 ] && echo "fnodes cache exists" || echo "no fnodes cache"
+  > }
+
   $ dumptags() {
   >     rev=$1
   >     echo "rev $rev: .hgtags:"
@@ -28,10 +32,14 @@ Setup:
   $ cd t
   $ cacheexists
   no tag cache
+  $ fnodescacheexists
+  no fnodes cache
   $ hg id
   000000000000 tip
   $ cacheexists
   no tag cache
+  $ fnodescacheexists
+  no fnodes cache
   $ echo a > a
   $ hg add a
   $ hg commit -m "test"
@@ -41,6 +49,10 @@ Setup:
   acb14030fe0a tip
   $ cacheexists
   tag cache exists
+No fnodes cache because .hgtags file doesn't exist
+(this is an implementation detail)
+  $ fnodescacheexists
+  no fnodes cache
 
 Try corrupting the cache
 
@@ -49,6 +61,8 @@ Try corrupting the cache
   acb14030fe0a tip
   $ cacheexists
   tag cache exists
+  $ fnodescacheexists
+  no fnodes cache
   $ hg identify
   acb14030fe0a tip
 
@@ -74,33 +88,75 @@ Create a tag behind hg's back:
   $ hg identify
   b9154636be93 tip
 
+We should have a fnodes cache now that we have a real tag
+The cache should have an empty entry for rev 0 and a valid entry for rev 1.
+
+
+  $ fnodescacheexists
+  fnodes cache exists
+  $ f --size --hexdump .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=48
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff b9 15 46 36 26 b7 b4 a7 |..........F6&...|
+  0020: 73 e0 9e e3 c5 2f 51 0e 19 e0 5e 1f f9 66 d8 59 |s..../Q...^..f.Y|
+
 Repeat with cold tag cache:
 
-  $ rm -f .hg/cache/tags
+  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
   $ hg identify
   b9154636be93 tip
+
+  $ fnodescacheexists
+  fnodes cache exists
+  $ f --size --hexdump .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=48
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff b9 15 46 36 26 b7 b4 a7 |..........F6&...|
+  0020: 73 e0 9e e3 c5 2f 51 0e 19 e0 5e 1f f9 66 d8 59 |s..../Q...^..f.Y|
 
 And again, but now unable to write tag cache:
 
 #if unix-permissions
-  $ rm -f .hg/cache/tags
-  $ chmod 555 .hg
+  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ chmod 555 .hg/cache
   $ hg identify
   b9154636be93 tip
-  $ chmod 755 .hg
+  $ chmod 755 .hg/cache
 #endif
 
 Tag cache debug info written to blackbox log
 
-  $ rm -f .hg/cache/tags
+  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
   $ hg identify
   b9154636be93 tip
-  $ hg blackbox -l 4
+  $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> identify
-  1970/01/01 00:00:00 bob> resolved 1 tags cache entries from 1 manifests in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob> writing 48 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing tags cache file with 1 heads and 1 tags
   1970/01/01 00:00:00 bob> identify exited 0 after ?.?? seconds (glob)
 
+Failure to acquire lock results in no write
+
+  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ echo 'foo:1' > .hg/wlock
+  $ hg identify
+  b9154636be93 tip
+  $ hg blackbox -l 5
+  1970/01/01 00:00:00 bob> identify
+  1970/01/01 00:00:00 bob> not writing .hg/cache/hgtagsfnodes1 because lock held
+  1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 1 heads and 1 tags
+  1970/01/01 00:00:00 bob> identify exited 0 after * seconds (glob)
+
+  $ fnodescacheexists
+  no fnodes cache
+
+  $ rm .hg/wlock
+
+  $ rm -f .hg/cache/tags .hg/cache/hgtagsfnodes1
+  $ hg identify
+  b9154636be93 tip
 
 Create a branch:
 
@@ -121,8 +177,28 @@ Create a branch:
   $ hg add b
   $ hg commit -m "branch"
   created new head
+
+Creating a new commit shouldn't append the .hgtags fnodes cache until
+tags info is accessed
+
+  $ f --size --hexdump .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=48
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff b9 15 46 36 26 b7 b4 a7 |..........F6&...|
+  0020: 73 e0 9e e3 c5 2f 51 0e 19 e0 5e 1f f9 66 d8 59 |s..../Q...^..f.Y|
+
   $ hg id
   c8edf04160c7 tip
+
+First 4 bytes of record 3 are changeset fragment
+
+  $ f --size --hexdump .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=72
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff b9 15 46 36 26 b7 b4 a7 |..........F6&...|
+  0020: 73 e0 9e e3 c5 2f 51 0e 19 e0 5e 1f f9 66 d8 59 |s..../Q...^..f.Y|
+  0030: c8 ed f0 41 00 00 00 00 00 00 00 00 00 00 00 00 |...A............|
+  0040: 00 00 00 00 00 00 00 00                         |........|
 
 Merge the two heads:
 
@@ -243,6 +319,107 @@ Dump cache:
   bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
   bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
   78391a272241d70354aa14c874552cad6b51bb42 bar
+
+  $ f --size --hexdump .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=120
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0020: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0030: 7a 94 12 77 0c 04 f2 a8 af 31 de 17 fa b7 42 28 |z..w.....1....B(|
+  0040: 78 ee 5a 2d ad bc 94 3d 6f a4 50 21 7d 3b 71 8c |x.Z-...=o.P!};q.|
+  0050: 96 4e f3 7b 89 e5 50 eb da fd 57 89 e7 6c e1 b0 |.N.{..P...W..l..|
+  0060: 0c 19 2d 7d 0c 04 f2 a8 af 31 de 17 fa b7 42 28 |..-}.....1....B(|
+  0070: 78 ee 5a 2d ad bc 94 3d                         |x.Z-...=|
+
+Corrupt the .hgtags fnodes cache
+Extra junk data at the end should get overwritten on next cache update
+
+  $ echo extra >> .hg/cache/hgtagsfnodes1
+  $ echo dummy1 > foo
+  $ hg commit -m throwaway1
+
+  $ hg tags
+  tip                                5:8dbfe60eff30
+  bar                                1:78391a272241
+
+  $ hg blackbox -l 5
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+
+#if unix-permissions no-root
+Errors writing to .hgtags fnodes cache are silently ignored
+
+  $ echo dummy2 > foo
+  $ hg commit -m throwaway2
+
+  $ chmod a-w .hg/cache/hgtagsfnodes1
+  $ rm -f .hg/cache/tags
+
+  $ hg tags
+  tip                                6:b968051b5cf3
+  bar                                1:78391a272241
+
+  $ hg blackbox -l 5
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> couldn't write cache/hgtagsfnodes1: [Errno 13] Permission denied: '$TESTTMP/t2/.hg/cache/hgtagsfnodes1'
+  1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+
+  $ chmod a+w .hg/cache/hgtagsfnodes1
+#endif
+
+  $ rm -f .hg/cache/tags
+  $ hg tags
+  tip                                6:b968051b5cf3
+  bar                                1:78391a272241
+
+  $ hg blackbox -l 5
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+
+  $ f --size .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=168
+
+Stripping doesn't truncate the tags cache until new data is available
+
+  $ hg -q --config extensions.strip= strip -r 5 --no-backup
+  $ hg tags
+  tip                                4:0c192d7d5e6b
+  bar                                1:78391a272241
+
+  $ hg blackbox -l 4
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> 1/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+
+  $ f --size .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=168
+
+  $ echo dummy > foo
+  $ hg commit -m throwaway3
+
+  $ hg tags
+  tip                                5:035f65efb448
+  bar                                1:78391a272241
+
+  $ hg blackbox -l 5
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+  $ f --size .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=144
+
+  $ hg -q --config extensions.strip= strip -r 5 --no-backup
 
 Test tag removal:
 

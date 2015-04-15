@@ -15,14 +15,35 @@ from i18n import _
 import util
 import encoding
 import error
+from array import array
 import errno
 import time
 
-# The tags cache stores information about heads and the history of tags.
+# Tags computation can be expensive and caches exist to make it fast in
+# the common case.
+#
+# The "hgtagsfnodes1" cache file caches the .hgtags filenode values for
+# each revision in the repository. The file is effectively an array of
+# fixed length records. Read the docs for "hgtagsfnodescache" for technical
+# details.
+#
+# The .hgtags filenode cache grows in proportion to the length of the
+# changelog. The file is truncated when the # changelog is stripped.
+#
+# The purpose of the filenode cache is to avoid the most expensive part
+# of finding global tags, which is looking up the .hgtags filenode in the
+# manifest for each head. This can take dozens or over 100ms for
+# repositories with very large manifests. Multiplied by dozens or even
+# hundreds of heads and there is a significant performance concern.
+#
+# The "tags" cache stores information about heads and the history of tags.
 #
 # The cache file consists of two parts. The first part maps head nodes
 # to .hgtags filenodes. The second part is a history of tags. The two
 # parts are separated by an empty line.
+#
+# The filenodes part of "tags" has effectively been superseded by
+# "hgtagsfnodes1." It is being kept around for backwards compatbility.
 #
 # The first part consists of lines of the form:
 #
@@ -39,11 +60,6 @@ import time
 # <headrev> is there: a quick check of the tip from when the cache was
 # written against the current tip is all that is needed to check whether
 # the cache is up to date).
-#
-# The purpose of the filenode cache is to avoid the most expensive part
-# of finding global tags, which is looking up the .hgtags filenode in the
-# manifest for each head. This can take over a minute on repositories
-# that have large manifests and many heads.
 #
 # The second part of the tags cache consists of lines of the form:
 #
@@ -324,20 +340,19 @@ def _readtagcache(ui, repo):
     # This is the most expensive part of finding tags, so performance
     # depends primarily on the size of newheads.  Worst case: no cache
     # file, so newheads == repoheads.
+    fnodescache = hgtagsfnodescache(repo.unfiltered())
     for head in reversed(newheads):
-        cctx = repo[head]
-        try:
-            fnode = cctx.filenode('.hgtags')
+        fnode = fnodescache.getfnode(head)
+        if fnode != nullid:
             cachefnode[head] = fnode
-        except error.LookupError:
-            # no .hgtags file on this head
-            pass
+
+    fnodescache.write()
 
     duration = time.time() - starttime
     ui.log('tagscache',
-           'resolved %d tags cache entries from %d manifests in %0.4f '
+           '%d/%d cache hits/lookups in %0.4f '
            'seconds\n',
-           len(cachefnode), len(newheads), duration)
+           fnodescache.hitcount, fnodescache.lookupcount, duration)
 
     # Caller has to iterate over all heads, but can use the filenodes in
     # cachefnode to get to each .hgtags revision quickly.
@@ -388,3 +403,153 @@ def _writetagcache(ui, repo, heads, tagfnode, cachetags):
         cachefile.close()
     except (OSError, IOError):
         pass
+
+_fnodescachefile = 'cache/hgtagsfnodes1'
+_fnodesrecsize = 4 + 20 # changeset fragment + filenode
+_fnodesmissingrec = '\xff' * 24
+
+class hgtagsfnodescache(object):
+    """Persistent cache mapping revisions to .hgtags filenodes.
+
+    The cache is an array of records. Each item in the array corresponds to
+    a changelog revision. Values in the array contain the first 4 bytes of
+    the node hash and the 20 bytes .hgtags filenode for that revision.
+
+    The first 4 bytes are present as a form of verification. Repository
+    stripping and rewriting may change the node at a numeric revision in the
+    changelog. The changeset fragment serves as a verifier to detect
+    rewriting. This logic is shared with the rev branch cache (see
+    branchmap.py).
+
+    The instance holds in memory the full cache content but entries are
+    only parsed on read.
+
+    Instances behave like lists. ``c[i]`` works where i is a rev or
+    changeset node. Missing indexes are populated automatically on access.
+    """
+    def __init__(self, repo):
+        assert repo.filtername is None
+
+        self._repo = repo
+
+        # Only for reporting purposes.
+        self.lookupcount = 0
+        self.hitcount = 0
+
+        self._raw = array('c')
+
+        data = repo.vfs.tryread(_fnodescachefile)
+        self._raw.fromstring(data)
+
+        # The end state of self._raw is an array that is of the exact length
+        # required to hold a record for every revision in the repository.
+        # We truncate or extend the array as necessary. self._dirtyoffset is
+        # defined to be the start offset at which we need to write the output
+        # file. This offset is also adjusted when new entries are calculated
+        # for array members.
+        cllen = len(repo.changelog)
+        wantedlen = cllen * _fnodesrecsize
+        rawlen = len(self._raw)
+
+        self._dirtyoffset = None
+
+        if rawlen < wantedlen:
+            self._dirtyoffset = rawlen
+            self._raw.extend('\xff' * (wantedlen - rawlen))
+        elif rawlen > wantedlen:
+            # There's no easy way to truncate array instances. This seems
+            # slightly less evil than copying a potentially large array slice.
+            for i in range(rawlen - wantedlen):
+                self._raw.pop()
+            self._dirtyoffset = len(self._raw)
+
+    def getfnode(self, node):
+        """Obtain the filenode of the .hgtags file at a specified revision.
+
+        If the value is in the cache, the entry will be validated and returned.
+        Otherwise, the filenode will be computed and returned.
+
+        If an .hgtags does not exist at the specified revision, nullid is
+        returned.
+        """
+        ctx = self._repo[node]
+        rev = ctx.rev()
+
+        self.lookupcount += 1
+
+        offset = rev * _fnodesrecsize
+        record = self._raw[offset:offset + _fnodesrecsize].tostring()
+        properprefix = node[0:4]
+
+        # Validate and return existing entry.
+        if record != _fnodesmissingrec:
+            fileprefix = record[0:4]
+
+            if fileprefix == properprefix:
+                self.hitcount += 1
+                return record[4:]
+
+            # Fall through.
+
+        # If we get here, the entry is either missing or invalid. Populate it.
+        try:
+            fnode = ctx.filenode('.hgtags')
+        except error.LookupError:
+            # No .hgtags file on this revision.
+            fnode = nullid
+
+        # Slices on array instances only accept other array.
+        entry = array('c', properprefix + fnode)
+        self._raw[offset:offset + _fnodesrecsize] = entry
+        # self._dirtyoffset could be None.
+        self._dirtyoffset = min(self._dirtyoffset, offset) or 0
+
+        return fnode
+
+    def write(self):
+        """Perform all necessary writes to cache file.
+
+        This may no-op if no writes are needed or if a write lock could
+        not be obtained.
+        """
+        if self._dirtyoffset is None:
+            return
+
+        data = self._raw[self._dirtyoffset:]
+        if not data:
+            return
+
+        repo = self._repo
+
+        try:
+            lock = repo.wlock(wait=False)
+        except error.LockHeld:
+            repo.ui.log('tagscache',
+                        'not writing .hg/%s because lock held\n' %
+                        (_fnodescachefile))
+            return
+
+        try:
+            try:
+                f = repo.vfs.open(_fnodescachefile, 'ab')
+                try:
+                    # if the file has been truncated
+                    actualoffset = f.tell()
+                    if actualoffset < self._dirtyoffset:
+                        self._dirtyoffset = actualoffset
+                        data = self._raw[self._dirtyoffset:]
+                    f.seek(self._dirtyoffset)
+                    f.truncate()
+                    repo.ui.log('tagscache',
+                                'writing %d bytes to %s\n' % (
+                                len(data), _fnodescachefile))
+                    f.write(data)
+                    self._dirtyoffset = None
+                finally:
+                    f.close()
+            except (IOError, OSError), inst:
+                repo.ui.log('tagscache',
+                            "couldn't write %s: %s\n" % (
+                            _fnodescachefile, inst))
+        finally:
+            lock.release()
