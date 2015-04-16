@@ -136,6 +136,21 @@ class localpeer(peer.peerrepository):
                     ret = bundle2.getunbundler(self.ui, stream)
                 return ret
             except Exception, exc:
+                # If the exception contains output salvaged from a bundle2
+                # reply, we need to make sure it is printed before continuing
+                # to fail. So we build a bundle2 with such output and consume
+                # it directly.
+                #
+                # This is not very elegant but allows a "simple" solution for
+                # issue4594
+                output = getattr(exc, '_bundle2salvagedoutput', ())
+                if output:
+                    bundler = bundle2.bundle20(self._repo.ui)
+                    for out in output:
+                        bundler.addpart(out)
+                    stream = util.chunkbuffer(bundler.getchunks())
+                    b = bundle2.getunbundler(self.ui, stream)
+                    bundle2.processbundle(self._repo, b)
                 raise
         except error.PushRaced, exc:
             raise error.ResponseError(_('push failed:'), str(exc))

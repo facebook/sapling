@@ -561,6 +561,10 @@ Doing the actual push: hook abort
   pre-close-tip:e7ec4e813ba6 draft 
   transaction abort!
   rollback completed
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
   abort: pretxnclose.failpush hook exited with status 1
   [255]
 
