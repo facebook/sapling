@@ -70,7 +70,7 @@ Hiding a non-tip changeset should change filtered hash and cause tags recompute
   $ hg blackbox -l 4
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> 2/2 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 2 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 2 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
 Hiding another changeset should cause the filtered hash to change
@@ -89,7 +89,7 @@ Hiding another changeset should cause the filtered hash to change
   $ hg blackbox -l 4
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> 1/1 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
 Resolving tags on an unfiltered repo writes a separate tags cache
@@ -109,5 +109,5 @@ Resolving tags on an unfiltered repo writes a separate tags cache
   $ hg blackbox -l 4
   1970/01/01 00:00:00 bob> --hidden tags
   1970/01/01 00:00:00 bob> 2/2 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 3 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2 with 3 tags
   1970/01/01 00:00:00 bob> --hidden tags exited 0 after * seconds (glob)

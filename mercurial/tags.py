@@ -355,13 +355,14 @@ def _readtagcache(ui, repo):
     return (repoheads, cachefnode, valid, None, True)
 
 def _writetagcache(ui, repo, valid, cachetags):
+    filename = _filename(repo)
     try:
-        cachefile = repo.vfs(_filename(repo), 'w', atomictemp=True)
+        cachefile = repo.vfs(filename, 'w', atomictemp=True)
     except (OSError, IOError):
         return
 
-    ui.log('tagscache', 'writing tags cache file with %d tags\n',
-           len(cachetags))
+    ui.log('tagscache', 'writing .hg/%s with %d tags\n',
+           filename, len(cachetags))
 
     if valid[2]:
         cachefile.write('%d %s %s\n' % (valid[0], hex(valid[1]), hex(valid[2])))

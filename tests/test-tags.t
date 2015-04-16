@@ -133,7 +133,7 @@ Tag cache debug info written to blackbox log
   1970/01/01 00:00:00 bob> identify
   1970/01/01 00:00:00 bob> writing 48 bytes to cache/hgtagsfnodes1
   1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> identify exited 0 after ?.?? seconds (glob)
 
 Failure to acquire lock results in no write
@@ -146,7 +146,7 @@ Failure to acquire lock results in no write
   1970/01/01 00:00:00 bob> identify
   1970/01/01 00:00:00 bob> not writing .hg/cache/hgtagsfnodes1 because lock held
   1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> identify exited 0 after * seconds (glob)
 
   $ fnodescacheexists
@@ -343,7 +343,7 @@ Extra junk data at the end should get overwritten on next cache update
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
   1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
 #if unix-permissions no-root
@@ -363,7 +363,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> couldn't write cache/hgtagsfnodes1: [Errno 13] Permission denied: '$TESTTMP/t2/.hg/cache/hgtagsfnodes1'
   1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
   $ chmod a+w .hg/cache/hgtagsfnodes1
@@ -378,7 +378,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
   1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
   $ f --size .hg/cache/hgtagsfnodes1
@@ -394,7 +394,7 @@ Stripping doesn't truncate the tags cache until new data is available
   $ hg blackbox -l 4
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> 3/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
   $ f --size .hg/cache/hgtagsfnodes1
@@ -411,7 +411,7 @@ Stripping doesn't truncate the tags cache until new data is available
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
   1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=144

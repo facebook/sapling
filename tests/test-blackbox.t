@@ -123,7 +123,7 @@ extension and python hooks - use the eol extension for a pythonhook
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> update
-  1970/01/01 00:00:00 bob> writing tags cache file with 0 tags
+  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 0 tags
   1970/01/01 00:00:00 bob> pythonhook-preupdate: hgext.eol.preupdate finished in * seconds (glob)
   1970/01/01 00:00:00 bob> exthook-update: echo hooked finished in * seconds (glob)
   1970/01/01 00:00:00 bob> update exited 0 after * seconds (glob)

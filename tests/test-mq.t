@@ -311,12 +311,12 @@ qpop
 qpush with dump of tag cache
 Dump the tag cache to ensure that it has exactly one head after qpush.
 
-  $ rm -f .hg/cache/tags-visible
+  $ rm -f .hg/cache/tags2-visible
   $ hg tags > /dev/null
 
-.hg/cache/tags-visible (pre qpush):
+.hg/cache/tags2-visible (pre qpush):
 
-  $ cat .hg/cache/tags-visible
+  $ cat .hg/cache/tags2-visible
   1 [\da-f]{40} (re)
   $ hg qpush
   applying test.patch
@@ -325,9 +325,9 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
   2: draft
   $ hg tags > /dev/null
 
-.hg/cache/tags-visible (post qpush):
+.hg/cache/tags2-visible (post qpush):
 
-  $ cat .hg/cache/tags-visible
+  $ cat .hg/cache/tags2-visible
   2 [\da-f]{40} (re)
   $ checkundo qpush
   $ cd ..
