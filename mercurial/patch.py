@@ -2127,7 +2127,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     copy = {}
     if opts.git or opts.upgrade:
-        copy = copies.pathcopies(ctx1, ctx2)
+        copy = copies.pathcopies(ctx1, ctx2, match=match)
 
     if relroot is not None:
         if not relfiltered:
