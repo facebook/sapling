@@ -858,6 +858,8 @@ def unbundle(repo, proto, heads):
                 return pusherr(str(exc))
 
         bundler = bundle2.bundle20(repo.ui)
+        for out in getattr(exc, '_bundle2salvagedoutput', ()):
+            bundler.addpart(out)
         try:
             raise
         except error.BundleValueError, exc:

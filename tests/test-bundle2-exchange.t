@@ -567,6 +567,10 @@ Doing the actual push: hook abort
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
   abort: pretxnclose.failpush hook exited with status 1
   remote: pre-close-tip:e7ec4e813ba6 draft 
   remote: transaction abort!
@@ -576,6 +580,10 @@ Doing the actual push: hook abort
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
   searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
   abort: pretxnclose.failpush hook exited with status 1
   [255]
 
