@@ -636,7 +636,7 @@ commands.norepo += " verifyremotefilelog"
 def verifyremotefilelog(ui, *args, **opts):
     return debugcommands.verifyremotefilelog(ui, *args, **opts)
 
-@command('^prefetch', [
+@command('prefetch', [
     ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
     ] + commands.walkopts, _('hg prefetch [OPTIONS] [FILE...]'))
 def prefetch(ui, repo, *pats, **opts):
