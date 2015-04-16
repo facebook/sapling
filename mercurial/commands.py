@@ -40,6 +40,12 @@ optionalrepo = ''
 # @command decorator.
 inferrepo = ''
 
+# label constants
+# until 3.5, bookmarks.current was the advertised name, not
+# bookmarks.active, so we must use both to avoid breaking old
+# custom styles
+activebookmarklabel = 'bookmarks.active bookmarks.current'
+
 # common command options
 
 globalopts = [
@@ -1037,7 +1043,7 @@ def bookmark(ui, repo, *names, **opts):
         for bmark, n in sorted(marks.iteritems()):
             current = repo._activebookmark
             if bmark == current:
-                prefix, label = '*', 'bookmarks.current'
+                prefix, label = '*', activebookmarklabel
             else:
                 prefix, label = ' ', ''
 
@@ -5932,10 +5938,10 @@ def summary(ui, repo, **opts):
         ui.write(_('bookmarks:'), label='log.bookmark')
         if current is not None:
             if current in marks:
-                ui.write(' *' + current, label='bookmarks.current')
+                ui.write(' *' + current, label=activebookmarklabel)
                 marks.remove(current)
             else:
-                ui.write(' [%s]' % current, label='bookmarks.current')
+                ui.write(' [%s]' % current, label=activebookmarklabel)
         for m in marks:
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')

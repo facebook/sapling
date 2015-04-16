@@ -84,7 +84,7 @@ effects may be overridden from your configuration file::
   resolve.unresolved = red bold
   resolve.resolved = green bold
 
-  bookmarks.current = green
+  bookmarks.active = green
 
   branches.active = none
   branches.closed = black bold
@@ -313,7 +313,7 @@ _styles = {'grep.match': 'red bold',
            'grep.filename': 'magenta',
            'grep.user': 'magenta',
            'grep.date': 'magenta',
-           'bookmarks.current': 'green',
+           'bookmarks.active': 'green',
            'branches.active': 'none',
            'branches.closed': 'black bold',
            'branches.current': 'green',
