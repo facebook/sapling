@@ -318,6 +318,10 @@ def processbundle(repo, unbundler, transactiongetter=None):
         # type of bundle. We should probably clean up or drop this return code
         # craziness in a future version.
         exc.duringunbundle2 = True
+        salvaged = []
+        if op.reply is not None:
+            salvaged = op.reply.salvageoutput()
+        exc._bundle2salvagedoutput = salvaged
         raise
     return op
 

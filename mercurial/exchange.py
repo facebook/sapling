@@ -1288,6 +1288,7 @@ def unbundle(repo, cg, heads, source, url):
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
         if util.safehasattr(cg, 'params'):
+            r = None
             try:
                 wlock = repo.wlock()
                 lock = repo.lock()
@@ -1299,6 +1300,8 @@ def unbundle(repo, cg, heads, source, url):
                 tr.close()
             except Exception, exc:
                 exc.duringunbundle2 = True
+                if r is not None:
+                    exc._bundle2salvagedoutput = r.salvageoutput()
                 raise
         else:
             lock = repo.lock()
