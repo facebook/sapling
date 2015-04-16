@@ -477,6 +477,7 @@ def chunkselector(ui, headerlist):
     of the chosen chunks.
 
     """
+    ui.write(_('starting interactive selection\n'))
     chunkselector = curseschunkselector(headerlist, ui)
     curses.wrapper(chunkselector.main)
 
