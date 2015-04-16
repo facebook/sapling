@@ -655,6 +655,15 @@ class bundlepart(object):
         self._generated = None
         self.mandatory = mandatory
 
+    def copy(self):
+        """return a copy of the part
+
+        The new part have the very same content but no partid assigned yet.
+        Parts with generated data cannot be copied."""
+        assert not util.safehasattr(self.data, 'next')
+        return self.__class__(self.type, self._mandatoryparams,
+                              self._advisoryparams, self._data, self.mandatory)
+
     # methods used to defines the part content
     def __setdata(self, data):
         if self._generated is not None:
