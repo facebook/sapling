@@ -326,7 +326,7 @@ def _readtagcache(ui, repo):
     if not len(repo.file('.hgtags')):
         # No tags have ever been committed, so we can avoid a
         # potentially expensive search.
-        return (repoheads, {}, valid, None, True)
+        return ([], {}, valid, None, True)
 
     starttime = time.time()
 
