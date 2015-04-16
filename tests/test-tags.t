@@ -345,7 +345,7 @@ Extra junk data at the end should get overwritten on next cache update
   $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
@@ -396,7 +396,7 @@ Stripping doesn't truncate the tags cache until new data is available
 
   $ hg blackbox -l 4
   1970/01/01 00:00:00 bob> tags
-  1970/01/01 00:00:00 bob> 1/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> 3/3 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
@@ -413,7 +413,7 @@ Stripping doesn't truncate the tags cache until new data is available
   $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> tags
   1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing tags cache file with 3 heads and 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
   $ f --size .hg/cache/hgtagsfnodes1

@@ -278,26 +278,23 @@ def _readtagcache(ui, repo):
     except IOError:
         cachefile = None
 
-    cacherevs = []  # list of headrev
-    cacheheads = [] # list of headnode
-    cachefnode = {} # map headnode to filenode
+    cachetiprev = None
+    cachetipnode = None
     if cachefile:
         try:
-            for line in cachelines:
+            for i, line in enumerate(cachelines):
+                # Getting the first line and consuming all fnode lines.
                 if line == "\n":
                     break
+                if i != 0:
+                    continue
+
                 line = line.split()
-                cacherevs.append(int(line[0]))
-                headnode = bin(line[1])
-                cacheheads.append(headnode)
-                if len(line) == 3:
-                    fnode = bin(line[2])
-                    cachefnode[headnode] = fnode
+                cachetiprev = int(line[0])
+                cachetipnode = bin(line[1])
         except Exception:
-            # corruption of the tags cache, just recompute it
-            cacheheads = []
-            cacherevs = []
-            cachefnode = {}
+            # corruption of the cache, just recompute it.
+            pass
 
     tipnode = repo.changelog.tip()
     tiprev = len(repo.changelog) - 1
@@ -306,7 +303,9 @@ def _readtagcache(ui, repo):
     # (Unchanged tip trivially means no changesets have been added.
     # But, thanks to localrepository.destroyed(), it also means none
     # have been destroyed by strip or rollback.)
-    if cacheheads and cacheheads[0] == tipnode and cacherevs[0] == tiprev:
+    if (cachetiprev is not None
+            and cachetiprev == tiprev
+            and cachetipnode == tipnode):
         tags = _readtags(ui, repo, cachelines, cachefile.name)
         cachefile.close()
         return (None, None, tags, False)
@@ -335,20 +334,17 @@ def _readtagcache(ui, repo):
     if not len(repo.file('.hgtags')):
         # No tags have ever been committed, so we can avoid a
         # potentially expensive search.
-        return (repoheads, cachefnode, None, True)
+        return (repoheads, {}, None, True)
 
     starttime = time.time()
-
-    newheads = [head
-                for head in repoheads
-                if head not in set(cacheheads)]
 
     # Now we have to lookup the .hgtags filenode for every new head.
     # This is the most expensive part of finding tags, so performance
     # depends primarily on the size of newheads.  Worst case: no cache
     # file, so newheads == repoheads.
     fnodescache = hgtagsfnodescache(repo.unfiltered())
-    for head in reversed(newheads):
+    cachefnode = {}
+    for head in reversed(repoheads):
         fnode = fnodescache.getfnode(head)
         if fnode != nullid:
             cachefnode[head] = fnode
