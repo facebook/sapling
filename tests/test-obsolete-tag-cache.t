@@ -47,7 +47,7 @@ Trigger tags cache population by doing something that accesses tags info
   test2                              2:d75775ffbc6b
   test1                              0:55482a6fb4b1
 
-  $ cat .hg/cache/tags-visible
+  $ cat .hg/cache/tags2-visible
   5 2942a772f72a444bef4bef13874d515f50fa27b6
   042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
@@ -62,7 +62,7 @@ Hiding a non-tip changeset should change filtered hash and cause tags recompute
   head2                              4:042eb6bfcc49
   test1                              0:55482a6fb4b1
 
-  $ cat .hg/cache/tags-visible
+  $ cat .hg/cache/tags2-visible
   5 2942a772f72a444bef4bef13874d515f50fa27b6 f34fbc9a9769ba9eff5aff3d008a6b49f85c08b1
   042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
@@ -82,7 +82,7 @@ Hiding another changeset should cause the filtered hash to change
   tip                                5:2942a772f72a
   head2                              4:042eb6bfcc49
 
-  $ cat .hg/cache/tags-visible
+  $ cat .hg/cache/tags2-visible
   5 2942a772f72a444bef4bef13874d515f50fa27b6 2fce1eec33263d08a4d04293960fc73a555230e4
   042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
 
@@ -91,3 +91,23 @@ Hiding another changeset should cause the filtered hash to change
   1970/01/01 00:00:00 bob> 1/1 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+
+Resolving tags on an unfiltered repo writes a separate tags cache
+
+  $ hg --hidden tags
+  tip                                5:2942a772f72a
+  head2                              4:042eb6bfcc49
+  test2                              2:d75775ffbc6b
+  test1                              0:55482a6fb4b1
+
+  $ cat .hg/cache/tags2
+  5 2942a772f72a444bef4bef13874d515f50fa27b6
+  042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
+  55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
+  d75775ffbc6bca1794d300f5571272879bd280da test2
+
+  $ hg blackbox -l 4
+  1970/01/01 00:00:00 bob> --hidden tags
+  1970/01/01 00:00:00 bob> 2/2 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 3 tags
+  1970/01/01 00:00:00 bob> --hidden tags exited 0 after * seconds (glob)

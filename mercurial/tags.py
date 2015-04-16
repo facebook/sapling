@@ -36,10 +36,11 @@ import time
 # repositories with very large manifests. Multiplied by dozens or even
 # hundreds of heads and there is a significant performance concern.
 #
-# The "tags" cache stores information about the history of tags.
+# There also exist a separate cache file for each repository filter.
+# These "tags-*" files store information about the history of tags.
 #
-# The cache file consists of a cache validation line followed by a history
-# of tags.
+# The tags cache files consists of a cache validation line followed by
+# a history of tags.
 #
 # The cache validation line has the format:
 #
@@ -239,7 +240,7 @@ def _updatetags(filetags, tagtype, alltags, tagtypes):
 
 def _filename(repo):
     """name of a tagcache file for a given repo or repoview"""
-    filename = 'cache/tags'
+    filename = 'cache/tags2'
     if repo.filtername:
         filename = '%s-%s' % (filename, repo.filtername)
     return filename
