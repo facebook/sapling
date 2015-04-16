@@ -480,6 +480,18 @@ class bundle20(object):
             blocks.append(par)
         return ' '.join(blocks)
 
+    def salvageoutput(self):
+        """return a list with a copy of all output parts in the bundle
+
+        This is meant to be used during error handling to make sure we preserve
+        server output"""
+        salvaged = []
+        for part in self._parts:
+            if part.type.startswith('output'):
+                salvaged.append(part.copy())
+        return salvaged
+
+
 class unpackermixin(object):
     """A mixin to extract bytes and struct data from a stream"""
 
