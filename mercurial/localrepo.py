@@ -975,6 +975,12 @@ class localrepository(object):
                                **tr2.hookargs)
             reporef()._afterlock(hook)
         tr.addfinalize('txnclose-hook', txnclosehook)
+        def txnaborthook(tr2):
+            """To be run if transaction is aborted
+            """
+            reporef().hook('txnabort', throw=False, txnname=desc,
+                           **tr2.hookargs)
+        tr.addabort('txnabort-hook', txnaborthook)
         self._transref = weakref.ref(tr)
         return tr
 

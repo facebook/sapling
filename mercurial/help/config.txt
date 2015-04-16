@@ -833,6 +833,10 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   after the lock is released. see ``pretxnclose`` docs for details about
   available variables.
 
+``txnabort``
+  Run when a transaction is aborted. see ``pretxnclose`` docs for details about
+  available variables.
+
 ``pretxnchangegroup``
   Run after a changegroup has been added via push, pull or unbundle,
   but before the transaction has been committed. Changegroup is
