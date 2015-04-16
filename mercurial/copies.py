@@ -140,14 +140,19 @@ def _dirstatecopies(d):
             del c[k]
     return c
 
-def _computeforwardmissing(a, b):
+def _computeforwardmissing(a, b, match=None):
     """Computes which files are in b but not a.
     This is its own function so extensions can easily wrap this call to see what
     files _forwardcopies is about to process.
     """
-    return b.manifest().filesnotin(a.manifest())
+    ma = a.manifest()
+    mb = b.manifest()
+    if match:
+        ma = ma.matches(match)
+        mb = mb.matches(match)
+    return mb.filesnotin(ma)
 
-def _forwardcopies(a, b):
+def _forwardcopies(a, b, match=None):
     '''find {dst@b: src@a} copy mapping where a is an ancestor of b'''
 
     # check for working copy
@@ -170,7 +175,7 @@ def _forwardcopies(a, b):
     # we currently don't try to find where old files went, too expensive
     # this means we can miss a case like 'hg rm b; hg cp a b'
     cm = {}
-    missing = _computeforwardmissing(a, b)
+    missing = _computeforwardmissing(a, b, match=match)
     ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
     for f in missing:
         fctx = b[f]
@@ -198,16 +203,17 @@ def _backwardrenames(a, b):
         r[v] = k
     return r
 
-def pathcopies(x, y):
+def pathcopies(x, y, match=None):
     '''find {dst@y: src@x} copy mapping for directed compare'''
     if x == y or not x or not y:
         return {}
     a = y.ancestor(x)
     if a == x:
-        return _forwardcopies(x, y)
+        return _forwardcopies(x, y, match=match)
     if a == y:
         return _backwardrenames(x, y)
-    return _chain(x, y, _backwardrenames(x, a), _forwardcopies(a, y))
+    return _chain(x, y, _backwardrenames(x, a),
+                  _forwardcopies(a, y, match=match))
 
 def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2):
     """Computes, based on addedinm1 and addedinm2, the files exclusive to c1
