@@ -841,35 +841,38 @@ def unbundle(repo, proto, heads):
         finally:
             fp.close()
             os.unlink(tempname)
-    except error.BundleValueError, exc:
-            bundler = bundle2.bundle20(repo.ui)
+
+    except (error.BundleValueError, util.Abort, error.PushRaced), exc:
+        # handle non-bundle2 case first
+        if not getattr(exc, 'duringunbundle2', False):
+            try:
+                raise
+            except util.Abort:
+                # The old code we moved used sys.stderr directly.
+                # We did not change it to minimise code change.
+                # This need to be moved to something proper.
+                # Feel free to do it.
+                sys.stderr.write("abort: %s\n" % exc)
+                return pushres(0)
+            except error.PushRaced:
+                return pusherr(str(exc))
+
+        bundler = bundle2.bundle20(repo.ui)
+        try:
+            raise
+        except error.BundleValueError, exc:
             errpart = bundler.newpart('error:unsupportedcontent')
             if exc.parttype is not None:
                 errpart.addparam('parttype', exc.parttype)
             if exc.params:
                 errpart.addparam('params', '\0'.join(exc.params))
-            return streamres(bundler.getchunks())
-    except util.Abort, inst:
-        # The old code we moved used sys.stderr directly.
-        # We did not change it to minimise code change.
-        # This need to be moved to something proper.
-        # Feel free to do it.
-        if getattr(inst, 'duringunbundle2', False):
-            bundler = bundle2.bundle20(repo.ui)
-            manargs = [('message', str(inst))]
+        except util.Abort, exc:
+            manargs = [('message', str(exc))]
             advargs = []
-            if inst.hint is not None:
-                advargs.append(('hint', inst.hint))
+            if exc.hint is not None:
+                advargs.append(('hint', exc.hint))
             bundler.addpart(bundle2.bundlepart('error:abort',
                                                manargs, advargs))
-            return streamres(bundler.getchunks())
-        else:
-            sys.stderr.write("abort: %s\n" % inst)
-            return pushres(0)
-    except error.PushRaced, exc:
-        if getattr(exc, 'duringunbundle2', False):
-            bundler = bundle2.bundle20(repo.ui)
+        except error.PushRaced, exc:
             bundler.newpart('error:pushraced', [('message', str(exc))])
-            return streamres(bundler.getchunks())
-        else:
-            return pusherr(str(exc))
+        return streamres(bundler.getchunks())
