@@ -921,6 +921,30 @@ def lsprofile(ui, func, fp):
             stats.sort(field)
             stats.pprint(limit=limit, file=fp, climit=climit)
 
+def flameprofile(ui, func, fp):
+    try:
+        from flamegraph import flamegraph
+    except ImportError:
+        raise util.Abort(_(
+            'flamegraph not available - install from '
+            'https://github.com/evanhempel/python-flamegraph'))
+    freq = ui.configint('profiling', 'freq', default=1000)
+    filter_ = None
+    collapse_recursion = True
+    thread = flamegraph.ProfileThread(fp, 1.0 / freq,
+                                      filter_, collapse_recursion)
+    start_time = time.clock()
+    try:
+        thread.start()
+        func()
+    finally:
+        thread.stop()
+        thread.join()
+        print 'Collected %d stack frames (%d unique) in %2.2f seconds.' % (
+            time.clock() - start_time, thread.num_frames(),
+            thread.num_frames(unique=True))
+
+
 def statprofile(ui, func, fp):
     try:
         import statprof
@@ -952,7 +976,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
         profiler = os.getenv('HGPROF')
         if profiler is None:
             profiler = ui.config('profiling', 'type', default='ls')
-        if profiler not in ('ls', 'stat'):
+        if profiler not in ('ls', 'stat', 'flame'):
             ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
             profiler = 'ls'
 
@@ -967,6 +991,8 @@ def _runcommand(ui, options, cmd, cmdfunc):
         try:
             if profiler == 'ls':
                 return lsprofile(ui, checkargs, fp)
+            elif profiler == 'flame':
+                return flameprofile(ui, checkargs, fp)
             else:
                 return statprofile(ui, checkargs, fp)
         finally:
