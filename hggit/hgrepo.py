@@ -16,7 +16,7 @@ def generate_repo_subclass(baseclass):
             def pull(self, remote, heads=None, force=False):
                 if isinstance(remote, gitrepo):
                     return self.githandler.fetch(remote.path, heads)
-                else: #pragma: no cover
+                else:  # pragma: no cover
                     return super(hgrepo, self).pull(remote, heads, force)
 
         if hgutil.safehasattr(localrepo.localrepository, 'push'):
@@ -26,7 +26,7 @@ def generate_repo_subclass(baseclass):
             def push(self, remote, force=False, revs=None, newbranch=False):
                 if isinstance(remote, gitrepo):
                     return self.githandler.push(remote.path, revs, force)
-                else: #pragma: no cover
+                else:  # pragma: no cover
                     return super(hgrepo, self).push(remote, force, revs,
                                                     newbranch)
 
@@ -34,10 +34,12 @@ def generate_repo_subclass(baseclass):
         def findoutgoing(self, remote, base=None, heads=None, force=False):
             if isinstance(remote, gitrepo):
                 base, heads = self.githandler.get_refs(remote.path)
-                out, h = super(hgrepo, self).findoutgoing(remote, base, heads, force)
+                out, h = super(hgrepo, self).findoutgoing(remote, base,
+                                                          heads, force)
                 return out
-            else: #pragma: no cover
-                return super(hgrepo, self).findoutgoing(remote, base, heads, force)
+            else:  # pragma: no cover
+                return super(hgrepo, self).findoutgoing(remote, base,
+                                                        heads, force)
 
         def _findtags(self):
             (tags, tagtypes) = super(hgrepo, self)._findtags()
