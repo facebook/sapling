@@ -908,7 +908,7 @@ class basefilectx(object):
         introrev = self.introrev()
         if self.rev() != introrev:
             base = self.filectx(self.filenode(), changeid=introrev)
-        if getattr(base, '_ancestrycontext', None) is None:
+        if introrev and getattr(base, '_ancestrycontext', None) is None:
             ac = self._repo.changelog.ancestors([introrev], inclusive=True)
             base._ancestrycontext = ac
 
