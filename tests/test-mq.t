@@ -318,7 +318,6 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
 
   $ cat .hg/cache/tags-visible
   1 [\da-f]{40} (re)
-  
   $ hg qpush
   applying test.patch
   now at: test.patch
@@ -330,7 +329,6 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
 
   $ cat .hg/cache/tags-visible
   2 [\da-f]{40} (re)
-  
   $ checkundo qpush
   $ cd ..
 

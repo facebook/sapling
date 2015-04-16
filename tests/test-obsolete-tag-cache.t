@@ -1,6 +1,8 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > blackbox=
   > rebase=
+  > mock=$TESTDIR/mockblackbox.py
   > 
   > [experimental]
   > evolution = createmarkers
@@ -21,11 +23,12 @@ Create a repo with some tags
   $ hg commit -A -m newhead
   adding newhead
   created new head
-
-Trigger tags cache population by doing something that accesses tags info
+  $ hg tag -m 'test head 2 tag' head2
 
   $ hg log -G -T '{rev}:{node|short} {tags} {desc}\n'
-  @  4:042eb6bfcc49 tip newhead
+  @  5:2942a772f72a tip test head 2 tag
+  |
+  o  4:042eb6bfcc49 head2 newhead
   |
   | o  3:c3cb30f2d2cd  test2 tag
   | |
@@ -36,35 +39,55 @@ Trigger tags cache population by doing something that accesses tags info
   o  0:55482a6fb4b1 test1 initial
   
 
+Trigger tags cache population by doing something that accesses tags info
+
+  $ hg tags
+  tip                                5:2942a772f72a
+  head2                              4:042eb6bfcc49
+  test2                              2:d75775ffbc6b
+  test1                              0:55482a6fb4b1
+
   $ cat .hg/cache/tags-visible
-  4 042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41
-  3 c3cb30f2d2cd0aae008cc91a07876e3c5131fd22 b3bce87817fe7ac9dca2834366c1d7534c095cf1
-  
+  5 2942a772f72a444bef4bef13874d515f50fa27b6
+  042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
   d75775ffbc6bca1794d300f5571272879bd280da test2
 
-Create some hidden changesets via a rebase and trigger tags cache
-repopulation
+Hiding a non-tip changeset should change filtered hash and cause tags recompute
 
-  $ hg -q rebase -s 1 -d 4
-  $ hg log -G -T '{rev}:{node|short} {tags} {desc}\n'
-  o  7:eb610439e10e tip test2 tag
-  |
-  o  6:7b4af00c3c83  first
-  |
-  o  5:43ac2a539b3c  test tag
-  |
-  @  4:042eb6bfcc49  newhead
-  |
-  o  0:55482a6fb4b1 test1 initial
-  
+  $ hg debugobsolete -d '0 0' c3cb30f2d2cd0aae008cc91a07876e3c5131fd22 -u dummyuser
 
-.hgtags filenodes for hidden heads should be visible (issue4550)
-(currently broken)
+  $ hg tags
+  tip                                5:2942a772f72a
+  head2                              4:042eb6bfcc49
+  test1                              0:55482a6fb4b1
 
   $ cat .hg/cache/tags-visible
-  7 eb610439e10e0c6b296f97b59624c2e24fc59e30 b3bce87817fe7ac9dca2834366c1d7534c095cf1
-  
+  5 2942a772f72a444bef4bef13874d515f50fa27b6 f34fbc9a9769ba9eff5aff3d008a6b49f85c08b1
+  042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
-  d75775ffbc6bca1794d300f5571272879bd280da test2
 
+  $ hg blackbox -l 4
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> 2/2 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 2 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+
+Hiding another changeset should cause the filtered hash to change
+
+  $ hg debugobsolete -d '0 0' d75775ffbc6bca1794d300f5571272879bd280da -u dummyuser
+  $ hg debugobsolete -d '0 0' 5f97d42da03fd56f3b228b03dfe48af5c0adf75b -u dummyuser
+
+  $ hg tags
+  tip                                5:2942a772f72a
+  head2                              4:042eb6bfcc49
+
+  $ cat .hg/cache/tags-visible
+  5 2942a772f72a444bef4bef13874d515f50fa27b6 2fce1eec33263d08a4d04293960fc73a555230e4
+  042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
+
+  $ hg blackbox -l 4
+  1970/01/01 00:00:00 bob> tags
+  1970/01/01 00:00:00 bob> 1/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing tags cache file with 1 tags
+  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)

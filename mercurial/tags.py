@@ -36,32 +36,23 @@ import time
 # repositories with very large manifests. Multiplied by dozens or even
 # hundreds of heads and there is a significant performance concern.
 #
-# The "tags" cache stores information about heads and the history of tags.
+# The "tags" cache stores information about the history of tags.
 #
-# The cache file consists of two parts. The first part maps head nodes
-# to .hgtags filenodes. The second part is a history of tags. The two
-# parts are separated by an empty line.
+# The cache file consists of a cache validation line followed by a history
+# of tags.
 #
-# The filenodes part of "tags" has effectively been superseded by
-# "hgtagsfnodes1." It is being kept around for backwards compatbility.
+# The cache validation line has the format:
 #
-# The first part consists of lines of the form:
+#   <tiprev> <tipnode> [<filteredhash>]
 #
-#   <headrev> <headnode> [<hgtagsnode>]
+# <tiprev> is an integer revision and <tipnode> is a 40 character hex
+# node for that changeset. These redundantly identify the repository
+# tip from the time the cache was written. In addition, <filteredhash>,
+# if present, is a 40 character hex hash of the contents of the filtered
+# revisions for this filter. If the set of filtered revs changes, the
+# hash will change and invalidate the cache.
 #
-# <headrev> is an integer revision and <headnode> is a 40 character hex
-# node for that changeset. These redundantly identify a repository
-# head from the time the cache was written.
-#
-# <tagnode> is the filenode of .hgtags on that head. Heads with no .hgtags
-# file will have no <hgtagsnode> (just 2 values per line).
-#
-# The filenode cache is ordered from tip to oldest (which is part of why
-# <headrev> is there: a quick check of the tip from when the cache was
-# written against the current tip is all that is needed to check whether
-# the cache is up to date).
-#
-# The second part of the tags cache consists of lines of the form:
+# The history part of the tags cache consists of lines of the form:
 #
 #   <node> <tag>
 #
@@ -94,7 +85,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
     assert len(alltags) == len(tagtypes) == 0, \
            "findglobaltags() should be called first"
 
-    (heads, tagfnode, cachetags, shouldwrite) = _readtagcache(ui, repo)
+    (heads, tagfnode, valid, cachetags, shouldwrite) = _readtagcache(ui, repo)
     if cachetags is not None:
         assert not shouldwrite
         # XXX is this really 100% correct?  are there oddball special
@@ -122,7 +113,7 @@ def findglobaltags(ui, repo, alltags, tagtypes):
 
     # and update the cache (if necessary)
     if shouldwrite:
-        _writetagcache(ui, repo, heads, tagfnode, alltags)
+        _writetagcache(ui, repo, valid, alltags)
 
 def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo. Update alltags and tagtypes.'''
@@ -256,20 +247,22 @@ def _filename(repo):
 def _readtagcache(ui, repo):
     '''Read the tag cache.
 
-    Returns a tuple (heads, fnodes, cachetags, shouldwrite).
+    Returns a tuple (heads, fnodes, validinfo, cachetags, shouldwrite).
 
     If the cache is completely up-to-date, "cachetags" is a dict of the
-    form returned by _readtags() and "heads" and "fnodes" are None and
-    "shouldwrite" is False.
+    form returned by _readtags() and "heads", "fnodes", and "validinfo" are
+    None and "shouldwrite" is False.
 
     If the cache is not up to date, "cachetags" is None. "heads" is a list
     of all heads currently in the repository, ordered from tip to oldest.
-    "fnodes" is a mapping from head to .hgtags filenode. "shouldwrite" is
-    True.
+    "validinfo" is a tuple describing cache validation info. This is used
+    when writing the tags cache. "fnodes" is a mapping from head to .hgtags
+    filenode. "shouldwrite" is True.
 
     If the cache is not up to date, the caller is responsible for reading tag
     info from each returned head. (See findglobaltags().)
     '''
+    import scmutil  # avoid cycle
 
     try:
         cachefile = repo.vfs(_filename(repo), 'r')
@@ -278,20 +271,17 @@ def _readtagcache(ui, repo):
     except IOError:
         cachefile = None
 
-    cachetiprev = None
-    cachetipnode = None
+    cacherev = None
+    cachenode = None
+    cachehash = None
     if cachefile:
         try:
-            for i, line in enumerate(cachelines):
-                # Getting the first line and consuming all fnode lines.
-                if line == "\n":
-                    break
-                if i != 0:
-                    continue
-
-                line = line.split()
-                cachetiprev = int(line[0])
-                cachetipnode = bin(line[1])
+            validline = cachelines.next()
+            validline = validline.split()
+            cacherev = int(validline[0])
+            cachenode = bin(validline[1])
+            if len(validline) > 2:
+                cachehash = bin(validline[2])
         except Exception:
             # corruption of the cache, just recompute it.
             pass
@@ -303,20 +293,22 @@ def _readtagcache(ui, repo):
     # (Unchanged tip trivially means no changesets have been added.
     # But, thanks to localrepository.destroyed(), it also means none
     # have been destroyed by strip or rollback.)
-    if (cachetiprev is not None
-            and cachetiprev == tiprev
-            and cachetipnode == tipnode):
+    if (cacherev == tiprev
+            and cachenode == tipnode
+            and cachehash == scmutil.filteredhash(repo, tiprev)):
         tags = _readtags(ui, repo, cachelines, cachefile.name)
         cachefile.close()
-        return (None, None, tags, False)
+        return (None, None, None, tags, False)
     if cachefile:
         cachefile.close()               # ignore rest of file
+
+    valid = (tiprev, tipnode, scmutil.filteredhash(repo, tiprev))
 
     repoheads = repo.heads()
     # Case 2 (uncommon): empty repo; get out quickly and don't bother
     # writing an empty cache.
     if repoheads == [nullid]:
-        return ([], {}, {}, False)
+        return ([], {}, valid, {}, False)
 
     # Case 3 (uncommon): cache file missing or empty.
 
@@ -334,7 +326,7 @@ def _readtagcache(ui, repo):
     if not len(repo.file('.hgtags')):
         # No tags have ever been committed, so we can avoid a
         # potentially expensive search.
-        return (repoheads, {}, None, True)
+        return (repoheads, {}, valid, None, True)
 
     starttime = time.time()
 
@@ -359,44 +351,26 @@ def _readtagcache(ui, repo):
 
     # Caller has to iterate over all heads, but can use the filenodes in
     # cachefnode to get to each .hgtags revision quickly.
-    return (repoheads, cachefnode, None, True)
+    return (repoheads, cachefnode, valid, None, True)
 
-def _writetagcache(ui, repo, heads, tagfnode, cachetags):
+def _writetagcache(ui, repo, valid, cachetags):
     try:
         cachefile = repo.vfs(_filename(repo), 'w', atomictemp=True)
     except (OSError, IOError):
         return
 
-    ui.log('tagscache', 'writing tags cache file with %d heads and %d tags\n',
-            len(heads), len(cachetags))
+    ui.log('tagscache', 'writing tags cache file with %d tags\n',
+           len(cachetags))
 
-    realheads = repo.heads()            # for sanity checks below
-    for head in heads:
-        # temporary sanity checks; these can probably be removed
-        # once this code has been in crew for a few weeks
-        assert head in repo.changelog.nodemap, \
-               'trying to write non-existent node %s to tag cache' % short(head)
-        assert head in realheads, \
-               'trying to write non-head %s to tag cache' % short(head)
-        assert head != nullid, \
-               'trying to write nullid to tag cache'
-
-        # This can't fail because of the first assert above.  When/if we
-        # remove that assert, we might want to catch LookupError here
-        # and downgrade it to a warning.
-        rev = repo.changelog.rev(head)
-
-        fnode = tagfnode.get(head)
-        if fnode:
-            cachefile.write('%d %s %s\n' % (rev, hex(head), hex(fnode)))
-        else:
-            cachefile.write('%d %s\n' % (rev, hex(head)))
+    if valid[2]:
+        cachefile.write('%d %s %s\n' % (valid[0], hex(valid[1]), hex(valid[2])))
+    else:
+        cachefile.write('%d %s\n' % (valid[0], hex(valid[1])))
 
     # Tag names in the cache are in UTF-8 -- which is the whole reason
     # we keep them in UTF-8 throughout this module.  If we converted
     # them local encoding on input, we would lose info writing them to
     # the cache.
-    cachefile.write('\n')
     for (name, (node, hist)) in sorted(cachetags.iteritems()):
         for n in hist:
             cachefile.write("%s %s\n" % (hex(n), name))
