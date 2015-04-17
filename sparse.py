@@ -532,7 +532,7 @@ def sparse(ui, repo, *pats, **opts):
     refresh = opts.get('refresh')
     reset = opts.get('reset')
     count = sum([include, exclude, enableprofile, disableprofile, delete,
-        refresh, reset])
+                refresh, reset])
     if count > 1:
         raise util.Abort(_("too many flags specified"))
 
@@ -547,54 +547,62 @@ def sparse(ui, repo, *pats, **opts):
             ui.status(_('repo is not sparse\n'))
         return
 
-    oldsparsematch = repo.sparsematch()
+    if include or exclude or delete or reset or enableprofile or disableprofile:
+        _config(ui, repo, pats, include=include, exclude=exclude, reset=reset,
+                delete=delete, enableprofile=enableprofile,
+                disableprofile=disableprofile, force=force)
 
-    if repo.opener.exists('sparse'):
-        raw = repo.opener.read('sparse')
-        oldinclude, oldexclude, oldprofiles = repo.readsparseconfig(raw)
-    else:
-        oldinclude = set()
-        oldexclude = set()
-        oldprofiles = set()
+    if refresh:
+        try:
+            wlock = repo.wlock()
+            _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
+        finally:
+            wlock.release()
 
+def _config(ui, repo, pats, include=False, exclude=False, reset=False,
+            delete=False, enableprofile=False, disableprofile=False,
+            force=False):
+    """
+    Perform a sparse config update. Only one of the kwargs may be specified.
+    """
     wlock = repo.wlock()
     try:
         try:
+            oldsparsematch = repo.sparsematch()
+
+            if repo.opener.exists('sparse'):
+                raw = repo.opener.read('sparse')
+                oldinclude, oldexclude, oldprofiles = repo.readsparseconfig(raw)
+            else:
+                oldinclude = set()
+                oldexclude = set()
+                oldprofiles = set()
+
+            if reset:
+                newinclude = set()
+                newexclude = set()
+                newprofiles = set()
+            else:
+                newinclude = set(oldinclude)
+                newexclude = set(oldexclude)
+                newprofiles = set(oldprofiles)
+
             oldstatus = repo.status()
 
-            edit = (include or exclude or delete or reset or
-                    enableprofile or disableprofile)
-            if edit:
-                if reset:
-                    newinclude = set()
-                    newexclude = set()
-                    newprofiles = set()
-                else:
-                    newinclude = set(oldinclude)
-                    newexclude = set(oldexclude)
-                    newprofiles = set(oldprofiles)
+            if include:
+                newinclude.update(pats)
+            elif exclude:
+                newexclude.update(pats)
+            elif enableprofile:
+                newprofiles.update(pats)
+            elif disableprofile:
+                newprofiles.difference_update(pats)
+            elif delete:
+                newinclude.difference_update(pats)
+                newexclude.difference_update(pats)
 
-                    if include:
-                        newinclude.update(pats)
-
-                    if exclude:
-                        newexclude.update(pats)
-
-                    if enableprofile:
-                        newprofiles.update(pats)
-
-                    if disableprofile:
-                        newprofiles.difference_update(pats)
-
-                    if delete:
-                        newinclude.difference_update(pats)
-                        newexclude.difference_update(pats)
-
-                repo.writesparseconfig(newinclude, newexclude, newprofiles)
-                refresh = True
-
-            if refresh:
-                _refresh(ui, repo, oldstatus, oldsparsematch, force)
+            repo.writesparseconfig(newinclude, newexclude, newprofiles)
+            _refresh(ui, repo, oldstatus, oldsparsematch, force)
         except Exception:
             repo.writesparseconfig(oldinclude, oldexclude, oldprofiles)
             raise
