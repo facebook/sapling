@@ -105,9 +105,11 @@ simplest hgrc using false for merge:
   M f
   ? f.orig
 
+#if unix-permissions
+
 unexecutable file in $PATH shouldn't be found:
 
-  $ touch false
+  $ echo "echo fail" > false
   $ hg up -qC 1
   $ PATH="`pwd`:$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
@@ -117,6 +119,8 @@ unexecutable file in $PATH shouldn't be found:
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ rm false
+
+#endif
 
 executable directory in $PATH shouldn't be found:
 
