@@ -442,9 +442,9 @@ def _wraprepo(ui, repo):
 
         def writesparseconfig(self, include, exclude, profiles):
             raw = '%s[include]\n%s\n[exclude]\n%s\n' % (
-                ''.join(['%%include %s\n' % p for p in profiles]),
-                '\n'.join(include),
-                '\n'.join(exclude))
+                ''.join(['%%include %s\n' % p for p in sorted(profiles)]),
+                '\n'.join(sorted(include)),
+                '\n'.join(sorted(exclude)))
             self.opener.write("sparse", raw)
 
         def addtemporaryincludes(self, files):

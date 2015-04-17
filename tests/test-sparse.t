@@ -295,8 +295,8 @@ Test that add -s adds dirs to sparse profile
   ? add/bar
   $ hg sparse
   [include]
-  empty
   add
+  empty
   [exclude]
   
   
@@ -307,8 +307,8 @@ Test that add -s adds dirs to sparse profile
   A add/foo
   $ hg sparse
   [include]
-  empty
   add
+  empty
   [exclude]
   
   
