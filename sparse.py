@@ -8,7 +8,7 @@
 """allow sparse checkouts of the working directory
 """
 
-from mercurial import util, cmdutil, extensions, context, dirstate
+from mercurial import util, cmdutil, extensions, context, dirstate, commands
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -22,6 +22,9 @@ testedwith = 'internal'
 def uisetup(ui):
     _setupupdates(ui)
     _setupcommit(ui)
+
+def extsetup(ui):
+    _setuplog(ui)
 
 def reposetup(ui, repo):
     if not util.safehasattr(repo, 'dirstate'):
@@ -178,6 +181,22 @@ def _setupcommit(ui):
 
     extensions.wrapfunction(context.committablectx, 'markcommitted',
         _refreshoncommit)
+
+def _setuplog(ui):
+    entry = commands.table['^log|history']
+    entry[1].append(('', 'sparse', None,
+        "limit to commits affecting the sparse checkout"))
+
+    def _logrevs(orig, repo, opts):
+        revs = orig(repo, opts)
+        if opts.get('sparse'):
+            sparsematch = repo.sparsematch()
+            def ctxmatch(rev):
+                ctx = repo[rev]
+                return util.any(f for f in ctx.files() if sparsematch(f))
+            revs = revs.filter(ctxmatch)
+        return revs
+    extensions.wrapfunction(cmdutil, '_logrevs', _logrevs)
 
 def _setupdirstate(ui, repo):
     """Modify the dirstate to prevent stat'ing excluded files,
