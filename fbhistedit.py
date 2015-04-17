@@ -31,38 +31,62 @@ class stop(histedit.histeditaction):
               'When you are finished, run hg histedit --continue to resume') %
             parentctx)
 
-def execute(ui, state, cmd, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    hg.update(repo, ctxnode)
+class execute(histedit.histeditaction):
+    def __init__(self, state, command):
+        self.state = state
+        self.repo = state.repo
+        self.command = command
 
-    # release locks so the programm can call hg and then relock.
-    lock.release(state.lock, state.wlock)
+    @classmethod
+    def fromrule(cls, state, rule):
+        """Parses the given rule, returning an instance of the histeditaction.
+        """
+        command = rule
+        return cls(state, command)
 
-    try:
-        ctx = repo[ctxnode]
-        rc = util.system(cmd, environ={'HGNODE': ctx.hex()}, cwd=repo.root)
-    except OSError as os:
-        raise error.InterventionRequired(
-            _("Cannot execute command '%s': %s") % (cmd, os))
-    finally:
-        # relock the repository
-        state.wlock = repo.wlock()
-        state.lock = repo.lock()
-        repo.invalidate()
-        repo.invalidatedirstate()
+    def run(self):
+        state = self.state
+        repo, ctxnode = state.repo, state.parentctxnode
+        hg.update(repo, ctxnode)
 
-    if rc != 0:
-        raise error.InterventionRequired(
-            _("Command '%s' failed with exit status %d") % (cmd, rc))
+        # release locks so the programm can call hg and then relock.
+        lock.release(state.lock, state.wlock)
 
-    if util.any(repo.status()[:4]):
-        raise error.InterventionRequired(
-            _('Fix up the change and run hg histedit --continue'))
+        try:
+            ctx = repo[ctxnode]
+            rc = util.system(self.command, environ={'HGNODE': ctx.hex()},
+                             cwd=repo.root)
+        except OSError as os:
+            raise error.InterventionRequired(
+                _("Cannot execute command '%s': %s") % (cmd, os))
+        finally:
+            # relock the repository
+            state.wlock = repo.wlock()
+            state.lock = repo.lock()
+            repo.invalidate()
+            repo.invalidatedirstate()
 
-    newctx = repo['.']
-    if ctxnode != newctx.node():
-        return newctx, [(ctxnode, (newctx.node(),))]
-    return newctx, []
+        if rc != 0:
+            raise error.InterventionRequired(
+                _("Command '%s' failed with exit status %d") %
+                (self.command, rc))
+
+        m, a, r, d = self.repo.status()[:4]
+        if m or a or r or d:
+            self.continuedirty()
+        return self.continueclean()
+
+    def continuedirty(self):
+        raise util.Abort(_('working copy has pending changes'),
+            hint=_('amend, commit, or revert them and run histedit '
+                '--continue, or abort with histedit --abort'))
+
+    def continueclean(self):
+        parentctxnode = self.state.parentctxnode
+        newctx = self.repo['.']
+        if newctx.node() != parentctxnode:
+            return newctx, [(parentctxnode, (newctx.node(),))]
+        return newctx, []
 
 # HACK:
 # The following function verifyrules and bootstrap continue are copied from
@@ -105,21 +129,6 @@ def verifyrules(orig, rules, repo, ctxs):
                          hint=_('do you want to use the drop action?'))
     return parsed
 
-def bootstrapcontinue(orig, ui, state, opts):
-    repo, parentctxnode = state.repo, state.parentctxnode
-    if state.rules[0][0] in ['x', 'exec']:
-        m, a, r, d = repo.status()[:4]
-        if m or a or r or d:
-            raise util.Abort(_('working copy has pending changes'),
-                hint=_('amend, commit, or revert them and run histedit '
-                    '--continue, or abort with histedit --abort'))
-
-        state.rules.pop(0)
-        state.parentctxnode = parentctxnode
-        return state
-    else:
-        return orig(ui, state, opts)
-
 def extsetup(ui):
     histedit.editcomment = _("""# Edit history between %s and %s
 #
@@ -141,5 +150,4 @@ def extsetup(ui):
     histedit.actiontable['x'] = execute
     histedit.actiontable['exec'] = execute
 
-    extensions.wrapfunction(histedit, 'bootstrapcontinue', bootstrapcontinue)
     extensions.wrapfunction(histedit, 'verifyrules', verifyrules)
