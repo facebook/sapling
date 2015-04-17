@@ -206,8 +206,10 @@ Test that adding a directory doesn't require case matching (issue4578)
   $ hg revert -r '.^' capsdir1/capsdir
   reverting CapsDir1/CapsDir/SubDir/Def.txt (glob)
 
+The conditional tests above mean the hash on the diff line differs on Windows
+and OS X
   $ hg diff capsdir1/capsdir
-  diff -r 5112e00e781d CapsDir1/CapsDir/SubDir/Def.txt
+  diff -r * CapsDir1/CapsDir/SubDir/Def.txt (glob)
   --- a/CapsDir1/CapsDir/SubDir/Def.txt	Thu Jan 01 00:00:00 1970 +0000
   +++ b/CapsDir1/CapsDir/SubDir/Def.txt	* +0000 (glob)
   @@ -1,1 +1,1 @@
