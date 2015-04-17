@@ -100,7 +100,7 @@ $4 = expected result
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@e300d1c794ec+ other rev@4ce40f5aca24 ancestor rev@924404dff337
-  launching merge tool: python ../merge $TESTTMP/t/t/rev '*' '*' (glob)
+  launching merge tool: python ../merge $TESTTMP/t/t/rev * * (glob)
   merge tool returned: 0
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
