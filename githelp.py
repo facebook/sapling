@@ -207,6 +207,34 @@ def branch(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def ispath(repo, string):
+    """
+    The first argument to git checkout can either be a revision or a path. Let's
+    generally assume it's a revision, unless it's obviously a path. There are
+    too many ways to spell revisions in git for us to reasonably catch all of
+    them, so let's be conservative.
+    """
+    if string in repo:
+        # if it's definitely a revision let's not even check if a file of the
+        # same name exists.
+        return False
+
+    cwd = repo.getcwd()
+    if cwd == '':
+        repopath = string
+    else:
+        repopath = cwd + '/' + string
+
+    exists = repo.wvfs.exists(repopath)
+    if exists:
+        return True
+
+    manifest = repo['.'].manifest()
+
+    didexist = (repopath in manifest) or manifest.hasdir(repopath)
+
+    return didexist
+
 def checkout(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('b', 'branch', '', ''),
@@ -220,6 +248,13 @@ def checkout(ui, repo, *args, **kwargs):
         args = args[:sepindex]
 
     args, opts = parseoptions(ui, cmdoptions, args)
+
+    rev = None
+    if args and ispath(repo, args[0]):
+        paths = args + paths
+    elif args:
+        rev = args[0]
+        paths = args[1:] + paths
 
     cmd = Command('update')
 
@@ -235,19 +270,17 @@ def checkout(ui, repo, *args, **kwargs):
             bookcmd = Command('bookmark')
             bookcmd.append(opts.get('branch'))
             cmd = cmd & bookcmd
-    elif len(args) > 1 or len(paths) > 0:
+    # if there is any path argument supplied, use revert instead of update
+    elif len(paths) > 0:
         ui.status("note: use --no-backup to avoid creating .orig files\n\n")
         cmd = Command('revert')
-        if len(args) > 0:
-            # first arg is a revision, the rest are paths
-            cmd['-r'] = args[0]
-            cmd.extend(args[1:])
-        if len(paths) > 0:
-            cmd.extend(paths)
-    elif len(args) == 0:
-        raise GitUnknownError("a commit must be specified")
+        if rev:
+            cmd['-r'] = rev
+        cmd.extend(paths)
+    elif rev:
+        cmd.append(rev)
     else:
-        cmd.append(args[0])
+        raise GitUnknownError("a commit must be specified")
 
     ui.status(cmd, "\n")
 
