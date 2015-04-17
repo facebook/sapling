@@ -367,7 +367,6 @@ Errors writing to .hgtags fnodes cache are silently ignored
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
   $ chmod a+w .hg/cache/hgtagsfnodes1
-#endif
 
   $ rm -f .hg/cache/tags2-visible
   $ hg tags
@@ -384,7 +383,18 @@ Errors writing to .hgtags fnodes cache are silently ignored
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=168
 
+  $ hg -q --config extensions.strip= strip -r 6 --no-backup
+#endif
+
 Stripping doesn't truncate the tags cache until new data is available
+
+  $ rm -f .hg/cache/hgtagsfnodes1 .hg/cache/tags2-visible
+  $ hg tags  
+  tip                                5:8dbfe60eff30
+  bar                                1:78391a272241
+
+  $ f --size .hg/cache/hgtagsfnodes1
+  .hg/cache/hgtagsfnodes1: size=144
 
   $ hg -q --config extensions.strip= strip -r 5 --no-backup
   $ hg tags
@@ -392,13 +402,13 @@ Stripping doesn't truncate the tags cache until new data is available
   bar                                1:78391a272241
 
   $ hg blackbox -l 4
-  1970/01/01 00:00:00 bob> tags
-  1970/01/01 00:00:00 bob> 3/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob> 2/3 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
 
   $ f --size .hg/cache/hgtagsfnodes1
-  .hg/cache/hgtagsfnodes1: size=168
+  .hg/cache/hgtagsfnodes1: size=120
 
   $ echo dummy > foo
   $ hg commit -m throwaway3
