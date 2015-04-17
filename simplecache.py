@@ -103,9 +103,9 @@ class pathcopiesserializer(object):
 
 def pathcopiesui(ui):
     version = ui.config('simplecache', 'version', default='1')
-    def pathcopies(orig, x, y):
-        func = lambda: orig(x, y)
-        if x._node is not None and y._node is not None:
+    def pathcopies(orig, x, y, match=None):
+        func = lambda: orig(x, y, match=match)
+        if x._node is not None and y._node is not None and not match:
             key = 'cca.hg.pathcopies:%s:%s:v%s' % (
                     node.hex(x._node), node.hex(y._node), version)
             return _mcmemoize(func, key, pathcopiesserializer, ui)
