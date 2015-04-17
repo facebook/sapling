@@ -491,3 +491,17 @@ test for --json
   } (no-eol)
 
 #endif
+
+backslash on end of line with glob matching is handled properly
+
+  $ cat > test-glob-backslash.t << EOF
+  >   $ echo 'foo bar \\'
+  >   foo * \ (glob)
+  > EOF
+
+  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-glob-backslash.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+  $ rm -f test-glob-backslash.t
+
