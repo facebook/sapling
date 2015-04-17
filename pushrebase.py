@@ -41,10 +41,11 @@ def extsetup(ui):
 
     wrapfunction(discovery, 'checkheads', _checkheads)
 
-    origpushkeyhandler = bundle2.parthandlermapping['b2x:pushkey']
+    origpushkeyhandler = bundle2.parthandlermapping['pushkey']
     newpushkeyhandler = lambda *args, **kwargs: \
         bundle2pushkey(origpushkeyhandler, *args, **kwargs)
     newpushkeyhandler.params = origpushkeyhandler.params
+    bundle2.parthandlermapping['pushkey'] = newpushkeyhandler
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
 def validaterevset(repo, revset):
@@ -221,8 +222,9 @@ def _getrevs(bundle, onto):
 
         # Is there a more efficient way to do this check?
         files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
-        commonmanifest = tail.p1().manifest()._intersectfiles(files)
-        ontomanifest = onto.manifest()._intersectfiles(files)
+        filematcher = scmutil.matchfiles(tail.repo(), files)
+        commonmanifest = tail.p1().manifest().matches(filematcher)
+        ontomanifest = onto.manifest().matches(filematcher)
         conflicts = ontomanifest.diff(commonmanifest).keys()
         if conflicts:
             raise util.Abort(_('conflicting changes in %r') % conflicts)
@@ -255,7 +257,7 @@ def _buildobsolete(replacements, oldrepo, newrepo):
 
 def _addpushbackchangegroup(repo, reply, outgoing):
     '''adds changegroup part to reply containing revs from outgoing.missing'''
-    cgversions = set(reply.capabilities.get('b2x:changegroup'))
+    cgversions = set(reply.capabilities.get('changegroup'))
     if not cgversions:
         cgversions.add('01')
     version = max(cgversions & set(changegroup.packermap.keys()))
@@ -265,7 +267,7 @@ def _addpushbackchangegroup(repo, reply, outgoing):
                                             outgoing,
                                             version = version)
 
-    cgpart = reply.newpart('B2X:CHANGEGROUP', data = cg)
+    cgpart = reply.newpart('CHANGEGROUP', data = cg)
     if version != '01':
         cgpart.addparam('version', version)
 
@@ -283,7 +285,7 @@ def _addpushbackparts(op, replacements):
     '''adds pushback to reply if supported by the client'''
     if (op.records[commonheadsparttype]
         and op.reply
-        and 'b2x:pushback' in op.reply.capabilities):
+        and 'pushback' in op.reply.capabilities):
         outgoing = discovery.outgoing(op.repo.changelog,
                                       op.records[commonheadsparttype],
                                       [new for old, new in replacements.items()
