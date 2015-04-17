@@ -80,6 +80,7 @@ Adding an excluded file should fail
 
   $ hg add hide3
   abort: cannot add 'hide3' - it is outside the sparse checkout
+  (include file with `hg sparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
   [255]
 
 Verify deleting sparseness while a file has changes fails
@@ -269,3 +270,45 @@ Test that hgwatchmans ignore hash check updates when .hgignore changes
   $ hg status --config extensions.hgwatchman=
   ? dir1/dir2/file
   ? ignoredir2/file
+
+Test that add -s adds dirs to sparse profile
+
+  $ hg sparse --reset
+  $ hg sparse --include empty
+  $ hg sparse
+  [include]
+  empty
+  [exclude]
+  
+  
+
+  $ mkdir add
+  $ touch add/foo
+  $ touch add/bar
+  $ hg add add/foo
+  abort: cannot add 'add/foo' - it is outside the sparse checkout
+  (include file with `hg sparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
+  [255]
+  $ hg add -s add/foo
+  $ hg st
+  A add/foo
+  ? add/bar
+  $ hg sparse
+  [include]
+  empty
+  add
+  [exclude]
+  
+  
+  $ hg add -s add/*
+  add/foo already tracked!
+  $ hg st
+  A add/bar
+  A add/foo
+  $ hg sparse
+  [include]
+  empty
+  add
+  [exclude]
+  
+  

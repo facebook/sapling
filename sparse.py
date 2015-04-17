@@ -25,6 +25,7 @@ def uisetup(ui):
 
 def extsetup(ui):
     _setuplog(ui)
+    _setupadd(ui)
     # if hgwatchman is installed, tell it to use our hash function
     try:
         hgwatchman = extensions.find('hgwatchman')
@@ -206,6 +207,22 @@ def _setuplog(ui):
         return revs
     extensions.wrapfunction(cmdutil, '_logrevs', _logrevs)
 
+def _setupadd(ui):
+    entry = commands.table['^add']
+    entry[1].append(('s', 'sparse', None,
+                    'also include directories of added files in sparse config'))
+
+    def _add(orig, ui, repo, *pats, **opts):
+        if opts.get('sparse'):
+            dirs = set()
+            for pat in pats:
+                dirname, basename = util.split(pat)
+                dirs.add(dirname)
+            _config(ui, repo, list(dirs), include=True)
+        orig(ui, repo, *pats, **opts)
+
+    extensions.wrapcommand(commands.table, 'add', _add)
+
 def _setupdirstate(ui, repo):
     """Modify the dirstate to prevent stat'ing excluded files,
     and to prevent modifications to files outside the checkout.
@@ -257,6 +274,8 @@ def _setupdirstate(ui, repo):
 
     # Prevent adding files that are outside the sparse checkout
     editfuncs = ['normal', 'add', 'normallookup', 'copy', 'remove', 'merge']
+    hint = _('include file with `hg sparse --include <pattern>` or use ' +
+             '`hg add -s <file>` to include file directory while adding')
     for func in editfuncs:
         def _wrapper(orig, self, *args):
             repo = self.repo
@@ -265,7 +284,7 @@ def _setupdirstate(ui, repo):
             for f in args:
                 if not sparsematch(f) and f not in dirstate:
                     raise util.Abort(_("cannot add '%s' - it is outside the " +
-                        "sparse checkout") % f)
+                                     "sparse checkout") % f, hint=hint)
             return orig(self, *args)
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
 

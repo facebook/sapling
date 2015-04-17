@@ -231,3 +231,5 @@ Test checking out a commit that does not contain the sparse profile
   data.py
   index.html
   readme.txt
+  $ hg sparse --disable-profile backend.sparse
+  warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
