@@ -246,7 +246,8 @@ class histeditstate(object):
         fp.write('%s\n' % self.keep)
         fp.write('%d\n' % len(self.rules))
         for rule in self.rules:
-            fp.write('%s%s\n' % (rule[1], rule[0]))
+            fp.write('%s\n' % rule[0]) # action
+            fp.write('%s\n' % rule[1]) # remainder
         fp.write('%d\n' % len(self.replacements))
         for replacement in self.replacements:
             fp.write('%s%s\n' % (node.hex(replacement[0]), ''.join(node.hex(r)
@@ -276,11 +277,11 @@ class histeditstate(object):
         rulelen = int(lines[index])
         index += 1
         for i in xrange(rulelen):
-            rule = lines[index]
-            rulehash = rule[:40]
-            ruleaction = rule[40:]
-            rules.append((ruleaction, rulehash))
+            ruleaction = lines[index]
             index += 1
+            rule = lines[index]
+            index += 1
+            rules.append((ruleaction, rule))
 
         # Replacements
         replacements = []
