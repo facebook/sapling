@@ -114,7 +114,7 @@ Repeat with cold tag cache:
   0010: ff ff ff ff ff ff ff ff b9 15 46 36 26 b7 b4 a7 |..........F6&...|
   0020: 73 e0 9e e3 c5 2f 51 0e 19 e0 5e 1f f9 66 d8 59 |s..../Q...^..f.Y|
 
-And again, but now unable to write tag cache:
+And again, but now unable to write tag cache or lock file:
 
 #if unix-permissions
   $ rm -f .hg/cache/tags2-visible .hg/cache/hgtagsfnodes1
@@ -122,6 +122,11 @@ And again, but now unable to write tag cache:
   $ hg identify
   b9154636be93 tip
   $ chmod 755 .hg/cache
+
+  $ chmod 555 .hg
+  $ hg identify
+  b9154636be93 tip
+  $ chmod 755 .hg
 #endif
 
 Tag cache debug info written to blackbox log
@@ -144,7 +149,7 @@ Failure to acquire lock results in no write
   b9154636be93 tip
   $ hg blackbox -l 5
   1970/01/01 00:00:00 bob> identify
-  1970/01/01 00:00:00 bob> not writing .hg/cache/hgtagsfnodes1 because lock held
+  1970/01/01 00:00:00 bob> not writing .hg/cache/hgtagsfnodes1 because lock cannot be acquired
   1970/01/01 00:00:00 bob> 0/1 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob> identify exited 0 after * seconds (glob)

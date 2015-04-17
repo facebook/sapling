@@ -502,9 +502,9 @@ class hgtagsfnodescache(object):
 
         try:
             lock = repo.wlock(wait=False)
-        except error.LockHeld:
+        except error.LockError:
             repo.ui.log('tagscache',
-                        'not writing .hg/%s because lock held\n' %
+                        'not writing .hg/%s because lock cannot be acquired\n' %
                         (_fnodescachefile))
             return
 
