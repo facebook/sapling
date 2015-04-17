@@ -77,7 +77,7 @@ def gitgetmeta(ui, repo, source='default'):
     other = hg.peer(repo, {}, source)
     ui.status(_('getting git metadata from %s\n') %
               util.hidepassword(source))
-    kwargs = {'bundlecaps': set(['HG2Y'])}
+    kwargs = {'bundlecaps': set(['HG20'])}
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
     kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
     # this would ideally not be in the bundlecaps at all, but adding new kwargs
@@ -109,12 +109,12 @@ def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
                     repo.ui.warn(_("warning: unable to read %s: %s\n") %
                                  (fname, e))
                 continue
-            part = bundle2.bundlepart('b2x:fb:gitmeta',
+            part = bundle2.bundlepart('fb:gitmeta',
                                       [('filename', fname)],
                                       data=f.read())
             bundler.addpart(part)
 
-@bundle2.parthandler('b2x:fb:gitmeta', ('filename',))
+@bundle2.parthandler('fb:gitmeta', ('filename',))
 def bundle2getgitmeta(op, part):
     '''unbundle a bundle2 containing git metadata on the client'''
     params = dict(part.mandatoryparams)
