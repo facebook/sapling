@@ -84,8 +84,8 @@ def overridereadbundle(orig, ui, fh, fname, vfs=None):
             return changegroup.cg1unpacker(fh, alg)
         else:
             return changegroup.cg2unpacker(fh, alg)
-    elif version == '2Y':
-        return bundle2.unbundle20(ui, fh, header=magic + version)
+    elif version == '20':
+        return bundle2.unbundle20(ui, fh)
     else:
         raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
 

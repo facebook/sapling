@@ -148,7 +148,7 @@ strip should produce bundle2
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-1954568c-backup.hg (glob)
   $ hg debugbundle .hg/strip-backup/0e067c57feba-1954568c-backup.hg
   Stream params: {}
-  b2x:changegroup -- "{'version': '02'}"
+  changegroup -- "{'version': '02'}"
       0e067c57feba1a5694ca4844f05588bb1bf82342
       b2a74d690cb63a443d20de84bdc9eb5a7ddbedac
   $ hg incoming .hg/strip-backup/0e067c57feba-1954568c-backup.hg
