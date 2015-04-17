@@ -46,15 +46,6 @@ Test basic functions
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg amend
-  
-      +----------------------------------------+
-      | Please read the Dex article on stacked |
-      | diff workflows to understand how the   |
-      | fbamend extension works:               |
-      |                                        |
-      |      https://fburl.com/hgstacks        |
-      +----------------------------------------+
-  
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg amend --fixup
@@ -83,19 +74,19 @@ Test that current bookmark is maintained
   $ hg bookmarks
    * bm                        1:7635008c16e1
 
+Set up education
+
+  $ echo "[fbamend]" >> $HGRCPATH
+  $ echo "education = user education" >> $HGRCPATH
+  $ echo "    second line" >> $HGRCPATH
+  $ echo "" >> $HGRCPATH
+
 Test that bookmarked re-amends work well
 
   $ echo a >> a
   $ hg amend
-  
-      +----------------------------------------+
-      | Please read the Dex article on stacked |
-      | diff workflows to understand how the   |
-      | fbamend extension works:               |
-      |                                        |
-      |      https://fburl.com/hgstacks        |
-      +----------------------------------------+
-  
+  user education
+  second line
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
@@ -139,15 +130,8 @@ Test that unbookmarked re-amends work well
   $ hg boo -d bm
   $ echo a >> a
   $ hg amend
-  
-      +----------------------------------------+
-      | Please read the Dex article on stacked |
-      | diff workflows to understand how the   |
-      | fbamend extension works:               |
-      |                                        |
-      |      https://fburl.com/hgstacks        |
-      +----------------------------------------+
-  
+  user education
+  second line
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'

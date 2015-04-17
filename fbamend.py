@@ -214,11 +214,6 @@ def _usereducation(ui):
     """
     You can print out a message to the user here
     """
-    ui.warn("""
-    +----------------------------------------+
-    | Please read the Dex article on stacked |
-    | diff workflows to understand how the   |
-    | fbamend extension works:               |
-    |                                        |
-    |      https://fburl.com/hgstacks        |
-    +----------------------------------------+\n\n""")
+    education = ui.config('fbamend', 'education')
+    if education:
+        ui.warn(education + "\n")
