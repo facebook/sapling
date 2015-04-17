@@ -18,18 +18,16 @@ For more information and instructions, see :hg:`help git`
 '''
 
 from bisect import insort
-import inspect
 import os
 
 from mercurial import bundlerepo
 from mercurial import cmdutil
-from mercurial import commands
 from mercurial import demandimport
 from mercurial import dirstate
 from mercurial import discovery
 try:
     from mercurial import exchange
-    exchange.push # existed in first iteration of this file
+    exchange.push  # existed in first iteration of this file
 except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
@@ -43,16 +41,17 @@ from mercurial import revset
 from mercurial import scmutil
 from mercurial import templatekw
 from mercurial import util as hgutil
-from mercurial import url
 from mercurial.i18n import _
+
+import gitrepo
+import hgrepo
+import util
+from git_handler import GitHandler
+import verify
 
 demandimport.ignore.extend([
     'collections',
-    ])
-
-import gitrepo, hgrepo, util
-from git_handler import GitHandler
-import verify
+])
 
 testedwith = '2.8.2 3.0.1 3.1 3.2.2 3.3'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
@@ -119,7 +118,7 @@ def extsetup(ui):
     })
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
     entry = (['git'], _("Working with Git Repositories"),
-        lambda: open(os.path.join(helpdir, 'git.rst')).read())
+             lambda: open(os.path.join(helpdir, 'git.rst')).read())
     insort(help.helptable, entry)
 
 def reposetup(ui, repo):
@@ -182,13 +181,13 @@ def findcommonoutgoing(orig, repo, other, *args, **kwargs):
         kw = {}
         kw.update(kwargs)
         for val, k in zip(args,
-                ('onlyheads', 'force', 'commoninc', 'portable')):
+                          ('onlyheads', 'force', 'commoninc', 'portable')):
             kw[k] = val
         force = kw.get('force', False)
         commoninc = kw.get('commoninc', None)
         if commoninc is None:
-            commoninc = discovery.findcommonincoming(repo, other,
-                heads=heads, force=force)
+            commoninc = discovery.findcommonincoming(repo, other, heads=heads,
+                                                     force=force)
             kw['commoninc'] = commoninc
         return orig(repo, other, **kw)
     return orig(repo, other, *args, **kwargs)
@@ -267,7 +266,7 @@ def revset_fromgit(repo, subset, x):
     '''``fromgit()``
     Select changesets that originate from Git.
     '''
-    args = revset.getargs(x, 0, 0, "fromgit takes no arguments")
+    revset.getargs(x, 0, 0, "fromgit takes no arguments")
     git = repo.githandler
     node = repo.changelog.node
     return [r for r in subset if git.map_git_get(hex(node(r))) is not None]
@@ -281,6 +280,7 @@ def revset_gitnode(repo, subset, x):
                            "the argument to gitnode() must be a hash")
     git = repo.githandler
     node = repo.changelog.node
+
     def matches(r):
         gitnode = git.map_git_get(hex(node(r)))
         if gitnode is None:
