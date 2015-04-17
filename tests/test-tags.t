@@ -389,7 +389,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
 Stripping doesn't truncate the tags cache until new data is available
 
   $ rm -f .hg/cache/hgtagsfnodes1 .hg/cache/tags2-visible
-  $ hg tags  
+  $ hg tags
   tip                                5:8dbfe60eff30
   bar                                1:78391a272241
 
