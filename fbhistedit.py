@@ -23,24 +23,13 @@ command = cmdutil.command(cmdtable)
 
 testedwith = 'internal'
 
-def stop(ui, state, ha, opts):
-    repo, ctxnode = state.repo, state.parentctxnode
-    oldctx = repo[ha]
-
-    hg.update(repo, ctxnode)
-    stats = histedit.applychanges(ui, repo, oldctx, opts)
-    if stats and stats[3] > 0:
+class stop(histedit.histeditaction):
+    def run(self):
+        parentctx, replacements = super(stop, self).run()
         raise error.InterventionRequired(
-            _('Fix up the change and run hg histedit --continue'))
-
-    commit = histedit.commitfuncfor(repo, oldctx)
-    new = commit(text=oldctx.description(), user=oldctx.user(),
-            date=oldctx.date(), extra=oldctx.extra())
-
-    raise error.InterventionRequired(
-        _('Changes commited as %s. You may amend the commit now.\n'
-          'When you are finished, run hg histedit --continue to resume') %
-        repo[new])
+            _('Changes commited as %s. You may amend the commit now.\n'
+              'When you are finished, run hg histedit --continue to resume') %
+            parentctx)
 
 def execute(ui, state, cmd, opts):
     repo, ctxnode = state.repo, state.parentctxnode
@@ -85,7 +74,7 @@ def verifyrules(orig, rules, repo, ctxs):
     or a rule on a changeset outside of the user-given range.
     """
     parsed = []
-    expected = set(str(c) for c in ctxs)
+    expected = set(c.hex() for c in ctxs)
     seen = set()
     for r in rules:
         if ' ' not in r:
@@ -97,14 +86,15 @@ def verifyrules(orig, rules, repo, ctxs):
         else:
             ha = rest.strip().split(' ', 1)[0]
             try:
-                ha = str(repo[ha])  # ensure its a short hash
+                ha = repo[ha].hex()
             except error.RepoError:
-                raise util.Abort(_('unknown changeset %s listed') % ha)
+                raise util.Abort(_('unknown changeset %s listed') % ha[:12])
             if ha not in expected:
                 raise util.Abort(
                     _('may not use changesets other than the ones listed'))
             if ha in seen:
-                raise util.Abort(_('duplicated command for changeset %s') % ha)
+                raise util.Abort(_('duplicated command for changeset %s') %
+                        ha[:12])
             seen.add(ha)
             if action not in histedit.actiontable:
                 raise util.Abort(_('unknown action "%s"') % action)
