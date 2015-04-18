@@ -806,6 +806,22 @@ class basefilectx(object):
         return self._adjustlinkrev(self._path, self._filelog, self._filenode,
                                    self.rev(), inclusive=True)
 
+    def _parentfilectx(self, path, fileid, filelog):
+        """create parent filectx keeping ancestry info for _adjustlinkrev()"""
+        fctx = filectx(self._repo, path, fileid=fileid, filelog=filelog)
+        if '_changeid' in vars(self) or '_changectx' in vars(self):
+            # If self is associated with a changeset (probably explicitly
+            # fed), ensure the created filectx is associated with a
+            # changeset that is an ancestor of self.changectx.
+            # This lets us later use _adjustlinkrev to get a correct link.
+            fctx._descendantrev = self.rev()
+            fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
+        elif '_descendantrev' in vars(self):
+            # Otherwise propagate _descendantrev if we have one associated.
+            fctx._descendantrev = self._descendantrev
+            fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
+        return fctx
+
     def parents(self):
         _path = self._path
         fl = self._filelog
@@ -824,22 +840,7 @@ class basefilectx(object):
             # first nullid parent with rename information.
             pl.insert(0, (r[0], r[1], self._repo.file(r[0])))
 
-        ret = []
-        for path, fnode, l in pl:
-            fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
-            if '_changeid' in vars(self) or '_changectx' in vars(self):
-                # If self is associated with a changeset (probably explicitly
-                # fed), ensure the created filectx is associated with a
-                # changeset that is an ancestor of self.changectx.
-                # This lets us later use _adjustlinkrev to get a correct link.
-                fctx._descendantrev = self.rev()
-                fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
-            elif '_descendantrev' in vars(self):
-                # Otherwise propagate _descendantrev if we have one associated.
-                fctx._descendantrev = self._descendantrev
-                fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
-            ret.append(fctx)
-        return ret
+        return [self._parentfilectx(path, fnode, l) for path, fnode, l in pl]
 
     def p1(self):
         return self.parents()[0]
