@@ -72,6 +72,20 @@ Test log
    content1_content2_content3-tracked |  1 +
    3 files changed, 3 insertions(+), 0 deletions(-)
   
+Largefiles doesn't crash
+  $ hg log -T '{rev}\n' --stat 'set:modified()' --config extensions.largefiles=
+  1
+   content1_content2_content1-tracked |  2 +-
+   content1_content2_content3-tracked |  2 +-
+   missing_content2_content3-tracked  |  1 +
+   3 files changed, 3 insertions(+), 2 deletions(-)
+  
+  0
+   content1_content1_content3-tracked |  1 +
+   content1_content2_content1-tracked |  1 +
+   content1_content2_content3-tracked |  1 +
+   3 files changed, 3 insertions(+), 0 deletions(-)
+  
   $ hg log -T '{rev}\n' --stat 'set:added()'
   1
    content1_missing_content1-tracked |  1 -

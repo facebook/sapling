@@ -305,6 +305,9 @@ def overridelog(orig, ui, repo, *pats, **opts):
         pats = set(p)
 
         def fixpats(pat, tostandin=lfutil.standin):
+            if pat.startswith('set:'):
+                return pat
+
             kindpat = match_._patsplit(pat, None)
 
             if kindpat[0] is not None:

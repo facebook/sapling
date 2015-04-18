@@ -37,6 +37,13 @@ Test copies and moves from a directory other than root (issue3516)
   A dira/dirb/largefile
   $ cd dira
   $ hg cp dirb/largefile foo/largefile
+
+TODO: Ideally, this should mention the largefile, not the standin
+  $ hg log -T '{rev}\n' --stat 'set:clean()'
+  0
+   .hglf/dira/dirb/largefile |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
   $ hg ci -m "deep copy"
   Invoking status precommit hook
   A dira/foo/largefile
