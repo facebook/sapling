@@ -1618,7 +1618,7 @@ class committablefilectx(basefilectx):
         for pc in pcl[1:]:
             pl.append((path, filenode(pc, path), fl))
 
-        return [filectx(self._repo, p, fileid=n, filelog=l)
+        return [self._parentfilectx(p, fileid=n, filelog=l)
                 for p, n, l in pl if n != nullid]
 
     def children(self):

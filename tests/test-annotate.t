@@ -556,6 +556,7 @@ create history with a filerev whose linkrev points to another branch
   grafting 1:fd27c222e3e6 "contentB"
   $ echo C >> a
   $ hg commit -m 'contentC'
+  $ echo W >> a
   $ hg log -G
   @  changeset:   4:072f1e8df249
   |  tag:         tip
@@ -591,6 +592,12 @@ Annotate should list ancestor of starting revision only
   0: A
   3: B
   4: C
+
+  $ hg annotate a -r 'wdir()'
+  0 : A
+  3 : B
+  4 : C
+  4+: W
 
 Even when the starting revision is the linkrev-shadowed one:
 
