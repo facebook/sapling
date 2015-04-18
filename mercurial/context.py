@@ -906,8 +906,15 @@ class basefilectx(object):
         introrev = self.introrev()
         if self.rev() != introrev:
             base = self.filectx(self.filenode(), changeid=introrev)
-        if introrev and getattr(base, '_ancestrycontext', None) is None:
-            ac = self._repo.changelog.ancestors([introrev], inclusive=True)
+        if getattr(base, '_ancestrycontext', None) is None:
+            cl = self._repo.changelog
+            if introrev is None:
+                # wctx is not inclusive, but works because _ancestrycontext
+                # is used to test filelog revisions
+                ac = cl.ancestors([p.rev() for p in base.parents()],
+                                  inclusive=True)
+            else:
+                ac = cl.ancestors([introrev], inclusive=True)
             base._ancestrycontext = ac
 
         # This algorithm would prefer to be recursive, but Python is a
