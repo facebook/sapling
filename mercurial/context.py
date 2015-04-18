@@ -826,21 +826,18 @@ class basefilectx(object):
 
         ret = []
         for path, fnode, l in pl:
+            fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
             if '_changeid' in vars(self) or '_changectx' in vars(self):
                 # If self is associated with a changeset (probably explicitly
                 # fed), ensure the created filectx is associated with a
                 # changeset that is an ancestor of self.changectx.
                 # This lets us later use _adjustlinkrev to get a correct link.
-                fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
                 fctx._descendantrev = self.rev()
                 fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
             elif '_descendantrev' in vars(self):
                 # Otherwise propagate _descendantrev if we have one associated.
-                fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
                 fctx._descendantrev = self._descendantrev
                 fctx._ancestrycontext = getattr(self, '_ancestrycontext', None)
-            else:
-                fctx = filectx(self._repo, path, fileid=fnode, filelog=l)
             ret.append(fctx)
         return ret
 
