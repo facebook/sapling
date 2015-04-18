@@ -838,6 +838,12 @@ def hgclone(orig, ui, opts, *args, **kwargs):
         sourcerepo, destrepo = result
         repo = destrepo.local()
 
+        # When cloning to a remote repo (like through SSH), no repo is available
+        # from the peer.   Therefore the largefiles can't be downloaded and the
+        # hgrc can't be updated.
+        if not repo:
+            return result
+
         # If largefiles is required for this repo, permanently enable it locally
         if 'largefiles' in repo.requirements:
             fp = repo.vfs('hgrc', 'a', text=True)

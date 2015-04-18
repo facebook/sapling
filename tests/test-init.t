@@ -111,6 +111,14 @@ clone to remote1
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
 
+The largefiles extension doesn't crash
+  $ hg clone -e "python \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remotelf --config extensions.largefiles=
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
 init to existing repo
 
   $ hg init -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote1
@@ -133,6 +141,8 @@ output of dummyssh
   Got arguments 1:user@dummy 2:hg -R remote2 serve --stdio
   Got arguments 1:user@dummy 2:hg init remote1
   Got arguments 1:user@dummy 2:hg -R remote1 serve --stdio
+  Got arguments 1:user@dummy 2:hg init remotelf
+  Got arguments 1:user@dummy 2:hg -R remotelf serve --stdio
   Got arguments 1:user@dummy 2:hg init remote1
   Got arguments 1:user@dummy 2:hg init remote1
 
