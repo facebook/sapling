@@ -828,7 +828,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   ``HG_PHASES_MOVED`` to ``1``, etc.
 
 ``txnclose``
-  Run after any repository transaction has been commited. At this
+  Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
   after the lock is released. see ``pretxnclose`` docs for details about
   available variables.
