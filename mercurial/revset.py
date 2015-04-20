@@ -1294,7 +1294,10 @@ def node_(repo, subset, x):
     # i18n: "id" is a keyword
     n = getstring(l[0], _("id requires a string"))
     if len(n) == 40:
-        rn = repo[n].rev()
+        try:
+            rn = repo.changelog.rev(node.bin(n))
+        except (LookupError, TypeError):
+            rn = None
     else:
         rn = None
         pm = repo.changelog._partialmatch(n)
