@@ -1905,6 +1905,8 @@ class localrepository(object):
             hookargs = {}
             if tr is not None:
                 hookargs.update(tr.hookargs)
+                pending = lambda: tr.writepending() and self.root or ""
+                hookargs['pending'] = pending
             hookargs['namespace'] = namespace
             hookargs['key'] = key
             hookargs['old'] = old
