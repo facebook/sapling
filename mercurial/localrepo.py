@@ -1901,8 +1901,15 @@ class localrepository(object):
 
     def pushkey(self, namespace, key, old, new):
         try:
-            self.hook('prepushkey', throw=True, namespace=namespace, key=key,
-                      old=old, new=new)
+            tr = self.currenttransaction()
+            hookargs = {}
+            if tr is not None:
+                hookargs.update(tr.hookargs)
+            hookargs['namespace'] = namespace
+            hookargs['key'] = key
+            hookargs['old'] = old
+            hookargs['new'] = new
+            self.hook('prepushkey', throw=True, **hookargs)
         except error.HookAbort, exc:
             self.ui.write_err(_("pushkey-abort: %s\n") % exc)
             if exc.hint:
