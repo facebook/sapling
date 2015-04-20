@@ -2484,7 +2484,7 @@ def debuglocks(ui, repo, **opts):
             l.release()
         else:
             try:
-                stat = repo.svfs.lstat(name)
+                stat = vfs.lstat(name)
                 age = now - stat.st_mtime
                 user = util.username(stat.st_uid)
                 locker = vfs.readlock(name)
