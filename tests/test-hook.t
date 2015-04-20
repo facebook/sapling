@@ -1,4 +1,5 @@
 commit hooks can see env vars
+(and post-transaction one are run unlocked)
 
   $ hg init a
   $ cd a
@@ -16,6 +17,7 @@ commit hooks can see env vars
   > pretxnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxnclose"
   > txnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnclose"
   > txnabort = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnabort"
+  > txnclose.checklock = hg debuglock > /dev/null
   > EOF
   $ echo a > a
   $ hg add a

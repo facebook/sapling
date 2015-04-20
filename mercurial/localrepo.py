@@ -1194,13 +1194,16 @@ class localrepository(object):
         return l
 
     def _afterlock(self, callback):
-        """add a callback to the current repository lock.
+        """add a callback to be run when the repository is fully unlocked
 
-        The callback will be executed on lock release."""
-        l = self._lockref and self._lockref()
-        if l:
-            l.postrelease.append(callback)
-        else:
+        The callback will be executed when the outermost lock is released
+        (with wlock being higher level than 'lock')."""
+        for ref in (self._wlockref, self._lockref):
+            l = ref and ref()
+            if l and l.held:
+                l.postrelease.append(callback)
+                break
+        else: # no lock have been found.
             callback()
 
     def lock(self, wait=True):
