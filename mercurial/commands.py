@@ -5837,14 +5837,15 @@ def status(ui, repo, *pats, **opts):
         else:
             show = states[:5]
 
-    stat = repo.status(node1, node2, scmutil.match(repo[node2], pats, opts),
+    m = scmutil.match(repo[node2], pats, opts)
+    stat = repo.status(node1, node2, m,
                        'ignored' in show, 'clean' in show, 'unknown' in show,
                        opts.get('subrepos'))
     changestates = zip(states, 'MAR!?IC', stat)
 
     if (opts.get('all') or opts.get('copies')
         or ui.configbool('ui', 'statuscopies')) and not opts.get('no_status'):
-        copy = copies.pathcopies(repo[node1], repo[node2])
+        copy = copies.pathcopies(repo[node1], repo[node2], m)
 
     fm = ui.formatter('status', opts)
     fmt = '%s' + end
