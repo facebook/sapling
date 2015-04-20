@@ -344,25 +344,29 @@ test qpush --keep-changes
   $ echo b >> b
   $ hg qpush --keep-changes
   applying p3
-  errors during apply, please fix and refresh p2
-  [2]
+  abort: conflicting local changes found
+  (did you forget to qrefresh?)
+  [255]
   $ rm b
   $ hg qpush --keep-changes
   applying p3
-  errors during apply, please fix and refresh p2
-  [2]
+  abort: conflicting local changes found
+  (did you forget to qrefresh?)
+  [255]
   $ hg rm -A b
   $ hg qpush --keep-changes
   applying p3
-  errors during apply, please fix and refresh p2
-  [2]
+  abort: conflicting local changes found
+  (did you forget to qrefresh?)
+  [255]
   $ hg revert -aq b
   $ echo d > d
   $ hg add d
   $ hg qpush --keep-changes
   applying p3
-  errors during apply, please fix and refresh p2
-  [2]
+  abort: conflicting local changes found
+  (did you forget to qrefresh?)
+  [255]
   $ hg forget d
   $ rm d
   $ hg qpop
@@ -372,8 +376,9 @@ test qpush --keep-changes
   $ hg qpush -a --keep-changes
   applying p2
   applying p3
-  errors during apply, please fix and refresh p2
-  [2]
+  abort: conflicting local changes found
+  (did you forget to qrefresh?)
+  [255]
   $ hg qtop
   p2
   $ hg parents --template "{rev} {desc}\n"

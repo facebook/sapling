@@ -822,7 +822,7 @@ class queue(object):
             except AbortNoCleanup:
                 tr.close()
                 self.savedirty()
-                return 2, repo.dirstate.p1()
+                raise
             except: # re-raises
                 try:
                     tr.abort()
@@ -880,7 +880,8 @@ class queue(object):
                     touched = set(touched) & tobackup
                     if touched and keepchanges:
                         raise AbortNoCleanup(
-                            _("local changes found, refresh first"))
+                            _("conflicting local changes found"),
+                            hint=_("did you forget to qrefresh?"))
                     self.backup(repo, touched, copy=True)
                     tobackup = tobackup - touched
                 (patcherr, files, fuzz) = self.patch(repo, pf)
@@ -1417,6 +1418,8 @@ class queue(object):
                 else:
                     ret = self.apply(repo, s, list, all_files=all_files,
                                      tobackup=tobackup, keepchanges=keepchanges)
+            except AbortNoCleanup:
+                raise
             except: # re-raises
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.p1()
