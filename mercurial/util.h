@@ -218,7 +218,7 @@ enum normcase_spec {
 
 #define MIN(a, b) (((a)<(b))?(a):(b))
 /* VC9 doesn't include bool and lacks stdbool.h based on my searching */
-#ifdef _MSC_VER
+#ifdef _MSC_VER || __STDC_VERSION__ < 199901L
 #define true 1
 #define false 0
 typedef unsigned char bool;
