@@ -417,7 +417,7 @@ class cg1packer(object):
         progress(msgbundling, None)
 
         mfs.clear()
-        needed = set(cl.rev(x) for x in clnodes)
+        clrevs = set(cl.rev(x) for x in clnodes)
 
         def linknodes(filerevlog, fname):
             if fastpathlinkrev and not reorder:
@@ -425,7 +425,7 @@ class cg1packer(object):
                 def genfilenodes():
                     for r in filerevlog:
                         linkrev = llr(r)
-                        if linkrev in needed:
+                        if linkrev in clrevs:
                             yield filerevlog.node(r), cl.node(linkrev)
                 return dict(genfilenodes())
             return fnodes.get(fname, {})
