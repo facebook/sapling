@@ -72,7 +72,7 @@ Add more obsolescence information
 clone --pull
 
   $ hg -R main phase --public cd010b8cd998
-  pre-close-tip:000000000000 public 
+  pre-close-tip:02de42196ebe draft 
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=phase (glob)
   $ hg clone main other --pull --rev 9520eea781bc
@@ -98,7 +98,7 @@ clone --pull
 pull
 
   $ hg -R main phase --public 9520eea781bc
-  pre-close-tip:000000000000 public 
+  pre-close-tip:02de42196ebe draft 
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=phase (glob)
   $ hg -R other pull -r 24b6387c8c8c
@@ -128,13 +128,13 @@ pull
 pull empty (with phase movement)
 
   $ hg -R main phase --public 24b6387c8c8c
-  pre-close-tip:000000000000 public 
+  pre-close-tip:02de42196ebe draft 
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=phase (glob)
   $ hg -R other pull -r 24b6387c8c8c
   pulling from $TESTTMP/main (glob)
   no changes found
-  pre-close-tip:000000000000 public 
+  pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
   txnclose hook: HG_NEW_OBSMARKERS=0 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
   file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
@@ -204,7 +204,7 @@ add extra data to test their exchange during push
   $ hg -R other bookmark --rev cd010b8cd998 book_32af
 
   $ hg -R main phase --public eea13746799a
-  pre-close-tip:000000000000 public 
+  pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=phase (glob)
 
@@ -344,7 +344,7 @@ push over http
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main phase --public 32af7686d403
-  pre-close-tip:000000000000 public 
+  pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=phase (glob)
   $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403 --bookmark book_32af

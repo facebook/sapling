@@ -113,3 +113,27 @@ test external hook
   rollback completed
   abort: pretxnchangegroup hook exited with status 1
   pull 0000000000000000000000000000000000000000
+
+Test that pending on transaction without changegroup see the normal changegroup(
+(issue4609)
+
+  $ cat <<EOF > parent/.hg/hgrc
+  > [hooks]
+  > pretxnchangegroup=
+  > pretxnclose = hg tip -T 'tip: {node|short}\n'
+  > [phases]
+  > publishing=False
+  > EOF
+
+setup
+
+  $ cd parent
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m a
+  tip: cb9a9f314b8b
+
+actual test
+
+  $ hg phase --public .
+  tip: cb9a9f314b8b

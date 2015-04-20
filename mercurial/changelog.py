@@ -267,6 +267,8 @@ class changelog(revlog.revlog):
         self.checkinlinesize(tr)
 
     def readpending(self, file):
+        if not self.opener.exists(file):
+            return # no pending data for changelog
         r = revlog.revlog(self.opener, file)
         self.index = r.index
         self.nodemap = r.nodemap
