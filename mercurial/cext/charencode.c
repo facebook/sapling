@@ -23,6 +23,7 @@
 #define PyInt_AS_LONG PyLong_AS_LONG
 #endif
 
+/* clang-format off */
 static const char lowertable[128] = {
 	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 	'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
@@ -64,6 +65,7 @@ static const char uppertable[128] = {
 	'\x58', '\x59', '\x5a', 					/* x-z */
 				'\x7b', '\x7c', '\x7d', '\x7e', '\x7f'
 };
+/* clang-format on */
 
 /* 1: no escape, 2: \<c>, 6: \u<x> */
 static const uint8_t jsonlentable[256] = {
