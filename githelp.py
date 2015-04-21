@@ -449,8 +449,9 @@ def grep(ui, repo, *args, **kwargs):
 
     cmd = Command('grep')
 
-    if len(args) > 0:
-        cmd.append(args[0])
+    # For basic usage, git grep and hg grep are the same. They both have the
+    # pattern first, followed by paths.
+    cmd.extend(args)
 
     ui.status(cmd, "\n")
 

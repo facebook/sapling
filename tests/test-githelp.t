@@ -122,3 +122,7 @@ githelp for checkout when not in repo root
 githelp for checkout with an argument that's both a file and a revision
   $ hg githelp -- checkout both
   hg update both
+
+githelp for grep with pattern and path
+  $ hg githelp -- grep shrubbery flib/intern/
+  hg grep shrubbery flib/intern/
