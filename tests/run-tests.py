@@ -324,17 +324,22 @@ def rename(src, dst):
     shutil.copy(src, dst)
     os.remove(src)
 
+_unified_diff = difflib.unified_diff
+if sys.version_info[0] > 2:
+    import functools
+    _unified_diff = functools.partial(difflib.diff_bytes, difflib.unified_diff)
+
 def getdiff(expected, output, ref, err):
     servefail = False
     lines = []
-    for line in difflib.unified_diff(expected, output, ref, err):
-        if line.startswith('+++') or line.startswith('---'):
-            line = line.replace('\\', '/')
-            if line.endswith(' \n'):
-                line = line[:-2] + '\n'
+    for line in _unified_diff(expected, output, ref, err):
+        if line.startswith(b'+++') or line.startswith(b'---'):
+            line = line.replace(b'\\', b'/')
+            if line.endswith(b' \n'):
+                line = line[:-2] + b'\n'
         lines.append(line)
         if not servefail and line.startswith(
-                             '+  abort: child process failed to start'):
+                             b'+  abort: child process failed to start'):
             servefail = True
 
     return servefail, lines
