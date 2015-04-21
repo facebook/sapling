@@ -978,7 +978,7 @@ class curseschunkselector(object):
                         "(space/A) toggle hunk/all; (e)dit hunk;",
                         pairname="legend")
             printstring(self.statuswin,
-                        " (f)old/unfold; (c)ommit applied; (q)uit; (?) help "
+                        " (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
                         "| [X]=hunk applied **=folded",
                         pairname="legend")
         except curses.error:
@@ -1319,7 +1319,8 @@ class curseschunkselector(object):
         helptext = """            [press any key to return to the patch-display]
 
 crecord allows you to interactively choose among the changes you have made,
-and commit only those changes you select.  after committing the selected
+and confirm only those changes you select for further processing by the command
+you are running (commit/shelve/revert), after confirming the selected
 changes, the unselected changes are still present in your working copy, so you
 can use crecord multiple times to split large changes into smaller changesets.
 the following are valid keystrokes:
@@ -1335,9 +1336,9 @@ the following are valid keystrokes:
                       m : edit / resume editing the commit message
                       e : edit the currently selected hunk
                       a : toggle amend mode (hg rev >= 2.2)
-                      c : commit selected changes
-                      r : review/edit and commit selected changes
-                      q : quit without committing (no changes will be made)
+                      c : confirm selected changes
+                      r : review/edit and confirm selected changes
+                      q : quit without confirming (no changes will be made)
                       ? : help (what you're currently reading)"""
 
         helpwin = curses.newwin(self.yscreensize, 0, 0, 0)
@@ -1375,7 +1376,8 @@ the following are valid keystrokes:
         return response
 
     def confirmcommit(self, review=False):
-        "ask for 'y' to be pressed to confirm commit. return True if confirmed."
+        """ask for 'y' to be pressed to confirm selected. return True if
+        confirmed."""
         if review:
             confirmtext = (
 """if you answer yes to the following, the your currently chosen patch chunks
@@ -1386,10 +1388,11 @@ close the editor without saving to accept the current patch as-is.
 note: don't add/remove lines unless you also modify the range information.
       failing to follow this rule will result in the commit aborting.
 
-are you sure you want to review/edit and commit the selected changes [yn]? """)
+are you sure you want to review/edit and confirm the selected changes [yn]?
+""")
         else:
             confirmtext = (
-                "are you sure you want to commit the selected changes [yn]? ")
+                "are you sure you want to confirm the selected changes [yn]? ")
 
         response = self.confirmationwindow(confirmtext)
         if response is None:
