@@ -196,7 +196,6 @@ class localrepository(object):
     _basesupported = supportedformats | set(('store', 'fncache', 'shared',
                                              'dotencode'))
     openerreqs = set(('revlogv1', 'generaldelta', 'manifestv2'))
-    requirements = ['revlogv1']
     filtername = None
 
     # a list of (ui, featureset) functions.
@@ -204,7 +203,7 @@ class localrepository(object):
     featuresetupfuncs = set()
 
     def _baserequirements(self, create):
-        return self.requirements[:]
+        return ['revlogv1']
 
     def __init__(self, baseui, path=None, create=False):
         self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
