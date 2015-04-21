@@ -107,6 +107,8 @@ check histedit_source
 
 rollup will fold without preserving the folded commit's message
 
+  $ OLDHGEDITOR=$HGEDITOR
+  $ HGEDITOR=false
   $ hg histedit d2ae7f538514 --commands - 2>&1 <<EOF | fixbundle
   > pick d2ae7f538514 b
   > roll ee283cb5f2d5 e
@@ -119,6 +121,8 @@ rollup will fold without preserving the folded commit's message
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ HGEDITOR=$OLDHGEDITOR
 
 log after edit
   $ hg logt --graph

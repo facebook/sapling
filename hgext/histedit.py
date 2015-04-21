@@ -413,7 +413,7 @@ def applychanges(ui, repo, ctx, opts):
             repo.ui.setconfig('ui', 'forcemerge', '', 'histedit')
     return stats
 
-def collapse(repo, first, last, commitopts):
+def collapse(repo, first, last, commitopts, skipprompt=False):
     """collapse the set of revisions from first to last as new one.
 
     Expected commit options are:
@@ -474,7 +474,7 @@ def collapse(repo, first, last, commitopts):
 
     parents = (first.p1().node(), first.p2().node())
     editor = None
-    if not commitopts.get('rollup'):
+    if not skipprompt:
         editor = cmdutil.getcommiteditor(edit=True, editform='histedit.fold')
     new = context.memctx(repo,
                          parents=parents,
@@ -575,7 +575,8 @@ class fold(histeditaction):
         try:
             phasemin = max(ctx.phase(), oldctx.phase())
             repo.ui.setconfig('phases', 'new-commit', phasemin, 'histedit')
-            n = collapse(repo, ctx, repo[newnode], commitopts)
+            n = collapse(repo, ctx, repo[newnode], commitopts,
+                         skipprompt=self.skipprompt())
         finally:
             repo.ui.restoreconfig(phasebackup)
         if n is None:
