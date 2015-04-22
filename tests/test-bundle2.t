@@ -26,9 +26,10 @@
 
 # Verify bookmarks are not synced if hook returns false
 
+  $ cp master/.hg/hgrc master/.hg/hgrc_good
   $ cat >> master/.hg/hgrc <<EOF
   > [hooks]
-  > b2x-pretransactionclose.abort=false
+  > pretxnclose.abort=false
   > EOF
   $ cd client
   $ echo x >> x
@@ -36,9 +37,14 @@
   $ hg push ssh://user@dummy/master
   pushing to ssh://user@dummy/master
   searching for changes
-  abort: b2x-pretransactionclose.abort hook exited with status 1
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  abort: pretxnclose.abort hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
   [255]
+  $ mv ../master/.hg/hgrc_good ../master/.hg/hgrc
   $ hg -R ../master bookmarks
      mybook                    0:b292c1e3311f

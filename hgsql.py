@@ -286,18 +286,18 @@ def wraprepo(repo):
             if tr.count > 1:
                 return tr
 
-            def transactionclose(orig):
-                if tr.count == 1:
-                    self.committodb(tr)
-                    del self.pendingrevs[:]
-                return orig()
+            validator = tr.validator
+            def pretxnclose(tr):
+                validator(tr)
+                self.committodb(tr)
+                del self.pendingrevs[:]
+            tr.validator = pretxnclose
 
             def transactionabort(orig):
                 del self.pendingrevs[:]
                 return orig()
-
             wrapfunction(tr, "_abort", transactionabort)
-            wrapfunction(tr, "close", transactionclose)
+
             tr.repo = self
             return tr
 
