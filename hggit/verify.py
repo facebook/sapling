@@ -9,9 +9,7 @@ import stat
 
 from mercurial import error
 from mercurial import util as hgutil
-from mercurial.node import hex, bin, nullid
 from mercurial.i18n import _
-from mercurial import scmutil
 
 from dulwich import diff_tree
 from dulwich.objects import Commit, S_IFGITLINK
@@ -30,7 +28,8 @@ def verify(ui, repo, hgctx):
     if not gitsha:
         # TODO deal better with commits in the middle of octopus merges
         raise hgutil.Abort(_('no git commit found for rev %s') % hgctx,
-                           hint=_('if this is an octopus merge, verify against the last rev'))
+                           hint=_('if this is an octopus merge, '
+                                  'verify against the last rev'))
 
     try:
         gitcommit = handler.git.get_object(gitsha)
@@ -60,8 +59,8 @@ def verify(ui, repo, hgctx):
         if gitfile.mode == dirkind:
             continue
         # TODO deal with submodules
-        if (gitfile.mode == S_IFGITLINK or gitfile.path == '.hgsubstate'
-            or gitfile.path == '.hgsub'):
+        if (gitfile.mode == S_IFGITLINK or gitfile.path == '.hgsubstate' or
+            gitfile.path == '.hgsub'):
             continue
         ui.progress('verify', i, total=len(hgfiles))
         i += 1
