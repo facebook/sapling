@@ -291,7 +291,8 @@ class localrepository(object):
         self.sopener = self.svfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
-        self._applyrequirements(requirements)
+        self.requirements = requirements
+        self._applyopenerreqs()
         if create:
             self._writerequirements()
 
@@ -334,9 +335,8 @@ class localrepository(object):
             caps.add('bundle2=' + urllib.quote(capsblob))
         return caps
 
-    def _applyrequirements(self, requirements):
-        self.requirements = requirements
-        self.svfs.options = dict((r, 1) for r in requirements
+    def _applyopenerreqs(self):
+        self.svfs.options = dict((r, 1) for r in self.requirements
                                            if r in self.openerreqs)
         chunkcachesize = self.ui.configint('format', 'chunkcachesize')
         if chunkcachesize is not None:
@@ -1828,7 +1828,8 @@ class localrepository(object):
             #                    new format-related
             # requirements from the streamed-in repository
             requirements.update(self.requirements - self.supportedformats)
-            self._applyrequirements(requirements)
+            self.requirements = requirements
+            self._applyopenerreqs()
             self._writerequirements()
 
             if rbranchmap:
