@@ -148,13 +148,13 @@ def reposetup(ui, repo):
         for name, node in mark2nodes.iteritems():
             node2marks.setdefault(node[0], []).append(name)
         remotebookmarkns = ns(
-                'remotebookmarks',
-                templatename='remotebookmarks',
-                logname='bookmark',
-                colorname='remotebookmark',
-                listnames=lambda repo: mark2nodes.keys(),
-                namemap=lambda repo, name: mark2nodes.get(name),
-                nodemap=lambda repo, node: node2marks.get(node, []))
+            'remotebookmarks',
+            templatename='remotebookmarks',
+            logname='bookmark',
+            colorname='remotebookmark',
+            listnames=lambda repo: mark2nodes.keys(),
+            namemap=lambda repo, name: mark2nodes.get(name),
+            nodemap=lambda repo, node: node2marks.get(node, []))
         repo.names.addnamespace(remotebookmarkns)
 
         # hoisting only works if there are remote bookmarks
@@ -171,13 +171,13 @@ def reposetup(ui, repo):
                     hoist2nodes[name] = node
                     node2hoists.setdefault(node[0], []).append(name)
             hoistednamens = ns(
-                    'hoistednames',
-                    templatename='hoistednames',
-                    logname='hoistedname',
-                    colorname='hoistedname',
-                    listnames=lambda repo: hoist2nodes.keys(),
-                    namemap=lambda repo, name: hoist2nodes.get(name),
-                    nodemap=lambda repo, node: node2hoists.get(node, []))
+                'hoistednames',
+                templatename='hoistednames',
+                logname='hoistedname',
+                colorname='hoistedname',
+                listnames=lambda repo: hoist2nodes.keys(),
+                namemap=lambda repo, name: hoist2nodes.get(name),
+                nodemap=lambda repo, node: node2hoists.get(node, []))
             repo.names.addnamespace(hoistednamens)
 
     if ui.configbool('remotenames', 'branches', True):
@@ -187,13 +187,13 @@ def reposetup(ui, repo):
             for node in nodes:
                 node2branch[node] = [name]
         remotebranchns = ns(
-                'remotebranches',
-                templatename='remotebranches',
-                logname='branch',
-                colorname='remotebranch',
-                listnames=lambda repo: branch2nodes.keys(),
-                namemap=lambda repo, name: branch2nodes.get(name),
-                nodemap=lambda repo, node: node2branch.get(node, []))
+            'remotebranches',
+            templatename='remotebranches',
+            logname='branch',
+            colorname='remotebranch',
+            listnames=lambda repo: branch2nodes.keys(),
+            namemap=lambda repo, name: branch2nodes.get(name),
+            nodemap=lambda repo, node: node2branch.get(node, []))
         repo.names.addnamespace(remotebranchns)
 
 def _tracking(ui):
@@ -288,7 +288,8 @@ def extsetup(ui):
     entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
 
     if _tracking(ui):
-        entry[1].append(('t', 'track', '', 'track this bookmark or remote name',
+        entry[1].append(('t', 'track', '',
+                         'track this bookmark or remote name',
                          'BOOKMARK'))
         entry[1].append(('u', 'untrack', None,
                          'remove tracking for this bookmark',
@@ -296,8 +297,10 @@ def extsetup(ui):
 
         try:
             rebase = extensions.find('rebase')
+
             def afterload(loaded):
                 extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebasecmd)
+
             if rebase:
                 extensions.afterloaded('tweakdefaults', afterload)
         except KeyError:
@@ -369,8 +372,8 @@ def expushdiscoverybookmarks(pushop):
 
     if not _pushto:
         ret = exchange._pushdiscoverybookmarks(pushop)
-        if not (repo.ui.configbool('remotenames', 'pushanonheads')
-                or force):
+        if not (repo.ui.configbool('remotenames', 'pushanonheads') or
+                force):
             # check to make sure we don't push an anonymous head
             if pushop.revs:
                 revs = set(pushop.revs)
@@ -661,8 +664,8 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     if not delete:
         for name in args:
             if name in disallowed:
-                raise util.Abort(_("bookmark '%s' not allowed by configuration")
-                                   % name)
+                msg = _("bookmark '%s' not allowed by configuration")
+                raise util.Abort(msg % name)
 
     if untrack:
         if track:
@@ -721,7 +724,8 @@ def exbookmarks(orig, ui, repo, *args, **opts):
                 if rname:
                     pad = " " * (25 - encoding.colwidth(str(rev)) -
                                  encoding.colwidth(str(h)))
-                    fm.write('bookmark', pad + '[%s%s]', rname, ab, label=label)
+                    fm.write('bookmark', pad + '[%s%s]', rname, ab,
+                             label=label)
             fm.data(active=(bmark == current))
             fm.plain('\n')
         fm.end()
@@ -815,8 +819,8 @@ def activepath(ui, remote):
     if cset:
         candidates = list(cset)
 
-    candidates.sort() # alphabetical
-    candidates.sort(key=len) # sort is stable so first will be the correct one
+    candidates.sort()         # alphabetical
+    candidates.sort(key=len)  # sort is stable so first will be the correct one
     bestpath = candidates[0]
 
     renames = _getrenames(ui)
@@ -1126,13 +1130,17 @@ def upstream(repo, subset, x):
         upstream_names = [revset.getstring(symbol,
                                            "remote path must be a string")
                           for symbol in revset.getlist(x)]
-    filt = lambda x: True
+
     default_path = dict(repo.ui.configitems('paths')).get('default')
     if not upstream_names and default_path:
         default_path = expandscheme(repo.ui, default_path)
         upstream_names = [activepath(repo.ui, default_path)]
-    if upstream_names:
-        filt = lambda name: name in upstream_names
+
+    def filt(name):
+        if upstream_names:
+            return name in upstream_names
+        return True
+
     return upstream_revs(filt, repo, subset, x)
 
 def pushed(repo, subset, x):
