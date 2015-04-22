@@ -301,6 +301,8 @@ pypats = [
      "missing _() in ui message (use () to hide false-positives)"),
     (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
     (r'\b__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
+    (r'os\.path\.join\(.*, *(""|\'\')\)',
+     "use pathutil.normasprefix(path) instead of os.path.join(path, '')"),
   ],
   # warnings
   [
