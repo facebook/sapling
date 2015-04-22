@@ -242,14 +242,14 @@ class localrepository(object):
                 if not self.wvfs.exists():
                     self.wvfs.makedirs()
                 self.vfs.makedir(notindexed=True)
-                requirements = self._baserequirements(create)
+                requirements = set(self._baserequirements(create))
                 if self.ui.configbool('format', 'usestore', True):
                     self.vfs.mkdir("store")
-                    requirements.append("store")
+                    requirements.add("store")
                     if self.ui.configbool('format', 'usefncache', True):
-                        requirements.append("fncache")
+                        requirements.add("fncache")
                         if self.ui.configbool('format', 'dotencode', True):
-                            requirements.append('dotencode')
+                            requirements.add('dotencode')
                     # create an invalid changelog
                     self.vfs.append(
                         "00changelog.i",
@@ -257,10 +257,9 @@ class localrepository(object):
                         ' dummy changelog to prevent using the old repo layout'
                     )
                 if self.ui.configbool('format', 'generaldelta', False):
-                    requirements.append("generaldelta")
+                    requirements.add("generaldelta")
                 if self.ui.configbool('experimental', 'manifestv2', False):
-                    requirements.append("manifestv2")
-                requirements = set(requirements)
+                    requirements.add("manifestv2")
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
@@ -1828,7 +1827,7 @@ class localrepository(object):
             # new requirements = old non-format requirements +
             #                    new format-related
             # requirements from the streamed-in repository
-            requirements.update(set(self.requirements) - self.supportedformats)
+            requirements.update(self.requirements - self.supportedformats)
             self._applyrequirements(requirements)
             self._writerequirements()
 
