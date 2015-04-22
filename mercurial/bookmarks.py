@@ -463,12 +463,16 @@ def incoming(ui, repo, other):
         def add(b, id, st):
             incomings.append("   %-25s %s\n" % (b, getid(id)))
     for b, scid, dcid in addsrc:
+        # i18n: "added" refers to a bookmark
         add(b, scid, _('added'))
     for b, scid, dcid in advsrc:
+        # i18n: "advanced" refers to a bookmark
         add(b, scid, _('advanced'))
     for b, scid, dcid in diverge:
+        # i18n: "diverged" refers to a bookmark
         add(b, scid, _('diverged'))
     for b, scid, dcid in differ:
+        # i18n: "changed" refers to a bookmark
         add(b, scid, _('changed'))
 
     if not incomings:
@@ -501,14 +505,19 @@ def outgoing(ui, repo, other):
         def add(b, id, st):
             outgoings.append("   %-25s %s\n" % (b, getid(id)))
     for b, scid, dcid in addsrc:
+        # i18n: "added refers to a bookmark
         add(b, scid, _('added'))
     for b, scid, dcid in adddst:
+        # i18n: "deleted" refers to a bookmark
         add(b, ' ' * 40, _('deleted'))
     for b, scid, dcid in advsrc:
+        # i18n: "advanced" refers to a bookmark
         add(b, scid, _('advanced'))
     for b, scid, dcid in diverge:
+        # i18n: "diverged" refers to a bookmark
         add(b, scid, _('diverged'))
     for b, scid, dcid in differ:
+        # i18n: "changed" refers to a bookmark
         add(b, scid, _('changed'))
 
     if not outgoings:
