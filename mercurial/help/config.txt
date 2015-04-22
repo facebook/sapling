@@ -830,11 +830,11 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
-  after the lock is released. see ``pretxnclose`` docs for details about
+  after the lock is released. See ``pretxnclose`` docs for details about
   available variables.
 
 ``txnabort``
-  Run when a transaction is aborted. see ``pretxnclose`` docs for details about
+  Run when a transaction is aborted. See ``pretxnclose`` docs for details about
   available variables.
 
 ``pretxnchangegroup``
