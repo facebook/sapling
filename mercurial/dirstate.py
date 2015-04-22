@@ -40,10 +40,7 @@ class dirstate(object):
         self._root = root
         # ntpath.join(root, '') of Python 2.7.9 does not add sep if root is
         # UNC path pointing to root share (issue4557)
-        if root.endswith(os.sep):
-            self._rootdir = root
-        else:
-            self._rootdir = root + os.sep
+        self._rootdir = pathutil.normasprefix(root)
         self._dirty = False
         self._dirtypl = False
         self._lastnormaltime = 0
