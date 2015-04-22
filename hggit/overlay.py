@@ -8,7 +8,6 @@ from mercurial import ancestor
 from mercurial import manifest
 from mercurial import context
 from mercurial.node import bin, hex, nullid
-from mercurial import localrepo
 
 def _maybehex(n):
     if len(n) == 20:
@@ -155,7 +154,7 @@ class overlaychangectx(context.changectx):
     def __init__(self, repo, sha):
         self.repo = repo
         if not isinstance(sha, basestring):
-          sha = sha.hex()
+            sha = sha.hex()
         self.commit = repo.handler.git.get_object(_maybehex(sha))
         self._overlay = getattr(repo, 'gitoverlay', repo)
         self._rev = self._overlay.rev(bin(self.commit.id))
@@ -261,10 +260,10 @@ class overlayrevlog(object):
         anode = self.repo.nodemap.get(a)
         bnode = self.repo.nodemap.get(b)
         if anode is None and bnode is None:
-          return self.base.ancestor(a, b)
+            return self.base.ancestor(a, b)
         ancs = ancestor.ancestors(self.parentrevs, a, b)
         if ancs:
-          return min(map(self.node, ancs))
+            return min(map(self.node, ancs))
         return nullid
 
     def parentrevs(self, rev):
@@ -279,7 +278,7 @@ class overlayrevlog(object):
     def rev(self, n):
         gitrev = self.repo.revmap.get(n)
         if gitrev is None:
-             return self.base.rev(n)
+            return self.base.rev(n)
         return gitrev
 
     def __len__(self):
@@ -342,19 +341,19 @@ class overlayrepo(object):
         r.handler = self.handler
         r.gitoverlay = self
         try:
-          return getattr(r, method)(*args, **kwargs)
+            return getattr(r, method)(*args, **kwargs)
         finally:
-          if oldhandler is nothing:
-            del r.handler
-          else:
-            r.handler = oldhandler
-          if oldoverlay is nothing:
-            del r.gitoverlay
-          else:
-            r.gitoverlay = oldoverlay
+            if oldhandler is nothing:
+                del r.handler
+            else:
+                r.handler = oldhandler
+            if oldoverlay is nothing:
+                del r.gitoverlay
+            else:
+                r.gitoverlay = oldoverlay
 
     def status(self, *args, **kwargs):
-      return self._handlerhack('status', *args, **kwargs)
+        return self._handlerhack('status', *args, **kwargs)
 
     def node(self, n):
         """Returns an Hg or Git hash for the specified Git hash"""
