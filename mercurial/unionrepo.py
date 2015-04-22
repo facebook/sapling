@@ -15,7 +15,7 @@ from node import nullid
 from i18n import _
 import os
 import util, mdiff, cmdutil, scmutil
-import localrepo, changelog, manifest, filelog, revlog
+import localrepo, changelog, manifest, filelog, revlog, pathutil
 
 class unionrevlog(revlog.revlog):
     def __init__(self, opener, indexfile, revlog2, linkmapper):
@@ -228,7 +228,7 @@ def instance(ui, path, create):
         if parentpath == cwd:
             parentpath = ''
         else:
-            cwd = os.path.join(cwd,'')
+            cwd = pathutil.normasprefix(cwd)
             if parentpath.startswith(cwd):
                 parentpath = parentpath[len(cwd):]
     if path.startswith('union:'):
