@@ -15,6 +15,7 @@ remotebranches extension. Ryan McElroy of Facebook also contributed.
 
 import os
 import errno
+import shutil
 
 from mercurial import bookmarks
 from mercurial import commands
@@ -1050,11 +1051,10 @@ def invalidatedistancecache(repo):
     """Try to invalidate any existing distance caches"""
     error = False
     try:
-        for filename, filetype in repo.vfs.readdir('cache/distance/'):
-            try:
-                repo.vfs.unlink('cache/distance/' + filename)
-            except (OSError, IOError):
-                error = True
+        if repo.vfs.isdir('cache/distance'):
+            shutil.rmtree(repo.vfs.join('cache/distance'))
+        else:
+            repo.vfs.unlink('cache/distance')
         repo.vfs.unlink('cache/distance.current')
     except (OSError, IOError), inst:
         if inst.errno != errno.ENOENT:
