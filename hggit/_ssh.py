@@ -1,4 +1,6 @@
+from dulwich.client import SubprocessWrapper
 from mercurial import util
+import subprocess
 
 class SSHVendor(object):
     """Parent class for ui-linked Vendor classes."""
@@ -12,10 +14,6 @@ def generate_ssh_vendor(ui):
 
     class _Vendor(SSHVendor):
         def run_command(self, host, command, username=None, port=None):
-            from dulwich.client import SubprocessWrapper
-            from mercurial import util
-            import subprocess
-
             sshcmd = ui.config("ui", "ssh", "ssh")
             args = util.sshargs(sshcmd, host, username, port)
             cmd = '%s %s %s' % (sshcmd, args,
