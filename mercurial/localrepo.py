@@ -206,6 +206,7 @@ class localrepository(object):
         return ['revlogv1']
 
     def __init__(self, baseui, path=None, create=False):
+        self.requirements = set()
         self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
         self.wopener = self.wvfs
         self.root = self.wvfs.base
@@ -242,14 +243,14 @@ class localrepository(object):
                 if not self.wvfs.exists():
                     self.wvfs.makedirs()
                 self.vfs.makedir(notindexed=True)
-                requirements = set(self._baserequirements(create))
+                self.requirements.update(self._baserequirements(create))
                 if self.ui.configbool('format', 'usestore', True):
                     self.vfs.mkdir("store")
-                    requirements.add("store")
+                    self.requirements.add("store")
                     if self.ui.configbool('format', 'usefncache', True):
-                        requirements.add("fncache")
+                        self.requirements.add("fncache")
                         if self.ui.configbool('format', 'dotencode', True):
-                            requirements.add('dotencode')
+                            self.requirements.add('dotencode')
                     # create an invalid changelog
                     self.vfs.append(
                         "00changelog.i",
@@ -257,20 +258,20 @@ class localrepository(object):
                         ' dummy changelog to prevent using the old repo layout'
                     )
                 if self.ui.configbool('format', 'generaldelta', False):
-                    requirements.add("generaldelta")
+                    self.requirements.add("generaldelta")
                 if self.ui.configbool('experimental', 'manifestv2', False):
-                    requirements.add("manifestv2")
+                    self.requirements.add("manifestv2")
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
             raise error.RepoError(_("repository %s already exists") % path)
         else:
             try:
-                requirements = scmutil.readrequires(self.vfs, self.supported)
+                self.requirements = scmutil.readrequires(
+                        self.vfs, self.supported)
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
-                requirements = set()
 
         self.sharedpath = self.path
         try:
@@ -285,13 +286,13 @@ class localrepository(object):
             if inst.errno != errno.ENOENT:
                 raise
 
-        self.store = store.store(requirements, self.sharedpath, scmutil.vfs)
+        self.store = store.store(
+                self.requirements, self.sharedpath, scmutil.vfs)
         self.spath = self.store.path
         self.svfs = self.store.vfs
         self.sopener = self.svfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
-        self.requirements = requirements
         self._applyopenerreqs()
         if create:
             self._writerequirements()
