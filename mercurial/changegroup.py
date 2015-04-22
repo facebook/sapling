@@ -347,6 +347,8 @@ class cg1packer(object):
             for c in self.revchunk(revlog, curr, prev, linknode):
                 yield c
 
+        if units is not None:
+            self._progress(msgbundling, None)
         yield self.close()
 
     # filter any nodes that claim to be part of the known set
@@ -360,10 +362,6 @@ class cg1packer(object):
         cl = self._changelog
         ml = self._manifest
         reorder = self._reorder
-        progress = self._progress
-
-        # for progress output
-        msgbundling = _('bundling')
 
         clrevorder = {}
         mfs = {} # needed manifests
@@ -388,7 +386,6 @@ class cg1packer(object):
             size += len(chunk)
             yield chunk
         self._verbosenote(_('%8.i (changelog)\n') % size)
-        progress(msgbundling, None)
 
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
@@ -414,7 +411,6 @@ class cg1packer(object):
             size += len(chunk)
             yield chunk
         self._verbosenote(_('%8.i (manifests)\n') % size)
-        progress(msgbundling, None)
 
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
@@ -435,7 +431,6 @@ class cg1packer(object):
             yield chunk
 
         yield self.close()
-        progress(msgbundling, None)
 
         if clnodes:
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
@@ -473,6 +468,7 @@ class cg1packer(object):
                     size += len(chunk)
                     yield chunk
                 self._verbosenote(_('%8.i  %s\n') % (size, fname))
+        progress(msgbundling, None)
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         return prev
