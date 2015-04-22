@@ -16,6 +16,7 @@ from i18n import _
 import os, tempfile, shutil
 import changegroup, util, mdiff, discovery, cmdutil, scmutil, exchange
 import localrepo, changelog, manifest, filelog, revlog, error, phases, bundle2
+import pathutil
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundle, linkmapper):
@@ -352,7 +353,7 @@ def instance(ui, path, create):
         if parentpath == cwd:
             parentpath = ''
         else:
-            cwd = os.path.join(cwd,'')
+            cwd = pathutil.normasprefix(cwd)
             if parentpath.startswith(cwd):
                 parentpath = parentpath[len(cwd):]
     u = util.url(path)
