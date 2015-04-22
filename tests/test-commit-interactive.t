@@ -229,24 +229,10 @@ Add plain file
   $ hg add plain
   $ hg commit -i -d '7 0' -m plain plain<<EOF
   > y
-  > y
   > EOF
   diff --git a/plain b/plain
   new file mode 100644
   examine changes to 'plain'? [Ynesfdaq?] y
-  
-  @@ -0,0 +1,10 @@
-  +1
-  +2
-  +3
-  +4
-  +5
-  +6
-  +7
-  +8
-  +9
-  +10
-  record this change to 'plain'? [Ynesfdaq?] y
   
   $ hg tip -p
   changeset:   7:11fb457c1be4
@@ -347,10 +333,6 @@ Modify end of plain file, add EOL
   diff --git a/plain2 b/plain2
   new file mode 100644
   examine changes to 'plain2'? [Ynesfdaq?] y
-  
-  @@ -0,0 +1,1 @@
-  +1
-  record change 2/2 to 'plain2'? [Ynesfdaq?] y
   
 Modify beginning, trim end, record both, add another file to test
 changes numbering
@@ -1395,40 +1377,34 @@ Test --user when ui.username not set
   $ export HGUSER
 
 
-Editing patch of newly added file
+Moving files
 
-  $ cat > editor.sh << '__EOF__'
-  > cat "$1"  | sed "s/first/very/g"  > tt
-  > mv tt  "$1"
-  > __EOF__
-  $ cat > newfile << '__EOF__'
-  > This is the first line
-  > This is the second line
-  > This is the third line
-  > __EOF__
-  $ hg add newfile
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit -i -d '23 0' -medit-patch-new <<EOF
+  $ hg update -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg mv plain plain3
+  $ echo somechange >> plain3
+  $ hg commit -i -d '23 0' -mmoving_files << EOF
   > y
-  > e
+  > y
   > EOF
-  diff --git a/newfile b/newfile
-  new file mode 100644
-  examine changes to 'newfile'? [Ynesfdaq?] y
+  diff --git a/plain b/plain3
+  rename from plain
+  rename to plain3
+  1 hunks, 1 lines changed
+  examine changes to 'plain' and 'plain3'? [Ynesfdaq?] y
   
-  @@ -0,0 +1,3 @@
-  +This is the first line
-  +This is the second line
-  +This is the third line
-  record this change to 'newfile'? [Ynesfdaq?] e
+  @@ -11,3 +11,4 @@
+   9
+   10
+   11
+  +somechange
+  record this change to 'plain3'? [Ynesfdaq?] y
   
-  $ hg cat -r tip newfile
-  This is the very line
-  This is the second line
-  This is the third line
-
-  $ cat newfile
-  This is the first line
-  This is the second line
-  This is the third line
-
+  $ hg tip
+  changeset:   30:542e1f362a22
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:23 1970 +0000
+  summary:     moving_files
+  
   $ cd ..

@@ -59,8 +59,6 @@ def recordfilter(ui, originalhunks):
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
     import merge as mergemod
-    hunkclasses = (crecordmod.uihunk, patch.recordhunk)
-    ishunk = lambda x: isinstance(x, hunkclasses)
 
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
@@ -117,12 +115,6 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             ui.status(_('no changes to record\n'))
             return 0
 
-        newandmodifiedfiles = set()
-        for h in chunks:
-            isnew = h.filename() in status.added
-            if ishunk(h) and isnew and not h in originalchunks:
-                newandmodifiedfiles.add(h.filename())
-
         modified = set(status.modified)
 
         # 2. backup changed files, so we can restore them in the end
@@ -130,8 +122,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         if backupall:
             tobackup = changed
         else:
-            tobackup = [f for f in newfiles
-                        if f in modified or f in newandmodifiedfiles]
+            tobackup = [f for f in newfiles if f in modified]
 
         backups = {}
         if tobackup:
@@ -155,12 +146,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             fp = cStringIO.StringIO()
             for c in chunks:
                 fname = c.filename()
-                if fname in backups or fname in newandmodifiedfiles:
+                if fname in backups:
                     c.write(fp)
             dopatch = fp.tell()
             fp.seek(0)
-
-            [os.unlink(c) for c in newandmodifiedfiles]
 
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:

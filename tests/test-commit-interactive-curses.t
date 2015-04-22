@@ -143,48 +143,10 @@ Committing only one hunk
   10
   y
 
-Editing patch of newly added file
-
-  $ cat > editor.sh << '__EOF__'
-  > cat "$1"  | sed "s/first/very/g"  > tt
-  > mv tt  "$1"
-  > __EOF__
-  $ cat > newfile << '__EOF__'
-  > This is the first line
-  > This is the second line
-  > This is the third line
-  > __EOF__
-  $ hg add newfile
-  $ cat <<EOF >testModeCommands
-  > f
-  > KEY_DOWN
-  > KEY_DOWN
-  > KEY_DOWN
-  > e
-  > X
-  > EOF
-  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit -i -d '23 0' -medit-patch-new
-  $ hg tip
-  changeset:   4:6a0a43e9eff5
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:23 1970 +0000
-  summary:     edit-patch-new
-  
-  $ hg cat -r tip newfile
-  This is the very line
-  This is the second line
-  This is the third line
-
-  $ cat newfile
-  This is the first line
-  This is the second line
-  This is the third line
-
 Newly added files can be selected with the curses interface
 
   $ hg update -C .
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "hello" > x
   $ hg add x
   $ cat <<EOF >testModeCommands
@@ -194,10 +156,8 @@ Newly added files can be selected with the curses interface
   > EOF
   $ hg st
   A x
-  ? editor.sh
   ? testModeCommands
   $ hg commit -i  -m "newly added file" -d "0 0"
   $ hg st
-  ? editor.sh
   ? testModeCommands
 

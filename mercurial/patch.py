@@ -820,7 +820,7 @@ class header(object):
     """
     diffgit_re = re.compile('diff --git a/(.*) b/(.*)$')
     diff_re = re.compile('diff -r .* (.*)$')
-    allhunks_re = re.compile('(?:index|deleted file) ')
+    allhunks_re = re.compile('(?:index|new file|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
     special_re = re.compile('(?:index|new|deleted|copy|rename) ')
 
