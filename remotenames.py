@@ -1061,7 +1061,7 @@ def invalidatedistancecache(repo):
             error = True
     if error:
         repo.ui.warn(_('Unable to invalidate tracking cache; ' +
-                       'distance displayed may be incorrect'))
+                       'distance displayed may be incorrect\n'))
 
 def precachedistance(repo):
     """
