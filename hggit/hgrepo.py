@@ -1,5 +1,3 @@
-import os
-
 from mercurial import localrepo
 from mercurial.node import bin
 from mercurial import util as hgutil
