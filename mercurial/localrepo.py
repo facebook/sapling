@@ -1752,7 +1752,7 @@ class localrepository(object):
         """
         return util.hooks()
 
-    def stream_in(self, remote, requirements):
+    def stream_in(self, remote, remotereqs):
         lock = self.lock()
         try:
             # Save remote branchmap. We will use it later
@@ -1825,9 +1825,9 @@ class localrepository(object):
                             util.bytecount(total_bytes / elapsed)))
 
             # new requirements = old non-format requirements +
-            #                    new format-related
+            #                    new format-related remote requirements
             # requirements from the streamed-in repository
-            self.requirements = requirements | (
+            self.requirements = remotereqs | (
                     self.requirements - self.supportedformats)
             self._applyopenerreqs()
             self._writerequirements()
