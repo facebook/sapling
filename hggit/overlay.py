@@ -37,11 +37,6 @@ class overlaymanifest(object):
     def iterkeys(self):
         return iter(self.keys())
 
-    def flags(self, path):
-        self.load()
-
-        return hgflag(self._flags[path])
-
     def load(self):
         if self._map is not None:
             return
