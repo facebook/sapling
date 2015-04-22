@@ -1,4 +1,3 @@
-import os
 from mercurial import util
 try:
     from mercurial.error import RepoError
@@ -10,10 +9,6 @@ try:
 except ImportError:
     from mercurial.repo import repository as peerrepository
 
-from overlay import overlayrepo
-
-from mercurial.node import bin
-
 class gitrepo(peerrepository):
     capabilities = ['lookup']
 
@@ -21,7 +16,7 @@ class gitrepo(peerrepository):
         return self.capabilities
 
     def __init__(self, ui, path, create):
-        if create: # pragma: no cover
+        if create:  # pragma: no cover
             raise util.Abort('Cannot create a git repository.')
         self.ui = ui
         self.path = path
@@ -43,7 +38,7 @@ class gitrepo(peerrepository):
 
     def listkeys(self, namespace):
         if namespace == 'namespaces':
-            return {'bookmarks':''}
+            return {'bookmarks': ''}
         elif namespace == 'bookmarks':
             if self.localrepo is not None:
                 handler = self.localrepo.githandler
@@ -51,8 +46,8 @@ class gitrepo(peerrepository):
                 # map any git shas that exist in hg to hg shas
                 stripped_refs = dict([
                     (ref[11:], handler.map_hg_get(refs[ref]) or refs[ref])
-                        for ref in refs.keys()
-                            if ref.startswith('refs/heads/')])
+                    for ref in refs.keys() if ref.startswith('refs/heads/')
+                ])
                 return stripped_refs
         return {}
 
