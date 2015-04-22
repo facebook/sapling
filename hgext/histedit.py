@@ -713,7 +713,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         goal = 'abort'
     elif editplan:
         if util.any((outg, revs, freeargs)):
-            raise util.Abort(_('only --commands argument allowed with'
+            raise util.Abort(_('only --commands argument allowed with '
                                '--edit-plan'))
         goal = 'edit-plan'
     else:
