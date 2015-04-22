@@ -1827,8 +1827,8 @@ class localrepository(object):
             # new requirements = old non-format requirements +
             #                    new format-related
             # requirements from the streamed-in repository
-            requirements.update(self.requirements - self.supportedformats)
-            self.requirements = requirements
+            self.requirements = requirements | (
+                    self.requirements - self.supportedformats)
             self._applyopenerreqs()
             self._writerequirements()
 
