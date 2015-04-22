@@ -1,7 +1,9 @@
-import os, stat, re, errno
+import os
+import stat
+import re
+import errno
 
 from mercurial import dirstate
-from mercurial import hg
 from mercurial import ignore
 from mercurial import match as matchmod
 from mercurial import osutil
@@ -15,7 +17,7 @@ except:
 from mercurial import util
 from mercurial.i18n import _
 
-def gignorepats(orig, lines, root = None):
+def gignorepats(orig, lines, root=None):
     '''parse lines (iterable) of .gitignore text, returning a tuple of
     (patterns, parse errors). These patterns should be given to compile()
     to be validated and converted into a match function.'''
@@ -46,14 +48,14 @@ def gignorepats(orig, lines, root = None):
             line = line[1:]
             rootsuffixes = ['']
         else:
-            rootsuffixes = ['','**/']
+            rootsuffixes = ['', '**/']
         for rootsuffix in rootsuffixes:
             pat = syntax + rootprefix + rootsuffix + line
             for s, rels in syntaxes.iteritems():
                 if line.startswith(rels):
                     pat = line
                     break
-                elif line.startswith(s+':'):
+                elif line.startswith(s + ':'):
                     pat = rels + line[len(s) + 1:]
                     break
             patterns.append(pat)
@@ -90,7 +92,7 @@ class gitdirstate(dirstate.dirstate):
         files = [self._join('.hgignore')]
         for name, path in self._ui.configitems("ui"):
             if name == 'ignore' or name.startswith('ignore.'):
-                  files.append(util.expandpath(path))
+                files.append(util.expandpath(path))
         patterns = []
         # Only use .gitignore if there's no .hgignore
         try:
@@ -104,28 +106,29 @@ class gitdirstate(dirstate.dirstate):
                 if not os.path.exists(fn):
                     continue
                 fp = open(fn)
-                pats, warnings = gignorepats(None,fp,root=d)
+                pats, warnings = gignorepats(None, fp, root=d)
                 for warning in warnings:
                     self._ui.warn("%s: %s\n" % (fn, warning))
                 patterns.extend(pats)
-        return ignore.ignore(self._root, files, self._ui.warn, extrapatterns=patterns)
+        return ignore.ignore(self._root, files, self._ui.warn,
+                             extrapatterns=patterns)
 
     def _finddotgitignores(self):
         """A copy of dirstate.walk. This is called from the new _ignore method,
         which is called by dirstate.walk, which would cause infinite recursion,
         except _finddotgitignores calls the superclass _ignore directly."""
-        match = matchmod.match(self._root, self.getcwd(), ['relglob:.gitignore'])
-        #TODO: need subrepos?
+        match = matchmod.match(self._root, self.getcwd(),
+                               ['relglob:.gitignore'])
+        # TODO: need subrepos?
         subrepos = []
         unknown = True
         ignored = False
-        full=True
 
         def fwarn(f, msg):
             self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
             return False
 
-        ignore = super(gitdirstate,self)._ignore
+        ignore = super(gitdirstate, self)._ignore
         dirignore = self._dirignore
         if ignored:
             ignore = util.never
@@ -147,10 +150,10 @@ class gitdirstate(dirstate.dirstate):
         join = self._join
 
         exact = skipstep3 = False
-        if matchfn == match.exact: # match.exact
+        if matchfn == match.exact:  # match.exact
             exact = True
-            dirignore = util.always # skip step 2
-        elif match.files() and not match.anypats(): # match.match, no patterns
+            dirignore = util.always                  # skip step 2
+        elif match.files() and not match.anypats():  # match.match, no patterns
             skipstep3 = True
 
         if not exact and self._checkcase:
@@ -220,9 +223,10 @@ class gitdirstate(dirstate.dirstate):
             visit.sort()
 
             if unknown:
-                # unknown == True means we walked the full directory tree above.
-                # So if a file is not seen it was either a) not matching matchfn
-                # b) ignored, c) missing, or d) under a symlink directory.
+                # unknown == True means we walked the full directory tree
+                # above. So if a file is not seen it was either a) not matching
+                # matchfn b) ignored, c) missing, or d) under a symlink
+                # directory.
                 audit_path = pathutil.pathauditor(self._root)
 
                 for nf in iter(visit):
