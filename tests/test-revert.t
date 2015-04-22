@@ -201,12 +201,26 @@ call `hg revert` with no file specified
   (use --all to revert all files, or 'hg update 1' to update)
   [255]
 
+call `hg revert` with -I
+---------------------------
+
+  $ echo a >> a
+  $ hg revert -I a
+  reverting a
+
+call `hg revert` with -X
+---------------------------
+
+  $ echo a >> a
+  $ hg revert -X d
+  reverting a
+
 call `hg revert` with --all
 ---------------------------
 
   $ hg revert --all -rtip
   reverting a
-
+  $ rm *.orig
 
 Issue332: confusing message when reverting directory
 ----------------------------------------------------

@@ -5511,7 +5511,8 @@ def revert(ui, repo, *pats, **opts):
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
 
-    if not pats and not (opts.get('all') or opts.get('interactive')):
+    if (not (pats or opts.get('include') or opts.get('exclude') or
+             opts.get('all') or opts.get('interactive'))):
         msg = _("no files or directories specified")
         if p2 != nullid:
             hint = _("uncommitted merge, use --all to discard all changes,"
