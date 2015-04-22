@@ -6,7 +6,6 @@ import os
 import stat
 
 import dulwich.objects as dulobjs
-from dulwich import diff_tree
 from mercurial import util as hgutil
 
 import compat
@@ -107,11 +106,12 @@ class IncrementalChangesetExporter(object):
     def __init__(self, hg_repo, start_ctx, git_store, git_commit):
         """Create an instance against a mercurial.localrepo.
 
-        start_ctx is the context for a Mercurial commit that has a Git
-        equivalent, passed in as git_commit. The incremental computation will be
-        started from this commit. git_store is the Git object store the commit
-        comes from. start_ctx can be repo[nullid], in which case git_commit
-        should be None.
+        start_ctx: the context for a Mercurial commit that has a Git
+                   equivalent, passed in as git_commit. The incremental
+                   computation will be started from this commit.
+        git_store: the Git object store the commit comes from.
+
+        start_ctx can be repo[nullid], in which case git_commit should be None.
         """
         self._hg = hg_repo
 
@@ -199,7 +199,8 @@ class IncrementalChangesetExporter(object):
                 subadded, subremoved = self._handle_subrepos(newctx)
                 break
 
-        # We first process subrepo and file removals so we can prune dead trees.
+        # We first process subrepo and file removals so we can prune dead
+        # trees.
         for path in subremoved:
             self._remove_path(path, dirty_trees)
 
@@ -229,8 +230,8 @@ class IncrementalChangesetExporter(object):
 
             fctx = newctx[path]
 
-            entry, blob = IncrementalChangesetExporter.tree_entry(fctx,
-                self._blob_cache)
+            func = IncrementalChangesetExporter.tree_entry
+            entry, blob = func(fctx, self._blob_cache)
             if blob is not None:
                 yield (blob, fctx.filenode())
 
@@ -373,8 +374,8 @@ class IncrementalChangesetExporter(object):
         #
         # All other combinations are 'do nothing'.
         #
-        # git links without corresponding submodule paths are stored as subrepos
-        # with a substate but without an entry in .hgsub.
+        # git links without corresponding submodule paths are stored as
+        # subrepos with a substate but without an entry in .hgsub.
 
         # 'added' is both modified and added
         added, removed = [], []
@@ -393,7 +394,8 @@ class IncrementalChangesetExporter(object):
 
         for path, sha in newsubstate.iteritems():
             if not isgit(newsub, path):
-                # new = hg or no; the only cases we care about are handled above
+                # new = hg or no; the only cases we care about are handled
+                # above
                 continue
 
             # case (1)
@@ -426,5 +428,5 @@ class IncrementalChangesetExporter(object):
         else:
             mode = 0100644
 
-        return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode, blob_id),
-                blob)
+        return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode,
+                                  blob_id), blob)
