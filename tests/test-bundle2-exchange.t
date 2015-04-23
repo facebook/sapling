@@ -559,12 +559,12 @@ Doing the actual push: hook abort
   pushing to other
   searching for changes
   pre-close-tip:e7ec4e813ba6 draft 
-  transaction abort!
-  rollback completed
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  remote: transaction abort!
+  remote: rollback completed
   abort: pretxnclose.failpush hook exited with status 1
   [255]
 
@@ -575,10 +575,10 @@ Doing the actual push: hook abort
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  abort: pretxnclose.failpush hook exited with status 1
-  remote: pre-close-tip:e7ec4e813ba6 draft 
   remote: transaction abort!
   remote: rollback completed
+  abort: pretxnclose.failpush hook exited with status 1
+  remote: pre-close-tip:e7ec4e813ba6 draft 
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
@@ -588,6 +588,8 @@ Doing the actual push: hook abort
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  remote: transaction abort!
+  remote: rollback completed
   abort: pretxnclose.failpush hook exited with status 1
   [255]
 

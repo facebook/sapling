@@ -1284,6 +1284,7 @@ def unbundle(repo, cg, heads, source, url):
     r = 0
     # need a transaction when processing a bundle2 stream
     wlock = lock = tr = None
+    recordout = None
     try:
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
@@ -1301,11 +1302,18 @@ def unbundle(repo, cg, heads, source, url):
             except Exception, exc:
                 exc.duringunbundle2 = True
                 if r is not None:
-                    exc._bundle2salvagedoutput = r.salvageoutput()
+                    parts = exc._bundle2salvagedoutput = r.salvageoutput()
+                    repo.ui.pushbuffer(error=True)
+                    def recordout(output):
+                        part = bundle2.bundlepart('output', data=output,
+                                                  mandatory=False)
+                        parts.append(part)
                 raise
         else:
             lock = repo.lock()
             r = changegroup.addchangegroup(repo, cg, source, url)
     finally:
         lockmod.release(tr, lock, wlock)
+        if recordout is not None:
+            recordout(repo.ui.popbuffer())
     return r
