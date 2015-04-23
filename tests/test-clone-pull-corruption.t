@@ -16,7 +16,7 @@ Add a hook to wait 5 seconds and then abort the commit
 
   $ cd ../corrupted
   $ echo "[hooks]" >> .hg/hgrc
-  $ echo "pretxncommit = sh -c 'sleep 5; exit 1'" >> .hg/hgrc
+  $ echo 'pretxncommit = sh -c "sleep 5; exit 1"' >> .hg/hgrc
 
 start a commit...
 

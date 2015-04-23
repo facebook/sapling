@@ -120,7 +120,7 @@ Test that pending on transaction without changegroup see the normal changegroup(
   $ cat <<EOF > parent/.hg/hgrc
   > [hooks]
   > pretxnchangegroup=
-  > pretxnclose = hg tip -T 'tip: {node|short}\n'
+  > pretxnclose = hg tip -T "tip: {node|short}\n"
   > [phases]
   > publishing=False
   > EOF
