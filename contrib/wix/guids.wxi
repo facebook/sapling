@@ -44,8 +44,6 @@
   <?define COPYING.guid = {B7801DBA-1C49-4BF4-91AD-33C65F5C7895} ?>
   <?define mercurial.rc.guid = {1D5FAEEE-7E6E-43B1-9F7F-802714316B15} ?>
   <?define mergetools.rc.guid = {E8A1DC29-FF40-4B5F-BD12-80B9F7BF0CCD} ?>
-  <?define paths.rc.guid = {F9ADF21D-5F0B-4934-8CD9-14BE63664721} ?>
-  <?define cacert.pem.guid = {EC1B2630-FE21-46E6-915B-A6545AF703D4} ?>
   <?define ProgramMenuDir.guid = {D5A63320-1238-489B-B68B-CF053E9577CA} ?>
 
 </Include>

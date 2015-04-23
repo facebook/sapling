@@ -82,15 +82,6 @@
               <File Id='mergetools.rc' Name='MergeTools.rc' Source='mercurial\default.d\mergetools.rc'
                     ReadOnly='yes' KeyPath='yes'/>
             </Component>
-            <Component Id='paths.rc' Guid='$(var.paths.rc.guid)' Win64='$(var.IsX64)'>
-              <CreateFolder/>
-              <IniFile Id="ini0" Action="createLine" Directory="HGRCD" Name="Paths.rc"
-                Section="web" Key="cacerts" Value="[INSTALLDIR]hgrc.d\cacert.pem" />
-            </Component>
-            <Component Id='cacert.pem' Guid='$(var.cacert.pem.guid)' Win64='$(var.IsX64)'>
-              <File Id='cacert.pem' Name='cacert.pem' Source='..\misc\cacert.pem'
-                    ReadOnly='yes' KeyPath='yes'/>
-            </Component>
           </Directory>
 
         </Directory>
@@ -132,8 +123,6 @@
         <ComponentRef Id='COPYING' />
         <ComponentRef Id='mercurial.rc' />
         <ComponentRef Id='mergetools.rc' />
-        <ComponentRef Id='paths.rc' />
-        <ComponentRef Id='cacert.pem' />
         <ComponentRef Id='helpFolder' />
         <ComponentGroupRef Id='templatesFolder' />
         <MergeRef Id='VCRuntime' />
