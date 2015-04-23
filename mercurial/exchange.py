@@ -1298,12 +1298,15 @@ def unbundle(repo, cg, heads, source, url):
                 tr.hookargs['url'] = url
                 tr.hookargs['bundle2'] = '1'
                 r = bundle2.processbundle(repo, cg, lambda: tr).reply
+                if r is not None:
+                    repo.ui.pushbuffer(error=True, subproc=True)
+                    def recordout(output):
+                        r.newpart('output', data=output, mandatory=False)
                 tr.close()
             except Exception, exc:
                 exc.duringunbundle2 = True
                 if r is not None:
                     parts = exc._bundle2salvagedoutput = r.salvageoutput()
-                    repo.ui.pushbuffer(error=True, subproc=True)
                     def recordout(output):
                         part = bundle2.bundlepart('output', data=output,
                                                   mandatory=False)
