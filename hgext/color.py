@@ -445,7 +445,7 @@ class colorui(uimod.ui):
             return super(colorui, self).write_err(*args, **opts)
 
         label = opts.get('label', '')
-        if self._bufferstates and self._bufferstates[-1]:
+        if self._bufferstates and self._bufferstates[-1][0]:
             return self.write(*args, **opts)
         if self._colormode == 'win32':
             for a in args:

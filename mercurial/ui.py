@@ -76,7 +76,8 @@ class ui(object):
     def __init__(self, src=None):
         # _buffers: used for temporary capture of output
         self._buffers = []
-        # _bufferstates: Should the temporary capture includes stderr
+        # _bufferstates:
+        #   should the temporary capture include stderr and subprocess output
         self._bufferstates = []
         self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
         self._reportuntrusted = True
@@ -540,12 +541,15 @@ class ui(object):
     def paths(self):
         return paths(self)
 
-    def pushbuffer(self, error=False):
+    def pushbuffer(self, error=False, subproc=False):
         """install a buffer to capture standard output of the ui object
 
-        If error is True, the error output will be captured too."""
+        If error is True, the error output will be captured too.
+
+        If subproc is True, output from subprocesses (typically hooks) will be
+        captured too."""
         self._buffers.append([])
-        self._bufferstates.append(error)
+        self._bufferstates.append((error, subproc))
 
     def popbuffer(self, labeled=False):
         '''pop the last buffer and return the buffered output
@@ -585,7 +589,7 @@ class ui(object):
 
     def write_err(self, *args, **opts):
         try:
-            if self._bufferstates and self._bufferstates[-1]:
+            if self._bufferstates and self._bufferstates[-1][0]:
                 return self.write(*args, **opts)
             if not getattr(self.fout, 'closed', False):
                 self.fout.flush()
@@ -834,8 +838,11 @@ class ui(object):
         '''execute shell command with appropriate output stream. command
         output will be redirected if fout is not stdout.
         '''
+        out = self.fout
+        if util.any(s[1] for s in self._bufferstates):
+            out = self
         return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
-                           errprefix=errprefix, out=self.fout)
+                           errprefix=errprefix, out=out)
 
     def traceback(self, exc=None, force=False):
         '''print exception traceback if traceback printing enabled or forced.
