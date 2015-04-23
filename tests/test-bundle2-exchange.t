@@ -549,6 +549,7 @@ Doing the actual push: hook abort
   > reason =
   > [hooks]
   > pretxnclose.failpush = false
+  > txnabort.failpush = echo 'Cleaning up the mess...'
   > EOF
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
@@ -564,6 +565,7 @@ Doing the actual push: hook abort
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: transaction abort!
+  remote: Cleaning up the mess...
   remote: rollback completed
   abort: pretxnclose.failpush hook exited with status 1
   [255]
@@ -576,6 +578,7 @@ Doing the actual push: hook abort
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: transaction abort!
+  remote: Cleaning up the mess...
   remote: rollback completed
   abort: pretxnclose.failpush hook exited with status 1
   remote: pre-close-tip:e7ec4e813ba6 draft 
@@ -589,6 +592,7 @@ Doing the actual push: hook abort
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: transaction abort!
+  remote: Cleaning up the mess...
   remote: rollback completed
   abort: pretxnclose.failpush hook exited with status 1
   [255]

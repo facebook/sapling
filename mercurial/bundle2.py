@@ -354,7 +354,7 @@ def _processpart(op, part):
         # itself represents a defect of a different variety).
         output = None
         if op.reply is not None:
-            op.ui.pushbuffer(error=True)
+            op.ui.pushbuffer(error=True, subproc=True)
             output = ''
         try:
             handler(op, part)

@@ -1303,7 +1303,7 @@ def unbundle(repo, cg, heads, source, url):
                 exc.duringunbundle2 = True
                 if r is not None:
                     parts = exc._bundle2salvagedoutput = r.salvageoutput()
-                    repo.ui.pushbuffer(error=True)
+                    repo.ui.pushbuffer(error=True, subproc=True)
                     def recordout(output):
                         part = bundle2.bundlepart('output', data=output,
                                                   mandatory=False)
