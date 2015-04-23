@@ -80,7 +80,6 @@ Source: dist\w9xpopen.exe; DestDir: {app}
 Source: dist\Microsoft.VC*.CRT.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\library.zip; DestDir: {app}
 Source: dist\add_path.exe; DestDir: {app}
-Source: dist\cacert.pem; Destdir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
 Source: doc\style.css; DestDir: {app}\Docs
 Source: mercurial\help\*.txt; DestDir: {app}\help
@@ -93,7 +92,6 @@ Source: COPYING; DestDir: {app}; DestName: Copying.txt
 [INI]
 Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http://mercurial.selenic.com/
 Filename: {app}\default.d\editor.rc; Section: ui; Key: editor; String: notepad
-Filename: {app}\default.d\cacerts.rc; Section: web; Key: cacerts; String: {app}\cacert.pem
 
 [UninstallDelete]
 Type: files; Name: {app}\Mercurial.url
