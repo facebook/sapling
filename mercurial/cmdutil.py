@@ -59,6 +59,8 @@ def recordfilter(ui, originalhunks):
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
     import merge as mergemod
+    hunkclasses = (crecordmod.uihunk, patch.recordhunk)
+    ishunk = lambda x: isinstance(x, hunkclasses)
 
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
@@ -102,6 +104,14 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         except patch.PatchError, err:
             raise util.Abort(_('error parsing patch: %s') % err)
 
+        # We need to keep a backup of files that have been newly added and
+        # modified during the recording process because there is a previous
+        # version without the edit in the workdir
+        newlyaddedandmodifiedfiles = set()
+        for chunk in chunks:
+            if ishunk(chunk) and chunk.header.isnewfile() and chunk not in \
+                originalchunks:
+                newlyaddedandmodifiedfiles.add(chunk.header.filename())
         contenders = set()
         for h in chunks:
             try:
@@ -122,8 +132,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         if backupall:
             tobackup = changed
         else:
-            tobackup = [f for f in newfiles if f in modified]
-
+            tobackup = [f for f in newfiles if f in modified or f in \
+                    newlyaddedandmodifiedfiles]
         backups = {}
         if tobackup:
             backupdir = repo.join('record-backups')
@@ -151,6 +161,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             dopatch = fp.tell()
             fp.seek(0)
 
+            [os.unlink(c) for c in newlyaddedandmodifiedfiles]
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
                 # Equivalent to hg.revert

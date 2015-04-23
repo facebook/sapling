@@ -479,6 +479,12 @@ record added file alone
   new file mode 100644
   examine changes to 'r'? [Ynesfdaq?] y
   
+  @@ -0,0 +1,1 @@
+  +$Id$
+  record this change to 'r'? [Ynesfdaq?] y
+  
+  resolving manifests
+  patching file r
   committing files:
   r
   committing manifest
@@ -507,6 +513,12 @@ record added keyword ignored file
   new file mode 100644
   examine changes to 'i'? [Ynesfdaq?] y
   
+  @@ -0,0 +1,1 @@
+  +$Id$
+  record this change to 'i'? [Ynesfdaq?] y
+  
+  resolving manifests
+  patching file i
   committing files:
   i
   committing manifest

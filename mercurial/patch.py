@@ -820,9 +820,10 @@ class header(object):
     """
     diffgit_re = re.compile('diff --git a/(.*) b/(.*)$')
     diff_re = re.compile('diff -r .* (.*)$')
-    allhunks_re = re.compile('(?:index|new file|deleted file) ')
+    allhunks_re = re.compile('(?:index|deleted file) ')
     pretty_re = re.compile('(?:new file|deleted file) ')
-    special_re = re.compile('(?:index|new|deleted|copy|rename) ')
+    special_re = re.compile('(?:index|deleted|copy|rename) ')
+    newfile_re = re.compile('(?:new file)')
 
     def __init__(self, header):
         self.header = header
@@ -870,8 +871,21 @@ class header(object):
     def __repr__(self):
         return '<header %s>' % (' '.join(map(repr, self.files())))
 
+    def isnewfile(self):
+        return util.any(self.newfile_re.match(h) for h in self.header)
+
     def special(self):
-        return util.any(self.special_re.match(h) for h in self.header)
+        # Special files are shown only at the header level and not at the hunk
+        # level for example a file that has been deleted is a special file.
+        # The user cannot change the content of the operation, in the case of
+        # the deleted file he has to take the deletion or not take it, he
+        # cannot take some of it.
+        # Newly added files are special if they are empty, they are not special
+        # if they have some content as we want to be able to change it
+        nocontent = len(self.header) == 2
+        emptynewfile = self.isnewfile() and nocontent
+        return emptynewfile or \
+                util.any(self.special_re.match(h) for h in self.header)
 
 class recordhunk(object):
     """patch hunk
