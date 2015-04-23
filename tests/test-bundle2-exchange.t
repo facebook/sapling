@@ -619,3 +619,51 @@ Doing the actual push: hook abort
   $ ls -1 other/.hg/store/00changelog.i*
   other/.hg/store/00changelog.i
 
+Check error from hook during the unbundling process itself
+
+  $ cat << EOF >> $HGRCPATH
+  > pretxnchangegroup = echo "Fail early!"; false
+  > EOF
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
+  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ cat other.pid >> $DAEMON_PIDS
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: Fail early!
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  abort: pretxnchangegroup hook exited with status 1
+  [255]
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: Fail early!
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  abort: pretxnchangegroup hook exited with status 1
+  [255]
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: Fail early!
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  abort: pretxnchangegroup hook exited with status 1
+  [255]

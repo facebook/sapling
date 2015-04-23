@@ -285,7 +285,7 @@ def _notransaction():
     to be created"""
     raise TransactionUnavailable()
 
-def processbundle(repo, unbundler, transactiongetter=None):
+def processbundle(repo, unbundler, transactiongetter=None, op=None):
     """This function process a bundle, apply effect to/from a repo
 
     It iterates over each part then searches for and uses the proper handling
@@ -295,10 +295,16 @@ def processbundle(repo, unbundler, transactiongetter=None):
     before final usage.
 
     Unknown Mandatory part will abort the process.
+
+    It is temporarily possible to provide a prebuilt bundleoperation to the
+    function. This is used to ensure output is properly propagated in case of
+    an error during the unbundling. This output capturing part will likely be
+    reworked and this ability will probably go away in the process.
     """
-    if transactiongetter is None:
-        transactiongetter = _notransaction
-    op = bundleoperation(repo, transactiongetter)
+    if op is None:
+        if transactiongetter is None:
+            transactiongetter = _notransaction
+        op = bundleoperation(repo, transactiongetter)
     # todo:
     # - replace this is a init function soon.
     # - exception catching
