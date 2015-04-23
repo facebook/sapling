@@ -325,7 +325,7 @@ class cg1packer(object):
 
         # for generaldelta revlogs, we linearize the revs; this will both be
         # much quicker and generate a much smaller bundle
-        if (revlog._generaldelta and reorder is not False) or reorder:
+        if (revlog._generaldelta and reorder is None) or reorder:
             dag = dagutil.revlogdag(revlog)
             revs = set(revlog.rev(n) for n in nodelist)
             revs = dag.linearize(revs)
@@ -511,7 +511,7 @@ class cg2packer(cg1packer):
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
 
     def group(self, nodelist, revlog, lookup, units=None, reorder=None):
-        if (revlog._generaldelta and reorder is not True):
+        if (revlog._generaldelta and reorder is None):
             reorder = False
         return super(cg2packer, self).group(nodelist, revlog, lookup,
                                             units=units, reorder=reorder)
