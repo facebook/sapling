@@ -315,7 +315,6 @@ Modify end of plain file, add EOL
   > y
   > y
   > y
-  > y
   > EOF
   diff --git a/plain b/plain
   1 hunks, 1 lines changed
