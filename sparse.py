@@ -25,6 +25,14 @@ def uisetup(ui):
 
 def extsetup(ui):
     _setuplog(ui)
+    # if hgwatchman is installed, tell it to use our hash function
+    try:
+        hgwatchman = extensions.find('hgwatchman')
+        def _hashignore(orig, ignore):
+            return _hashmatcher(ignore)
+        extensions.wrapfunction(hgwatchman, '_hashignore', _hashignore)
+    except KeyError:
+        pass
 
 def reposetup(ui, repo):
     if not util.safehasattr(repo, 'dirstate'):
