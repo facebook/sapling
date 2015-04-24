@@ -1139,19 +1139,18 @@ def _computebumpedset(repo):
     public = phases.public
     cl = repo.changelog
     torev = cl.nodemap.get
-    obs = getrevs(repo, 'obsolete')
-    for rev in repo:
+    for ctx in repo.set('(not public()) and (not obsolete())'):
+        rev = ctx.rev()
         # We only evaluate mutable, non-obsolete revision
-        if (public < phase(repo, rev)) and (rev not in obs):
-            node = cl.node(rev)
-            # (future) A cache of precursors may worth if split is very common
-            for pnode in allprecursors(repo.obsstore, [node],
-                                       ignoreflags=bumpedfix):
-                prev = torev(pnode) # unfiltered! but so is phasecache
-                if (prev is not None) and (phase(repo, prev) <= public):
-                    # we have a public precursors
-                    bumped.add(rev)
-                    break # Next draft!
+        node = ctx.node()
+        # (future) A cache of precursors may worth if split is very common
+        for pnode in allprecursors(repo.obsstore, [node],
+                                   ignoreflags=bumpedfix):
+            prev = torev(pnode) # unfiltered! but so is phasecache
+            if (prev is not None) and (phase(repo, prev) <= public):
+                # we have a public precursors
+                bumped.add(rev)
+                break # Next draft!
     return bumped
 
 @cachefor('divergent')
