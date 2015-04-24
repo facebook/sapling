@@ -1478,6 +1478,22 @@ def present(repo, subset, x):
     except error.RepoLookupError:
         return baseset()
 
+def _notpublic(repo, subset, x):
+    """``_notpublic()``
+    Changeset not in public phase."""
+    # i18n: "public" is a keyword
+    getargs(x, 0, 0, _("_notpublic takes no arguments"))
+    if repo._phasecache._phasesets:
+        s = set()
+        for u in repo._phasecache._phasesets[1:]:
+            s.update(u)
+        return subset & s
+    else:
+        phase = repo._phasecache.phase
+        target = phases.public
+        condition = lambda r: phase(repo, r) != target
+        return subset.filter(condition, cache=False)
+
 def public(repo, subset, x):
     """``public()``
     Changeset in public phase."""
@@ -1984,6 +2000,7 @@ symbols = {
     "parents": parents,
     "present": present,
     "public": public,
+    "_notpublic": _notpublic,
     "remote": remote,
     "removes": removes,
     "rev": rev,
@@ -2058,6 +2075,7 @@ safesymbols = set([
     "parents",
     "present",
     "public",
+    "_notpublic",
     "remote",
     "removes",
     "rev",
@@ -2149,8 +2167,14 @@ def optimize(x, small):
             wb, wa = wa, wb
         return max(wa, wb), (op, ta, tb)
     elif op == 'not':
-        o = optimize(x[1], not small)
-        return o[0], (op, o[1])
+        # Optimize not public() to _notpublic() because we have a fast version
+        if x[1] == ('func', ('symbol', 'public'), None):
+            newsym =  ('func', ('symbol', '_notpublic'), None)
+            o = optimize(newsym, not small)
+            return o[0], o[1]
+        else:
+            o = optimize(x[1], not small)
+            return o[0], (op, o[1])
     elif op == 'parentpost':
         o = optimize(x[1], small)
         return o[0], (op, o[1])
