@@ -708,6 +708,13 @@ class forceincludematcher(object):
     def anypats(self):
         return True
 
+    def hash(self):
+        sha1 = util.sha1()
+        sha1.update(_hashmatcher(self._matcher))
+        for include in sorted(self._includes):
+            sha1.update(include + '\0')
+        return sha1.hexdigest()
+
 class unionmatcher(object):
     """A matcher that is the union of several matchers."""
     def __init__(self, matchers):
@@ -731,6 +738,12 @@ class unionmatcher(object):
     def anypats(self):
         return True
 
+    def hash(self):
+        sha1 = util.sha1()
+        for m in self._matchers:
+            sha1.update(_hashmatcher(m))
+        return sha1.hexdigest()
+
 class negatematcher(object):
     def __init__(self, matcher):
         self._matcher = matcher
@@ -750,3 +763,28 @@ class negatematcher(object):
     def anypats(self):
         return True
 
+    def hash(self):
+        sha1 = util.sha1()
+        sha1.update('negate')
+        sha1.update(_hashmatcher(self._matcher))
+        return sha1.hexdigest()
+
+def _hashmatcher(matcher):
+    if util.safehasattr(matcher, 'hash'):
+        return matcher.hash()
+
+    sha1 = util.sha1()
+    if util.safehasattr(matcher, 'includepat'):
+        sha1.update(matcher.includepat)
+    sha1.update('\0\0')
+    if util.safehasattr(matcher, 'excludepat'):
+        sha1.update(matcher.excludepat)
+    sha1.update('\0\0')
+    if util.safehasattr(matcher, 'patternspat'):
+        sha1.update(matcher.patternspat)
+    sha1.update('\0\0')
+    if util.safehasattr(matcher, '_files'):
+        for f in matcher._files:
+            sha1.update(f + '\0')
+    sha1.update('\0')
+    return sha1.hexdigest()
