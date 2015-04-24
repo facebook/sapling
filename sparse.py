@@ -368,9 +368,21 @@ def _wraprepo(ui, repo):
                     includes, excludes, profiles = self.getsparsepatterns(rev)
 
                     if includes or excludes:
-                        matchers.append(matchmod.match(self.root, '', [],
+                        # Explicitly include subdirectories of includes so
+                        # status will walk them down to the actual include.
+                        subdirs = set()
+                        for include in includes:
+                            dirname = os.path.dirname(include)
+                            while dirname:
+                                subdirs.add(dirname)
+                                dirname = os.path.dirname(dirname)
+
+                        matcher = matchmod.match(self.root, '', [],
                             include=includes, exclude=excludes,
-                            default='relpath'))
+                            default='relpath')
+                        if subdirs:
+                            matcher = forceincludematcher(matcher, subdirs)
+                        matchers.append(matcher)
                 except IOError:
                     pass
 

@@ -233,3 +233,11 @@ Verify log --sparse only shows commits that affect the sparse checkout
   2 1 0  (no-eol)
   $ hg log --sparse -T '{rev} '
   2 0  (no-eol)
+
+Test status on a file in a subdir
+
+  $ mkdir -p dir1/dir2
+  $ touch dir1/dir2/file
+  $ hg sparse -I dir1/dir2
+  $ hg status
+  ? dir1/dir2/file
