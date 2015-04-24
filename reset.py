@@ -78,7 +78,7 @@ def _revive(repo, rev):
             pass
 
     try:
-        revs = repo.revs(rev)
+        revs = scmutil.revrange(repo, [rev])
         if len(revs) > 1:
             raise util.Abort(_('exactly one revision must be specified'))
         if len(revs) == 1:

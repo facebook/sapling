@@ -111,6 +111,19 @@ Reset without a bookmark
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg book foo
 
+Reset to bookmark with - in the name
+
+  $ hg reset 66ee28d0328c
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ hg book foo-bar -r .^
+  $ hg reset foo-bar
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
+  $ hg book -d foo-bar
+
 Verify file status after reset
 
   $ hg reset -C 66ee28d0328c
