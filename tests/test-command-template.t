@@ -101,23 +101,52 @@ following below omit it properly.
   $ hg add c
   $ hg commit -qm ' '
 
-Default style is like normal output.
+Default style is like normal output. Phases style should be the same
+as default style, except for extra phase lines.
 
   $ hg log > log.out
   $ hg log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg log -T phases > phases.out
+  $ diff -u log.out phases.out | grep "phase:"
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
 
   $ hg log -v > log.out
   $ hg log -v --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg log -v -T phases > phases.out
+  $ diff -u log.out phases.out | grep phase:
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
+  +phase:       draft
 
   $ hg log -q > log.out
   $ hg log -q --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg log -q -T phases > phases.out
+  $ cmp log.out phases.out || diff -u log.out phases.out
 
   $ hg log --debug > log.out
   $ hg log --debug --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg log --debug -T phases > phases.out
+  $ cmp log.out phases.out || diff -u log.out phases.out
 
 Default style should also preserve color information (issue2866):
 
@@ -130,15 +159,46 @@ Default style should also preserve color information (issue2866):
   $ hg --color=debug log > log.out
   $ hg --color=debug log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug log -T phases > phases.out
+  $ diff -u log.out phases.out | grep phase:
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+
   $ hg --color=debug -v log > log.out
   $ hg --color=debug -v log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug -v log -T phases > phases.out
+  $ diff -u log.out phases.out | grep phase:
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+  +[log.phase|phase:       draft]
+
   $ hg --color=debug -q log > log.out
   $ hg --color=debug -q log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug -q log -T phases > phases.out
+  $ cmp log.out phases.out || diff -u log.out phases.out
+
   $ hg --color=debug --debug log > log.out
   $ hg --color=debug --debug log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
+  $ hg --color=debug --debug log -T phases > phases.out
+  $ cmp log.out phases.out || diff -u log.out phases.out
 
   $ mv $HGRCPATH-bak $HGRCPATH
 
