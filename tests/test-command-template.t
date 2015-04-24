@@ -94,11 +94,14 @@ Template should precede style option
   $ hg log -l1 --style default -T '{rev}\n'
   8
 
-Default style is like normal output:
+Add a commit with empty description, to ensure that the templates
+following below omit it properly.
 
   $ echo c >> c
   $ hg add c
   $ hg commit -qm ' '
+
+Default style is like normal output.
 
   $ hg log > log.out
   $ hg log --style default > style.out
@@ -138,6 +141,9 @@ Default style should also preserve color information (issue2866):
   $ cmp log.out style.out || diff -u log.out style.out
 
   $ mv $HGRCPATH-bak $HGRCPATH
+
+Remove commit with empty commit message, so as to not pollute further
+tests.
 
   $ hg --config extensions.strip= strip -q .
 
