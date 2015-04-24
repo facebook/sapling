@@ -225,7 +225,7 @@ def _setupdirstate(ui, repo):
             sparsematch = repo.sparsematch()
             origignore = self.orig.__get__(obj)
             if self.sparsematch != sparsematch or self.origignore != origignore:
-                self.func = lambda f: origignore(f) or not sparsematch(f)
+                self.func = unionmatcher([origignore, negatematcher(sparsematch)])
                 self.sparsematch = sparsematch
                 self.origignore = origignore
             return self.func
@@ -730,3 +730,23 @@ class unionmatcher(object):
 
     def anypats(self):
         return True
+
+class negatematcher(object):
+    def __init__(self, matcher):
+        self._matcher = matcher
+
+    def __call__(self, value):
+        return not self._matcher(value)
+
+    def always(self):
+        return False
+
+    def files(self):
+        return []
+
+    def isexact(self):
+        return False
+
+    def anypats(self):
+        return True
+
