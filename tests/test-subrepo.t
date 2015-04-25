@@ -1026,6 +1026,45 @@ Incoming and outgoing should not use the default path:
   no changes found
   [1]
 
+Check that merge of a new subrepo doesn't write the uncommitted state to
+.hgsubstate (issue4622)
+
+  $ hg init issue1852a/addedsub
+  $ echo zzz > issue1852a/addedsub/zz.txt
+  $ hg -R issue1852a/addedsub ci -Aqm "initial ZZ"
+
+  $ hg clone issue1852a/addedsub issue1852d/addedsub
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ echo def > issue1852a/sub/repo/foo
+  $ hg -R issue1852a ci -SAm 'tweaked subrepo'
+  adding tmp/sub/repo/foo_p
+  committing subrepository sub/repo (glob)
+
+  $ echo 'addedsub = addedsub' >> issue1852d/.hgsub
+  $ echo xyz > issue1852d/sub/repo/foo
+  $ hg -R issue1852d pull -u
+  pulling from $TESTTMP/issue1852a (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+   subrepository sub/repo diverged (local revision: f42d5c7504a8, remote revision: 46cd4aac504c)
+  (M)erge, keep (l)ocal or keep (r)emote? m
+  pulling subrepo sub/repo from $TESTTMP/issue1852a/sub/repo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+   subrepository sources for sub/repo differ (glob)
+  use (l)ocal source (f42d5c7504a8) or (r)emote source (46cd4aac504c)? l
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat issue1852d/.hgsubstate
+  f42d5c7504a811dda50f5cf3e5e16c3330b87172 sub/repo
+
 Check status of files when none of them belong to the first
 subrepository:
 

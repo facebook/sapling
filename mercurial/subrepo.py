@@ -153,7 +153,8 @@ def state(ctx, ui):
 
 def writestate(repo, state):
     """rewrite .hgsubstate in (outer) repo with these subrepo states"""
-    lines = ['%s %s\n' % (state[s][1], s) for s in sorted(state)]
+    lines = ['%s %s\n' % (state[s][1], s) for s in sorted(state)
+                                                if state[s][1] != nullstate[1]]
     repo.wwrite('.hgsubstate', ''.join(lines), '')
 
 def submerge(repo, wctx, mctx, actx, overwrite):
