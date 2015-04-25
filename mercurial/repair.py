@@ -18,7 +18,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
     if usebundle2:
         cgversion = repo.ui.config('experimental', 'strip-bundle2-version')
         if cgversion not in changegroup.packermap:
-            repo.ui.warn(_('unknown strip-bundle2-version value %r; ' +
+            repo.ui.warn(_('unknown strip-bundle2-version value %r; '
                             'should be one of %r\n') %
                          (cgversion, sorted(changegroup.packermap.keys()),))
             cgversion = '01'
