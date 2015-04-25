@@ -1142,7 +1142,7 @@ class changeset_printer(object):
                               label='log.%s' % ns.colorname)
         if self.ui.debugflag:
             # i18n: column positioning for "hg log"
-            self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
+            self.ui.write(_("phase:       %s\n") % ctx.phasestr(),
                           label='log.phase')
         for pctx in self._meaningful_parentrevs(ctx):
             label = 'log.parent changeset.%s' % pctx.phasestr()
