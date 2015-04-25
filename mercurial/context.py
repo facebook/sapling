@@ -887,6 +887,11 @@ class basefilectx(object):
         getlog = util.lrucachefunc(lambda x: self._repo.file(x))
 
         def parents(f):
+            # Cut _descendantrev here to mitigate the penalty of lazy linkrev
+            # adjustment. Otherwise, p._adjustlinkrev() would walk changelog
+            # from the topmost introrev (= srcrev) down to p.linkrev() if it
+            # isn't an ancestor of the srcrev.
+            f._changeid
             pl = f.parents()
 
             # Don't return renamed parents if we aren't following.
