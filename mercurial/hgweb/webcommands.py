@@ -223,7 +223,7 @@ def _search(web, req, tmpl):
 
         revdef = 'reverse(%s)' % query
         try:
-            tree, pos = revset.parse(revdef)
+            tree = revset.parse(revdef)
         except ParseError:
             # can't parse to a revset tree
             return MODE_KEYWORD, query

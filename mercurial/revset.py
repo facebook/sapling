@@ -2509,7 +2509,10 @@ def foldconcat(tree):
 
 def parse(spec, lookup=None):
     p = parser.parser(tokenize, elements)
-    return p.parse(spec, lookup=lookup)
+    tree, pos = p.parse(spec, lookup=lookup)
+    if pos != len(spec):
+        raise error.ParseError(_("invalid token"), pos)
+    return tree
 
 def posttreebuilthook(tree, repo):
     # hook for extensions to execute code on the optimized tree
@@ -2521,9 +2524,7 @@ def match(ui, spec, repo=None):
     lookup = None
     if repo:
         lookup = repo.__contains__
-    tree, pos = parse(spec, lookup)
-    if (pos != len(spec)):
-        raise error.ParseError(_("invalid token"), pos)
+    tree = parse(spec, lookup)
     if ui:
         tree = findaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)

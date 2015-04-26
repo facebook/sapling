@@ -2918,7 +2918,7 @@ def debugrevspec(ui, repo, expr, **opts):
     expansion.
     """
     if ui.verbose:
-        tree = revset.parse(expr)[0]
+        tree = revset.parse(expr)
         ui.note(revset.prettyformat(tree), "\n")
         newtree = revset.findaliases(ui, tree)
         if newtree != tree:
