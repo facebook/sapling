@@ -153,6 +153,23 @@ issue 3342: file in nested directory causes unexpected abort
   $ mkdir -p a/B/c/D
   $ echo e > a/B/c/D/e
   $ hg add a/B/c/D/e
+  $ hg ci -m 'add e'
+
+issue 4481: revert across case only renames
+  $ hg mv a/B/c/D/e a/B/c/d/E
+  $ hg ci -m "uppercase E"
+  $ echo 'foo' > a/B/c/D/E
+  $ hg ci -m 'e content change'
+  $ hg revert --all -r 0
+  removing a\B\c\D\E
+  adding a\B\c\D\e
+  $ find * | sort
+  a
+  a/B
+  a/B/c
+  a/B/c/D
+  a/B/c/D/e
+  a/B/c/D/e.orig
 
   $ cd ..
 

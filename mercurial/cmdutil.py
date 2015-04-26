@@ -3084,7 +3084,10 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         repo.dirstate.drop(f)
     for f in actions['remove'][0]:
         audit_path(f)
-        util.unlinkpath(repo.wjoin(f))
+        try:
+            util.unlinkpath(repo.wjoin(f))
+        except OSError:
+            pass
         repo.dirstate.remove(f)
     for f in actions['drop'][0]:
         audit_path(f)
