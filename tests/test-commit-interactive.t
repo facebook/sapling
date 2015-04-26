@@ -1418,8 +1418,9 @@ Moving files
   +somechange
   record this change to 'plain3'? [Ynesfdaq?] y
   
+The #if execbit block above changes the hash here on some systems
   $ hg tip
-  changeset:   30:542e1f362a22
+  changeset:   30:* (glob)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
