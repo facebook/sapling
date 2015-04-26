@@ -81,7 +81,10 @@ def tokenize(program):
 
 def parse(expr):
     p = parser.parser(tokenize, elements)
-    return p.parse(expr)
+    tree, pos = p.parse(expr)
+    if pos != len(expr):
+        raise error.ParseError(_("invalid token"), pos)
+    return tree
 
 def getstring(x, err):
     if x and (x[0] == 'string' or x[0] == 'symbol'):
@@ -491,9 +494,7 @@ _existingcallers = [
 ]
 
 def getfileset(ctx, expr):
-    tree, pos = parse(expr)
-    if (pos != len(expr)):
-        raise error.ParseError(_("invalid token"), pos)
+    tree = parse(expr)
 
     # do we need status info?
     if (_intree(['modified', 'added', 'removed', 'deleted',

@@ -2164,7 +2164,7 @@ def debugfileset(ui, repo, expr, **opts):
     '''parse and apply a fileset specification'''
     ctx = scmutil.revsingle(repo, opts.get('rev'), None)
     if ui.verbose:
-        tree = fileset.parse(expr)[0]
+        tree = fileset.parse(expr)
         ui.note(tree, "\n")
 
     for f in ctx.getfileset(expr):
