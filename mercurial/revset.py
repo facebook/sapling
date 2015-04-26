@@ -2162,8 +2162,10 @@ def optimize(x, small):
     elif op == 'or':
         wa, ta = optimize(x[1], False)
         wb, tb = optimize(x[2], False)
-        if wb < wa:
-            wb, wa = wa, wb
+        # we can't reorder trees by weight because it would change the order.
+        # ("sort(a + b)" == "sort(b + a)", but "a + b" != "b + a")
+        #   if wb < wa:
+        #       tb, ta = ta, tb
         return max(wa, wb), (op, ta, tb)
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
