@@ -128,16 +128,15 @@ trivial
   6
   $ try '0|1|2'
   (or
-    (or
-      ('symbol', '0')
-      ('symbol', '1'))
+    ('symbol', '0')
+    ('symbol', '1')
     ('symbol', '2'))
   * set:
   <addset
+    <baseset [0]>,
     <addset
-      <baseset [0]>,
-      <baseset [1]>>,
-    <baseset [2]>>
+      <baseset [1]>,
+      <baseset [2]>>>
   0
   1
   2
@@ -910,6 +909,49 @@ test that `or` operation skips duplicated revisions from right-hand side
   4
   5
 
+test that chained `or` operations make balanced addsets
+
+  $ try '0:1|1:2|2:3|3:4|4:5'
+  (or
+    (range
+      ('symbol', '0')
+      ('symbol', '1'))
+    (range
+      ('symbol', '1')
+      ('symbol', '2'))
+    (range
+      ('symbol', '2')
+      ('symbol', '3'))
+    (range
+      ('symbol', '3')
+      ('symbol', '4'))
+    (range
+      ('symbol', '4')
+      ('symbol', '5')))
+  * set:
+  <addset
+    <addset
+      <spanset+ 0:1>,
+      <spanset+ 1:2>>,
+    <addset
+      <spanset+ 2:3>,
+      <addset
+        <spanset+ 3:4>,
+        <spanset+ 4:5>>>>
+  0
+  1
+  2
+  3
+  4
+  5
+
+test that chained `or` operations never eat up stack (issue4624)
+(uses `0:1` instead of `0` to avoid future optimization of trivial revisions)
+
+  $ hg log -T '{rev}\n' -r "`python -c "print '|'.join(['0:1'] * 500)"`"
+  0
+  1
+
 check that conversion to only works
   $ try --optimize '::3 - ::1'
   (minus
@@ -1351,6 +1393,44 @@ test nesting and variable passing
   * set:
   <baseset [5]>
   5
+
+test chained `or` operations are flattened at parsing phase
+
+  $ echo 'chainedorops($1, $2, $3) = $1|$2|$3' >> .hg/hgrc
+  $ try 'chainedorops(0:1, 1:2, 2:3)'
+  (func
+    ('symbol', 'chainedorops')
+    (list
+      (list
+        (range
+          ('symbol', '0')
+          ('symbol', '1'))
+        (range
+          ('symbol', '1')
+          ('symbol', '2')))
+      (range
+        ('symbol', '2')
+        ('symbol', '3'))))
+  (or
+    (range
+      ('symbol', '0')
+      ('symbol', '1'))
+    (range
+      ('symbol', '1')
+      ('symbol', '2'))
+    (range
+      ('symbol', '2')
+      ('symbol', '3')))
+  * set:
+  <addset
+    <spanset+ 0:1>,
+    <addset
+      <spanset+ 1:2>,
+      <spanset+ 2:3>>>
+  0
+  1
+  2
+  3
 
 test variable isolation, variable placeholders are rewritten as string
 then parsed and matched again as string. Check they do not leak too

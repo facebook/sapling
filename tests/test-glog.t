@@ -1469,13 +1469,12 @@ glog always reorders nodes which explains the difference with log
   (group
     (group
       (or
-        (or
-          (func
-            ('symbol', 'branch')
-            ('string', 'default'))
-          (func
-            ('symbol', 'branch')
-            ('string', 'branch')))
+        (func
+          ('symbol', 'branch')
+          ('string', 'default'))
+        (func
+          ('symbol', 'branch')
+          ('string', 'branch'))
         (func
           ('symbol', 'branch')
           ('string', 'branch')))))

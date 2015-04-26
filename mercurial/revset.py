@@ -356,10 +356,9 @@ def dagrange(repo, subset, x, y):
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
 
-def orset(repo, subset, x, y):
-    xl = getset(repo, subset, x)
-    yl = getset(repo, subset, y)
-    return xl + yl
+def orset(repo, subset, *xs):
+    rs = [getset(repo, subset, x) for x in xs]
+    return _combinesets(rs)
 
 def notset(repo, subset, x):
     return subset - getset(repo, subset, x)
@@ -2160,13 +2159,11 @@ def optimize(x, small):
             return w, (op, tb, ta)
         return w, (op, ta, tb)
     elif op == 'or':
-        wa, ta = optimize(x[1], False)
-        wb, tb = optimize(x[2], False)
+        ws, ts = zip(*[optimize(y, False) for y in x[1:]])
         # we can't reorder trees by weight because it would change the order.
         # ("sort(a + b)" == "sort(b + a)", but "a + b" != "b + a")
-        #   if wb < wa:
-        #       tb, ta = ta, tb
-        return max(wa, wb), (op, ta, tb)
+        #   ts = tuple(t for w, t in sorted(zip(ws, ts), key=lambda wt: wt[0]))
+        return max(ws), (op,) + ts
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1] == ('func', ('symbol', 'public'), None):
@@ -2384,7 +2381,7 @@ def _parsealiasdefn(defn, args):
     tree, pos = p.parse(defn)
     if pos != len(defn):
         raise error.ParseError(_('invalid token'), pos)
-    return tree
+    return parser.simplifyinfixops(tree, ('or',))
 
 class revsetalias(object):
     # whether own `error` information is already shown or not.
@@ -2515,7 +2512,7 @@ def parse(spec, lookup=None):
     tree, pos = p.parse(spec, lookup=lookup)
     if pos != len(spec):
         raise error.ParseError(_("invalid token"), pos)
-    return tree
+    return parser.simplifyinfixops(tree, ('or',))
 
 def posttreebuilthook(tree, repo):
     # hook for extensions to execute code on the optimized tree
