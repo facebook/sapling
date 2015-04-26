@@ -2165,7 +2165,7 @@ def debugfileset(ui, repo, expr, **opts):
     ctx = scmutil.revsingle(repo, opts.get('rev'), None)
     if ui.verbose:
         tree = fileset.parse(expr)
-        ui.note(tree, "\n")
+        ui.note(fileset.prettyformat(tree), "\n")
 
     for f in ctx.getfileset(expr):
         ui.write("%s\n" % f)

@@ -517,5 +517,8 @@ def getfileset(ctx, expr):
 
     return getset(matchctx(ctx, subset, status), tree)
 
+def prettyformat(tree):
+    return parser.prettyformat(tree, ('string', 'symbol'))
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()

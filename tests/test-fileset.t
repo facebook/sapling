@@ -16,15 +16,21 @@
 
 Test operators and basic patterns
 
-  $ fileset a1
+  $ fileset -v a1
+  ('symbol', 'a1')
   a1
-  $ fileset 'a*'
+  $ fileset -v 'a*'
+  ('symbol', 'a*')
   a1
   a2
-  $ fileset '"re:a\d"'
+  $ fileset -v '"re:a\d"'
+  ('string', 're:a\\d')
   a1
   a2
-  $ fileset 'a1 or a2'
+  $ fileset -v 'a1 or a2'
+  (or
+    ('symbol', 'a1')
+    ('symbol', 'a2'))
   a1
   a2
   $ fileset 'a1 | a2'
