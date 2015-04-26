@@ -95,7 +95,7 @@ Template should precede style option
   8
 
 Add a commit with empty description, to ensure that the templates
-following below omit it properly.
+below will omit the description line.
 
   $ echo c >> c
   $ hg add c
