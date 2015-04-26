@@ -2635,19 +2635,7 @@ def formatspec(expr, *args):
     return ret
 
 def prettyformat(tree):
-    def _prettyformat(tree, level, lines):
-        if not isinstance(tree, tuple) or tree[0] in ('string', 'symbol'):
-            lines.append((level, str(tree)))
-        else:
-            lines.append((level, '(%s' % tree[0]))
-            for s in tree[1:]:
-                _prettyformat(s, level + 1, lines)
-            lines[-1:] = [(lines[-1][0], lines[-1][1] + ')')]
-
-    lines = []
-    _prettyformat(tree, 0, lines)
-    output = '\n'.join(('  '*l + s) for l, s in lines)
-    return output
+    return parser.prettyformat(tree, ('string', 'symbol'))
 
 def depth(tree):
     if isinstance(tree, tuple):
