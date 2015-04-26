@@ -557,8 +557,8 @@ Doing the actual push: hook abort
   > [failpush]
   > reason =
   > [hooks]
-  > pretxnclose.failpush = echo "You shall not pass!"; false
-  > txnabort.failpush = echo 'Cleaning up the mess...'
+  > pretxnclose.failpush = sh -c "echo 'You shall not pass!'; false"
+  > txnabort.failpush = sh -c "echo 'Cleaning up the mess...'"
   > EOF
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
@@ -622,7 +622,7 @@ Doing the actual push: hook abort
 Check error from hook during the unbundling process itself
 
   $ cat << EOF >> $HGRCPATH
-  > pretxnchangegroup = echo "Fail early!"; false
+  > pretxnchangegroup = sh -c "echo 'Fail early!'; false"
   > EOF
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
   $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
