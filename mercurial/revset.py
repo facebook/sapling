@@ -3044,10 +3044,6 @@ class addset(abstractsmartset):
 
         val1 = None
         val2 = None
-
-        choice = max
-        if ascending:
-            choice = min
         try:
             # Consume both iterators in an ordered way until one is
             # empty
