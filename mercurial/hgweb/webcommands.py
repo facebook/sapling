@@ -1318,3 +1318,6 @@ def help(web, req, tmpl):
     except error.UnknownCommand:
         raise ErrorResponse(HTTP_NOT_FOUND)
     return tmpl('help', topic=topicname, doc=doc)
+
+# tell hggettext to extract docstrings from these functions:
+i18nfunctions = commands.values()
