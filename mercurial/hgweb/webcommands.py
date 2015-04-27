@@ -459,7 +459,7 @@ def manifest(web, req, tmpl):
 
     Show information about a directory.
 
-    If the URL path arguments are defined, information about the root
+    If the URL path arguments are omitted, information about the root
     directory for the ``tip`` changeset will be shown.
 
     Because this handler can only show information for directories, it
