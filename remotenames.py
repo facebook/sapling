@@ -701,6 +701,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         marks = repo._bookmarks
         if len(marks) == 0 and not fm:
             ui.status(_("no bookmarks set\n"))
+        distances = {}
         for bmark, n in sorted(marks.iteritems()):
             current = repo._bookmarkcurrent
             if bmark == current:
@@ -727,9 +728,14 @@ def exbookmarks(orig, ui, repo, *args, **opts):
                                  encoding.colwidth(str(h)))
                     fm.write('bookmark', pad + '[%s%s]', rname, ab,
                              label=label)
+                    if distance != (None, None):
+                        distances[bmark] = distance
             fm.data(active=(bmark == current))
             fm.plain('\n')
         fm.end()
+
+        # write distance cache
+        writedistancecache(repo, distances)
 
     if remote or opts.get('all'):
         n = 'remotebookmarks'
@@ -1022,30 +1028,40 @@ def distancefromtracked(repo, bookmark):
     if bookmark and bookmark in repo and bookmark in tracking:
         tracked = tracking[bookmark]
         if tracked in repo:
-            cached = readdistancecache(repo, bookmark)
-            if cached:
-                distance = cached
-            else:
+            cached = readdistancecache(repo)
+            try:
+                distance = cached[bookmark]
+            except KeyError:
                 rev1 = repo[bookmark].rev()
                 rev2 = repo[tracked].rev()
                 distance = calculatedistance(repo, rev1, rev2)
-                writedistancecache(repo, bookmark, distance)
+                cached[bookmark] = distance
 
     return (tracked, distance)
 
-def writedistancecache(repo, name, distance):
+def writedistancecache(repo, distance):
     try:
-        repo.vfs.makedirs('cache/distance')
-        repo.vfs.write('cache/distance/%s' % name, '%s %s' % distance)
+        f = repo.vfs('cache/distance', 'w')
+        for k, v in distance.iteritems():
+            f.write('%s %d %d\n' % (k, v[0], v[1]))
     except (IOError, OSError):
         pass
 
-def readdistancecache(repo, name):
+def readdistancecache(repo):
+    distances = {}
     try:
-        data = repo.vfs.read('cache/distance/%s' % name).strip()
-        return tuple(int(d) for d in data.split(' '))
+        for line in repo.vfs.read('cache/distance').splitlines():
+            line = line.rsplit(' ', 2)
+            try:
+                d = (int(line[1]), int(line[2]))
+                distances[line[0]] = d
+            except ValueError:
+                # corrupt entry, ignore line
+                pass
     except (IOError, OSError):
-        return None
+        pass
+
+    return distances
 
 def invalidatedistancecache(repo):
     """Try to invalidate any existing distance caches"""
@@ -1078,9 +1094,14 @@ def precachedistance(repo):
         wlock = repo.wlock()
         invalidatedistancecache(repo)
 
+        distances = {}
         if repo.ui.configbool('remotenames', 'precachedistance', True):
             for bmark, remotename in _readtracking(repo).iteritems():
-                distancefromtracked(repo, bmark)
+                rname, distance = distancefromtracked(repo, bmark)
+                if rname and distance != (None, None):
+                    distances[bmark] = distance
+
+            writedistancecache(repo, distances)
 
         if repo.ui.configbool('remotenames', 'precachecurrent', True):
             # are we on a 'branch' but not at the head?
