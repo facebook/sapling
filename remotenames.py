@@ -52,24 +52,20 @@ def expull(orig, repo, remote, *args, **kwargs):
     return res
 
 def pullremotenames(repo, remote):
-    lock = repo.lock()
-    try:
-        path = activepath(repo.ui, remote)
-        if path:
-            # on a push, we don't want to keep obsolete heads since
-            # they won't show up as heads on the next pull, so we
-            # remove them here otherwise we would require the user
-            # to issue a pull to refresh .hg/remotenames
-            bmap = {}
-            repo = repo.unfiltered()
-            for branch, nodes in remote.branchmap().iteritems():
-                bmap[branch] = []
-                for node in nodes:
-                    if node in repo and not repo[node].obsolete():
-                        bmap[branch].append(node)
-            saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
-    finally:
-        lock.release()
+    path = activepath(repo.ui, remote)
+    if path:
+        # on a push, we don't want to keep obsolete heads since
+        # they won't show up as heads on the next pull, so we
+        # remove them here otherwise we would require the user
+        # to issue a pull to refresh .hg/remotenames
+        bmap = {}
+        repo = repo.unfiltered()
+        for branch, nodes in remote.branchmap().iteritems():
+            bmap[branch] = []
+            for node in nodes:
+                if node in repo and not repo[node].obsolete():
+                    bmap[branch].append(node)
+        saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
 
     loadremotenames(repo)
     precachedistance(repo)
@@ -956,40 +952,45 @@ def transition(repo, ui):
         ui.warn(message + '\n')
 
 def saveremotenames(repo, remote, branches={}, bookmarks={}):
-    # delete old files
+    wlock = repo.wlock()
     try:
-        repo.vfs.unlink('remotedistance')
-    except OSError, inst:
-        if inst.errno != errno.ENOENT:
-            raise
+        # delete old files
+        try:
+            repo.vfs.unlink('remotedistance')
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
 
-    if not repo.vfs.exists('remotenames'):
-        transition(repo, repo.ui)
+        if not repo.vfs.exists('remotenames'):
+            transition(repo, repo.ui)
 
-    # while we're removing old paths, also update _remotenames
-    for btype, rmap in _remotenames.iteritems():
-        for rname in rmap.copy():
-            if remote == splitremotename(rname)[0]:
-                del _remotenames[btype][rname]
+        # while we're removing old paths, also update _remotenames
+        for btype, rmap in _remotenames.iteritems():
+            for rname in rmap.copy():
+                if remote == splitremotename(rname)[0]:
+                    del _remotenames[btype][rname]
 
-    # read in all data first before opening file to write
-    olddata = set(readremotenames(repo))
+        # read in all data first before opening file to write
+        olddata = set(readremotenames(repo))
 
-    f = repo.vfs('remotenames', 'w')
+        f = repo.vfs('remotenames', 'w')
 
-    # only update the given 'remote', so iterate over old data and re-save it
-    for node, nametype, oldremote, rname in olddata:
-        if oldremote != remote:
-            n = joinremotename(oldremote, rname)
-            f.write('%s %s %s\n' % (node, nametype, n))
+        # only update the given 'remote'; iterate over old data and re-save it
+        for node, nametype, oldremote, rname in olddata:
+            if oldremote != remote:
+                n = joinremotename(oldremote, rname)
+                f.write('%s %s %s\n' % (node, nametype, n))
 
-    for branch, nodes in branches.iteritems():
-        for n in nodes:
-            rname = joinremotename(remote, branch)
-            f.write('%s branches %s\n' % (hex(n), rname))
-    for bookmark, n in bookmarks.iteritems():
-        f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
-    f.close()
+        for branch, nodes in branches.iteritems():
+            for n in nodes:
+                rname = joinremotename(remote, branch)
+                f.write('%s branches %s\n' % (hex(n), rname))
+        for bookmark, n in bookmarks.iteritems():
+            f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
+        f.close()
+
+    finally:
+        wlock.release()
 
 def calculatedistance(repo, fromrev, torev):
     """
