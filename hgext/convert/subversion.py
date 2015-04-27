@@ -1293,7 +1293,7 @@ class svn_sink(converter_sink, commandline):
             try:
                 rev = self.commit_re.search(output).group(1)
             except AttributeError:
-                if not files:
+                if parents and not files:
                     return parents[0]
                 self.ui.warn(_('unexpected svn output:\n'))
                 self.ui.warn(output)
