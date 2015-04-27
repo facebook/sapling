@@ -1038,6 +1038,8 @@ class GitHandler(object):
                         bookmarks.setcurrent(self.repo, 'master')
                     new_refs['refs/heads/master'] = self.map_git_get(tip)
 
+        # mapped nodes might be hidden
+        unfiltered = self.repo.unfiltered()
         for rev, rev_refs in exportable.iteritems():
             ctx = self.repo[rev]
             if not rev_refs:
@@ -1071,7 +1073,7 @@ class GitHandler(object):
                 if ref not in refs:
                     new_refs[ref] = self.map_git_get(ctx.hex())
                 elif new_refs[ref] in self._map_git:
-                    rctx = self.repo[self.map_hg_get(new_refs[ref])]
+                    rctx = unfiltered[self.map_hg_get(new_refs[ref])]
                     if rctx.ancestor(ctx) == rctx or force:
                         new_refs[ref] = self.map_git_get(ctx.hex())
                     else:
