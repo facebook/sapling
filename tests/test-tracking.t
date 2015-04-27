@@ -275,3 +275,26 @@ Test that -r sets up tracking
      bar                       3:aff78bd8e592            [remote/a]
      baz                       3:aff78bd8e592            [remote/b]
    * d                         5:045b4e9d5205
+
+Test bookmarks with difficult characters
+
+  $ hg book -t remote/a "bookmark with spaces"
+  $ hg book -t remote/b "with	tab too"
+  $ hg book -t remote/a "bookmark/with/slashes"
+  $ hg book -v
+     bar                       3:aff78bd8e592            [remote/a]
+     baz                       3:aff78bd8e592            [remote/b]
+     bookmark with spaces      5:045b4e9d5205
+   * bookmark/with/slashes     5:045b4e9d5205            [remote/a: 1 ahead, 0 behind]
+     d                         5:045b4e9d5205
+     with	tab too              5:045b4e9d5205
+  $ hg update bookmark/with/slashes
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark bookmark/with/slashes)
+  $ hg book -v
+     bar                       3:aff78bd8e592            [remote/a]
+     baz                       3:aff78bd8e592            [remote/b]
+     bookmark with spaces      5:045b4e9d5205
+   * bookmark/with/slashes     5:045b4e9d5205            [remote/a: 1 ahead, 0 behind]
+     d                         5:045b4e9d5205
+     with	tab too              5:045b4e9d5205
