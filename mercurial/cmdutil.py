@@ -161,7 +161,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             dopatch = fp.tell()
             fp.seek(0)
 
-            [os.unlink(c) for c in newlyaddedandmodifiedfiles]
+            [os.unlink(repo.wjoin(c)) for c in newlyaddedandmodifiedfiles]
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
                 # Equivalent to hg.revert

@@ -1463,4 +1463,37 @@ Editing patch of newly added file
   This is the first line
   This is the second line
   This is the third line
+
+Add new file from within a subdirectory
+  $ hg update -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkdir folder
+  $ cd folder
+  $ echo "foo" > bar
+  $ hg add bar
+  $ hg commit -i -d '23 0' -mnewfilesubdir  <<EOF
+  > y
+  > y
+  > EOF
+  diff --git a/folder/bar b/folder/bar
+  new file mode 100644
+  examine changes to 'folder/bar'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +foo
+  record this change to 'folder/bar'? [Ynesfdaq?] y
+  
+  $ hg tip -p
+  changeset:   32:fb46c2a66466
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:23 1970 +0000
+  summary:     newfilesubdir
+  
+  diff -r 34c65441ddfb -r fb46c2a66466 folder/bar
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/folder/bar	Thu Jan 01 00:00:23 1970 +0000
+  @@ -0,0 +1,1 @@
+  +foo
+  
   $ cd ..
