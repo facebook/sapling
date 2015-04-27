@@ -1074,10 +1074,15 @@ def invalidatedistancecache(repo):
             shutil.rmtree(repo.vfs.join('cache/distance'))
         else:
             repo.vfs.unlink('cache/distance')
+    except (OSError, IOError), inst:
+        if inst.errno != errno.ENOENT:
+            error = True
+    try:
         repo.vfs.unlink('cache/distance.current')
     except (OSError, IOError), inst:
         if inst.errno != errno.ENOENT:
             error = True
+
     if error:
         repo.ui.warn(_('Unable to invalidate tracking cache; ' +
                        'distance displayed may be incorrect\n'))
