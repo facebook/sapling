@@ -1101,8 +1101,8 @@ def precachedistance(repo):
     # to avoid stale namespaces, let's reload
     loadremotenames(repo)
 
+    wlock = repo.wlock()
     try:
-        wlock = repo.wlock()
         invalidatedistancecache(repo)
 
         distances = {}
