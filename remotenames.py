@@ -214,7 +214,9 @@ def exrebasecmd(orig, ui, repo, **opts):
         if current in tracking:
             opts['dest'] = tracking[current]
 
-    return orig(ui, repo, **opts)
+    ret = orig(ui, repo, **opts)
+    precachedistance(repo)
+    return ret
 
 def exstrip(orig, ui, repo, *args, **opts):
     ret = orig(ui, repo, *args, **opts)
