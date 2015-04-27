@@ -68,7 +68,6 @@ def pullremotenames(repo, remote):
                     bmap[branch].append(node)
         saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
 
-    loadremotenames(repo)
     precachedistance(repo)
 
 def blockerhook(orig, repo, *args, **kwargs):
@@ -1094,6 +1093,9 @@ def precachedistance(repo):
         precachedistance = False
         precachecurrent = False
     """
+    # to avoid stale namespaces, let's reload
+    loadremotenames(repo)
+
     try:
         wlock = repo.wlock()
         invalidatedistancecache(repo)
