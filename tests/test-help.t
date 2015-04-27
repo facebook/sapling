@@ -629,6 +629,7 @@ Test command without options
   >     'hg nohelp',
   >     norepo=True)
   > @command('debugoptDEP', [('', 'dopt', None, 'option is DEPRECATED')])
+  > @command('debugoptEXP', [('', 'eopt', None, 'option is EXPERIMENTAL')])
   > def nohelp(ui, *args, **kwargs):
   >     pass
   > 
@@ -788,6 +789,7 @@ Test list of internal help commands
    debugobsolete
                  create arbitrary obsolete marker
    debugoptDEP   (no help text available)
+   debugoptEXP   (no help text available)
    debugpathcomplete
                  complete part or all of a tracked path
    debugpushkey  access the pushkey key/value protocol
@@ -822,7 +824,7 @@ Test list of commands with command with no help text
   (use "hg help -v helpext" to show built-in aliases and global options)
 
 
-test deprecated option is hidden in command help
+test deprecated and experimental options are hidden in command help
   $ hg help debugoptDEP
   hg debugoptDEP
   
@@ -832,9 +834,20 @@ test deprecated option is hidden in command help
   
   (some details hidden, use --verbose to show complete help)
 
-test deprecated option is shown with -v
+  $ hg help debugoptEXP
+  hg debugoptEXP
+  
+  (no help text available)
+  
+  options:
+  
+  (some details hidden, use --verbose to show complete help)
+
+test deprecated and experimental options is shown with -v
   $ hg help -v debugoptDEP | grep dopt
     --dopt option is DEPRECATED
+  $ hg help -v debugoptEXP | grep eopt
+    --eopt option is EXPERIMENTAL
 
 #if gettext
 test deprecated option is hidden with translation with untranslated description

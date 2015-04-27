@@ -43,7 +43,9 @@ def optrst(header, options, verbose):
             shortopt, longopt, default, desc = option
             optlabel = _("VALUE") # default label
 
-        if not verbose and ("DEPRECATED" in desc or _("DEPRECATED") in desc):
+        if not verbose and ("DEPRECATED" in desc or _("DEPRECATED") in desc or
+                            "EXPERIMENTAL" in desc or
+                            _("EXPERIMENTAL") in desc):
             continue
 
         so = ''
