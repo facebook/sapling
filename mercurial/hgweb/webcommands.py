@@ -338,7 +338,7 @@ def changelog(web, req, tmpl, shortlog=False):
 
     The argument for ``rev`` can be a single revision, a revision set,
     or a literal keyword to search for in changeset data (equivalent to
-    :hg:`log -k`.
+    :hg:`log -k`).
 
     The ``revcount`` query string argument defines the maximum numbers of
     changesets to render.
