@@ -358,7 +358,7 @@ class cg1packer(object):
         '''yield a sequence of changegroup chunks (strings)'''
         repo = self._repo
         cl = self._changelog
-        mf = self._manifest
+        ml = self._manifest
         reorder = self._reorder
         progress = self._progress
 
@@ -396,7 +396,7 @@ class cg1packer(object):
         def lookupmf(x):
             clnode = mfs[x]
             if not fastpathlinkrev or reorder:
-                mdata = mf.readfast(x)
+                mdata = ml.readfast(x)
                 for f, n in mdata.iteritems():
                     if f in changedfiles:
                         # record the first changeset introducing this filelog
@@ -407,9 +407,9 @@ class cg1packer(object):
                             fclnodes[n] = clnode
             return clnode
 
-        mfnodes = self.prune(mf, mfs, commonrevs)
+        mfnodes = self.prune(ml, mfs, commonrevs)
         size = 0
-        for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
+        for chunk in self.group(mfnodes, ml, lookupmf, units=_('manifests'),
                                 reorder=reorder):
             size += len(chunk)
             yield chunk
