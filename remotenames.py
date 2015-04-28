@@ -738,37 +738,40 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         writedistancecache(repo, distances)
 
     if remote or opts.get('all'):
-        n = 'remotebookmarks'
-        if n not in repo.names:
-            return
-        ns = repo.names[n]
-        color = ns.colorname
-        label = 'log.' + color
+        displayremotebookmarks(ui, repo, opts)
 
-        fm = ui.formatter('bookmarks', opts)
+def displayremotebookmarks(ui, repo, opts):
+    n = 'remotebookmarks'
+    if n not in repo.names:
+        return
+    ns = repo.names[n]
+    color = ns.colorname
+    label = 'log.' + color
 
-        # it seems overkill to hide displaying hidden remote bookmarks
-        repo = repo.unfiltered()
+    fm = ui.formatter('bookmarks', opts)
 
-        for name in sorted(ns.listnames(repo)):
-            node = ns.nodes(repo, name)[0]
-            ctx = repo[node]
-            fm.startitem()
+    # it seems overkill to hide displaying hidden remote bookmarks
+    repo = repo.unfiltered()
 
-            if not ui.quiet:
-                fm.plain('   ')
+    for name in sorted(ns.listnames(repo)):
+        node = ns.nodes(repo, name)[0]
+        ctx = repo[node]
+        fm.startitem()
 
-            padsize = max(25 - encoding.colwidth(name), 0)
-            fmt = ' ' * padsize + ' %d:%s'
+        if not ui.quiet:
+            fm.plain('   ')
 
-            tmplabel = label
-            if ctx.obsolete():
-                tmplabel = tmplabel + ' changeset.obsolete'
-            fm.write(color, '%s', name, label=label)
-            fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
-                         fm.hexfunc(node), label=tmplabel)
-            fm.plain('\n')
-        fm.end()
+        padsize = max(25 - encoding.colwidth(name), 0)
+        fmt = ' ' * padsize + ' %d:%s'
+
+        tmplabel = label
+        if ctx.obsolete():
+            tmplabel = tmplabel + ' changeset.obsolete'
+        fm.write(color, '%s', name, label=label)
+        fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
+                     fm.hexfunc(node), label=tmplabel)
+        fm.plain('\n')
+    fm.end()
 
 def activepath(ui, remote):
     local = None
