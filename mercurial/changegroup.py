@@ -440,6 +440,7 @@ class cg1packer(object):
         if clnodes:
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
+    # The 'source' parameter is useful for extensions
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         repo = self._repo
         progress = self._progress
