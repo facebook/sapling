@@ -350,7 +350,7 @@ class cg1packer(object):
         yield self.close()
 
     # filter any nodes that claim to be part of the known set
-    def prune(self, revlog, missing, commonrevs, source):
+    def prune(self, revlog, missing, commonrevs):
         rr, rl = revlog.rev, revlog.linkrev
         return [n for n in missing if rl(rr(n)) not in commonrevs]
 
@@ -407,7 +407,7 @@ class cg1packer(object):
                             fclnodes[n] = clnode
             return clnode
 
-        mfnodes = self.prune(mf, mfs, commonrevs, source)
+        mfnodes = self.prune(mf, mfs, commonrevs)
         size = 0
         for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
                                 reorder=reorder):
@@ -460,7 +460,7 @@ class cg1packer(object):
             def lookupfilelog(x):
                 return linkrevnodes[x]
 
-            filenodes = self.prune(filerevlog, linkrevnodes, commonrevs, source)
+            filenodes = self.prune(filerevlog, linkrevnodes, commonrevs)
             if filenodes:
                 progress(msgbundling, i + 1, item=fname, unit=msgfiles,
                          total=total)
