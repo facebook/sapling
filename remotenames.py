@@ -1041,29 +1041,6 @@ def calculatenamedistance(repo, fromname, toname):
         distance = calculatedistance(repo, rev1, rev2)
     return distance
 
-def distancefromtracked(repo, bookmark):
-    """
-    Returns the name and distance between a bookmark and what it tracks as
-    a tuple of the form (tracked_name, (ahead, behind)).
-    Returns (None, (None, None)) when the bookmark is not tracked.
-    """
-    tracked = None
-    distance = (None, None)
-    tracking = _readtracking(repo)
-    if bookmark and bookmark in repo and bookmark in tracking:
-        tracked = tracking[bookmark]
-        if tracked in repo:
-            cached = readdistancecache(repo)
-            try:
-                distance = cached[bookmark]
-            except KeyError:
-                rev1 = repo[bookmark].rev()
-                rev2 = repo[tracked].rev()
-                distance = calculatedistance(repo, rev1, rev2)
-                cached[bookmark] = distance
-
-    return (tracked, distance)
-
 def writedistancecache(repo, distance):
     try:
         f = repo.vfs('cache/distance', 'w')
