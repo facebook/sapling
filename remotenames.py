@@ -707,7 +707,11 @@ def displaylocalbookmarks(ui, repo, opts):
     marks = repo._bookmarks
     if len(marks) == 0 and not fm:
         ui.status(_("no bookmarks set\n"))
-    distances = {}
+
+    tracking = _readtracking(repo)
+    distances = readdistancecache(repo)
+    nq = not ui.quiet
+
     for bmark, n in sorted(marks.iteritems()):
         current = repo._bookmarkcurrent
         if bmark == current:
@@ -716,24 +720,26 @@ def displaylocalbookmarks(ui, repo, opts):
             prefix, label = ' ', ''
 
         fm.startitem()
-        if not ui.quiet:
+        if nq:
             fm.plain(' %s ' % prefix, label=label)
         fm.write('bookmark', '%s', bmark, label=label)
         pad = " " * (25 - encoding.colwidth(bmark))
         rev = repo.changelog.rev(n)
         h = hexfn(n)
-        fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s', rev, h,
-                     label=label)
-        if ui.verbose:
-            rname, distance = distancefromtracked(repo, bmark)
-            ab = ''
-            if distance != (0, 0):
-                ab = ': %s ahead, %s behind' % distance
-            if rname:
+        fm.condwrite(nq, 'rev node', pad + ' %d:%s', rev, h, label=label)
+        if ui.verbose and bmark in tracking:
+            tracked = tracking[bmark]
+            if bmark in distances:
+                distance = distances[bmark]
+            else:
+                distance = calculatenamedistance(repo, bmark, tracked)
+            if tracked:
+                ab = ''
+                if distance != (0, 0) and distance != (None, None):
+                    ab = ': %s ahead, %s behind' % distance
                 pad = " " * (25 - encoding.colwidth(str(rev)) -
                              encoding.colwidth(str(h)))
-                fm.write('bookmark', pad + '[%s%s]', rname, ab,
-                         label=label)
+                fm.write('bookmark', pad + '[%s%s]', tracked, ab, label=label)
                 if distance != (None, None):
                     distances[bmark] = distance
         fm.data(active=(bmark == current))
