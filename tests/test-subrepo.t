@@ -598,6 +598,26 @@ committing into a subrepo makes its store (but not its parent's store) dirty
 
   $ echo foo >> s/ss/a
   $ hg -R s/ss commit -m 'test dirty store detection'
+
+  $ hg out -S -r `hg log -r tip -T "{node|short}"`
+  comparing with $TESTTMP/t (glob)
+  searching for changes
+  no changes found
+  comparing with $TESTTMP/t/s
+  searching for changes
+  no changes found
+  comparing with $TESTTMP/t/s/ss
+  searching for changes
+  changeset:   1:79ea5566a333
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     test dirty store detection
+  
+  comparing with $TESTTMP/t/t
+  searching for changes
+  no changes found
+
   $ hg push
   pushing to $TESTTMP/t (glob)
   pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)

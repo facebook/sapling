@@ -873,6 +873,10 @@ class hgsubrepo(abstractsubrepo):
 
     @annotatesubrepoerror
     def outgoing(self, ui, dest, opts):
+        if 'rev' in opts or 'branch' in opts:
+            opts = copy.copy(opts)
+            opts.pop('rev', None)
+            opts.pop('branch', None)
         return hg.outgoing(ui, self._repo, _abssource(self._repo, True), opts)
 
     @annotatesubrepoerror
