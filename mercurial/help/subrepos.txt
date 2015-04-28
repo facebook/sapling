@@ -106,8 +106,7 @@ Interaction with Mercurial Commands
 
 :diff: diff does not recurse in subrepos unless -S/--subrepos is
     specified. Changes are displayed as usual, on the subrepositories
-    elements. Git subrepositories do not support --include/--exclude.
-    Subversion subrepositories are currently silently ignored.
+    elements. Subversion subrepositories are currently silently ignored.
 
 :files: files does not recurse into subrepos unless -S/--subrepos is
     specified.  Git and Subversion subrepositories are currently
