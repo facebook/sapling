@@ -689,6 +689,24 @@ pull
 
 should pull t
 
+  $ hg incoming -S -r `hg log -r tip -T "{node|short}"`
+  comparing with $TESTTMP/t (glob)
+  no changes found
+  comparing with $TESTTMP/t/s
+  searching for changes
+  no changes found
+  comparing with $TESTTMP/t/s/ss
+  searching for changes
+  no changes found
+  comparing with $TESTTMP/t/t
+  searching for changes
+  changeset:   5:52c0adc0515a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     13
+  
+
   $ hg up
   pulling subrepo t from $TESTTMP/t/t
   searching for changes
