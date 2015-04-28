@@ -789,8 +789,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
         if repo.ui.configbool('server', 'validate', default=False):
             # validate incoming csets have their manifests
             for cset in xrange(clstart, clend):
-                mfest = repo.changelog.read(repo.changelog.node(cset))[0]
-                mfest = repo.manifest.readdelta(mfest)
+                mfnode = repo.changelog.read(repo.changelog.node(cset))[0]
+                mfest = repo.manifest.readdelta(mfnode)
                 # store file nodes we must see
                 for f, n in mfest.iteritems():
                     needfiles.setdefault(f, set()).add(n)
