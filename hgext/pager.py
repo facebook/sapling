@@ -59,6 +59,10 @@ import atexit, sys, os, signal, subprocess, errno, shlex
 from mercurial import commands, dispatch, util, extensions, cmdutil
 from mercurial.i18n import _
 
+# Note for extension authors: ONLY specify testedwith = 'internal' for
+# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
+# be specifying the version(s) of Mercurial they are tested with, or
+# leave the attribute unspecified.
 testedwith = 'internal'
 
 def _pagerfork(ui, p):

@@ -95,6 +95,10 @@ from mercurial.i18n import _
 from mercurial import util, config, extensions, match, error
 import re, os
 
+# Note for extension authors: ONLY specify testedwith = 'internal' for
+# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
+# be specifying the version(s) of Mercurial they are tested with, or
+# leave the attribute unspecified.
 testedwith = 'internal'
 
 # Matches a lone LF, i.e., one that is not part of CRLF.

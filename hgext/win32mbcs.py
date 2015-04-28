@@ -48,6 +48,10 @@ It is useful for the users who want to commit with UTF-8 log message.
 import os, sys
 from mercurial.i18n import _
 from mercurial import util, encoding
+# Note for extension authors: ONLY specify testedwith = 'internal' for
+# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
+# be specifying the version(s) of Mercurial they are tested with, or
+# leave the attribute unspecified.
 testedwith = 'internal'
 
 _encoding = None                                # see extsetup
