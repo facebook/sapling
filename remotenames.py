@@ -1022,6 +1022,19 @@ def calculatedistance(repo, fromrev, torev):
 
     return (ahead, behind)
 
+def calculatenamedistance(repo, fromname, toname):
+    """
+    Similar to calculatedistance, but accepts names such as local and remote
+    bookmarks, and will return (None, None) if any of the names do not resolve
+    in the given repository.
+    """
+    distance = (None, None)
+    if fromname and fromname in repo and toname in repo:
+        rev1 = repo[fromname].rev()
+        rev2 = repo[toname].rev()
+        distance = calculatedistance(repo, rev1, rev2)
+    return distance
+
 def distancefromtracked(repo, bookmark):
     """
     Returns the name and distance between a bookmark and what it tracks as
@@ -1102,11 +1115,11 @@ def precachedistance(repo):
 
         distances = {}
         if repo.ui.configbool('remotenames', 'precachedistance', True):
-            for bmark, remotename in _readtracking(repo).iteritems():
-                rname, distance = distancefromtracked(repo, bmark)
-                if rname and distance != (None, None):
+            distances = {}
+            for bmark, tracked in _readtracking(repo).iteritems():
+                distance = calculatenamedistance(repo, bmark, tracked)
+                if distance != (None, None):
                     distances[bmark] = distance
-
             writedistancecache(repo, distances)
 
         if repo.ui.configbool('remotenames', 'precachecurrent', True):
