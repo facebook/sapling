@@ -694,51 +694,54 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
         return ret
 
-    # copy pasta from commands.py; need to patch core
     if not remote:
-        fm = ui.formatter('bookmarks', opts)
-        hexfn = fm.hexfunc
-        marks = repo._bookmarks
-        if len(marks) == 0 and not fm:
-            ui.status(_("no bookmarks set\n"))
-        distances = {}
-        for bmark, n in sorted(marks.iteritems()):
-            current = repo._bookmarkcurrent
-            if bmark == current:
-                prefix, label = '*', 'bookmarks.current'
-            else:
-                prefix, label = ' ', ''
-
-            fm.startitem()
-            if not ui.quiet:
-                fm.plain(' %s ' % prefix, label=label)
-            fm.write('bookmark', '%s', bmark, label=label)
-            pad = " " * (25 - encoding.colwidth(bmark))
-            rev = repo.changelog.rev(n)
-            h = hexfn(n)
-            fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s', rev, h,
-                         label=label)
-            if ui.verbose:
-                rname, distance = distancefromtracked(repo, bmark)
-                ab = ''
-                if distance != (0, 0):
-                    ab = ': %s ahead, %s behind' % distance
-                if rname:
-                    pad = " " * (25 - encoding.colwidth(str(rev)) -
-                                 encoding.colwidth(str(h)))
-                    fm.write('bookmark', pad + '[%s%s]', rname, ab,
-                             label=label)
-                    if distance != (None, None):
-                        distances[bmark] = distance
-            fm.data(active=(bmark == current))
-            fm.plain('\n')
-        fm.end()
-
-        # write distance cache
-        writedistancecache(repo, distances)
+        displaylocalbookmarks(ui, repo, opts)
 
     if remote or opts.get('all'):
         displayremotebookmarks(ui, repo, opts)
+
+def displaylocalbookmarks(ui, repo, opts):
+    # copy pasta from commands.py; need to patch core
+    fm = ui.formatter('bookmarks', opts)
+    hexfn = fm.hexfunc
+    marks = repo._bookmarks
+    if len(marks) == 0 and not fm:
+        ui.status(_("no bookmarks set\n"))
+    distances = {}
+    for bmark, n in sorted(marks.iteritems()):
+        current = repo._bookmarkcurrent
+        if bmark == current:
+            prefix, label = '*', 'bookmarks.current'
+        else:
+            prefix, label = ' ', ''
+
+        fm.startitem()
+        if not ui.quiet:
+            fm.plain(' %s ' % prefix, label=label)
+        fm.write('bookmark', '%s', bmark, label=label)
+        pad = " " * (25 - encoding.colwidth(bmark))
+        rev = repo.changelog.rev(n)
+        h = hexfn(n)
+        fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s', rev, h,
+                     label=label)
+        if ui.verbose:
+            rname, distance = distancefromtracked(repo, bmark)
+            ab = ''
+            if distance != (0, 0):
+                ab = ': %s ahead, %s behind' % distance
+            if rname:
+                pad = " " * (25 - encoding.colwidth(str(rev)) -
+                             encoding.colwidth(str(h)))
+                fm.write('bookmark', pad + '[%s%s]', rname, ab,
+                         label=label)
+                if distance != (None, None):
+                    distances[bmark] = distance
+        fm.data(active=(bmark == current))
+        fm.plain('\n')
+    fm.end()
+
+    # write distance cache
+    writedistancecache(repo, distances)
 
 def displayremotebookmarks(ui, repo, opts):
     n = 'remotebookmarks'
