@@ -145,10 +145,10 @@ repo, you can add a ``--force`` option.
 
 Histedit rule lines are truncated to 80 characters by default. You
 can customise this behaviour by setting a different length in your
-configuration file:
+configuration file::
 
-[histedit]
-linelen = 120      # truncate rule lines at 120 characters
+  [histedit]
+  linelen = 120      # truncate rule lines at 120 characters
 """
 
 try:
