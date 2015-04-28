@@ -1040,6 +1040,10 @@ def pullrebase(orig, ui, repo, *args, **opts):
             # dropping it
             if 'rev' in opts:
                 del opts['rev']
+            # positional argument from pull conflicts with rebase's own
+            # --source.
+            if 'source' in opts:
+                del opts['source']
             rebase(ui, repo, **opts)
             branch = repo[None].branch()
             dest = repo[branch].rev()
