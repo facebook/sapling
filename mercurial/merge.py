@@ -1167,7 +1167,9 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         wlock.release()
 
     if not partial:
-        repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
+        def updatehook(parent1=xp1, parent2=xp2, error=stats[3]):
+            repo.hook('update', parent1=parent1, parent2=parent2, error=error)
+        repo._afterlock(updatehook)
     return stats
 
 def graft(repo, ctx, pctx, labels):
