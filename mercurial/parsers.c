@@ -1312,7 +1312,7 @@ static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen,
 			const char *n;
 			Py_ssize_t i;
 
-			v = -v - 1;
+			v = -(v + 1);
 			n = index_node(self, v);
 			if (n == NULL)
 				return -2;
@@ -1368,7 +1368,7 @@ static int nt_insert(indexObject *self, const char *node, int rev)
 			return 0;
 		}
 		if (v < 0) {
-			const char *oldnode = index_node(self, -v - 1);
+			const char *oldnode = index_node(self, -(v + 1));
 			int noff;
 
 			if (!oldnode || !memcmp(oldnode, node, 20)) {
