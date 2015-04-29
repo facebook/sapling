@@ -304,7 +304,7 @@ class cg1packer(object):
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
 
-    def group(self, nodelist, revlog, lookup, units=None, reorder=None):
+    def group(self, nodelist, revlog, lookup, units=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -325,7 +325,7 @@ class cg1packer(object):
 
         # for generaldelta revlogs, we linearize the revs; this will both be
         # much quicker and generate a much smaller bundle
-        if (revlog._generaldelta and reorder is None) or reorder:
+        if (revlog._generaldelta and self._reorder is None) or self._reorder:
             dag = dagutil.revlogdag(revlog)
             revs = set(revlog.rev(n) for n in nodelist)
             revs = dag.linearize(revs)
@@ -381,8 +381,7 @@ class cg1packer(object):
 
         self._verbosenote(_('uncompressed size of bundle content:\n'))
         size = 0
-        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
-                                reorder=reorder):
+        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets')):
             size += len(chunk)
             yield chunk
         self._verbosenote(_('%8.i (changelog)\n') % size)
@@ -406,8 +405,7 @@ class cg1packer(object):
 
         mfnodes = self.prune(ml, mfs, commonrevs)
         size = 0
-        for chunk in self.group(mfnodes, ml, lookupmf, units=_('manifests'),
-                                reorder=reorder):
+        for chunk in self.group(mfnodes, ml, lookupmf, units=_('manifests')):
             size += len(chunk)
             yield chunk
         self._verbosenote(_('%8.i (manifests)\n') % size)
@@ -439,7 +437,6 @@ class cg1packer(object):
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         repo = self._repo
         progress = self._progress
-        reorder = self._reorder
         msgbundling = _('bundling')
 
         total = len(changedfiles)
@@ -463,8 +460,7 @@ class cg1packer(object):
                 h = self.fileheader(fname)
                 size = len(h)
                 yield h
-                for chunk in self.group(filenodes, filerevlog, lookupfilelog,
-                                        reorder=reorder):
+                for chunk in self.group(filenodes, filerevlog, lookupfilelog):
                     size += len(chunk)
                     yield chunk
                 self._verbosenote(_('%8.i  %s\n') % (size, fname))
