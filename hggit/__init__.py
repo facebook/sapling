@@ -227,6 +227,7 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
                                         bookmarks=bookmarks)
         if trmanager:
             pullop.trmanager = trmanager(repo, 'pull', remote.url())
+        wlock = repo.wlock()
         lock = repo.lock()
         try:
             pullop.cgresult = repo.githandler.fetch(remote.path, heads)
@@ -241,6 +242,7 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
             else:
                 pullop.releasetransaction()
             lock.release()
+            wlock.release()
     else:
         return orig(repo, remote, heads, force, bookmarks=bookmarks)
 if not hgutil.safehasattr(localrepo.localrepository, 'pull'):
