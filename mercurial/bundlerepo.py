@@ -157,7 +157,15 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         # Although changelog doesn't override 'revision' method, some extensions
         # may replace this class with another that does. Same story with
         # manifest and filelog classes.
-        return changelog.changelog.revision(self, nodeorrev)
+
+        # This bypasses filtering on changelog.node() and rev() because we need
+        # revision text of the bundle base even if it is hidden.
+        oldfilter = self.filteredrevs
+        try:
+            self.filteredrevs = ()
+            return changelog.changelog.revision(self, nodeorrev)
+        finally:
+            self.filteredrevs = oldfilter
 
 class bundlemanifest(bundlerevlog, manifest.manifest):
     def __init__(self, opener, bundle, linkmapper):

@@ -789,6 +789,62 @@ Test that removing a local tag does not cause some commands to fail
   visible                            0:193e9254ce7e
   tip                                0:193e9254ce7e
 
+Test bundle overlay onto hidden revision
+
+  $ cd ..
+  $ hg init repo-bundleoverlay
+  $ cd repo-bundleoverlay
+  $ echo "A" > foo
+  $ hg ci -Am "A"
+  adding foo
+  $ echo "B" >> foo
+  $ hg ci -m "B"
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "C" >> foo
+  $ hg ci -m "C"
+  created new head
+  $ hg log -G
+  @  2:c186d7714947 (draft) [tip ] C
+  |
+  | o  1:44526ebb0f98 (draft) [ ] B
+  |/
+  o  0:4b34ecfb0d56 (draft) [ ] A
+  
+
+  $ hg clone -r1 . ../other-bundleoverlay
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ../other-bundleoverlay
+  $ echo "B+" >> foo
+  $ hg ci --amend -m "B+"
+  $ hg log -G --hidden
+  @  3:b7d587542d40 (draft) [tip ] B+
+  |
+  | x  2:eb95e9297e18 (draft) [ ] temporary amend commit for 44526ebb0f98
+  | |
+  | x  1:44526ebb0f98 (draft) [ ] B
+  |/
+  o  0:4b34ecfb0d56 (draft) [ ] A
+  
+
+  $ hg incoming ../repo-bundleoverlay --bundle ../bundleoverlay.hg
+  comparing with ../repo-bundleoverlay
+  searching for changes
+  1:44526ebb0f98 (draft) [ ] B
+  2:c186d7714947 (draft) [tip ] C
+  $ hg log -G -R ../bundleoverlay.hg
+  o  4:c186d7714947 (draft) [tip ] C
+  |
+  | @  3:b7d587542d40 (draft) [ ] B+
+  |/
+  o  0:4b34ecfb0d56 (draft) [ ] A
+  
+
 #if serve
 
 Test issue 4506
