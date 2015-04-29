@@ -268,3 +268,10 @@ Test draft branches
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     a2
   |
+
+Test with weird bookmark names
+
+  $ hg book -r . foo-bar
+  $ hg smartlog -r 'foo-bar + .' -T '{rev} {desc|firstline}\n'
+  @  6 create branch foo
+  |

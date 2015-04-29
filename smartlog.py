@@ -428,8 +428,7 @@ Excludes:
         revs.update(repo.revs('smartlog(%s, %s)', scope, masterrevset))
         masterrev = _masterrev(repo, masterrevset)
     else:
-        for r in opts.get('rev'):
-            revs.update(repo.revs(r))
+        revs.update(scmutil.revrange(repo, opts.get('rev')))
         try:
             masterrev = repo.revs('.').first()
         except error.RepoLookupError:
