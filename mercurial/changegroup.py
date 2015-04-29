@@ -385,6 +385,21 @@ class cg1packer(object):
             yield chunk
         self._verbosenote(_('%8.i (changelog)\n') % size)
 
+        # We need to make sure that the linkrev in the changegroup refers to
+        # the first changeset that introduced the manifest or file revision.
+        # The fastpath is usually safer than the slowpath, because the filelogs
+        # are walked in revlog order.
+        #
+        # When taking the slowpath with reorder=None and the manifest revlog
+        # uses generaldelta, the manifest may be walked in the "wrong" order.
+        # Without 'clrevorder', we would get an incorrect linkrev (see fix in
+        # cc0ff93d0c0c).
+        #
+        # When taking the fastpath, we are only vulnerable to reordering
+        # of the changelog itself. The changelog never uses generaldelta, so
+        # it is only reordered when reorder=True. To handle this case, we
+        # simply take the slowpath, which already has the 'clrevorder' logic.
+        # This was also fixed in cc0ff93d0c0c.
         fastpathlinkrev = fastpathlinkrev and not self._reorder
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
