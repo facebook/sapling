@@ -16,6 +16,7 @@ enable obsolescence
   > [experimental]
   > evolution=createmarkers,exchange
   > bundle2-exp=True
+  > bundle2-output-capture=True
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
@@ -653,6 +654,55 @@ Check error from hook during the unbundling process itself
   remote: Cleaning up the mess...
   remote: rollback completed
   abort: pretxnchangegroup hook exited with status 1
+  [255]
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: Fail early!
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  abort: pretxnchangegroup hook exited with status 1
+  [255]
+
+Check output capture control.
+
+(should be still forced for http, disabled for local and ssh)
+
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > bundle2-output-capture=False
+  > EOF
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  Fail early!
+  transaction abort!
+  Cleaning up the mess...
+  rollback completed
+  abort: pretxnchangegroup hook exited with status 1
+  [255]
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  abort: pretxnchangegroup hook exited with status 1
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: Fail early!
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/

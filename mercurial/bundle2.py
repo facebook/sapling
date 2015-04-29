@@ -268,12 +268,13 @@ class bundleoperation(object):
     * a way to construct a bundle response when applicable.
     """
 
-    def __init__(self, repo, transactiongetter):
+    def __init__(self, repo, transactiongetter, captureoutput=True):
         self.repo = repo
         self.ui = repo.ui
         self.records = unbundlerecords()
         self.gettransaction = transactiongetter
         self.reply = None
+        self.captureoutput = captureoutput
 
 class TransactionUnavailable(RuntimeError):
     pass
@@ -359,7 +360,7 @@ def _processpart(op, part):
         # parthandlermapping lookup (any KeyError raised by handler()
         # itself represents a defect of a different variety).
         output = None
-        if op.reply is not None:
+        if op.captureoutput and op.reply is not None:
             op.ui.pushbuffer(error=True, subproc=True)
             output = ''
         try:
@@ -840,6 +841,7 @@ class interruptoperation(object):
     def __init__(self, ui):
         self.ui = ui
         self.reply = None
+        self.captureoutput = False
 
     @property
     def repo(self):
