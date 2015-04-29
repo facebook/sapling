@@ -510,11 +510,13 @@ class cg2packer(cg1packer):
     version = '02'
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
 
-    def group(self, nodelist, revlog, lookup, units=None, reorder=None):
-        if (revlog._generaldelta and reorder is None):
-            reorder = False
-        return super(cg2packer, self).group(nodelist, revlog, lookup,
-                                            units=units, reorder=reorder)
+    def __init__(self, repo, bundlecaps=None):
+        super(cg2packer, self).__init__(repo, bundlecaps)
+        if self._reorder is None:
+            # Since generaldelta is directly supported by cg2, reordering
+            # generally doesn't help, so we disable it by default (treating
+            # bundle.reorder=auto just like bundle.reorder=False).
+            self._reorder = False
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         dp = revlog.deltaparent(rev)
