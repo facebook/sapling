@@ -361,7 +361,6 @@ class cg1packer(object):
         repo = self._repo
         cl = self._changelog
         ml = self._manifest
-        reorder = self._reorder
 
         clrevorder = {}
         mfs = {} # needed manifests
@@ -386,12 +385,13 @@ class cg1packer(object):
             yield chunk
         self._verbosenote(_('%8.i (changelog)\n') % size)
 
+        fastpathlinkrev = fastpathlinkrev and not self._reorder
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
         def lookupmf(x):
             clnode = mfs[x]
-            if not fastpathlinkrev or reorder:
+            if not fastpathlinkrev:
                 mdata = ml.readfast(x)
                 for f, n in mdata.iteritems():
                     if f in changedfiles:
@@ -414,7 +414,7 @@ class cg1packer(object):
         clrevs = set(cl.rev(x) for x in clnodes)
 
         def linknodes(filerevlog, fname):
-            if fastpathlinkrev and not reorder:
+            if fastpathlinkrev:
                 llr = filerevlog.linkrev
                 def genfilenodes():
                     for r in filerevlog:
