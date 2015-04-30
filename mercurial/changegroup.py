@@ -283,8 +283,6 @@ class cg1packer(object):
         if bundlecaps is None:
             bundlecaps = set()
         self._bundlecaps = bundlecaps
-        self._changelog = repo.changelog
-        self._manifest = repo.manifest
         reorder = repo.ui.config('bundle', 'reorder', 'auto')
         if reorder == 'auto':
             reorder = None
@@ -359,8 +357,8 @@ class cg1packer(object):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         '''yield a sequence of changegroup chunks (strings)'''
         repo = self._repo
-        cl = self._changelog
-        ml = self._manifest
+        cl = repo.changelog
+        ml = repo.manifest
 
         clrevorder = {}
         mfs = {} # needed manifests
