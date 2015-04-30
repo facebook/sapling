@@ -1483,14 +1483,15 @@ Add new file from within a subdirectory
   +foo
   record this change to 'folder/bar'? [Ynesfdaq?] y
   
+The #if execbit block above changes the hashes here on some systems
   $ hg tip -p
-  changeset:   32:fb46c2a66466
+  changeset:   32:* (glob)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     newfilesubdir
   
-  diff -r 34c65441ddfb -r fb46c2a66466 folder/bar
+  diff -r * -r * folder/bar (glob)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/folder/bar	Thu Jan 01 00:00:23 1970 +0000
   @@ -0,0 +1,1 @@
