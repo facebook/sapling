@@ -15,6 +15,7 @@ setup(
         'b2xcompat',
         'backups',
         'chistedit',
+        'commitextras',
         'fbamend',
         'fbhistedit',
         'githelp',
