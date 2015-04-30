@@ -365,7 +365,7 @@ def _wraprepo(ui, repo):
             `includetemp` is used to indicate if the temporarily included file
             should be part of the matcher.
             """
-            if not revs:
+            if not revs or revs == (None,):
                 revs = [self.changelog.rev(node) for node in
                     self.dirstate.parents() if node != nullid]
 
