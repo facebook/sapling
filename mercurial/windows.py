@@ -167,10 +167,12 @@ def shellquote(s):
         _quotere = re.compile(r'(\\*)("|\\$)')
     global _needsshellquote
     if _needsshellquote is None:
-        # ":" and "\\" are also treated as "safe character", because
-        # they are used as a part of path name (and the latter doesn't
-        # work as "escape character", like one on posix) on Windows
-        _needsshellquote = re.compile(r'[^a-zA-Z0-9._:/\\-]').search
+        # ":" is also treated as "safe character", because it is used as a part
+        # of path name on Windows.  "\" is also part of a path name, but isn't
+        # safe because shlex.split() (kind of) treats it as an escape char and
+        # drops it.  It will leave the next character, even if it is another
+        # "\".
+        _needsshellquote = re.compile(r'[^a-zA-Z0-9._:/-]').search
     if s and not _needsshellquote(s) and not _quotere.search(s):
         # "s" shouldn't have to be quoted
         return s

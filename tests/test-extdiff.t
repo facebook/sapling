@@ -58,9 +58,15 @@ Should diff cloned directories:
 
 Should diff cloned files directly:
 
+#if windows
+  $ hg falabala -r 0:1
+  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob)
+  [1]
+#else
   $ hg falabala -r 0:1
   diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
   [1]
+#endif
 
 Test diff during merge:
 
@@ -76,23 +82,41 @@ Test diff during merge:
 
 Should diff cloned file against wc file:
 
+#if windows
+  $ hg falabala
+  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "*\\a\\a" (glob)
+  [1]
+#else
   $ hg falabala
   diffing */extdiff.*/a.2a13a4d2da36/a */a/a (glob)
   [1]
+#endif
 
 
 Test --change option:
 
   $ hg ci -d '2 0' -mtest3
+#if windows
+  $ hg falabala -c 1
+  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob)
+  [1]
+#else
   $ hg falabala -c 1
   diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
   [1]
+#endif
 
 Check diff are made from the first parent:
 
+#if windows
+  $ hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
+  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "a.46c0e4daeb72\\a" (glob)
+  diff-like tools yield a non-zero exit code
+#else
   $ hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
   diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob)
   diff-like tools yield a non-zero exit code
+#endif
 
 issue4463: usage of command line configuration without additional quoting
 
@@ -107,11 +131,11 @@ issue4463: usage of command line configuration without additional quoting
   $ echo a >> a
 #if windows
   $ hg --debug 4463a | grep '^running'
-  running 'echo a-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
+  running 'echo a-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
   $ hg --debug 4463b | grep '^running'
-  running 'echo b-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
+  running 'echo b-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
   $ hg --debug echo | grep '^running'
-  running '*echo* *\\a *\\a' in */extdiff.* (glob)
+  running '*echo* "*\\a" "*\\a"' in */extdiff.* (glob)
 #else
   $ hg --debug 4463a | grep '^running'
   running 'echo a-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob)
@@ -138,15 +162,15 @@ issue4463: usage of command line configuration without additional quoting
   > EOF
 #if windows
   $ hg --debug 4463b2 | grep '^running'
-  running 'echo b2-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
+  running 'echo b2-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
   $ hg --debug 4463b3 | grep '^running'
-  running 'echo b3-naked \'single quoted\' "double quoted" *\\a *\\a' in */extdiff.* (glob)
+  running 'echo b3-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
   $ hg --debug 4463b4 | grep '^running'
-  running 'echo *\\a *\\a' in */extdiff.* (glob)
+  running 'echo "*\\a" "*\\a"' in */extdiff.* (glob)
   $ hg --debug 4463b4 --option b4-naked --option 'being quoted' | grep '^running'
-  running 'echo b4-naked "being quoted" *\\a *\\a' in */extdiff.* (glob)
+  running 'echo b4-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
   $ hg --debug extdiff -p echo --option echo-naked --option 'being quoted' | grep '^running'
-  running 'echo echo-naked "being quoted" *\\a *\\a' in */extdiff.* (glob)
+  running 'echo echo-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
 #else
   $ hg --debug 4463b2 | grep '^running'
   running 'echo b2-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob)
