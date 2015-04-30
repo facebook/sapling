@@ -2620,3 +2620,9 @@ Test word error messages for not enough and too many arguments
   $ hg log -Gv -R a --template "{word('0', desc, 'o', 'h', 'b', 'o', 'y')}"
   hg: parse error: word expects two or three arguments, got 7
   [255]
+
+Test word for invalid numbers
+
+  $ hg log -Gv -R a --template "{word(2, desc)}"
+  hg: parse error: Use strings like '3' for numbers passed to word function
+  [255]

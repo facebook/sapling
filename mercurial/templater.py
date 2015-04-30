@@ -539,7 +539,12 @@ def word(context, mapping, args):
         raise error.ParseError(_("word expects two or three arguments, got %d")
                                % len(args))
 
-    num = int(stringify(args[0][0](context, mapping, args[0][1])))
+    try:
+        num = int(stringify(args[0][0](context, mapping, args[0][1])))
+    except ValueError:
+        # i18n: "word" is a keyword
+        raise error.ParseError(
+                _("Use strings like '3' for numbers passed to word function"))
     text = stringify(args[1][0](context, mapping, args[1][1]))
     if len(args) == 3:
         splitter = stringify(args[2][0](context, mapping, args[2][1]))
