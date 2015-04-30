@@ -169,6 +169,9 @@ class ui(object):
         if self.plain('alias'):
             for k, v in cfg.items('alias'):
                 del cfg['alias'][k]
+        if self.plain('revsetalias'):
+            for k, v in cfg.items('revsetalias'):
+                del cfg['revsetalias'][k]
 
         if trusted:
             self._tcfg.update(cfg)
