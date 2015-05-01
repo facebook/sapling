@@ -1066,12 +1066,16 @@ aliases:
     <fullreposet+ 0:9>>
   6
 
-  $ HGPLAIN=1 try m
+  $ HGPLAIN=1
+  $ export HGPLAIN
+  $ try m
   ('symbol', 'm')
   abort: unknown revision 'm'!
   [255]
 
-  $ HGPLAIN=1 HGPLAINEXCEPT=revsetalias try m
+  $ HGPLAINEXCEPT=revsetalias
+  $ export HGPLAINEXCEPT
+  $ try m
   ('symbol', 'm')
   (func
     ('symbol', 'merge')
@@ -1080,8 +1084,6 @@ aliases:
   <filteredset
     <fullreposet+ 0:9>>
   6
-
-(for some reason HGPLAIN and HGPLAINEXCEPT can carry forward)
 
   $ unset HGPLAIN
   $ unset HGPLAINEXCEPT
@@ -1097,14 +1099,18 @@ aliases:
   <baseset+ [8]>
   8
 
-  $ HGPLAIN=1 try 'p2(.)'
+  $ HGPLAIN=1
+  $ export HGPLAIN
+  $ try 'p2(.)'
   (func
     ('symbol', 'p2')
     ('symbol', '.'))
   * set:
   <baseset+ []>
 
-  $ HGPLAIN=1 HGPLAINEXCEPT=revsetalias try 'p2(.)'
+  $ HGPLAINEXCEPT=revsetalias
+  $ export HGPLAINEXCEPT
+  $ try 'p2(.)'
   (func
     ('symbol', 'p2')
     ('symbol', '.'))
