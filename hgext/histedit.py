@@ -252,7 +252,10 @@ class histeditstate(object):
         for replacement in self.replacements:
             fp.write('%s%s\n' % (node.hex(replacement[0]), ''.join(node.hex(r)
                 for r in replacement[1])))
-        fp.write('%s\n' % self.backupfile)
+        backupfile = self.backupfile
+        if not backupfile:
+            backupfile = ''
+        fp.write('%s\n' % backupfile)
         fp.close()
 
     def _load(self):
