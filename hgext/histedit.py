@@ -893,21 +893,22 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
-    action, currentnode = state.rules.pop(0)
+    if state.rules:
+        action, currentnode = state.rules.pop(0)
 
-    actobj = actiontable[action].fromrule(state, currentnode)
+        actobj = actiontable[action].fromrule(state, currentnode)
 
-    s = repo.status()
-    if s.modified or s.added or s.removed or s.deleted:
-        actobj.continuedirty()
         s = repo.status()
         if s.modified or s.added or s.removed or s.deleted:
-            raise util.Abort(_("working copy still dirty"))
+            actobj.continuedirty()
+            s = repo.status()
+            if s.modified or s.added or s.removed or s.deleted:
+                raise util.Abort(_("working copy still dirty"))
 
-    parentctx, replacements = actobj.continueclean()
+        parentctx, replacements = actobj.continueclean()
 
-    state.parentctxnode = parentctx.node()
-    state.replacements.extend(replacements)
+        state.parentctxnode = parentctx.node()
+        state.replacements.extend(replacements)
 
     return state
 
