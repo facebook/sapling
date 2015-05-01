@@ -24,3 +24,20 @@ hg debuginstall with no username
    (specify a username in your configuration file)
   1 problems detected, please check your install!
   [1]
+
+path variables are expanded (~ is the same as $TESTTMP)
+  $ mkdir tools
+  $ touch tools/testeditor.exe
+#if execbit
+  $ chmod 755 tools/testeditor.exe
+#endif
+  $ hg debuginstall --config ui.editor=~/tools/testeditor.exe
+  checking encoding (ascii)...
+  checking Python executable (*) (glob)
+  checking Python version (*) (glob)
+  checking Python lib (*lib*)... (glob)
+  checking installed modules (*mercurial)... (glob)
+  checking templates (*mercurial?templates)... (glob)
+  checking commit editor...
+  checking username...
+  no problems detected

@@ -2370,6 +2370,7 @@ def debuginstall(ui):
     # editor
     ui.status(_("checking commit editor...\n"))
     editor = ui.geteditor()
+    editor = util.expandpath(editor)
     cmdpath = util.findexe(shlex.split(editor)[0])
     if not cmdpath:
         if editor == 'vi':
