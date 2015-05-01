@@ -20,6 +20,7 @@ elements = {
     "|": (5, None, ("|", 5)),
     "%": (6, None, ("%", 6)),
     ")": (0, None, None),
+    "integer": (0, ("integer",), None),
     "symbol": (0, ("symbol",), None),
     "string": (0, ("string",), None),
     "rawstring": (0, ("rawstring",), None),
@@ -59,6 +60,20 @@ def tokenizer(data):
                 pos += 1
             else:
                 raise error.ParseError(_("unterminated string"), s)
+        elif c.isdigit() or c == '-':
+            s = pos
+            if c == '-': # simply take negate operator as part of integer
+                pos += 1
+            if pos >= end or not program[pos].isdigit():
+                raise error.ParseError(_("integer literal without digits"), s)
+            pos += 1
+            while pos < end:
+                d = program[pos]
+                if not d.isdigit():
+                    break
+                pos += 1
+            yield ('integer', program[s:pos], s)
+            pos -= 1
         elif c.isalnum() or c in '_':
             s = pos
             pos += 1
@@ -134,6 +149,9 @@ def gettemplate(exp, context):
     if exp[0] == 'symbol':
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
+
+def runinteger(context, mapping, data):
+    return int(data)
 
 def runstring(context, mapping, data):
     return data.decode("string-escape")
@@ -567,6 +585,7 @@ def word(context, mapping, args):
 
 # methods to interpret function arguments or inner expressions (e.g. {_(x)})
 exprmethods = {
+    "integer": lambda e, c: (runinteger, e[1]),
     "string": lambda e, c: (runstring, e[1]),
     "rawstring": lambda e, c: (runrawstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -579,6 +598,7 @@ exprmethods = {
 
 # methods to interpret top-level template (e.g. {x}, {x|_}, {x % "y"})
 methods = exprmethods.copy()
+methods["integer"] = exprmethods["symbol"]  # '{1}' as variable
 
 funcs = {
     "date": date,

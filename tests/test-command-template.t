@@ -2291,6 +2291,39 @@ Test invalid date:
   hg: parse error: date expects a date information
   [255]
 
+Test integer literal:
+
+  $ hg log -Ra -r0 -T '{(0)}\n'
+  0
+  $ hg log -Ra -r0 -T '{(123)}\n'
+  123
+  $ hg log -Ra -r0 -T '{(-4)}\n'
+  -4
+  $ hg log -Ra -r0 -T '{(-)}\n'
+  hg: parse error at 2: integer literal without digits
+  [255]
+  $ hg log -Ra -r0 -T '{(-a)}\n'
+  hg: parse error at 2: integer literal without digits
+  [255]
+
+top-level integer literal is interpreted as symbol (i.e. variable name):
+
+  $ hg log -Ra -r0 -T '{1}\n'
+  
+  $ hg log -Ra -r0 -T '{if("t", "{1}")}\n'
+  
+  $ hg log -Ra -r0 -T '{1|stringify}\n'
+  
+
+unless explicit symbol is expected:
+
+  $ hg log -Ra -r0 -T '{desc|1}\n'
+  hg: parse error: expected a symbol, got 'integer'
+  [255]
+  $ hg log -Ra -r0 -T '{1()}\n'
+  hg: parse error: expected a symbol, got 'integer'
+  [255]
+
 Test string escaping:
 
   $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
@@ -2737,8 +2770,13 @@ Test word error messages for not enough and too many arguments
   hg: parse error: word expects two or three arguments, got 7
   [255]
 
+Test word for integer literal
+
+  $ hg log -R a --template "{word(2, desc)}\n" -r0
+  line
+
 Test word for invalid numbers
 
-  $ hg log -Gv -R a --template "{word(2, desc)}"
+  $ hg log -Gv -R a --template "{word('a', desc)}"
   hg: parse error: Use strings like '3' for numbers passed to word function
   [255]
