@@ -9,7 +9,6 @@
 Adds a s/stop verb to histedit to stop after a commit was picked.
 """
 
-from hgext import histedit
 from mercurial import cmdutil
 from mercurial import error
 from mercurial import extensions
@@ -23,70 +22,74 @@ command = cmdutil.command(cmdtable)
 
 testedwith = 'internal'
 
-class stop(histedit.histeditaction):
-    def run(self):
-        parentctx, replacements = super(stop, self).run()
-        raise error.InterventionRequired(
-            _('Changes commited as %s. You may amend the commit now.\n'
-              'When you are finished, run hg histedit --continue to resume') %
-            parentctx)
-
-class execute(histedit.histeditaction):
-    def __init__(self, state, command):
-        self.state = state
-        self.repo = state.repo
-        self.command = command
-
-    @classmethod
-    def fromrule(cls, state, rule):
-        """Parses the given rule, returning an instance of the histeditaction.
-        """
-        command = rule
-        return cls(state, command)
-
-    def run(self):
-        state = self.state
-        repo, ctxnode = state.repo, state.parentctxnode
-        hg.update(repo, ctxnode)
-
-        # release locks so the programm can call hg and then relock.
-        lock.release(state.lock, state.wlock)
-
-        try:
-            ctx = repo[ctxnode]
-            rc = util.system(self.command, environ={'HGNODE': ctx.hex()},
-                             cwd=repo.root)
-        except OSError as os:
+def defineactions():
+    histedit = extensions.find('histedit')
+    class stop(histedit.histeditaction):
+        def run(self):
+            parentctx, replacements = super(stop, self).run()
             raise error.InterventionRequired(
-                _("Cannot execute command '%s': %s") % (cmd, os))
-        finally:
-            # relock the repository
-            state.wlock = repo.wlock()
-            state.lock = repo.lock()
-            repo.invalidate()
-            repo.invalidatedirstate()
+                _('Changes commited as %s. You may amend the commit now.\n'
+                  'When you are finished, run hg histedit --continue to resume') %
+                parentctx)
 
-        if rc != 0:
-            raise error.InterventionRequired(
-                _("Command '%s' failed with exit status %d") %
-                (self.command, rc))
+    class execute(histedit.histeditaction):
+        def __init__(self, state, command):
+            self.state = state
+            self.repo = state.repo
+            self.command = command
 
-        m, a, r, d = self.repo.status()[:4]
-        if m or a or r or d:
-            self.continuedirty()
-        return self.continueclean()
+        @classmethod
+        def fromrule(cls, state, rule):
+            """Parses the given rule, returning an instance of the histeditaction.
+            """
+            command = rule
+            return cls(state, command)
 
-    def continuedirty(self):
-        raise util.Abort(_('working copy has pending changes'),
-            hint=_('amend, commit, or revert them and run histedit '
-                '--continue, or abort with histedit --abort'))
+        def run(self):
+            state = self.state
+            repo, ctxnode = state.repo, state.parentctxnode
+            hg.update(repo, ctxnode)
 
-    def continueclean(self):
-        parentctxnode = self.state.parentctxnode
-        newctx = self.repo['.']
-        if newctx.node() != parentctxnode:
-            return newctx, [(parentctxnode, (newctx.node(),))]
-        return newctx, []
+            # release locks so the programm can call hg and then relock.
+            lock.release(state.lock, state.wlock)
+
+            try:
+                ctx = repo[ctxnode]
+                rc = util.system(self.command, environ={'HGNODE': ctx.hex()},
+                                 cwd=repo.root)
+            except OSError as os:
+                raise error.InterventionRequired(
+                    _("Cannot execute command '%s': %s") % (cmd, os))
+            finally:
+                # relock the repository
+                state.wlock = repo.wlock()
+                state.lock = repo.lock()
+                repo.invalidate()
+                repo.invalidatedirstate()
+
+            if rc != 0:
+                raise error.InterventionRequired(
+                    _("Command '%s' failed with exit status %d") %
+                    (self.command, rc))
+
+            m, a, r, d = self.repo.status()[:4]
+            if m or a or r or d:
+                self.continuedirty()
+            return self.continueclean()
+
+        def continuedirty(self):
+            raise util.Abort(_('working copy has pending changes'),
+                hint=_('amend, commit, or revert them and run histedit '
+                    '--continue, or abort with histedit --abort'))
+
+        def continueclean(self):
+            parentctxnode = self.state.parentctxnode
+            newctx = self.repo['.']
+            if newctx.node() != parentctxnode:
+                return newctx, [(parentctxnode, (newctx.node(),))]
+            return newctx, []
+
+    return stop, execute
 
 # HACK:
 # The following function verifyrules and bootstrap continue are copied from
@@ -97,6 +100,7 @@ def verifyrules(orig, rules, repo, ctxs):
     Will abort if there are to many or too few rules, a malformed rule,
     or a rule on a changeset outside of the user-given range.
     """
+    histedit = extensions.find('histedit')
     parsed = []
     expected = set(c.hex() for c in ctxs)
     seen = set()
@@ -130,6 +134,7 @@ def verifyrules(orig, rules, repo, ctxs):
     return parsed
 
 def extsetup(ui):
+    histedit = extensions.find('histedit')
     histedit.editcomment = _("""# Edit history between %s and %s
 #
 # Commits are listed from least to most recent
@@ -145,6 +150,7 @@ def extsetup(ui):
 #  x, exec = execute given command
 #
     """)
+    stop, execute = defineactions()
     histedit.actiontable['s'] = stop
     histedit.actiontable['stop'] = stop
     histedit.actiontable['x'] = execute
