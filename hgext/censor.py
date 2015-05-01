@@ -22,8 +22,7 @@ data needs to be materialized. Some commands, like ``hg cat``/``hg revert``,
 simply fail when asked to produce censored data. Others, like ``hg verify`` and
 ``hg update``, must be capable of tolerating censored data to continue to
 function in a meaningful way. Such commands only tolerate censored file
-revisions if they are allowed by the policy specified by the "censor.allow"
-config option.
+revisions if they are allowed by the "censor.policy=ignore" config option.
 """
 
 from mercurial.node import short
