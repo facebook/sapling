@@ -100,12 +100,12 @@ def compiletemplate(tmpl, context, strtoken="string"):
         parseres, pos = p.parse(pd)
         parsed.append(parseres)
 
-    return [compileexp(e, context) for e in parsed]
+    return [compileexp(e, context, methods) for e in parsed]
 
-def compileexp(exp, context):
+def compileexp(exp, context, curmethods):
     t = exp[0]
-    if t in methods:
-        return methods[t](exp, context)
+    if t in curmethods:
+        return curmethods[t](exp, context)
     raise error.ParseError(_("unknown method '%s'") % t)
 
 # template evaluation
@@ -157,7 +157,7 @@ def runsymbol(context, mapping, key):
     return v
 
 def buildfilter(exp, context):
-    func, data = compileexp(exp[1], context)
+    func, data = compileexp(exp[1], context, methods)
     filt = getfilter(exp[2], context)
     return (runfilter, (func, data, filt))
 
@@ -179,7 +179,7 @@ def runfilter(context, mapping, data):
                            "keyword '%s'") % (filt.func_name, dt))
 
 def buildmap(exp, context):
-    func, data = compileexp(exp[1], context)
+    func, data = compileexp(exp[1], context, methods)
     ctmpl = gettemplate(exp[2], context)
     return (runmap, (func, data, ctmpl))
 
@@ -208,7 +208,7 @@ def runmap(context, mapping, data):
 
 def buildfunc(exp, context):
     n = getsymbol(exp[1])
-    args = [compileexp(x, context) for x in getlist(exp[2])]
+    args = [compileexp(x, context, exprmethods) for x in getlist(exp[2])]
     if n in funcs:
         f = funcs[n]
         return (f, args)
@@ -565,16 +565,20 @@ def word(context, mapping, args):
     else:
         return tokens[num]
 
-methods = {
+# methods to interpret function arguments or inner expressions (e.g. {_(x)})
+exprmethods = {
     "string": lambda e, c: (runstring, e[1]),
     "rawstring": lambda e, c: (runrawstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
-    "group": lambda e, c: compileexp(e[1], c),
+    "group": lambda e, c: compileexp(e[1], c, exprmethods),
 #    ".": buildmember,
     "|": buildfilter,
     "%": buildmap,
     "func": buildfunc,
     }
+
+# methods to interpret top-level template (e.g. {x}, {x|_}, {x % "y"})
+methods = exprmethods.copy()
 
 funcs = {
     "date": date,
