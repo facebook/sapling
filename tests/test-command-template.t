@@ -2778,5 +2778,5 @@ Test word for integer literal
 Test word for invalid numbers
 
   $ hg log -Gv -R a --template "{word('a', desc)}"
-  hg: parse error: Use strings like '3' for numbers passed to word function
+  hg: parse error: word expects an integer index
   [255]
