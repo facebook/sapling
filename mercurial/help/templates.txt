@@ -67,7 +67,7 @@ Some sample command line templates:
 
 - Output the description set to a fill-width of 30::
 
-   $ hg log -r 0 --template "{fill(desc, '30')}"
+   $ hg log -r 0 --template "{fill(desc, 30)}"
 
 - Use a conditional to test for the default branch::
 
@@ -104,4 +104,4 @@ Some sample command line templates:
 
 - Print the first word of each line of a commit message::
 
-   $ hg log --template "{word(\"0\", desc)}\n"
+   $ hg log --template "{word(0, desc)}\n"
