@@ -226,10 +226,17 @@ def date(context, mapping, args):
         raise error.ParseError(_("date expects one or two arguments"))
 
     date = args[0][0](context, mapping, args[0][1])
+    fmt = None
     if len(args) == 2:
         fmt = stringify(args[1][0](context, mapping, args[1][1]))
-        return util.datestr(date, fmt)
-    return util.datestr(date)
+    try:
+        if fmt is None:
+            return util.datestr(date)
+        else:
+            return util.datestr(date, fmt)
+    except (TypeError, ValueError):
+        # i18n: "date" is a keyword
+        raise error.ParseError(_("date expects a date information"))
 
 def diff(context, mapping, args):
     """:diff([includepattern [, excludepattern]]): Show a diff, optionally

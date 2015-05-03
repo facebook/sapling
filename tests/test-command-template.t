@@ -2236,6 +2236,12 @@ Test date format:
   date: 70 01 01 01 +0000
   date: 70 01 01 00 +0000
 
+Test invalid date:
+
+  $ hg log -R latesttag -T '{date(rev)}\n'
+  hg: parse error: date expects a date information
+  [255]
+
 Test string escaping:
 
   $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
