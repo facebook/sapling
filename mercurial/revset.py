@@ -334,11 +334,6 @@ def stringset(repo, subset, x):
         return baseset([x])
     return baseset()
 
-def symbolset(repo, subset, x):
-    if x in symbols:
-        raise error.ParseError(_("can't use %s here") % x)
-    return stringset(repo, subset, x)
-
 def rangeset(repo, subset, x, y):
     m = getset(repo, fullreposet(repo), x)
     n = getset(repo, fullreposet(repo), y)
@@ -2088,7 +2083,7 @@ methods = {
     "range": rangeset,
     "dagrange": dagrange,
     "string": stringset,
-    "symbol": symbolset,
+    "symbol": stringset,
     "and": andset,
     "or": orset,
     "not": notset,
