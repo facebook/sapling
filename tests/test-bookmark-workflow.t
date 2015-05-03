@@ -169,7 +169,8 @@ Bookmarks on new revs
   [1]
 As of 2.3, Mercurial's outgoing -B doesn't actually show changed bookmarks
 It only shows "new" bookmarks.  Thus, b1 doesn't show up.
-  $ hg outgoing -B
+This changed in 3.4 to start showing changed and deleted bookmarks again.
+  $ hg outgoing -B | grep -v -E -w 'b1|b3|b4'
   comparing with $TESTTMP/hgremoterepo
   searching for changed bookmarks
      b2                        3442585be8a6
@@ -209,7 +210,8 @@ It only shows "new" bookmarks.  Thus, b1 doesn't show up.
   [1]
 As of 2.3, Mercurial's outgoing -B doesn't actually show changed bookmarks
 It only shows "new" bookmarks.  Thus, b1 doesn't show up.
-  $ hg outgoing -B
+This changed in 3.4 to start showing changed and deleted bookmarks again.
+  $ hg outgoing -B | grep -v -E -w 'b1|b3|b4'
   comparing with $TESTTMP/gitremoterepo
   searching for changed bookmarks
      b2                        ff7a2f2d8d70
