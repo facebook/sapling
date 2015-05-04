@@ -1443,7 +1443,7 @@ def gettemplate(ui, tmpl, style):
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl:
             try:
-                tmpl = templater.parsestring(tmpl)
+                tmpl = templater.unquotestring(tmpl)
             except SyntaxError:
                 pass
             return tmpl, None
@@ -1477,7 +1477,7 @@ def gettemplate(ui, tmpl, style):
     t = ui.config('templates', tmpl)
     if t:
         try:
-            tmpl = templater.parsestring(t)
+            tmpl = templater.unquotestring(t)
         except SyntaxError:
             tmpl = t
         return tmpl, None

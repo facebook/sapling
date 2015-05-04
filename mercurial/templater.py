@@ -618,7 +618,7 @@ def _flatten(thing):
                 for j in _flatten(i):
                     yield j
 
-def parsestring(s):
+def unquotestring(s):
     '''unwrap quotes'''
     if len(s) < 2 or s[0] != s[-1]:
         raise SyntaxError(_('unmatched quotes'))
@@ -728,7 +728,7 @@ class templater(object):
                 raise SyntaxError(_('%s: missing value') % conf.source('', key))
             if val[0] in "'\"":
                 try:
-                    self.cache[key] = parsestring(val)
+                    self.cache[key] = unquotestring(val)
                 except SyntaxError, inst:
                     raise SyntaxError('%s: %s' %
                                       (conf.source('', key), inst.args[0]))
