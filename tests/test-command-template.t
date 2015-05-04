@@ -2250,6 +2250,29 @@ Test string escaping:
   <>\n<]>
   <>\n<
 
+  $ hg log -R latesttag -r 0 \
+  > --config ui.logtemplate='>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
+  $ hg log -R latesttag -r 0 -T esc \
+  > --config templates.esc='>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
+  $ cat <<'EOF' > esctmpl
+  > changeset = '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  > EOF
+  $ hg log -R latesttag -r 0 --style ./esctmpl
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
 "string-escape"-ed "\x5c\x786e" becomes r"\x6e" (once) or r"n" (twice)
 
   $ hg log -R a -r 0 --template '{if("1", "\x5c\x786e", "NG")}\n'

@@ -618,14 +618,13 @@ def _flatten(thing):
                     yield j
 
 def parsestring(s, quoted=True):
-    '''parse a string using simple c-like syntax.
-    string must be in quotes if quoted is True.'''
+    '''unwrap quotes if quoted is True'''
     if quoted:
         if len(s) < 2 or s[0] != s[-1]:
             raise SyntaxError(_('unmatched quotes'))
-        return s[1:-1].decode('string_escape')
+        return s[1:-1]
 
-    return s.decode('string_escape')
+    return s
 
 class engine(object):
     '''template expansion engine.
