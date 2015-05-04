@@ -877,7 +877,7 @@ def checkcase(path):
     Requires a path (like /foo/.hg) ending with a foldable final
     directory component.
     """
-    s1 = os.stat(path)
+    s1 = os.lstat(path)
     d, b = os.path.split(path)
     b2 = b.upper()
     if b == b2:
@@ -886,7 +886,7 @@ def checkcase(path):
             return True # no evidence against case sensitivity
     p2 = os.path.join(d, b2)
     try:
-        s2 = os.stat(p2)
+        s2 = os.lstat(p2)
         if s2 == s1:
             return False
         return True

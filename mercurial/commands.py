@@ -105,7 +105,7 @@ commitopts2 = [
 # hidden for now
 formatteropts = [
     ('T', 'template', '',
-     _('display with template (DEPRECATED)'), _('TEMPLATE')),
+     _('display with template (EXPERIMENTAL)'), _('TEMPLATE')),
 ]
 
 templateopts = [

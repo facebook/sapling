@@ -87,6 +87,7 @@
   $ hg ci -Aqm9
 
   $ hg tag -r6 1.0
+  $ hg bookmark -r6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
   $ hg clone --quiet -U -r 7 . ../remote1
   $ hg clone --quiet -U -r 8 . ../remote2
@@ -553,6 +554,23 @@ Test explicit numeric revision
   $ log 'rev(tip)'
   hg: parse error: rev expects a number
   [255]
+
+Test hexadecimal revision
+  $ log 'id(2)'
+  abort: 00changelog.i@2: ambiguous identifier!
+  [255]
+  $ log 'id(23268)'
+  4
+  $ log 'id(2785f51eece)'
+  0
+  $ log 'id(d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c)'
+  8
+  $ log 'id(d5d0dcbdc4a)'
+  $ log 'id(d5d0dcbdc4w)'
+  $ log 'id(d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532d)'
+  $ log 'id(d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532q)'
+  $ log 'id(1.0)'
+  $ log 'id(xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)'
 
 Test null revision
   $ log '(null)'
