@@ -329,6 +329,9 @@ def clone(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
+    if len(args) == 0:
+        raise GitUnknownError("a repository to clone must be specified")
+
     cmd = Command('clone')
     cmd.append(args[0])
     if len(args) > 1:
