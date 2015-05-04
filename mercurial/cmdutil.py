@@ -1445,7 +1445,7 @@ def gettemplate(ui, tmpl, style):
             try:
                 tmpl = templater.parsestring(tmpl)
             except SyntaxError:
-                tmpl = templater.parsestring(tmpl, quoted=False)
+                pass
             return tmpl, None
         else:
             style = util.expandpath(ui.config('ui', 'style', ''))
@@ -1479,7 +1479,7 @@ def gettemplate(ui, tmpl, style):
         try:
             tmpl = templater.parsestring(t)
         except SyntaxError:
-            tmpl = templater.parsestring(t, quoted=False)
+            tmpl = t
         return tmpl, None
 
     if tmpl == 'list':

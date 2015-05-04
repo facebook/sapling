@@ -43,7 +43,7 @@ configure it, set the following options in your hgrc::
 
 from mercurial.i18n import _
 from mercurial.node import bin, short
-from mercurial import cmdutil, patch, templater, util, mail
+from mercurial import cmdutil, patch, util, mail
 import email.Parser
 
 import socket, xmlrpclib
@@ -206,7 +206,6 @@ class hgcia(object):
                 template = self.dstemplate
             else:
                 template = self.deftemplate
-        template = templater.parsestring(template, quoted=False)
         t = cmdutil.changeset_templater(self.ui, self.repo, False, None,
                                         template, style, False)
         self.templater = t

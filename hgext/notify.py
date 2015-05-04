@@ -138,7 +138,7 @@ import email, socket, time
 # load. This was not a problem on Python 2.7.
 import email.Parser
 from mercurial.i18n import _
-from mercurial import patch, cmdutil, templater, util, mail
+from mercurial import patch, cmdutil, util, mail
 import fnmatch
 
 testedwith = 'internal'
@@ -190,8 +190,6 @@ class notifier(object):
                     self.ui.config('notify', 'template'))
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
-        if template:
-            template = templater.parsestring(template, quoted=False)
         self.t = cmdutil.changeset_templater(self.ui, self.repo, False, None,
                                              template, mapfile, False)
 

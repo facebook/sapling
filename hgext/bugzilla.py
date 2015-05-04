@@ -279,7 +279,7 @@ All the above add a comment to the Bugzilla bug record of the form::
 
 from mercurial.i18n import _
 from mercurial.node import short
-from mercurial import cmdutil, mail, templater, util
+from mercurial import cmdutil, mail, util
 import re, time, urlparse, xmlrpclib
 
 testedwith = 'internal'
@@ -876,8 +876,6 @@ class bugzilla(object):
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')
-        if tmpl:
-            tmpl = templater.parsestring(tmpl, quoted=False)
         t = cmdutil.changeset_templater(self.ui, self.repo,
                                         False, None, tmpl, mapfile, False)
         self.ui.pushbuffer()
