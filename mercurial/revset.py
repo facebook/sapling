@@ -3137,7 +3137,12 @@ class generatorset(abstractsmartset):
                 self.__contains__ = self._desccontains
 
     def __nonzero__(self):
-        for r in self:
+        # Do not use 'for r in self' because it will enforce the iteration
+        # order (default ascending), possibly unrolling a whole descending
+        # iterator.
+        if self._genlist:
+            return True
+        for r in self._consumegen():
             return True
         return False
 
