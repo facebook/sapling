@@ -87,8 +87,9 @@ def compiletemplate(tmpl, context, strtoken="string"):
         if n < 0:
             parsed.append((strtoken, tmpl[pos:]))
             break
-        if n > 0 and tmpl[n - 1] == '\\':
-            # escaped
+        bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
+        if strtoken == 'string' and bs % 2 == 1:
+            # escaped (e.g. '\{', '\\\{', but not '\\{' nor r'\{')
             parsed.append((strtoken, (tmpl[pos:n - 1] + "{")))
             pos = n + 1
             continue
