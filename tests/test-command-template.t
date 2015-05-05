@@ -1993,6 +1993,15 @@ Upper/lower filters:
   abort: template filter 'upper' is not compatible with keyword 'date'
   [255]
 
+Add a commit that does all possible modifications at once
+
+  $ echo modify >> third
+  $ touch b
+  $ hg add b
+  $ hg mv fourth fifth
+  $ hg rm a
+  $ hg ci -m "Modify, add, remove, rename"
+
 Error on syntax:
 
   $ echo 'x = "f' >> t
@@ -2606,7 +2615,9 @@ Test stringify on sub expressions
 Test splitlines
 
   $ hg log -Gv -R a --template "{splitlines(desc) % 'foo {line}\n'}"
-  @  foo future
+  @  foo Modify, add, remove, rename
+  |
+  o  foo future
   |
   o  foo third
   |
@@ -2640,6 +2651,8 @@ Test startswith
   o
   |
   o
+  |
+  o
   
   o
   |\
@@ -2665,7 +2678,9 @@ Test bad template with better error message
 Test word function (including index out of bounds graceful failure)
 
   $ hg log -Gv -R a --template "{word('1', desc)}"
-  @
+  @  add,
+  |
+  o
   |
   o
   |
@@ -2689,7 +2704,9 @@ Test word function (including index out of bounds graceful failure)
 Test word third parameter used as splitter
 
   $ hg log -Gv -R a --template "{word('0', desc, 'o')}"
-  @  future
+  @  M
+  |
+  o  future
   |
   o  third
   |
