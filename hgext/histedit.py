@@ -747,7 +747,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     elif goal == 'edit-plan':
         state.read()
         if not rules:
-            comment = editcomment % (state.parentctx, node.short(state.topmost))
+            comment = editcomment % (node.short(state.parentctxnode),
+                                     node.short(state.topmost))
             rules = ruleeditor(repo, ui, state.rules, comment)
         else:
             if rules == '-':

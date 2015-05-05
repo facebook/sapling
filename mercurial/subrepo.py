@@ -517,7 +517,7 @@ class abstractsubrepo(object):
             flags = self.fileflags(name)
             mode = 'x' in flags and 0755 or 0644
             symlink = 'l' in flags
-            archiver.addfile(self.wvfs.reljoin(prefix, self._path, name),
+            archiver.addfile(prefix + self._path + '/' + name,
                              mode, symlink, self.filedata(name))
             self.ui.progress(_('archiving (%s)') % relpath, i + 1,
                              unit=_('files'), total=total)
@@ -731,8 +731,7 @@ class hgsubrepo(abstractsubrepo):
         for subpath in ctx.substate:
             s = subrepo(ctx, subpath)
             submatch = matchmod.narrowmatcher(subpath, match)
-            total += s.archive(
-                archiver, self.wvfs.reljoin(prefix, self._path), submatch)
+            total += s.archive(archiver, prefix + self._path + '/', submatch)
         return total
 
     @annotatesubrepoerror
@@ -1675,7 +1674,7 @@ class gitsubrepo(abstractsubrepo):
                 data = info.linkname
             else:
                 data = tar.extractfile(info).read()
-            archiver.addfile(self.wvfs.reljoin(prefix, self._path, info.name),
+            archiver.addfile(prefix + self._path + '/' + info.name,
                              info.mode, info.issym(), data)
             total += 1
             self.ui.progress(_('archiving (%s)') % relpath, i + 1,

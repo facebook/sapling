@@ -70,12 +70,51 @@ edit the history
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
 
-edit the plan
+edit the plan via the editor
+  $ cat >> ../editplan.sh <<EOF
+  > cat > \$1 <<EOF2
+  > drop e860deea161a e
+  > drop 652413bf663e f
+  > drop 3c6a8ed2ebe8 g
+  > EOF2
+  > EOF
+  $ chmod a+x ../editplan.sh
+  $ HGEDITOR=../editplan.sh hg histedit --edit-plan
+  $ cat .hg/histedit-state
+  v1
+  055a42cdd88768532f9cf79daa407fc8d138de9b
+  3c6a8ed2ebe862cc949d2caa30775dd6f16fb799
+  False
+  3
+  drop
+  e860deea161a2f77de56603b340ebbb4536308ae
+  drop
+  652413bf663ef2a641cab26574e46d5f5a64a55a
+  drop
+  3c6a8ed2ebe862cc949d2caa30775dd6f16fb799
+  0
+  strip-backup/177f92b77385-0ebe6a8f-histedit.hg
+
+edit the plan via --commands
   $ hg histedit --edit-plan --commands - 2>&1 << EOF
   > edit e860deea161a e
   > pick 652413bf663e f
   > drop 3c6a8ed2ebe8 g
   > EOF
+  $ cat .hg/histedit-state
+  v1
+  055a42cdd88768532f9cf79daa407fc8d138de9b
+  3c6a8ed2ebe862cc949d2caa30775dd6f16fb799
+  False
+  3
+  edit
+  e860deea161a2f77de56603b340ebbb4536308ae
+  pick
+  652413bf663ef2a641cab26574e46d5f5a64a55a
+  drop
+  3c6a8ed2ebe862cc949d2caa30775dd6f16fb799
+  0
+  strip-backup/177f92b77385-0ebe6a8f-histedit.hg
 
 Go at a random point and try to continue
 

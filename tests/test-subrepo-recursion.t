@@ -434,6 +434,18 @@ Note there's a slight output glitch on non-hardlink systems: the last
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
 #endif
 
+Archive + subrepos uses '/' for all component separators
+
+  $ tar -tzf ../archive.tar.gz | sort
+  archive/.hg_archival.txt
+  archive/.hgsub
+  archive/.hgsubstate
+  archive/foo/.hgsub
+  archive/foo/.hgsubstate
+  archive/foo/bar/z.txt
+  archive/foo/y.txt
+  archive/x.txt
+
 The newly cloned subrepos contain no working copy:
 
   $ hg -R foo summary
