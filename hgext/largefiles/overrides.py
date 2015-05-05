@@ -985,7 +985,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
     for subpath in sorted(ctx.substate):
         sub = ctx.sub(subpath)
         submatch = match_.narrowmatcher(subpath, match)
-        sub.archive(archiver, os.path.join(prefix, repo._path) + '/', submatch)
+        sub.archive(archiver, prefix + repo._path + '/', submatch)
 
 # If a largefile is modified, the change is not reflected in its
 # standin until a commit. cmdutil.bailifchanged() raises an exception
