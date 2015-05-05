@@ -309,21 +309,17 @@ Exclude large files from main and sub-sub repo
 
 Exclude normal files from main and sub-sub repo
 
-  $ hg --config extensions.largefiles= archive -S -X '**.txt' ../archive_lf
-  $ find ../archive_lf | sort
-  ../archive_lf
-  ../archive_lf/.hgsub
-  ../archive_lf/.hgsubstate
-  ../archive_lf/large.bin
-  ../archive_lf/main
-  ../archive_lf/sub1
-  ../archive_lf/sub1/.hgsub
-  ../archive_lf/sub1/.hgsubstate
-  ../archive_lf/sub1/sub1
-  ../archive_lf/sub1/sub2
-  ../archive_lf/sub1/sub2/large.bin
-  ../archive_lf/sub1/sub2/sub2
-  $ rm -rf ../archive_lf
+  $ hg --config extensions.largefiles= archive -S -X '**.txt' ../archive_lf.tgz
+  $ tar -tzf ../archive_lf.tgz | sort
+  archive_lf/.hgsub
+  archive_lf/.hgsubstate
+  archive_lf/large.bin
+  archive_lf/main
+  archive_lf/sub1/.hgsub
+  archive_lf/sub1/.hgsubstate
+  archive_lf/sub1/sub1
+  archive_lf/sub1/sub2/large.bin
+  archive_lf/sub1/sub2/sub2
 
 Include normal files from within a largefiles subrepo
 
