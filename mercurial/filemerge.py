@@ -508,11 +508,11 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     # 8 for the prefix of conflict marker lines (e.g. '<<<<<<< ')
     return util.ellipsis(mark, 80 - 8)
 
-_defaultconflictmarker = ('{node|short} ' +
-    '{ifeq(tags, "tip", "", "{tags} ")}' +
-    '{if(bookmarks, "{bookmarks} ")}' +
-    '{ifeq(branch, "default", "", "{branch} ")}' +
-    '- {author|user}: {desc|firstline}')
+_defaultconflictmarker = ('{node|short} '
+                          '{ifeq(tags, "tip", "", "{tags} ")}'
+                          '{if(bookmarks, "{bookmarks} ")}'
+                          '{ifeq(branch, "default", "", "{branch} ")}'
+                          '- {author|user}: {desc|firstline}')
 
 _defaultconflictlabels = ['local', 'other']
 
