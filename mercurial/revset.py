@@ -1163,13 +1163,11 @@ def _matchfiles(repo, subset, x):
     # initialized. Use 'd:' to set the default matching mode, default
     # to 'glob'. At most one 'r:' and 'd:' argument can be passed.
 
-    # i18n: "_matchfiles" is a keyword
-    l = getargs(x, 1, -1, _("_matchfiles requires at least one argument"))
+    l = getargs(x, 1, -1, "_matchfiles requires at least one argument")
     pats, inc, exc = [], [], []
     rev, default = None, None
     for arg in l:
-        # i18n: "_matchfiles" is a keyword
-        s = getstring(arg, _("_matchfiles requires string arguments"))
+        s = getstring(arg, "_matchfiles requires string arguments")
         prefix, value = s[:2], s[2:]
         if prefix == 'p:':
             pats.append(value)
@@ -1179,20 +1177,17 @@ def _matchfiles(repo, subset, x):
             exc.append(value)
         elif prefix == 'r:':
             if rev is not None:
-                # i18n: "_matchfiles" is a keyword
-                raise error.ParseError(_('_matchfiles expected at most one '
-                                         'revision'))
+                raise error.ParseError('_matchfiles expected at most one '
+                                       'revision')
             if value != '': # empty means working directory; leave rev as None
                 rev = value
         elif prefix == 'd:':
             if default is not None:
-                # i18n: "_matchfiles" is a keyword
-                raise error.ParseError(_('_matchfiles expected at most one '
-                                         'default mode'))
+                raise error.ParseError('_matchfiles expected at most one '
+                                       'default mode')
             default = value
         else:
-            # i18n: "_matchfiles" is a keyword
-            raise error.ParseError(_('invalid _matchfiles prefix: %s') % prefix)
+            raise error.ParseError('invalid _matchfiles prefix: %s' % prefix)
     if not default:
         default = 'glob'
 
