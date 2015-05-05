@@ -192,10 +192,11 @@ class locallegacypeer(localpeer):
 
 class localrepository(object):
 
-    supportedformats = set(('revlogv1', 'generaldelta', 'manifestv2'))
+    supportedformats = set(('revlogv1', 'generaldelta', 'treemanifest',
+                            'manifestv2'))
     _basesupported = supportedformats | set(('store', 'fncache', 'shared',
                                              'dotencode'))
-    openerreqs = set(('revlogv1', 'generaldelta', 'manifestv2'))
+    openerreqs = set(('revlogv1', 'generaldelta', 'treemanifest', 'manifestv2'))
     filtername = None
 
     # a list of (ui, featureset) functions.
@@ -259,6 +260,8 @@ class localrepository(object):
                     )
                 if self.ui.configbool('format', 'generaldelta', False):
                     self.requirements.add("generaldelta")
+                if self.ui.configbool('experimental', 'treemanifest', False):
+                    self.requirements.add("treemanifest")
                 if self.ui.configbool('experimental', 'manifestv2', False):
                     self.requirements.add("manifestv2")
             else:
@@ -348,9 +351,6 @@ class localrepository(object):
         manifestcachesize = self.ui.configint('format', 'manifestcachesize')
         if manifestcachesize is not None:
             self.svfs.options['manifestcachesize'] = manifestcachesize
-        usetreemanifest = self.ui.configbool('experimental', 'treemanifest')
-        if usetreemanifest is not None:
-            self.svfs.options['usetreemanifest'] = usetreemanifest
 
     def _writerequirements(self):
         scmutil.writerequires(self.vfs, self.requirements)
