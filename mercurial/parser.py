@@ -94,17 +94,17 @@ class parser(object):
             return self.eval(t)
         return t
 
-def prettyformat(tree, leafnodes):
-    def _prettyformat(tree, level, lines):
-        if not isinstance(tree, tuple) or tree[0] in leafnodes:
-            lines.append((level, str(tree)))
-        else:
-            lines.append((level, '(%s' % tree[0]))
-            for s in tree[1:]:
-                _prettyformat(s, level + 1, lines)
-            lines[-1:] = [(lines[-1][0], lines[-1][1] + ')')]
+def _prettyformat(tree, leafnodes, level, lines):
+    if not isinstance(tree, tuple) or tree[0] in leafnodes:
+        lines.append((level, str(tree)))
+    else:
+        lines.append((level, '(%s' % tree[0]))
+        for s in tree[1:]:
+            _prettyformat(s, leafnodes, level + 1, lines)
+        lines[-1:] = [(lines[-1][0], lines[-1][1] + ')')]
 
+def prettyformat(tree, leafnodes):
     lines = []
-    _prettyformat(tree, 0, lines)
+    _prettyformat(tree, leafnodes, 0, lines)
     output = '\n'.join(('  ' * l + s) for l, s in lines)
     return output
