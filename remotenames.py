@@ -504,9 +504,10 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         dest = 'default-push'
 
     try:
-        # hgsubversion does funcky things on push. Just call it directly
+        # hgsubversion and hggit do funcky things on push. Just call it
+        # directly
         path = paths[dest]
-        if path.startswith('svn+'):
+        if path.startswith('svn+') or path.startswith('git+'):
             orig(ui, repo, dest, **opts)
     except KeyError:
         pass
