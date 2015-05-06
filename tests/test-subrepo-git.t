@@ -325,13 +325,13 @@ archive subrepos
   ../archive_x/s
   ../archive_x/s/g
 
-  $ hg -R ../tc archive -S ../archive.tgz 2>/dev/null
+  $ hg -R ../tc archive -S ../archive.tgz --prefix '.' 2>/dev/null
   $ tar -tzf ../archive.tgz | sort
-  archive/.hg_archival.txt
-  archive/.hgsub
-  archive/.hgsubstate
-  archive/a
-  archive/s/g
+  .hg_archival.txt
+  .hgsub
+  .hgsubstate
+  a
+  s/g
 
 create nested repo
 

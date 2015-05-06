@@ -312,7 +312,7 @@ only show up in the test output, not in real usage):
 
 Test archiving to zip file (unzip output is unstable):
 
-  $ hg archive --subrepos ../archive.zip
+  $ hg archive --subrepos --prefix '.' ../archive.zip
   \r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
@@ -339,6 +339,20 @@ Test archiving to zip file (unzip output is unstable):
   archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
   archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
                                                               \r (no-eol) (esc)
+  $ unzip -l ../archive.zip
+  Archive:  ../archive.zip
+    Length      Date    Time    Name
+  ---------  ---------- -----   ----
+        172  01-01-1980 00:00   .hg_archival.txt
+         10  01-01-1980 00:00   .hgsub
+         45  01-01-1980 00:00   .hgsubstate
+          3  01-01-1980 00:00   x.txt
+         10  01-01-1980 00:00   foo/.hgsub
+         45  01-01-1980 00:00   foo/.hgsubstate
+          9  01-01-1980 00:00   foo/y.txt
+          9  01-01-1980 00:00   foo/bar/z.txt
+  ---------                     -------
+        303                     8 files
 
 Test archiving a revision that references a subrepo that is not yet
 cloned:
@@ -363,7 +377,7 @@ cloned:
 
   $ cd ../empty
 #if hardlink
-  $ hg archive --subrepos -r tip ../archive.tar.gz
+  $ hg archive --subrepos -r tip --prefix './' ../archive.tar.gz
   \r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
@@ -413,7 +427,7 @@ cloned:
 #else
 Note there's a slight output glitch on non-hardlink systems: the last
 "linking" progress topic never gets closed, leading to slight output corruption on that platform.
-  $ hg archive --subrepos -r tip ../archive.tar.gz
+  $ hg archive --subrepos -r tip --prefix './' ../archive.tar.gz
   \r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
@@ -437,14 +451,14 @@ Note there's a slight output glitch on non-hardlink systems: the last
 Archive + subrepos uses '/' for all component separators
 
   $ tar -tzf ../archive.tar.gz | sort
-  archive/.hg_archival.txt
-  archive/.hgsub
-  archive/.hgsubstate
-  archive/foo/.hgsub
-  archive/foo/.hgsubstate
-  archive/foo/bar/z.txt
-  archive/foo/y.txt
-  archive/x.txt
+  .hg_archival.txt
+  .hgsub
+  .hgsubstate
+  foo/.hgsub
+  foo/.hgsubstate
+  foo/bar/z.txt
+  foo/y.txt
+  x.txt
 
 The newly cloned subrepos contain no working copy:
 
