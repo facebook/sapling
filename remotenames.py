@@ -508,7 +508,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         # directly
         path = paths[dest]
         if path.startswith('svn+') or path.startswith('git+'):
-            orig(ui, repo, dest, **opts)
+            return orig(ui, repo, dest, **opts)
     except KeyError:
         pass
 
