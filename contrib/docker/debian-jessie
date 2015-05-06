@@ -1,0 +1,11 @@
+FROM debian:jessie
+RUN apt-get update && apt-get install -y \
+  build-essential \
+  debhelper \
+  dh-python \
+  devscripts \
+  python \
+  python-all-dev \
+  python-docutils \
+  zip \
+  unzip

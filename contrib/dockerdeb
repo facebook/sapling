@@ -1,0 +1,39 @@
+#!/bin/bash -eu
+
+. $(dirname $0)/dockerlib.sh
+. $(dirname $0)/packagelib.sh
+
+BUILDDIR=$(dirname $0)
+export ROOTDIR=$(cd $BUILDDIR/..; pwd)
+
+checkdocker
+
+PLATFORM="debian-$1"
+shift # extra params are passed to build process
+
+initcontainer $PLATFORM
+
+DEBBUILDDIR=$ROOTDIR/packages/$PLATFORM
+contrib/builddeb --debbuilddir $DEBBUILDDIR/staged --prepare
+
+DSHARED=/mnt/shared/
+if [ $(uname) = "Darwin" ] ; then
+    $DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED -v $PWD:/mnt/hg $CONTAINER \
+            sh -c "cd /mnt/hg && make clean && make local"
+fi
+$DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED -v $PWD:/mnt/hg $CONTAINER \
+  sh -c "cd /mnt/hg && make PREFIX=$DSHARED/staged/usr install"
+$DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED $CONTAINER \
+  dpkg-deb --build $DSHARED/staged
+if [ $(uname) = "Darwin" ] ; then
+    $DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED -v $PWD:/mnt/hg $CONTAINER \
+            sh -c "cd /mnt/hg && make clean"
+fi
+
+gethgversion
+
+rm -r $DEBBUILDDIR/staged
+mv $DEBBUILDDIR/staged.deb $DEBBUILDDIR/mercurial-$version-$release.deb
+
+echo
+echo "Build complete - results can be found in $DEBBUILDDIR"

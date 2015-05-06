@@ -163,6 +163,10 @@ debian-jessie:
 	mv debbuild/*.deb packages/debian-jessie
 	rm -rf debbuild
 
+docker-debian-jessie:
+	mkdir -p packages/debian/jessie
+	contrib/dockerdeb jessie
+
 fedora20:
 	mkdir -p packages/fedora20
 	contrib/buildrpm
