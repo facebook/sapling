@@ -460,3 +460,9 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           'VWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxx'
           'xxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwww'
           'wwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww.i')
+
+print "paths outside data/ can be encoded"
+show('metadata/dir/00manifest.i')
+show('metadata/12345678/12345678/12345678/12345678/12345678/'
+          '12345678/12345678/12345678/12345678/12345678/12345678/'
+          '12345678/12345678/00manifest.i')
