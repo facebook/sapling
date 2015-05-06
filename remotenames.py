@@ -504,7 +504,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         dest = 'default-push'
 
     # hgsubversion does funcky things on push. Just call it directly
-    if dest in paths and paths[dest].startswith('svn+ssh'):
+    if dest in paths and paths[dest].startswith('svn+'):
         orig(ui, repo, dest, **opts)
 
     if not to:
