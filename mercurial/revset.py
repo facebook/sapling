@@ -25,20 +25,20 @@ def _revancestors(repo, revs, followfirst):
     cl = repo.changelog
 
     def iterate():
-        revqueue, inputrev = None, None
-        h = []
-
         revs.sort(reverse=True)
         revqueue = util.deque(revs)
-        if revqueue:
-            inputrev = revqueue.popleft()
-            heapq.heappush(h, -inputrev)
+        if not revqueue:
+            return
+
+        h = []
+        inputrev = revqueue.popleft()
+        heapq.heappush(h, -inputrev)
 
         seen = set()
         while h:
             current = -heapq.heappop(h)
             if current not in seen:
-                if inputrev and current == inputrev:
+                if current == inputrev:
                     if revqueue:
                         inputrev = revqueue.popleft()
                         heapq.heappush(h, -inputrev)
