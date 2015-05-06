@@ -503,9 +503,13 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if not origdest and dest == 'default' and 'default-push' in paths:
         dest = 'default-push'
 
-    # hgsubversion does funcky things on push. Just call it directly
-    if dest in paths and paths[dest].startswith('svn+'):
-        orig(ui, repo, dest, **opts)
+    try:
+        # hgsubversion does funcky things on push. Just call it directly
+        path = paths[dest]
+        if path.startswith('svn+'):
+            orig(ui, repo, dest, **opts)
+    except KeyError:
+        pass
 
     if not to:
         if ui.configbool('remotenames', 'forceto', False):
