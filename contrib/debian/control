@@ -1,0 +1,9 @@
+Package: mercurial
+Version: __VERSION__
+Section: vcs
+Priority: optional
+Architecture: all
+Depends: python
+Conflicts: mercurial-common
+Maintainer: Mercurial Developers <mercurial-devel@selenic.com>
+Description: Mercurial (probably nightly) package built by upstream.

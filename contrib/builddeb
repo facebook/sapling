@@ -1,0 +1,76 @@
+#!/bin/sh -e
+#
+# Build a Mercurial debian package from the current repo
+#
+# Tested on Jessie (stable as of original script authoring.)
+
+BUILD=1
+DEBBUILDDIR="$PWD/debbuild"
+while [ "$1" ]; do
+    case "$1" in
+    --prepare )
+        shift
+        BUILD=
+        ;;
+    --debbuilddir )
+        shift
+        DEBBUILDDIR="$1"
+        shift
+        ;;
+    * )
+        echo "Invalid parameter $1!" 1>&2
+        exit 1
+        ;;
+    esac
+done
+
+set -u
+
+rm -rf $DEBBUILDDIR
+mkdir -p $DEBBUILDDIR
+
+if [ ! -d .hg ]; then
+    echo 'You are not inside a Mercurial repository!' 1>&2
+    exit 1
+fi
+
+# build local hg and use it
+python setup.py build_py -c -d .
+HG="$PWD/hg"
+
+$HG version > /dev/null || { echo 'abort: hg version failed!'; exit 1 ; }
+
+hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
+
+if echo $hgversion | grep -- '-' > /dev/null 2>&1; then
+    # nightly build case, version is like 1.3.1+250-20b91f91f9ca
+    version=`echo $hgversion | cut -d- -f1`
+    release=`echo $hgversion | cut -d- -f2 | sed -e 's/+.*//'`
+else
+    # official tag, version is like 1.3.1
+    version=`echo $hgversion | sed -e 's/+.*//'`
+    release='0'
+fi
+
+cp -r $PWD/contrib/debian $DEBBUILDDIR/DEBIAN
+chmod -R 0755 $DEBBUILDDIR/DEBIAN
+
+control=$DEBBUILDDIR/DEBIAN/control
+
+# This looks like sed -i, but sed -i behaves just differently enough
+# between BSD and GNU sed that I gave up and did the dumb thing.
+sed "s/__VERSION__/$version/" < $control > $control.tmp
+mv $control.tmp $control
+
+if [ "$BUILD" ]; then
+    dpkg-deb --build $DEBBUILDDIR
+    mv $DEBBUILDDIR.deb $DEBBUILDDIR/mercurial-$version-$release.deb
+    if [ $? = 0 ]; then
+        echo
+        echo "Built packages for $version-$release:"
+        find $DEBBUILDDIR/ -type f -newer $control
+    fi
+else
+    echo "Prepared sources for $version-$release $control are in $DEBBUILDDIR - use like:"
+    echo "dpkg-deb --build $DEBBUILDDIR"
+fi
