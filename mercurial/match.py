@@ -174,14 +174,10 @@ class match(object):
         return set(util.dirs(self._fmap)) | set(['.'])
 
     def visitdir(self, dir):
-        '''Helps while traversing a directory tree. Returns the string 'all' if
-        the given directory and all subdirectories should be visited. Otherwise
-        returns True or False indicating whether the given directory should be
-        visited. If 'all' is returned, calling this method on a subdirectory
-        gives an undefined result.'''
-        if not self._fmap or self.exact(dir):
-            return 'all'
-        return dir in self._dirs
+        return (not self._fmap or '.' in self._fmap or
+                dir in self._fmap or dir in self._dirs or
+                any(parentdir in self._fmap
+                    for parentdir in util.finddirs(dir)))
 
     def exact(self, f):
         '''Returns True if f is in .files().'''

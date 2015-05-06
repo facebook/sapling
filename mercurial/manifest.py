@@ -656,18 +656,10 @@ class treemanifest(object):
             if not self.hasdir(fn):
                 match.bad(fn, None)
 
-    def _walk(self, match, alldirs=False):
-        '''Recursively generates matching file names for walk().
-
-        Will visit all subdirectories if alldirs is True, otherwise it will
-        only visit subdirectories for which match.visitdir is True.'''
-
-        if not alldirs:
-            # substring to strip trailing slash
-            visit = match.visitdir(self._dir[:-1] or '.')
-            if not visit:
-                return
-            alldirs = (visit == 'all')
+    def _walk(self, match):
+        '''Recursively generates matching file names for walk().'''
+        if not match.visitdir(self._dir[:-1] or '.'):
+            return
 
         # yield this dir's files and walk its submanifests
         for p in sorted(self._dirs.keys() + self._files.keys()):
@@ -676,7 +668,7 @@ class treemanifest(object):
                 if match(fullp):
                     yield fullp
             else:
-                for f in self._dirs[p]._walk(match, alldirs):
+                for f in self._dirs[p]._walk(match):
                     yield f
 
     def matches(self, match):
@@ -686,19 +678,13 @@ class treemanifest(object):
 
         return self._matches(match)
 
-    def _matches(self, match, alldirs=False):
+    def _matches(self, match):
         '''recursively generate a new manifest filtered by the match argument.
-
-        Will visit all subdirectories if alldirs is True, otherwise it will
-        only visit subdirectories for which match.visitdir is True.'''
-
+        '''
         ret = treemanifest(self._dir)
-        if not alldirs:
-            # substring to strip trailing slash
-            visit = match.visitdir(self._dir[:-1] or '.')
-            if not visit:
-                return ret
-            alldirs = (visit == 'all')
+
+        if not match.visitdir(self._dir[:-1] or '.'):
+            return ret
 
         for fn in self._files:
             fullp = self._subpath(fn)
@@ -709,7 +695,7 @@ class treemanifest(object):
                 ret._flags[fn] = self._flags[fn]
 
         for dir, subm in self._dirs.iteritems():
-            m = subm._matches(match, alldirs)
+            m = subm._matches(match)
             if not m._isempty():
                 ret._dirs[dir] = m
 
