@@ -71,15 +71,14 @@ edit the history
   When you are finished, run hg histedit --continue to resume.
 
 edit the plan via the editor
-  $ cat >> ../editplan.sh <<EOF
+  $ cat >> $TESTTMP/editplan.sh <<EOF
   > cat > \$1 <<EOF2
   > drop e860deea161a e
   > drop 652413bf663e f
   > drop 3c6a8ed2ebe8 g
   > EOF2
   > EOF
-  $ chmod a+x ../editplan.sh
-  $ HGEDITOR=../editplan.sh hg histedit --edit-plan
+  $ HGEDITOR="sh $TESTTMP/editplan.sh" hg histedit --edit-plan
   $ cat .hg/histedit-state
   v1
   055a42cdd88768532f9cf79daa407fc8d138de9b
