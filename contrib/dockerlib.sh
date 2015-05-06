@@ -29,7 +29,14 @@ function initcontainer() {
   DBUILDUSER=build
   (
     cat $DFILE
-    echo RUN groupadd $DBUILDUSER -g `id -g`
-    echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
+    if [ $(uname) = "Darwin" ] ; then
+        # The builder is using boot2docker on OS X, so we're going to
+        # *guess* the uid of the user inside the VM that is actually
+        # running docker. This is *very likely* to fail at some point.
+        echo RUN useradd $DBUILDUSER -u 1000
+    else
+        echo RUN groupadd $DBUILDUSER -g `id -g`
+        echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
+    fi
   ) | $DOCKER build --tag $CONTAINER -
 }
