@@ -99,7 +99,7 @@ Some tests for hgweb in an empty repository
                   var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);
                   return m ? m[1] : null;
               },
-              '.bigtable > tbody:nth-of-type(2)',
+              '.bigtable > tbody',
               '<tr class="%class%">\
               <td colspan="3" style="text-align: center;">%text%</td>\
               </tr>'
@@ -210,7 +210,7 @@ Some tests for hgweb in an empty repository
                   var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);
                   return m ? m[1] : null;
               },
-              '.bigtable > tbody:nth-of-type(2)',
+              '.bigtable > tbody',
               '<tr class="%class%">\
               <td colspan="3" style="text-align: center;">%text%</td>\
               </tr>'
