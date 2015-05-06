@@ -3,25 +3,14 @@
 . $(dirname $0)/dockerlib.sh
 
 BUILDDIR=$(dirname $0)
-ROOTDIR=$(cd $BUILDDIR/..; pwd)
+export ROOTDIR=$(cd $BUILDDIR/..; pwd)
 
 checkdocker
 
 PLATFORM="$1"
-[ "$PLATFORM" ] || { echo "Error: platform name must be specified"; exit 1; }
 shift # extra params are passed to buildrpm
 
-DFILE="$ROOTDIR/contrib/docker/$PLATFORM"
-[ -f "$DFILE" ] || { echo "Error: docker file $DFILE not found"; exit 1; }
-
-CONTAINER="hg-dockerrpm-$PLATFORM"
-
-DBUILDUSER=build
-(
-cat $DFILE
-echo RUN groupadd $DBUILDUSER -g `id -g`
-echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
-) | $DOCKER build --tag $CONTAINER -
+initcontainer $PLATFORM
 
 RPMBUILDDIR=$ROOTDIR/packages/$PLATFORM
 contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare $*

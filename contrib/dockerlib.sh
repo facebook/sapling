@@ -17,3 +17,19 @@ function checkdocker() {
   $DOCKER version | grep -q "^Client version:" || { echo "Error: unexpected output from \"$DOCKER version\""; exit 1; }
   $DOCKER version | grep -q "^Server version:" || { echo "Error: could not get docker server version - check it is running and your permissions"; exit 1; }
 }
+
+# Construct a container and leave its name in $CONTAINER for future use.
+function initcontainer() {
+  [ "$1" ] || { echo "Error: platform name must be specified"; exit 1; }
+
+  DFILE="$ROOTDIR/contrib/docker/$1"
+  [ -f "$DFILE" ] || { echo "Error: docker file $DFILE not found"; exit 1; }
+
+  CONTAINER="hg-dockerrpm-$1"
+  DBUILDUSER=build
+  (
+    cat $DFILE
+    echo RUN groupadd $DBUILDUSER -g `id -g`
+    echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
+  ) | $DOCKER build --tag $CONTAINER -
+}
