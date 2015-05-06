@@ -134,6 +134,10 @@ def loadall(ui):
         for fn in _aftercallbacks[shortname]:
             fn(loaded=False)
 
+    # loadall() is called multiple times and lingering _aftercallbacks
+    # entries could result in double execution. See issue4646.
+    _aftercallbacks.clear()
+
 def afterloaded(extension, callback):
     '''Run the specified function after a named extension is loaded.
 
