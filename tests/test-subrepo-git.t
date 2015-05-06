@@ -1105,5 +1105,21 @@ since we ignore the staging area
   ? s/c.c
   ? s/cpp.cpp
   ? s/foobar.orig
+  $ hg revert --all -q
+
+make sure we show changed files, rather than changed subtrees
+  $ mkdir s/foo
+  $ touch s/foo/bwuh
+  $ hg add s/foo/bwuh
+  $ hg commit -S -m "add bwuh"
+  committing subrepository s
+  $ hg status -S --change .
+  M .hgsubstate
+  A s/foo/bwuh
+  ? s/barfoo
+  ? s/c.c
+  ? s/cpp.cpp
+  ? s/foobar.orig
+  ? s/snake.python.orig
 
   $ cd ..

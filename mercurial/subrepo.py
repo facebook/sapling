@@ -1711,7 +1711,7 @@ class gitsubrepo(abstractsubrepo):
         modified, added, removed = [], [], []
         self._gitupdatestat()
         if rev2:
-            command = ['diff-tree', rev1, rev2]
+            command = ['diff-tree', '-r', rev1, rev2]
         else:
             command = ['diff-index', rev1]
         out = self._gitcommand(command)
