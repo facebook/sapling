@@ -339,18 +339,21 @@ Test archiving to zip file (unzip output is unstable):
   archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
   archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
                                                               \r (no-eol) (esc)
+
+(unzip date formating is unstable, we do not care about it and glob it out)
+
   $ unzip -l ../archive.zip
   Archive:  ../archive.zip
     Length      Date    Time    Name
   ---------  ---------- -----   ----
-        172  01-01-1980 00:00   .hg_archival.txt
-         10  01-01-1980 00:00   .hgsub
-         45  01-01-1980 00:00   .hgsubstate
-          3  01-01-1980 00:00   x.txt
-         10  01-01-1980 00:00   foo/.hgsub
-         45  01-01-1980 00:00   foo/.hgsubstate
-          9  01-01-1980 00:00   foo/y.txt
-          9  01-01-1980 00:00   foo/bar/z.txt
+        172  ?????????? 00:00   .hg_archival.txt (glob)
+         10  ?????????? 00:00   .hgsub (glob)
+         45  ?????????? 00:00   .hgsubstate (glob)
+          3  ?????????? 00:00   x.txt (glob)
+         10  ?????????? 00:00   foo/.hgsub (glob)
+         45  ?????????? 00:00   foo/.hgsubstate (glob)
+          9  ?????????? 00:00   foo/y.txt (glob)
+          9  ?????????? 00:00   foo/bar/z.txt (glob)
   ---------                     -------
         303                     8 files
 
