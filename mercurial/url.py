@@ -318,11 +318,18 @@ class httphandler(keepalive.HTTPHandler):
         return keepalive.HTTPHandler._start_transaction(self, h, req)
 
 if has_https:
-    class httpsconnection(httplib.HTTPSConnection):
+    class httpsconnection(httplib.HTTPConnection):
         response_class = keepalive.HTTPResponse
+        default_port = httplib.HTTPS_PORT
         # must be able to send big bundle as stream.
         send = _gen_sendfile(keepalive.safesend)
-        getresponse = keepalive.wrapgetresponse(httplib.HTTPSConnection)
+        getresponse = keepalive.wrapgetresponse(httplib.HTTPConnection)
+
+        def __init__(self, host, port=None, key_file=None, cert_file=None,
+                     *args, **kwargs):
+            httplib.HTTPConnection.__init__(self, host, port, *args, **kwargs)
+            self.key_file = key_file
+            self.cert_file = cert_file
 
         def connect(self):
             self.sock = _create_connection((self.host, self.port))
