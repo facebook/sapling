@@ -326,7 +326,7 @@ archive subrepos
   ../archive_x/s/g
 
   $ hg -R ../tc archive -S ../archive.tgz --prefix '.' 2>/dev/null
-  $ tar -tzf ../archive.tgz | sort
+  $ tar -tzf ../archive.tgz | sort | grep -v pax_global_header
   .hg_archival.txt
   .hgsub
   .hgsubstate
