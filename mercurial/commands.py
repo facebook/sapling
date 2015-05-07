@@ -4213,7 +4213,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         cmdutil.bailifchanged(repo)
 
     base = opts["base"]
-    wlock = lock = tr = None
+    wlock = dsguard = lock = tr = None
     msgs = []
     ret = 0
 
@@ -4221,7 +4221,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     try:
         try:
             wlock = repo.wlock()
-            repo.dirstate.beginparentchange()
+            dsguard = cmdutil.dirstateguard(repo, 'import')
             if not opts.get('no_commit'):
                 lock = repo.lock()
                 tr = repo.transaction('import')
@@ -4262,18 +4262,16 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 tr.close()
             if msgs:
                 repo.savecommitmessage('\n* * *\n'.join(msgs))
-            repo.dirstate.endparentchange()
+            dsguard.close()
             return ret
-        except: # re-raises
-            # wlock.release() indirectly calls dirstate.write(): since
-            # we're crashing, we do not want to change the working dir
-            # parent after all, so make sure it writes nothing
-            repo.dirstate.invalidate()
-            raise
+        finally:
+            # TODO: get rid of this meaningless try/finally enclosing.
+            # this is kept only to reduce changes in a patch.
+            pass
     finally:
         if tr:
             tr.release()
-        release(lock, wlock)
+        release(lock, dsguard, wlock)
 
 @command('incoming|in',
     [('f', 'force', None,
