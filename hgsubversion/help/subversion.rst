@@ -407,7 +407,7 @@ The following options only have an effect on the initial clone of a repository:
     you use this option, be sure to carefully check the result of a
     pull afterwards.
 
-    ``hgsubversionbranch.*``
+  ``hgsubversionbranch.*``
 
     Use this config section with the custom layout to specify a cusomt
     mapping of subversion path to Mercurial branch.  This is useful if
