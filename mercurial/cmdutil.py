@@ -818,6 +818,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     msg = _('applied to working directory')
 
     rejects = False
+    dsguard = None
 
     try:
         cmdline_message = logmessage(ui, opts)
@@ -859,7 +860,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
 
         n = None
         if update:
-            repo.dirstate.beginparentchange()
+            dsguard = dirstateguard(repo, 'tryimportone')
             if p1 != parents[0]:
                 updatefunc(repo, p1.node())
             if p2 != parents[1]:
@@ -899,7 +900,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 n = repo.commit(message, opts.get('user') or user,
                                 opts.get('date') or date, match=m,
                                 editor=editor, force=partial)
-            repo.dirstate.endparentchange()
+            dsguard.close()
         else:
             if opts.get('exact') or opts.get('import_branch'):
                 branch = branch or 'default'
@@ -937,6 +938,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             msg = _('created %s') % short(n)
         return (msg, n, rejects)
     finally:
+        lockmod.release(dsguard)
         os.unlink(tmpname)
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
