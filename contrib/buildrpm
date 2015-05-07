@@ -7,6 +7,8 @@
 # - CentOS 5
 # - centOS 6
 
+. $(dirname $0)/packagelib.sh
+
 BUILD=1
 RPMBUILDDIR="$PWD/rpmbuild"
 while [ "$1" ]; do
@@ -45,25 +47,8 @@ if [ ! -d .hg ]; then
     exit 1
 fi
 
-# build local hg and use it
-python setup.py build_py -c -d .
-HG="$PWD/hg"
-PYTHONPATH="$PWD/mercurial/pure"
-export PYTHONPATH
+gethgversion
 
-mkdir -p $RPMBUILDDIR/SOURCES $RPMBUILDDIR/SPECS $RPMBUILDDIR/RPMS $RPMBUILDDIR/SRPMS $RPMBUILDDIR/BUILD
-
-hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
-
-if echo $hgversion | grep -- '-' > /dev/null 2>&1; then
-    # nightly build case, version is like 1.3.1+250-20b91f91f9ca
-    version=`echo $hgversion | cut -d- -f1`
-    release=`echo $hgversion | cut -d- -f2 | sed -e 's/+.*//'`
-else
-    # official tag, version is like 1.3.1
-    version=`echo $hgversion | sed -e 's/+.*//'`
-    release='0'
-fi
 if [ "$PYTHONVER" ]; then
     release=$release+$PYTHONVER
     RPMPYTHONVER=$PYTHONVER
