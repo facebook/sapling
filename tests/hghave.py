@@ -315,6 +315,15 @@ def has_ssl():
     except ImportError:
         return False
 
+@check("sslcontext", "python >= 2.7.9 ssl")
+def has_sslcontext():
+    try:
+        import ssl
+        ssl.SSLContext
+        return True
+    except (ImportError, AttributeError):
+        return False
+
 @check("defaultcacerts", "can verify SSL certs by system's CA certs store")
 def has_defaultcacerts():
     from mercurial import sslutil

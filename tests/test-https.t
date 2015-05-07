@@ -81,6 +81,53 @@ pub.pem patched with other notBefore / notAfter:
   > EOT
   $ cat priv.pem pub-expired.pem > server-expired.pem
 
+Client certificates created with:
+ openssl genrsa -aes128 -passout pass:1234 -out client-key.pem 512
+ openssl rsa -in client-key.pem -passin pass:1234 -out client-key-decrypted.pem
+ printf '.\n.\n.\n.\n.\n.\nhg-client@localhost\n.\n.\n' | \
+ openssl req -new -key client-key.pem -passin pass:1234 -out client-csr.pem
+ openssl x509 -req -days 9000 -in client-csr.pem -CA pub.pem -CAkey priv.pem \
+ -set_serial 01 -out client-cert.pem
+
+  $ cat << EOT > client-key.pem
+  > -----BEGIN RSA PRIVATE KEY-----
+  > Proc-Type: 4,ENCRYPTED
+  > DEK-Info: AES-128-CBC,C8B8F103A61A336FB0716D1C0F8BB2E8
+  > 
+  > JolMlCFjEW3q3JJjO9z99NJWeJbFgF5DpUOkfSCxH56hxxtZb9x++rBvBZkxX1bF
+  > BAIe+iI90+jdCLwxbILWuFcrJUaLC5WmO14XDKYVmr2eW9e4MiCYOlO0Q6a9rDFS
+  > jctRCfvubOXFHbBGLH8uKEMpXEkP7Lc60FiIukqjuQEivJjrQirVtZCGwyk3qUi7
+  > Eyh4Lo63IKGu8T1Bkmn2kaMvFhu7nC/CQLBjSq0YYI1tmCOkVb/3tPrz8oqgDJp2
+  > u7bLS3q0xDNZ52nVrKIoZC/UlRXGlPyzPpa70/jPIdfCbkwDaBpRVXc+62Pj2n5/
+  > CnO2xaKwfOG6pDvanBhFD72vuBOkAYlFZPiEku4sc2WlNggsSWCPCIFwzmiHjKIl
+  > bWmdoTq3nb7sNfnBbV0OCa7fS1dFwCm4R1NC7ELENu0=
+  > -----END RSA PRIVATE KEY-----
+  > EOT
+
+  $ cat << EOT > client-key-decrypted.pem
+  > -----BEGIN RSA PRIVATE KEY-----
+  > MIIBOgIBAAJBAJs4LS3glAYU92bg5kPgRPNW84ewB0fWJfAKccCp1ACHAdZPeaKb
+  > FCinVMYKAVbVqBkyrZ/Tyr8aSfMz4xO4+KsCAwEAAQJAeKDr25+Q6jkZHEbkLRP6
+  > AfMtR+Ixhk6TJT24sbZKIC2V8KuJTDEvUhLU0CAr1nH79bDqiSsecOiVCr2HHyfT
+  > AQIhAM2C5rHbTs9R3PkywFEqq1gU3ztCnpiWglO7/cIkuGBhAiEAwVpMSAf77kop
+  > 4h/1kWsgMALQTJNsXd4CEUK4BOxvJIsCIQCbarVAKBQvoT81jfX27AfscsxnKnh5
+  > +MjSvkanvdFZwQIgbbcTefwt1LV4trtz2SR0i0nNcOZmo40Kl0jIquKO3qkCIH01
+  > mJHzZr3+jQqeIFtr5P+Xqi30DJxgrnEobbJ0KFjY
+  > -----END RSA PRIVATE KEY-----
+  > EOT
+
+  $ cat << EOT > client-cert.pem
+  > -----BEGIN CERTIFICATE-----
+  > MIIBPjCB6QIBATANBgkqhkiG9w0BAQsFADAxMRIwEAYDVQQDDAlsb2NhbGhvc3Qx
+  > GzAZBgkqhkiG9w0BCQEWDGhnQGxvY2FsaG9zdDAeFw0xNTA1MDcwNjI5NDVaFw0z
+  > OTEyMjcwNjI5NDVaMCQxIjAgBgkqhkiG9w0BCQEWE2hnLWNsaWVudEBsb2NhbGhv
+  > c3QwXDANBgkqhkiG9w0BAQEFAANLADBIAkEAmzgtLeCUBhT3ZuDmQ+BE81bzh7AH
+  > R9Yl8ApxwKnUAIcB1k95opsUKKdUxgoBVtWoGTKtn9PKvxpJ8zPjE7j4qwIDAQAB
+  > MA0GCSqGSIb3DQEBCwUAA0EAfBTqBG5pYhuGk+ZnyUufgS+d7Nk/sZAZjNdCAEj/
+  > NFPo5fR1jM6jlEWoWbeg298+SkjV7tfO+2nt0otUFkdM6A==
+  > -----END CERTIFICATE-----
+  > EOT
+
   $ hg init test
   $ cd test
   $ echo foo>foo
@@ -297,3 +344,51 @@ Test https with cert problems through proxy
   pulling from https://localhost:$HGPORT2/
   abort: error: *certificate verify failed* (glob)
   [255]
+
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+
+#if sslcontext
+
+Start patched hgweb that requires client certificates:
+
+  $ cat << EOT > reqclientcert.py
+  > import ssl
+  > from mercurial.hgweb import server
+  > class _httprequesthandlersslclientcert(server._httprequesthandlerssl):
+  >     @staticmethod
+  >     def preparehttpserver(httpserver, ssl_cert):
+  >         sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+  >         sslcontext.verify_mode = ssl.CERT_REQUIRED
+  >         sslcontext.load_cert_chain(ssl_cert)
+  >         # verify clients by server certificate
+  >         sslcontext.load_verify_locations(ssl_cert)
+  >         httpserver.socket = sslcontext.wrap_socket(httpserver.socket,
+  >                                                    server_side=True)
+  > server._httprequesthandlerssl = _httprequesthandlersslclientcert
+  > EOT
+  $ cd test
+  $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV \
+  > --config extensions.reqclientcert=../reqclientcert.py
+  $ cat ../hg0.pid >> $DAEMON_PIDS
+  $ cd ..
+
+without client certificate:
+
+  $ P=`pwd` hg id https://localhost:$HGPORT/
+  abort: error: *handshake failure* (glob)
+  [255]
+
+with client certificate:
+
+  $ cat << EOT >> $HGRCPATH
+  > [auth]
+  > l.prefix = localhost
+  > l.cert = client-cert.pem
+  > EOT
+
+  $ P=`pwd` hg id https://localhost:$HGPORT/ \
+  > --config auth.l.key=client-key-decrypted.pem
+  5fed3813f7f5
+
+#endif
