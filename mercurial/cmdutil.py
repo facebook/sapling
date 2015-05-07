@@ -3259,3 +3259,59 @@ def clearunfinished(repo):
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if clearable and repo.vfs.exists(f):
             util.unlink(repo.join(f))
+
+class dirstateguard(object):
+    '''Restore dirstate at unexpected failure.
+
+    At the construction, this class does:
+
+    - write current ``repo.dirstate`` out, and
+    - save ``.hg/dirstate`` into the backup file
+
+    This restores ``.hg/dirstate`` from backup file, if ``release()``
+    is invoked before ``close()``.
+
+    This just removes the backup file at ``close()`` before ``release()``.
+    '''
+
+    def __init__(self, repo, name):
+        repo.dirstate.write()
+        self._repo = repo
+        self._filename = 'dirstate.backup.%s.%d' % (name, id(self))
+        repo.vfs.write(self._filename, repo.vfs.tryread('dirstate'))
+        self._active = True
+        self._closed = False
+
+    def __del__(self):
+        if self._active: # still active
+            # this may occur, even if this class is used correctly:
+            # for example, releasing other resources like transaction
+            # may raise exception before ``dirstateguard.release`` in
+            # ``release(tr, ....)``.
+            self._abort()
+
+    def close(self):
+        if not self._active: # already inactivated
+            msg = (_("can't close already inactivated backup: %s")
+                   % self._filename)
+            raise util.Abort(msg)
+
+        self._repo.vfs.unlink(self._filename)
+        self._active = False
+        self._closed = True
+
+    def _abort(self):
+        # this "invalidate()" prevents "wlock.release()" from writing
+        # changes of dirstate out after restoring to original status
+        self._repo.dirstate.invalidate()
+
+        self._repo.vfs.rename(self._filename, 'dirstate')
+        self._active = False
+
+    def release(self):
+        if not self._closed:
+            if not self._active: # already inactivated
+                msg = (_("can't release already inactivated backup: %s")
+                       % self._filename)
+                raise util.Abort(msg)
+            self._abort()
