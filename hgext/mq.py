@@ -1683,8 +1683,9 @@ class queue(object):
 
             bmlist = repo[top].bookmarks()
 
+            dsguard = None
             try:
-                repo.dirstate.beginparentchange()
+                dsguard = cmdutil.dirstateguard(repo, 'mq.refresh')
                 if diffopts.git or diffopts.upgrade:
                     copies = {}
                     for dst in a:
@@ -1737,13 +1738,12 @@ class queue(object):
 
                 # assumes strip can roll itself back if interrupted
                 repo.setparents(*cparents)
-                repo.dirstate.endparentchange()
                 self.applied.pop()
                 self.applieddirty = True
                 strip(self.ui, repo, [top], update=False, backup=False)
-            except: # re-raises
-                repo.dirstate.invalidate()
-                raise
+                dsguard.close()
+            finally:
+                release(dsguard)
 
             try:
                 # might be nice to attempt to roll back strip after this
