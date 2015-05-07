@@ -530,10 +530,9 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
+    dsguard = cmdutil.dirstateguard(repo, 'rebase')
     try:
-        repo.dirstate.beginparentchange()
         repo.setparents(repo[p1].node(), repo[p2].node())
-        repo.dirstate.endparentchange()
         ctx = repo[rev]
         if commitmsg is None:
             commitmsg = ctx.description()
@@ -552,11 +551,10 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
             repo.ui.restoreconfig(backup)
 
         repo.dirstate.setbranch(repo[newnode].branch())
+        dsguard.close()
         return newnode
-    except util.Abort:
-        # Invalidate the previous setparents
-        repo.dirstate.invalidate()
-        raise
+    finally:
+        release(dsguard)
 
 def rebasenode(repo, rev, p1, base, state, collapse, target):
     'Rebase a single revision rev on top of p1 using base as merge ancestor'

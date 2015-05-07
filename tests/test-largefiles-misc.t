@@ -1017,7 +1017,7 @@ that time)
 
   $ hg -R no-largefiles -q pull --rebase
   Invoking status precommit hook
-  ? normal3
+  M normal3
 
 (test reverting)
 
