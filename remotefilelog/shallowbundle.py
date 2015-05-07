@@ -56,7 +56,7 @@ def sortnodes(nodes, parentfunc):
 def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
     if isinstance(rlog, revlog.revlog):
         for c in super(cls, self).group(nodelist, rlog, lookup,
-                                        units=units, reorder=reorder):
+                                        units=units):
             yield c
         return
 
@@ -90,7 +90,7 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def group(self, nodelist, rlog, lookup, units=None, reorder=None):
         return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
-                            units=units, reorder=reorder)
+                            units=units)
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         if requirement in self._repo.requirements:
@@ -165,10 +165,10 @@ class shallowcg1packer(changegroup.cg1packer):
 
         return NoFiles
 
-    def prune(self, rlog, missing, commonrevs, source):
+    def prune(self, rlog, missing, commonrevs):
         if isinstance(rlog, revlog.revlog):
             return super(shallowcg1packer, self).prune(rlog, missing,
-                commonrevs, source)
+                commonrevs)
 
         repo = self._repo
         results = []
@@ -205,7 +205,7 @@ if util.safehasattr(changegroup, 'cg2packer'):
             # function. If that assumption changes this will have to be
             # revisited.
             return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
-                                units=units, reorder=reorder)
+                                units=units)
 
 def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None):
     if not requirement in repo.requirements:
