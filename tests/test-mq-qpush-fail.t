@@ -34,7 +34,23 @@ test qpush on empty series
   $ $PYTHON -c 'print "\xe9"' > message
   $ cat .hg/patches/bad-patch >> message
   $ mv message .hg/patches/bad-patch
-  $ hg qpush -a && echo 'qpush succeeded?!'
+  $ cat > $TESTTMP/wrapplayback.py <<EOF
+  > import os
+  > from mercurial import extensions, transaction
+  > def wrapplayback(orig,
+  >                  journal, report, opener, vfsmap, entries, backupentries,
+  >                  unlink=True):
+  >     orig(journal, report, opener, vfsmap, entries, backupentries, unlink)
+  >     # Touching files truncated at "transaction.abort" causes
+  >     # forcible re-loading invalidated filecache properties
+  >     # (including repo.changelog)
+  >     for f, o, _ignore in entries:
+  >         if o or not unlink:
+  >             os.utime(opener.join(f), (0.0, 0.0))
+  > def extsetup(ui):
+  >     extensions.wrapfunction(transaction, '_playback', wrapplayback)
+  > EOF
+  $ hg qpush -a --config extensions.wrapplayback=$TESTTMP/wrapplayback.py  && echo 'qpush succeeded?!'
   applying patch1
   applying patch2
   applying bad-patch
