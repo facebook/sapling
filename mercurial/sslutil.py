@@ -21,7 +21,8 @@ try:
         _canloaddefaultcerts = util.safehasattr(ssl_context,
                                                 'load_default_certs')
 
-        def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=ssl.CERT_NONE,
+        def ssl_wrap_socket(sock, keyfile, certfile, ui,
+                            cert_reqs=ssl.CERT_NONE,
                             ca_certs=None, serverhostname=None):
             # Allow any version of SSL starting with TLSv1 and
             # up. Note that specifying TLSv1 here prohibits use of
@@ -35,7 +36,10 @@ try:
             sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
             sslcontext.options &= ssl.OP_NO_SSLv2 & ssl.OP_NO_SSLv3
             if certfile is not None:
-                sslcontext.load_cert_chain(certfile, keyfile)
+                def password():
+                    f = keyfile or certfile
+                    return ui.getpass(_('passphrase for %s: ') % f, '')
+                sslcontext.load_cert_chain(certfile, keyfile, password)
             sslcontext.verify_mode = cert_reqs
             if ca_certs is not None:
                 sslcontext.load_verify_locations(cafile=ca_certs)
@@ -51,7 +55,8 @@ try:
                 raise util.Abort(_('ssl connection failed'))
             return sslsocket
     except AttributeError:
-        def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=ssl.CERT_NONE,
+        def ssl_wrap_socket(sock, keyfile, certfile, ui,
+                            cert_reqs=ssl.CERT_NONE,
                             ca_certs=None, serverhostname=None):
             sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
                                         cert_reqs=cert_reqs, ca_certs=ca_certs,
@@ -67,7 +72,8 @@ except ImportError:
 
     import socket, httplib
 
-    def ssl_wrap_socket(sock, keyfile, certfile, cert_reqs=CERT_REQUIRED,
+    def ssl_wrap_socket(sock, keyfile, certfile, ui,
+                        cert_reqs=CERT_REQUIRED,
                         ca_certs=None, serverhostname=None):
         if not util.safehasattr(socket, 'ssl'):
             raise util.Abort(_('Python SSL support not found'))
@@ -146,7 +152,7 @@ def _defaultcacerts():
     return '!'
 
 def sslkwargs(ui, host):
-    kws = {}
+    kws = {'ui': ui}
     hostfingerprint = ui.config('hostfingerprints', host)
     if hostfingerprint:
         return kws

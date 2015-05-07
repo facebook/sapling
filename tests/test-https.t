@@ -385,10 +385,19 @@ with client certificate:
   > [auth]
   > l.prefix = localhost
   > l.cert = client-cert.pem
+  > l.key = client-key.pem
   > EOT
 
   $ P=`pwd` hg id https://localhost:$HGPORT/ \
   > --config auth.l.key=client-key-decrypted.pem
   5fed3813f7f5
+
+  $ printf '1234\n' | env P=`pwd` hg id https://localhost:$HGPORT/ \
+  > --config ui.interactive=True --config ui.nontty=True
+  passphrase for client-key.pem: 5fed3813f7f5
+
+  $ env P=`pwd` hg id https://localhost:$HGPORT/
+  abort: error: * (glob)
+  [255]
 
 #endif
