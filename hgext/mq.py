@@ -807,9 +807,10 @@ class queue(object):
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, all_files=None,
               tobackup=None, keepchanges=False):
-        wlock = lock = tr = None
+        wlock = dsguard = lock = tr = None
         try:
             wlock = repo.wlock()
+            dsguard = cmdutil.dirstateguard(repo, 'mq.apply')
             lock = repo.lock()
             tr = repo.transaction("qpush")
             try:
@@ -818,21 +819,22 @@ class queue(object):
                                   tobackup=tobackup, keepchanges=keepchanges)
                 tr.close()
                 self.savedirty()
+                dsguard.close()
                 return ret
             except AbortNoCleanup:
                 tr.close()
                 self.savedirty()
+                dsguard.close()
                 raise
             except: # re-raises
                 try:
                     tr.abort()
                 finally:
                     repo.invalidate()
-                    repo.dirstate.invalidate()
                     self.invalidate()
                 raise
         finally:
-            release(tr, lock, wlock)
+            release(tr, lock, dsguard, wlock)
             self.removeundo(repo)
 
     def _apply(self, repo, series, list=False, update_status=True,
