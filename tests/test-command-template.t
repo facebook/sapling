@@ -2290,6 +2290,40 @@ Test string escaping:
   <>\n<]>
   <>\n<
 
+  $ hg log -R latesttag -r 0 \
+  > --config ui.logtemplate='>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
+  $ hg log -R latesttag -r 0 -T esc \
+  > --config templates.esc='>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
+  $ cat <<'EOF' > esctmpl
+  > changeset = '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  > EOF
+  $ hg log -R latesttag -r 0 --style ./esctmpl
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
+Test leading backslashes:
+
+  $ cd latesttag
+  $ hg log -r 2 -T '\{rev} {files % "\{file}"} {files % r"\{file}"}\n'
+  {rev} {file} \head1
+  $ hg log -r 2 -T '\\{rev} {files % "\\{file}"} {files % r"\\{file}"}\n'
+  \2 \head1 \\head1
+  $ hg log -r 2 -T '\\\{rev} {files % "\\\{file}"} {files % r"\\\{file}"}\n'
+  \{rev} \{file} \\\head1
+  $ cd ..
+
 "string-escape"-ed "\x5c\x786e" becomes r"\x6e" (once) or r"n" (twice)
 
   $ hg log -R a -r 0 --template '{if("1", "\x5c\x786e", "NG")}\n'

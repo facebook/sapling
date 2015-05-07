@@ -87,8 +87,9 @@ def compiletemplate(tmpl, context, strtoken="string"):
         if n < 0:
             parsed.append((strtoken, tmpl[pos:]))
             break
-        if n > 0 and tmpl[n - 1] == '\\':
-            # escaped
+        bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
+        if strtoken == 'string' and bs % 2 == 1:
+            # escaped (e.g. '\{', '\\\{', but not '\\{' nor r'\{')
             parsed.append((strtoken, (tmpl[pos:n - 1] + "{")))
             pos = n + 1
             continue
@@ -618,14 +619,13 @@ def _flatten(thing):
                     yield j
 
 def parsestring(s, quoted=True):
-    '''parse a string using simple c-like syntax.
-    string must be in quotes if quoted is True.'''
+    '''unwrap quotes if quoted is True'''
     if quoted:
         if len(s) < 2 or s[0] != s[-1]:
             raise SyntaxError(_('unmatched quotes'))
-        return s[1:-1].decode('string_escape')
+        return s[1:-1]
 
-    return s.decode('string_escape')
+    return s
 
 class engine(object):
     '''template expansion engine.
