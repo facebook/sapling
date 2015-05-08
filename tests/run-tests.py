@@ -1200,6 +1200,7 @@ class TestResult(unittest._TextTestResult):
         self.warned = []
 
         self.times = []
+        self._firststarttime =  None
         # Data stored for the benefit of generating xunit reports.
         self.successes = []
         self.faildata = {}
@@ -1324,6 +1325,8 @@ class TestResult(unittest._TextTestResult):
         # This module has one limitation. It can only work for Linux user
         # and not for Windows.
         test.started = os.times()
+        if self._firststarttime is None: # thread racy but irrelevant
+            self._firststarttime = test.started[4]
 
     def stopTest(self, test, interrupted=False):
         super(TestResult, self).stopTest(test)
@@ -1332,10 +1335,13 @@ class TestResult(unittest._TextTestResult):
 
         starttime = test.started
         endtime = test.stopped
+        origin = self._firststarttime
         self.times.append((test.name,
                            endtime[2] - starttime[2], # user space CPU time
                            endtime[3] - starttime[3], # sys  space CPU time
                            endtime[4] - starttime[4], # real time
+                           starttime[4] - origin, # start date in run context
+                           endtime[4] - origin, # end date in run context
                            ))
 
         if interrupted:
@@ -1570,9 +1576,10 @@ class TextTestRunner(unittest.TextTestRunner):
                             tres = {'result': res,
                                     'time': ('%0.3f' % timesd[tc.name][2]),
                                     'cuser': ('%0.3f' % timesd[tc.name][0]),
-                                    'csys': ('%0.3f' % timesd[tc.name][1])}
+                                    'csys': ('%0.3f' % timesd[tc.name][1]),
+                                    'start': ('%0.3f' % timesd[tc.name][3]),
+                                    'end': ('%0.3f' % timesd[tc.name][4])}
                             outcome[tc.name] = tres
-
                     jsonout = json.dumps(outcome, sort_keys=True, indent=4)
                     fp.writelines(("testreport =", jsonout))
                 finally:
