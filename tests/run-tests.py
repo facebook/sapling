@@ -1603,13 +1603,13 @@ class TextTestRunner(unittest.TextTestRunner):
         # iolock held by run
         self.stream.writeln('# Producing time report')
         times.sort(key=lambda t: (t[3]))
-        cols = '%7.3f %7.3f %7.3f   %s'
-        self.stream.writeln('%-7s %-7s %-7s   %s' % ('cuser', 'csys', 'real',
-                    'Test'))
+        cols = '%7.3f %7.3f %7.3f %7.3f %7.3f   %s'
+        self.stream.writeln('%-7s %-7s %-7s %-7s %-7s   %s' %
+                            ('start', 'end', 'cuser', 'csys', 'real', 'Test'))
         for tdata in times:
             test = tdata[0]
-            cuser, csys, real = tdata[1:4]
-            self.stream.writeln(cols % (cuser, csys, real, test))
+            cuser, csys, real, start, end = tdata[1:6]
+            self.stream.writeln(cols % (start, end, cuser, csys, real, test))
 
 class TestRunner(object):
     """Holds context for executing tests.
