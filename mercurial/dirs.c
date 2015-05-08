@@ -95,6 +95,7 @@ bail:
 
 static int _delpath(PyObject *dirs, PyObject *path)
 {
+	char *cpath = PyString_AS_STRING(path);
 	Py_ssize_t pos = PyString_GET_SIZE(path);
 	PyObject *key = NULL;
 	int ret = -1;
@@ -102,7 +103,7 @@ static int _delpath(PyObject *dirs, PyObject *path)
 	while ((pos = _finddir(path, pos - 1)) != -1) {
 		PyObject *val;
 
-		key = PyString_FromStringAndSize(PyString_AS_STRING(path), pos);
+		key = PyString_FromStringAndSize(cpath, pos);
 
 		if (key == NULL)
 			goto bail;
