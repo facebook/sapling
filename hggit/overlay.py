@@ -103,10 +103,16 @@ class overlaymanifest(object):
         # below code copied from manifest.py:manifestdict.diff
         diff = {}
 
+        try:
+            m2flagget = m2.flags
+        except AttributeError:
+            # Mercurial <= 3.3
+            m2flagget = m2._flags.get
+
         for fn, n1 in self.iteritems():
             fl1 = self._flags.get(fn, '')
             n2 = m2.get(fn, None)
-            fl2 = m2._flags.get(fn, '')
+            fl2 = m2flagget(fn, '')
             if n2 is None:
                 fl2 = ''
             if n1 != n2 or fl1 != fl2:
@@ -116,13 +122,25 @@ class overlaymanifest(object):
 
         for fn, n2 in m2.iteritems():
             if fn not in self:
-                fl2 = m2._flags.get(fn, '')
+                fl2 = m2flagget(fn, '')
                 diff[fn] = ((None, ''), (n2, fl2))
 
         return diff
 
     def __delitem__(self, path):
         del self._map[path]
+
+def wrapmanifestdictdiff(orig, self, m2, clean=False):
+    '''avoid calling into lazymanifest code if m2 is an overlaymanifest'''
+    if isinstance(m2, overlaymanifest):
+        diff = m2.diff(self, clean=clean)
+        # since we calculated the diff with m2 vs m1, flip it around
+        for fn in diff:
+            c1, c2 = diff[fn]
+            diff[fn] = c2, c1
+        return diff
+    else:
+        return orig(self, m2, clean=clean)
 
 class overlayfilectx(object):
     def __init__(self, repo, path, fileid=None):

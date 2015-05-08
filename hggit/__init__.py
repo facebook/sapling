@@ -36,6 +36,7 @@ from mercurial import help
 from mercurial import hg
 from mercurial import ignore
 from mercurial import localrepo
+from mercurial import manifest
 from mercurial.node import hex
 from mercurial import revset
 from mercurial import scmutil
@@ -45,6 +46,7 @@ from mercurial.i18n import _
 
 import gitrepo
 import hgrepo
+import overlay
 import util
 from git_handler import GitHandler
 import verify
@@ -125,6 +127,11 @@ def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
         klass = hgrepo.generate_repo_subclass(repo.__class__)
         repo.__class__ = klass
+
+if hgutil.safehasattr(manifest, '_lazymanifest'):
+    # Mercurial >= 3.4
+    extensions.wrapfunction(manifest.manifestdict, 'diff',
+                            overlay.wrapmanifestdictdiff)
 
 @command('gimport')
 def gimport(ui, repo, remote_name=None):
