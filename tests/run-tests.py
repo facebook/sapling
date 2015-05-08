@@ -442,6 +442,11 @@ class Test(unittest.TestCase):
         else:
             self._refout = []
 
+    # needed to get base class __repr__ running
+    @property
+    def _testMethodName(self):
+        return self.name
+
     def __str__(self):
         return self.name
 
