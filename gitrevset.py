@@ -69,3 +69,6 @@ def extsetup(ui):
     templatekw.keywords['gitnode'] = showgitnode
     revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
+    revset.symbols['stringset'] = revset.stringset
+    revset.methods['string'] = revset.stringset
+    revset.methods['symbol'] = revset.stringset
