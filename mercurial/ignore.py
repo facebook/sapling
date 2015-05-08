@@ -40,15 +40,18 @@ def ignorepats(lines):
             except KeyError:
                 warnings.append(_("ignoring invalid syntax '%s'") % s)
             continue
-        pat = syntax + line
+
+        linesyntax = syntax
         for s, rels in syntaxes.iteritems():
             if line.startswith(rels):
-                pat = line
+                linesyntax = rels
+                line = line[len(rels):]
                 break
             elif line.startswith(s+':'):
-                pat = rels + line[len(s) + 1:]
+                linesyntax = rels
+                line = line[len(s) + 1:]
                 break
-        patterns.append(pat)
+        patterns.append(linesyntax + line)
 
     return patterns, warnings
 
