@@ -69,7 +69,7 @@ static int _addpath(PyObject *dirs, PyObject *path)
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
 			PyInt_AS_LONG(val) += 1;
-			continue;
+			break;
 		}
 
 		/* Force Python to not reuse a small shared int. */
@@ -114,9 +114,11 @@ static int _delpath(PyObject *dirs, PyObject *path)
 			goto bail;
 		}
 
-		if (--PyInt_AS_LONG(val) <= 0 &&
-		    PyDict_DelItem(dirs, key) == -1)
-			goto bail;
+		if (--PyInt_AS_LONG(val) <= 0) {
+			if (PyDict_DelItem(dirs, key) == -1)
+				goto bail;
+		} else
+			break;
 		Py_CLEAR(key);
 	}
 	ret = 0;
