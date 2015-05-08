@@ -1535,26 +1535,16 @@ class TextTestRunner(unittest.TextTestRunner):
                     timesd[test] = (real, cuser, csys)
 
                 outcome = {}
-                for tc in result.successes:
-                    testresult = {'result': 'success',
-                                  'time': ('%0.3f' % timesd[tc.name][0]),
-                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
-                                  'csys': ('%0.3f' % timesd[tc.name][2])}
-                    outcome[tc.name] = testresult
-
-                for tc, error in result.failures:
-                    testresult = {'result': 'failure',
-                                  'time': ('%0.3f' % timesd[tc.name][0]),
-                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
-                                  'csys': ('%0.3f' % timesd[tc.name][2])}
-                    outcome[tc.name] = testresult
-
-                for tc, reason in result.skipped:
-                    testresult = {'result': 'skip',
-                                  'time': ('%0.3f' % timesd[tc.name][0]),
-                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
-                                  'csys': ('%0.3f' % timesd[tc.name][2])}
-                    outcome[tc.name] = testresult
+                groups = [('success', ((tc, None) for tc in result.successes)),
+                          ('failure', result.failures),
+                          ('skip', result.skipped)]
+                for res, testcases in groups:
+                    for tc, __ in testcases:
+                        testresult = {'result': res,
+                                      'time': ('%0.3f' % timesd[tc.name][0]),
+                                      'cuser': ('%0.3f' % timesd[tc.name][1]),
+                                      'csys': ('%0.3f' % timesd[tc.name][2])}
+                        outcome[tc.name] = testresult
 
                 jsonout = json.dumps(outcome, sort_keys=True, indent=4)
                 fp.writelines(("testreport =", jsonout))
