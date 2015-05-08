@@ -1308,8 +1308,11 @@ class TestResult(unittest._TextTestResult):
 
         starttime = test.started
         endtime = test.stopped
-        self.times.append((test.name, endtime[2] - starttime[2],
-                    endtime[3] - starttime[3], endtime[4] - starttime[4]))
+        self.times.append((test.name,
+                           endtime[2] - starttime[2], # user space CPU time
+                           endtime[3] - starttime[3], # sys  space CPU time
+                           endtime[4] - starttime[4], # real time
+                           ))
 
         if interrupted:
             iolock.acquire()
