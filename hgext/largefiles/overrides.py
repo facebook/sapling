@@ -27,7 +27,7 @@ def composelargefilematcher(match, manifest):
     m = copy.copy(match)
     lfile = lambda f: lfutil.standin(f) in manifest
     m._files = filter(lfile, m._files)
-    m._fmap = set(m._files)
+    m._fileroots = set(m._files)
     m._always = False
     origmatchfn = m.matchfn
     m.matchfn = lambda f: lfile(f) and origmatchfn(f)
@@ -42,7 +42,7 @@ def composenormalfilematcher(match, manifest, exclude=None):
     notlfile = lambda f: not (lfutil.isstandin(f) or lfutil.standin(f) in
             manifest or f in excluded)
     m._files = filter(notlfile, m._files)
-    m._fmap = set(m._files)
+    m._fileroots = set(m._files)
     m._always = False
     origmatchfn = m.matchfn
     m.matchfn = lambda f: notlfile(f) and origmatchfn(f)
@@ -358,7 +358,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
                     and repo.wvfs.isdir(standin):
                 m._files.append(standin)
 
-        m._fmap = set(m._files)
+        m._fileroots = set(m._files)
         m._always = False
         origmatchfn = m.matchfn
         def lfmatchfn(f):
@@ -626,7 +626,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
             m = copy.copy(match)
             lfile = lambda f: lfutil.standin(f) in manifest
             m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
-            m._fmap = set(m._files)
+            m._fileroots = set(m._files)
             origmatchfn = m.matchfn
             m.matchfn = lambda f: (lfutil.isstandin(f) and
                                 (f in manifest) and
@@ -742,7 +742,7 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
                 return f
             m._files = [tostandin(f) for f in m._files]
             m._files = [f for f in m._files if f is not None]
-            m._fmap = set(m._files)
+            m._fileroots = set(m._files)
             origmatchfn = m.matchfn
             def matchfn(f):
                 if lfutil.isstandin(f):

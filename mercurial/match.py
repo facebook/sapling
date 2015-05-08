@@ -123,7 +123,7 @@ class match(object):
                 return True
 
         self.matchfn = m
-        self._fmap = set(self._files)
+        self._fileroots = set(self._files)
 
     def __call__(self, fn):
         return self.matchfn(fn)
@@ -171,17 +171,17 @@ class match(object):
 
     @propertycache
     def _dirs(self):
-        return set(util.dirs(self._fmap)) | set(['.'])
+        return set(util.dirs(self._fileroots)) | set(['.'])
 
     def visitdir(self, dir):
-        return (not self._fmap or '.' in self._fmap or
-                dir in self._fmap or dir in self._dirs or
-                any(parentdir in self._fmap
+        return (not self._fileroots or '.' in self._fileroots or
+                dir in self._fileroots or dir in self._dirs or
+                any(parentdir in self._fileroots
                     for parentdir in util.finddirs(dir)))
 
     def exact(self, f):
         '''Returns True if f is in .files().'''
-        return f in self._fmap
+        return f in self._fileroots
 
     def anypats(self):
         '''Matcher uses patterns or include/exclude.'''
@@ -276,7 +276,7 @@ class narrowmatcher(match):
                        if f.startswith(path + "/")]
         self._anypats = matcher._anypats
         self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
-        self._fmap = set(self._files)
+        self._fileroots = set(self._files)
 
     def abs(self, f):
         return self._matcher.abs(self._path + "/" + f)
@@ -303,7 +303,7 @@ class icasefsmatcher(match):
         # m.exact(file) must be based off of the actual user input, otherwise
         # inexact case matches are treated as exact, and not noted without -v.
         if self._files:
-            self._fmap = set(_roots(self._kp))
+            self._fileroots = set(_roots(self._kp))
 
     def _normalize(self, patterns, default, root, cwd, auditor):
         self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
