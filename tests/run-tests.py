@@ -1532,8 +1532,7 @@ class TextTestRunner(unittest.TextTestRunner):
                 timesd = {}
                 for tdata in result.times:
                     test = tdata[0]
-                    real, cuser, csys = tdata[3], tdata[1], tdata[2]
-                    timesd[test] = (real, cuser, csys)
+                    timesd[test] = tdata[1:]
 
                 outcome = {}
                 groups = [('success', ((tc, None) for tc in result.successes)),
@@ -1542,9 +1541,9 @@ class TextTestRunner(unittest.TextTestRunner):
                 for res, testcases in groups:
                     for tc, __ in testcases:
                         testresult = {'result': res,
-                                      'time': ('%0.3f' % timesd[tc.name][0]),
-                                      'cuser': ('%0.3f' % timesd[tc.name][1]),
-                                      'csys': ('%0.3f' % timesd[tc.name][2])}
+                                      'time': ('%0.3f' % timesd[tc.name][2]),
+                                      'cuser': ('%0.3f' % timesd[tc.name][0]),
+                                      'csys': ('%0.3f' % timesd[tc.name][1])}
                         outcome[tc.name] = testresult
 
                 jsonout = json.dumps(outcome, sort_keys=True, indent=4)
