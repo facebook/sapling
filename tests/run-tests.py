@@ -1662,7 +1662,10 @@ class TestRunner(object):
             random.shuffle(tests)
         else:
             # keywords for slow tests
-            slow = b'svn gendoc check-code-hg'.split()
+            slow = {b'svn': 10,
+                    b'gendoc': 10,
+                    b'check-code-hg': 10,
+                   }
             def sortkey(f):
                 # run largest tests first, as they tend to take the longest
                 try:
@@ -1671,9 +1674,9 @@ class TestRunner(object):
                     if e.errno != errno.ENOENT:
                         raise
                     return -1e9 # file does not exist, tell early
-                for kw in slow:
+                for kw, mul in slow.iteritems():
                     if kw in f:
-                        val *= 10
+                        val *= mul
                 return val
             tests.sort(key=sortkey)
 
