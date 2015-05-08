@@ -49,6 +49,7 @@ import os
 import shutil
 import subprocess
 import signal
+import socket
 import sys
 import tempfile
 import time
@@ -77,6 +78,18 @@ if sys.version_info < (2, 5):
     subprocess._cleanup = lambda: None
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
+
+def checkportisavailable(port):
+    """return true if a port seems free to bind on localhost"""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('localhost', port))
+        s.close()
+        return True
+    except socket.error, exc:
+        if not exc.errno == errno.EADDRINUSE:
+            raise
+        return False
 
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
@@ -1608,6 +1621,8 @@ class TestRunner(object):
         self._coveragefile = None
         self._createdfiles = []
         self._hgpath = None
+        self._portoffset = 0
+        self._ports = {}
 
     def run(self, args, parser=None):
         """Run the test suite."""
@@ -1812,6 +1827,24 @@ class TestRunner(object):
         if warned:
             return 80
 
+    def _getport(self, count):
+        port = self._ports.get(count) # do we have a cached entry?
+        if port is None:
+            port = self.options.port + self._portoffset
+            portneeded = 3
+            # above 100 tries we just give up and let test reports failure
+            for tries in xrange(100):
+                allfree = True
+                for idx in xrange(portneeded):
+                    if not checkportisavailable(port + idx):
+                        allfree = False
+                        break
+                self._portoffset += portneeded
+                if allfree:
+                    break
+            self._ports[count] = port
+        return port
+
     def _gettest(self, test, count):
         """Obtain a Test by looking at its filename.
 
@@ -1833,7 +1866,7 @@ class TestRunner(object):
                     keeptmpdir=self.options.keep_tmpdir,
                     debug=self.options.debug,
                     timeout=self.options.timeout,
-                    startport=self.options.port + count * 3,
+                    startport=self._getport(count),
                     extraconfigopts=self.options.extra_config_opt,
                     py3kwarnings=self.options.py3k_warnings,
                     shell=self.options.shell)
