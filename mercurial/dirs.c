@@ -28,12 +28,10 @@ typedef struct {
 	PyObject *dict;
 } dirsObject;
 
-static inline Py_ssize_t _finddir(PyObject *path, Py_ssize_t pos)
+static inline Py_ssize_t _finddir(const char *path, Py_ssize_t pos)
 {
-	const char *s = PyString_AS_STRING(path);
-
 	while (pos != -1) {
-		if (s[pos] == '/')
+		if (path[pos] == '/')
 			break;
 		pos -= 1;
 	}
@@ -48,7 +46,7 @@ static int _addpath(PyObject *dirs, PyObject *path)
 	PyObject *key = NULL;
 	int ret = -1;
 
-	while ((pos = _finddir(path, pos - 1)) != -1) {
+	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
 		/* It's likely that every prefix already has an entry
@@ -100,7 +98,7 @@ static int _delpath(PyObject *dirs, PyObject *path)
 	PyObject *key = NULL;
 	int ret = -1;
 
-	while ((pos = _finddir(path, pos - 1)) != -1) {
+	while ((pos = _finddir(cpath, pos - 1)) != -1) {
 		PyObject *val;
 
 		key = PyString_FromStringAndSize(cpath, pos);
