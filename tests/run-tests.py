@@ -1542,12 +1542,12 @@ class TextTestRunner(unittest.TextTestRunner):
                                   'csys': ('%0.3f' % timesd[tc.name][2])}
                     outcome[tc.name] = testresult
 
-                for tc, err in sorted(result.faildata.iteritems()):
+                for tc, error in result.failures:
                     testresult = {'result': 'failure',
-                                  'time': ('%0.3f' % timesd[tc][0]),
-                                  'cuser': ('%0.3f' % timesd[tc][1]),
-                                  'csys': ('%0.3f' % timesd[tc][2])}
-                    outcome[tc] = testresult
+                                  'time': ('%0.3f' % timesd[tc.name][0]),
+                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
+                                  'csys': ('%0.3f' % timesd[tc.name][2])}
+                    outcome[tc.name] = testresult
 
                 for tc, reason in result.skipped:
                     testresult = {'result': 'skip',
