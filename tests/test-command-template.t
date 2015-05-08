@@ -2313,6 +2313,25 @@ Test string escaping:
   <>\n<]>
   <>\n<
 
+Test exception in quoted template. single backslash before quotation mark is
+stripped before parsing:
+
+  $ cat <<'EOF' > escquotetmpl
+  > changeset = "\" \\" \\\" \\\\" {files % \"{file}\"}\n"
+  > EOF
+  $ cd latesttag
+  $ hg log -r 2 --style ../escquotetmpl
+  " \" \" \\" head1
+
+  $ hg log -r 2 -T esc --config templates.esc='{\"invalid\"}\n'
+  hg: parse error at 1: syntax error
+  [255]
+  $ hg log -r 2 -T esc --config templates.esc='"{\"valid\"}\n"'
+  valid
+  $ hg log -r 2 -T esc --config templates.esc="'"'{\'"'"'valid\'"'"'}\n'"'"
+  valid
+  $ cd ..
+
 Test leading backslashes:
 
   $ cd latesttag
