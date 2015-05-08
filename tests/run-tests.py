@@ -1494,8 +1494,7 @@ class TextTestRunner(unittest.TextTestRunner):
         if self._runner.options.xunit:
             xuf = open(self._runner.options.xunit, 'wb')
             try:
-                timesd = dict(
-                    (test, real) for test, cuser, csys, real in result.times)
+                timesd = dict((t[0], t[3]) for t in result.times)
                 doc = minidom.Document()
                 s = doc.createElement('testsuite')
                 s.setAttribute('name', 'run-tests')
@@ -1531,7 +1530,9 @@ class TextTestRunner(unittest.TextTestRunner):
             fp = open(jsonpath, 'w')
             try:
                 timesd = {}
-                for test, cuser, csys, real in result.times:
+                for tdata in result.times:
+                    test = tdata[0]
+                    real, cuser, csys = tdata[3], tdata[1], tdata[2]
                     timesd[test] = (real, cuser, csys)
 
                 outcome = {}
@@ -1573,7 +1574,9 @@ class TextTestRunner(unittest.TextTestRunner):
         cols = '%7.3f %7.3f %7.3f   %s'
         self.stream.writeln('%-7s %-7s %-7s   %s' % ('cuser', 'csys', 'real',
                     'Test'))
-        for test, cuser, csys, real in times:
+        for tdata in times:
+            test = tdata[0]
+            cuser, csys, real = tdata[1:4]
             self.stream.writeln(cols % (cuser, csys, real, test))
 
 class TestRunner(object):
