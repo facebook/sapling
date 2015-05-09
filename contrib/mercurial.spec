@@ -37,8 +37,8 @@ BuildRequires: make, gcc, gettext
 %if "%{?withpython}"
 BuildRequires: readline-devel, openssl-devel, ncurses-devel, zlib-devel, bzip2-devel
 %else
-BuildRequires: python >= 2.4, python-devel, python-docutils >= 0.5
-Requires: python >= 2.4
+BuildRequires: python >= 2.6, python-devel, python-docutils >= 0.5
+Requires: python >= 2.6
 %endif
 # The hgk extension uses the wish tcl interpreter, but we don't enforce it
 #Requires: tk
