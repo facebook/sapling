@@ -675,13 +675,14 @@ def rebase(ui, repo, *args, **kwargs):
     if opts.get('interactive'):
         ui.status("note: hg histedit does not perform a rebase. " +
             "It just edits history.\n\n")
-        ui.status("also note: the complicated first(children(blahblah)) below " +
-            "is just a direct translation from git. It's much simpler to just specify " +
-            "the lowest commit that should be part of the histedit. Example: if " +
-            "you have commits (0 <- 1 <- 2 <- 3) and you want to edit 2+3 " +
-            "(assuming you are on 3 right now) use 'hg histedit 2'.\n\n")
         cmd = Command('histedit')
-        cmd.append("'first(children(ancestor(.,%s))::.)'" % (convert(args[0]),))
+        if len(args) > 0:
+            ui.status("also note: the complicated first(children(blahblah)) below " +
+                "is just a direct translation from git. It's much simpler to just specify " +
+                "the lowest commit that should be part of the histedit. Example: if " +
+                "you have commits (0 <- 1 <- 2 <- 3) and you want to edit 2+3 " +
+                "(assuming you are on 3 right now) use 'hg histedit 2'.\n\n")
+            cmd.append("'first(children(ancestor(.,%s))::.)'" % (convert(args[0]),))
         ui.status(cmd, "\n")
         return
 
