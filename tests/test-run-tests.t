@@ -490,6 +490,46 @@ test for --json
       }
   } (no-eol)
 
+Test that failed test accepted through interactive are properly reported:
+
+  $ cp test-failure.t backup
+  $ echo y | $TESTDIR/run-tests.py --with-hg=`which hg` --json -i
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,4 +1,4 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+  Accept this change? [n] ..s
+  Skipped test-skip.t: skipped
+  # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
+
+  $ cat report.json
+  testreport ={
+      "test-failure.t": [\{] (re)
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "result": "success", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }, ? (re)
+      "test-skip.t": {
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "result": "skip", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }, ? (re)
+      "test-success.t": [\{] (re)
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "result": "success", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }
+  } (no-eol)
+  $ mv backup test-failure.t
+
 #endif
 
 backslash on end of line with glob matching is handled properly
