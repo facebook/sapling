@@ -12,6 +12,7 @@
       <ComponentRef Id="templates.atom" />
       <ComponentRef Id="templates.coal" />
       <ComponentRef Id="templates.gitweb" />
+      <ComponentRef Id="templates.json" />
       <ComponentRef Id="templates.monoblue" />
       <ComponentRef Id="templates.paper" />
       <ComponentRef Id="templates.raw" />
@@ -35,6 +36,13 @@
           <File Name="map-cmdline.xml" />
           <File Name="map-cmdline.phases" />
         </Component>
+
+        <Directory Id="templates.jsondir" Name="json">
+          <Component Id="templates.json" Guid="$(var.templates.json.guid)" Win64='$(var.IsX64)'>
+            <File Id="json.changelist.tmpl" Name="changelist.tmpl" KeyPath="yes" />
+            <File Id="json.map"             Name="map" />
+          </Component>
+        </Directory>
 
         <Directory Id="templates.atomdir" Name="atom">
           <Component Id="templates.atom" Guid="$(var.templates.atom.guid)" Win64='$(var.IsX64)'>
