@@ -172,14 +172,6 @@ class changelog(revlog.revlog):
         self.rev(self.node(0))
         return self._nodecache
 
-    def hasnode(self, node):
-        """filtered version of revlog.hasnode"""
-        try:
-            i = self.rev(node)
-            return i not in self.filteredrevs
-        except KeyError:
-            return False
-
     def headrevs(self):
         if self.filteredrevs:
             try:
