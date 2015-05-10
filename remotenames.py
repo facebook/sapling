@@ -129,11 +129,10 @@ def exupdate(orig, repo, *args, **opts):
     precachedistance(repo)
     return res
 
-def exsetcurrent(orig, repo, mark):
+def exactivate(orig, repo, mark):
     res = orig(repo, mark)
     precachedistance(repo)
     return res
-
 
 def reposetup(ui, repo):
     if not repo.local():
@@ -206,7 +205,7 @@ def exrebasecmd(orig, ui, repo, **opts):
     source = opts['source']
     revs = opts['rev']
     base = opts['base']
-    current = bookmarks.readcurrent(repo)
+    current = bmactive(repo)
 
     if not (dest or source or revs or base) and current:
         tracking = _readtracking(repo)
@@ -280,7 +279,10 @@ def extsetup(ui):
     extensions.wrapfunction(exchange, 'pull', expull)
     extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
     extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
-    extensions.wrapfunction(bookmarks, 'setcurrent', exsetcurrent)
+    if util.safehasattr(bookmarks, 'activate'):
+        extensions.wrapfunction(bookmarks, 'activate', exactivate)
+    else:
+        extensions.wrapfunction(bookmarks, 'setcurrent', exactivate)
     extensions.wrapfunction(hg, 'clone', exclone)
     extensions.wrapfunction(hg, 'updaterepo', exupdate)
     extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
@@ -483,7 +485,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     origdest = dest
     if not dest and not to and not revs and _tracking(ui):
-        current = bookmarks.readcurrent(repo)
+        current = bmactive(repo)
         tracking = _readtracking(repo)
         # print "tracking on %s %s" % (current, tracking)
         if current and current in tracking:
@@ -719,9 +721,9 @@ def displaylocalbookmarks(ui, repo, opts):
     nq = not ui.quiet
 
     for bmark, n in sorted(marks.iteritems()):
-        current = repo._bookmarkcurrent
+        current = bmactive(repo)
         if bmark == current:
-            prefix, label = '*', 'bookmarks.current'
+            prefix, label = '*', 'bookmarks.current bookmarks.active'
         else:
             prefix, label = ' ', ''
 
@@ -1231,3 +1233,12 @@ def remotenameskw(**args):
 
     return templatekw.showlist('remotename', remotenames,
                                plural='remotenames', **args)
+
+#############################
+# bookmarks api compatibility
+#############################
+def bmactive(repo):
+    try:
+        return repo._activebookmark
+    except AttributeError:
+        return repo._bookmarkcurrent
