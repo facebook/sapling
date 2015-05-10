@@ -110,7 +110,7 @@ def amend(ui, repo, *pats, **opts):
 
         return noderesult
 
-    current = repo._bookmarkcurrent
+    active = bmactive(repo)
     oldbookmarks = old.bookmarks()
 
     if haschildren:
@@ -151,8 +151,8 @@ def amend(ui, repo, *pats, **opts):
         preamendname = _preamendname(repo, node)
         if haschildren:
             newbookmarks[preamendname] = old.node()
-        elif not repo._bookmarkcurrent:
-            # update bookmark if it isn't based on the current bookmark name
+        elif not active:
+            # update bookmark if it isn't based on the active bookmark name
             oldname = _preamendname(repo, old.node())
             if oldname in repo._bookmarks:
                 newbookmarks[preamendname] = repo._bookmarks[oldname]
@@ -179,7 +179,7 @@ def fixupamend(ui, repo):
     old = repo[preamendname]
     oldbookmarks = old.bookmarks()
 
-    active = repo._bookmarkcurrent
+    active = bmactive(repo)
     opts = {
         'rev' : [str(c.rev()) for c in old.descendants()],
         'dest' : active
@@ -197,11 +197,11 @@ def fixupamend(ui, repo):
 
     merge.update(repo, current.node(), False, True, False)
     if active:
-        bookmarks.setcurrent(repo, active)
+        bmactivate(repo, active)
 
 def _preamendname(repo, node):
     suffix = '.preamend'
-    name = repo._bookmarkcurrent
+    name = bmactive(repo)
     if not name:
         name = hex(node)[:12]
     return name + suffix
@@ -216,3 +216,16 @@ def _usereducation(ui):
     education = ui.config('fbamend', 'education')
     if education:
         ui.warn(education + "\n")
+
+### bookmarks api compatibility layer ###
+def bmactivate(repo, mark):
+    try:
+        return bookmarks.activate(repo, mark)
+    except AttributeError:
+        return bookmarks.setcurrent(repo, mark)
+
+def bmactive(repo):
+    try:
+        return repo._activebookmark
+    except AttributeError:
+        return repo._bookmarkcurrent

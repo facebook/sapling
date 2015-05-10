@@ -178,7 +178,7 @@ def _rebase(orig, ui, repo, **opts):
         common = dest.ancestor(prev)
         if prev == common:
             result = hg.update(repo, dest.node())
-            if repo._bookmarkcurrent:
+            if bmactive(repo):
                 bookmarks.update(repo, [prev.node()], dest.node())
             return result
 
@@ -192,3 +192,9 @@ def log(orig, ui, repo, *pats, **opts):
 
     return orig(ui, repo, *pats, **opts)
 
+### bookmarks api compatibility layer ###
+def bmactive(repo):
+    try:
+        return repo._activebookmark
+    except AttributeError:
+        return repo._bookmarkcurrent
