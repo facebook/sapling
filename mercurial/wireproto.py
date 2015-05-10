@@ -345,6 +345,11 @@ class wirepeer(peer.peerrepository):
     def getbundle(self, source, **kwargs):
         self.requirecap('getbundle', _('look up remote changes'))
         opts = {}
+        bundlecaps = kwargs.get('bundlecaps')
+        if bundlecaps is not None:
+            kwargs['bundlecaps'] = sorted(bundlecaps)
+        else:
+            bundlecaps = () # kwargs could have it to None
         for key, value in kwargs.iteritems():
             if value is None:
                 continue
@@ -362,9 +367,6 @@ class wirepeer(peer.peerrepository):
                                % keytype)
             opts[key] = value
         f = self._callcompressable("getbundle", **opts)
-        bundlecaps = kwargs.get('bundlecaps')
-        if bundlecaps is None:
-            bundlecaps = () # kwargs could have it to None
         if util.any((cap.startswith('HG2') for cap in bundlecaps)):
             return bundle2.getunbundler(self.ui, f)
         else:
