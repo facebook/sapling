@@ -288,3 +288,36 @@ user has somehow managed to update to a different revision (issue4009)
   new
 
   $ cd ..
+
+On the other hand, make sure we *do* clobber changes whenever we
+haven't somehow managed to update the repo to a different revision
+during a rebase (issue4661)
+
+  $ hg ini yesupdate
+  $ cd yesupdate
+  $ echo "initial data" > foo.txt
+  $ hg add
+  adding foo.txt
+  $ hg ci -m "initial checkin"
+  $ echo "change 1" > foo.txt
+  $ hg ci -m "change 1"
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "conflicting change 1" > foo.txt
+  $ hg ci -m "conflicting 1"
+  created new head
+  $ echo "conflicting change 2" > foo.txt
+  $ hg ci -m "conflicting 2"
+
+  $ hg rebase -d 1 --tool 'internal:fail'
+  rebasing 2:e4ea5cdc9789 "conflicting 1"
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+  $ hg summary
+  parent: 3:b16646383533 tip
+   conflicting 2
+  branch: default
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
