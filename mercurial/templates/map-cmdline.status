@@ -1,0 +1,25 @@
+%include map-cmdline.default
+
+# Override base templates
+changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{summary}{lfiles}\n'
+changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{description}{lfiles}\n'
+changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{extras}{description}{lfiles}\n'
+
+# Override the file templates
+lfiles = '{if(files,
+              label('ui.note log.files',
+                    'files:\n'))}{lfile_mods}{lfile_adds}{lfile_copies_switch}{lfile_dels}'
+
+# Exclude copied files, will display those in lfile_copies_switch
+lfile_adds  = '{file_adds % "{ifcontains(file, file_copies_switch,
+                                         '',
+                                         '{lfile_add}')}"}'
+lfile_add = '{label("status.added", "A {file}\n")}'
+
+lfile_copies_switch = '{file_copies_switch % "{lfile_copy_orig}{lfile_copy_dest}"'
+lfile_copy_orig = '{label("status.added", "A {name}\n")}'
+lfile_copy_dest = '{label("status.copied", "  {source}\n")}'
+
+lfile_mods = '{file_mods % "{label('status.modified', 'M {file}\n')}"}'
+
+lfile_dels = '{file_dels % "{label('status.removed', 'R {file}\n')}"}'

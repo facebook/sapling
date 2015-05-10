@@ -992,11 +992,11 @@ Error if no style:
 
   $ hg log --style notexist
   abort: style 'notexist' not found
-  (available styles: bisect, changelog, compact, default, phases, xml)
+  (available styles: bisect, changelog, compact, default, phases, status, xml)
   [255]
 
   $ hg log -T list
-  available styles: bisect, changelog, compact, default, phases, xml
+  available styles: bisect, changelog, compact, default, phases, status, xml
   abort: specify a template
   [255]
 
@@ -2012,6 +2012,147 @@ Add a commit that does all possible modifications at once
   $ hg mv fourth fifth
   $ hg rm a
   $ hg ci -m "Modify, add, remove, rename"
+
+Check the status template
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > color=
+  > EOF
+
+  $ hg log -T status -r 10
+  changeset:   10:0f9759ec227a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Modify, add, remove, rename
+  files:
+  M third
+  A b
+  A fifth
+  R a
+  R fourth
+  
+  $ hg log -T status -C -r 10
+  changeset:   10:0f9759ec227a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Modify, add, remove, rename
+  files:
+  M third
+  A b
+  A fifth
+    fourth
+  R a
+  R fourth
+  
+  $ hg log -T status -C -r 10 -v
+  changeset:   10:0f9759ec227a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  description:
+  Modify, add, remove, rename
+  
+  files:
+  M third
+  A b
+  A fifth
+    fourth
+  R a
+  R fourth
+  
+  $ hg log -T status -C -r 10 --debug
+  changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c
+  tag:         tip
+  phase:       secret
+  parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    8:89dd546f2de0a9d6d664f58d86097eb97baba567
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  extra:       branch=default
+  description:
+  Modify, add, remove, rename
+  
+  files:
+  M third
+  A b
+  A fifth
+    fourth
+  R a
+  R fourth
+  
+  $ hg log -T status -C -r 10 --quiet
+  10:0f9759ec227a
+  $ hg --color=debug log -T status -r 10
+  [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
+  [log.tag|tag:         tip]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.summary|summary:     Modify, add, remove, rename]
+  [ui.note log.files|files:]
+  [status.modified|M third]
+  [status.added|A b]
+  [status.added|A fifth]
+  [status.removed|R a]
+  [status.removed|R fourth]
+  
+  $ hg --color=debug log -T status -C -r 10
+  [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
+  [log.tag|tag:         tip]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.summary|summary:     Modify, add, remove, rename]
+  [ui.note log.files|files:]
+  [status.modified|M third]
+  [status.added|A b]
+  [status.added|A fifth]
+  [status.copied|  fourth]
+  [status.removed|R a]
+  [status.removed|R fourth]
+  
+  $ hg --color=debug log -T status -C -r 10 -v
+  [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
+  [log.tag|tag:         tip]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [ui.note log.description|description:]
+  [ui.note log.description|Modify, add, remove, rename]
+  
+  [ui.note log.files|files:]
+  [status.modified|M third]
+  [status.added|A b]
+  [status.added|A fifth]
+  [status.copied|  fourth]
+  [status.removed|R a]
+  [status.removed|R fourth]
+  
+  $ hg --color=debug log -T status -C -r 10 --debug
+  [log.changeset changeset.secret|changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c]
+  [log.tag|tag:         tip]
+  [log.phase|phase:       secret]
+  [log.parent changeset.secret|parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [ui.debug log.manifest|manifest:    8:89dd546f2de0a9d6d664f58d86097eb97baba567]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [ui.debug log.extra|extra:       branch=default]
+  [ui.note log.description|description:]
+  [ui.note log.description|Modify, add, remove, rename]
+  
+  [ui.note log.files|files:]
+  [status.modified|M third]
+  [status.added|A b]
+  [status.added|A fifth]
+  [status.copied|  fourth]
+  [status.removed|R a]
+  [status.removed|R fourth]
+  
+  $ hg --color=debug log -T status -C -r 10 --quiet
+  [log.node|10:0f9759ec227a]
+
 
 Error on syntax:
 

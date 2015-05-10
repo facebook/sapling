@@ -148,7 +148,7 @@ log on directory
 
   $ hg log -f -l1 --style something
   abort: style 'something' not found
-  (available styles: bisect, changelog, compact, default, phases, xml)
+  (available styles: bisect, changelog, compact, default, phases, status, xml)
   [255]
 
 -f, phases style
