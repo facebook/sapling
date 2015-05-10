@@ -39,19 +39,23 @@ annotate |
 <table cellspacing="0">
 <tr>
  <td>author</td>
- <td>{author|obfuscate}</td></tr>
+ <td>{author|obfuscate}</td>
+</tr>
 <tr>
  <td></td>
- <td class="date age">{date|rfc822date}</td></tr>
+ <td class="date age">{date|rfc822date}</td>
+</tr>
 {branch%filerevbranch}
 <tr>
  <td>changeset {rev}</td>
- <td style="font-family:monospace"><a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
+ <td style="font-family:monospace"><a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+</tr>
 {parent%fileannotateparent}
 {child%fileannotatechild}
 <tr>
  <td>permissions</td>
- <td style="font-family:monospace">{permissions|permissions}</td></tr>
+ <td style="font-family:monospace">{permissions|permissions}</td>
+</tr>
 </table>
 </div>
 

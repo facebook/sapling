@@ -22,18 +22,22 @@
 <table>
 <tr>
  <td class="metatag">changeset {rev}:</td>
- <td><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
+ <td><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+</tr>
 {parent%filerevparent}
 {child%filerevchild}
 <tr>
  <td class="metatag">author:</td>
- <td>{author|obfuscate}</td></tr>
+ <td>{author|obfuscate}</td>
+</tr>
 <tr>
  <td class="metatag">date:</td>
- <td class="date age">{date|rfc822date}</td></tr>
+ <td class="date age">{date|rfc822date}</td>
+</tr>
 <tr>
  <td class="metatag">permissions:</td>
- <td>{permissions|permissions}</td></tr>
+ <td>{permissions|permissions}</td>
+</tr>
 <tr>
   <td class="metatag">description:</td>
   <td>{desc|strip|escape|websub|addbreaks|nonempty}</td>

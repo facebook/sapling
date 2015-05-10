@@ -22,12 +22,14 @@
 <table>
 <tr>
  <td class="metatag">changeset {rev}:</td>
- <td><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
+ <td><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+</tr>
 {parent%fileannotateparent}
 {child%fileannotatechild}
 <tr>
  <td class="metatag">author:</td>
- <td>{author|obfuscate}</td></tr>
+ <td>{author|obfuscate}</td>
+</tr>
 <tr>
  <td class="metatag">date:</td>
  <td class="date age">{date|rfc822date}</td>
