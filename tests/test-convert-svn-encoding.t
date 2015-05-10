@@ -10,7 +10,7 @@
 
 Convert while testing all possible outputs
 
-  $ hg --debug convert svn-repo A-hg
+  $ hg --debug convert svn-repo A-hg --config progress.debug=1
   initializing destination A-hg repository
   reparent to file://*/svn-repo (glob)
   run hg sink pre-conversion action

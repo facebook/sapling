@@ -58,7 +58,6 @@ Simulate a Windows merge:
    branchmerge: True, force: False, partial: False
    ancestor: a03b0deabf2b, local: d6fa54f68ae1+, remote: 2d8bcf2dda39
    a: update permissions -> e
-  updating: a 1/1 files (100.00%)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

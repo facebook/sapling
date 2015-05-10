@@ -145,7 +145,7 @@ test that we reject unsafe patterns
   test/baz/bletch
   test/foo
 
-  $ hg archive --debug -t tbz2 -X baz test.tar.bz2
+  $ hg archive --debug -t tbz2 -X baz test.tar.bz2 --config progress.debug=true
   archiving: 0/4 files (0.00%)
   archiving: .hgsub 1/4 files (25.00%)
   archiving: .hgsubstate 2/4 files (50.00%)

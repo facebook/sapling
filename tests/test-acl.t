@@ -91,33 +91,15 @@ Extension disabled for lack of a hook
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   updating the branch cache
   listing keys for "phases"
@@ -151,33 +133,15 @@ Extension disabled for lack of acl.sources
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
@@ -214,33 +178,15 @@ No [acl.allow]/[acl.deny]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -287,33 +233,15 @@ Empty [acl.allow]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -357,33 +285,15 @@ fred is allowed inside foo/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -432,33 +342,15 @@ Empty [acl.deny]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
@@ -504,33 +396,15 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -581,33 +455,15 @@ fred is allowed inside foo/, but not foo/Bar/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -655,33 +511,15 @@ fred is allowed inside foo/, but not foo/Bar/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
@@ -731,33 +569,15 @@ barney is allowed everywhere
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
@@ -811,33 +631,15 @@ wilma can change files with a .txt extension
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "wilma"
@@ -894,33 +696,15 @@ file specified by acl.config does not exist
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
@@ -972,33 +756,15 @@ betty is allowed inside foo/ by a acl.config file
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "betty"
@@ -1061,33 +827,15 @@ acl.config can set only [acl.allow]/[acl.deny]
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
@@ -1144,33 +892,15 @@ fred is always allowed
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -1223,33 +953,15 @@ no one is allowed inside foo/Bar/
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -1304,33 +1016,15 @@ OS-level groups
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -1384,33 +1078,15 @@ OS-level groups
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: foo/Bar/file.txt 1/3 files (33.33%)
-  bundling: foo/file.txt 2/3 files (66.67%)
-  bundling: quux/file.py 3/3 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
   adding manifests
-  manifests: 1/3 chunks (33.33%)
-  manifests: 2/3 chunks (66.67%)
-  manifests: 3/3 chunks (100.00%)
   adding file changes
   adding foo/Bar/file.txt revisions
-  files: 1/3 chunks (33.33%)
   adding foo/file.txt revisions
-  files: 2/3 chunks (66.67%)
   adding quux/file.py revisions
-  files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "fred"
@@ -1504,41 +1180,17 @@ No branch acls specified
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "astro"
@@ -1590,41 +1242,17 @@ Branch acl deny test
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "astro"
@@ -1674,41 +1302,17 @@ Branch acl empty allow test
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "astro"
@@ -1754,41 +1358,17 @@ Branch acl allow other
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "astro"
@@ -1828,41 +1408,17 @@ Branch acl allow other
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "george"
@@ -1919,41 +1475,17 @@ push foobar into the remote
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "george"
@@ -2009,41 +1541,17 @@ Branch acl conflicting deny
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "george"
@@ -2088,41 +1596,17 @@ User 'astro' must not be denied
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "astro"
@@ -2172,41 +1656,17 @@ Non-astro users must be denied
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: abc.txt 1/4 files (25.00%)
-  bundling: foo/Bar/file.txt 2/4 files (50.00%)
-  bundling: foo/file.txt 3/4 files (75.00%)
-  bundling: quux/file.py 4/4 files (100.00%)
   adding changesets
-  changesets: 1 chunks
   add changeset ef1ea85a6374
-  changesets: 2 chunks
   add changeset f9cafe1212c8
-  changesets: 3 chunks
   add changeset 911600dab2ae
-  changesets: 4 chunks
   add changeset e8fc755d4d82
   adding manifests
-  manifests: 1/4 chunks (25.00%)
-  manifests: 2/4 chunks (50.00%)
-  manifests: 3/4 chunks (75.00%)
-  manifests: 4/4 chunks (100.00%)
   adding file changes
   adding abc.txt revisions
-  files: 1/4 chunks (25.00%)
   adding foo/Bar/file.txt revisions
-  files: 2/4 chunks (50.00%)
   adding foo/file.txt revisions
-  files: 3/4 chunks (75.00%)
   adding quux/file.py revisions
-  files: 4/4 chunks (100.00%)
   added 4 changesets with 4 changes to 4 files (+1 heads)
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "george"

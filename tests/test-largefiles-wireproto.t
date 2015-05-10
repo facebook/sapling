@@ -264,7 +264,7 @@ largefiles pulled on update - a largefile corrupted on the server:
 
 largefiles pulled on update - no server side problems:
   $ mv 02a439e5c31c526465ab1a0ca1f431f76b827b90 empty/.hg/largefiles/
-  $ hg -R http-clone --debug up --config largefiles.usercache=http-clone-usercache
+  $ hg -R http-clone --debug up --config largefiles.usercache=http-clone-usercache --config progress.debug=true
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 000000000000, local: 000000000000+, remote: cf03e5bb9936

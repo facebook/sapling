@@ -902,7 +902,7 @@ class ui(object):
         termination.
         '''
 
-        if pos is None or not self.debugflag:
+        if pos is None or not self.configbool('progress', 'debug'):
             return
 
         if unit:

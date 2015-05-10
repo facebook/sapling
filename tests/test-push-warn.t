@@ -40,7 +40,6 @@ Specifying a revset that evaluates to null will abort
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
   query 2; still undecided: 1, sample size is: 1
   2 total queries
   listing keys for "phases"

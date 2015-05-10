@@ -663,7 +663,7 @@ check messages when there are files to upload:
   
   $ hg -R clone2 cat -r 1 clone2/.hglf/b
   89e6c98d92887913cadf06b2adb97f26cde4849b
-  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug --config progress.debug=true
   comparing with $TESTTMP/issue3651/src (glob)
   query 1; heads
   searching for changes
@@ -718,7 +718,7 @@ check messages when there are files to upload:
   c801c9cfe94400963fcb683246217d5db77f9a9a
   $ hg -R clone2 cat -r 4 clone2/.hglf/b
   13f9ed0898e315bf59dc2973fec52037b6f441a2
-  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug --config progress.debug=true
   comparing with $TESTTMP/issue3651/src (glob)
   query 1; heads
   searching for changes
@@ -770,7 +770,7 @@ and #5 refer it.
   largefiles to upload (2 entities):
   b
   
-  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug
+  $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug --config progress.debug=true
   comparing with $TESTTMP/issue3651/src (glob)
   query 1; heads
   searching for changes

@@ -73,7 +73,6 @@ This should use bar@rev2 as the ancestor:
    ancestor: 0f2ff26688b9, local: 2263c1be0967+, remote: 0555950ead28
    preserving bar for resolve of bar
    bar: versions differ -> m
-  updating: bar 1/1 files (100.00%)
   picked tool 'internal:merge' for bar (binary False symlink False)
   merging bar
   my bar@2263c1be0967+ other bar@0555950ead28 ancestor bar@0f2ff26688b9
@@ -160,7 +159,6 @@ This should use bar@rev2 as the ancestor:
    ancestor: 0f2ff26688b9, local: 2263c1be0967+, remote: 3ffa6b9e35f0
    preserving bar for resolve of bar
    bar: versions differ -> m
-  updating: bar 1/1 files (100.00%)
   picked tool 'internal:merge' for bar (binary False symlink False)
   merging bar
   my bar@2263c1be0967+ other bar@3ffa6b9e35f0 ancestor bar@0f2ff26688b9

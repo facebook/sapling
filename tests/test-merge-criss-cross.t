@@ -82,9 +82,7 @@ Criss cross merging
    preserving f2 for resolve of f2
    f1: remote is newer -> g
   getting f1
-  updating: f1 1/2 files (50.00%)
    f2: versions differ -> m
-  updating: f2 2/2 files (100.00%)
   picked tool 'internal:dump' for f2 (binary False symlink False)
   merging f2
   my f2@3b08d01b0ab5+ other f2@adfe50279922 ancestor f2@40494bf2444c
@@ -151,7 +149,6 @@ Redo merge with merge.preferancestor="*" to enable bid merge
   
    f1: remote is newer -> g
   getting f1
-  updating: f1 1/1 files (100.00%)
    f2: remote unchanged -> k
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -194,7 +191,6 @@ The other way around:
   
    f2: remote is newer -> g
   getting f2
-  updating: f2 1/1 files (100.00%)
    f1: remote unchanged -> k
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -259,7 +255,6 @@ Verify how the output looks and and how verbose it is:
   
    f1: remote is newer -> g
   getting f1
-  updating: f1 1/1 files (100.00%)
    f2: remote unchanged -> k
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

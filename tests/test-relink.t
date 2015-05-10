@@ -70,7 +70,7 @@ clone and pull to break links
 
 relink
 
-  $ hg relink --debug | fix_path
+  $ hg relink --debug --config progress.debug=true | fix_path
   relinking $TESTTMP/repo/.hg/store to $TESTTMP/clone/.hg/store
   tip has 2 files, estimated total number of files: 3
   collecting: 00changelog.i 1/3 files (33.33%)

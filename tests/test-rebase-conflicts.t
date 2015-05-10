@@ -223,7 +223,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   ignoring null merge rebase of 6
   ignoring null merge rebase of 8
   rebasing 9:e31216eec445 "more changes to f1"
-  rebasing: 9:e31216eec445 5/6 changesets (83.33%)
    future parents are 2 and -1
   rebase status stored
    update to 2:4bc80088dc6b
@@ -232,10 +231,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    ancestor: d79e2059b5c0+, local: d79e2059b5c0+, remote: 4bc80088dc6b
    f2.txt: other deleted -> r
   removing f2.txt
-  updating: f2.txt 1/2 files (50.00%)
    f1.txt: remote created -> g
   getting f1.txt
-  updating: f1.txt 2/2 files (100.00%)
    merge against 9:e31216eec445
      detach base 8:8e4e2c1a07ae
     searching for copies back to rev 3
@@ -244,14 +241,12 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    ancestor: 8e4e2c1a07ae, local: 4bc80088dc6b+, remote: e31216eec445
    f1.txt: remote is newer -> g
   getting f1.txt
-  updating: f1.txt 1/1 files (100.00%)
   committing files:
   f1.txt
   committing manifest
   committing changelog
   rebased as 19c888675e13
   rebasing 10:2f2496ddf49d "merge" (tip)
-  rebasing: 10:2f2496ddf49d 6/6 changesets (100.00%)
    future parents are 11 and 7
   rebase status stored
    already in target
@@ -263,7 +258,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    ancestor: e31216eec445, local: 19c888675e13+, remote: 2f2496ddf49d
    f1.txt: remote is newer -> g
   getting f1.txt
-  updating: f1.txt 1/1 files (100.00%)
   committing files:
   f1.txt
   committing manifest
@@ -276,50 +270,27 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    ancestor: 2a7f09cac94c, local: 2a7f09cac94c+, remote: d79e2059b5c0
    f1.txt: other deleted -> r
   removing f1.txt
-  updating: f1.txt 1/2 files (50.00%)
    f2.txt: remote created -> g
   getting f2.txt
-  updating: f2.txt 2/2 files (100.00%)
   3 changesets found
   list of changesets:
   4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
   e31216eec445e44352c5f01588856059466a24c9
   2f2496ddf49d69b5ef23ad8cf9fb2e0e4faf0ac2
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: f1.txt 1/1 files (100.00%)
   saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)
   3 changesets found
   list of changesets:
   4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
   19c888675e133ab5dff84516926a65672eaf04d9
   2a7f09cac94c7f4b73ebd5cd1a62d3b2e8e336bf
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
-  bundling: f1.txt 1/1 files (100.00%)
   adding branch
   adding changesets
-  changesets: 1 chunks
   add changeset 4c9fbe56a16f
-  changesets: 2 chunks
   add changeset 19c888675e13
-  changesets: 3 chunks
   add changeset 2a7f09cac94c
   adding manifests
-  manifests: 1/2 chunks (50.00%)
-  manifests: 2/2 chunks (100.00%)
-  manifests: 3/2 chunks (150.00%)
   adding file changes
   adding f1.txt revisions
-  files: 1/1 chunks (100.00%)
   added 2 changesets with 2 changes to 1 files
   invalid branchheads cache (served): tip differs
   rebase completed

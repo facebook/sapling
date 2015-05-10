@@ -57,7 +57,7 @@ Prepare repo r1:
 
 Create hardlinked clone r2:
 
-  $ hg clone -U --debug r1 r2
+  $ hg clone -U --debug r1 r2 --config progress.debug=true
   linking: 1
   linking: 2
   linking: 3

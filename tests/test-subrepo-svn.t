@@ -551,7 +551,7 @@ First, create that condition in the repository.
 
 Test archive
 
-  $ hg archive -S ../archive-all --debug
+  $ hg archive -S ../archive-all --debug --config progress.debug=true
   archiving: 0/2 files (0.00%)
   archiving: .hgsub 1/2 files (50.00%)
   archiving: .hgsubstate 2/2 files (100.00%)
@@ -563,7 +563,7 @@ Test archive
   archiving (s): 1/2 files (50.00%)
   archiving (s): 2/2 files (100.00%)
 
-  $ hg archive -S ../archive-exclude --debug -X **old
+  $ hg archive -S ../archive-exclude --debug --config progress.debug=true -X **old
   archiving: 0/2 files (0.00%)
   archiving: .hgsub 1/2 files (50.00%)
   archiving: .hgsubstate 2/2 files (100.00%)

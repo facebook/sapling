@@ -154,7 +154,6 @@ Graft out of order, skipping a merge and a duplicate
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    preserving b for resolve of b
    b: local copied/moved from a -> m
-  updating: b 1/1 files (100.00%)
   picked tool 'internal:merge' for b (binary False symlink False)
   merging b and a to b
   my b@ef0ef43d49e7+ other a@5d205f8b35b6 ancestor a@68795b066622
@@ -170,7 +169,6 @@ Graft out of order, skipping a merge and a duplicate
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
    e: remote is newer -> g
   getting e
-  updating: e 1/1 files (100.00%)
    b: remote unchanged -> k
   committing files:
   e
@@ -184,10 +182,8 @@ Graft out of order, skipping a merge and a duplicate
    preserving e for resolve of e
    d: remote is newer -> g
   getting d
-  updating: d 1/2 files (50.00%)
    b: remote unchanged -> k
    e: versions differ -> m
-  updating: e 2/2 files (100.00%)
   picked tool 'internal:merge' for e (binary False symlink False)
   merging e
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622

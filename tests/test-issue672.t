@@ -36,10 +36,8 @@ http://mercurial.selenic.com/bts/issue672
    ancestor: 81f4b099af3d, local: c64f439569a9+, remote: c12dcd37c90a
    1: other deleted -> r
   removing 1
-  updating: 1 1/2 files (50.00%)
    1a: remote created -> g
   getting 1a
-  updating: 1a 2/2 files (100.00%)
    2: remote unchanged -> k
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -68,7 +66,6 @@ http://mercurial.selenic.com/bts/issue672
    ancestor: c64f439569a9, local: e327dca35ac8+, remote: 746e9549ea96
    preserving 1a for resolve of 1a
    1a: local copied/moved from 1 -> m
-  updating: 1a 1/1 files (100.00%)
   picked tool 'internal:merge' for 1a (binary False symlink False)
   merging 1a and 1 to 1a
   my 1a@e327dca35ac8+ other 1@746e9549ea96 ancestor 1@81f4b099af3d
@@ -92,7 +89,6 @@ http://mercurial.selenic.com/bts/issue672
    preserving 1 for resolve of 1a
   removing 1
    1a: remote moved from 1 -> m
-  updating: 1a 1/1 files (100.00%)
   picked tool 'internal:merge' for 1a (binary False symlink False)
   merging 1 and 1a to 1a
   my 1a@746e9549ea96+ other 1a@e327dca35ac8 ancestor 1@81f4b099af3d

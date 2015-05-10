@@ -629,7 +629,7 @@ bundle single branch
 
 == bundling
 
-  $ hg bundle bundle.hg part --debug
+  $ hg bundle bundle.hg part --debug --config progress.debug=true
   query 1; heads
   searching for changes
   all remote heads known locally

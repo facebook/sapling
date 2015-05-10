@@ -49,9 +49,7 @@
    preserving a for resolve of a
    b: remote created -> g
   getting b
-  updating: b 1/2 files (50.00%)
    a: versions differ -> m
-  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
@@ -72,9 +70,7 @@
    preserving a for resolve of a
    b: other deleted -> r
   removing b
-  updating: b 1/2 files (50.00%)
    a: versions differ -> m
-  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@1e71731e6fbb+ other a@c19d34741b0a ancestor a@1e71731e6fbb
@@ -103,9 +99,7 @@
    preserving a for resolve of a
    b: remote created -> g
   getting b
-  updating: b 1/2 files (50.00%)
    a: versions differ -> m
-  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a

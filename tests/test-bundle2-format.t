@@ -336,7 +336,7 @@ Test debug output
 
 bundling debug
 
-  $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2
+  $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2 --config progress.debug=true
   start emission of HG20 stream
   bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
   start of parts
@@ -349,7 +349,7 @@ file content is ok
 
 unbundling debug
 
-  $ hg statbundle2 --debug < ../out.hg2
+  $ hg statbundle2 --debug --config progress.debug=true < ../out.hg2
   start processing of HG20 stream
   reading bundle2 stream parameters
   ignoring unknown parameter 'e|! 7/'
@@ -383,7 +383,7 @@ bad parameter name
 Test part
 =================
 
-  $ hg bundle2 --parts ../parts.hg2 --debug
+  $ hg bundle2 --parts ../parts.hg2 --debug --config progress.debug=true
   start emission of HG20 stream
   bundle parameter: 
   start of parts
@@ -436,7 +436,7 @@ Test part
       payload: 0 bytes
   parts count:   7
 
-  $ hg statbundle2 --debug < ../parts.hg2
+  $ hg statbundle2 --debug --config progress.debug=true < ../parts.hg2
   start processing of HG20 stream
   reading bundle2 stream parameters
   options count: 0
@@ -515,7 +515,7 @@ Test actual unbundling of test part
 
 Process the bundle
 
-  $ hg unbundle2 --debug < ../parts.hg2
+  $ hg unbundle2 --debug --config progress.debug=true < ../parts.hg2
   start processing of HG20 stream
   reading bundle2 stream parameters
   start extraction of bundle2 parts
@@ -704,7 +704,7 @@ Support for changegroup
   @  0:3903775176ed draft test  a
   
 
-  $ hg bundle2 --debug --rev '8+7+5+4' ../rev.hg2
+  $ hg bundle2 --debug --config progress.debug=true --rev '8+7+5+4' ../rev.hg2
   4 changesets found
   list of changesets:
   32af7686d403cf45b5d95f2d70cebea587ac806a

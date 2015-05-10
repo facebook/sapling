@@ -40,9 +40,7 @@
   removing a
    b2: remote created -> g
   getting b2
-  updating: b2 1/2 files (50.00%)
    b: remote moved from a -> m
-  updating: b 2/2 files (100.00%)
   picked tool 'internal:merge' for b (binary False symlink False)
   merging a and b to b
   my b@044f8520aeeb+ other b@85c198ef2f6c ancestor a@af1939970a1c
@@ -181,7 +179,6 @@ Check for issue3074
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
    newfile: remote created -> g
   getting newfile
-  updating: newfile 1/1 files (100.00%)
   note: possible conflict - file was deleted and renamed to:
    newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
