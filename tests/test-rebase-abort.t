@@ -241,3 +241,50 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   o  0 a
   
   $ cd ..
+
+Make sure we don't clobber changes in the working directory when the
+user has somehow managed to update to a different revision (issue4009)
+
+  $ hg init noupdate
+  $ cd noupdate
+  $ hg book @
+  $ echo original > a
+  $ hg add a
+  $ hg commit -m a
+  $ echo x > b
+  $ hg add b
+  $ hg commit -m b1
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark @)
+  $ hg book foo
+  $ echo y > b
+  $ hg add b
+  $ hg commit -m b2
+  created new head
+
+  $ hg rebase -d @ -b foo --tool=internal:fail
+  rebasing 2:070cf4580bb5 "b2" (tip foo)
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ mv .hg/rebasestate ./ # so we're allowed to hg up like in mercurial <2.6.3
+  $ hg up -C 0            # user does other stuff in the repo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+  $ mv rebasestate .hg/   # user upgrades to 2.7
+
+  $ echo new > a
+  $ hg up 1               # user gets an error saying to run hg rebase --abort
+  abort: rebase in progress
+  (use 'hg rebase --continue' or 'hg rebase --abort')
+  [255]
+
+  $ cat a
+  new
+  $ hg rebase --abort
+  rebase aborted
+  $ cat a
+  new
+
+  $ cd ..
