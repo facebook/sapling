@@ -64,7 +64,7 @@ def main():
             if readonly:
                 cmd += [
                     '--config',
-                    'hooks.prechangegroup.hg-ssh=python:__main__.rejectpush',
+                    'hooks.pretxnopen.hg-ssh=python:__main__.rejectpush',
                     '--config',
                     'hooks.prepushkey.hg-ssh=python:__main__.rejectpush'
                     ]
