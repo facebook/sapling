@@ -26,7 +26,7 @@
   $ echo bar >> 3/foo
   $ hg --cwd 3 ci -m bar
 
-  $ hg --cwd 3 push ../2
+  $ hg --cwd 3 push ../2 --config experimental.bundle2-exp=False
   pushing to ../2
   searching for changes
   adding changesets
@@ -35,4 +35,16 @@
   added 1 changesets with 1 changes to 1 files
   lock:  user *, process * (*s) (glob)
   wlock: free
+
+  $ hg --cwd 1 --config extensions.strip= strip tip -q
+  $ hg --cwd 2 --config extensions.strip= strip tip -q
+  $ hg --cwd 3 push ../2 --config experimental.bundle2-exp=True
+  pushing to ../2
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  lock:  user *, process * (*s) (glob)
+  wlock: user *, process * (*s) (glob)
 
