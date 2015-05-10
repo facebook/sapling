@@ -718,7 +718,7 @@ def listmarkers(repo):
     """List markers over pushkey"""
     if not repo.obsstore:
         return {}
-    return _pushkeyescape(repo.obsstore)
+    return _pushkeyescape(sorted(repo.obsstore))
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""

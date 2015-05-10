@@ -536,7 +536,8 @@ def _pushb2obsmarkers(pushop, bundler):
         return
     pushop.stepsdone.add('obsmarkers')
     if pushop.outobsmarkers:
-        buildobsmarkerspart(bundler, pushop.outobsmarkers)
+        markers = sorted(pushop.outobsmarkers)
+        buildobsmarkerspart(bundler, markers)
 
 @b2partsgenerator('bookmarks')
 def _pushb2bookmarks(pushop, bundler):
@@ -751,7 +752,7 @@ def _pushobsolete(pushop):
     pushop.stepsdone.add('obsmarkers')
     if pushop.outobsmarkers:
         rslts = []
-        remotedata = obsolete._pushkeyescape(pushop.outobsmarkers)
+        remotedata = obsolete._pushkeyescape(sorted(pushop.outobsmarkers))
         for key in sorted(remotedata, reverse=True):
             # reverse sort to ensure we end with dump0
             data = remotedata[key]
@@ -1257,6 +1258,7 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
             heads = repo.heads()
         subset = [c.node() for c in repo.set('::%ln', heads)]
         markers = repo.obsstore.relevantmarkers(subset)
+        markers = sorted(markers)
         buildobsmarkerspart(bundler, markers)
 
 def check_heads(repo, their_heads, context):
