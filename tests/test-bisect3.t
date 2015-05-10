@@ -230,3 +230,20 @@ test style
   I 2:e1355ee1f23e
   G 1:ce7c85e06a9f
   G 0:b4e73ffab476
+
+  $ hg --config extensions.color= --color=debug log --quiet --style bisect
+  [log.bisect| ] 14:cbf2f3105bbf
+  [log.bisect| ] 13:e07efca37c43
+  [log.bisect bisect.bad|B] 12:98c6b56349c0
+  [log.bisect bisect.bad|B] 11:03f491376e63
+  [log.bisect bisect.bad|B] 10:c012b15e2409
+  [log.bisect bisect.untested|U] 9:2197c557e14c
+  [log.bisect bisect.untested|U] 8:e74a86251f58
+  [log.bisect bisect.skipped|S] 7:a5f87041c899
+  [log.bisect bisect.good|G] 6:7d997bedcd8d
+  [log.bisect bisect.good|G] 5:2dd1875f1028
+  [log.bisect bisect.good|G] 4:2a1daef14cd4
+  [log.bisect bisect.ignored|I] 3:8417d459b90c
+  [log.bisect bisect.ignored|I] 2:e1355ee1f23e
+  [log.bisect bisect.good|G] 1:ce7c85e06a9f
+  [log.bisect bisect.good|G] 0:b4e73ffab476

@@ -2153,6 +2153,326 @@ Check the status template
   $ hg --color=debug log -T status -C -r 10 --quiet
   [log.node|10:0f9759ec227a]
 
+Check the bisect template
+
+  $ hg bisect -g 1
+  $ hg bisect -b 3 --noupdate
+  Testing changeset 2:97054abb4ab8 (2 changesets remaining, ~1 tests)
+  $ hg log -T bisect -r 0:4
+  changeset:   0:1e4e1b8f71e0
+  bisect:      good (implicit)
+  user:        User Name <user@hostname>
+  date:        Mon Jan 12 13:46:40 1970 +0000
+  summary:     line 1
+  
+  changeset:   1:b608e9d1a3f0
+  bisect:      good
+  user:        A. N. Other <other@place>
+  date:        Tue Jan 13 17:33:20 1970 +0000
+  summary:     other 1
+  
+  changeset:   2:97054abb4ab8
+  bisect:      untested
+  user:        other@place
+  date:        Wed Jan 14 21:20:00 1970 +0000
+  summary:     no person
+  
+  changeset:   3:10e46f2dcbf4
+  bisect:      bad
+  user:        person
+  date:        Fri Jan 16 01:06:40 1970 +0000
+  summary:     no user, no domain
+  
+  changeset:   4:bbe44766e73d
+  bisect:      bad (implicit)
+  branch:      foo
+  user:        person
+  date:        Sat Jan 17 04:53:20 1970 +0000
+  summary:     new branch
+  
+  $ hg log --debug -T bisect -r 0:4
+  changeset:   0:1e4e1b8f71e05681d422154f5421e385fec3454f
+  bisect:      good (implicit)
+  phase:       public
+  parent:      -1:0000000000000000000000000000000000000000
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  user:        User Name <user@hostname>
+  date:        Mon Jan 12 13:46:40 1970 +0000
+  files+:      a
+  extra:       branch=default
+  description:
+  line 1
+  line 2
+  
+  
+  changeset:   1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+  bisect:      good
+  phase:       public
+  parent:      0:1e4e1b8f71e05681d422154f5421e385fec3454f
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
+  user:        A. N. Other <other@place>
+  date:        Tue Jan 13 17:33:20 1970 +0000
+  files+:      b
+  extra:       branch=default
+  description:
+  other 1
+  other 2
+  
+  other 3
+  
+  
+  changeset:   2:97054abb4ab824450e9164180baf491ae0078465
+  bisect:      untested
+  phase:       public
+  parent:      1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1
+  user:        other@place
+  date:        Wed Jan 14 21:20:00 1970 +0000
+  files+:      c
+  extra:       branch=default
+  description:
+  no person
+  
+  
+  changeset:   3:10e46f2dcbf4823578cf180f33ecf0b957964c47
+  bisect:      bad
+  phase:       public
+  parent:      2:97054abb4ab824450e9164180baf491ae0078465
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc
+  user:        person
+  date:        Fri Jan 16 01:06:40 1970 +0000
+  files:       c
+  extra:       branch=default
+  description:
+  no user, no domain
+  
+  
+  changeset:   4:bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  bisect:      bad (implicit)
+  branch:      foo
+  phase:       draft
+  parent:      3:10e46f2dcbf4823578cf180f33ecf0b957964c47
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc
+  user:        person
+  date:        Sat Jan 17 04:53:20 1970 +0000
+  extra:       branch=foo
+  description:
+  new branch
+  
+  
+  $ hg log -v -T bisect -r 0:4
+  changeset:   0:1e4e1b8f71e0
+  bisect:      good (implicit)
+  user:        User Name <user@hostname>
+  date:        Mon Jan 12 13:46:40 1970 +0000
+  files:       a
+  description:
+  line 1
+  line 2
+  
+  
+  changeset:   1:b608e9d1a3f0
+  bisect:      good
+  user:        A. N. Other <other@place>
+  date:        Tue Jan 13 17:33:20 1970 +0000
+  files:       b
+  description:
+  other 1
+  other 2
+  
+  other 3
+  
+  
+  changeset:   2:97054abb4ab8
+  bisect:      untested
+  user:        other@place
+  date:        Wed Jan 14 21:20:00 1970 +0000
+  files:       c
+  description:
+  no person
+  
+  
+  changeset:   3:10e46f2dcbf4
+  bisect:      bad
+  user:        person
+  date:        Fri Jan 16 01:06:40 1970 +0000
+  files:       c
+  description:
+  no user, no domain
+  
+  
+  changeset:   4:bbe44766e73d
+  bisect:      bad (implicit)
+  branch:      foo
+  user:        person
+  date:        Sat Jan 17 04:53:20 1970 +0000
+  description:
+  new branch
+  
+  
+  $ hg --color=debug log -T bisect -r 0:4
+  [log.changeset changeset.public|changeset:   0:1e4e1b8f71e0]
+  [log.bisect bisect.good|bisect:      good (implicit)]
+  [log.user|user:        User Name <user@hostname>]
+  [log.date|date:        Mon Jan 12 13:46:40 1970 +0000]
+  [log.summary|summary:     line 1]
+  
+  [log.changeset changeset.public|changeset:   1:b608e9d1a3f0]
+  [log.bisect bisect.good|bisect:      good]
+  [log.user|user:        A. N. Other <other@place>]
+  [log.date|date:        Tue Jan 13 17:33:20 1970 +0000]
+  [log.summary|summary:     other 1]
+  
+  [log.changeset changeset.public|changeset:   2:97054abb4ab8]
+  [log.bisect bisect.untested|bisect:      untested]
+  [log.user|user:        other@place]
+  [log.date|date:        Wed Jan 14 21:20:00 1970 +0000]
+  [log.summary|summary:     no person]
+  
+  [log.changeset changeset.public|changeset:   3:10e46f2dcbf4]
+  [log.bisect bisect.bad|bisect:      bad]
+  [log.user|user:        person]
+  [log.date|date:        Fri Jan 16 01:06:40 1970 +0000]
+  [log.summary|summary:     no user, no domain]
+  
+  [log.changeset changeset.draft|changeset:   4:bbe44766e73d]
+  [log.bisect bisect.bad|bisect:      bad (implicit)]
+  [log.branch|branch:      foo]
+  [log.user|user:        person]
+  [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
+  [log.summary|summary:     new branch]
+  
+  $ hg --color=debug log --debug -T bisect -r 0:4
+  [log.changeset changeset.public|changeset:   0:1e4e1b8f71e05681d422154f5421e385fec3454f]
+  [log.bisect bisect.good|bisect:      good (implicit)]
+  [log.phase|phase:       public]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [ui.debug log.manifest|manifest:    0:a0c8bcbbb45c63b90b70ad007bf38961f64f2af0]
+  [log.user|user:        User Name <user@hostname>]
+  [log.date|date:        Mon Jan 12 13:46:40 1970 +0000]
+  [ui.debug log.files|files+:      a]
+  [ui.debug log.extra|extra:       branch=default]
+  [ui.note log.description|description:]
+  [ui.note log.description|line 1
+  line 2]
+  
+  
+  [log.changeset changeset.public|changeset:   1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965]
+  [log.bisect bisect.good|bisect:      good]
+  [log.phase|phase:       public]
+  [log.parent changeset.public|parent:      0:1e4e1b8f71e05681d422154f5421e385fec3454f]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [ui.debug log.manifest|manifest:    1:4e8d705b1e53e3f9375e0e60dc7b525d8211fe55]
+  [log.user|user:        A. N. Other <other@place>]
+  [log.date|date:        Tue Jan 13 17:33:20 1970 +0000]
+  [ui.debug log.files|files+:      b]
+  [ui.debug log.extra|extra:       branch=default]
+  [ui.note log.description|description:]
+  [ui.note log.description|other 1
+  other 2
+  
+  other 3]
+  
+  
+  [log.changeset changeset.public|changeset:   2:97054abb4ab824450e9164180baf491ae0078465]
+  [log.bisect bisect.untested|bisect:      untested]
+  [log.phase|phase:       public]
+  [log.parent changeset.public|parent:      1:b608e9d1a3f0273ccf70fb85fd6866b3482bf965]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [ui.debug log.manifest|manifest:    2:6e0e82995c35d0d57a52aca8da4e56139e06b4b1]
+  [log.user|user:        other@place]
+  [log.date|date:        Wed Jan 14 21:20:00 1970 +0000]
+  [ui.debug log.files|files+:      c]
+  [ui.debug log.extra|extra:       branch=default]
+  [ui.note log.description|description:]
+  [ui.note log.description|no person]
+  
+  
+  [log.changeset changeset.public|changeset:   3:10e46f2dcbf4823578cf180f33ecf0b957964c47]
+  [log.bisect bisect.bad|bisect:      bad]
+  [log.phase|phase:       public]
+  [log.parent changeset.public|parent:      2:97054abb4ab824450e9164180baf491ae0078465]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [ui.debug log.manifest|manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc]
+  [log.user|user:        person]
+  [log.date|date:        Fri Jan 16 01:06:40 1970 +0000]
+  [ui.debug log.files|files:       c]
+  [ui.debug log.extra|extra:       branch=default]
+  [ui.note log.description|description:]
+  [ui.note log.description|no user, no domain]
+  
+  
+  [log.changeset changeset.draft|changeset:   4:bbe44766e73d5f11ed2177f1838de10c53ef3e74]
+  [log.bisect bisect.bad|bisect:      bad (implicit)]
+  [log.branch|branch:      foo]
+  [log.phase|phase:       draft]
+  [log.parent changeset.public|parent:      3:10e46f2dcbf4823578cf180f33ecf0b957964c47]
+  [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
+  [ui.debug log.manifest|manifest:    3:cb5a1327723bada42f117e4c55a303246eaf9ccc]
+  [log.user|user:        person]
+  [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
+  [ui.debug log.extra|extra:       branch=foo]
+  [ui.note log.description|description:]
+  [ui.note log.description|new branch]
+  
+  
+  $ hg --color=debug log -v -T bisect -r 0:4
+  [log.changeset changeset.public|changeset:   0:1e4e1b8f71e0]
+  [log.bisect bisect.good|bisect:      good (implicit)]
+  [log.user|user:        User Name <user@hostname>]
+  [log.date|date:        Mon Jan 12 13:46:40 1970 +0000]
+  [ui.note log.files|files:       a]
+  [ui.note log.description|description:]
+  [ui.note log.description|line 1
+  line 2]
+  
+  
+  [log.changeset changeset.public|changeset:   1:b608e9d1a3f0]
+  [log.bisect bisect.good|bisect:      good]
+  [log.user|user:        A. N. Other <other@place>]
+  [log.date|date:        Tue Jan 13 17:33:20 1970 +0000]
+  [ui.note log.files|files:       b]
+  [ui.note log.description|description:]
+  [ui.note log.description|other 1
+  other 2
+  
+  other 3]
+  
+  
+  [log.changeset changeset.public|changeset:   2:97054abb4ab8]
+  [log.bisect bisect.untested|bisect:      untested]
+  [log.user|user:        other@place]
+  [log.date|date:        Wed Jan 14 21:20:00 1970 +0000]
+  [ui.note log.files|files:       c]
+  [ui.note log.description|description:]
+  [ui.note log.description|no person]
+  
+  
+  [log.changeset changeset.public|changeset:   3:10e46f2dcbf4]
+  [log.bisect bisect.bad|bisect:      bad]
+  [log.user|user:        person]
+  [log.date|date:        Fri Jan 16 01:06:40 1970 +0000]
+  [ui.note log.files|files:       c]
+  [ui.note log.description|description:]
+  [ui.note log.description|no user, no domain]
+  
+  
+  [log.changeset changeset.draft|changeset:   4:bbe44766e73d]
+  [log.bisect bisect.bad|bisect:      bad (implicit)]
+  [log.branch|branch:      foo]
+  [log.user|user:        person]
+  [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
+  [ui.note log.description|description:]
+  [ui.note log.description|new branch]
+  
+  
+  $ hg bisect --reset
 
 Error on syntax:
 
