@@ -326,6 +326,8 @@ def stringify(thing):
     """
     if util.safehasattr(thing, '__iter__') and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
+    if thing is None:
+        return ""
     return str(thing)
 
 def strip(text):
