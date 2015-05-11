@@ -1462,9 +1462,9 @@ class localrepository(object):
             cctx = context.workingcommitctx(self, status,
                                             text, user, date, extra)
 
-            if (not force and not extra.get("close") and not merge
-                and not cctx.files()
-                and wctx.branch() == wctx.p1().branch()):
+            allowemptycommit = (wctx.branch() != wctx.p1().branch() or force
+                                or extra.get('close') or merge or cctx.files())
+            if not allowemptycommit:
                 return None
 
             if merge and cctx.deleted():
