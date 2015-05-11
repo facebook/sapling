@@ -1463,7 +1463,8 @@ class localrepository(object):
                                             text, user, date, extra)
 
             allowemptycommit = (wctx.branch() != wctx.p1().branch() or force
-                                or extra.get('close') or merge or cctx.files())
+                                or extra.get('close') or merge or cctx.files()
+                                or self.ui.configbool('ui', 'allowemptycommit'))
             if not allowemptycommit:
                 return None
 

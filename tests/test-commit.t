@@ -544,6 +544,18 @@ commit copy
        0         0       6  .....       0 26d3ca0dfd18 000000000000 000000000000 (re)
        1         6       7  .....       1 d267bddd54f7 26d3ca0dfd18 000000000000 (re)
 
+Test making empty commits
+  $ hg commit --config ui.allowemptycommit=True -m "empty commit"
+  $ hg log -r . -v --stat
+  changeset:   2:d809f3644287
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  description:
+  empty commit
+  
+  
+  
 verify pathauditor blocks evil filepaths
   $ cat > evil-commit.py <<EOF
   > from mercurial import ui, hg, context, node
@@ -568,7 +580,7 @@ verify pathauditor blocks evil filepaths
 #endif
 
   $ hg rollback -f
-  repository tip rolled back to revision 1 (undo commit)
+  repository tip rolled back to revision 2 (undo commit)
   $ cat > evil-commit.py <<EOF
   > from mercurial import ui, hg, context, node
   > notrc = "HG~1/hgrc"
@@ -586,7 +598,7 @@ verify pathauditor blocks evil filepaths
   [255]
 
   $ hg rollback -f
-  repository tip rolled back to revision 1 (undo commit)
+  repository tip rolled back to revision 2 (undo commit)
   $ cat > evil-commit.py <<EOF
   > from mercurial import ui, hg, context, node
   > notrc = "HG8B6C~2/hgrc"
