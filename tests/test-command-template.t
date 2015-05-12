@@ -1938,6 +1938,8 @@ Formatnode filter works:
 
 Age filter:
 
+  $ hg init unstable-hash
+  $ cd unstable-hash
   $ hg log --template '{date|age}\n' > /dev/null || exit 1
 
   >>> from datetime import datetime, timedelta
@@ -1950,6 +1952,15 @@ Age filter:
 
   $ hg log -l1 --template '{date|age}\n'
   7 years from now
+
+  $ cd ..
+  $ rm -rf unstable-hash
+
+Add a dummy commit to make up for the instability of the above:
+
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m future
 
 Count filter:
 
