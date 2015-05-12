@@ -61,7 +61,7 @@ Initialize remote hg and git repos with equivalent initial contents
   > done
   $ git branch b1 9497a4e
   $ gitstate
-    55b133e "add delta" refs: (master)
+    55b133e "add delta" refs: (*master) (glob)
     d338971 "add gamma" refs:
     9497a4e "add beta" refs: (b1)
     7eeab2e "add alpha" refs:
@@ -184,7 +184,7 @@ This changed in 3.4 to start showing changed and deleted bookmarks again.
   $ git add epsilon
   $ gitcommit -m 'add epsilon'
   $ gitstate
-    fcfd2c0 "add epsilon" refs: (b4)
+    fcfd2c0 "add epsilon" refs: (*b4) (glob)
     55b133e "add delta" refs: (master, b3)
     d338971 "add gamma" refs:
     9497a4e "add beta" refs: (b1)
