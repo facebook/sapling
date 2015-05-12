@@ -897,9 +897,15 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     editor = None
                 else:
                     editor = getcommiteditor(editform=editform, **opts)
-                n = repo.commit(message, opts.get('user') or user,
-                                opts.get('date') or date, match=m,
-                                editor=editor, force=partial)
+                allowemptyback = repo.ui.backupconfig('ui', 'allowemptycommit')
+                try:
+                    if partial:
+                        repo.ui.setconfig('ui', 'allowemptycommit', True)
+                    n = repo.commit(message, opts.get('user') or user,
+                                    opts.get('date') or date, match=m,
+                                    editor=editor)
+                finally:
+                    repo.ui.restoreconfig(allowemptyback)
             dsguard.close()
         else:
             if opts.get('exact') or opts.get('import_branch'):
