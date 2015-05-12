@@ -67,7 +67,7 @@ def _makeextrafn(copiers):
     ('e', 'edit', False, _('invoke editor on commit messages')),
     ('l', 'logfile', '',
      _('read collapse commit message from file'), _('FILE')),
-    ('', 'keep', False, _('keep original changesets')),
+    ('k', 'keep', False, _('keep original changesets')),
     ('', 'keepbranches', False, _('keep original branch names')),
     ('D', 'detach', False, _('(DEPRECATED)')),
     ('i', 'interactive', False, _('(DEPRECATED)')),

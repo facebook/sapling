@@ -397,7 +397,7 @@ Source on have two descendant heads but ask for one
   abort: can't remove original changesets with unrebased descendants
   (use --keep to keep original changesets)
   [255]
-  $ hg rebase -r '2::8' -d 1 --keep
+  $ hg rebase -r '2::8' -d 1 -k
   rebasing 2:c9e50f6cdc55 "C"
   rebasing 3:ffd453c31098 "D"
   rebasing 6:3d8a618087a7 "G"
