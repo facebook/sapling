@@ -152,7 +152,17 @@ def canonpath(root, cwd, myname, auditor=None):
                 break
             name = dirname
 
-        raise util.Abort(_("%s not under root '%s'") % (myname, root))
+        # A common mistake is to use -R, but specify a file relative to the repo
+        # instead of cwd.  Detect that case, and provide a hint to the user.
+        hint = None
+        try:
+            canonpath(root, root, myname, auditor)
+            hint = _("consider using '--cwd %s'") % os.path.relpath(root, cwd)
+        except util.Abort:
+            pass
+
+        raise util.Abort(_("%s not under root '%s'") % (myname, root),
+                         hint=hint)
 
 def normasprefix(path):
     '''normalize the specified path as path prefix
