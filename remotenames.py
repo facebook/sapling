@@ -205,9 +205,12 @@ def exrebasecmd(orig, ui, repo, **opts):
     source = opts['source']
     revs = opts['rev']
     base = opts['base']
+    cont = opts['continue']
+    abort = opts['abort']
+
     current = bmactive(repo)
 
-    if not (dest or source or revs or base) and current:
+    if not (cont or abort or dest or source or revs or base) and current:
         tracking = _readtracking(repo)
         if current in tracking:
             opts['dest'] = tracking[current]
