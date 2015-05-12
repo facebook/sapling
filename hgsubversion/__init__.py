@@ -178,6 +178,9 @@ def reposetup(ui, repo):
 
     if ui.configbool('hgsubversion', 'nativerevs'):
         extensions.wrapfunction(revset, 'stringset', util.revset_stringset)
+        revset.symbols['stringset'] = revset.stringset
+        revset.methods['string'] = revset.stringset
+        revset.methods['symbol'] = revset.stringset
 
 _old_local = hg.schemes['file']
 def _lookup(url):
