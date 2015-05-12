@@ -376,14 +376,17 @@ def newcommit(repo, phase, *args, **kwargs):
         if repo.ui.configbool('mq', 'secret', False):
             phase = phases.secret
     if phase is not None:
-        backup = repo.ui.backupconfig('phases', 'new-commit')
+        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
+    allowemptybackup = repo.ui.backupconfig('ui', 'allowemptycommit')
     try:
         if phase is not None:
             repo.ui.setconfig('phases', 'new-commit', phase, 'mq')
+        repo.ui.setconfig('ui', 'allowemptycommit', True)
         return repo.commit(*args, **kwargs)
     finally:
+        repo.ui.restoreconfig(allowemptybackup)
         if phase is not None:
-            repo.ui.restoreconfig(backup)
+            repo.ui.restoreconfig(phasebackup)
 
 class AbortNoCleanup(error.Abort):
     pass
