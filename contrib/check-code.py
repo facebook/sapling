@@ -281,7 +281,6 @@ pypats = [
     (r'opener\([^)]*\).read\(',
      "use opener.read() instead"),
     (r'BaseException', 'not in Python 2.4, use Exception'),
-    (r'os\.path\.relpath', 'os.path.relpath is not in Python 2.5'),
     (r'opener\([^)]*\).write\(',
      "use opener.write() instead"),
     (r'[\s\(](open|file)\([^)]*\)\.read\(',
