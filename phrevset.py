@@ -233,3 +233,7 @@ def revsetstringset(orig, repo, subset, revstr):
 
 def extsetup(ui):
     extensions.wrapfunction(revset, 'stringset', revsetstringset)
+    revset.symbols['stringset'] = revset.stringset
+    revset.methods['string'] = revset.stringset
+    revset.methods['symbol'] = revset.stringset
+
