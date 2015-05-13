@@ -221,11 +221,14 @@ def main(argv):
     if argv[1] == '-':
         argv = argv[:1]
         argv.extend(l.rstrip() for l in sys.stdin.readlines())
+    localmods = {}
     used_imports = {}
     any_errors = False
     for source_path in argv[1:]:
-        f = open(source_path)
         modname = dotted_name_of_path(source_path, trimpure=True)
+        localmods[modname] = source_path
+    for modname, source_path in sorted(localmods.iteritems()):
+        f = open(source_path)
         src = f.read()
         used_imports[modname] = sorted(
             imported_modules(src, ignore_nested=True))
