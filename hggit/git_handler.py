@@ -262,7 +262,11 @@ class GitHandler(object):
                 bms = getattr(self.repo['tip'], 'bookmarks',
                               lambda: None)()
                 if bms:
-                    bookmarks.setcurrent(self.repo, bms[0])
+                    try:
+                        bookmarks.activate(self.repo, bms[0])
+                    except AttributeError:
+                        # hg < 3.5
+                        bookmarks.setcurrent(self.repo, bms[0])
 
         self.save_map(self.map_file)
 
@@ -1010,7 +1014,11 @@ class GitHandler(object):
                     except NameError:
                         bookmarks.bookmark(self.ui, self.repo, 'master',
                                            rev=tip, force=True)
-                    bookmarks.setcurrent(self.repo, 'master')
+                    try:
+                        bookmarks.activate(self.repo, 'master')
+                    except AttributeError:
+                        # hg < 3.5
+                        bookmarks.setcurrent(self.repo, 'master')
                     new_refs['refs/heads/master'] = self.map_git_get(tip)
 
         for rev, rev_refs in exportable.iteritems():
