@@ -101,22 +101,6 @@
 
 #endif /* PY_VERSION_HEX */
 
-#if (PY_VERSION_HEX < 0x02050000)
-/* Definitions to get compatibility with python 2.4 and earlier which
-   does not have Py_ssize_t. See also PEP 353.
-   Note: msvc (8 or earlier) does not have ssize_t, so we use Py_ssize_t.
-*/
-typedef int Py_ssize_t;
-typedef Py_ssize_t (*lenfunc)(PyObject *);
-typedef PyObject *(*ssizeargfunc)(PyObject *, Py_ssize_t);
-#define PyInt_FromSsize_t PyInt_FromLong
-
-#if !defined(PY_SSIZE_T_MIN)
-#define PY_SSIZE_T_MAX INT_MAX
-#define PY_SSIZE_T_MIN INT_MIN
-#endif
-#endif
-
 #ifdef _WIN32
 #ifdef _MSC_VER
 /* msvc 6.0 has problems */
