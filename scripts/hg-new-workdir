@@ -1,0 +1,58 @@
+# Copyright (C) 2015 Facebook, Inc
+# Maintained by Ryan McElroy <rm@fb.com>
+#
+# Distributed under the GNU General Public License, version 2.0.
+#
+#!/bin/bash -e
+
+if [[ $# -ne 2 ]]; then
+  PROGNAME="$(basename $0)"
+  cat <<END
+Usage: $PROGNAME <src> <dst>
+
+This script enables the Mercurial share extension, shares a repository from
+'src' to 'dst', and copies the .hg/hgrc configuration from 'src' to 'dst'.
+This allows sharing repositories with non-standard configurations like we have
+here at Facebook.
+
+In the future, this functionality will probably be folded into the share
+extension directly.
+END
+exit 1
+fi
+
+src="$1"
+dst="$2"
+
+hg --config "extensions.share=" share --noupdate --bookmarks "$src" "$dst"
+
+echo "Setting up configuration..."
+cp "$src/.hg/hgrc" "$dst/.hg/hgrc"
+
+# Force share on in this repo, regardless of global setting.
+# This ensures that bookmark shares will work
+# (basic sharing works even without extension).
+if [[ ! $(grep -q "^share=$" "$dst/.hg/hgrc") ]]; then
+  cat >> "$dst/.hg/hgrc" <<END
+[extensions]
+share=
+END
+fi
+
+# For forward compatibility, write "bookmarks" into the "shared" file.
+# See http://patchwork.serpentine.com/patch/7488/
+echo "bookmarks" >> "$dst/.hg/shared"
+
+# Copy over svn metadata since hgsvn and share are not aware of each other
+if [[ -d $src/.hg/svn ]]; then
+  echo "Copying svn metadata..."
+  cp -R $src/.hg/svn $dst/.hg/
+fi
+
+
+echo "Updating new repository..."
+cd "$dst"
+hg update tip
+
+echo "Set up new Mercurial Working Directory in '$dst' based on '$src'..."
+
