@@ -240,6 +240,8 @@ def getparser():
                       help='set the given config opt in the test hgrc')
     parser.add_option('--random', action="store_true",
                       help='run tests in random order')
+    parser.add_option('--profile-runner', action='store_true',
+                      help='run statprof on run-tests')
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -1660,7 +1662,15 @@ class TestRunner(object):
 
             self._checktools()
             tests = self.findtests(args)
-            return self._run(tests)
+            if options.profile_runner:
+                import statprof
+                statprof.start()
+            result = self._run(tests)
+            if options.profile_runner:
+                statprof.stop()
+                statprof.display()
+            return result
+
         finally:
             os.umask(oldmask)
 
