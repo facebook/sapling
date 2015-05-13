@@ -187,7 +187,7 @@ _maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
 
 def _hashencode(path, dotencode):
     digest = _sha(path).hexdigest()
-    le = lowerencode(path[5:]).split('/')
+    le = lowerencode(path[5:]).split('/') # skips prefix 'data/'
     parts = _auxencode(le, dotencode)
     basename = parts[-1]
     _root, ext = os.path.splitext(basename)
