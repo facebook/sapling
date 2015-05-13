@@ -215,9 +215,12 @@ def _cycle_sortkey(c):
     return len(c), c
 
 def main(argv):
-    if len(argv) < 2:
-        print 'Usage: %s file [file] [file] ...'
+    if len(argv) < 2 or (argv[1] == '-' and len(argv) > 2):
+        print 'Usage: %s {-|file [file] [file] ...}'
         return 1
+    if argv[1] == '-':
+        argv = argv[:1]
+        argv.extend(l.rstrip() for l in sys.stdin.readlines())
     used_imports = {}
     any_errors = False
     for source_path in argv[1:]:

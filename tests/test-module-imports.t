@@ -20,7 +20,7 @@ here that we should still endeavor to fix, and some cycles will be
 hidden by deduplication algorithm in the cycle detector, so fixing
 these may expose other cycles.
 
-  $ hg locate 'mercurial/**.py' | sed 's-\\-/-g' | xargs python "$import_checker"
+  $ hg locate 'mercurial/**.py' | sed 's-\\-/-g' | python "$import_checker" -
   mercurial/dispatch.py mixed imports
      stdlib:    commands
      relative:  error, extensions, fancyopts, hg, hook, util
