@@ -17,6 +17,7 @@ setup(
         'chistedit',
         'commitextras',
         'fbamend',
+        'fbconduit',
         'fbhistedit',
         'githelp',
         'gitlookup',
