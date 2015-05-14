@@ -503,11 +503,10 @@ extmodules = [
                                     'mercurial/parsers.c',
                                     'mercurial/pathencode.c'],
               depends=common_depends),
+    Extension('mercurial.osutil', ['mercurial/osutil.c'],
+              extra_link_args=osutil_ldflags,
+              depends=common_depends),
     ]
-
-extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c'],
-                            extra_link_args=osutil_ldflags,
-                            depends=common_depends))
 
 try:
     from distutils import cygwinccompiler
