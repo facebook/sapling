@@ -139,7 +139,7 @@ def normpath(path):
     return pconvert(os.path.normpath(path))
 
 def normcase(path):
-    return encoding.upper(path)
+    return encoding.upper(path) # NTFS compares via upper()
 
 # see posix.py for definitions
 normcasespec = encoding.normcasespecs.upper
