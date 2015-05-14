@@ -839,15 +839,20 @@ def restorestatus(repo):
             raise
         raise util.Abort(_('no rebase in progress'))
 
-def inrebase(repo, originalwd, state):
-    '''check whether the working dir is in an interrupted rebase'''
+def needupdate(repo, state):
+    '''check whether we should `update --clean` away from a merge, or if
+    somehow the working dir got forcibly updated, e.g. by older hg'''
     parents = [p.rev() for p in repo.parents()]
-    if originalwd in parents:
-        return True
 
-    for newrev in state.itervalues():
-        if newrev in parents:
-            return True
+    # Are we in a merge state at all?
+    if len(parents) < 2:
+        return False
+
+    # We should be standing on the first as-of-yet unrebased commit.
+    firstunrebased = min([old for old, new in state.iteritems()
+                          if new == nullrev])
+    if firstunrebased in parents:
+        return True
 
     return False
 
@@ -875,7 +880,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
 
     if cleanup:
         # Update away from the rebase if necessary
-        if inrebase(repo, originalwd, state):
+        if needupdate(repo, state):
             merge.update(repo, originalwd, False, True, False)
 
         # Strip from the first rebased revision
