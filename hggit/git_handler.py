@@ -866,7 +866,10 @@ class GitHandler(object):
                 fc = context.filectx(self.repo, f, changeid=memctx.p1().rev())
                 data = fc.data()
                 e = fc.flags()
-                copied_path = fc.renamed()
+                copied_path = None
+                copied = fc.renamed()
+                if copied:
+                    copied_path = copied[0]
 
             try:
                 return context.memfilectx(self.repo, f, data,
