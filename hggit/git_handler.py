@@ -1085,7 +1085,7 @@ class GitHandler(object):
         return new_refs
 
     def fetch_pack(self, remote_name, heads=None):
-        client, path = self.get_transport_and_path(remote_name)
+        localclient, path = self.get_transport_and_path(remote_name)
 
         # The dulwich default walk only checks refs/heads/. We also want to
         # consider remotes when doing discovery, so we build our own list.  We
@@ -1103,8 +1103,8 @@ class GitHandler(object):
         try:
             progress = GitProgress(self.ui)
             f = StringIO.StringIO()
-            ret = client.fetch_pack(path, determine_wants, graphwalker,
-                                    f.write, progress.progress)
+            ret = localclient.fetch_pack(path, determine_wants, graphwalker,
+                                         f.write, progress.progress)
             if(f.pos != 0):
                 f.seek(0)
                 self.git.object_store.add_thin_pack(f.read, None)
