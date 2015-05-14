@@ -484,6 +484,11 @@ pymodules = []
 
 common_depends = ['mercurial/util.h']
 
+osutil_ldflags = []
+
+if sys.platform == 'darwin':
+    osutil_ldflags += ['-framework', 'ApplicationServices']
+
 extmodules = [
     Extension('mercurial.base85', ['mercurial/base85.c'],
               depends=common_depends),
@@ -499,11 +504,6 @@ extmodules = [
                                     'mercurial/pathencode.c'],
               depends=common_depends),
     ]
-
-osutil_ldflags = []
-
-if sys.platform == 'darwin':
-    osutil_ldflags += ['-framework', 'ApplicationServices']
 
 extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c'],
                             extra_link_args=osutil_ldflags,
