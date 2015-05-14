@@ -54,7 +54,12 @@ def record(ui, repo, *pats, **opts):
     This command is not available when committing a merge.'''
 
     opts["interactive"] = True
-    commands.commit(ui, repo, *pats, **opts)
+    backup = ui.backupconfig('experimental', 'crecord')
+    try:
+        ui.setconfig('experimental', 'crecord', False, 'record')
+        commands.commit(ui, repo, *pats, **opts)
+    finally:
+        ui.restoreconfig(backup)
 
 def qrefresh(origfn, ui, repo, *pats, **opts):
     if not opts['interactive']:
@@ -96,8 +101,13 @@ def qrecord(ui, repo, patch, *pats, **opts):
         opts['checkname'] = False
         mq.new(ui, repo, patch, *pats, **opts)
 
-    cmdutil.dorecord(ui, repo, committomq, 'qnew', False,
-                    cmdutil.recordfilter, *pats, **opts)
+    backup = ui.backupconfig('experimental', 'crecord')
+    try:
+        ui.setconfig('experimental', 'crecord', False, 'record')
+        cmdutil.dorecord(ui, repo, committomq, 'qnew', False,
+                         cmdutil.recordfilter, *pats, **opts)
+    finally:
+        ui.restoreconfig(backup)
 
 def qnew(origfn, ui, repo, patch, *args, **opts):
     if opts['interactive']:
