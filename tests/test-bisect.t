@@ -190,6 +190,7 @@ bisect test
   branch: default
   commit: (clean)
   update: (current)
+  phases: 32 draft (draft)
   $ hg bisect -g 1
   Testing changeset 16:a2e6ea4973e9 (30 changesets remaining, ~4 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

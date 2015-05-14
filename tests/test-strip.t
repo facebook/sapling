@@ -526,6 +526,7 @@ Verify strip protects against stripping wc parent when there are uncommitted mod
   branch: default
   commit: 1 modified, 1 unknown, 1 unresolved
   update: (current)
+  phases: 2 draft (draft)
   mq:     3 unapplied
 
   $ echo c > b
@@ -553,6 +554,7 @@ Verify strip protects against stripping wc parent when there are uncommitted mod
   branch: default
   commit: 1 modified, 1 unknown
   update: (current)
+  phases: 1 draft (draft)
   mq:     3 unapplied
 
 Strip adds, removes, modifies with --keep

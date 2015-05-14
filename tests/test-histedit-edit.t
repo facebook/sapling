@@ -246,6 +246,7 @@ check histedit_source
   branch: default
   commit: 1 added (new branch head)
   update: 1 new changesets (update)
+  phases: 7 draft (draft)
   hist:   1 remaining (histedit --continue)
 
 (test also that editor is invoked if histedit is continued for

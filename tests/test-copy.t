@@ -19,6 +19,7 @@
   branch: default
   commit: 1 copied
   update: (current)
+  phases: 1 draft (draft)
   $ hg --debug commit -m "2"
   committing files:
   b

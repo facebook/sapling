@@ -20,6 +20,7 @@ rename a single file
   branch: default
   commit: 1 renamed
   update: (current)
+  phases: 1 draft (draft)
   $ hg status -C
   A d2/c
     d1/d11/a1

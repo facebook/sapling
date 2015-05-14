@@ -393,6 +393,7 @@ test summary
   bookmarks: *Z Y x  y
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
+  phases: 3 draft (draft)
 
 test id
 
@@ -538,6 +539,7 @@ update to current bookmark if it's not the parent
   bookmarks: *Z Y x  y
   commit: 1 added, 1 unknown (new branch head)
   update: 2 new changesets (update)
+  phases: 5 draft (draft)
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark Z

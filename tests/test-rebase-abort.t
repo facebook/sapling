@@ -321,3 +321,4 @@ during a rebase (issue4661)
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
+  phases: 4 draft (draft)

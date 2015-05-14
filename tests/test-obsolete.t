@@ -164,6 +164,7 @@ check that summary does not report them
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
   remote: 3 outgoing
 
   $ hg summary --remote --hidden
@@ -172,6 +173,7 @@ check that summary does not report them
   branch: default
   commit: (clean)
   update: 3 new changesets, 4 branch heads (merge)
+  phases: 6 draft (draft)
   remote: 3 outgoing
 
 check that various commands work well with filtering

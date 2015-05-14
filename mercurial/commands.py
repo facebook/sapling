@@ -5869,7 +5869,7 @@ def summary(ui, repo, **opts):
     """summarize working directory state
 
     This generates a brief summary of the working directory state,
-    including parents, branch, commit status, and available updates.
+    including parents, branch, commit status, phase and available updates.
 
     With the --remote option, this will check the default paths for
     incoming and outgoing changes. This can be time-consuming.
@@ -5996,6 +5996,25 @@ def summary(ui, repo, **opts):
         # i18n: column positioning for "hg summary"
         ui.write(_('update: %d new changesets, %d branch heads (merge)\n') %
                  (new, len(bheads)))
+
+    t = []
+    draft = len(repo.revs('draft()'))
+    if draft:
+        t.append(_('%d draft') % draft)
+    secret = len(repo.revs('secret()'))
+    if secret:
+        t.append(_('%d secret') % secret)
+
+    if parents:
+        parentphase = max(p.phase() for p in parents)
+    else:
+        parentphase = phases.public
+
+    if draft or secret:
+        ui.status(_('phases: %s (%s)\n') % (', '.join(t),
+                                            phases.phasenames[parentphase]))
+    else:
+        ui.note(_('phases: (%s)\n') % phases.phasenames[parentphase])
 
     cmdutil.summaryhooks(ui, repo)
 

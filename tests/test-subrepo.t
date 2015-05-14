@@ -38,6 +38,7 @@ Issue2232: committing a subrepo without .hgsub
   branch: default
   commit: 1 added, 1 subrepos
   update: (current)
+  phases: 1 draft (draft)
   $ hg ci -m1
 
 test handling .hgsubstate "added" explicitly.
@@ -83,6 +84,7 @@ Issue2022: update -C
   branch: default
   commit: 1 subrepos
   update: (current)
+  phases: 2 draft (draft)
   $ hg co -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
@@ -91,6 +93,7 @@ Issue2022: update -C
   branch: default
   commit: (clean)
   update: (current)
+  phases: 2 draft (draft)
 
 commands that require a clean repo should respect subrepos
 
@@ -113,6 +116,7 @@ add sub sub
   branch: default
   commit: 1 subrepos
   update: (current)
+  phases: 2 draft (draft)
   $ hg ci -m2
   committing subrepository s
   committing subrepository s/ss (glob)
@@ -122,6 +126,7 @@ add sub sub
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
 
 test handling .hgsubstate "modified" explicitly.
 

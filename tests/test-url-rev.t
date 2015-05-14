@@ -101,6 +101,7 @@ Changing original repo:
   branch: default
   commit: (clean)
   update: (current)
+  phases: 4 draft (draft)
   remote: 2 outgoing
   $ hg -q outgoing '../clone#foo'
   2:faba9097cad4
@@ -110,6 +111,7 @@ Changing original repo:
   branch: default
   commit: (clean)
   update: (current)
+  phases: 4 draft (draft)
   remote: 1 outgoing
 
   $ hg -q --cwd ../clone incoming '../repo#foo'
@@ -282,6 +284,7 @@ Test handling common incoming revisions between "default" and
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
   remote: 1 outgoing
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
@@ -290,6 +293,7 @@ Test handling common incoming revisions between "default" and
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
   remote: 2 outgoing
 
   $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
@@ -298,6 +302,7 @@ Test handling common incoming revisions between "default" and
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
   remote: 1 outgoing
 
   $ hg clone -q -r 0 . ../another
@@ -311,6 +316,7 @@ Test handling common incoming revisions between "default" and
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
   remote: 1 outgoing
 
   $ cd ..

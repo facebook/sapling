@@ -40,6 +40,7 @@ Test interrupted updates by exploiting our non-handling of directory collisions
   branch: default
   commit: (interrupted update)
   update: 1 new changesets (update)
+  phases: 2 draft (draft)
   $ rmdir b
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -49,6 +50,7 @@ Test interrupted updates by exploiting our non-handling of directory collisions
   branch: default
   commit: (clean)
   update: (current)
+  phases: 2 draft (draft)
 
 Prepare a basic merge
 

@@ -228,6 +228,7 @@ verify that large files in subrepos handled properly
   branch: default
   commit: 1 subrepos
   update: (current)
+  phases: 2 draft (draft)
   $ hg st
   $ hg st -S
   A subrepo/large.txt
@@ -245,6 +246,7 @@ verify that large files in subrepos handled properly
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
   $ echo "rev 2" > subrepo/large.txt
   $ hg st -S
   M subrepo/large.txt
@@ -254,6 +256,7 @@ verify that large files in subrepos handled properly
   branch: default
   commit: 1 subrepos
   update: (current)
+  phases: 3 draft (draft)
   $ hg ci -m "this commit should fail without -S"
   abort: uncommitted changes in subrepository 'subrepo'
   (use --subrepos for recursive commit)
@@ -567,6 +570,7 @@ because it can't be reproduced easily.
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
   largefiles: (no remote repo)
 
 check messages when there is no files to upload:
@@ -581,6 +585,7 @@ check messages when there is no files to upload:
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
   largefiles: (no files to upload)
   $ hg -R clone2 outgoing --large
   comparing with $TESTTMP/issue3651/src (glob)
@@ -608,6 +613,7 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
+  phases: 2 draft (draft)
   largefiles: 1 entities for 1 files to upload
   $ hg -R clone2 outgoing --large
   comparing with $TESTTMP/issue3651/src (glob)
@@ -643,6 +649,7 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
   largefiles: 1 entities for 3 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
   comparing with $TESTTMP/issue3651/src (glob)
@@ -692,6 +699,7 @@ check messages when there are files to upload:
   branch: default
   commit: (clean)
   update: (current)
+  phases: 6 draft (draft)
   largefiles: 3 entities for 3 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
   comparing with $TESTTMP/issue3651/src (glob)
@@ -750,6 +758,7 @@ and #5 refer it.
   branch: default
   commit: (clean)
   update: (current)
+  phases: 6 draft (draft)
   largefiles: 2 entities for 1 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
   comparing with $TESTTMP/issue3651/src (glob)

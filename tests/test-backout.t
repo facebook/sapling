@@ -42,6 +42,7 @@ specified explicitly)
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
 
 commit option
 
@@ -69,6 +70,7 @@ commit option
   branch: default
   commit: (clean)
   update: (current)
+  phases: 4 draft (draft)
 
   $ echo ypples > a
   $ hg commit -d '5 0' -m ypples
@@ -83,6 +85,7 @@ commit option
   branch: default
   commit: 1 unresolved (clean)
   update: (current)
+  phases: 5 draft (draft)
 
 file that was removed is recreated
 (this also tests that editor is not invoked if the commit message is
@@ -110,6 +113,7 @@ specified explicitly)
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
 
 backout of backout is as if nothing happened
 
@@ -124,6 +128,7 @@ backout of backout is as if nothing happened
   branch: default
   commit: (clean)
   update: (current)
+  phases: 4 draft (draft)
 
 across branch
 
@@ -144,6 +149,7 @@ across branch
   branch: default
   commit: (clean)
   update: 1 new changesets (update)
+  phases: 2 draft (draft)
 
 should fail
 
@@ -160,6 +166,7 @@ should fail
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
+  phases: 3 draft (draft)
 
 should fail
 
@@ -172,6 +179,7 @@ should fail
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
+  phases: 3 draft (draft)
 
 backout with merge
 
@@ -189,6 +197,7 @@ backout with merge
   branch: default
   commit: (clean)
   update: (current)
+  phases: 1 draft (draft)
 
 remove line 1
 
@@ -213,6 +222,7 @@ remove line 1
   branch: default
   commit: (clean)
   update: (current)
+  phases: 5 draft (draft)
 
 check line 1 is back
 
@@ -241,6 +251,7 @@ backout should not back out subsequent changesets
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
 
 without --merge
   $ hg backout -d '3 0' 1 --tool=true
@@ -258,6 +269,7 @@ without --merge
   branch: default
   commit: (clean)
   update: (current)
+  phases: 3 draft (draft)
 
 with --merge
   $ hg backout --merge -d '3 0' 1 --tool=true
@@ -302,6 +314,7 @@ with --merge
   branch: default
   commit: (clean)
   update: (current)
+  phases: 5 draft (draft)
 
 backout of merge should fail
 
@@ -332,6 +345,7 @@ backout with valid parent should be ok
   branch: default
   commit: (clean)
   update: (current)
+  phases: 6 draft (draft)
 
   $ hg rollback
   repository tip rolled back to revision 4 (undo commit)
@@ -344,6 +358,7 @@ backout with valid parent should be ok
   branch: default
   commit: (clean)
   update: (current)
+  phases: 5 draft (draft)
 
   $ hg backout -d '6 0' --parent 3 4 --tool=true
   removing c
@@ -354,6 +369,7 @@ backout with valid parent should be ok
   branch: default
   commit: (clean)
   update: (current)
+  phases: 6 draft (draft)
 
   $ cd ..
 
@@ -394,6 +410,7 @@ without --merge
   branch: branch2
   commit: 1 removed
   update: (current)
+  phases: 3 draft (draft)
 
 with --merge
 (this also tests that editor is invoked if '--edit' is specified
@@ -424,6 +441,7 @@ explicitly regardless of '--message')
   branch: branch2
   commit: 1 removed (merge)
   update: (current)
+  phases: 4 draft (draft)
   $ hg update -q -C 2
 
 on branch2 with branch1 not merged, so file1 should still exist:
@@ -440,6 +458,7 @@ on branch2 with branch1 not merged, so file1 should still exist:
   branch: branch2
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
+  phases: 4 draft (draft)
 
 on branch2 with branch1 merged, so file1 should be gone:
 
@@ -458,6 +477,7 @@ on branch2 with branch1 merged, so file1 should be gone:
   branch: branch2
   commit: (clean)
   update: (current)
+  phases: 5 draft (draft)
 
 on branch1, so no file1 and file2:
 
@@ -474,6 +494,7 @@ on branch1, so no file1 and file2:
   branch: branch1
   commit: (clean)
   update: (current)
+  phases: 5 draft (draft)
 
   $ cd ..
 
@@ -553,6 +574,7 @@ Test usage of `hg resolve` in case of conflict
   branch: default
   commit: 1 unresolved (clean)
   update: (current)
+  phases: 3 draft (draft)
   $ hg resolve --all --debug
   picked tool 'internal:merge' for foo (binary False symlink False)
   merging foo
@@ -570,6 +592,7 @@ Test usage of `hg resolve` in case of conflict
   branch: default
   commit: 1 modified, 1 unknown
   update: (current)
+  phases: 3 draft (draft)
   $ cat foo
   one
   two
