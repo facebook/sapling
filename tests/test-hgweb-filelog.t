@@ -191,12 +191,18 @@ tip - two revisions
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
+    <td class="description">
+     <a href="/rev/01de2d66a28d">second a</a>
+     
+    </td>
    </tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/5ed941583260">first a</a></td>
+    <td class="description">
+     <a href="/rev/5ed941583260">first a</a>
+     
+    </td>
    </tr>
   
   </tbody>
@@ -302,12 +308,18 @@ second version - two revisions
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
+    <td class="description">
+     <a href="/rev/01de2d66a28d">second a</a>
+     
+    </td>
    </tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/5ed941583260">first a</a></td>
+    <td class="description">
+     <a href="/rev/5ed941583260">first a</a>
+     
+    </td>
    </tr>
   
   </tbody>
@@ -413,7 +425,10 @@ first deleted - one revision
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/5ed941583260">first a</a></td>
+    <td class="description">
+     <a href="/rev/5ed941583260">first a</a>
+     
+    </td>
    </tr>
   
   </tbody>
@@ -519,7 +534,10 @@ first version - one revision
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/5ed941583260">first a</a></td>
+    <td class="description">
+     <a href="/rev/5ed941583260">first a</a>
+     
+    </td>
    </tr>
   
   </tbody>

@@ -762,22 +762,34 @@ Logs and changes
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/cad8025a2e87">branch commit with null character: </a><span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
+    <td class="description">
+     <a href="/rev/cad8025a2e87">branch commit with null character: </a>
+     <span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> 
+    </td>
    </tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> </td>
+    <td class="description">
+     <a href="/rev/1d22e65f027e">branch</a>
+     <span class="branchhead">stable</span> 
+    </td>
    </tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
+    <td class="description">
+     <a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a>
+     <span class="branchhead">default</span> 
+    </td>
    </tr>
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
+    <td class="description">
+     <a href="/rev/2ef0ac749a14">base</a>
+     <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
+    </td>
    </tr>
   
   </tbody>
@@ -1024,7 +1036,10 @@ Logs and changes
    <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
+    <td class="description">
+     <a href="/rev/2ef0ac749a14">base</a>
+     <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
+    </td>
    </tr>
   
   </tbody>

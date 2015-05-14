@@ -1,5 +1,8 @@
  <tr>
   <td class="age">{date|rfc822date}</td>
   <td class="author">{author|person}</td>
-  <td class="description"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a>{inbranch%changelogbranchname}{branches%changelogbranchhead}{tags%changelogtag}{bookmarks%changelogtag}</td>
+  <td class="description">
+   <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a>
+   {inbranch%changelogbranchname}{branches%changelogbranchhead}{tags%changelogtag}{bookmarks%changelogtag}
+  </td>
  </tr>

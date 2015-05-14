@@ -296,8 +296,12 @@ filelogentry = '
       </a>
     </td>
     <td class="link">
-      <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a>&nbsp;|&nbsp;<a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a>&nbsp;|&nbsp;<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a> {rename%filelogrename}</td>
-    </tr>'
+      <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
+      <a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
+      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
+      {rename%filelogrename}
+    </td>
+  </tr>'
 archiveentry = ' | <a href="{url|urlescape}archive/{node|short}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a> '
 indexentry = '
   <tr class="parity{parity}">
