@@ -1160,6 +1160,10 @@ class GitHandler(object):
         try:
             progress = GitProgress(self.ui)
             f = StringIO.StringIO()
+
+            # monkey patch dulwich's read_pkt_refs so that we can determine on
+            # clone which bookmark to activate
+            client.read_pkt_refs = compat.read_pkt_refs
             ret = localclient.fetch_pack(path, determine_wants, graphwalker,
                                          f.write, progress.progress)
             if(f.pos != 0):
