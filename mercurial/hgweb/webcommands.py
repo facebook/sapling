@@ -546,6 +546,7 @@ def manifest(web, req, tmpl):
                 archives=web.archivelist(hex(node)),
                 tags=webutil.nodetagsdict(web.repo, node),
                 bookmarks=webutil.nodebookmarksdict(web.repo, node),
+                branch=webutil.nodebranchnodefault(ctx),
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
