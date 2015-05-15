@@ -615,6 +615,24 @@ Test opreand of '%' is optimized recursively (issue4670)
   <baseset+ [8, 9]>
   8
   9
+  $ try --optimize '(9)%(5)'
+  (only
+    (group
+      ('symbol', '9'))
+    (group
+      ('symbol', '5')))
+  * optimized:
+  (func
+    ('symbol', 'only')
+    (list
+      ('symbol', '9')
+      ('symbol', '5')))
+  * set:
+  <baseset+ [8, 9, 2, 4]>
+  2
+  4
+  8
+  9
 
 Test the order of operations
 

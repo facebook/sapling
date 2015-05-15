@@ -2094,7 +2094,6 @@ methods = {
     "ancestor": ancestorspec,
     "parent": parentspec,
     "parentpost": p1,
-    "only": only,
 }
 
 def optimize(x, small):
