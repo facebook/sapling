@@ -176,71 +176,70 @@ class hgwebdir(object):
 
     def run_wsgi(self, req):
         try:
-            try:
-                self.refresh()
+            self.refresh()
 
-                virtual = req.env.get("PATH_INFO", "").strip('/')
-                tmpl = self.templater(req)
-                ctype = tmpl('mimetype', encoding=encoding.encoding)
-                ctype = templater.stringify(ctype)
+            virtual = req.env.get("PATH_INFO", "").strip('/')
+            tmpl = self.templater(req)
+            ctype = tmpl('mimetype', encoding=encoding.encoding)
+            ctype = templater.stringify(ctype)
 
-                # a static file
-                if virtual.startswith('static/') or 'static' in req.form:
-                    if virtual.startswith('static/'):
-                        fname = virtual[7:]
-                    else:
-                        fname = req.form['static'][0]
-                    static = self.ui.config("web", "static", None,
-                                            untrusted=False)
-                    if not static:
-                        tp = self.templatepath or templater.templatepaths()
-                        if isinstance(tp, str):
-                            tp = [tp]
-                        static = [os.path.join(p, 'static') for p in tp]
-                    staticfile(static, fname, req)
-                    return []
+            # a static file
+            if virtual.startswith('static/') or 'static' in req.form:
+                if virtual.startswith('static/'):
+                    fname = virtual[7:]
+                else:
+                    fname = req.form['static'][0]
+                static = self.ui.config("web", "static", None,
+                                        untrusted=False)
+                if not static:
+                    tp = self.templatepath or templater.templatepaths()
+                    if isinstance(tp, str):
+                        tp = [tp]
+                    static = [os.path.join(p, 'static') for p in tp]
+                staticfile(static, fname, req)
+                return []
 
-                # top-level index
-                elif not virtual:
-                    req.respond(HTTP_OK, ctype)
-                    return self.makeindex(req, tmpl)
+            # top-level index
+            elif not virtual:
+                req.respond(HTTP_OK, ctype)
+                return self.makeindex(req, tmpl)
 
-                # nested indexes and hgwebs
+            # nested indexes and hgwebs
 
-                repos = dict(self.repos)
-                virtualrepo = virtual
-                while virtualrepo:
-                    real = repos.get(virtualrepo)
-                    if real:
-                        req.env['REPO_NAME'] = virtualrepo
-                        try:
-                            # ensure caller gets private copy of ui
-                            repo = hg.repository(self.ui.copy(), real)
-                            return hgweb(repo).run_wsgi(req)
-                        except IOError, inst:
-                            msg = inst.strerror
-                            raise ErrorResponse(HTTP_SERVER_ERROR, msg)
-                        except error.RepoError, inst:
-                            raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
+            repos = dict(self.repos)
+            virtualrepo = virtual
+            while virtualrepo:
+                real = repos.get(virtualrepo)
+                if real:
+                    req.env['REPO_NAME'] = virtualrepo
+                    try:
+                        # ensure caller gets private copy of ui
+                        repo = hg.repository(self.ui.copy(), real)
+                        return hgweb(repo).run_wsgi(req)
+                    except IOError, inst:
+                        msg = inst.strerror
+                        raise ErrorResponse(HTTP_SERVER_ERROR, msg)
+                    except error.RepoError, inst:
+                        raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
-                    up = virtualrepo.rfind('/')
-                    if up < 0:
-                        break
-                    virtualrepo = virtualrepo[:up]
+                up = virtualrepo.rfind('/')
+                if up < 0:
+                    break
+                virtualrepo = virtualrepo[:up]
 
-                # browse subdirectories
-                subdir = virtual + '/'
-                if [r for r in repos if r.startswith(subdir)]:
-                    req.respond(HTTP_OK, ctype)
-                    return self.makeindex(req, tmpl, subdir)
+            # browse subdirectories
+            subdir = virtual + '/'
+            if [r for r in repos if r.startswith(subdir)]:
+                req.respond(HTTP_OK, ctype)
+                return self.makeindex(req, tmpl, subdir)
 
-                # prefixes not found
-                req.respond(HTTP_NOT_FOUND, ctype)
-                return tmpl("notfound", repo=virtual)
+            # prefixes not found
+            req.respond(HTTP_NOT_FOUND, ctype)
+            return tmpl("notfound", repo=virtual)
 
-            except ErrorResponse, err:
-                req.respond(err, ctype)
-                return tmpl('error', error=err.message or '')
+        except ErrorResponse, err:
+            req.respond(err, ctype)
+            return tmpl('error', error=err.message or '')
         finally:
             tmpl = None
 
