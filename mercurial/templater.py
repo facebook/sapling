@@ -743,7 +743,7 @@ class templater(object):
             raise util.Abort(_("style '%s' not found") % mapfile,
                              hint=_("available styles: %s") % stylelist())
 
-        conf = config.config()
+        conf = config.config(includepaths=templatepaths())
         conf.read(mapfile)
 
         for key, val in conf[''].items():
