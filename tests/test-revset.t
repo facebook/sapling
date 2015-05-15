@@ -593,6 +593,29 @@ Test '%' operator
   8
   9
 
+Test opreand of '%' is optimized recursively (issue4670)
+
+  $ try --optimize '8:9-8%'
+  (onlypost
+    (minus
+      (range
+        ('symbol', '8')
+        ('symbol', '9'))
+      ('symbol', '8')))
+  * optimized:
+  (func
+    ('symbol', 'only')
+    (and
+      (range
+        ('symbol', '8')
+        ('symbol', '9'))
+      (not
+        ('symbol', '8'))))
+  * set:
+  <baseset+ [8, 9]>
+  8
+  9
+
 Test the order of operations
 
   $ log '7 + 9%5 + 2'
