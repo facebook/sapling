@@ -1377,7 +1377,7 @@ class localrepository(object):
             wctx = self[None]
             merge = len(wctx.parents()) > 1
 
-            if not force and merge and not match.always():
+            if not force and merge and match.ispartial():
                 raise util.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 

@@ -186,6 +186,14 @@ class match(object):
         - optimization might be possible and necessary.'''
         return self._always
 
+    def ispartial(self):
+        '''True if the matcher won't always match.
+
+        Although it's just the inverse of _always in this implementation,
+        an extenion such as narrowhg might make it return something
+        slightly different.'''
+        return not self._always
+
     def isexact(self):
         return self.matchfn == self.exact
 
