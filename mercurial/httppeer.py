@@ -198,16 +198,15 @@ class httppeer(wireproto.wirepeer):
         headers = {'Content-Type': 'application/mercurial-0.1'}
 
         try:
-            try:
-                r = self._call(cmd, data=fp, headers=headers, **args)
-                vals = r.split('\n', 1)
-                if len(vals) < 2:
-                    raise error.ResponseError(_("unexpected response:"), r)
-                return vals
-            except socket.error, err:
-                if err.args[0] in (errno.ECONNRESET, errno.EPIPE):
-                    raise util.Abort(_('push failed: %s') % err.args[1])
-                raise util.Abort(err.args[1])
+            r = self._call(cmd, data=fp, headers=headers, **args)
+            vals = r.split('\n', 1)
+            if len(vals) < 2:
+                raise error.ResponseError(_("unexpected response:"), r)
+            return vals
+        except socket.error, err:
+            if err.args[0] in (errno.ECONNRESET, errno.EPIPE):
+                raise util.Abort(_('push failed: %s') % err.args[1])
+            raise util.Abort(err.args[1])
         finally:
             fp.close()
             os.unlink(tempname)
