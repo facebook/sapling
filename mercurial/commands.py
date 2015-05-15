@@ -2545,26 +2545,25 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         try:
             tr = repo.transaction('debugobsolete')
             try:
-                try:
-                    date = opts.get('date')
-                    if date:
-                        date = util.parsedate(date)
-                    else:
-                        date = None
-                    prec = parsenodeid(precursor)
-                    parents = None
-                    if opts['record_parents']:
-                        if prec not in repo.unfiltered():
-                            raise util.Abort('cannot used --record-parents on '
-                                             'unknown changesets')
-                        parents = repo.unfiltered()[prec].parents()
-                        parents = tuple(p.node() for p in parents)
-                    repo.obsstore.create(tr, prec, succs, opts['flags'],
-                                         parents=parents, date=date,
-                                         metadata=metadata)
-                    tr.close()
-                except ValueError, exc:
-                    raise util.Abort(_('bad obsmarker input: %s') % exc)
+                date = opts.get('date')
+                if date:
+                    date = util.parsedate(date)
+                else:
+                    date = None
+                prec = parsenodeid(precursor)
+                parents = None
+                if opts['record_parents']:
+                    if prec not in repo.unfiltered():
+                        raise util.Abort('cannot used --record-parents on '
+                                         'unknown changesets')
+                    parents = repo.unfiltered()[prec].parents()
+                    parents = tuple(p.node() for p in parents)
+                repo.obsstore.create(tr, prec, succs, opts['flags'],
+                                     parents=parents, date=date,
+                                     metadata=metadata)
+                tr.close()
+            except ValueError, exc:
+                raise util.Abort(_('bad obsmarker input: %s') % exc)
             finally:
                 tr.release()
         finally:
