@@ -67,21 +67,20 @@ def auth_getuserpasswd(self, getkey, params):
     while True:
         fd = os.open('%s/rpc' % _mountpoint, os.O_RDWR)
         try:
-            try:
-                os.write(fd, 'start %s' % params)
-                l = os.read(fd, ERRMAX).split()
-                if l[0] == 'ok':
-                    os.write(fd, 'read')
-                    status, user, passwd = os.read(fd, ERRMAX).split(None, 2)
-                    if status == 'ok':
-                        if passwd.startswith("'"):
-                            if passwd.endswith("'"):
-                                passwd = passwd[1:-1].replace("''", "'")
-                            else:
-                                raise util.Abort(_('malformed password string'))
-                        return (user, passwd)
-            except (OSError, IOError):
-                raise util.Abort(_('factotum not responding'))
+            os.write(fd, 'start %s' % params)
+            l = os.read(fd, ERRMAX).split()
+            if l[0] == 'ok':
+                os.write(fd, 'read')
+                status, user, passwd = os.read(fd, ERRMAX).split(None, 2)
+                if status == 'ok':
+                    if passwd.startswith("'"):
+                        if passwd.endswith("'"):
+                            passwd = passwd[1:-1].replace("''", "'")
+                        else:
+                            raise util.Abort(_('malformed password string'))
+                    return (user, passwd)
+        except (OSError, IOError):
+            raise util.Abort(_('factotum not responding'))
         finally:
             os.close(fd)
         getkey(self, params)
