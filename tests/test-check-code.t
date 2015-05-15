@@ -104,9 +104,6 @@
   ./non-py24.py:6:
    >     z = next(x)
    no next(foo) in Python 2.4 and 2.5, use foo.next() instead
-  ./non-py24.py:18:
-   >     try:
-   no try/except/finally in Python 2.4
   ./non-py24.py:35:
    >     try:
    no yield inside try/finally in Python 2.4
