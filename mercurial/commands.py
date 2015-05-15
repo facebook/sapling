@@ -4952,11 +4952,11 @@ def paths(ui, repo, search=None):
      ('f', 'force', False, _('allow to move boundary backward')),
      ('r', 'rev', [], _('target revision'), _('REV')),
     ],
-    _('[-p|-d|-s] [-f] [-r] REV...'))
+    _('[-p|-d|-s] [-f] [-r] [REV...]'))
 def phase(ui, repo, *revs, **opts):
     """set or show the current phase name
 
-    With no argument, show the phase name of specified revisions.
+    With no argument, show the phase name of the current revision(s).
 
     With one of -p/--public, -d/--draft or -s/--secret, change the
     phase value of the specified revisions.
@@ -4981,7 +4981,9 @@ def phase(ui, repo, *revs, **opts):
     revs = list(revs)
     revs.extend(opts['rev'])
     if not revs:
-        raise util.Abort(_('no revisions specified'))
+        # display both parents as the second parent phase can influence
+        # the phase of a merge commit
+        revs = [c.rev() for c in repo[None].parents()]
 
     revs = scmutil.revrange(repo, revs)
 

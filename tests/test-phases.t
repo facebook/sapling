@@ -36,6 +36,8 @@ Following commit are draft too
 Draft commit are properly created over public one:
 
   $ hg phase --public .
+  $ hg phase
+  1: public
   $ hglog
   1 0 B
   0 0 A
@@ -86,6 +88,9 @@ Even on merge
   $ hg merge 4 # E
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ hg phase
+  6: draft
+  4: secret
   $ hg ci -m "merge B' and E"
   $ hglog
   7 2 merge B' and E
