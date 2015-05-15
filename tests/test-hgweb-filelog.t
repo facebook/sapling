@@ -223,7 +223,7 @@ tip - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> 
+     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
   
@@ -340,7 +340,7 @@ second version - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> 
+     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
   
@@ -449,7 +449,7 @@ first deleted - one revision
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> 
+     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
   
@@ -558,7 +558,7 @@ first version - one revision
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> 
+     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
   
