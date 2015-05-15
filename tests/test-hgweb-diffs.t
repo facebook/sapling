@@ -249,7 +249,7 @@ diff removed file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>diff b @ 1:559edbd9ed20</h3>
+  <h3>diff b @ 1:559edbd9ed20 <span class="tag">tip</span> </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -525,7 +525,7 @@ diff modified file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>diff a @ 1:559edbd9ed20</h3>
+  <h3>diff a @ 1:559edbd9ed20 <span class="tag">tip</span> </h3>
   
   <form class="search" action="/log">
   <p></p>

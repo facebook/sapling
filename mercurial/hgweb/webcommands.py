@@ -811,6 +811,8 @@ def filediff(web, req, tmpl):
                 branch=webutil.nodebranchnodefault(ctx),
                 parent=webutil.parents(ctx),
                 child=webutil.children(ctx),
+                tags=webutil.nodetagsdict(web.repo, n),
+                bookmarks=webutil.nodebookmarksdict(web.repo, n),
                 diff=diffs)
 
 diff = webcommand('diff')(filediff)

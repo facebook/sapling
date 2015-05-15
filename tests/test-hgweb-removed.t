@@ -185,7 +185,7 @@ diff removed file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>diff a @ 1:c78f6c5cbea9</h3>
+  <h3>diff a @ 1:c78f6c5cbea9 <span class="tag">tip</span> </h3>
   
   <form class="search" action="/log">
   <p></p>
