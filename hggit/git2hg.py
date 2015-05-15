@@ -22,10 +22,10 @@ def find_incoming(git_object_store, git_map, refs):
     def get_heads(refs):
         todo = []
         seenheads = set()
-        for sha in refs.itervalues():
+        for ref, sha in refs.iteritems():
             # refs could contain refs on the server that we haven't pulled down
-            # the objects for
-            if sha in git_object_store:
+            # the objects for; also make sure it's a sha and not a symref
+            if ref != 'HEAD' and sha in git_object_store:
                 obj = git_object_store[sha]
                 while isinstance(obj, Tag):
                     obj_type, sha = obj.object
