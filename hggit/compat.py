@@ -35,3 +35,28 @@ def passwordmgr(ui, passwddb):
     except TypeError:
         # compat with hg < 3.9
         return url.passwordmgr(ui)
+
+# dulwich doesn't return the symref where remote HEAD points, so we monkey
+# patch it here
+from dulwich.errors import GitProtocolError
+from dulwich.protocol import extract_capabilities
+
+def read_pkt_refs(proto):
+    server_capabilities = None
+    refs = {}
+    # Receive refs from server
+    for pkt in proto.read_pkt_seq():
+        (sha, ref) = pkt.rstrip('\n').split(None, 1)
+        if sha == 'ERR':
+            raise GitProtocolError(ref)
+        if server_capabilities is None:
+            (ref, server_capabilities) = extract_capabilities(ref)
+            symref = 'symref=HEAD:'
+            for cap in server_capabilities:
+                if cap.startswith(symref):
+                    sha = cap.replace(symref, '')
+        refs[ref] = sha
+
+    if len(refs) == 0:
+        return None, set([])
+    return refs, set(server_capabilities)
