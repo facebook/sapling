@@ -22,6 +22,7 @@ from mercurial import (
     commands,
     context,
     encoding,
+    phases,
     util as hgutil,
     url,
 )
@@ -316,6 +317,23 @@ class GitHandler(object):
                         bookmarks.setcurrent(self.repo, bms[0])
 
         self.save_map(self.map_file)
+
+        if rnode and self.ui.configbool('hggit', 'usephases'):
+            lock = self.repo.lock()
+            try:
+                tr = self.repo.transaction("phase")
+                try:
+                    phases.advanceboundary(self.repo, tr, phases.public,
+                                           [rnode])
+                except TypeError:
+                    # hg < 3.2
+                    phases.advanceboundary(self.repo, phases.public,
+                                           [rnode])
+                tr.close()
+            finally:
+                if tr is not None:
+                    tr.release()
+                lock.release()
 
         if imported == 0:
             return 0

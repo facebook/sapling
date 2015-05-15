@@ -32,6 +32,10 @@ clone a tag
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
+Make sure this is still draft since we didn't pull remote's HEAD
+  $ hg -R hgrepo-a phase -r alpha
+  0: draft
+
 clone a branch
   $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
   importing git objects into hg

@@ -76,13 +76,17 @@ Cloning transfers all bookmarks from remote to local
     1 7bcd915dc873 "add beta" bookmarks: [b1]
     0 3442585be8a6 "add alpha" bookmarks: []
   $ cd ..
-  $ hg clone -q gitremoterepo hggitlocalrepo
+  $ hg clone -q gitremoterepo hggitlocalrepo --config hggit.usephases=True
   $ cd hggitlocalrepo
   $ hggitstate
     3 03769a650ded 55b133e1d558 "add delta" bookmarks: [master]
     2 ca33a262eb46 d338971a96e2 "add gamma" bookmarks: []
     1 7fe02317c63d 9497a4ee62e1 "add beta" bookmarks: [b1]
     0 ff7a2f2d8d70 7eeab2ea75ec "add alpha" bookmarks: []
+
+Make sure that master is public
+  $ hg phase -r master
+  3: public
   $ cd ..
 
 No changes
