@@ -1003,15 +1003,13 @@ def checknlink(testfile):
     f2 = testfile + ".hgtmp2"
     fd = None
     try:
-        try:
-            oslink(f1, f2)
-        except OSError:
-            return False
-
+        oslink(f1, f2)
         # nlinks() may behave differently for files on Windows shares if
         # the file is open.
         fd = posixfile(f2)
         return nlinks(f2) > 1
+    except OSError:
+        return False
     finally:
         if fd is not None:
             fd.close()
