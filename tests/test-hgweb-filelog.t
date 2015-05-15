@@ -8,8 +8,13 @@
   $ echo a > a
   $ hg ci -Am "first a"
   adding a
+  $ hg tag -r 1 a-tag
+  $ hg bookmark -r 1 a-bookmark
   $ hg rm a
   $ hg ci -m "del a"
+  $ hg branch a-branch
+  marked working directory as branch a-branch
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > a
   $ hg ci -Am "second a"
   adding a
@@ -20,69 +25,86 @@
   $ echo c >> c
   $ hg ci -m "change c"
   $ hg log -p
-  changeset:   6:b7682196df1c
+  changeset:   7:46c1a66bd8fc
+  branch:      a-branch
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change c
   
-  diff -r 1a6696706df2 -r b7682196df1c c
+  diff -r c9637d3cc8ef -r 46c1a66bd8fc c
   --- a/c	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
    b
   +c
   
-  changeset:   5:1a6696706df2
+  changeset:   6:c9637d3cc8ef
+  branch:      a-branch
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mv b
   
-  diff -r 52e848cdcd88 -r 1a6696706df2 b
+  diff -r 958bd88be4eb -r c9637d3cc8ef b
   --- a/b	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -b
-  diff -r 52e848cdcd88 -r 1a6696706df2 c
+  diff -r 958bd88be4eb -r c9637d3cc8ef c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +b
   
-  changeset:   4:52e848cdcd88
+  changeset:   5:958bd88be4eb
+  branch:      a-branch
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     del2 a
   
-  diff -r 01de2d66a28d -r 52e848cdcd88 a
+  diff -r 3f41bc784e7e -r 958bd88be4eb a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -b
   
-  changeset:   3:01de2d66a28d
+  changeset:   4:3f41bc784e7e
+  branch:      a-branch
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second a
   
-  diff -r be3ebcc91739 -r 01de2d66a28d a
+  diff -r 292258f86fdf -r 3f41bc784e7e a
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +b
   
-  changeset:   2:be3ebcc91739
+  changeset:   3:292258f86fdf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     del a
   
-  diff -r 5ed941583260 -r be3ebcc91739 a
+  diff -r 94c9dd5ca9b4 -r 292258f86fdf a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -a
   
+  changeset:   2:94c9dd5ca9b4
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Added tag a-tag for changeset 5ed941583260
+  
+  diff -r 5ed941583260 -r 94c9dd5ca9b4 .hgtags
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +5ed941583260248620985524192fdc382ef57c36 a-tag
+  
   changeset:   1:5ed941583260
+  bookmark:    a-bookmark
+  tag:         a-tag
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     first a
@@ -135,29 +157,29 @@ tip - two revisions
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/01de2d66a28d">log</a></li>
-  <li><a href="/graph/01de2d66a28d">graph</a></li>
+  <li><a href="/shortlog/3f41bc784e7e">log</a></li>
+  <li><a href="/graph/3f41bc784e7e">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/01de2d66a28d">changeset</a></li>
-  <li><a href="/file/01de2d66a28d">browse</a></li>
+  <li><a href="/rev/3f41bc784e7e">changeset</a></li>
+  <li><a href="/file/3f41bc784e7e">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/01de2d66a28d/a">file</a></li>
-  <li><a href="/diff/01de2d66a28d/a">diff</a></li>
-  <li><a href="/comparison/01de2d66a28d/a">comparison</a></li>
-  <li><a href="/annotate/01de2d66a28d/a">annotate</a></li>
+  <li><a href="/file/3f41bc784e7e/a">file</a></li>
+  <li><a href="/diff/3f41bc784e7e/a">diff</a></li>
+  <li><a href="/comparison/3f41bc784e7e/a">comparison</a></li>
+  <li><a href="/annotate/3f41bc784e7e/a">annotate</a></li>
   <li class="active">file log</li>
-  <li><a href="/raw-file/01de2d66a28d/a">raw</a></li>
+  <li><a href="/raw-file/3f41bc784e7e/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
   </ul>
   <div class="atom-logo">
-  <a href="/atom-log/01de2d66a28d/a" title="subscribe to atom feed">
+  <a href="/atom-log/3f41bc784e7e/a" title="subscribe to atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
   </a>
   </div>
@@ -175,8 +197,8 @@ tip - two revisions
   </form>
   
   <div class="navigate">
-  <a href="/log/01de2d66a28d/a?revcount=30">less</a>
-  <a href="/log/01de2d66a28d/a?revcount=120">more</a>
+  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
+  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
   
   <table class="bigtable">
@@ -192,8 +214,8 @@ tip - two revisions
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/01de2d66a28d">second a</a>
-     
+     <a href="/rev/3f41bc784e7e">second a</a>
+     <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr>
@@ -201,7 +223,7 @@ tip - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     
+     <span class="tag">a-tag</span> 
     </td>
    </tr>
   
@@ -209,8 +231,8 @@ tip - two revisions
   </table>
   
   <div class="navigate">
-  <a href="/log/01de2d66a28d/a?revcount=30">less</a>
-  <a href="/log/01de2d66a28d/a?revcount=120">more</a>
+  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
+  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
   </div>
   
@@ -226,7 +248,7 @@ tip - two revisions
 
 second version - two revisions
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/3/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/4/a')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -252,29 +274,29 @@ second version - two revisions
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/01de2d66a28d">log</a></li>
-  <li><a href="/graph/01de2d66a28d">graph</a></li>
+  <li><a href="/shortlog/3f41bc784e7e">log</a></li>
+  <li><a href="/graph/3f41bc784e7e">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/01de2d66a28d">changeset</a></li>
-  <li><a href="/file/01de2d66a28d">browse</a></li>
+  <li><a href="/rev/3f41bc784e7e">changeset</a></li>
+  <li><a href="/file/3f41bc784e7e">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/01de2d66a28d/a">file</a></li>
-  <li><a href="/diff/01de2d66a28d/a">diff</a></li>
-  <li><a href="/comparison/01de2d66a28d/a">comparison</a></li>
-  <li><a href="/annotate/01de2d66a28d/a">annotate</a></li>
+  <li><a href="/file/3f41bc784e7e/a">file</a></li>
+  <li><a href="/diff/3f41bc784e7e/a">diff</a></li>
+  <li><a href="/comparison/3f41bc784e7e/a">comparison</a></li>
+  <li><a href="/annotate/3f41bc784e7e/a">annotate</a></li>
   <li class="active">file log</li>
-  <li><a href="/raw-file/01de2d66a28d/a">raw</a></li>
+  <li><a href="/raw-file/3f41bc784e7e/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
   </ul>
   <div class="atom-logo">
-  <a href="/atom-log/01de2d66a28d/a" title="subscribe to atom feed">
+  <a href="/atom-log/3f41bc784e7e/a" title="subscribe to atom feed">
   <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="atom feed" />
   </a>
   </div>
@@ -292,8 +314,8 @@ second version - two revisions
   </form>
   
   <div class="navigate">
-  <a href="/log/01de2d66a28d/a?revcount=30">less</a>
-  <a href="/log/01de2d66a28d/a?revcount=120">more</a>
+  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
+  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
   
   <table class="bigtable">
@@ -309,8 +331,8 @@ second version - two revisions
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description">
-     <a href="/rev/01de2d66a28d">second a</a>
-     
+     <a href="/rev/3f41bc784e7e">second a</a>
+     <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr>
@@ -318,7 +340,7 @@ second version - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     
+     <span class="tag">a-tag</span> 
     </td>
    </tr>
   
@@ -326,8 +348,8 @@ second version - two revisions
   </table>
   
   <div class="navigate">
-  <a href="/log/01de2d66a28d/a?revcount=30">less</a>
-  <a href="/log/01de2d66a28d/a?revcount=120">more</a>
+  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
+  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
   </div>
   
@@ -343,7 +365,7 @@ second version - two revisions
 
 first deleted - one revision
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/2/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/3/a')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -427,7 +449,7 @@ first deleted - one revision
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     
+     <span class="tag">a-tag</span> 
     </td>
    </tr>
   
@@ -536,7 +558,7 @@ first version - one revision
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     
+     <span class="tag">a-tag</span> 
     </td>
    </tr>
   
@@ -652,8 +674,8 @@ should show base link, use spartan because it shows it
   <a href="/graph?style=spartan">graph</a>
   <a href="/tags?style=spartan">tags</a>
   <a href="/branches?style=spartan">branches</a>
-  <a href="/file/b7682196df1c/c?style=spartan">file</a>
-  <a href="/annotate/b7682196df1c/c?style=spartan">annotate</a>
+  <a href="/file/46c1a66bd8fc/c?style=spartan">file</a>
+  <a href="/annotate/46c1a66bd8fc/c?style=spartan">annotate</a>
   <a href="/help?style=spartan">help</a>
   <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
   <a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
@@ -661,19 +683,19 @@ should show base link, use spartan because it shows it
   
   <h2><a href="/">Mercurial</a>  / c revision history</h2>
   
-  <p>navigate: <small class="navigate"><a href="/log/1a6696706df2/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
+  <p>navigate: <small class="navigate"><a href="/log/c9637d3cc8ef/c?style=spartan">(0)</a> <a href="/log/tip/c?style=spartan">tip</a> </small></p>
   
   <table class="logEntry parity0">
    <tr>
     <th class="label"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
-    <th class="firstline"><a href="/rev/b7682196df1c?style=spartan">change c</a></th>
+    <th class="firstline"><a href="/rev/46c1a66bd8fc?style=spartan">change c</a></th>
    </tr>
    <tr>
     <th class="revision">revision 1:</th>
     <td class="node">
-     <a href="/file/b7682196df1c/c?style=spartan">b7682196df1c</a>
-     <a href="/diff/b7682196df1c/c?style=spartan">(diff)</a>
-     <a href="/annotate/b7682196df1c/c?style=spartan">(annotate)</a>
+     <a href="/file/46c1a66bd8fc/c?style=spartan">46c1a66bd8fc</a>
+     <a href="/diff/46c1a66bd8fc/c?style=spartan">(diff)</a>
+     <a href="/annotate/46c1a66bd8fc/c?style=spartan">(annotate)</a>
     </td>
    </tr>
    
@@ -691,14 +713,14 @@ should show base link, use spartan because it shows it
   <table class="logEntry parity1">
    <tr>
     <th class="label"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>:</th>
-    <th class="firstline"><a href="/rev/1a6696706df2?style=spartan">mv b</a></th>
+    <th class="firstline"><a href="/rev/c9637d3cc8ef?style=spartan">mv b</a></th>
    </tr>
    <tr>
     <th class="revision">revision 0:</th>
     <td class="node">
-     <a href="/file/1a6696706df2/c?style=spartan">1a6696706df2</a>
-     <a href="/diff/1a6696706df2/c?style=spartan">(diff)</a>
-     <a href="/annotate/1a6696706df2/c?style=spartan">(annotate)</a>
+     <a href="/file/c9637d3cc8ef/c?style=spartan">c9637d3cc8ef</a>
+     <a href="/diff/c9637d3cc8ef/c?style=spartan">(diff)</a>
+     <a href="/annotate/c9637d3cc8ef/c?style=spartan">(annotate)</a>
     </td>
    </tr>
    
@@ -749,7 +771,7 @@ rss log
       <description>a revision history</description>
       <item>
       <title>second a</title>
-      <link>http://*:$HGPORT/log01de2d66a28d/a</link> (glob)
+      <link>http://*:$HGPORT/log3f41bc784e7e/a</link> (glob)
       <description><![CDATA[second a]]></description>
       <author>&#116;&#101;&#115;&#116;</author>
       <pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>
@@ -778,9 +800,9 @@ atom log
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>second a</title>
-    <id>http://*:$HGPORT/#changeset-01de2d66a28df5549090991dccda788726948517</id> (glob)
-    <link href="http://*:$HGPORT/rev/01de2d66a28d"/> (glob)
+    <title>[a-branch] second a</title>
+    <id>http://*:$HGPORT/#changeset-3f41bc784e7e73035c6d47112c6cc7efb673adf8</id> (glob)
+    <link href="http://*:$HGPORT/rev/3f41bc784e7e"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -791,11 +813,11 @@ atom log
   	<table xmlns="http://www.w3.org/1999/xhtml">
   	<tr>
   		<th style="text-align:left;">changeset</th>
-  		<td>01de2d66a28d</td>
+  		<td>3f41bc784e7e</td>
                 </tr>
                 <tr>
                                 <th style="text-align:left;">branch</th>
-                                <td></td>
+                                <td>a-branch</td>
                 </tr>
                 <tr>
                                 <th style="text-align:left;">bookmark</th>
@@ -842,11 +864,11 @@ atom log
                 </tr>
                 <tr>
                                 <th style="text-align:left;">bookmark</th>
-  		<td></td>
+  		<td>a-bookmark</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;">tag</th>
-  		<td></td>
+  		<td>a-tag</td>
   	</tr>
   	<tr>
   		<th style="text-align:left;">user</th>
