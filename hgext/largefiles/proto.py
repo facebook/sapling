@@ -31,17 +31,16 @@ def putlfile(repo, proto, sha):
     tmpfp = util.atomictempfile(path, createmode=repo.store.createmode)
 
     try:
-        try:
-            proto.getfile(tmpfp)
-            tmpfp._fp.seek(0)
-            if sha != lfutil.hexsha1(tmpfp._fp):
-                raise IOError(0, _('largefile contents do not match hash'))
-            tmpfp.close()
-            lfutil.linktousercache(repo, sha)
-        except IOError, e:
-            repo.ui.warn(_('largefiles: failed to put %s into store: %s\n') %
-                         (sha, e.strerror))
-            return wireproto.pushres(1)
+        proto.getfile(tmpfp)
+        tmpfp._fp.seek(0)
+        if sha != lfutil.hexsha1(tmpfp._fp):
+            raise IOError(0, _('largefile contents do not match hash'))
+        tmpfp.close()
+        lfutil.linktousercache(repo, sha)
+    except IOError, e:
+        repo.ui.warn(_('largefiles: failed to put %s into store: %s\n') %
+                     (sha, e.strerror))
+        return wireproto.pushres(1)
     finally:
         tmpfp.discard()
 

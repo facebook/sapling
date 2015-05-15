@@ -578,14 +578,13 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
     nolfiles = False
     installnormalfilesmatchfn(repo[None].manifest())
     try:
-        try:
-            result = orig(ui, repo, pats, opts, rename)
-        except util.Abort, e:
-            if str(e) != _('no files to copy'):
-                raise e
-            else:
-                nonormalfiles = True
-            result = 0
+        result = orig(ui, repo, pats, opts, rename)
+    except util.Abort, e:
+        if str(e) != _('no files to copy'):
+            raise e
+        else:
+            nonormalfiles = True
+        result = 0
     finally:
         restorematchfn()
 
@@ -608,86 +607,85 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
             os.makedirs(makestandin(dest))
 
     try:
-        try:
-            # When we call orig below it creates the standins but we don't add
-            # them to the dir state until later so lock during that time.
-            wlock = repo.wlock()
+        # When we call orig below it creates the standins but we don't add
+        # them to the dir state until later so lock during that time.
+        wlock = repo.wlock()
 
-            manifest = repo[None].manifest()
-            def overridematch(ctx, pats=[], opts={}, globbed=False,
-                    default='relpath'):
-                newpats = []
-                # The patterns were previously mangled to add the standin
-                # directory; we need to remove that now
-                for pat in pats:
-                    if match_.patkind(pat) is None and lfutil.shortname in pat:
-                        newpats.append(pat.replace(lfutil.shortname, ''))
-                    else:
-                        newpats.append(pat)
-                match = oldmatch(ctx, newpats, opts, globbed, default)
-                m = copy.copy(match)
-                lfile = lambda f: lfutil.standin(f) in manifest
-                m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
-                m._fmap = set(m._files)
-                origmatchfn = m.matchfn
-                m.matchfn = lambda f: (lfutil.isstandin(f) and
-                                    (f in manifest) and
-                                    origmatchfn(lfutil.splitstandin(f)) or
-                                    None)
-                return m
-            oldmatch = installmatchfn(overridematch)
-            listpats = []
+        manifest = repo[None].manifest()
+        def overridematch(ctx, pats=[], opts={}, globbed=False,
+                default='relpath'):
+            newpats = []
+            # The patterns were previously mangled to add the standin
+            # directory; we need to remove that now
             for pat in pats:
-                if match_.patkind(pat) is not None:
-                    listpats.append(pat)
+                if match_.patkind(pat) is None and lfutil.shortname in pat:
+                    newpats.append(pat.replace(lfutil.shortname, ''))
                 else:
-                    listpats.append(makestandin(pat))
+                    newpats.append(pat)
+            match = oldmatch(ctx, newpats, opts, globbed, default)
+            m = copy.copy(match)
+            lfile = lambda f: lfutil.standin(f) in manifest
+            m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
+            m._fmap = set(m._files)
+            origmatchfn = m.matchfn
+            m.matchfn = lambda f: (lfutil.isstandin(f) and
+                                (f in manifest) and
+                                origmatchfn(lfutil.splitstandin(f)) or
+                                None)
+            return m
+        oldmatch = installmatchfn(overridematch)
+        listpats = []
+        for pat in pats:
+            if match_.patkind(pat) is not None:
+                listpats.append(pat)
+            else:
+                listpats.append(makestandin(pat))
 
-            try:
-                origcopyfile = util.copyfile
-                copiedfiles = []
-                def overridecopyfile(src, dest):
-                    if (lfutil.shortname in src and
-                        dest.startswith(repo.wjoin(lfutil.shortname))):
-                        destlfile = dest.replace(lfutil.shortname, '')
-                        if not opts['force'] and os.path.exists(destlfile):
-                            raise IOError('',
-                                _('destination largefile already exists'))
-                    copiedfiles.append((src, dest))
-                    origcopyfile(src, dest)
-
-                util.copyfile = overridecopyfile
-                result += orig(ui, repo, listpats, opts, rename)
-            finally:
-                util.copyfile = origcopyfile
-
-            lfdirstate = lfutil.openlfdirstate(ui, repo)
-            for (src, dest) in copiedfiles:
+        try:
+            origcopyfile = util.copyfile
+            copiedfiles = []
+            def overridecopyfile(src, dest):
                 if (lfutil.shortname in src and
                     dest.startswith(repo.wjoin(lfutil.shortname))):
-                    srclfile = src.replace(repo.wjoin(lfutil.standin('')), '')
-                    destlfile = dest.replace(repo.wjoin(lfutil.standin('')), '')
-                    destlfiledir = os.path.dirname(repo.wjoin(destlfile)) or '.'
-                    if not os.path.isdir(destlfiledir):
-                        os.makedirs(destlfiledir)
-                    if rename:
-                        os.rename(repo.wjoin(srclfile), repo.wjoin(destlfile))
+                    destlfile = dest.replace(lfutil.shortname, '')
+                    if not opts['force'] and os.path.exists(destlfile):
+                        raise IOError('',
+                            _('destination largefile already exists'))
+                copiedfiles.append((src, dest))
+                origcopyfile(src, dest)
 
-                        # The file is gone, but this deletes any empty parent
-                        # directories as a side-effect.
-                        util.unlinkpath(repo.wjoin(srclfile), True)
-                        lfdirstate.remove(srclfile)
-                    else:
-                        util.copyfile(repo.wjoin(srclfile),
-                                      repo.wjoin(destlfile))
+            util.copyfile = overridecopyfile
+            result += orig(ui, repo, listpats, opts, rename)
+        finally:
+            util.copyfile = origcopyfile
 
-                    lfdirstate.add(destlfile)
-            lfdirstate.write()
-        except util.Abort, e:
-            if str(e) != _('no files to copy'):
-                raise e
-            else:
-                nolfiles = True
+        lfdirstate = lfutil.openlfdirstate(ui, repo)
+        for (src, dest) in copiedfiles:
+            if (lfutil.shortname in src and
+                dest.startswith(repo.wjoin(lfutil.shortname))):
+                srclfile = src.replace(repo.wjoin(lfutil.standin('')), '')
+                destlfile = dest.replace(repo.wjoin(lfutil.standin('')), '')
+                destlfiledir = os.path.dirname(repo.wjoin(destlfile)) or '.'
+                if not os.path.isdir(destlfiledir):
+                    os.makedirs(destlfiledir)
+                if rename:
+                    os.rename(repo.wjoin(srclfile), repo.wjoin(destlfile))
+
+                    # The file is gone, but this deletes any empty parent
+                    # directories as a side-effect.
+                    util.unlinkpath(repo.wjoin(srclfile), True)
+                    lfdirstate.remove(srclfile)
+                else:
+                    util.copyfile(repo.wjoin(srclfile),
+                                  repo.wjoin(destlfile))
+
+                lfdirstate.add(destlfile)
+        lfdirstate.write()
+    except util.Abort, e:
+        if str(e) != _('no files to copy'):
+            raise e
+        else:
+            nolfiles = True
     finally:
         restorematchfn()
         wlock.release()
