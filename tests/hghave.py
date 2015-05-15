@@ -225,12 +225,11 @@ def has_hardlink():
     os.close(fh)
     name = tempfile.mktemp(dir='.', prefix=tempprefix)
     try:
-        try:
-            util.oslink(fn, name)
-            os.unlink(name)
-            return True
-        except OSError:
-            return False
+        util.oslink(fn, name)
+        os.unlink(name)
+        return True
+    except OSError:
+        return False
     finally:
         os.unlink(fn)
 
