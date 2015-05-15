@@ -953,6 +953,8 @@ def annotate(web, req, tmpl):
                 branch=webutil.nodebranchnodefault(fctx),
                 parent=webutil.parents(fctx),
                 child=webutil.children(fctx),
+                tags=webutil.nodetagsdict(web.repo, fctx.node()),
+                bookmarks=webutil.nodebookmarksdict(web.repo, fctx.node()),
                 permissions=fctx.manifest().flags(f))
 
 @webcommand('filelog')
