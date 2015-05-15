@@ -628,7 +628,7 @@ comparison new file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison a @ 0:0cd96de13884</h3>
+  <h3>comparison a @ 0:0cd96de13884 </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -755,7 +755,7 @@ comparison existing file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison a @ 2:d73db4d812ff</h3>
+  <h3>comparison a @ 2:d73db4d812ff <span class="tag">tip</span> </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -884,7 +884,7 @@ comparison removed file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison a @ 3:20e80271eb7a</h3>
+  <h3>comparison a @ 3:20e80271eb7a <span class="tag">tip</span> </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -1019,7 +1019,7 @@ comparison not-modified file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison e @ 5:41d9fc4a6ae1</h3>
+  <h3>comparison e @ 5:41d9fc4a6ae1 <span class="tag">tip</span> </h3>
   
   <form class="search" action="/log">
   <p></p>

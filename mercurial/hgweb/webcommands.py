@@ -885,6 +885,8 @@ def comparison(web, req, tmpl):
                 branch=webutil.nodebranchnodefault(ctx),
                 parent=webutil.parents(fctx),
                 child=webutil.children(fctx),
+                tags=webutil.nodetagsdict(web.repo, ctx.node()),
+                bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
                 leftrev=leftrev,
                 leftnode=hex(leftnode),
                 rightrev=rightrev,
