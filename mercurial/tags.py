@@ -509,26 +509,25 @@ class hgtagsfnodescache(object):
             return
 
         try:
+            f = repo.vfs.open(_fnodescachefile, 'ab')
             try:
-                f = repo.vfs.open(_fnodescachefile, 'ab')
-                try:
-                    # if the file has been truncated
-                    actualoffset = f.tell()
-                    if actualoffset < self._dirtyoffset:
-                        self._dirtyoffset = actualoffset
-                        data = self._raw[self._dirtyoffset:]
-                    f.seek(self._dirtyoffset)
-                    f.truncate()
-                    repo.ui.log('tagscache',
-                                'writing %d bytes to %s\n' % (
-                                len(data), _fnodescachefile))
-                    f.write(data)
-                    self._dirtyoffset = None
-                finally:
-                    f.close()
-            except (IOError, OSError), inst:
+                # if the file has been truncated
+                actualoffset = f.tell()
+                if actualoffset < self._dirtyoffset:
+                    self._dirtyoffset = actualoffset
+                    data = self._raw[self._dirtyoffset:]
+                f.seek(self._dirtyoffset)
+                f.truncate()
                 repo.ui.log('tagscache',
-                            "couldn't write %s: %s\n" % (
-                            _fnodescachefile, inst))
+                            'writing %d bytes to %s\n' % (
+                            len(data), _fnodescachefile))
+                f.write(data)
+                self._dirtyoffset = None
+            finally:
+                f.close()
+        except (IOError, OSError), inst:
+            repo.ui.log('tagscache',
+                        "couldn't write %s: %s\n" % (
+                        _fnodescachefile, inst))
         finally:
             lock.release()
