@@ -281,10 +281,6 @@ def has_pygments():
     except ImportError:
         return False
 
-@check("python243", "python >= 2.4.3")
-def has_python243():
-    return sys.version_info >= (2, 4, 3)
-
 @check("json", "some json module available")
 def has_json():
     try:
