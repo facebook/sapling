@@ -892,7 +892,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
             # no backup of rebased cset versions needed
             repair.strip(repo.ui, repo, strippoints)
 
-    if activebookmark:
+    if activebookmark and activebookmark in repo._bookmarks:
         bookmarks.setcurrent(repo, activebookmark)
 
     clearstatus(repo)
