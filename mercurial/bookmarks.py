@@ -156,12 +156,11 @@ def deactivate(repo):
     """
     wlock = repo.wlock()
     try:
-        try:
-            repo.vfs.unlink('bookmarks.current')
-            repo._activebookmark = None
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                raise
+        repo.vfs.unlink('bookmarks.current')
+        repo._activebookmark = None
+    except OSError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
     finally:
         wlock.release()
 
