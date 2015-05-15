@@ -39,26 +39,25 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         if demandimportenabled:
             demandimport.disable()
         try:
+            obj = __import__(modname)
+        except ImportError:
+            e1 = sys.exc_type, sys.exc_value, sys.exc_traceback
             try:
-                obj = __import__(modname)
+                # extensions are loaded with hgext_ prefix
+                obj = __import__("hgext_%s" % modname)
             except ImportError:
-                e1 = sys.exc_type, sys.exc_value, sys.exc_traceback
-                try:
-                    # extensions are loaded with hgext_ prefix
-                    obj = __import__("hgext_%s" % modname)
-                except ImportError:
-                    e2 = sys.exc_type, sys.exc_value, sys.exc_traceback
-                    if ui.tracebackflag:
-                        ui.warn(_('exception from first failed import '
-                                  'attempt:\n'))
-                    ui.traceback(e1)
-                    if ui.tracebackflag:
-                        ui.warn(_('exception from second failed import '
-                                  'attempt:\n'))
-                    ui.traceback(e2)
-                    raise util.Abort(_('%s hook is invalid '
-                                       '(import of "%s" failed)') %
-                                     (hname, modname))
+                e2 = sys.exc_type, sys.exc_value, sys.exc_traceback
+                if ui.tracebackflag:
+                    ui.warn(_('exception from first failed import '
+                              'attempt:\n'))
+                ui.traceback(e1)
+                if ui.tracebackflag:
+                    ui.warn(_('exception from second failed import '
+                              'attempt:\n'))
+                ui.traceback(e2)
+                raise util.Abort(_('%s hook is invalid '
+                                   '(import of "%s" failed)') %
+                                 (hname, modname))
         finally:
             if demandimportenabled:
                 demandimport.enable()
@@ -79,27 +78,26 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     starttime = time.time()
 
     try:
-        try:
-            # redirect IO descriptors to the ui descriptors so hooks
-            # that write directly to these don't mess up the command
-            # protocol when running through the command server
-            old = sys.stdout, sys.stderr, sys.stdin
-            sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
+        # redirect IO descriptors to the ui descriptors so hooks
+        # that write directly to these don't mess up the command
+        # protocol when running through the command server
+        old = sys.stdout, sys.stderr, sys.stdin
+        sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
 
-            r = obj(ui=ui, repo=repo, hooktype=name, **args)
-        except KeyboardInterrupt:
+        r = obj(ui=ui, repo=repo, hooktype=name, **args)
+    except KeyboardInterrupt:
+        raise
+    except Exception, exc:
+        if isinstance(exc, util.Abort):
+            ui.warn(_('error: %s hook failed: %s\n') %
+                         (hname, exc.args[0]))
+        else:
+            ui.warn(_('error: %s hook raised an exception: '
+                           '%s\n') % (hname, exc))
+        if throw:
             raise
-        except Exception, exc:
-            if isinstance(exc, util.Abort):
-                ui.warn(_('error: %s hook failed: %s\n') %
-                             (hname, exc.args[0]))
-            else:
-                ui.warn(_('error: %s hook raised an exception: '
-                               '%s\n') % (hname, exc))
-            if throw:
-                raise
-            ui.traceback()
-            return True
+        ui.traceback()
+        return True
     finally:
         sys.stdout, sys.stderr, sys.stdin = old
         duration = time.time() - starttime
