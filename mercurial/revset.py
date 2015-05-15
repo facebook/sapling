@@ -2098,7 +2098,6 @@ methods = {
     "parent": parentspec,
     "parentpost": p1,
     "only": only,
-    "onlypost": only,
 }
 
 def optimize(x, small):
@@ -2115,6 +2114,8 @@ def optimize(x, small):
     elif op == 'only':
         return optimize(('func', ('symbol', 'only'),
                          ('list', x[1], x[2])), small)
+    elif op == 'onlypost':
+        return optimize(('func', ('symbol', 'only'), x[1]), small)
     elif op == 'dagrangepre':
         return optimize(('func', ('symbol', 'ancestors'), x[1]), small)
     elif op == 'dagrangepost':
