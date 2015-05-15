@@ -293,6 +293,7 @@ filelogentry = '
     <td>
       <a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         <b>{desc|strip|firstline|escape|nonempty}</b>
+        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
       </a>
     </td>
     <td class="link">
