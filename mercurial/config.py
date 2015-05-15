@@ -10,10 +10,11 @@ import error, util
 import os, errno
 
 class config(object):
-    def __init__(self, data=None):
+    def __init__(self, data=None, includepaths=[]):
         self._data = {}
         self._source = {}
         self._unset = []
+        self._includepaths = includepaths
         if data:
             for k in data._data:
                 self._data[k] = data[k].copy()
@@ -110,13 +111,17 @@ class config(object):
                 item = None
                 cont = False
             m = includere.match(l)
-            if m:
-                inc = util.expandpath(m.group(1))
-                base = os.path.dirname(src)
-                inc = os.path.normpath(os.path.join(base, inc))
-                if include:
+
+            if m and include:
+                expanded = util.expandpath(m.group(1))
+                includepaths = [os.path.dirname(src)] + self._includepaths
+
+                for base in includepaths:
+                    inc = os.path.normpath(os.path.join(base, expanded))
+
                     try:
                         include(inc, remap=remap, sections=sections)
+                        break
                     except IOError, inst:
                         if inst.errno != errno.ENOENT:
                             raise error.ParseError(_("cannot include %s (%s)")
