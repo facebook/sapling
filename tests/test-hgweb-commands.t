@@ -1295,7 +1295,7 @@ File-related
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>view foo @ 1:a4f92ed23982</h3>
+  <h3>view foo @ 1:a4f92ed23982 </h3>
   
   <form class="search" action="/log">
   
@@ -1419,7 +1419,7 @@ File-related
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>view foo @ 2:1d22e65f027e</h3>
+  <h3>view foo @ 2:1d22e65f027e <span class="branchname">stable</span> </h3>
   
   <form class="search" action="/log">
   

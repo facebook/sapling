@@ -130,6 +130,8 @@ def _filerevision(web, tmpl, fctx):
                 parent=webutil.parents(fctx),
                 child=webutil.children(fctx),
                 rename=webutil.renamelink(fctx),
+                tags=webutil.nodetagsdict(web.repo, fctx.node()),
+                bookmarks=webutil.nodebookmarksdict(web.repo, fctx.node()),
                 permissions=fctx.manifest().flags(f))
 
 @webcommand('file')
