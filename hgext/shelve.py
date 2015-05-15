@@ -284,17 +284,15 @@ def deletecmd(ui, repo, pats):
     """subcommand that deletes a specific shelve"""
     if not pats:
         raise util.Abort(_('no shelved changes specified!'))
-    wlock = None
+    wlock = repo.wlock()
     try:
-        wlock = repo.wlock()
-        try:
-            for name in pats:
-                for suffix in 'hg patch'.split():
-                    shelvedfile(repo, name, suffix).unlink()
-        except OSError, err:
-            if err.errno != errno.ENOENT:
-                raise
-            raise util.Abort(_("shelved change '%s' not found") % name)
+        for name in pats:
+            for suffix in 'hg patch'.split():
+                shelvedfile(repo, name, suffix).unlink()
+    except OSError, err:
+        if err.errno != errno.ENOENT:
+            raise
+        raise util.Abort(_("shelved change '%s' not found") % name)
     finally:
         lockmod.release(wlock)
 
