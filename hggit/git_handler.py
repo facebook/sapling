@@ -15,15 +15,10 @@ from dulwich import client
 from dulwich import config as dul_config
 from dulwich import diff_tree
 
-try:
-    from mercurial import bookmarks
-    bookmarks.update
-    from mercurial import commands
-except ImportError:
-    from hgext import bookmarks
-
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
+from mercurial import bookmarks
+from mercurial import commands
 from mercurial import context, util as hgutil
 from mercurial import url
 
@@ -266,8 +261,8 @@ class GitHandler(object):
                 self.update_remote_branches('default', refs)
 
                 # "Activate" a tipmost bookmark.
-                bms = getattr(self.repo['tip'], 'bookmarks',
-                              lambda: None)()
+                bms = self.repo['tip'].bookmarks()
+
                 if bms:
                     try:
                         bookmarks.activate(self.repo, bms[0])
@@ -1281,11 +1276,7 @@ class GitHandler(object):
 
     def update_hg_bookmarks(self, refs):
         try:
-            oldbm = getattr(bookmarks, 'parse', None)
-            if oldbm:
-                bms = bookmarks.parse(self.repo)
-            else:
-                bms = self.repo._bookmarks
+            bms = self.repo._bookmarks
 
             heads = dict([(ref[11:], refs[ref]) for ref in refs
                           if ref.startswith('refs/heads/')])
@@ -1308,14 +1299,7 @@ class GitHandler(object):
                         bms[head + suffix] = hgsha
 
             if heads:
-                if oldbm:
-                    bookmarks.write(self.repo, bms)
-                else:
-                    self.repo._bookmarks = bms
-                    if getattr(bms, 'write', None):  # hg >= 2.5
-                        bms.write()
-                    else:  # hg < 2.5
-                        bookmarks.write(self.repo)
+                bms.write()
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
