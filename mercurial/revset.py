@@ -2974,10 +2974,10 @@ class addset(abstractsmartset):
     >>> [x for x in rs], [x for x in rs.fastasc()]  # without _asclist
     ([0, 2, 3, 4, 5], [0, 2, 3, 4, 5])
     >>> assert not rs._asclist
-    >>> len(rs)  # BROKEN
-    6
-    >>> [x for x in rs], [x for x in rs.fastasc()]  # BROKEN with _asclist
-    ([0, 2, 2, 3, 4, 5], [0, 2, 2, 3, 4, 5])
+    >>> len(rs)
+    5
+    >>> [x for x in rs], [x for x in rs.fastasc()]
+    ([0, 2, 3, 4, 5], [0, 2, 3, 4, 5])
     >>> assert rs._asclist
 
     iterate descending:
@@ -2985,23 +2985,23 @@ class addset(abstractsmartset):
     >>> [x for x in rs], [x for x in rs.fastdesc()]  # without _asclist
     ([5, 4, 3, 2, 0], [5, 4, 3, 2, 0])
     >>> assert not rs._asclist
-    >>> len(rs)  # BROKEN
-    6
-    >>> [x for x in rs], [x for x in rs.fastdesc()]  # BROKEN with _asclist
-    ([5, 4, 3, 2, 2, 0], [5, 4, 3, 2, 2, 0])
+    >>> len(rs)
+    5
+    >>> [x for x in rs], [x for x in rs.fastdesc()]
+    ([5, 4, 3, 2, 0], [5, 4, 3, 2, 0])
     >>> assert rs._asclist
 
     iterate ascending without fastasc:
     >>> rs = addset(xs, generatorset(ys), ascending=True)
     >>> assert rs.fastasc is None
-    >>> [x for x in rs]  # BROKEN
-    [0, 2, 2, 3, 4, 5]
+    >>> [x for x in rs]
+    [0, 2, 3, 4, 5]
 
     iterate descending without fastdesc:
     >>> rs = addset(generatorset(xs), ys, ascending=False)
     >>> assert rs.fastdesc is None
-    >>> [x for x in rs]  # BROKEN
-    [5, 4, 3, 2, 2, 0]
+    >>> [x for x in rs]
+    [5, 4, 3, 2, 0]
     """
     def __init__(self, revs1, revs2, ascending=None):
         self._r1 = revs1
@@ -3020,10 +3020,10 @@ class addset(abstractsmartset):
     @util.propertycache
     def _list(self):
         if not self._genlist:
-            self._genlist = baseset(self._iterator())
+            self._genlist = baseset(iter(self))
         return self._genlist
 
-    def _iterator(self):
+    def __iter__(self):
         """Iterate over both collections without repeating elements
 
         If the ascending attribute is not set, iterate over the first one and
@@ -3034,35 +3034,43 @@ class addset(abstractsmartset):
         same time, yielding only one value at a time in the given order.
         """
         if self._ascending is None:
-            def gen():
+            if self._genlist:
+                return iter(self._genlist)
+            def arbitraryordergen():
                 for r in self._r1:
                     yield r
                 inr1 = self._r1.__contains__
                 for r in self._r2:
                     if not inr1(r):
                         yield r
-            gen = gen()
-        else:
-            iter1 = iter(self._r1)
-            iter2 = iter(self._r2)
-            gen = self._iterordered(self._ascending, iter1, iter2)
-        return gen
-
-    def __iter__(self):
-        if self._ascending is None:
-            if self._genlist:
-                return iter(self._genlist)
-            return iter(self._iterator())
+            return arbitraryordergen()
+        # try to use our own fast iterator if it exists
         self._trysetasclist()
         if self._ascending:
             it = self.fastasc
         else:
             it = self.fastdesc
-        if it is None:
-            # consume the gen and try again
-            self._list
-            return iter(self)
-        return it()
+        if it is not None:
+            return it()
+        # maybe half of the component supports fast
+        attr = 'fastdesc'
+        if self._ascending:
+            attr = 'fastasc'
+        # get iterator for _r1
+        iter1 = getattr(self._r1, attr)
+        if iter1 is None:
+            # let's avoid side effect (not sure it matters)
+            iter1 = iter(sorted(self._r1, reverse=not self._ascending))
+        else:
+            iter1 = iter1()
+        # get iterator for _r2
+        iter2 = getattr(self._r2, attr)
+        if iter2 is None:
+            # let's avoid side effect (not sure it matters)
+            iter2 = iter(sorted(self._r2, reverse=not self._ascending))
+        else:
+            iter2 = iter2()
+        return self._iterordered(self._ascending, iter1, iter2)
 
     def _trysetasclist(self):
         """populate the _asclist attribute if possible and necessary"""
