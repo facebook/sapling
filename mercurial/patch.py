@@ -6,6 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import collections
 import cStringIO, email, os, errno, re, posixpath, copy
 import tempfile, zlib, shutil
 # On python2.4 you have to import these by name or they fail to
@@ -2102,7 +2103,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     def lrugetfilectx():
         cache = {}
-        order = util.deque()
+        order = collections.deque()
         def getfilectx(f, ctx):
             fctx = ctx.filectx(f, filelog=cache.get(f))
             if f not in cache:

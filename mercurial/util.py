@@ -334,8 +334,6 @@ def cachefunc(func):
 
     return f
 
-deque = collections.deque
-
 class sortdict(dict):
     '''a simple sorted dictionary'''
     def __init__(self, data=None):
@@ -386,7 +384,7 @@ class lrucachedict(object):
     def __init__(self, maxsize):
         self._cache = {}
         self._maxsize = maxsize
-        self._order = deque()
+        self._order = collections.deque()
 
     def __getitem__(self, key):
         value = self._cache[key]
@@ -408,12 +406,12 @@ class lrucachedict(object):
 
     def clear(self):
         self._cache.clear()
-        self._order = deque()
+        self._order = collections.deque()
 
 def lrucachefunc(func):
     '''cache most recent results of function calls'''
     cache = {}
-    order = deque()
+    order = collections.deque()
     if func.func_code.co_argcount == 1:
         def f(arg):
             if arg not in cache:
@@ -1191,7 +1189,7 @@ class chunkbuffer(object):
                 else:
                     yield chunk
         self.iter = splitbig(in_iter)
-        self._queue = deque()
+        self._queue = collections.deque()
 
     def read(self, l=None):
         """Read L bytes of data from the iterator of chunks of data.

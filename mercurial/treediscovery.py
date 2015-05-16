@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import collections
 from node import nullid, short
 from i18n import _
 import util, error
@@ -56,7 +57,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     # a 'branch' here is a linear segment of history, with four parts:
     # head, root, first parent, second parent
     # (a branch always has two parents (or none) by definition)
-    unknown = util.deque(remote.branches(unknown))
+    unknown = collections.deque(remote.branches(unknown))
     while unknown:
         r = []
         while unknown:

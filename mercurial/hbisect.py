@@ -8,6 +8,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import collections
 import os
 import error
 from i18n import _
@@ -71,7 +72,7 @@ def bisect(changelog, state):
 
     # build children dict
     children = {}
-    visit = util.deque([badrev])
+    visit = collections.deque([badrev])
     candidates = []
     while visit:
         rev = visit.popleft()

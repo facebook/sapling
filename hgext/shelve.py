@@ -21,6 +21,7 @@ shelved change has a distinct name. For details, see the help for "hg
 shelve".
 """
 
+import collections
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases, commands
@@ -143,7 +144,7 @@ def createcmd(ui, repo, pats, opts):
 
         Much faster than the revset ancestors(ctx) & draft()"""
         seen = set([nullrev])
-        visit = util.deque()
+        visit = collections.deque()
         visit.append(ctx)
         while visit:
             ctx = visit.popleft()

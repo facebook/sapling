@@ -12,6 +12,7 @@ and O(changes) merge between branches.
 """
 
 # import stuff from node for others to import from revlog
+import collections
 from node import bin, hex, nullid, nullrev
 from i18n import _
 import ancestor, mdiff, parsers, error, util, templatefilters
@@ -485,7 +486,7 @@ class revlog(object):
 
         # take all ancestors from heads that aren't in has
         missing = set()
-        visit = util.deque(r for r in heads if r not in has)
+        visit = collections.deque(r for r in heads if r not in has)
         while visit:
             r = visit.popleft()
             if r in missing:

@@ -40,6 +40,7 @@ nodes that will maximize the number of nodes that will be
 classified with it (since all ancestors or descendants will be marked as well).
 """
 
+import collections
 from node import nullid, nullrev
 from i18n import _
 import random
@@ -65,7 +66,7 @@ def _updatesample(dag, nodes, sample, quicksamplesize=0):
     else:
         heads = dag.heads()
     dist = {}
-    visit = util.deque(heads)
+    visit = collections.deque(heads)
     seen = set()
     factor = 1
     while visit:

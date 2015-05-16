@@ -5,8 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import collections
 import heapq
-import util
 from node import nullrev
 
 def commonancestorsheads(pfunc, *nodes):
@@ -314,7 +314,7 @@ class lazyancestors(object):
 
         parentrevs = self._parentrevs
         stoprev = self._stoprev
-        visit = util.deque(revs)
+        visit = collections.deque(revs)
 
         while visit:
             for parent in parentrevs(visit.popleft()):
