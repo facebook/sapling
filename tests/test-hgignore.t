@@ -167,3 +167,25 @@ Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)
   ? a.c
   ? a.o
   ? syntax
+
+Check using 'include:' in ignore file
+
+  $ hg purge --all --config extensions.purge=
+  $ touch foo.included
+
+  $ echo ".*.included" > otherignore
+  $ hg status -I "include:otherignore"
+  ? foo.included
+
+  $ echo "include:otherignore" >> .hgignore
+  $ hg status
+  A dir/b.o
+  ? .hgignore
+  ? otherignore
+
+Check recursive uses of 'include:'
+
+  $ echo "include:nestedignore" >> otherignore
+  $ echo "glob:*ignore" > nestedignore
+  $ hg status
+  A dir/b.o

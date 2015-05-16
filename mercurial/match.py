@@ -75,6 +75,7 @@ class match(object):
         'relpath:<path>' - a path relative to cwd
         'relre:<regexp>' - a regexp that needn't match the start of a name
         'set:<fileset>' - a fileset expression
+        'include:<path>' - a file of patterns to read and include
         '<something>' - a pattern of the specified default type
         """
 
@@ -228,6 +229,19 @@ class match(object):
                                                     auditor):
                     kindpats.append((k, p, pat))
                 continue
+            elif kind == 'include':
+                try:
+                    includepats = readpatternfile(pat, self._warn)
+                    for k, p, source in self._normalize(includepats, default,
+                                                        root, cwd, auditor):
+                        kindpats.append((k, p, source or pat))
+                except util.Abort, inst:
+                    raise util.Abort('%s: %s' % (pat, inst[0]))
+                except IOError, inst:
+                    if self._warn:
+                        self._warn(_("skipping unreadable pattern file "
+                                     "'%s': %s\n") % (pat, inst.strerror))
+                continue
             # else: re or relre - which cannot be normalized
             kindpats.append((kind, pat, ''))
         return kindpats
@@ -335,7 +349,7 @@ def _patsplit(pattern, default):
     if ':' in pattern:
         kind, pat = pattern.split(':', 1)
         if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
-                    'listfile', 'listfile0', 'set'):
+                    'listfile', 'listfile0', 'set', 'include'):
             return kind, pat
     return default, pattern
 
@@ -515,7 +529,8 @@ def readpatternfile(filepath, warn):
     '''parse a pattern file, returning a list of
     patterns. These patterns should be given to compile()
     to be validated and converted into a match function.'''
-    syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
+    syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:',
+                'include': 'include'}
     syntax = 'relre:'
     patterns = []
 
