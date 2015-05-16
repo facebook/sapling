@@ -219,7 +219,7 @@ class manifestdict(object):
         files instead of over manifest files.'''
         files = match.files()
         return (len(files) < 100 and (match.isexact() or
-            (not match.anypats() and util.all(fn in self for fn in files))))
+            (not match.anypats() and all(fn in self for fn in files))))
 
     def walk(self, match):
         '''Generates matching file names.
@@ -465,7 +465,7 @@ class treemanifest(object):
 
     def _isempty(self):
         return (not self._files and (not self._dirs or
-                util.all(m._isempty() for m in self._dirs.values())))
+                all(m._isempty() for m in self._dirs.values())))
 
     def __str__(self):
         return ('<treemanifest dir=%s, node=%s>' %

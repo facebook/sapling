@@ -972,7 +972,7 @@ class dirstate(object):
             # fast path -- filter the other way around, since typically files is
             # much smaller than dmap
             return [f for f in files if f in dmap]
-        if not match.anypats() and util.all(fn in dmap for fn in files):
+        if not match.anypats() and all(fn in dmap for fn in files):
             # fast path -- all the values are known to be files, so just return
             # that
             return list(files)

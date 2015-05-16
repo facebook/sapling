@@ -605,7 +605,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             # Consensus?
             if len(bids) == 1: # all bids are the same kind of method
                 m, l = bids.items()[0]
-                if util.all(a == l[0] for a in l[1:]): # len(bids) is > 1
+                if all(a == l[0] for a in l[1:]): # len(bids) is > 1
                     repo.ui.note(" %s: consensus for %s\n" % (f, m))
                     actions[f] = l[0]
                     continue
@@ -617,7 +617,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
             # If there are gets and they all agree [how could they not?], do it.
             if 'g' in bids:
                 ga0 = bids['g'][0]
-                if util.all(a == ga0 for a in bids['g'][1:]):
+                if all(a == ga0 for a in bids['g'][1:]):
                     repo.ui.note(" %s: picking 'get' action\n" % f)
                     actions[f] = ga0
                     continue
