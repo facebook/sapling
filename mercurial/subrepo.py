@@ -500,6 +500,10 @@ class abstractsubrepo(object):
         """return file flags"""
         return ''
 
+    def getfileset(self, expr):
+        """Resolve the fileset expression for this repo"""
+        return set()
+
     def printfiles(self, ui, m, fm, fmt):
         """handle the files command for this subrepo"""
         return 1
@@ -916,6 +920,26 @@ class hgsubrepo(abstractsubrepo):
             rev = self._state[1]
             ctx = self._repo[rev]
         return cmdutil.files(ui, ctx, m, fm, fmt, True)
+
+    @annotatesubrepoerror
+    def getfileset(self, expr):
+        if self._ctx.rev() is None:
+            ctx = self._repo[None]
+        else:
+            rev = self._state[1]
+            ctx = self._repo[rev]
+
+        files = ctx.getfileset(expr)
+
+        for subpath in ctx.substate:
+            sub = ctx.sub(subpath)
+
+            try:
+                files.extend(subpath + '/' + f for f in sub.getfileset(expr))
+            except error.LookupError:
+                self.ui.status(_("skipping missing subrepository: %s\n")
+                               % self.wvfs.reljoin(reporelpath(self), subpath))
+        return files
 
     def walk(self, match):
         ctx = self._repo[None]
