@@ -3047,15 +3047,13 @@ class addset(abstractsmartset):
         # try to use our own fast iterator if it exists
         self._trysetasclist()
         if self._ascending:
-            it = self.fastasc
+            attr = 'fastasc'
         else:
-            it = self.fastdesc
+            attr = 'fastdesc'
+        it = getattr(self, attr)
         if it is not None:
             return it()
         # maybe half of the component supports fast
-        attr = 'fastdesc'
-        if self._ascending:
-            attr = 'fastasc'
         # get iterator for _r1
         iter1 = getattr(self._r1, attr)
         if iter1 is None:
