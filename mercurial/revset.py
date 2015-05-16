@@ -2935,6 +2935,42 @@ class filteredset(abstractsmartset):
     def __repr__(self):
         return '<%s %r>' % (type(self).__name__, self._subset)
 
+def _iterordered(ascending, iter1, iter2):
+    """produce an ordered iteration from two iterators with the same order
+
+    The ascending is used to indicated the iteration direction.
+    """
+    choice = max
+    if ascending:
+        choice = min
+
+    val1 = None
+    val2 = None
+    try:
+        # Consume both iterators in an ordered way until one is empty
+        while True:
+            if val1 is None:
+                val1 = iter1.next()
+            if val2 is None:
+                val2 = iter2.next()
+            next = choice(val1, val2)
+            yield next
+            if val1 == next:
+                val1 = None
+            if val2 == next:
+                val2 = None
+    except StopIteration:
+        # Flush any remaining values and consume the other one
+        it = iter2
+        if val1 is not None:
+            yield val1
+            it = iter1
+        elif val2 is not None:
+            # might have been equality and both are empty
+            yield val2
+        for val in it:
+            yield val
+
 class addset(abstractsmartset):
     """Represent the addition of two sets
 
@@ -3068,7 +3104,7 @@ class addset(abstractsmartset):
             iter2 = iter(sorted(self._r2, reverse=not self._ascending))
         else:
             iter2 = iter2()
-        return self._iterordered(self._ascending, iter1, iter2)
+        return _iterordered(self._ascending, iter1, iter2)
 
     def _trysetasclist(self):
         """populate the _asclist attribute if possible and necessary"""
@@ -3084,7 +3120,7 @@ class addset(abstractsmartset):
         iter2 = self._r2.fastasc
         if None in (iter1, iter2):
             return None
-        return lambda: self._iterordered(True, iter1(), iter2())
+        return lambda: _iterordered(True, iter1(), iter2())
 
     @property
     def fastdesc(self):
@@ -3095,44 +3131,7 @@ class addset(abstractsmartset):
         iter2 = self._r2.fastdesc
         if None in (iter1, iter2):
             return None
-        return lambda: self._iterordered(False, iter1(), iter2())
-
-    def _iterordered(self, ascending, iter1, iter2):
-        """produce an ordered iteration from two iterators with the same order
-
-        The ascending is used to indicated the iteration direction.
-        """
-        choice = max
-        if ascending:
-            choice = min
-
-        val1 = None
-        val2 = None
-        try:
-            # Consume both iterators in an ordered way until one is
-            # empty
-            while True:
-                if val1 is None:
-                    val1 = iter1.next()
-                if val2 is None:
-                    val2 = iter2.next()
-                next = choice(val1, val2)
-                yield next
-                if val1 == next:
-                    val1 = None
-                if val2 == next:
-                    val2 = None
-        except StopIteration:
-            # Flush any remaining values and consume the other one
-            it = iter2
-            if val1 is not None:
-                yield val1
-                it = iter1
-            elif val2 is not None:
-                # might have been equality and both are empty
-                yield val2
-            for val in it:
-                yield val
+        return lambda: _iterordered(False, iter1(), iter2())
 
     def __contains__(self, x):
         return x in self._r1 or x in self._r2
