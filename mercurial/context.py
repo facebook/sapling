@@ -251,11 +251,13 @@ class basectx(object):
     def sub(self, path):
         return subrepo.subrepo(self, path)
 
-    def match(self, pats=[], include=None, exclude=None, default='glob'):
+    def match(self, pats=[], include=None, exclude=None, default='glob',
+              listsubrepos=False):
         r = self._repo
         return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
-                              auditor=r.auditor, ctx=self)
+                              auditor=r.auditor, ctx=self,
+                              listsubrepos=listsubrepos)
 
     def diff(self, ctx2=None, match=None, **opts):
         """Returns a diff generator for the given contexts and matcher"""
@@ -1437,17 +1439,20 @@ class workingctx(committablectx):
             finally:
                 wlock.release()
 
-    def match(self, pats=[], include=None, exclude=None, default='glob'):
+    def match(self, pats=[], include=None, exclude=None, default='glob',
+              listsubrepos=False):
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input
         # to actual case in the filesystem.
         if not util.checkcase(r.root):
             return matchmod.icasefsmatcher(r.root, r.getcwd(), pats, include,
-                                           exclude, default, r.auditor, self)
+                                           exclude, default, r.auditor, self,
+                                           listsubrepos=listsubrepos)
         return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
-                              auditor=r.auditor, ctx=self)
+                              auditor=r.auditor, ctx=self,
+                              listsubrepos=listsubrepos)
 
     def _filtersuspectsymlink(self, files):
         if not files or self._repo.dirstate._checklink:

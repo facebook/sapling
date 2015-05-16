@@ -21,7 +21,7 @@ def _rematcher(regex):
     except AttributeError:
         return m.match
 
-def _expandsets(kindpats, ctx):
+def _expandsets(kindpats, ctx, listsubrepos):
     '''Returns the kindpats list with the 'set' patterns expanded.'''
     fset = set()
     other = []
@@ -32,6 +32,12 @@ def _expandsets(kindpats, ctx):
                 raise util.Abort("fileset expression with no context")
             s = ctx.getfileset(pat)
             fset.update(s)
+
+            if listsubrepos:
+                for subpath in ctx.substate:
+                    s = ctx.sub(subpath).getfileset(pat)
+                    fset.update(subpath + '/' + f for f in s)
+
             continue
         other.append((kind, pat))
     return fset, other
@@ -47,7 +53,8 @@ def _kindpatsalwaysmatch(kindpats):
 
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
-                 default='glob', exact=False, auditor=None, ctx=None):
+                 default='glob', exact=False, auditor=None, ctx=None,
+                 listsubrepos=False):
         """build an object to match a set of file patterns
 
         arguments:
@@ -80,11 +87,13 @@ class match(object):
         matchfns = []
         if include:
             kindpats = self._normalize(include, 'glob', root, cwd, auditor)
-            self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)')
+            self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
+                                              listsubrepos)
             matchfns.append(im)
         if exclude:
             kindpats = self._normalize(exclude, 'glob', root, cwd, auditor)
-            self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)')
+            self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
+                                              listsubrepos)
             matchfns.append(lambda f: not em(f))
         if exact:
             if isinstance(patterns, list):
@@ -97,7 +106,8 @@ class match(object):
             if not _kindpatsalwaysmatch(kindpats):
                 self._files = _roots(kindpats)
                 self._anypats = self._anypats or _anypats(kindpats)
-                self.patternspat, pm = _buildmatch(ctx, kindpats, '$')
+                self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
+                                                   listsubrepos)
                 matchfns.append(pm)
 
         if not matchfns:
@@ -287,12 +297,12 @@ class icasefsmatcher(match):
     """
 
     def __init__(self, root, cwd, patterns, include, exclude, default, auditor,
-                 ctx):
+                 ctx, listsubrepos=False):
         init = super(icasefsmatcher, self).__init__
         self._dsnormalize = ctx.repo().dirstate.normalize
 
         init(root, cwd, patterns, include, exclude, default, auditor=auditor,
-             ctx=ctx)
+             ctx=ctx, listsubrepos=listsubrepos)
 
         # m.exact(file) must be based off of the actual user input, otherwise
         # inexact case matches are treated as exact, and not noted without -v.
@@ -420,10 +430,10 @@ def _regex(kind, pat, globsuffix):
         return '.*' + pat
     return _globre(pat) + globsuffix
 
-def _buildmatch(ctx, kindpats, globsuffix):
+def _buildmatch(ctx, kindpats, globsuffix, listsubrepos):
     '''Return regexp string and a matcher function for kindpats.
     globsuffix is appended to the regexp of globs.'''
-    fset, kindpats = _expandsets(kindpats, ctx)
+    fset, kindpats = _expandsets(kindpats, ctx, listsubrepos)
     if not kindpats:
         return "", fset.__contains__
 

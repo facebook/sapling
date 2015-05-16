@@ -803,7 +803,7 @@ def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
         pats = expandpats(pats or [])
 
     m = ctx.match(pats, opts.get('include'), opts.get('exclude'),
-                         default)
+                         default, listsubrepos=opts.get('subrepos'))
     def badfn(f, msg):
         ctx.repo().ui.warn("%s: %s\n" % (m.rel(f), msg))
     m.bad = badfn
