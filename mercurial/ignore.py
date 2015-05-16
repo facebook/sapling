@@ -56,16 +56,11 @@ def ignorepats(lines):
     return patterns, warnings
 
 def readignorefile(filepath, warn):
-    try:
-        pats = []
-        fp = open(filepath)
-        pats, warnings = ignorepats(fp)
-        fp.close()
-        for warning in warnings:
-            warn("%s: %s\n" % (filepath, warning))
-    except IOError, inst:
-        warn(_("skipping unreadable ignore file '%s': %s\n") %
-             (filepath, inst.strerror))
+    fp = open(filepath)
+    pats, warnings = ignorepats(fp)
+    fp.close()
+    for warning in warnings:
+        warn("%s: %s\n" % (filepath, warning))
     return pats
 
 def readpats(root, files, warn):
@@ -75,7 +70,11 @@ def readpats(root, files, warn):
     for f in files:
         if f in pats:
             continue
-        pats[f] = readignorefile(f, warn)
+        try:
+            pats[f] = readignorefile(f, warn)
+        except IOError, inst:
+            warn(_("skipping unreadable ignore file '%s': %s\n") %
+                 (f, inst.strerror))
 
     return [(f, pats[f]) for f in files if f in pats]
 
