@@ -830,7 +830,7 @@ class header(object):
         self.hunks = []
 
     def binary(self):
-        return util.any(h.startswith('index ') for h in self.header)
+        return any(h.startswith('index ') for h in self.header)
 
     def pretty(self, fp):
         for h in self.header:
@@ -853,7 +853,7 @@ class header(object):
         fp.write(''.join(self.header))
 
     def allhunks(self):
-        return util.any(self.allhunks_re.match(h) for h in self.header)
+        return any(self.allhunks_re.match(h) for h in self.header)
 
     def files(self):
         match = self.diffgit_re.match(self.header[0])
@@ -872,7 +872,7 @@ class header(object):
         return '<header %s>' % (' '.join(map(repr, self.files())))
 
     def isnewfile(self):
-        return util.any(self.newfile_re.match(h) for h in self.header)
+        return any(self.newfile_re.match(h) for h in self.header)
 
     def special(self):
         # Special files are shown only at the header level and not at the hunk
@@ -885,7 +885,7 @@ class header(object):
         nocontent = len(self.header) == 2
         emptynewfile = self.isnewfile() and nocontent
         return emptynewfile or \
-                util.any(self.special_re.match(h) for h in self.header)
+                any(self.special_re.match(h) for h in self.header)
 
 class recordhunk(object):
     """patch hunk

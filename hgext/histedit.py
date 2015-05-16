@@ -707,15 +707,15 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     if force and not outg:
         raise util.Abort(_('--force only allowed with --outgoing'))
     if cont:
-        if util.any((outg, abort, revs, freeargs, rules, editplan)):
+        if any((outg, abort, revs, freeargs, rules, editplan)):
             raise util.Abort(_('no arguments allowed with --continue'))
         goal = 'continue'
     elif abort:
-        if util.any((outg, revs, freeargs, rules, editplan)):
+        if any((outg, revs, freeargs, rules, editplan)):
             raise util.Abort(_('no arguments allowed with --abort'))
         goal = 'abort'
     elif editplan:
-        if util.any((outg, revs, freeargs)):
+        if any((outg, revs, freeargs)):
             raise util.Abort(_('only --commands argument allowed with '
                                '--edit-plan'))
         goal = 'edit-plan'

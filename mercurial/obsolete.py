@@ -1117,7 +1117,7 @@ def _computeunstableset(repo):
     for rev, ctx in revs:
         # A rev is unstable if one of its parent is obsolete or unstable
         # this works since we traverse following growing rev order
-        if util.any((x.obsolete() or (x.rev() in unstable))
+        if any((x.obsolete() or (x.rev() in unstable))
                 for x in ctx.parents()):
             unstable.add(rev)
     return unstable

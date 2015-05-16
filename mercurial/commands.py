@@ -4047,8 +4047,8 @@ def identify(ui, repo, source=None, rev=None,
             parents = ctx.parents()
             changed = ""
             if default or id or num:
-                if (util.any(repo.status())
-                    or util.any(ctx.sub(s).dirty() for s in ctx.substate)):
+                if (any(repo.status())
+                    or any(ctx.sub(s).dirty() for s in ctx.substate)):
                     changed = '+'
             if default or id:
                 output = ["%s%s" %
@@ -5522,7 +5522,7 @@ def revert(ui, repo, *pats, **opts):
             hint = _("uncommitted merge, use --all to discard all changes,"
                      " or 'hg update -C .' to abort the merge")
             raise util.Abort(msg, hint=hint)
-        dirty = util.any(repo.status())
+        dirty = any(repo.status())
         node = ctx.node()
         if node != parent:
             if dirty:

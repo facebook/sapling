@@ -332,7 +332,7 @@ class filemap_source(converter_source):
             mp1 = self.parentmap[p1]
             if mp1 == SKIPREV or mp1 in knownparents:
                 continue
-            isancestor = util.any(p2 for p2 in parents
+            isancestor = any(p2 for p2 in parents
                                   if p1 != p2 and mp1 != self.parentmap[p2]
                                   and mp1 in self.wantedancestors[p2])
             if not isancestor and not hasbranchparent and len(parents) > 1:

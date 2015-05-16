@@ -627,7 +627,7 @@ class localrepository(object):
 
         if not local:
             m = matchmod.exact(self.root, '', ['.hgtags'])
-            if util.any(self.status(match=m, unknown=True, ignored=True)):
+            if any(self.status(match=m, unknown=True, ignored=True)):
                 raise util.Abort(_('working copy of .hgtags is changed'),
                                  hint=_('please commit .hgtags manually'))
 

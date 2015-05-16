@@ -1181,7 +1181,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     # bundle10 case
     usebundle2 = False
     if bundlecaps is not None:
-        usebundle2 = util.any((cap.startswith('HG2') for cap in bundlecaps))
+        usebundle2 = any((cap.startswith('HG2') for cap in bundlecaps))
     if not usebundle2:
         if bundlecaps and not kwargs.get('cg', True):
             raise ValueError(_('request for bundle10 must include changegroup'))

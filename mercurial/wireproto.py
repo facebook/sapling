@@ -367,7 +367,7 @@ class wirepeer(peer.peerrepository):
                                % keytype)
             opts[key] = value
         f = self._callcompressable("getbundle", **opts)
-        if util.any((cap.startswith('HG2') for cap in bundlecaps)):
+        if any((cap.startswith('HG2') for cap in bundlecaps)):
             return bundle2.getunbundler(self.ui, f)
         else:
             return changegroupmod.cg1unpacker(f, 'UN')

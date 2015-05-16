@@ -298,7 +298,7 @@ class patchheader(object):
         self.haspatch = diffstart > 1
         self.plainmode = (plainmode or
                           '# HG changeset patch' not in self.comments and
-                          util.any(c.startswith('Date: ') or
+                          any(c.startswith('Date: ') or
                                    c.startswith('From: ')
                                    for c in self.comments))
 

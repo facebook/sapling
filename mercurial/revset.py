@@ -1121,7 +1121,7 @@ def keyword(repo, subset, x):
 
     def matches(r):
         c = repo[r]
-        return util.any(kw in encoding.lower(t) for t in c.files() + [c.user(),
+        return any(kw in encoding.lower(t) for t in c.files() + [c.user(),
             c.description()])
 
     return subset.filter(matches)
@@ -1779,7 +1779,7 @@ def subrepo(repo, subset, x):
             return s.added or s.modified or s.removed
 
         if s.added:
-            return util.any(submatches(c.substate.keys()))
+            return any(submatches(c.substate.keys()))
 
         if s.modified:
             subs = set(c.p1().substate.keys())
@@ -1790,7 +1790,7 @@ def subrepo(repo, subset, x):
                     return True
 
         if s.removed:
-            return util.any(submatches(c.p1().substate.keys()))
+            return any(submatches(c.p1().substate.keys()))
 
         return False
 

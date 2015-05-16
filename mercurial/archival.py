@@ -54,7 +54,7 @@ exts = {
 
 def guesskind(dest):
     for kind, extensions in exts.iteritems():
-        if util.any(dest.endswith(ext) for ext in extensions):
+        if any(dest.endswith(ext) for ext in extensions):
             return kind
     return None
 

@@ -232,7 +232,7 @@ def _search(web, req, tmpl):
             # no revset syntax used
             return MODE_KEYWORD, query
 
-        if util.any((token, (value or '')[:3]) == ('string', 're:')
+        if any((token, (value or '')[:3]) == ('string', 're:')
                     for token, value, pos in revset.tokenize(revdef)):
             return MODE_KEYWORD, query
 

@@ -196,7 +196,7 @@ def computemutable(repo):
     Secret and hidden changeset should not pretend to be here."""
     assert not repo.changelog.filteredrevs
     # fast check to avoid revset call on huge repo
-    if util.any(repo._phasecache.phaseroots[1:]):
+    if any(repo._phasecache.phaseroots[1:]):
         getphase = repo._phasecache.phase
         maymutable = filterrevs(repo, 'base')
         return frozenset(r for r in maymutable if getphase(repo, r))

@@ -365,7 +365,7 @@ def reposetup(ui, repo):
     repo.prepushoutgoinghooks.add("largefiles", prepushoutgoinghook)
 
     def checkrequireslfiles(ui, repo, **kwargs):
-        if 'largefiles' not in repo.requirements and util.any(
+        if 'largefiles' not in repo.requirements and any(
                 lfutil.shortname+'/' in f[0] for f in repo.store.datafiles()):
             repo.requirements.add('largefiles')
             repo._writerequirements()

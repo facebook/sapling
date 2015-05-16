@@ -364,10 +364,10 @@ def unixpath(path):
 
 def islfilesrepo(repo):
     if ('largefiles' in repo.requirements and
-            util.any(shortnameslash in f[0] for f in repo.store.datafiles())):
+            any(shortnameslash in f[0] for f in repo.store.datafiles())):
         return True
 
-    return util.any(openlfdirstate(repo.ui, repo, False))
+    return any(openlfdirstate(repo.ui, repo, False))
 
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):

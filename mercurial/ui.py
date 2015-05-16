@@ -842,7 +842,7 @@ class ui(object):
         output will be redirected if fout is not stdout.
         '''
         out = self.fout
-        if util.any(s[1] for s in self._bufferstates):
+        if any(s[1] for s in self._bufferstates):
             out = self
         return util.system(cmd, environ=environ, cwd=cwd, onerr=onerr,
                            errprefix=errprefix, out=out)
