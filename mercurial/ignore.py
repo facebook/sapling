@@ -11,16 +11,16 @@ import re
 
 _commentre = None
 
-def ignorepats(lines):
-    '''parse lines (iterable) of .hgignore text, returning a tuple of
-    (patterns, parse errors). These patterns should be given to compile()
+def readignorefile(filepath, warn):
+    '''parse a pattern file, returning a list of
+    patterns. These patterns should be given to compile()
     to be validated and converted into a match function.'''
     syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
     syntax = 'relre:'
     patterns = []
-    warnings = []
 
-    for line in lines:
+    fp = open(filepath)
+    for line in fp:
         if "#" in line:
             global _commentre
             if not _commentre:
@@ -38,7 +38,7 @@ def ignorepats(lines):
             try:
                 syntax = syntaxes[s]
             except KeyError:
-                warnings.append(_("ignoring invalid syntax '%s'") % s)
+                warn(_("%s: ignoring invalid syntax '%s'\n") % (filepath, s))
             continue
 
         linesyntax = syntax
@@ -53,15 +53,8 @@ def ignorepats(lines):
                 break
         patterns.append(linesyntax + line)
 
-    return patterns, warnings
-
-def readignorefile(filepath, warn):
-    fp = open(filepath)
-    pats, warnings = ignorepats(fp)
     fp.close()
-    for warning in warnings:
-        warn("%s: %s\n" % (filepath, warning))
-    return pats
+    return patterns
 
 def readpats(root, files, warn):
     '''return a dict mapping ignore-file-name to list-of-patterns'''
