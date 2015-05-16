@@ -11,7 +11,7 @@ import re
 
 _commentre = None
 
-def readignorefile(filepath, warn):
+def readpatternfile(filepath, warn):
     '''parse a pattern file, returning a list of
     patterns. These patterns should be given to compile()
     to be validated and converted into a match function.'''
@@ -64,7 +64,7 @@ def readpats(root, files, warn):
         if f in pats:
             continue
         try:
-            pats[f] = readignorefile(f, warn)
+            pats[f] = readpatternfile(f, warn)
         except IOError, inst:
             warn(_("skipping unreadable ignore file '%s': %s\n") %
                  (f, inst.strerror))
