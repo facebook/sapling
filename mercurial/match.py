@@ -94,7 +94,7 @@ class match(object):
         if include:
             kindpats = self._normalize(include, 'glob', root, cwd, auditor)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
-                                              listsubrepos)
+                                              listsubrepos, root)
             self._includeroots.update(_roots(kindpats))
             self._includeroots.discard('.')
             self._includedirs.update(util.dirs(self._includeroots))
@@ -102,7 +102,7 @@ class match(object):
         if exclude:
             kindpats = self._normalize(exclude, 'glob', root, cwd, auditor)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
-                                              listsubrepos)
+                                              listsubrepos, root)
             self._excluderoots.update(_roots(kindpats))
             self._excluderoots.discard('.')
             matchfns.append(lambda f: not em(f))
@@ -118,7 +118,7 @@ class match(object):
                 self._files = _roots(kindpats)
                 self._anypats = self._anypats or _anypats(kindpats)
                 self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
-                                                   listsubrepos)
+                                                   listsubrepos, root)
                 matchfns.append(pm)
 
         if not matchfns:
@@ -476,7 +476,7 @@ def _regex(kind, pat, globsuffix):
         return '.*' + pat
     return _globre(pat) + globsuffix
 
-def _buildmatch(ctx, kindpats, globsuffix, listsubrepos):
+def _buildmatch(ctx, kindpats, globsuffix, listsubrepos, root):
     '''Return regexp string and a matcher function for kindpats.
     globsuffix is appended to the regexp of globs.'''
     fset, kindpats = _expandsets(kindpats, ctx, listsubrepos)
