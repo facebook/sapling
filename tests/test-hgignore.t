@@ -190,7 +190,55 @@ Check recursive uses of 'include:'
   $ hg status
   A dir/b.o
 
+  $ cp otherignore goodignore
   $ echo "include:badignore" >> otherignore
   $ hg status
   skipping unreadable pattern file 'badignore': No such file or directory
   A dir/b.o
+
+  $ mv goodignore otherignore
+
+Check including subincludes
+
+  $ hg revert -q --all
+  $ hg purge --all --config extensions.purge=
+  $ echo ".hgignore" > .hgignore
+  $ mkdir dir1 dir2
+  $ touch dir1/file1 dir1/file2 dir2/file1 dir2/file2
+  $ echo "subinclude:dir2/.hgignore" >> .hgignore
+  $ echo "glob:file*2" > dir2/.hgignore
+  $ hg status
+  ? dir1/file1
+  ? dir1/file2
+  ? dir2/file1
+
+Check including subincludes with regexs
+
+  $ echo "subinclude:dir1/.hgignore" >> .hgignore
+  $ echo "regexp:f.le1" > dir1/.hgignore
+
+  $ hg status
+  ? dir1/file2
+  ? dir2/file1
+
+Check multiple levels of sub-ignores
+
+  $ mkdir dir1/subdir
+  $ touch dir1/subdir/subfile1 dir1/subdir/subfile3 dir1/subdir/subfile4
+  $ echo "subinclude:subdir/.hgignore" >> dir1/.hgignore
+  $ echo "glob:subfil*3" >> dir1/subdir/.hgignore
+
+  $ hg status
+  ? dir1/file2
+  ? dir1/subdir/subfile4
+  ? dir2/file1
+
+Check include subignore at the same level
+
+  $ mv dir1/subdir/.hgignore dir1/.hgignoretwo
+  $ echo "regexp:f.le1" > dir1/.hgignore
+  $ echo "subinclude:.hgignoretwo" >> dir1/.hgignore
+  $ echo "glob:file*2" > dir1/.hgignoretwo
+
+  $ hg status | grep file2
+  [1]

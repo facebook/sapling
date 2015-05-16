@@ -42,6 +42,30 @@ def _expandsets(kindpats, ctx, listsubrepos):
         other.append((kind, pat, source))
     return fset, other
 
+def _expandsubinclude(kindpats, root):
+    '''Returns the list of subinclude matchers and the kindpats without the
+    subincludes in it.'''
+    relmatchers = []
+    other = []
+
+    for kind, pat, source in kindpats:
+        if kind == 'subinclude':
+            sourceroot = pathutil.dirname(source)
+            pat = util.pconvert(pat)
+            path = pathutil.join(sourceroot, pat)
+
+            newroot = pathutil.dirname(path)
+            relmatcher = match(newroot, '', [], ['include:%s' % path])
+
+            prefix = pathutil.canonpath(root, root, newroot)
+            if prefix:
+                prefix += '/'
+            relmatchers.append((prefix, relmatcher))
+        else:
+            other.append((kind, pat, source))
+
+    return relmatchers, other
+
 def _kindpatsalwaysmatch(kindpats):
     """"Checks whether the kindspats match everything, as e.g.
     'relpath:.' does.
@@ -76,6 +100,8 @@ class match(object):
         'relre:<regexp>' - a regexp that needn't match the start of a name
         'set:<fileset>' - a fileset expression
         'include:<path>' - a file of patterns to read and include
+        'subinclude:<path>' - a file of patterns to match against files under
+                              the same directory
         '<something>' - a pattern of the specified default type
         """
 
@@ -375,7 +401,7 @@ def _patsplit(pattern, default):
     if ':' in pattern:
         kind, pat = pattern.split(':', 1)
         if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
-                    'listfile', 'listfile0', 'set', 'include'):
+                    'listfile', 'listfile0', 'set', 'include', 'subinclude'):
             return kind, pat
     return default, pattern
 
@@ -481,6 +507,15 @@ def _buildmatch(ctx, kindpats, globsuffix, listsubrepos, root):
     globsuffix is appended to the regexp of globs.'''
     matchfuncs = []
 
+    subincludes, kindpats = _expandsubinclude(kindpats, root)
+    if subincludes:
+        def matchsubinclude(f):
+            for prefix, mf in subincludes:
+                if f.startswith(prefix) and mf(f[len(prefix):]):
+                    return True
+            return False
+        matchfuncs.append(matchsubinclude)
+
     fset, kindpats = _expandsets(kindpats, ctx, listsubrepos)
     if fset:
         matchfuncs.append(fset.__contains__)
@@ -577,7 +612,7 @@ def readpatternfile(filepath, warn):
     pattern        # pattern of the current default type'''
 
     syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:',
-                'include': 'include'}
+                'include': 'include', 'subinclude': 'subinclude'}
     syntax = 'relre:'
     patterns = []
 
