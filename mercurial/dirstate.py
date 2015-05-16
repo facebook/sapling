@@ -143,7 +143,9 @@ class dirstate(object):
 
     @rootcache('.hgignore')
     def _ignore(self):
-        files = [self._join('.hgignore')]
+        files = []
+        if os.path.exists(self._join('.hgignore')):
+            files.append(self._join('.hgignore'))
         for name, path in self._ui.configitems("ui"):
             if name == 'ignore' or name.startswith('ignore.'):
                 # we need to use os.path.join here rather than self._join
