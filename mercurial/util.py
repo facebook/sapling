@@ -1720,21 +1720,6 @@ def rundetached(args, condfn):
         if prevhandler is not None:
             signal.signal(signal.SIGCHLD, prevhandler)
 
-try:
-    any, all = any, all
-except NameError:
-    def any(iterable):
-        for i in iterable:
-            if i:
-                return True
-        return False
-
-    def all(iterable):
-        for i in iterable:
-            if not i:
-                return False
-        return True
-
 def interpolate(prefix, mapping, s, fn=None, escape_prefix=False):
     """Return the result of interpolating items in the mapping into string s.
 
