@@ -26,7 +26,7 @@ def _expandsets(kindpats, ctx, listsubrepos):
     fset = set()
     other = []
 
-    for kind, pat in kindpats:
+    for kind, pat, source in kindpats:
         if kind == 'set':
             if not ctx:
                 raise util.Abort("fileset expression with no context")
@@ -39,14 +39,14 @@ def _expandsets(kindpats, ctx, listsubrepos):
                     fset.update(subpath + '/' + f for f in s)
 
             continue
-        other.append((kind, pat))
+        other.append((kind, pat, source))
     return fset, other
 
 def _kindpatsalwaysmatch(kindpats):
     """"Checks whether the kindspats match everything, as e.g.
     'relpath:.' does.
     """
-    for kind, pat in kindpats:
+    for kind, pat, source in kindpats:
         if pat != '' or kind not in ['relpath', 'glob']:
             return False
     return True
@@ -222,10 +222,12 @@ class match(object):
                     files = [f for f in files if f]
                 except EnvironmentError:
                     raise util.Abort(_("unable to read file list (%s)") % pat)
-                kindpats += self._normalize(files, default, root, cwd, auditor)
+                for k, p, source in self._normalize(files, default, root, cwd,
+                                                    auditor):
+                    kindpats.append((k, p, pat))
                 continue
             # else: re or relre - which cannot be normalized
-            kindpats.append((kind, pat))
+            kindpats.append((kind, pat, ''))
         return kindpats
 
 def exact(root, cwd, files):
@@ -315,10 +317,10 @@ class icasefsmatcher(match):
         self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
                                                           root, cwd, auditor)
         kindpats = []
-        for kind, pats in self._kp:
+        for kind, pats, source in self._kp:
             if kind not in ('re', 'relre'):  # regex can't be normalized
                 pats = self._dsnormalize(pats)
-            kindpats.append((kind, pats))
+            kindpats.append((kind, pats, source))
         return kindpats
 
 def patkind(pattern, default=None):
@@ -449,7 +451,7 @@ def _buildregexmatch(kindpats, globsuffix):
     return regexp string and a matcher function."""
     try:
         regex = '(?:%s)' % '|'.join([_regex(k, p, globsuffix)
-                                     for (k, p) in kindpats])
+                                     for (k, p, s) in kindpats])
         if len(regex) > 20000:
             raise OverflowError
         return regex, _rematcher(regex)
@@ -464,25 +466,29 @@ def _buildregexmatch(kindpats, globsuffix):
         regexb, b = _buildregexmatch(kindpats[l//2:], globsuffix)
         return regex, lambda s: a(s) or b(s)
     except re.error:
-        for k, p in kindpats:
+        for k, p, s in kindpats:
             try:
                 _rematcher('(?:%s)' % _regex(k, p, globsuffix))
             except re.error:
-                raise util.Abort(_("invalid pattern (%s): %s") % (k, p))
+                if s:
+                    raise util.Abort(_("%s: invalid pattern (%s): %s") %
+                                     (s, k, p))
+                else:
+                    raise util.Abort(_("invalid pattern (%s): %s") % (k, p))
         raise util.Abort(_("invalid pattern"))
 
 def _roots(kindpats):
     '''return roots and exact explicitly listed files from patterns
 
-    >>> _roots([('glob', 'g/*'), ('glob', 'g'), ('glob', 'g*')])
+    >>> _roots([('glob', 'g/*', ''), ('glob', 'g', ''), ('glob', 'g*', '')])
     ['g', 'g', '.']
-    >>> _roots([('relpath', 'r'), ('path', 'p/p'), ('path', '')])
+    >>> _roots([('relpath', 'r', ''), ('path', 'p/p', ''), ('path', '', '')])
     ['r', 'p/p', '.']
-    >>> _roots([('relglob', 'rg*'), ('re', 're/'), ('relre', 'rr')])
+    >>> _roots([('relglob', 'rg*', ''), ('re', 're/', ''), ('relre', 'rr', '')])
     ['.', '.', '.']
     '''
     r = []
-    for kind, pat in kindpats:
+    for kind, pat, source in kindpats:
         if kind == 'glob': # find the non-glob prefix
             root = []
             for p in pat.split('/'):
@@ -497,7 +503,7 @@ def _roots(kindpats):
     return r
 
 def _anypats(kindpats):
-    for kind, pat in kindpats:
+    for kind, pat, source in kindpats:
         if kind in ('glob', 're', 'relglob', 'relre', 'set'):
             return True
 
