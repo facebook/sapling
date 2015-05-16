@@ -528,7 +528,21 @@ _commentre = None
 def readpatternfile(filepath, warn):
     '''parse a pattern file, returning a list of
     patterns. These patterns should be given to compile()
-    to be validated and converted into a match function.'''
+    to be validated and converted into a match function.
+
+    trailing white space is dropped.
+    the escape character is backslash.
+    comments start with #.
+    empty lines are skipped.
+
+    lines can be of the following formats:
+
+    syntax: regexp # defaults following lines to non-rooted regexps
+    syntax: glob   # defaults following lines to non-rooted globs
+    re:pattern     # non-rooted regular expression
+    glob:pattern   # non-rooted glob
+    pattern        # pattern of the current default type'''
+
     syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:',
                 'include': 'include'}
     syntax = 'relre:'

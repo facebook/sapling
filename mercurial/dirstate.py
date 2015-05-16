@@ -7,8 +7,9 @@
 
 from node import nullid
 from i18n import _
-import scmutil, util, ignore, osutil, parsers, encoding, pathutil
+import scmutil, util, osutil, parsers, encoding, pathutil
 import os, stat, errno
+import match as matchmod
 
 propertycache = util.propertycache
 filecache = scmutil.filecache
@@ -151,7 +152,12 @@ class dirstate(object):
                 # we need to use os.path.join here rather than self._join
                 # because path is arbitrary and user-specified
                 files.append(os.path.join(self._rootdir, util.expandpath(path)))
-        return ignore.ignore(self._root, files, self._ui.warn)
+
+        if not files:
+            return util.never
+
+        pats = ['include:%s' % f for f in files]
+        return matchmod.match(self._root, '', [], pats, warn=self._ui.warn)
 
     @propertycache
     def _slash(self):

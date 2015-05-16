@@ -189,3 +189,8 @@ Check recursive uses of 'include:'
   $ echo "glob:*ignore" > nestedignore
   $ hg status
   A dir/b.o
+
+  $ echo "include:badignore" >> otherignore
+  $ hg status
+  skipping unreadable pattern file 'badignore': No such file or directory
+  A dir/b.o
