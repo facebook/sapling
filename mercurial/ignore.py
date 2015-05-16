@@ -7,54 +7,6 @@
 
 from i18n import _
 import util, match
-import re
-
-_commentre = None
-
-def readpatternfile(filepath, warn):
-    '''parse a pattern file, returning a list of
-    patterns. These patterns should be given to compile()
-    to be validated and converted into a match function.'''
-    syntaxes = {'re': 'relre:', 'regexp': 'relre:', 'glob': 'relglob:'}
-    syntax = 'relre:'
-    patterns = []
-
-    fp = open(filepath)
-    for line in fp:
-        if "#" in line:
-            global _commentre
-            if not _commentre:
-                _commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
-            # remove comments prefixed by an even number of escapes
-            line = _commentre.sub(r'\1', line)
-            # fixup properly escaped comments that survived the above
-            line = line.replace("\\#", "#")
-        line = line.rstrip()
-        if not line:
-            continue
-
-        if line.startswith('syntax:'):
-            s = line[7:].strip()
-            try:
-                syntax = syntaxes[s]
-            except KeyError:
-                warn(_("%s: ignoring invalid syntax '%s'\n") % (filepath, s))
-            continue
-
-        linesyntax = syntax
-        for s, rels in syntaxes.iteritems():
-            if line.startswith(rels):
-                linesyntax = rels
-                line = line[len(rels):]
-                break
-            elif line.startswith(s+':'):
-                linesyntax = rels
-                line = line[len(s) + 1:]
-                break
-        patterns.append(linesyntax + line)
-
-    fp.close()
-    return patterns
 
 def readpats(root, files, warn):
     '''return a dict mapping ignore-file-name to list-of-patterns'''
@@ -64,7 +16,7 @@ def readpats(root, files, warn):
         if f in pats:
             continue
         try:
-            pats[f] = readpatternfile(f, warn)
+            pats[f] = match.readpatternfile(f, warn)
         except IOError, inst:
             warn(_("skipping unreadable ignore file '%s': %s\n") %
                  (f, inst.strerror))
