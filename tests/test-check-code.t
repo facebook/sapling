@@ -20,7 +20,6 @@
   $ cat > non-py24.py <<EOF
   > # Using builtins that does not exist in Python 2.4
   > if True:
-  >     x = all()
   >     y = format(x)
   > 
   > # try/except/finally block does not exist in Python 2.4
@@ -82,15 +81,12 @@
    > '"""', 42+1, """and
    missing whitespace in expression
   ./non-py24.py:3:
-   >     x = all()
-   all/format not available in Python 2.4
-  ./non-py24.py:4:
    >     y = format(x)
-   all/format not available in Python 2.4
-  ./non-py24.py:24:
+   format not available in Python 2.4
+  ./non-py24.py:23:
    >     try:
    no yield inside try/finally in Python 2.4
-  ./non-py24.py:29:
+  ./non-py24.py:28:
    >     try:
    no yield inside try/finally in Python 2.4
   ./classstyle.py:4:
