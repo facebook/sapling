@@ -479,14 +479,21 @@ def _regex(kind, pat, globsuffix):
 def _buildmatch(ctx, kindpats, globsuffix, listsubrepos, root):
     '''Return regexp string and a matcher function for kindpats.
     globsuffix is appended to the regexp of globs.'''
-    fset, kindpats = _expandsets(kindpats, ctx, listsubrepos)
-    if not kindpats:
-        return "", fset.__contains__
+    matchfuncs = []
 
-    regex, mf = _buildregexmatch(kindpats, globsuffix)
+    fset, kindpats = _expandsets(kindpats, ctx, listsubrepos)
     if fset:
-        return regex, lambda f: f in fset or mf(f)
-    return regex, mf
+        matchfuncs.append(fset.__contains__)
+
+    regex = ''
+    if kindpats:
+        regex, mf = _buildregexmatch(kindpats, globsuffix)
+        matchfuncs.append(mf)
+
+    if len(matchfuncs) == 1:
+        return regex, matchfuncs[0]
+    else:
+        return regex, lambda f: any(mf(f) for mf in matchfuncs)
 
 def _buildregexmatch(kindpats, globsuffix):
     """Build a match function from a list of kinds and kindpats,
