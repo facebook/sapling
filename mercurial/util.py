@@ -334,17 +334,7 @@ def cachefunc(func):
 
     return f
 
-try:
-    collections.deque.remove
-    deque = collections.deque
-except AttributeError:
-    # python 2.4 lacks deque.remove
-    class deque(collections.deque):
-        def remove(self, val):
-            for i, v in enumerate(self):
-                if v == val:
-                    del self[i]
-                    break
+deque = collections.deque
 
 class sortdict(dict):
     '''a simple sorted dictionary'''
