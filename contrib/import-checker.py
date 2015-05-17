@@ -26,6 +26,72 @@ def dotted_name_of_path(path, trimpure=False):
         return '.'.join(p for p in parts if p != 'pure')
     return '.'.join(parts)
 
+def fromlocalfunc(modulename, localmods):
+    """Get a function to examine which locally defined module the
+    target source imports via a specified name.
+
+    `modulename` is an `dotted_name_of_path()`-ed source file path,
+    which may have `.__init__` at the end of it, of the target source.
+
+    `localmods` is a dict (or set), of which key is an absolute
+    `dotted_name_of_path()`-ed source file path of locally defined (=
+    Mercurial specific) modules.
+
+    This function assumes that module names not existing in
+    `localmods` are ones of Python standard libarary.
+
+    This function returns the function, which takes `name` argument,
+    and returns `(absname, dottedpath, hassubmod)` tuple if `name`
+    matches against locally defined module. Otherwise, it returns
+    False.
+
+    It is assumed that `name` doesn't have `.__init__`.
+
+    `absname` is an absolute module name of specified `name`
+    (e.g. "hgext.convert"). This can be used to compose prefix for sub
+    modules or so.
+
+    `dottedpath` is a `dotted_name_of_path()`-ed source file path
+    (e.g. "hgext.convert.__init__") of `name`. This is used to look
+    module up in `localmods` again.
+
+    `hassubmod` is whether it may have sub modules under it (for
+    convenient, even though this is also equivalent to "absname !=
+    dottednpath")
+
+    >>> localmods = {'foo.__init__': True, 'foo.foo1': True,
+    ...              'foo.bar.__init__': True, 'foo.bar.bar1': True,
+    ...              'baz.__init__': True, 'baz.baz1': True }
+    >>> fromlocal = fromlocalfunc('foo.xxx', localmods)
+    >>> # relative
+    >>> fromlocal('foo1')
+    ('foo.foo1', 'foo.foo1', False)
+    >>> fromlocal('bar')
+    ('foo.bar', 'foo.bar.__init__', True)
+    >>> fromlocal('bar.bar1')
+    ('foo.bar.bar1', 'foo.bar.bar1', False)
+    >>> # absolute
+    >>> fromlocal('baz')
+    ('baz', 'baz.__init__', True)
+    >>> fromlocal('baz.baz1')
+    ('baz.baz1', 'baz.baz1', False)
+    >>> # unknown = maybe standard library
+    >>> fromlocal('os')
+    False
+    """
+    prefix = '.'.join(modulename.split('.')[:-1])
+    if prefix:
+        prefix += '.'
+    def fromlocal(name):
+        # check relative name at first
+        for n in prefix + name, name:
+            if n in localmods:
+                return (n, n, False)
+            dottedpath = n + '.__init__'
+            if dottedpath in localmods:
+                return (n, dottedpath, True)
+        return False
+    return fromlocal
 
 def list_stdlib_modules():
     """List the modules present in the stdlib.
