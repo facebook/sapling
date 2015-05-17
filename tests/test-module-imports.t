@@ -37,3 +37,4 @@ these may expose other cycles.
      stdlib:    formatter
      relative:  config, error, scmutil, util
   Import cycle: mercurial.cmdutil -> mercurial.context -> mercurial.subrepo -> mercurial.cmdutil
+  Import cycle: mercurial.commands -> mercurial.commandserver -> mercurial.dispatch -> mercurial.commands

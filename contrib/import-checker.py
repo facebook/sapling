@@ -170,38 +170,94 @@ def list_stdlib_modules():
 
 stdlib_modules = set(list_stdlib_modules())
 
-def imported_modules(source, ignore_nested=False):
+def imported_modules(source, modulename, localmods, ignore_nested=False):
     """Given the source of a file as a string, yield the names
     imported by that file.
 
     Args:
       source: The python source to examine as a string.
+      modulename: of specified python source (may have `__init__`)
+      localmods: dict of locally defined module names (may have `__init__`)
       ignore_nested: If true, import statements that do not start in
                      column zero will be ignored.
 
     Returns:
-      A list of module names imported by the given source.
+      A list of absolute module names imported by the given source.
 
+    >>> modulename = 'foo.xxx'
+    >>> localmods = {'foo.__init__': True,
+    ...              'foo.foo1': True, 'foo.foo2': True,
+    ...              'foo.bar.__init__': True, 'foo.bar.bar1': True,
+    ...              'baz.__init__': True, 'baz.baz1': True }
+    >>> # standard library (= not locally defined ones)
     >>> sorted(imported_modules(
-    ...         'import foo ; from baz import bar; import foo.qux'))
-    ['baz.bar', 'foo', 'foo.qux']
+    ...        'from stdlib1 import foo, bar; import stdlib2',
+    ...        modulename, localmods))
+    []
+    >>> # relative importing
+    >>> sorted(imported_modules(
+    ...        'import foo1; from bar import bar1',
+    ...        modulename, localmods))
+    ['foo.bar.__init__', 'foo.bar.bar1', 'foo.foo1']
+    >>> sorted(imported_modules(
+    ...        'from bar.bar1 import name1, name2, name3',
+    ...        modulename, localmods))
+    ['foo.bar.bar1']
+    >>> # absolute importing
+    >>> sorted(imported_modules(
+    ...        'from baz import baz1, name1',
+    ...        modulename, localmods))
+    ['baz.__init__', 'baz.baz1']
+    >>> # mixed importing, even though it shouldn't be recommended
+    >>> sorted(imported_modules(
+    ...        'import stdlib, foo1, baz',
+    ...        modulename, localmods))
+    ['baz.__init__', 'foo.foo1']
+    >>> # ignore_nested
     >>> sorted(imported_modules(
     ... '''import foo
     ... def wat():
     ...     import bar
-    ... ''', ignore_nested=True))
-    ['foo']
+    ... ''', modulename, localmods))
+    ['foo.__init__', 'foo.bar.__init__']
+    >>> sorted(imported_modules(
+    ... '''import foo
+    ... def wat():
+    ...     import bar
+    ... ''', modulename, localmods, ignore_nested=True))
+    ['foo.__init__']
     """
+    fromlocal = fromlocalfunc(modulename, localmods)
     for node in ast.walk(ast.parse(source)):
         if ignore_nested and getattr(node, 'col_offset', 0) > 0:
             continue
         if isinstance(node, ast.Import):
             for n in node.names:
-                yield n.name
+                found = fromlocal(n.name)
+                if not found:
+                    # this should import standard library
+                    continue
+                yield found[1]
         elif isinstance(node, ast.ImportFrom):
-            prefix = node.module + '.'
+            found = fromlocal(node.module)
+            if not found:
+                # this should import standard library
+                continue
+
+            absname, dottedpath, hassubmod = found
+            yield dottedpath
+            if not hassubmod:
+                # examination of "node.names" should be redundant
+                # e.g.: from mercurial.node import nullid, nullrev
+                continue
+
+            prefix = absname + '.'
             for n in node.names:
-                yield prefix + n.name
+                found = fromlocal(prefix + n.name)
+                if not found:
+                    # this should be a function or a property of "node.module"
+                    continue
+                yield found[1]
 
 def verify_stdlib_on_own_line(source):
     """Given some python source, verify that stdlib imports are done
@@ -297,7 +353,7 @@ def main(argv):
         f = open(source_path)
         src = f.read()
         used_imports[modname] = sorted(
-            imported_modules(src, ignore_nested=True))
+            imported_modules(src, modname, localmods, ignore_nested=True))
         for error in verify_stdlib_on_own_line(src):
             any_errors = True
             print source_path, error
