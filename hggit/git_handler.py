@@ -216,19 +216,13 @@ class GitHandler(object):
 
     def load_remote_refs(self):
         self._remote_refs = {}
-        tagfile = self.repo.join(self.remote_refs_file)
-        if os.path.exists(tagfile):
-            tf = open(tagfile, 'rb')
-            tagdata = tf.read().split('\n')
-            td = [line.split(' ', 1) for line in tagdata if line]
-            self._remote_refs.update([(name, bin(sha)) for sha, name in td])
-
-    def save_remote_refs(self):
-        file = self.repo.opener(self.remote_refs_file, 'w+', atomictemp=True)
-        for tag, node in self.remote_refs.iteritems():
-            file.write('%s %s\n' % (hex(node), tag))
-        # If this complains, atomictempfile no longer has close
-        file.close()
+        for k, v in self.git.refs.as_dict().iteritems():
+            if k.startswith('refs/remotes'):
+                k = k.replace('refs/remotes/', '')
+                try:
+                    self._remote_refs[k] = bin(self._map_git[v])
+                except KeyError:
+                    pass
 
     # END FILE LOAD AND SAVE METHODS
 
@@ -1333,8 +1327,6 @@ class GitHandler(object):
             elif (ref_name.startswith('refs/tags') and not
                   ref_name.endswith('^{}')):
                 self.git.refs[ref_name] = sha
-
-        self.save_remote_refs()
 
     # UTILITY FUNCTIONS
 

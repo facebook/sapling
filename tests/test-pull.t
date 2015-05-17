@@ -286,6 +286,7 @@ also add an annotated tag
   $ hg -R hgrepo log -r master
   changeset:   4:a02330f767a4
   bookmark:    master
+  tag:         default/master
   parent:      3:6f898ad1f3e1
   parent:      1:7fe02317c63d
   user:        test <test@example.org>
