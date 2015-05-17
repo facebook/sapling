@@ -20,7 +20,7 @@ here that we should still endeavor to fix, and some cycles will be
 hidden by deduplication algorithm in the cycle detector, so fixing
 these may expose other cycles.
 
-  $ hg locate 'mercurial/**.py' | sed 's-\\-/-g' | python "$import_checker" -
+  $ hg locate 'mercurial/**.py' 'hgext/**.py' | sed 's-\\-/-g' | python "$import_checker" -
   mercurial/dispatch.py mixed imports
      stdlib:    commands
      relative:  error, extensions, fancyopts, hg, hook, util
@@ -37,4 +37,5 @@ these may expose other cycles.
      stdlib:    formatter
      relative:  config, error, scmutil, util
   Import cycle: mercurial.cmdutil -> mercurial.context -> mercurial.subrepo -> mercurial.cmdutil
+  Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
   Import cycle: mercurial.commands -> mercurial.commandserver -> mercurial.dispatch -> mercurial.commands
