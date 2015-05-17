@@ -132,11 +132,7 @@ trivial
     ('symbol', '1')
     ('symbol', '2'))
   * set:
-  <addset
-    <baseset [0]>,
-    <addset
-      <baseset [1]>,
-      <baseset [2]>>>
+  <baseset [0, 1, 2]>
   0
   1
   2
@@ -272,9 +268,7 @@ quoting needed
   * set:
   <addset
     <baseset [1]>,
-    <addset
-      <baseset [2]>,
-      <baseset [3]>>>
+    <baseset [2, 3]>>
   1
   2
   3
@@ -909,6 +903,114 @@ test that `or` operation skips duplicated revisions from right-hand side
   4
   5
 
+test optimization of trivial `or` operation
+
+  $ try --optimize '0|(1)|"2"|-2|tip|null'
+  (or
+    ('symbol', '0')
+    (group
+      ('symbol', '1'))
+    ('string', '2')
+    (negate
+      ('symbol', '2'))
+    ('symbol', 'tip')
+    ('symbol', 'null'))
+  * optimized:
+  (func
+    ('symbol', '_list')
+    ('string', '0\x001\x002\x00-2\x00tip\x00null'))
+  * set:
+  <baseset [0, 1, 2, 8, 9, -1]>
+  0
+  1
+  2
+  8
+  9
+  -1
+
+  $ try --optimize '0|1|2:3'
+  (or
+    ('symbol', '0')
+    ('symbol', '1')
+    (range
+      ('symbol', '2')
+      ('symbol', '3')))
+  * optimized:
+  (or
+    (func
+      ('symbol', '_list')
+      ('string', '0\x001'))
+    (range
+      ('symbol', '2')
+      ('symbol', '3')))
+  * set:
+  <addset
+    <baseset [0, 1]>,
+    <spanset+ 2:3>>
+  0
+  1
+  2
+  3
+
+  $ try --optimize '0:1|2|3:4|5|6'
+  (or
+    (range
+      ('symbol', '0')
+      ('symbol', '1'))
+    ('symbol', '2')
+    (range
+      ('symbol', '3')
+      ('symbol', '4'))
+    ('symbol', '5')
+    ('symbol', '6'))
+  * optimized:
+  (or
+    (range
+      ('symbol', '0')
+      ('symbol', '1'))
+    ('symbol', '2')
+    (range
+      ('symbol', '3')
+      ('symbol', '4'))
+    (func
+      ('symbol', '_list')
+      ('string', '5\x006')))
+  * set:
+  <addset
+    <addset
+      <spanset+ 0:1>,
+      <baseset [2]>>,
+    <addset
+      <spanset+ 3:4>,
+      <baseset [5, 6]>>>
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+
+test that `_list` should be narrowed by provided `subset`
+
+  $ log '0:2 and (null|1|2|3)'
+  1
+  2
+
+test that `_list` should remove duplicates
+
+  $ log '0|1|2|1|2|-1|tip'
+  0
+  1
+  2
+  9
+
+test unknown revision in `_list`
+
+  $ log '0|unknown'
+  abort: unknown revision 'unknown'!
+  [255]
+
 test that chained `or` operations make balanced addsets
 
   $ try '0:1|1:2|2:3|3:4|4:5'
@@ -1367,9 +1469,7 @@ test infinite recursion
   * set:
   <addset
     <baseset [3]>,
-    <addset
-      <baseset [1]>,
-      <baseset [2]>>>
+    <baseset [1, 2]>>
   3
   1
   2

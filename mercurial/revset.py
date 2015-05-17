@@ -2169,11 +2169,36 @@ def optimize(x, small):
             return w, (op, tb, ta)
         return w, (op, ta, tb)
     elif op == 'or':
-        ws, ts = zip(*[optimize(y, False) for y in x[1:]])
+        # fast path for machine-generated expression, that is likely to have
+        # lots of trivial revisions: 'a + b + c()' to '_list(a b) + c()'
+        ws, ts, ss = [], [], []
+        def flushss():
+            if not ss:
+                return
+            if len(ss) == 1:
+                w, t = ss[0]
+            else:
+                s = '\0'.join(t[1] for w, t in ss)
+                y = ('func', ('symbol', '_list'), ('string', s))
+                w, t = optimize(y, False)
+            ws.append(w)
+            ts.append(t)
+            del ss[:]
+        for y in x[1:]:
+            w, t = optimize(y, False)
+            if t[0] == 'string' or t[0] == 'symbol':
+                ss.append((w, t))
+                continue
+            flushss()
+            ws.append(w)
+            ts.append(t)
+        flushss()
+        if len(ts) == 1:
+            return ws[0], ts[0] # 'or' operation is fully optimized out
         # we can't reorder trees by weight because it would change the order.
         # ("sort(a + b)" == "sort(b + a)", but "a + b" != "b + a")
         #   ts = tuple(t for w, t in sorted(zip(ws, ts), key=lambda wt: wt[0]))
-        return max(ws), (op,) + ts
+        return max(ws), (op,) + tuple(ts)
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1] == ('func', ('symbol', 'public'), None):
