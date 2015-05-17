@@ -1011,6 +1011,26 @@ test unknown revision in `_list`
   abort: unknown revision 'unknown'!
   [255]
 
+test integer range in `_list`
+
+  $ log '-1|-10'
+  9
+  0
+
+  $ log '-10|-11'
+  abort: unknown revision '-11'!
+  [255]
+
+  $ log '9|10'
+  abort: unknown revision '10'!
+  [255]
+
+test '0000' != '0' in `_list`
+
+  $ log '0|0000'
+  0
+  -1
+
 test that chained `or` operations make balanced addsets
 
   $ try '0:1|1:2|2:3|3:4|4:5'

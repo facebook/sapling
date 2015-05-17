@@ -1922,10 +1922,17 @@ def _list(repo, subset, x):
         return baseset()
     # remove duplicates here. it's difficult for caller to deduplicate sets
     # because different symbols can point to the same rev.
+    cl = repo.changelog
     ls = []
     seen = set()
     for t in s.split('\0'):
-        r = repo[t].rev()
+        try:
+            # fast path for integer revision
+            r = int(t)
+            if str(r) != t or r not in cl:
+                raise ValueError
+        except ValueError:
+            r = repo[t].rev()
         if r in seen:
             continue
         if (r in subset
