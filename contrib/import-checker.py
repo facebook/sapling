@@ -293,8 +293,6 @@ def checkmod(mod, imports):
     while visit:
         path = visit.pop(0)
         for i in sorted(imports.get(path[-1], [])):
-            if i not in stdlib_modules and not i.startswith('mercurial.'):
-                i = mod.rsplit('.', 1)[0] + '.' + i
             if len(path) < shortest.get(i, 1000):
                 shortest[i] = len(path)
                 if i in path:
@@ -316,10 +314,12 @@ def rotatecycle(cycle):
 def find_cycles(imports):
     """Find cycles in an already-loaded import graph.
 
-    >>> imports = {'top.foo': ['bar', 'os.path', 'qux'],
-    ...            'top.bar': ['baz', 'sys'],
-    ...            'top.baz': ['foo'],
-    ...            'top.qux': ['foo']}
+    All module names recorded in `imports` should be absolute one.
+
+    >>> imports = {'top.foo': ['top.bar', 'os.path', 'top.qux'],
+    ...            'top.bar': ['top.baz', 'sys'],
+    ...            'top.baz': ['top.foo'],
+    ...            'top.qux': ['top.foo']}
     >>> print '\\n'.join(sorted(find_cycles(imports)))
     top.bar -> top.baz -> top.foo -> top.bar
     top.foo -> top.qux -> top.foo
