@@ -176,10 +176,7 @@ def parsedag(desc):
     chiter = (c for c in desc)
 
     def nextch():
-        try:
-            return chiter.next()
-        except StopIteration:
-            return '\0'
+        return next(chiter, '\0')
 
     def nextrun(c, allow):
         s = ''
