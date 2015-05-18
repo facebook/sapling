@@ -109,8 +109,10 @@ Interaction with Mercurial Commands
     elements. Subversion subrepositories are currently silently ignored.
 
 :files: files does not recurse into subrepos unless -S/--subrepos is
-    specified.  Git and Subversion subrepositories are currently
-    silently ignored.
+    specified.  However, if you specify the full path of a file or
+    directory in a subrepo, it will be displayed even without
+    -S/--subrepos being specified.  Git and Subversion subrepositories
+    are currently silently ignored.
 
 :forget: forget currently only handles exact file matches in subrepos.
     Git and Subversion subrepositories are currently silently ignored.

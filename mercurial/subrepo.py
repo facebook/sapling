@@ -504,7 +504,7 @@ class abstractsubrepo(object):
         """Resolve the fileset expression for this repo"""
         return set()
 
-    def printfiles(self, ui, m, fm, fmt):
+    def printfiles(self, ui, m, fm, fmt, subrepos):
         """handle the files command for this subrepo"""
         return 1
 
@@ -904,7 +904,7 @@ class hgsubrepo(abstractsubrepo):
         return ctx.flags(name)
 
     @annotatesubrepoerror
-    def printfiles(self, ui, m, fm, fmt):
+    def printfiles(self, ui, m, fm, fmt, subrepos):
         # If the parent context is a workingctx, use the workingctx here for
         # consistency.
         if self._ctx.rev() is None:
@@ -912,7 +912,7 @@ class hgsubrepo(abstractsubrepo):
         else:
             rev = self._state[1]
             ctx = self._repo[rev]
-        return cmdutil.files(ui, ctx, m, fm, fmt, True)
+        return cmdutil.files(ui, ctx, m, fm, fmt, subrepos)
 
     @annotatesubrepoerror
     def getfileset(self, expr):

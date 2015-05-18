@@ -2297,12 +2297,16 @@ def files(ui, ctx, m, fm, fmt, subrepos):
         fm.write('path', fmt, m.rel(f))
         ret = 0
 
-    if subrepos:
-        for subpath in sorted(ctx.substate):
+    for subpath in sorted(ctx.substate):
+        def matchessubrepo(subpath):
+            return (m.always() or m.exact(subpath)
+                    or any(f.startswith(subpath + '/') for f in m.files()))
+
+        if subrepos or matchessubrepo(subpath):
             sub = ctx.sub(subpath)
             try:
                 submatch = matchmod.narrowmatcher(subpath, m)
-                if sub.printfiles(ui, submatch, fm, fmt) == 0:
+                if sub.printfiles(ui, submatch, fm, fmt, subrepos) == 0:
                     ret = 0
             except error.LookupError:
                 ui.status(_("skipping missing subrepository: %s\n")
