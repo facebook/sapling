@@ -63,3 +63,40 @@
   (run 'hg update' to get a working copy)
   prefetching file contents
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+# Dont consider filtered files when doing copy tracing
+
+## Push an unrelated commit
+  $ cd ../
+
+  $ hgcloneshallow ssh://user@dummy/master shallow2
+  streaming all changes
+  2 files to transfer, 527 bytes of data
+  transferred 527 bytes in 0.0 seconds (*) (glob)
+  searching for changes
+  no changes found
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  $ cd shallow2
+  $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
+
+  $ hg up -q 0
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  $ touch a
+  $ hg ci -Aqm a
+  $ hg push -q -f
+
+## Pull the unrelated commit and rebase onto it - verify unrelated file was not
+pulled
+
+  $ cd ../shallow
+  $ hg up -q 1
+  $ hg pull -q
+  $ clearcache
+  $ hg sparse -I z
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  $ hg prefetch -r '. + .^'
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  $ hg rebase -d 2 --keep
+  rebasing 1:876b1317060d "x2" (foo)

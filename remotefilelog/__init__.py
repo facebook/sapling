@@ -176,15 +176,25 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             m1 = c1.manifest()
             m2 = c2.manifest()
-            sparsematch1 = repo.sparsematch(c1.rev())
             files = []
-            for f in u1:
-                if not sparsematch1 or sparsematch1(f):
-                    files.append((f, hex(m1[f])))
+
+            sparsematch1 = repo.sparsematch(c1.rev())
+            if sparsematch1:
+                sparseu1 = []
+                for f in u1:
+                    if sparsematch1(f):
+                        files.append((f, hex(m1[f])))
+                        sparseu1.append(f)
+                u1 = sparseu1
+
             sparsematch2 = repo.sparsematch(c2.rev())
-            for f in u2:
-                if not sparsematch2 or sparsematch2(f):
-                    files.append((f, hex(m2[f])))
+            if sparsematch2:
+                sparseu2 = []
+                for f in u2:
+                    if sparsematch2(f):
+                        files.append((f, hex(m2[f])))
+                        sparseu2.append(f)
+                u2 = sparseu2
 
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
@@ -198,11 +208,15 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             mb = b.manifest()
 
-            sparsematch = repo.sparsematch(b.rev())
             files = []
-            for f in missing:
-                if not sparsematch or sparsematch(f):
-                    files.append((f, hex(mb[f])))
+            sparsematch = repo.sparsematch(b.rev())
+            if sparsematch:
+                sparsemissing = []
+                for f in missing:
+                    if sparsematch(f):
+                        files.append((f, hex(mb[f])))
+                        sparsemissing.append(f)
+                missing = sparsemissing
 
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
