@@ -217,8 +217,6 @@ pypats = [
     (r'(\w|\)),\w', "missing whitespace after ,"),
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
-    (r'(?<!def)(\s+|^|\()next\(.+\)',
-     'no next(foo) in Python 2.4 and 2.5, use foo.next() instead'),
     (r'(\s+)try:\n((?:\n|\1\s.*\n)*?)\1\s*yield\b.*?'
      r'((?:\n|\1\s.*\n)+?)\1finally:',
      'no yield inside try/finally in Python 2.4'),
