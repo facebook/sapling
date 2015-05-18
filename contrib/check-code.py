@@ -239,8 +239,6 @@ pypats = [
 #    (r'in range\(', "use xrange"),
 #    (r'^\s*print\s+', "avoid using print in core and extensions"),
     (r'[\x80-\xff]', "non-ASCII character literal"),
-    (r'(?<!def)\s+(format)\(',
-     "format not available in Python 2.4", 'no-py24'),
     (r'if\s.*\selse', "if ... else form not available in Python 2.4"),
     (r'^\s*(%s)\s\s' % '|'.join(keyword.kwlist),
      "gratuitous whitespace after Python keyword"),

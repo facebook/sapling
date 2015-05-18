@@ -18,10 +18,6 @@
   > a, '\\\\\\\\', "\\\\\\" x-2", "c-1"
   > EOF
   $ cat > non-py24.py <<EOF
-  > # Using builtins that does not exist in Python 2.4
-  > if True:
-  >     y = format(x)
-  > 
   > # try/except/finally block does not exist in Python 2.4
   >     try:
   >         pass
@@ -68,9 +64,6 @@
   ./quote.py:5:
    > '"""', 42+1, """and
    missing whitespace in expression
-  ./non-py24.py:3:
-   >     y = format(x)
-   format not available in Python 2.4
   ./classstyle.py:4:
    > class oldstyle_class:
    old-style class, use class foo(object)
