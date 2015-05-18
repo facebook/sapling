@@ -261,11 +261,9 @@ def statfiles(files):
                              for n, k, s in osutil.listdir(dir, True)
                              if getkind(s.st_mode) in _wantedkinds])
             except OSError, err:
-                # handle directory not found in Python version prior to 2.5
-                # Python <= 2.4 returns native Windows code 3 in errno
                 # Python >= 2.5 returns ENOENT and adds winerror field
                 # EINVAL is raised if dir is not a directory.
-                if err.errno not in (3, errno.ENOENT, errno.EINVAL,
+                if err.errno not in (errno.ENOENT, errno.EINVAL,
                                      errno.ENOTDIR):
                     raise
                 dmap = {}
