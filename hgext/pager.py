@@ -55,7 +55,7 @@ normal behavior.
 
 '''
 
-import atexit, sys, os, signal, subprocess, errno, shlex
+import atexit, sys, os, signal, subprocess
 from mercurial import commands, dispatch, util, extensions, cmdutil
 from mercurial.i18n import _
 
@@ -64,34 +64,6 @@ from mercurial.i18n import _
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'internal'
-
-def _pagerfork(ui, p):
-    if not util.safehasattr(os, 'fork'):
-        sys.stdout = util.popen(p, 'wb')
-        if ui._isatty(sys.stderr):
-            sys.stderr = sys.stdout
-        return
-    fdin, fdout = os.pipe()
-    pid = os.fork()
-    if pid == 0:
-        os.close(fdin)
-        os.dup2(fdout, sys.stdout.fileno())
-        if ui._isatty(sys.stderr):
-            os.dup2(fdout, sys.stderr.fileno())
-        os.close(fdout)
-        return
-    os.dup2(fdin, sys.stdin.fileno())
-    os.close(fdin)
-    os.close(fdout)
-    try:
-        os.execvp('/bin/sh', ['/bin/sh', '-c', p])
-    except OSError, e:
-        if e.errno == errno.ENOENT:
-            # no /bin/sh, try executing the pager directly
-            args = shlex.split(p)
-            os.execvp(args[0], args)
-        else:
-            raise
 
 def _pagersubprocess(ui, p):
     pager = subprocess.Popen(p, shell=True, bufsize=-1,
@@ -114,13 +86,7 @@ def _pagersubprocess(ui, p):
         pager.wait()
 
 def _runpager(ui, p):
-    # The subprocess module shipped with Python <= 2.4 is buggy (issue3533).
-    # The compat version is buggy on Windows (issue3225), but has been shipping
-    # with hg for a long time.  Preserve existing functionality.
-    if sys.version_info >= (2, 5):
-        _pagersubprocess(ui, p)
-    else:
-        _pagerfork(ui, p)
+    _pagersubprocess(ui, p)
 
 def uisetup(ui):
     if '--debugger' in sys.argv or not ui.formatted():
