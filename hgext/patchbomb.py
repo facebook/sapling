@@ -59,10 +59,6 @@ You can set patchbomb to always ask for confirmation by setting
 
 import os, errno, socket, tempfile, cStringIO
 import email
-# On python2.4 you have to import these by name or they fail to
-# load. This was not a problem on Python 2.7.
-import email.Generator
-import email.MIMEMultipart
 
 from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial import scmutil
