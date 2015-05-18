@@ -115,7 +115,7 @@
    old-style class, use class foo(object)
   ./classstyle.py:7:
    > class empty():
-   class foo() not available in Python 2.4, use class foo(object)
+   class foo() creates old style object, use class foo(object)
   [1]
   $ cat > python3-compat.py << EOF
   > foo <> bar
