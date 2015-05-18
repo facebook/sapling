@@ -22,6 +22,7 @@ setup(
         'githelp',
         'gitlookup',
         'gitrevset',
+        'inhibitwarn',
         'phabdiff',
         'phrevset',
         'pushvars',
