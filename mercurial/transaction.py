@@ -496,7 +496,7 @@ class transaction(object):
                 _playback(self.journal, self.report, self.opener, self._vfsmap,
                           self.entries, self._backupentries, False)
                 self.report(_("rollback completed\n"))
-            except Exception:
+            except BaseException:
                 self.report(_("rollback failed - please run hg recover\n"))
         finally:
             self.journal = None
