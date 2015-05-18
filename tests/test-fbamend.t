@@ -295,3 +295,58 @@ no warning if only obsolete markers are enabled
   $ hg amend
   nothing changed
   [1]
+
+Fbamend respects the createmarkers option
+
+  $ hg log -G -T '{rev} {node|short} {desc} {bookmarks}\n'
+  @  3 01dd7a39383a bar
+  |
+  o  2 3166f3b5587d commit --amend message
+  |
+  o  1 048e86baa19d message from exec
+  |
+  o  0 cb9a9f314b8b a
+  
+  $ hg up 048e86
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ echo "bb" > bb
+  $ hg add bb
+  $ hg amend --debug
+  amending changeset 048e86baa19d
+  committing files:
+  bb
+  committing manifest
+  committing changelog
+  copying changeset 4e21ff9ac40b to cb9a9f314b8b
+  committing files:
+  a
+  bb
+  committing manifest
+  committing changelog
+  user education
+  second line
+  warning: the commit's children were left behind
+  (use 'hg amend --fixup' to rebase them)
+  $ hg amend --fixup
+  rebasing the children of 3a4d2824efc1.preamend
+  rebasing 2:3166f3b5587d "commit --amend message"
+  rebasing 3:01dd7a39383a "bar"
+  $ hg log -G -T '{rev} {node|short} {desc} {bookmarks}\n'
+  o  7 9752120dcffe bar
+  |
+  o  6 bc3b6a46cdb4 commit --amend message
+  |
+  @  5 3a4d2824efc1 message from exec
+  |
+  o  0 cb9a9f314b8b a
+  
+  $ echo "cc" > cc
+  $ hg add cc
+  $ hg amend --rebase --traceback
+  rebasing the children of 1c16dd8e35d2.preamend
+  rebasing 6:bc3b6a46cdb4 "commit --amend message"
+  rebasing 7:9752120dcffe "bar"
+
+
+
+

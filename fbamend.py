@@ -188,7 +188,11 @@ def fixupamend(ui, repo):
     if opts['rev'] and opts['rev'][0]:
         rebase.rebase(ui, repo, **opts)
 
-    repair.strip(ui, repo, old.node(), topic='preamend-backup')
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+       # clean up the original node if inhibit kept it alive
+       obsolete.createmarkers(repo, [(old,())])
+    else:
+       repair.strip(ui, repo, old.node(), topic='preamend-backup')
 
     for bookmark in oldbookmarks:
         repo._bookmarks.pop(bookmark)
