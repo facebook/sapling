@@ -83,14 +83,25 @@ if sys.version_info > (3, 5, 0):
     xrange = range # we use xrange in one place, and we'd rather not use range
     def _bytespath(p):
         return p.encode('utf-8')
+
+    def _strpath(p):
+        return p.decode('utf-8')
+
 elif sys.version_info >= (3, 0, 0):
     print('%s is only supported on Python 3.5+ and 2.6-2.7, not %s' %
           (sys.argv[0], '.'.join(str(v) for v in sys.version_info[:3])))
     sys.exit(70) # EX_SOFTWARE from `man 3 sysexit`
 else:
     PYTHON3 = False
+
+    # In python 2.x, path operations are generally done using
+    # bytestrings by default, so we don't have to do any extra
+    # fiddling there. We define the wrapper functions anyway just to
+    # help keep code consistent between platforms.
     def _bytespath(p):
         return p
+
+    _strpath = _bytespath
 
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
@@ -443,7 +454,7 @@ class Test(unittest.TestCase):
         """
         self.path = path
         self.bname = os.path.basename(path)
-        self.name = self.bname.decode('utf-8')
+        self.name = _strpath(self.bname)
         self._testdir = os.path.dirname(path)
         self.errpath = os.path.join(self._testdir, b'%s.err' % self.bname)
 
@@ -1734,8 +1745,8 @@ class TestRunner(object):
                 # in all lowercase, which causes troubles with paths (issue3490)
                 d = osenvironb.get(b'TMP', None)
             # FILE BUG: mkdtemp works only on unicode in Python 3
-            tmpdir = tempfile.mkdtemp('', 'hgtests.',
-                                      d and d.decode('utf-8')).encode('utf-8')
+            tmpdir = tempfile.mkdtemp('', 'hgtests.', d and _strpath(d))
+            tmpdir = _bytespath(tmpdir)
 
         self._hgtmp = osenvironb[b'HGTMP'] = (
             os.path.realpath(tmpdir))
@@ -2126,7 +2137,7 @@ class TestRunner(object):
         cmd = b'%s -c "import mercurial; print (mercurial.__path__[0])"'
         cmd = cmd % PYTHON
         if PYTHON3:
-            cmd = cmd.decode('utf-8')
+            cmd = _strpath(cmd)
         pipe = os.popen(cmd)
         try:
             self._hgpath = _bytespath(pipe.read().strip())
