@@ -1315,7 +1315,7 @@ def unbundle(repo, cg, heads, source, url):
                         def recordout(output):
                             r.newpart('output', data=output, mandatory=False)
                 tr.close()
-            except Exception, exc:
+            except BaseException, exc:
                 exc.duringunbundle2 = True
                 if captureoutput and r is not None:
                     parts = exc._bundle2salvagedoutput = r.salvageoutput()
