@@ -79,7 +79,10 @@ except ImportError:
 processlock = threading.Lock()
 
 if sys.version_info > (3, 0, 0):
+    PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
+else:
+    PYTHON3 = False
 
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
