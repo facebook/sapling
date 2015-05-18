@@ -1172,12 +1172,11 @@ def last(repo, subset, x):
     result = []
     it = iter(os)
     for x in xrange(lim):
-        try:
-            y = it.next()
-            if y in ss:
-                result.append(y)
-        except (StopIteration):
+        y = next(it, None)
+        if y is None:
             break
+        elif y in ss:
+            result.append(y)
     return baseset(result)
 
 def maxrev(repo, subset, x):
