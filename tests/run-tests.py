@@ -81,12 +81,6 @@ processlock = threading.Lock()
 if sys.version_info > (3, 0, 0):
     xrange = range # we use xrange in one place, and we'd rather not use range
 
-# subprocess._cleanup can race with any Popen.wait or Popen.poll on py24
-# http://bugs.python.org/issue1731717 for details. We shouldn't be producing
-# zombies but it's pretty harmless even if we do.
-if sys.version_info < (2, 5):
-    subprocess._cleanup = lambda: None
-
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
     try:
