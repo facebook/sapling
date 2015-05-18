@@ -1843,13 +1843,12 @@ def walkchangerevs(repo, match, opts, prepare):
         for windowsize in increasingwindows():
             nrevs = []
             for i in xrange(windowsize):
-                try:
-                    rev = it.next()
-                    if want(rev):
-                        nrevs.append(rev)
-                except (StopIteration):
+                rev = next(it, None)
+                if rev is None:
                     stopiteration = True
                     break
+                elif want(rev):
+                    nrevs.append(rev)
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
                 ctx = change(rev)
