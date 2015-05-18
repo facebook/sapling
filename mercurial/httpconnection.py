@@ -70,11 +70,7 @@ def readauthforuri(ui, uri, user):
         gdict[setting] = val
 
     # Find the best match
-    if '://' in uri:
-        scheme, hostpath = uri.split('://', 1)
-    else:
-        # Python 2.4.1 doesn't provide the full URI
-        scheme, hostpath = 'http', uri
+    scheme, hostpath = uri.split('://', 1)
     bestuser = None
     bestlen = 0
     bestauth = None
