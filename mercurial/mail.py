@@ -9,10 +9,6 @@ from i18n import _
 import util, encoding, sslutil
 import os, smtplib, socket, quopri, time, sys
 import email
-# On python2.4 you have to import these by name or they fail to
-# load. This was not a problem on Python 2.7.
-import email.Header
-import email.MIMEText
 
 _oldheaderinit = email.Header.Header.__init__
 def _unifiedheaderinit(self, *args, **kw):
