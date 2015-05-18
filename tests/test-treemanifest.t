@@ -280,3 +280,100 @@ Turning off treemanifest config has no effect
        0         0     125      0       4 63c9c0557d24 000000000000 000000000000
        1       125     109      0       5 23d12a1f6e0e 000000000000 000000000000
        2       234      55      0       6 3cb2d87b4250 23d12a1f6e0e 000000000000
+
+Create deeper repo with tree manifests.
+
+  $ cd ..
+  $ hg --config experimental.treemanifest=True init deeprepo
+  $ cd deeprepo
+
+  $ mkdir a
+  $ mkdir b
+  $ mkdir b/bar
+  $ mkdir b/bar/orange
+  $ mkdir b/bar/orange/fly
+  $ mkdir b/foo
+  $ mkdir b/foo/apple
+  $ mkdir b/foo/apple/bees
+
+  $ touch a/one.txt
+  $ touch a/two.txt
+  $ touch b/bar/fruits.txt
+  $ touch b/bar/orange/fly/gnat.py
+  $ touch b/bar/orange/fly/housefly.txt
+  $ touch b/foo/apple/bees/flower.py
+  $ touch c.txt
+  $ touch d.py
+
+  $ hg ci -Aqm 'initial'
+
+We'll see that visitdir works by removing some treemanifest revlogs and running
+the files command with various parameters.
+
+Test files from the root.
+
+  $ hg files -r .
+  a/one.txt
+  a/two.txt
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+  b/foo/apple/bees/flower.py
+  c.txt
+  d.py
+
+Test files for a subdirectory.
+
+  $ mv .hg/store/meta/a oldmf
+  $ hg files -r . b
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+  b/foo/apple/bees/flower.py
+  $ mv oldmf .hg/store/meta/a
+
+Test files with just includes and excludes.
+
+  $ mv .hg/store/meta/a oldmf
+  $ mv .hg/store/meta/b/bar/orange/fly oldmf2
+  $ mv .hg/store/meta/b/foo/apple/bees oldmf3
+  $ hg files -r . -I b/bar -X b/bar/orange/fly -I b/foo -X b/foo/apple/bees
+  b/bar/fruits.txt
+  $ mv oldmf .hg/store/meta/a
+  $ mv oldmf2 .hg/store/meta/b/bar/orange/fly
+  $ mv oldmf3 .hg/store/meta/b/foo/apple/bees
+
+Test files for a subdirectory, excluding a directory within it.
+
+  $ mv .hg/store/meta/a oldmf
+  $ mv .hg/store/meta/b/foo oldmf2
+  $ hg files -r . -X b/foo b
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+  $ mv oldmf .hg/store/meta/a
+  $ mv oldmf2 .hg/store/meta/b/foo
+
+Test files for a sub directory, including only a directory within it, and
+including an unrelated directory.
+
+  $ mv .hg/store/meta/a oldmf
+  $ mv .hg/store/meta/b/foo oldmf2
+  $ hg files -r . -I b/bar/orange -I a b
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+  $ mv oldmf .hg/store/meta/a
+  $ mv oldmf2 .hg/store/meta/b/foo
+
+Test files for a pattern, including a directory, and excluding a directory
+within that.
+
+  $ mv .hg/store/meta/a oldmf
+  $ mv .hg/store/meta/b/foo oldmf2
+  $ mv .hg/store/meta/b/bar/orange oldmf3
+  $ hg files -r . glob:**.txt -I b/bar -X b/bar/orange
+  b/bar/fruits.txt
+  $ mv oldmf .hg/store/meta/a
+  $ mv oldmf2 .hg/store/meta/b/foo
+  $ mv oldmf3 .hg/store/meta/b/bar/orange
+

@@ -86,17 +86,25 @@ class match(object):
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
         self._warn = warn
+        self._includeroots = set()
+        self._includedirs = set(['.'])
+        self._excluderoots = set()
 
         matchfns = []
         if include:
             kindpats = self._normalize(include, 'glob', root, cwd, auditor)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos)
+            self._includeroots.update(_roots(kindpats))
+            self._includeroots.discard('.')
+            self._includedirs.update(util.dirs(self._includeroots))
             matchfns.append(im)
         if exclude:
             kindpats = self._normalize(exclude, 'glob', root, cwd, auditor)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos)
+            self._excluderoots.update(_roots(kindpats))
+            self._excluderoots.discard('.')
             matchfns.append(lambda f: not em(f))
         if exact:
             if isinstance(patterns, list):
@@ -177,10 +185,25 @@ class match(object):
         return set(util.dirs(self._fileroots)) | set(['.'])
 
     def visitdir(self, dir):
+        '''Decides whether a directory should be visited based on whether it
+        has potential matches in it or one of its subdirectories. This is
+        based on the match's primary, included, and excluded patterns.
+
+        This function's behavior is undefined if it has returned False for
+        one of the dir's parent directories.
+        '''
+        if dir in self._excluderoots:
+            return False
+        parentdirs = None
+        if (self._includeroots and dir not in self._includeroots and
+                dir not in self._includedirs):
+            parentdirs = util.finddirs(dir)
+            if not any(parent in self._includeroots for parent in parentdirs):
+                return False
         return (not self._fileroots or '.' in self._fileroots or
                 dir in self._fileroots or dir in self._dirs or
                 any(parentdir in self._fileroots
-                    for parentdir in util.finddirs(dir)))
+                    for parentdir in parentdirs or util.finddirs(dir)))
 
     def exact(self, f):
         '''Returns True if f is in .files().'''
