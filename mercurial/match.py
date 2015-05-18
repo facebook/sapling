@@ -54,7 +54,7 @@ def _kindpatsalwaysmatch(kindpats):
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
                  default='glob', exact=False, auditor=None, ctx=None,
-                 listsubrepos=False):
+                 listsubrepos=False, warn=None):
         """build an object to match a set of file patterns
 
         arguments:
@@ -65,6 +65,7 @@ class match(object):
         exclude - patterns to exclude (even if they are included)
         default - if a pattern in patterns has no explicit type, assume this one
         exact - patterns are actually filenames (include/exclude still apply)
+        warn - optional function used for printing warnings
 
         a pattern is one of:
         'glob:<glob>' - a glob relative to cwd
@@ -83,6 +84,7 @@ class match(object):
         self._anypats = bool(include or exclude)
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
+        self._warn = warn
 
         matchfns = []
         if include:
@@ -536,7 +538,9 @@ def readpatternfile(filepath, warn):
             try:
                 syntax = syntaxes[s]
             except KeyError:
-                warn(_("%s: ignoring invalid syntax '%s'\n") % (filepath, s))
+                if warn:
+                    warn(_("%s: ignoring invalid syntax '%s'\n") %
+                         (filepath, s))
             continue
 
         linesyntax = syntax
