@@ -33,8 +33,6 @@ if '--json' in sys.argv:
     sys.argv.remove('--json')
     formatjson = True
 
-reasons = {'Not modified': 'Not Modified'} # python 2.4
-
 tag = None
 def request(host, path, show):
     assert not path.startswith('/'), path
@@ -46,7 +44,7 @@ def request(host, path, show):
     conn = httplib.HTTPConnection(host)
     conn.request("GET", '/' + path, None, headers)
     response = conn.getresponse()
-    print response.status, reasons.get(response.reason, response.reason)
+    print response.status, response.reason
     if show[:1] == ['-']:
         show = sorted(h for h, v in response.getheaders()
                       if h.lower() not in show)
