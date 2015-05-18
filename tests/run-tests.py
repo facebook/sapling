@@ -81,12 +81,16 @@ processlock = threading.Lock()
 if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
+    def _bytespath(p):
+        return p.encode('utf-8')
 elif sys.version_info >= (3, 0, 0):
     print('%s is only supported on Python 3.5+ and 2.6-2.7, not %s' %
           (sys.argv[0], '.'.join(str(v) for v in sys.version_info[:3])))
     sys.exit(70) # EX_SOFTWARE from `man 3 sysexit`
 else:
     PYTHON3 = False
+    def _bytespath(p):
+        return p
 
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
@@ -126,7 +130,7 @@ def Popen4(cmd, wd, timeout, env=None):
 
     return p
 
-PYTHON = sys.executable.replace('\\', '/').encode('utf-8')
+PYTHON = _bytespath(sys.executable.replace('\\', '/'))
 IMPL_PATH = b'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = b'JYTHONPATH'
@@ -264,7 +268,7 @@ def parseargs(args, parser):
         if not os.path.basename(options.with_hg) == 'hg':
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
-        testdir = os.path.dirname(os.path.realpath(sys.argv[0]).encode('utf-8'))
+        testdir = os.path.dirname(_bytespath(os.path.realpath(sys.argv[0])))
         hgbin = os.path.join(os.path.dirname(testdir), b'hg')
         if os.name != 'nt' and not os.access(hgbin, os.X_OK):
             parser.error('--local specified, but %r not found or not executable'
@@ -450,7 +454,7 @@ class Test(unittest.TestCase):
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
-        self._shell = shell.encode('utf-8')
+        self._shell = _bytespath(shell)
 
         self._aborted = False
         self._daemonpids = []
@@ -1283,7 +1287,7 @@ class TestResult(unittest._TextTestResult):
             elif self._options.view:
                 v = self._options.view
                 if PYTHON3:
-                    v = v.encode('utf-8')
+                    v = _bytespath(v)
                 os.system(b"%s %s %s" %
                           (v, test.refpath, test.errpath))
             else:
@@ -1621,7 +1625,7 @@ class TestRunner(object):
 
     # Programs required to run tests.
     REQUIREDTOOLS = [
-        os.path.basename(sys.executable).encode('utf-8'),
+        os.path.basename(_bytespath(sys.executable)),
         b'diff',
         b'grep',
         b'unzip',
@@ -1657,7 +1661,9 @@ class TestRunner(object):
         try:
             parser = parser or getparser()
             options, args = parseargs(args, parser)
-            args = [a.encode('utf-8') for a in args]
+            # positional arguments are paths to test files to run, so
+            # we make sure they're all bytestrings
+            args = [_bytespath(a) for a in args]
             self.options = options
 
             self._checktools()
@@ -1707,7 +1713,7 @@ class TestRunner(object):
 
         if self.options.tmpdir:
             self.options.keep_tmpdir = True
-            tmpdir = self.options.tmpdir.encode('utf-8')
+            tmpdir = _bytespath(self.options.tmpdir)
             if os.path.exists(tmpdir):
                 # Meaning of tmpdir has changed since 1.3: we used to create
                 # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
@@ -1742,7 +1748,7 @@ class TestRunner(object):
             # have to encode it back into a bytes.
             if PYTHON3:
                 if not isinstance(whg, bytes):
-                    whg = whg.encode('utf-8')
+                    whg = _bytespath(whg)
             self._bindir = os.path.dirname(os.path.realpath(whg))
             assert isinstance(self._bindir, bytes)
             self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
@@ -1764,10 +1770,10 @@ class TestRunner(object):
         osenvironb[b"BINDIR"] = self._bindir
         osenvironb[b"PYTHON"] = PYTHON
 
-        fileb = __file__.encode('utf-8')
+        fileb = _bytespath(__file__)
         runtestdir = os.path.abspath(os.path.dirname(fileb))
         if PYTHON3:
-            sepb = os.pathsep.encode('utf-8')
+            sepb = _bytespath(os.pathsep)
         else:
             sepb = os.pathsep
         path = [self._bindir, runtestdir] + osenvironb[b"PATH"].split(sepb)
@@ -2001,9 +2007,9 @@ class TestRunner(object):
         exe = sys.executable
         if PYTHON3:
             py3 = b'--c2to3'
-            compiler = compiler.encode('utf-8')
-            script = script.encode('utf-8')
-            exe = exe.encode('utf-8')
+            compiler = _bytespath(compiler)
+            script = _bytespath(script)
+            exe = _bytespath(exe)
         hgroot = os.path.dirname(os.path.dirname(script))
         self._hgroot = hgroot
         os.chdir(hgroot)
@@ -2123,9 +2129,7 @@ class TestRunner(object):
             cmd = cmd.decode('utf-8')
         pipe = os.popen(cmd)
         try:
-            self._hgpath = pipe.read().strip()
-            if PYTHON3:
-                self._hgpath = self._hgpath.encode('utf-8')
+            self._hgpath = _bytespath(pipe.read().strip())
         finally:
             pipe.close()
 
@@ -2161,12 +2165,8 @@ class TestRunner(object):
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
-        if PYTHON3:
-            dpb = os.defpath.encode('utf-8')
-            sepb = os.pathsep.encode('utf-8')
-        else:
-            dpb = os.defpath
-            sepb = os.pathsep
+        dpb = _bytespath(os.defpath)
+        sepb = _bytespath(os.pathsep)
         for p in osenvironb.get(b'PATH', dpb).split(sepb):
             name = os.path.join(p, program)
             if os.name == 'nt' or os.access(name, os.X_OK):
