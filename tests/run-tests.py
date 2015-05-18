@@ -103,6 +103,9 @@ else:
 
     _strpath = _bytespath
 
+# For Windows support
+wifexited = getattr(os, "WIFEXITED", lambda x: False)
+
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
     try:
@@ -804,7 +807,7 @@ class Test(unittest.TestCase):
             raise
 
         ret = proc.wait()
-        if os.WIFEXITED(ret):
+        if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
 
         if proc.timeout:
@@ -905,7 +908,7 @@ class TTest(Test):
                       self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
-        if os.WIFEXITED(ret):
+        if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
         if ret == 2:
             print(stdout)
