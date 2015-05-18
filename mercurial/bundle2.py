@@ -315,7 +315,7 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
     try:
         for part in iterparts:
             _processpart(op, part)
-    except Exception, exc:
+    except BaseException, exc:
         for part in iterparts:
             # consume the bundle content
             part.seek(0, 2)
@@ -762,7 +762,7 @@ class bundlepart(object):
             for chunk in self._payloadchunks():
                 yield _pack(_fpayloadsize, len(chunk))
                 yield chunk
-        except Exception, exc:
+        except BaseException, exc:
             # backup exception data for later
             exc_info = sys.exc_info()
             msg = 'unexpected error: %s' % exc
