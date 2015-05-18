@@ -16,7 +16,6 @@ import email.Parser
 
 from i18n import _
 from node import hex, short
-import cStringIO
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
 import pathutil
 
