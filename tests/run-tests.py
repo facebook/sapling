@@ -303,8 +303,9 @@ def parseargs(args, parser):
                 'warning: --timeout option ignored with --debug\n')
         options.timeout = 0
     if options.py3k_warnings:
-        if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
-            parser.error('--py3k-warnings can only be used on Python 2.6+')
+        if PYTHON3:
+            parser.error(
+                '--py3k-warnings can only be used on Python 2.6 and 2.7')
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, 'blacklist')
     if options.whitelist:
