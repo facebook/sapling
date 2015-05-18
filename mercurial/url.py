@@ -120,16 +120,6 @@ class proxyhandler(urllib2.ProxyHandler):
             if e.startswith('.') and host.endswith(e[1:]):
                 return None
 
-        # work around a bug in Python < 2.4.2
-        # (it leaves a "\n" at the end of Proxy-authorization headers)
-        baseclass = req.__class__
-        class _request(baseclass):
-            def add_header(self, key, val):
-                if key.lower() == 'proxy-authorization':
-                    val = val.strip()
-                return baseclass.add_header(self, key, val)
-        req.__class__ = _request
-
         return urllib2.ProxyHandler.proxy_open(self, req, proxy, type_)
 
 def _gen_sendfile(orgsend):
