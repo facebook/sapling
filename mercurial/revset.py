@@ -28,21 +28,18 @@ def _revancestors(repo, revs, followfirst):
         revs.sort(reverse=True)
         irevs = iter(revs)
         h = []
-        try:
-            inputrev = irevs.next()
+
+        inputrev = next(irevs, None)
+        if inputrev is not None:
             heapq.heappush(h, -inputrev)
-        except StopIteration:
-            return
 
         seen = set()
         while h:
             current = -heapq.heappop(h)
             if current == inputrev:
-                try:
-                    inputrev = irevs.next()
+                inputrev = next(irevs, None)
+                if inputrev is not None:
                     heapq.heappush(h, -inputrev)
-                except StopIteration:
-                    pass
             if current not in seen:
                 seen.add(current)
                 yield current
