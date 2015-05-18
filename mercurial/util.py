@@ -1554,13 +1554,6 @@ def MBTextWrapper(**kwargs):
 
         This requires use decision to determine width of such characters.
         """
-        def __init__(self, **kwargs):
-            textwrap.TextWrapper.__init__(self, **kwargs)
-
-            # for compatibility between 2.4 and 2.6
-            if getattr(self, 'drop_whitespace', None) is None:
-                self.drop_whitespace = kwargs.get('drop_whitespace', True)
-
         def _cutdown(self, ucstr, space_left):
             l = 0
             colwidth = encoding.ucolwidth
