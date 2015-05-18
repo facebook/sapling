@@ -2127,15 +2127,11 @@ def getlogrevs(repo, pats, opts):
         if not opts.get('rev'):
             revs.sort(reverse=True)
     if limit is not None:
-        count = 0
         limitedrevs = []
-        it = iter(revs)
-        while count < limit:
-            try:
-                limitedrevs.append(it.next())
-            except (StopIteration):
+        for idx, r in enumerate(revs):
+            if limit <= idx:
                 break
-            count += 1
+            limitedrevs.append(r)
         revs = revset.baseset(limitedrevs)
 
     return revs, expr, filematcher
