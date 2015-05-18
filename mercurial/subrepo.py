@@ -596,21 +596,14 @@ class hgsubrepo(abstractsubrepo):
     def _storeclean(self, path):
         clean = True
         itercache = self._calcstorehash(path)
-        try:
-            for filehash in self._readstorehashcache(path):
-                if filehash != itercache.next():
-                    clean = False
-                    break
-        except StopIteration:
-            # the cached and current pull states have a different size
-            clean = False
-        if clean:
-            try:
-                itercache.next()
-                # the cached and current pull states have a different size
+        for filehash in self._readstorehashcache(path):
+            if filehash != next(itercache, None):
                 clean = False
-            except StopIteration:
-                pass
+                break
+        if clean:
+            # if not empty:
+            # the cached and current pull states have a different size
+            clean = next(itercache, None) is None
         return clean
 
     def _calcstorehash(self, remotepath):
