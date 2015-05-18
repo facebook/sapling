@@ -323,7 +323,7 @@ def rename(src, dst):
     os.remove(src)
 
 _unified_diff = difflib.unified_diff
-if sys.version_info[0] > 2:
+if PYTHON3:
     import functools
     _unified_diff = functools.partial(difflib.diff_bytes, difflib.unified_diff)
 
@@ -831,7 +831,7 @@ checkcodeglobpats = [
 ]
 
 bchr = chr
-if sys.version_info[0] == 3:
+if PYTHON3:
     bchr = lambda x: bytes([x])
 
 class TTest(Test):
@@ -1118,7 +1118,7 @@ class TTest(Test):
             return True
         if el:
             if el.endswith(b" (esc)\n"):
-                if sys.version_info[0] == 3:
+                if PYTHON3:
                     el = el[:-7].decode('unicode_escape') + '\n'
                     el = el.encode('utf-8')
                 else:
@@ -1278,7 +1278,7 @@ class TestResult(unittest._TextTestResult):
                 pass
             elif self._options.view:
                 v = self._options.view
-                if sys.version_info[0] == 3:
+                if PYTHON3:
                     v = v.encode('utf-8')
                 os.system(b"%s %s %s" %
                           (v, test.refpath, test.errpath))
@@ -1292,7 +1292,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        if sys.version_info[0] > 2:
+                        if PYTHON3:
                             self.stream.flush()
                             self.stream.buffer.write(line)
                             self.stream.buffer.flush()
@@ -1736,7 +1736,7 @@ class TestRunner(object):
             # If --with-hg is not specified, we have bytes already,
             # but if it was specified in python3 we get a str, so we
             # have to encode it back into a bytes.
-            if sys.version_info[0] == 3:
+            if PYTHON3:
                 if not isinstance(whg, bytes):
                     whg = whg.encode('utf-8')
             self._bindir = os.path.dirname(os.path.realpath(whg))
@@ -1762,7 +1762,7 @@ class TestRunner(object):
 
         fileb = __file__.encode('utf-8')
         runtestdir = os.path.abspath(os.path.dirname(fileb))
-        if sys.version_info[0] == 3:
+        if PYTHON3:
             sepb = os.pathsep.encode('utf-8')
         else:
             sepb = os.pathsep
@@ -1848,7 +1848,7 @@ class TestRunner(object):
             failed = False
             warned = False
             kws = self.options.keywords
-            if kws is not None and sys.version_info[0] == 3:
+            if kws is not None and PYTHON3:
                 kws = kws.encode('utf-8')
 
             suite = TestSuite(self._testdir,
@@ -1995,7 +1995,7 @@ class TestRunner(object):
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
         exe = sys.executable
-        if sys.version_info[0] == 3:
+        if PYTHON3:
             py3 = b'--c2to3'
             compiler = compiler.encode('utf-8')
             script = script.encode('utf-8')
@@ -2039,7 +2039,7 @@ class TestRunner(object):
         else:
             f = open(installerrs, 'rb')
             for line in f:
-                if sys.version_info[0] > 2:
+                if PYTHON3:
                     sys.stdout.buffer.write(line)
                 else:
                     sys.stdout.write(line)
@@ -2115,12 +2115,12 @@ class TestRunner(object):
 
         cmd = b'%s -c "import mercurial; print (mercurial.__path__[0])"'
         cmd = cmd % PYTHON
-        if sys.version_info[0] > 2:
+        if PYTHON3:
             cmd = cmd.decode('utf-8')
         pipe = os.popen(cmd)
         try:
             self._hgpath = pipe.read().strip()
-            if sys.version_info[0] == 3:
+            if PYTHON3:
                 self._hgpath = self._hgpath.encode('utf-8')
         finally:
             pipe.close()
@@ -2157,7 +2157,7 @@ class TestRunner(object):
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
-        if sys.version_info[0] > 2:
+        if PYTHON3:
             dpb = os.defpath.encode('utf-8')
             sepb = os.pathsep.encode('utf-8')
         else:
