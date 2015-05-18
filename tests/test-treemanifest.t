@@ -46,12 +46,12 @@ Can add nested directories
   $ hg files -r .
   a
   b
-  dir1/a
-  dir1/b
-  dir1/dir1/a
-  dir1/dir1/b
-  dir1/dir2/a
-  dir1/dir2/b
+  dir1/a (glob)
+  dir1/b (glob)
+  dir1/dir1/a (glob)
+  dir1/dir1/b (glob)
+  dir1/dir2/a (glob)
+  dir1/dir2/b (glob)
   e
 
 Revision is not created for unchanged directory
@@ -59,7 +59,7 @@ Revision is not created for unchanged directory
   $ mkdir dir2
   $ echo 3 > dir2/a
   $ hg add dir2
-  adding dir2/a
+  adding dir2/a (glob)
   $ hg debugindex --dir dir1 > before
   $ hg ci -qm 'add dir2'
   $ hg debugindex --dir dir1 > after
@@ -69,8 +69,8 @@ Revision is not created for unchanged directory
 Removing directory does not create an revlog entry
 
   $ hg rm dir1/dir1
-  removing dir1/dir1/a
-  removing dir1/dir1/b
+  removing dir1/dir1/a (glob)
+  removing dir1/dir1/b (glob)
   $ hg debugindex --dir dir1/dir1 > before
   $ hg ci -qm 'remove dir1/dir1'
   $ hg debugindex --dir dir1/dir1 > after
@@ -82,12 +82,12 @@ Check that hg files (calls treemanifest.walk()) works
   $ hg co 'desc("add dir2")'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg files -r . dir1
-  dir1/a
-  dir1/b
-  dir1/dir1/a
-  dir1/dir1/b
-  dir1/dir2/a
-  dir1/dir2/b
+  dir1/a (glob)
+  dir1/b (glob)
+  dir1/dir1/a (glob)
+  dir1/dir1/b (glob)
+  dir1/dir2/a (glob)
+  dir1/dir2/b (glob)
 
 Check that status between revisions works (calls treemanifest.matches())
 
