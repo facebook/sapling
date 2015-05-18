@@ -234,12 +234,7 @@ closefds = os.name == 'posix'
 
 def unpacker(fmt):
     """create a struct unpacker for the specified format"""
-    try:
-        # 2.5+
-        return struct.Struct(fmt).unpack
-    except AttributeError:
-        # 2.4
-        return lambda buf: struct.unpack(fmt, buf)
+    return struct.Struct(fmt).unpack
 
 def popen2(cmd, env=None, newlines=False):
     # Setting bufsize to -1 lets the system decide the buffer size.
