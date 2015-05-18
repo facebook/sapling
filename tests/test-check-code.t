@@ -17,25 +17,6 @@
   > ( 4-1 ) """, "( 1+1 )\" and ")
   > a, '\\\\\\\\', "\\\\\\" x-2", "c-1"
   > EOF
-  $ cat > non-py24.py <<EOF
-  > # try/except/finally block does not exist in Python 2.4
-  >     try:
-  >         pass
-  >     except StandardError, inst:
-  >         pass
-  >     finally:
-  >         pass
-  > 
-  > # nested try/finally+try/except is allowed
-  >     try:
-  >         try:
-  >             pass
-  >         except StandardError, inst:
-  >             pass
-  >     finally:
-  >         pass
-  > 
-  > EOF
   $ cat > classstyle.py <<EOF
   > class newstyle_class(object):
   >     pass
@@ -50,7 +31,7 @@
   >     pass
   > EOF
   $ check_code="$TESTDIR"/../contrib/check-code.py
-  $ "$check_code" ./wrong.py ./correct.py ./quote.py ./non-py24.py ./classstyle.py
+  $ "$check_code" ./wrong.py ./correct.py ./quote.py ./classstyle.py
   ./wrong.py:1:
    > def toto( arg1, arg2):
    gratuitous whitespace in () or []
