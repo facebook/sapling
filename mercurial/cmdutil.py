@@ -1933,10 +1933,7 @@ def _makelogrevset(repo, pats, opts, revs):
     # --follow with FILE behaviour depends on revs...
     it = iter(revs)
     startrev = it.next()
-    try:
-        followdescendants = startrev < it.next()
-    except (StopIteration):
-        followdescendants = False
+    followdescendants = startrev < next(it, startrev)
 
     # branch and only_branch are really aliases and must be handled at
     # the same time
