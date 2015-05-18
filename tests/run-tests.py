@@ -78,9 +78,13 @@ except ImportError:
 
 processlock = threading.Lock()
 
-if sys.version_info > (3, 0, 0):
+if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
+elif sys.version_info >= (3, 0, 0):
+    print('%s is only supported on Python 3.5+ and 2.6-2.7, not %s' %
+          (sys.argv[0], '.'.join(str(v) for v in sys.version_info[:3])))
+    sys.exit(70) # EX_SOFTWARE from `man 3 sysexit`
 else:
     PYTHON3 = False
 
