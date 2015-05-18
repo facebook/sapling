@@ -87,8 +87,6 @@ if sys.version_info > (3, 0, 0):
 if sys.version_info < (2, 5):
     subprocess._cleanup = lambda: None
 
-wifexited = getattr(os, "WIFEXITED", lambda x: False)
-
 def checkportisavailable(port):
     """return true if a port seems free to bind on localhost"""
     try:
@@ -789,7 +787,7 @@ class Test(unittest.TestCase):
             raise
 
         ret = proc.wait()
-        if wifexited(ret):
+        if os.WIFEXITED(ret):
             ret = os.WEXITSTATUS(ret)
 
         if proc.timeout:
@@ -890,7 +888,7 @@ class TTest(Test):
                       self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
-        if wifexited(ret):
+        if os.WIFEXITED(ret):
             ret = os.WEXITSTATUS(ret)
         if ret == 2:
             print(stdout)
