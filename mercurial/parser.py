@@ -27,10 +27,7 @@ class parser(object):
     def _advance(self):
         'advance the tokenizer'
         t = self.current
-        try:
-            self.current = self._iter.next()
-        except StopIteration:
-            pass
+        self.current = next(self._iter, None)
         return t
     def _match(self, m, pos):
         'make sure the tokenizer matches an end condition'
