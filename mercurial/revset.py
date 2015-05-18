@@ -3322,9 +3322,7 @@ class generatorset(abstractsmartset):
             for x in self._consumegen():
                 pass
             return self.first()
-        if self:
-            return it().next()
-        return None
+        return next(it(), None)
 
     def last(self):
         if self._ascending:
@@ -3336,9 +3334,7 @@ class generatorset(abstractsmartset):
             for x in self._consumegen():
                 pass
             return self.first()
-        if self:
-            return it().next()
-        return None
+        return next(it(), None)
 
     def __repr__(self):
         d = {False: '-', True: '+'}[self._ascending]
