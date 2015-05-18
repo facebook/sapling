@@ -39,18 +39,6 @@
   >     finally:
   >         pass
   > 
-  > # yield inside a try/finally block is not allowed in Python 2.4
-  >     try:
-  >         pass
-  >         yield 1
-  >     finally:
-  >         pass
-  >     try:
-  >         yield
-  >         pass
-  >     finally:
-  >         pass
-  > 
   > EOF
   $ cat > classstyle.py <<EOF
   > class newstyle_class(object):
@@ -83,12 +71,6 @@
   ./non-py24.py:3:
    >     y = format(x)
    format not available in Python 2.4
-  ./non-py24.py:23:
-   >     try:
-   no yield inside try/finally in Python 2.4
-  ./non-py24.py:28:
-   >     try:
-   no yield inside try/finally in Python 2.4
   ./classstyle.py:4:
    > class oldstyle_class:
    old-style class, use class foo(object)
