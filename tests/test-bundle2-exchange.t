@@ -694,7 +694,6 @@ Check output capture control.
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
-  abort: pretxnchangegroup hook exited with status 1
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -703,6 +702,7 @@ Check output capture control.
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
+  abort: pretxnchangegroup hook exited with status 1
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
