@@ -1444,7 +1444,7 @@ class localrepository(object):
                     status.removed.insert(0, '.hgsubstate')
 
             # make sure all explicit patterns are matched
-            if not force and match.files():
+            if not force and (match.isexact() or match.prefix()):
                 matched = set(status.modified + status.added + status.removed)
 
                 for f in match.files():
