@@ -1480,8 +1480,7 @@ def present(repo, subset, x):
 
 # for internal use
 def _notpublic(repo, subset, x):
-    # i18n: "public" is a keyword
-    getargs(x, 0, 0, _("_notpublic takes no arguments"))
+    getargs(x, 0, 0, "_notpublic takes no arguments")
     if repo._phasecache._phasesets:
         s = set()
         for u in repo._phasecache._phasesets[1:]:
