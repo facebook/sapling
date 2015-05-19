@@ -92,7 +92,7 @@ As a revset
   | |
 
 With --master
-  $ hg smartlog -T compact --master 1:2
+  $ hg smartlog -T compact --master 1
   @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
@@ -271,7 +271,39 @@ Test draft branches
 
 Test with weird bookmark names
 
-  $ hg book -r . foo-bar
-  $ hg smartlog -r 'foo-bar + .' -T '{rev} {desc|firstline}\n'
-  @  6 create branch foo
+  $ hg book -r 2 foo-bar
+  $ hg smartlog -r 'foo-bar + .' -T compact
+  @  6[tip][feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
+  |    create branch foo
   |
+  .
+  .
+  |
+  | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+  $ hg smartlog --config smartlog.master=foo-bar -T compact
+  o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  | @  6[tip][feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
+  | |    create branch foo
+  | |
+  | .
+  | .
+  | |
+  | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |/     c1
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+  $ hg smartlog --config smartlog.master=xxxx -T compact
+  abort: unknown revision 'xxxx'!
+  [255]

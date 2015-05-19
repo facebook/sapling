@@ -263,11 +263,13 @@ def _reposnames():
 
 def _masterrev(repo, masterrevset):
     try:
-        master = repo.revs(masterrevset).first()
+        master = scmutil.revsingle(repo, masterrevset)
     except error.RepoLookupError:
-        master = repo.revs(_masterrevset(repo.ui, repo, '')).first()
+        master = scmutil.revsingle(repo, _masterrevset(repo.ui, repo, ''))
 
-    return master
+    if master:
+        return master.rev()
+    return None
 
 def smartlogrevset(repo, subset, x):
     """``smartlog([scope, [master]])``
@@ -420,7 +422,9 @@ Excludes:
             scope = 'all'
         else:
             scope = 'recent'
-        revs.update(repo.revs('smartlog(%s, %s)', scope, masterrevset))
+        revstring = revset.formatspec('smartlog(%s, %s)', scope,
+                                      masterrevset)
+        revs.update(scmutil.revrange(repo, [revstring]))
         masterrev = _masterrev(repo, masterrevset)
     else:
         revs.update(scmutil.revrange(repo, opts.get('rev')))
