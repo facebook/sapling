@@ -32,11 +32,7 @@ class httprangereader(object):
         try:
             f = self.opener.open(req)
             data = f.read()
-            # Python 2.6+ defines a getcode() function, and 2.4 and
-            # 2.5 appear to always have an undocumented code attribute
-            # set. If we can't read either of those, fall back to 206
-            # and hope for the best.
-            code = getattr(f, 'getcode', lambda : getattr(f, 'code', 206))()
+            code = f.code
         except urllib2.HTTPError, inst:
             num = inst.code == 404 and errno.ENOENT or None
             raise IOError(num, inst)
