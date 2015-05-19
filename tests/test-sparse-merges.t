@@ -45,3 +45,18 @@ Verify bar disappears automatically when the working copy becomes clean
   $ hg cat -r . bar
   bar
   bar2
+
+Test merging things outside of the sparse checkout that are not in the working
+copy
+
+  $ hg strip -q -r . --config extensions.strip=
+  $ hg up -q feature
+  $ touch branchonly
+  $ hg ci -Aqm 'add branchonly'
+
+  $ hg up -q default
+  $ hg sparse -X branchonly
+  $ hg merge feature
+  temporarily included 2 file(s) in the sparse checkout for merging
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)

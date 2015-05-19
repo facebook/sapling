@@ -129,16 +129,18 @@ def _setupupdates(ui):
             # Add the new files to the working copy so they can be merged, etc
             actions = []
             message = 'temporarily adding to sparse checkout'
+            wctxmanifest = repo[None].manifest()
             for file in temporaryfiles:
-                fctx = repo[None][file]
-                actions.append((file, (fctx.flags(),), message))
+                if file in wctxmanifest:
+                    fctx = repo[None][file]
+                    actions.append((file, (fctx.flags(),), message))
 
             typeactions = collections.defaultdict(list)
             typeactions['g'] = actions
             mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
 
             dirstate = repo.dirstate
-            for file in temporaryfiles:
+            for file, flags, msg in actions:
                 dirstate.normal(file)
 
         profiles = repo.getactiveprofiles()
