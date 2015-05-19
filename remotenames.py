@@ -669,7 +669,6 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     remote = opts.get('remote')
     track = opts.get('track')
     untrack = opts.get('untrack')
-    rev = opts.get('rev')
 
     disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
 
@@ -685,9 +684,6 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             raise util.Abort(msg)
         _removetracking(repo, args)
         return
-
-    if rev and not track and not untrack:
-        track = opts['track'] = rev
 
     if delete or rename or args or inactive:
         ret = orig(ui, repo, *args, **opts)
