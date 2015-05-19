@@ -27,6 +27,15 @@ def _serverquote(s):
         return s
     return "'%s'" % s.replace("'", "'\\''")
 
+def _forwardoutput(ui, pipe):
+    """display all data currently available on pipe as remote output.
+
+    This is non blocking."""
+    s = util.readpipe(pipe)
+    if s:
+        for l in s.splitlines():
+            ui.status(_("remote: "), l, '\n')
+
 class sshpeer(wireproto.wirepeer):
     def __init__(self, ui, path, create=False):
         self._url = path
@@ -108,10 +117,7 @@ class sshpeer(wireproto.wirepeer):
         return self._caps
 
     def readerr(self):
-        s = util.readpipe(self.pipee)
-        if s:
-            for l in s.splitlines():
-                self.ui.status(_("remote: "), l, '\n')
+        _forwardoutput(self.ui, self.pipee)
 
     def _abort(self, exception):
         self.cleanup()
