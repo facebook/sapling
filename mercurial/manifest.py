@@ -219,7 +219,7 @@ class manifestdict(object):
         files instead of over manifest files.'''
         files = match.files()
         return (len(files) < 100 and (match.isexact() or
-            (not match.anypats() and all(fn in self for fn in files))))
+            (match.prefix() and all(fn in self for fn in files))))
 
     def walk(self, match):
         '''Generates matching file names.
