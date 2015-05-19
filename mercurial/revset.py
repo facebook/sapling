@@ -1478,9 +1478,8 @@ def present(repo, subset, x):
     except error.RepoLookupError:
         return baseset()
 
+# for internal use
 def _notpublic(repo, subset, x):
-    """``_notpublic()``
-    Changeset not in public phase."""
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("_notpublic takes no arguments"))
     if repo._phasecache._phasesets:
