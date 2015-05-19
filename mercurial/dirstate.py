@@ -326,7 +326,11 @@ class dirstate(object):
         self._map = {}
         self._copymap = {}
         try:
-            st = self._opener.read(self._filename)
+            fp = self._opener.open(self._filename)
+            try:
+                st = fp.read()
+            finally:
+                fp.close()
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
