@@ -9,7 +9,7 @@ from node import nullid, nullrev, short, hex, bin
 from i18n import _
 import mdiff, error, util, scmutil, subrepo, patch, encoding, phases
 import match as matchmod
-import os, errno, stat
+import copy, os, errno, stat
 import obsolete as obsmod
 import repoview
 import fileset
@@ -592,8 +592,14 @@ class changectx(basectx):
         '''Generates matching file names.'''
 
         # Override match.bad method to have message with nodeid
+        match = copy.copy(match)
         oldbad = match.bad
         def bad(fn, msg):
+            # The manifest doesn't know about subrepos, so don't complain about
+            # paths into valid subrepos.
+            if any(fn == s or fn.startswith(s + '/')
+                   for s in self.substate):
+                return
             oldbad(fn, _('no such file in rev %s') % self)
         match.bad = bad
 

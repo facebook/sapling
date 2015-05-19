@@ -232,6 +232,26 @@ Files sees uncommitted adds and removes in subrepos
   sub1/sub2/sub2 (glob)
   sub1/sub2/test.txt (glob)
 
+  $ hg files -S -r '.^' sub1/sub2/folder
+  sub1/sub2/folder/test.txt (glob)
+
+  $ hg files -S -r '.^' sub1/sub2/missing
+  sub1/sub2/missing: no such file in rev 78026e779ea6 (glob)
+  [1]
+
+  $ hg files -S -r '.^' sub1/
+  sub1/.hgsub (glob)
+  sub1/.hgsubstate (glob)
+  sub1/sub1 (glob)
+  sub1/sub2/folder/test.txt (glob)
+  sub1/sub2/sub2 (glob)
+  sub1/sub2/test.txt (glob)
+
+  $ hg files -S -r '.^' sub1/sub2
+  sub1/sub2/folder/test.txt (glob)
+  sub1/sub2/sub2 (glob)
+  sub1/sub2/test.txt (glob)
+
   $ hg rollback -q
   $ hg up -Cq
 
