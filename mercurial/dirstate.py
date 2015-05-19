@@ -48,6 +48,7 @@ class dirstate(object):
         self._ui = ui
         self._filecache = {}
         self._parentwriters = 0
+        self._filename = 'dirstate'
 
     def beginparentchange(self):
         '''Marks the beginning of a set of changes that involve changing
@@ -122,7 +123,7 @@ class dirstate(object):
     @propertycache
     def _pl(self):
         try:
-            fp = self._opener("dirstate")
+            fp = self._opener(self._filename)
             st = fp.read(40)
             fp.close()
             l = len(st)
@@ -325,7 +326,7 @@ class dirstate(object):
         self._map = {}
         self._copymap = {}
         try:
-            st = self._opener.read("dirstate")
+            st = self._opener.read(self._filename)
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
@@ -592,7 +593,7 @@ class dirstate(object):
             import time # to avoid useless import
             time.sleep(delaywrite)
 
-        st = self._opener("dirstate", "w", atomictemp=True)
+        st = self._opener(self._filename, "w", atomictemp=True)
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = util.fstat(st).st_mtime
