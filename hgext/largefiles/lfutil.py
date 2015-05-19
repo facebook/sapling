@@ -241,13 +241,15 @@ def linktousercache(repo, hash):
 def getstandinmatcher(repo, rmatcher=None):
     '''Return a match object that applies rmatcher to the standin directory'''
     standindir = repo.wjoin(shortname)
-    if rmatcher and rmatcher.files():
+    if rmatcher and not rmatcher.always():
         pats = [os.path.join(standindir, pat) for pat in rmatcher.files()]
+        match = scmutil.match(repo[None], pats)
+        # if pats is empty, it would incorrectly always match, so clear _always
+        match._always = False
     else:
         # no patterns: relative to repo root
-        pats = [standindir]
+        match = scmutil.match(repo[None], [standindir])
     # no warnings about missing files or directories
-    match = scmutil.match(repo[None], pats)
     match.bad = lambda f, msg: None
     return match
 
