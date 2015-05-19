@@ -239,6 +239,7 @@ pypats = [
 #    (r'in range\(', "use xrange"),
 #    (r'^\s*print\s+', "avoid using print in core and extensions"),
     (r'[\x80-\xff]', "non-ASCII character literal"),
+    (r'("\')\.format\(', "str.format() has no bytes counterpart, use %"),
     (r'^\s*(%s)\s\s' % '|'.join(keyword.kwlist),
      "gratuitous whitespace after Python keyword"),
     (r'([\(\[][ \t]\S)|(\S[ \t][\)\]])', "gratuitous whitespace in () or []"),
