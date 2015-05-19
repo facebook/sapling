@@ -24,6 +24,7 @@ setup(
         'gitrevset',
         'phabdiff',
         'phrevset',
+        'pushvars',
         'rage',
         'reflog',
         'reset',
