@@ -1951,7 +1951,8 @@ def _makelogrevset(repo, pats, opts, revs):
     # platforms without shell expansion (windows).
     wctx = repo[None]
     match, pats = scmutil.matchandpats(wctx, pats, opts)
-    slowpath = match.anypats() or (match.files() and opts.get('removed'))
+    slowpath = match.anypats() or ((match.isexact() or match.prefix()) and
+                                   opts.get('removed'))
     if not slowpath:
         for f in match.files():
             if follow and f not in wctx:
