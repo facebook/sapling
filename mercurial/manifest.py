@@ -759,6 +759,9 @@ class treemanifest(object):
         _diff(self, m2)
         return result
 
+    def unmodifiedsince(self, m2):
+        return not self._dirty and not m2._dirty and self._node == m2._node
+
     def parse(self, text, readsubtree):
         for f, n, fl in _parse(text):
             if fl == 'd':
@@ -951,13 +954,16 @@ class manifest(revlog.revlog):
         return n
 
     def _addtree(self, m, transaction, link, m1, m2):
+        # If the manifest is unchanged compared to one parent,
+        # don't write a new revision
+        if m.unmodifiedsince(m1) or m.unmodifiedsince(m2):
+            return m.node()
         def writesubtree(subm, subp1, subp2):
             sublog = self.dirlog(subm.dir())
             sublog.add(subm, transaction, link, subp1, subp2, None, None)
         m.writesubtrees(m1, m2, writesubtree)
         text = m.dirtext(self._usemanifestv2)
-        # If the manifest is unchanged compared to one parent,
-        # don't write a new revision
+        # Double-check whether contents are unchanged to one parent
         if text == m1.dirtext(self._usemanifestv2):
             n = m1.node()
         elif text == m2.dirtext(self._usemanifestv2):
