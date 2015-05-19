@@ -985,7 +985,7 @@ class localrepository(object):
                                      validator=validate)
 
         trid = 'TXN:' + util.sha1("%s#%f" % (id(tr), time.time())).hexdigest()
-        tr.hookargs['TXNID'] = trid
+        tr.hookargs['txnid'] = trid
         # note: writing the fncache only during finalize mean that the file is
         # outdated when running hooks. As fncache is used for streaming clone,
         # this is not expected to break anything that happen during the hooks.

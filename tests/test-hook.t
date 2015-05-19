@@ -1,6 +1,11 @@
 commit hooks can see env vars
 (and post-transaction one are run unlocked)
 
+  $ cat > $TESTTMP/txnabort.checkargs.py <<EOF
+  > def showargs(ui, repo, hooktype, **kwargs):
+  >     ui.write('%s python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
+  > EOF
+
   $ hg init a
   $ cd a
   $ cat > .hg/hgrc <<EOF
@@ -16,7 +21,8 @@ commit hooks can see env vars
   > pretxnopen = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxnopen"
   > pretxnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxnclose"
   > txnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnclose"
-  > txnabort = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnabort"
+  > txnabort.0 = python:$TESTTMP/txnabort.checkargs.py:showargs
+  > txnabort.1 = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnabort"
   > txnclose.checklock = sh -c "hg debuglock > /dev/null"
   > EOF
   $ echo a > a
@@ -164,6 +170,7 @@ more there after
   5:6f611f8018c1
   pretxncommit.forbid hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a
   transaction abort!
+  txnabort python hook: txnid,txnname
   txnabort hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   rollback completed
   abort: pretxncommit.forbid1 hook exited with status 1
