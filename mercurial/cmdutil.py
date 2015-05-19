@@ -1755,7 +1755,8 @@ def walkchangerevs(repo, match, opts, prepare):
     if not revs:
         return []
     wanted = set()
-    slowpath = match.anypats() or (match.files() and opts.get('removed'))
+    slowpath = match.anypats() or ((match.isexact() or match.prefix()) and
+                                   opts.get('removed'))
     fncache = {}
     change = repo.changectx
 
@@ -1835,7 +1836,7 @@ def walkchangerevs(repo, match, opts, prepare):
     # Now that wanted is correctly initialized, we can iterate over the
     # revision range, yielding only revisions in wanted.
     def iterate():
-        if follow and not match.files():
+        if follow and match.always():
             ff = _followfilter(repo, onlyfirst=opts.get('follow_first'))
             def want(rev):
                 return ff.match(rev) and rev in wanted
