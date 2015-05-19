@@ -299,7 +299,7 @@ def _fm1purereadmarkers(data, off):
 
     # Loop on markers
     stop = len(data) - _fm1fsize
-    ufixed = util.unpacker(_fm1fixed)
+    ufixed = struct.Struct(_fm1fixed).unpack
 
     while off <= stop:
         # read fixed part
