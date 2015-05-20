@@ -1358,7 +1358,7 @@ def unbundle(repo, cg, heads, source, url):
     # quick fix for output mismatch with bundle2 in 3.4
     captureoutput = repo.ui.configbool('experimental', 'bundle2-output-capture',
                                        False)
-    if url.startswith('remote:'):
+    if url.startswith('remote:http:') or url.startswith('remote:https:'):
         captureoutput = True
     try:
         check_heads(repo, heads, 'uploading changes')

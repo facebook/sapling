@@ -63,11 +63,11 @@ Without config
   $ hg push
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushback not enabled
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  remote: pushback not enabled
   $ hg bookmark
   no bookmarks set
 
