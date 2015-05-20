@@ -87,7 +87,12 @@ class sshpeer(wireproto.wirepeer):
 
         # while self.subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
-        self.pipeo, self.pipei, self.pipee, self.subprocess = util.popen4(cmd)
+        #
+        # no buffer allow the use of 'select'
+        # feel free to remove buffering and select usage when we ultimately
+        # move to threading.
+        sub = util.popen4(cmd, bufsize=0)
+        self.pipeo, self.pipei, self.pipee, self.subprocess = sub
 
         self.pipei = util.bufferedinputpipe(self.pipei)
 
