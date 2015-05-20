@@ -371,6 +371,10 @@ def statisexec(st):
     '''check whether a stat result is an executable file'''
     return False
 
+def poll(fds):
+    # see posix.py for description
+    raise NotImplementedError()
+
 def readpipe(pipe):
     """Read all available data from a pipe."""
     chunks = []

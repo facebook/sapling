@@ -54,6 +54,7 @@ openhardlinks = platform.openhardlinks
 oslink = platform.oslink
 parsepatchoutput = platform.parsepatchoutput
 pconvert = platform.pconvert
+poll = platform.poll
 popen = platform.popen
 posixfile = platform.posixfile
 quotecommand = platform.quotecommand

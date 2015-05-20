@@ -8,6 +8,7 @@
 from i18n import _
 import encoding
 import os, sys, errno, stat, getpass, pwd, grp, socket, tempfile, unicodedata
+import select
 import fcntl, re
 
 posixfile = open
@@ -593,6 +594,19 @@ def statislink(st):
 def statisexec(st):
     '''check whether a stat result is an executable file'''
     return st and (st.st_mode & 0100 != 0)
+
+def poll(fds):
+    """block until something happens on any file descriptor
+
+    This is a generic helper that will check for any activity
+    (read, write.  exception) and return the list of touched files.
+
+    In unsupported cases, it will raise a NotImplementedError"""
+    try:
+        res = select.select(fds, fds, fds)
+    except ValueError: # out of range file descriptor
+        raise NotImplementedError()
+    return sorted(list(set(sum(res, []))))
 
 def readpipe(pipe):
     """Read all available data from a pipe."""
