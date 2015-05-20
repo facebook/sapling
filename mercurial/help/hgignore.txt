@@ -68,6 +68,10 @@ the form ``*.c`` will match a file ending in ``.c`` in any directory,
 and a regexp pattern of the form ``\.c$`` will do the same. To root a
 regexp pattern, start it with ``^``.
 
+Subdirectories can have their own .hgignore settings by adding
+``subinclude:path/to/subdir/.hgignore`` to the root ``.hgignore``. See
+:hg:`help patterns` for details on ``subinclude:`` and ``include:``.
+
 .. note::
 
   Patterns specified in other than ``.hgignore`` are always rooted.

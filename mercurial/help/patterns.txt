@@ -30,6 +30,12 @@ The latter expects null delimited patterns while the former expects line
 feeds. Each string read from the file is itself treated as a file
 pattern.
 
+To read a set of patterns from a file, use ``include:`` or ``subinclude:``.
+``include:`` will use all the patterns from the given file and treat them as if
+they had been passed in manually.  ``subinclude:`` will only apply the patterns
+against files that are under the subinclude file's directory. See :hg:`help
+hgignore` for details on the format of these files.
+
 All patterns, except for ``glob:`` specified in command line (not for
 ``-I`` or ``-X`` options), can match also against directories: files
 under matched directories are treated as matched.
@@ -60,3 +66,9 @@ File examples::
   listfile0:list.txt read list from list.txt with null byte delimiters
 
 See also :hg:`help filesets`.
+
+Include examples::
+
+  include:path/to/mypatternfile    reads patterns to be applied to all paths
+  subinclude:path/to/subignorefile reads patterns specifically for paths in the
+                                   subdirectory
