@@ -81,10 +81,11 @@ class doublepipe(object):
     def readline(self):
         return self._call('readline')
 
-    def _call(self, methname, size=None):
+    def _call(self, methname, data=None):
         """call <methname> on "main", forward output of "side" while blocking
         """
-        if size == 0 or self._main.closed:
+        # data can be '' or 0
+        if (data is not None and not data) or self._main.closed:
             _forwardoutput(self._ui, self._side)
             return ''
         while True:
@@ -93,10 +94,10 @@ class doublepipe(object):
                 _forwardoutput(self._ui, self._side)
             if mainready:
                 meth = getattr(self._main, methname)
-                if size is None:
+                if data is None:
                     return meth()
                 else:
-                    return meth(size)
+                    return meth(data)
 
     def close(self):
         return self._main.close()
