@@ -195,16 +195,9 @@ class sshpeer(wireproto.wirepeer):
     def _recv(self):
         l = self.pipei.readline()
         if l == '\n':
-            err = []
-            while True:
-                line = self.pipee.readline()
-                if line == '-\n':
-                    break
-                err.extend([line])
-            if len(err) > 0:
-                # strip the trailing newline added to the last line server-side
-                err[-1] = err[-1][:-1]
-            self._abort(error.OutOfBandError(*err))
+            self.readerr()
+            msg = _('check previous remote output')
+            self._abort(error.OutOfBandError(hint=msg))
         self.readerr()
         try:
             l = int(l)

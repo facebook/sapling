@@ -111,11 +111,14 @@ used all HGPORTs, kill all daemons
 
 vanilla clients locked out from largefiles ssh repos
   $ hg --config extensions.largefiles=! clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/r4 r5
-  abort: remote error:
-  
-  This repository uses the largefiles extension.
-  
-  Please enable it in your Mercurial config file.
+  remote: 
+  remote: This repository uses the largefiles extension.
+  remote: 
+  remote: Please enable it in your Mercurial config file.
+  remote: 
+  remote: -
+  abort: remote error
+  (check previous remote output)
   [255]
 
 #if serve
