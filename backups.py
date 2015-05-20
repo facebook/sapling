@@ -19,6 +19,11 @@ pager.attended.append('backups')
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
+msgwithevolve = """Evolve is enabled so no commit should be stripped unless you
+explicitely called hg strip. hg backups will show you the stripped commits.
+If you are trying to recover a commit hidden from a previous command, use hg 
+reflog to get its sha1 and you will be able to access it directly without 
+recovering a backup."""
 
 @command('^backups', [
     ('', 'recover', '', 'brings the specified commit back into the repository')
@@ -35,6 +40,13 @@ def backups(ui, repo, *pats, **opts):
     --verbose will print the entire commit message and the bundle path for that
     backup.
     '''
+    try:
+        if extensions.find('evolve'):
+            # Warn evolve users that they probably don't want to use backups
+            # but reflog instead
+            ui.warn(msgwithevolve)
+    except KeyError:
+        pass
     backuppath = repo.join("strip-backup")
     backups = filter(os.path.isfile, glob.glob(backuppath + "/*.hg"))
     backups.sort(key=lambda x: os.path.getmtime(x), reverse=True)
