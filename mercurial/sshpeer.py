@@ -75,6 +75,9 @@ class doublepipe(object):
             act = fds
         return (self._main.fileno() in act, self._side.fileno() in act)
 
+    def write(self, data):
+        return self._call('write', data)
+
     def read(self, size):
         return self._call('read', size)
 
@@ -101,6 +104,9 @@ class doublepipe(object):
 
     def close(self):
         return self._main.close()
+
+    def flush(self):
+        return self._main.flush()
 
 class sshpeer(wireproto.wirepeer):
     def __init__(self, ui, path, create=False):
