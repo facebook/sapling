@@ -1,6 +1,11 @@
 commit hooks can see env vars
 (and post-transaction one are run unlocked)
 
+  $ cat > $TESTTMP/txnabort.checkargs.py <<EOF
+  > def showargs(ui, repo, hooktype, **kwargs):
+  >     ui.write('%s python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
+  > EOF
+
   $ hg init a
   $ cd a
   $ cat > .hg/hgrc <<EOF
@@ -16,7 +21,8 @@ commit hooks can see env vars
   > pretxnopen = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxnopen"
   > pretxnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxnclose"
   > txnclose = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnclose"
-  > txnabort = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnabort"
+  > txnabort.0 = python:$TESTTMP/txnabort.checkargs.py:showargs
+  > txnabort.1 = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" txnabort"
   > txnclose.checklock = sh -c "hg debuglock > /dev/null"
   > EOF
   $ echo a > a
@@ -26,7 +32,7 @@ commit hooks can see env vars
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a
   0:cb9a9f314b8b
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_XNNAME=commit (glob)
+  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   commit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
   commit.b hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
@@ -54,7 +60,7 @@ pretxncommit and commit hooks can see both parents of merge
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   1:ab228980c14d
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_XNNAME=commit (glob)
+  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   txnclose hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   commit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
@@ -67,7 +73,7 @@ pretxncommit and commit hooks can see both parents of merge
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   2:ee9deb46ab31
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_XNNAME=commit (glob)
+  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   txnclose hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   commit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
@@ -80,7 +86,7 @@ pretxncommit and commit hooks can see both parents of merge
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$TESTTMP/a
   3:07f3376c1e65
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_XNNAME=commit (glob)
+  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   txnclose hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   commit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
   commit.b hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
@@ -124,7 +130,7 @@ tag hooks can see env vars
   pretxnopen hook: HG_TXNNAME=commit
   pretxncommit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a
   4:539e4b31b6dc
-  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_XNNAME=commit (glob)
+  pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   tag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
   txnclose hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   commit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
@@ -164,6 +170,7 @@ more there after
   5:6f611f8018c1
   pretxncommit.forbid hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a
   transaction abort!
+  txnabort python hook: txnid,txnname
   txnabort hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   rollback completed
   abort: pretxncommit.forbid1 hook exited with status 1
@@ -222,7 +229,7 @@ pushkey hook
   searching for changes
   no changes found
   pretxnopen hook: HG_TXNNAME=bookmarks
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_XNNAME=bookmarks (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1
   exporting bookmark foo
