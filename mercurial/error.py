@@ -64,6 +64,10 @@ class ConfigError(Abort):
 class OutOfBandError(Exception):
     """Exception raised when a remote repo reports failure"""
 
+    def __init__(self, *args, **kw):
+        Exception.__init__(self, *args)
+        self.hint = kw.get('hint')
+
 class ParseError(Exception):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
 

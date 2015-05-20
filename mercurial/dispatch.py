@@ -193,8 +193,15 @@ def _runcatch(req):
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')
     except error.OutOfBandError, inst:
-        ui.warn(_("abort: remote error:\n"))
-        ui.warn(''.join(inst.args))
+        if inst.args:
+            msg = _("abort: remote error:\n")
+        else:
+            msg = _("abort: remote error\n")
+        ui.warn(msg)
+        if inst.args:
+            ui.warn(''.join(inst.args))
+        if inst.hint:
+            ui.warn('(%s)\n' % inst.hint)
     except error.RepoError, inst:
         ui.warn(_("abort: %s!\n") % inst)
         if inst.hint:
