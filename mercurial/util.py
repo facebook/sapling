@@ -247,8 +247,8 @@ def popen3(cmd, env=None, newlines=False):
     stdin, stdout, stderr, p = popen4(cmd, env, newlines)
     return stdin, stdout, stderr
 
-def popen4(cmd, env=None, newlines=False):
-    p = subprocess.Popen(cmd, shell=True, bufsize=-1,
+def popen4(cmd, env=None, newlines=False, bufsize=-1):
+    p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
