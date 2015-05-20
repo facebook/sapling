@@ -53,10 +53,8 @@ div.page-header {
   }
 
   div.page-header form {
-    position: absolute;
-    margin-bottom: 2px;
-    bottom: 0;
-    right: 20px;
+    float: right;
+    margin-top: -2px;
   }
   div.page-header form label {
     color: #DDD;
@@ -83,7 +81,6 @@ div.page-header {
     margin: 10px 0 0 0;
     list-style-type: none;
     overflow: hidden;
-    width: 900px;
   }
     ul.page-nav li {
       margin: 0 2px 0 0;
