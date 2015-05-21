@@ -60,6 +60,7 @@ shelve has a help message
    -m --message TEXT        use text as shelve message
    -n --name NAME           use the given name for the shelved commit
    -p --patch               show patch
+   -i --interactive         interactive mode, only works while creating a shelve
       --stat                output diffstat-style summary of changes
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns

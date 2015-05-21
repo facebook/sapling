@@ -672,8 +672,7 @@ def unshelve(ui, repo, *shelved, **opts):
           ('p', 'patch', None,
            _('show patch')),
           ('i', 'interactive', None,
-           _('interactive mode, only works while creating a shelve'
-                   '(EXPERIMENTAL)')),
+           _('interactive mode, only works while creating a shelve')),
           ('', 'stat', None,
            _('output diffstat-style summary of changes'))] + commands.walkopts,
          _('hg shelve [OPTION]... [FILE]...'))
