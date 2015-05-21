@@ -17,6 +17,10 @@ import encoding
 import crecord as crecordmod
 import lock as lockmod
 
+def ishunk(x):
+    hunkclasses = (crecordmod.uihunk, patch.recordhunk)
+    return isinstance(x, hunkclasses)
+
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
@@ -59,8 +63,6 @@ def recordfilter(ui, originalhunks):
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
     import merge as mergemod
-    hunkclasses = (crecordmod.uihunk, patch.recordhunk)
-    ishunk = lambda x: isinstance(x, hunkclasses)
 
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
