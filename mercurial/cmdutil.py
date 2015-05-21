@@ -21,6 +21,14 @@ def ishunk(x):
     hunkclasses = (crecordmod.uihunk, patch.recordhunk)
     return isinstance(x, hunkclasses)
 
+def newandmodified(chunks, originalchunks):
+    newlyaddedandmodifiedfiles = set()
+    for chunk in chunks:
+        if ishunk(chunk) and chunk.header.isnewfile() and chunk not in \
+            originalchunks:
+            newlyaddedandmodifiedfiles.add(chunk.header.filename())
+    return newlyaddedandmodifiedfiles
+
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
@@ -109,11 +117,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         # We need to keep a backup of files that have been newly added and
         # modified during the recording process because there is a previous
         # version without the edit in the workdir
-        newlyaddedandmodifiedfiles = set()
-        for chunk in chunks:
-            if ishunk(chunk) and chunk.header.isnewfile() and chunk not in \
-                originalchunks:
-                newlyaddedandmodifiedfiles.add(chunk.header.filename())
+        newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
         contenders = set()
         for h in chunks:
             try:
