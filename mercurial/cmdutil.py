@@ -3127,7 +3127,10 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         # Prompt the user for changes to revert
         torevert = [repo.wjoin(f) for f in actions['revert'][0]]
         m = scmutil.match(ctx, torevert, {})
-        diff = patch.diff(repo, None, ctx.node(), m)
+        diffopts = patch.difffeatureopts(repo.ui, whitespace=True)
+        diffopts.nodates = True
+        diffopts.git = True
+        diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
         originalchunks = patch.parsepatch(diff)
         try:
             chunks = recordfilter(repo.ui, originalchunks)
