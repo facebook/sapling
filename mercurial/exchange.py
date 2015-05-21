@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import time
 from i18n import _
 from node import hex, nullid
 import errno, urllib
@@ -1397,3 +1398,66 @@ def generatestreamclone(repo):
                     yield chunk
     finally:
         sopener.mustaudit = oldaudit
+
+def consumestreamclone(repo, fp):
+    """Apply the contents from a streaming clone file.
+
+    This takes the output from "streamout" and applies it to the specified
+    repository.
+
+    Like "streamout," the status line added by the wire protocol is not handled
+    by this function.
+    """
+    lock = repo.lock()
+    try:
+        repo.ui.status(_('streaming all changes\n'))
+        l = fp.readline()
+        try:
+            total_files, total_bytes = map(int, l.split(' ', 1))
+        except (ValueError, TypeError):
+            raise error.ResponseError(
+                _('unexpected response from remote server:'), l)
+        repo.ui.status(_('%d files to transfer, %s of data\n') %
+                       (total_files, util.bytecount(total_bytes)))
+        handled_bytes = 0
+        repo.ui.progress(_('clone'), 0, total=total_bytes)
+        start = time.time()
+
+        tr = repo.transaction(_('clone'))
+        try:
+            for i in xrange(total_files):
+                # XXX doesn't support '\n' or '\r' in filenames
+                l = fp.readline()
+                try:
+                    name, size = l.split('\0', 1)
+                    size = int(size)
+                except (ValueError, TypeError):
+                    raise error.ResponseError(
+                        _('unexpected response from remote server:'), l)
+                if repo.ui.debugflag:
+                    repo.ui.debug('adding %s (%s)\n' %
+                                  (name, util.bytecount(size)))
+                # for backwards compat, name was partially encoded
+                ofp = repo.svfs(store.decodedir(name), 'w')
+                for chunk in util.filechunkiter(fp, limit=size):
+                    handled_bytes += len(chunk)
+                    repo.ui.progress(_('clone'), handled_bytes,
+                                     total=total_bytes)
+                    ofp.write(chunk)
+                ofp.close()
+            tr.close()
+        finally:
+            tr.release()
+
+        # Writing straight to files circumvented the inmemory caches
+        repo.invalidate()
+
+        elapsed = time.time() - start
+        if elapsed <= 0:
+            elapsed = 0.001
+        repo.ui.progress(_('clone'), None)
+        repo.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
+                       (util.bytecount(total_bytes), elapsed,
+                        util.bytecount(total_bytes / elapsed)))
+    finally:
+        lock.release()

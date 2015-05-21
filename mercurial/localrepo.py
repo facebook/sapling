@@ -1776,55 +1776,8 @@ class localrepository(object):
                 raise util.Abort(_('locking the remote repository failed'))
             elif resp != 0:
                 raise util.Abort(_('the server sent an unknown error code'))
-            self.ui.status(_('streaming all changes\n'))
-            l = fp.readline()
-            try:
-                total_files, total_bytes = map(int, l.split(' ', 1))
-            except (ValueError, TypeError):
-                raise error.ResponseError(
-                    _('unexpected response from remote server:'), l)
-            self.ui.status(_('%d files to transfer, %s of data\n') %
-                           (total_files, util.bytecount(total_bytes)))
-            handled_bytes = 0
-            self.ui.progress(_('clone'), 0, total=total_bytes)
-            start = time.time()
 
-            tr = self.transaction(_('clone'))
-            try:
-                for i in xrange(total_files):
-                    # XXX doesn't support '\n' or '\r' in filenames
-                    l = fp.readline()
-                    try:
-                        name, size = l.split('\0', 1)
-                        size = int(size)
-                    except (ValueError, TypeError):
-                        raise error.ResponseError(
-                            _('unexpected response from remote server:'), l)
-                    if self.ui.debugflag:
-                        self.ui.debug('adding %s (%s)\n' %
-                                      (name, util.bytecount(size)))
-                    # for backwards compat, name was partially encoded
-                    ofp = self.svfs(store.decodedir(name), 'w')
-                    for chunk in util.filechunkiter(fp, limit=size):
-                        handled_bytes += len(chunk)
-                        self.ui.progress(_('clone'), handled_bytes,
-                                         total=total_bytes)
-                        ofp.write(chunk)
-                    ofp.close()
-                tr.close()
-            finally:
-                tr.release()
-
-            # Writing straight to files circumvented the inmemory caches
-            self.invalidate()
-
-            elapsed = time.time() - start
-            if elapsed <= 0:
-                elapsed = 0.001
-            self.ui.progress(_('clone'), None)
-            self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
-                           (util.bytecount(total_bytes), elapsed,
-                            util.bytecount(total_bytes / elapsed)))
+            exchange.consumestreamclone(self, fp)
 
             # new requirements = old non-format requirements +
             #                    new format-related remote requirements
