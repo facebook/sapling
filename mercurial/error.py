@@ -18,7 +18,7 @@ class HintException(Exception):
         Exception.__init__(self, *args)
         self.hint = kw.get('hint')
 
-class RevlogError(Exception):
+class RevlogError(HintException):
     pass
 
 class FilteredIndexError(IndexError):
