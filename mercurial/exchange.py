@@ -8,7 +8,7 @@
 from i18n import _
 from node import hex, nullid
 import errno, urllib
-import util, scmutil, changegroup, base85, error
+import util, scmutil, changegroup, base85, error, store
 import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
 import lock as lockmod
 
@@ -1332,3 +1332,68 @@ def unbundle(repo, cg, heads, source, url):
         if recordout is not None:
             recordout(repo.ui.popbuffer())
     return r
+
+# This is it's own function so extensions can override it.
+def _walkstreamfiles(repo):
+    return repo.store.walk()
+
+def generatestreamclone(repo):
+    """Emit content for a streaming clone.
+
+    This is a generator of raw chunks that constitute a streaming clone.
+
+    The stream begins with a line of 2 space-delimited integers containing the
+    number of entries and total bytes size.
+
+    Next, are N entries for each file being transferred. Each file entry starts
+    as a line with the file name and integer size delimited by a null byte.
+    The raw file data follows. Following the raw file data is the next file
+    entry, or EOF.
+
+    When used on the wire protocol, an additional line indicating protocol
+    success will be prepended to the stream. This function is not responsible
+    for adding it.
+
+    This function will obtain a repository lock to ensure a consistent view of
+    the store is captured. It therefore may raise LockError.
+    """
+    entries = []
+    total_bytes = 0
+    # Get consistent snapshot of repo, lock during scan.
+    lock = repo.lock()
+    try:
+        repo.ui.debug('scanning\n')
+        for name, ename, size in _walkstreamfiles(repo):
+            if size:
+                entries.append((name, size))
+                total_bytes += size
+    finally:
+            lock.release()
+
+    repo.ui.debug('%d files, %d bytes to transfer\n' %
+                  (len(entries), total_bytes))
+    yield '%d %d\n' % (len(entries), total_bytes)
+
+    sopener = repo.svfs
+    oldaudit = sopener.mustaudit
+    debugflag = repo.ui.debugflag
+    sopener.mustaudit = False
+
+    try:
+        for name, size in entries:
+            if debugflag:
+                repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+            # partially encode name over the wire for backwards compat
+            yield '%s\0%d\n' % (store.encodedir(name), size)
+            if size <= 65536:
+                fp = sopener(name)
+                try:
+                    data = fp.read(size)
+                finally:
+                    fp.close()
+                yield data
+            else:
+                for chunk in util.filechunkiter(sopener(name), limit=size):
+                    yield chunk
+    finally:
+        sopener.mustaudit = oldaudit
