@@ -13,6 +13,11 @@ imports.
 
 # Do not import anything here, please
 
+class HintException(Exception):
+    def __init__(self, *args, **kw):
+        Exception.__init__(self, *args)
+        self.hint = kw.get('hint')
+
 class RevlogError(Exception):
     pass
 
@@ -46,11 +51,9 @@ class CommandError(Exception):
 class InterventionRequired(Exception):
     """Exception raised when a command requires human intervention."""
 
-class Abort(Exception):
+class Abort(HintException):
     """Raised if a command needs to print an error and exit."""
-    def __init__(self, *args, **kw):
-        Exception.__init__(self, *args)
-        self.hint = kw.get('hint')
+    pass
 
 class HookAbort(Abort):
     """raised when a validation hook fails, aborting an operation
@@ -80,10 +83,8 @@ class UnknownIdentifier(ParseError):
         self.function = function
         self.symbols = symbols
 
-class RepoError(Exception):
-    def __init__(self, *args, **kw):
-        Exception.__init__(self, *args)
-        self.hint = kw.get('hint')
+class RepoError(HintException):
+    pass
 
 class RepoLookupError(RepoError):
     pass
