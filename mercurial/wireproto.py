@@ -9,7 +9,7 @@ import urllib, tempfile, os, sys
 from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod, bundle2, pushkey as pushkeymod
-import peer, error, encoding, util, store, exchange
+import peer, error, encoding, util, exchange
 
 
 class abstractserverproto(object):
