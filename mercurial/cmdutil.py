@@ -1767,8 +1767,7 @@ def walkchangerevs(repo, match, opts, prepare):
     if match.always():
         # No files, no patterns.  Display all revs.
         wanted = revs
-
-    if not slowpath and match.files():
+    elif not slowpath:
         # We only have to read through the filelog to find wanted revisions
 
         try:
