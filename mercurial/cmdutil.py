@@ -3123,6 +3123,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         else:
             normal = repo.dirstate.normal
 
+    newlyaddedandmodifiedfiles = set()
     if interactive:
         # Prompt the user for changes to revert
         torevert = [repo.wjoin(f) for f in actions['revert'][0]]
@@ -3137,6 +3138,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         except patch.PatchError, err:
             raise util.Abort(_('error parsing patch: %s') % err)
 
+        newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
         # Apply changes
         fp = cStringIO.StringIO()
         for c in chunks:
@@ -3160,8 +3162,10 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
                 repo.dirstate.normallookup(f)
 
     for f in actions['add'][0]:
-        checkout(f)
-        repo.dirstate.add(f)
+        # Don't checkout modified files, they are already created by the diff
+        if f not in newlyaddedandmodifiedfiles:
+            checkout(f)
+            repo.dirstate.add(f)
 
     normal = repo.dirstate.normallookup
     if node == parent and p2 == nullid:

@@ -270,3 +270,53 @@ Test that --interactive lift the need for --all
   3
   4
   5
+  $ rm f.orig
+  $ hg update -C .
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Check editing files newly added by a revert
+
+1) Create a dummy editor changing 1 to 42
+  $ cat > $TESTTMP/editor.sh << '__EOF__'
+  > cat "$1"  | sed "s/1/42/g"  > tt
+  > mv tt  "$1"
+  > __EOF__
+
+2) Remove f
+  $ hg rm f
+  $ hg commit -m "remove f"
+
+3) Do another commit on top
+  $ touch k; hg add k
+  $ hg commit -m "add k"
+  $ hg st
+
+4) Use interactive revert to recover f and change it on the fly
+  $ HGEDITOR="\"sh\" \"\${TESTTMP}/editor.sh\"" PRINTHUNK="YES" hg revert -i -r ".^^"  <<EOF
+  > y
+  > e
+  > EOF
+  adding f
+  removing k
+  diff --git a/f b/f
+  new file mode 100644
+  examine changes to 'f'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,7 @@
+  +a
+  +1
+  +2
+  +3
+  +4
+  +5
+  +b
+  record this change to 'f'? [Ynesfdaq?] e
+  
+  $ cat f
+  a
+  42
+  2
+  3
+  4
+  5
+  b
