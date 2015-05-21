@@ -65,7 +65,10 @@ direntry = '
     <td>drwxr-xr-x</td>
     <td></td>
     <td></td>
-    <td><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}</a></td>
+    <td>
+      <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
+      <a href="{url|urlescape}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">{emptydirs|escape}</a>
+    </td>
     <td><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a></td>
   </tr>'
 fileentry = '
