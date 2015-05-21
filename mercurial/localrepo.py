@@ -1755,28 +1755,40 @@ class localrepository(object):
         return util.hooks()
 
     def stream_in(self, remote, remotereqs):
+        # Save remote branchmap. We will use it later
+        # to speed up branchcache creation
+        rbranchmap = None
+        if remote.capable("branchmap"):
+            rbranchmap = remote.branchmap()
+
+        fp = remote.stream_out()
+        l = fp.readline()
+        try:
+            resp = int(l)
+        except ValueError:
+            raise error.ResponseError(
+                _('unexpected response from remote server:'), l)
+        if resp == 1:
+            raise util.Abort(_('operation forbidden by server'))
+        elif resp == 2:
+            raise util.Abort(_('locking the remote repository failed'))
+        elif resp != 0:
+            raise util.Abort(_('the server sent an unknown error code'))
+
+        self.applystreamclone(remotereqs, rbranchmap, fp)
+        return len(self.heads()) + 1
+
+    def applystreamclone(self, remotereqs, remotebranchmap, fp):
+        """Apply stream clone data to this repository.
+
+        "remotereqs" is a set of requirements to handle the incoming data.
+        "remotebranchmap" is the result of a branchmap lookup on the remote. It
+        can be None.
+        "fp" is a file object containing the raw stream data, suitable for
+        feeding into exchange.consumestreamclone.
+        """
         lock = self.lock()
         try:
-            # Save remote branchmap. We will use it later
-            # to speed up branchcache creation
-            rbranchmap = None
-            if remote.capable("branchmap"):
-                rbranchmap = remote.branchmap()
-
-            fp = remote.stream_out()
-            l = fp.readline()
-            try:
-                resp = int(l)
-            except ValueError:
-                raise error.ResponseError(
-                    _('unexpected response from remote server:'), l)
-            if resp == 1:
-                raise util.Abort(_('operation forbidden by server'))
-            elif resp == 2:
-                raise util.Abort(_('locking the remote repository failed'))
-            elif resp != 0:
-                raise util.Abort(_('the server sent an unknown error code'))
-
             exchange.consumestreamclone(self, fp)
 
             # new requirements = old non-format requirements +
@@ -1787,10 +1799,10 @@ class localrepository(object):
             self._applyopenerreqs()
             self._writerequirements()
 
-            if rbranchmap:
+            if remotebranchmap:
                 rbheads = []
                 closed = []
-                for bheads in rbranchmap.itervalues():
+                for bheads in remotebranchmap.itervalues():
                     rbheads.extend(bheads)
                     for h in bheads:
                         r = self.changelog.rev(h)
@@ -1801,7 +1813,7 @@ class localrepository(object):
                 if rbheads:
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
-                    cache = branchmap.branchcache(rbranchmap,
+                    cache = branchmap.branchcache(remotebranchmap,
                                                   self[rtiprev].node(),
                                                   rtiprev,
                                                   closednodes=closed)
@@ -1814,7 +1826,6 @@ class localrepository(object):
                             cache.write(rview)
                             break
             self.invalidate()
-            return len(self.heads()) + 1
         finally:
             lock.release()
 
