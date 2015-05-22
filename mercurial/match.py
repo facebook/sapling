@@ -197,7 +197,7 @@ class match(object):
         parentdirs = None
         if (self._includeroots and dir not in self._includeroots and
                 dir not in self._includedirs):
-            parentdirs = util.finddirs(dir)
+            parentdirs = list(util.finddirs(dir))
             if not any(parent in self._includeroots for parent in parentdirs):
                 return False
         return (not self._fileroots or '.' in self._fileroots or
