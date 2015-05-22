@@ -187,3 +187,68 @@ def normasprefix(path):
         return path + os.sep
     else:
         return path
+
+def join(path, *paths):
+    '''Join two or more pathname components, inserting '/' as needed.
+
+    Based on the posix os.path.join() implementation.
+
+    >>> join('foo', 'bar')
+    'foo/bar'
+    >>> join('/foo', 'bar')
+    '/foo/bar'
+    >>> join('foo', '/bar')
+    '/bar'
+    >>> join('foo', 'bar/')
+    'foo/bar/'
+    >>> join('foo', 'bar', 'gah')
+    'foo/bar/gah'
+    >>> join('foo')
+    'foo'
+    >>> join('', 'foo')
+    'foo'
+    >>> join('foo/', 'bar')
+    'foo/bar'
+    >>> join('', '', '')
+    ''
+    >>> join ('foo', '', '', 'bar')
+    'foo/bar'
+    '''
+    sep = '/'
+    if not paths:
+        path[:0] + sep #23780: Ensure compatible data type even if p is null.
+    for piece in paths:
+        if piece.startswith(sep):
+            path = piece
+        elif not path or path.endswith(sep):
+            path += piece
+        else:
+            path += sep + piece
+    return path
+
+def dirname(path):
+    '''returns the directory portion of the given path
+
+    Based on the posix os.path.split() implementation.
+
+    >>> dirname('foo')
+    ''
+    >>> dirname('foo/')
+    'foo'
+    >>> dirname('foo/bar')
+    'foo'
+    >>> dirname('/foo')
+    '/'
+    >>> dirname('/foo/bar')
+    '/foo'
+    >>> dirname('/foo//bar/poo')
+    '/foo//bar'
+    >>> dirname('/foo//bar')
+    '/foo'
+    '''
+    sep = '/'
+    i = path.rfind(sep) + 1
+    dirname = path[:i]
+    if dirname and dirname != sep * len(dirname):
+        dirname = dirname.rstrip(sep)
+    return dirname
