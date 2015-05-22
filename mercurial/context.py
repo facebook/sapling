@@ -340,7 +340,7 @@ class basectx(object):
 
 
 def makememctx(repo, parents, text, user, date, branch, files, store,
-               editor=None):
+               editor=None, extra=None):
     def getfilectx(repo, memctx, path):
         data, mode, copied = store.getfile(path)
         if data is None:
@@ -348,7 +348,8 @@ def makememctx(repo, parents, text, user, date, branch, files, store,
         islink, isexec = mode
         return memfilectx(repo, path, data, islink=islink, isexec=isexec,
                                   copied=copied, memctx=memctx)
-    extra = {}
+    if extra is None:
+        extra = {}
     if branch:
         extra['branch'] = encoding.fromlocal(branch)
     ctx =  memctx(repo, parents, text, files, getfilectx, user,
