@@ -5,14 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import util
+import util, pathutil
 import heapq
-
-def _dirname(f):
-    s = f.rfind("/")
-    if s == -1:
-        return ""
-    return f[:s]
 
 def _findlimit(repo, a, b):
     """
@@ -384,7 +378,7 @@ def mergecopies(repo, c1, c2, ca):
     # examine each file copy for a potential directory move, which is
     # when all the files in a directory are moved to a new directory
     for dst, src in fullcopy.iteritems():
-        dsrc, ddst = _dirname(src), _dirname(dst)
+        dsrc, ddst = pathutil.dirname(src), pathutil.dirname(dst)
         if dsrc in invalid:
             # already seen to be uninteresting
             continue
