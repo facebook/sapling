@@ -571,7 +571,6 @@ Interactions between collapse and keepbranches
 
   $ hg branch 'two'
   marked working directory as branch two
-  (branches are permanent and global, did you want a bookmark?)
   $ echo 'c' > c
   $ hg ci -Am 'C'
   adding c

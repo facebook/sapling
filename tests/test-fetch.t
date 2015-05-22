@@ -168,7 +168,6 @@ test fetch with named branches
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R nbase branch b
   marked working directory as branch b
-  (branches are permanent and global, did you want a bookmark?)
   $ echo b > nbase/b
   $ hg -R nbase ci -Am b
   adding b
@@ -363,7 +362,6 @@ test fetch with inactive branches
   adding b
   $ hg --cwd ib1 branch -f default
   marked working directory as branch default
-  (branches are permanent and global, did you want a bookmark?)
   $ echo c > ib1/c
   $ hg --cwd ib1 ci -Am newdefault
   adding c

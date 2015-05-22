@@ -357,7 +357,6 @@ Test clone with a branch named "@" (issue3677)
 
   $ hg -R ua branch @
   marked working directory as branch @
-  (branches are permanent and global, did you want a bookmark?)
   $ hg -R ua commit -m 'created branch @'
   $ hg clone ua atbranch
   updating to branch default

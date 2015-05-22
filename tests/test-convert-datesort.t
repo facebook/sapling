@@ -21,7 +21,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch branchb
   marked working directory as branch branchb
-  (branches are permanent and global, did you want a bookmark?)
   $ echo b >> b
   $ hg ci -Am b0 -d '6 0'
   adding b
@@ -42,7 +41,6 @@
   $ echo c >> c
   $ hg branch branchc
   marked working directory as branch branchc
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Am c0 -d '10 0'
   adding c
   $ hg up -C brancha

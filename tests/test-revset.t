@@ -43,13 +43,11 @@
   $ echo b > b
   $ hg branch b
   marked working directory as branch b
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm1
 
   $ rm a
   $ hg branch a-b-c-
   marked working directory as branch a-b-c-
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm2 -u Bob
 
   $ hg log -r "extra('branch', 'a-b-c-')" --template '{rev}\n'
@@ -66,7 +64,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch +a+b+c+
   marked working directory as branch +a+b+c+
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm3
 
   $ hg co 2  # interleave
@@ -74,14 +71,12 @@
   $ echo bb > b
   $ hg branch -- -a-b-c-
   marked working directory as branch -a-b-c-
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm4 -d "May 12 2005"
 
   $ hg co 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch !a/b/c/
   marked working directory as branch !a/b/c/
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm"5 bug"
 
   $ hg merge 4
@@ -89,23 +84,19 @@
   (branch merge, don't forget to commit)
   $ hg branch _a_b_c_
   marked working directory as branch _a_b_c_
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm"6 issue619"
 
   $ hg branch .a.b.c.
   marked working directory as branch .a.b.c.
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm7
 
   $ hg branch all
   marked working directory as branch all
-  (branches are permanent and global, did you want a bookmark?)
 
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch é
   marked working directory as branch \xc3\xa9 (esc)
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm9
 
   $ hg tag -r6 1.0

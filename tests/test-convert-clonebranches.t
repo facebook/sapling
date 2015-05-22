@@ -55,13 +55,11 @@ Add a merge with both parents and child in different branches
   $ cd source
   $ hg branch branch1
   marked working directory as branch branch1
-  (branches are permanent and global, did you want a bookmark?)
   $ echo a > file1
   $ hg ci -qAm c1
   $ hg up -qC mergeab
   $ hg branch branch2
   marked working directory as branch branch2
-  (branches are permanent and global, did you want a bookmark?)
   $ echo a > file2
   $ hg ci -qAm c2
   $ hg merge branch1
@@ -69,7 +67,6 @@ Add a merge with both parents and child in different branches
   (branch merge, don't forget to commit)
   $ hg branch branch3
   marked working directory as branch branch3
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -qAm c3
   $ cd ..
 

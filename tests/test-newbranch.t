@@ -25,7 +25,6 @@
   $ hg ci -m "add branch name"
   $ hg branch bar
   marked working directory as branch bar
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m "change branch name"
 
 Branch shadowing:
@@ -37,7 +36,6 @@ Branch shadowing:
 
   $ hg branch -f default
   marked working directory as branch default
-  (branches are permanent and global, did you want a bookmark?)
 
   $ hg ci -m "clear branch name"
   created new head
@@ -67,11 +65,9 @@ Merging and branches
 
   $ hg branch -f bar
   marked working directory as branch bar
-  (branches are permanent and global, did you want a bookmark?)
 
   $ hg branch foo
   marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
 
   $ echo bleah > a
   $ hg ci -m "modify a branch"
@@ -94,13 +90,11 @@ Merging and branches
 
   $ hg branch default
   marked working directory as branch default
-  (branches are permanent and global, did you want a bookmark?)
 
  set (first) parent branch as branch name
 
   $ hg branch foo
   marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
 
   $ hg ci -m "merge"
 
@@ -215,7 +209,6 @@ Update with no arguments: tipmost revision of the current branch:
 
   $ hg branch foobar
   marked working directory as branch foobar
-  (branches are permanent and global, did you want a bookmark?)
 
   $ hg up
   abort: branch foobar not found
@@ -225,7 +218,6 @@ Fast-forward merge:
 
   $ hg branch ff
   marked working directory as branch ff
-  (branches are permanent and global, did you want a bookmark?)
 
   $ echo ff > ff
   $ hg ci -Am'fast forward'

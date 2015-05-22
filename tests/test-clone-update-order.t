@@ -14,7 +14,6 @@
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch other
   marked working directory as branch other
-  (branches are permanent and global, did you want a bookmark?)
   $ echo good > bye
   $ hg commit -Am other
   adding bye

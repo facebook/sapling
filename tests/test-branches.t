@@ -13,7 +13,6 @@
 
   $ hg branch q
   marked working directory as branch q
-  (branches are permanent and global, did you want a bookmark?)
   $ echo 'aa' >a
   $ hg branch -C
   reset working directory to branch a
@@ -25,7 +24,6 @@
   $ hg add b
   $ hg branch b
   marked working directory as branch b
-  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '2 0' -m "Adding b branch"
 
   $ echo 'bh1' >bh1
@@ -42,7 +40,6 @@
   $ hg add c
   $ hg branch c
   marked working directory as branch c
-  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '5 0' -m "Adding c branch"
 
 reserved names
@@ -101,7 +98,6 @@ verify update will accept invalid legacy branch names
   $ hg add d
   $ hg branch 'a branch name much longer than the default justification used by branches'
   marked working directory as branch a branch name much longer than the default justification used by branches
-  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '6 0' -m "Adding d branch"
 
   $ hg branches
@@ -601,7 +597,6 @@ recovery from invalid cache file with some bad records
 cache is updated when committing
   $ hg branch i-will-regret-this
   marked working directory as branch i-will-regret-this
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m regrets
   $ f --size .hg/cache/rbc-*
   .hg/cache/rbc-names-v1: size=106

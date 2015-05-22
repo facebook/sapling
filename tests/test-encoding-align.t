@@ -119,12 +119,10 @@ add branches/tags
   $ hg book -f $S
   $ hg branch $M
   marked working directory as branch MIDDLE_
-  (branches are permanent and global, did you want a bookmark?)
   $ hg tag $M
   $ hg book -f $M
   $ hg branch $L
   marked working directory as branch \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d (esc)
-  (branches are permanent and global, did you want a bookmark?)
   $ hg tag $L
   $ hg book -f $L
 

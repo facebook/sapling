@@ -26,7 +26,6 @@ Set up the repo
   $ hg ci -Ambranch
   $ hg branch unstable
   marked working directory as branch unstable
-  (branches are permanent and global, did you want a bookmark?)
   >>> open('msg', 'wb').write('branch commit with null character: \0\n')
   $ hg ci -l msg
   $ rm msg

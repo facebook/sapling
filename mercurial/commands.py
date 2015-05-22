@@ -1107,8 +1107,13 @@ def branch(ui, repo, label=None, **opts):
             scmutil.checknewlabel(repo, label, 'branch')
             repo.dirstate.setbranch(label)
             ui.status(_('marked working directory as branch %s\n') % label)
-            ui.status(_('(branches are permanent and global, '
-                        'did you want a bookmark?)\n'))
+
+            # find any open named branches aside from default
+            others = [n for n, h, t, c in repo.branchmap().iterbranches()
+                      if n != "default" and not c]
+            if not others:
+                ui.status(_('(branches are permanent and global, '
+                            'did you want a bookmark?)\n'))
     finally:
         wlock.release()
 

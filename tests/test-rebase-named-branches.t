@@ -36,7 +36,6 @@
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg branch dev-two
   marked working directory as branch dev-two
-  (branches are permanent and global, did you want a bookmark?)
 
   $ echo x > x
 
@@ -128,7 +127,6 @@ Branch name containing a dash (issue3181)
   3 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg branch dev-one
   marked working directory as branch dev-one
-  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m 'dev-one named branch'
 
   $ hg tglog
