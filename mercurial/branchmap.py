@@ -341,6 +341,10 @@ class revbranchcache(object):
         changelog = self._repo.changelog
         rbcrevidx = rev * _rbcrecsize
 
+        # avoid negative index, changelog.read(nullrev) is fast without cache
+        if rev == nullrev:
+            return changelog.branchinfo(rev)
+
         # if requested rev is missing, add and populate all missing revs
         if len(self._rbcrevs) < rbcrevidx + _rbcrecsize:
             self._rbcrevs.extend('\0' * (len(changelog) * _rbcrecsize -

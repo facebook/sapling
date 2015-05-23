@@ -1602,6 +1602,14 @@ prepare repository that has "default" branches of multiple roots
   $ echo default5 >> a
   $ hg ci -m5
 
+"null" revision belongs to "default" branch (issue4683)
+
+  $ log 'branch(null)'
+  0
+  1
+  4
+  5
+
 "null" revision belongs to "default" branch, but it shouldn't appear in set
 unless explicitly specified (issue4682)
 
