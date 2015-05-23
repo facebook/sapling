@@ -1711,7 +1711,7 @@ class TestRunner(object):
                     if e.errno != errno.ENOENT:
                         raise
                     return -1e9 # file does not exist, tell early
-                for kw, mul in slow.iteritems():
+                for kw, mul in slow.items():
                     if kw in f:
                         val *= mul
                 return val
