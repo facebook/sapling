@@ -146,6 +146,15 @@ def onetimesetup(ui):
         return caps
     wrapfunction(wireproto, 'capabilities', capabilities)
 
+    def _adjustlinkrev(orig, self, path, filelog, fnode, *args, **kwargs):
+        # When generating file blobs, taking the real path is too slow on large
+        # repos, so force it to just return the linkrev directly.
+        repo = self._repo
+        if util.safehasattr(repo, 'forcelinkrev') and repo.forcelinkrev:
+            return filelog.linkrev(filelog.rev(fnode))
+        return orig(self, path, filelog, fnode, *args, **kwargs)
+
+    wrapfunction(context.basefilectx, '_adjustlinkrev', _adjustlinkrev)
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
