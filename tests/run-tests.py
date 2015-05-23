@@ -1747,9 +1747,7 @@ class TestRunner(object):
                 # without this, we get the default temp dir location, but
                 # in all lowercase, which causes troubles with paths (issue3490)
                 d = osenvironb.get(b'TMP', None)
-            # FILE BUG: mkdtemp works only on unicode in Python 3
-            tmpdir = tempfile.mkdtemp('', 'hgtests.', d and _strpath(d))
-            tmpdir = _bytespath(tmpdir)
+            tmpdir = tempfile.mkdtemp(b'', b'hgtests.', d)
 
         self._hgtmp = osenvironb[b'HGTMP'] = (
             os.path.realpath(tmpdir))
