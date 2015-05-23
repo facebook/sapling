@@ -723,12 +723,15 @@ def _children(repo, subset, parentset):
     cs = set()
     pr = repo.changelog.parentrevs
     minrev = parentset.min()
+    nullrev = node.nullrev
     for r in subset:
         if r <= minrev:
             continue
-        for p in pr(r):
-            if p in parentset:
-                cs.add(r)
+        p1, p2 = pr(r)
+        if p1 in parentset:
+            cs.add(r)
+        if p2 != nullrev and p2 in parentset:
+            cs.add(r)
     return baseset(cs)
 
 @predicate('children(set)', safe=True)

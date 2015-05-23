@@ -881,6 +881,13 @@ test ancestors
   $ log 'children(ancestor(4,5))'
   2
   3
+
+  $ log 'children(4)'
+  6
+  8
+  $ log 'children(null)'
+  0
+
   $ log 'closed()'
   $ log 'contains(a)'
   0
