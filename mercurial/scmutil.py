@@ -737,8 +737,10 @@ def revrange(repo, revs):
                 end = revfix(repo, end, len(repo) - 1)
                 if end == nullrev and start < 0:
                     start = nullrev
-                rangeiter = repo.changelog.revs(start, end)
-                l = revset.baseset(rangeiter)
+                if start < end:
+                    l = revset.spanset(repo, start, end + 1)
+                else:
+                    l = revset.spanset(repo, start, end - 1)
                 subsets.append(l)
                 continue
             elif spec and spec in repo: # single unquoted rev
