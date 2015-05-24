@@ -906,7 +906,22 @@ class generatorset(abstractsmartset):
         d = {False: '-', True: '+'}[self._ascending]
         return '<%s%s>' % (type(self).__name__, d)
 
-class spanset(abstractsmartset):
+def spanset(repo, start=0, end=None):
+    """Create a spanset that represents a range of repository revisions
+
+    start: first revision included the set (default to 0)
+    end:   first revision excluded (last+1) (default to len(repo))
+
+    Spanset will be descending if `end` < `start`.
+    """
+    if end is None:
+        end = len(repo)
+    ascending = start <= end
+    if not ascending:
+        start, end = end + 1, start + 1
+    return _spanset(start, end, ascending, repo.changelog.filteredrevs)
+
+class _spanset(abstractsmartset):
     """Duck type for baseset class which represents a range of revisions and
     can work lazily and without having all the range in memory
 
@@ -916,23 +931,11 @@ class spanset(abstractsmartset):
     - revision filtered with this repoview will be skipped.
 
     """
-    def __init__(self, repo, start=0, end=None):
-        """
-        start: first revision included the set
-               (default to 0)
-        end:   first revision excluded (last+1)
-               (default to len(repo)
-
-        Spanset will be descending if `end` < `start`.
-        """
-        if end is None:
-            end = len(repo)
-        self._ascending = start <= end
-        if not self._ascending:
-            start, end = end + 1, start +1
+    def __init__(self, start, end, ascending, hiddenrevs):
         self._start = start
         self._end = end
-        self._hiddenrevs = repo.changelog.filteredrevs
+        self._ascending = ascending
+        self._hiddenrevs = hiddenrevs
 
     def sort(self, reverse=False):
         self._ascending = not reverse
@@ -1020,10 +1023,10 @@ class spanset(abstractsmartset):
 
     def __repr__(self):
         d = {False: '-', True: '+'}[self._ascending]
-        return '<%s%s %d:%d>' % (type(self).__name__, d,
+        return '<%s%s %d:%d>' % (type(self).__name__.lstrip('_'), d,
                                  self._start, self._end)
 
-class fullreposet(spanset):
+class fullreposet(_spanset):
     """a set containing all revisions in the repo
 
     This class exists to host special optimization and magic to handle virtual
@@ -1031,7 +1034,8 @@ class fullreposet(spanset):
     """
 
     def __init__(self, repo):
-        super(fullreposet, self).__init__(repo)
+        super(fullreposet, self).__init__(0, len(repo), True,
+                                          repo.changelog.filteredrevs)
 
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be
