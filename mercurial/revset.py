@@ -2944,6 +2944,20 @@ class filteredset(abstractsmartset):
     def __repr__(self):
         return '<%s %r>' % (type(self).__name__, self._subset)
 
+# this function will be removed, or merged to addset or orset, when
+# - scmutil.revrange() can be rewritten to not combine calculated smartsets
+# - or addset can handle more than two sets without balanced tree
+def _combinesets(subsets):
+    """Create balanced tree of addsets representing union of given sets"""
+    if not subsets:
+        return baseset()
+    if len(subsets) == 1:
+        return subsets[0]
+    p = len(subsets) // 2
+    xs = _combinesets(subsets[:p])
+    ys = _combinesets(subsets[p:])
+    return addset(xs, ys)
+
 def _iterordered(ascending, iter1, iter2):
     """produce an ordered iteration from two iterators with the same order
 
