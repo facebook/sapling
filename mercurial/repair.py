@@ -151,6 +151,12 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
 
     mfst = repo.manifest
 
+    curtr = repo.currenttransaction()
+    if curtr is not None:
+        del curtr  # avoid carrying reference to transaction for nothing
+        msg = _('programming error: cannot strip from inside a transaction')
+        raise util.Abort(msg, hint=_('contact your extension maintainer'))
+
     tr = repo.transaction("strip")
     offset = len(tr.entries)
 

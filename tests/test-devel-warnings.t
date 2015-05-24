@@ -3,7 +3,7 @@
   > """A small extension that acquire locks in the wrong order
   > """
   > 
-  > from mercurial import cmdutil
+  > from mercurial import cmdutil, repair
   > 
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -38,6 +38,15 @@
   >     wl = repo.wlock(wait=False)
   >     wl.release()
   >     lo.release()
+  > 
+  > @command('stripintr', [], '')
+  > def stripintr(ui, repo):
+  >     lo = repo.lock()
+  >     tr = repo.transaction('foobar')
+  >     try:
+  >         repair.strip(repo.ui, repo, [repo['.'].node()])
+  >     finally:
+  >         lo.release()
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -87,4 +96,14 @@
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
   $ hg properlocking
   $ hg nowaitlocking
+
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m a
+  $ hg stripintr
+  saved backup bundle to $TESTTMP/lock-checker/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-backup.hg (glob)
+  abort: programming error: cannot strip from inside a transaction
+  (contact your extension maintainer)
+  [255]
+
   $ cd ..
