@@ -742,8 +742,7 @@ def revrange(repo, revs):
                     # by far the most common case: revs = ["-1:0"]
                     l = revset.baseset(rangeiter)
                     continue
-                newrevs = set(rangeiter)
-                l = l + revset.baseset(sorted(newrevs, reverse=start > end))
+                l = l + revset.baseset(rangeiter)
                 continue
             elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
@@ -755,8 +754,7 @@ def revrange(repo, revs):
         # fall through to new-style queries if old-style fails
         m = revset.match(repo.ui, spec, repo)
         if l:
-            dl = [r for r in m(repo)]
-            l = l + revset.baseset(dl)
+            l = l + m(repo)
         else:
             l = m(repo)
 
