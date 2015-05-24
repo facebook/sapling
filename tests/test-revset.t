@@ -858,6 +858,16 @@ test that `or` operation combines elements in the right order:
   4
   5
 
+test that more than one `-r`s are combined in the right order and deduplicated:
+
+  $ hg log -T '{rev}\n' -r 3 -r 3 -r 4 -r 5:2 -r 'ancestors(4)'
+  3
+  4
+  5
+  2
+  0
+  1
+
 test that `or` operation skips duplicated revisions from right-hand side
 
   $ try 'reverse(1::5) or ancestors(4)'

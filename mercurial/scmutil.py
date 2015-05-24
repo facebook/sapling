@@ -709,14 +709,12 @@ def revrange(repo, revs):
             return defval
         return repo[val].rev()
 
-    seen, l = set(), revset.baseset([])
+    l = revset.baseset([])
 
     revsetaliases = [alias for (alias, _) in
                      repo.ui.configitems("revsetalias")]
 
     for spec in revs:
-        if l and not seen:
-            seen = set(l)
         # attempt to parse old-style ranges first to deal with
         # things like old-tag which contain query metacharacters
         try:
@@ -727,7 +725,6 @@ def revrange(repo, revs):
                 raise error.RepoLookupError
 
             if isinstance(spec, int):
-                seen.add(spec)
                 l = l + revset.baseset([spec])
                 continue
 
@@ -741,24 +738,15 @@ def revrange(repo, revs):
                 if end == nullrev and start < 0:
                     start = nullrev
                 rangeiter = repo.changelog.revs(start, end)
-                if not seen and not l:
+                if not l:
                     # by far the most common case: revs = ["-1:0"]
                     l = revset.baseset(rangeiter)
-                    # defer syncing seen until next iteration
                     continue
                 newrevs = set(rangeiter)
-                if seen:
-                    newrevs.difference_update(seen)
-                    seen.update(newrevs)
-                else:
-                    seen = newrevs
                 l = l + revset.baseset(sorted(newrevs, reverse=start > end))
                 continue
             elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
-                if rev in seen:
-                    continue
-                seen.add(rev)
                 l = l + revset.baseset([rev])
                 continue
         except error.RepoLookupError:
@@ -766,10 +754,9 @@ def revrange(repo, revs):
 
         # fall through to new-style queries if old-style fails
         m = revset.match(repo.ui, spec, repo)
-        if seen or l:
-            dl = [r for r in m(repo) if r not in seen]
+        if l:
+            dl = [r for r in m(repo)]
             l = l + revset.baseset(dl)
-            seen.update(dl)
         else:
             l = m(repo)
 
