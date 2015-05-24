@@ -29,7 +29,7 @@ commit hooks can see env vars
   $ hg add a
   $ hg commit -m a
   precommit hook: HG_PARENT1=0000000000000000000000000000000000000000
-  pretxnopen hook: HG_TXNNAME=commit
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   pretxncommit hook: HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a
   0:cb9a9f314b8b
   pretxnclose hook: HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -57,7 +57,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ echo b >> a
   $ hg commit -m a1 -d "1 0"
   precommit hook: HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
-  pretxnopen hook: HG_TXNNAME=commit
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   pretxncommit hook: HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   1:ab228980c14d
   pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -70,7 +70,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg add b
   $ hg commit -m b -d '1 0'
   precommit hook: HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
-  pretxnopen hook: HG_TXNNAME=commit
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   2:ee9deb46ab31
   pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -83,7 +83,7 @@ pretxncommit and commit hooks can see both parents of merge
   (branch merge, don't forget to commit)
   $ hg commit -m merge -d '2 0'
   precommit hook: HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
-  pretxnopen hook: HG_TXNNAME=commit
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   pretxncommit hook: HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$TESTTMP/a
   3:07f3376c1e65
   pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -127,7 +127,7 @@ tag hooks can see env vars
   $ hg tag -d '3 0' a
   pretag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a
   precommit hook: HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
-  pretxnopen hook: HG_TXNNAME=commit
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   pretxncommit hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a
   4:539e4b31b6dc
   pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -164,7 +164,7 @@ more there after
   4:539e4b31b6dc
   $ hg commit -m 'fail' -d '4 0'
   precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10
-  pretxnopen hook: HG_TXNNAME=commit
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   pretxncommit hook: HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a
   5:6f611f8018c1
   5:6f611f8018c1
@@ -228,7 +228,7 @@ pushkey hook
   pushing to ../a
   searching for changes
   no changes found
-  pretxnopen hook: HG_TXNNAME=bookmarks
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1

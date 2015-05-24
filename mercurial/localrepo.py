@@ -962,7 +962,7 @@ class localrepository(object):
 
         idbase = "%.40f#%f" % (random.random(), time.time())
         txnid = 'TXN:' + util.sha1(idbase).hexdigest()
-        self.hook('pretxnopen', throw=True, txnname=desc)
+        self.hook('pretxnopen', throw=True, txnname=desc, txnid=txnid)
 
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
