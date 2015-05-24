@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import changegroup, exchange, util, bundle2
-from mercurial.node import short, hex
+from mercurial.node import short
 from mercurial.i18n import _
 import errno
 
@@ -34,9 +34,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
         vfs.mkdir(backupdir)
 
     # Include a hash of all the nodes in the filename for uniqueness
-    hexbases = (hex(n) for n in bases)
-    hexheads = (hex(n) for n in heads)
-    allcommits = repo.set('%ls::%ls', hexbases, hexheads)
+    allcommits = repo.set('%ln::%ln', bases, heads)
     allhashes = sorted(c.hex() for c in allcommits)
     totalhash = util.sha1(''.join(allhashes)).hexdigest()
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
