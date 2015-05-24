@@ -1920,9 +1920,18 @@ def _list(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
-    ls = [repo[r].rev() for r in s.split('\0')]
-    s = subset
-    return baseset([r for r in ls if r in s])
+    # remove duplicates here. it's difficult for caller to deduplicate sets
+    # because different symbols can point to the same rev.
+    ls = []
+    seen = set()
+    for t in s.split('\0'):
+        r = repo[t].rev()
+        if r in seen:
+            continue
+        if r in subset:
+            ls.append(r)
+        seen.add(r)
+    return baseset(ls)
 
 # for internal use
 def _intlist(repo, subset, x):
