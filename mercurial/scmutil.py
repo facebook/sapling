@@ -709,7 +709,7 @@ def revrange(repo, revs):
             return defval
         return repo[val].rev()
 
-    l = revset.baseset([])
+    subsets = []
 
     revsetaliases = [alias for (alias, _) in
                      repo.ui.configitems("revsetalias")]
@@ -725,7 +725,7 @@ def revrange(repo, revs):
                 raise error.RepoLookupError
 
             if isinstance(spec, int):
-                l = l + revset.baseset([spec])
+                subsets.append(revset.baseset([spec]))
                 continue
 
             if _revrangesep in spec:
@@ -738,27 +738,21 @@ def revrange(repo, revs):
                 if end == nullrev and start < 0:
                     start = nullrev
                 rangeiter = repo.changelog.revs(start, end)
-                if not l:
-                    # by far the most common case: revs = ["-1:0"]
-                    l = revset.baseset(rangeiter)
-                    continue
-                l = l + revset.baseset(rangeiter)
+                l = revset.baseset(rangeiter)
+                subsets.append(l)
                 continue
             elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
-                l = l + revset.baseset([rev])
+                subsets.append(revset.baseset([rev]))
                 continue
         except error.RepoLookupError:
             pass
 
         # fall through to new-style queries if old-style fails
         m = revset.match(repo.ui, spec, repo)
-        if l:
-            l = l + m(repo)
-        else:
-            l = m(repo)
+        subsets.append(m(repo))
 
-    return l
+    return revset._combinesets(subsets)
 
 def expandpats(pats):
     '''Expand bare globs when running on windows.

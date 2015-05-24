@@ -1084,6 +1084,13 @@ test that chained `or` operations never eat up stack (issue4624)
   0
   1
 
+test that repeated `-r` options never eat up stack (issue4565)
+(uses `-r 0::1` to avoid possible optimization at old-style parser)
+
+  $ hg log -T '{rev}\n' `python -c "for i in xrange(500): print '-r 0::1 ',"`
+  0
+  1
+
 check that conversion to only works
   $ try --optimize '::3 - ::1'
   (minus
