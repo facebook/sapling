@@ -1,9 +1,5 @@
 #require test-repo
 
-This code uses the ast module, which was new in 2.6, so we'll skip
-this test on anything earlier.
-  $ $PYTHON -c 'import sys ; assert sys.version_info >= (2, 6)' || exit 80
-
   $ import_checker="$TESTDIR"/../contrib/import-checker.py
 
 Run the doctests from the import checker, and make sure
