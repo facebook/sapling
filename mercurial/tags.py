@@ -484,13 +484,26 @@ class hgtagsfnodescache(object):
             # No .hgtags file on this revision.
             fnode = nullid
 
+        self._writeentry(offset, properprefix, fnode)
+        return fnode
+
+    def setfnode(self, node, fnode):
+        """Set the .hgtags filenode for a given changeset."""
+        assert len(fnode) == 20
+        ctx = self._repo[node]
+
+        # Do a lookup first to avoid writing if nothing has changed.
+        if self.getfnode(ctx.node(), computemissing=False) == fnode:
+            return
+
+        self._writeentry(ctx.rev() * _fnodesrecsize, node[0:4], fnode)
+
+    def _writeentry(self, offset, prefix, fnode):
         # Slices on array instances only accept other array.
-        entry = array('c', properprefix + fnode)
+        entry = array('c', prefix + fnode)
         self._raw[offset:offset + _fnodesrecsize] = entry
         # self._dirtyoffset could be None.
         self._dirtyoffset = min(self._dirtyoffset, offset) or 0
-
-        return fnode
 
     def write(self):
         """Perform all necessary writes to cache file.
