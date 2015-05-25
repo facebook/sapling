@@ -442,11 +442,13 @@ class hgtagsfnodescache(object):
                 self._raw.pop()
             self._dirtyoffset = len(self._raw)
 
-    def getfnode(self, node):
+    def getfnode(self, node, computemissing=True):
         """Obtain the filenode of the .hgtags file at a specified revision.
 
         If the value is in the cache, the entry will be validated and returned.
-        Otherwise, the filenode will be computed and returned.
+        Otherwise, the filenode will be computed and returned unless
+        "computemissing" is False, in which case None will be returned without
+        any potentially expensive computation being performed.
 
         If an .hgtags does not exist at the specified revision, nullid is
         returned.
@@ -470,7 +472,12 @@ class hgtagsfnodescache(object):
 
             # Fall through.
 
-        # If we get here, the entry is either missing or invalid. Populate it.
+        # If we get here, the entry is either missing or invalid.
+
+        if not computemissing:
+            return None
+
+        # Populate missing entry.
         try:
             fnode = ctx.filenode('.hgtags')
         except error.LookupError:
