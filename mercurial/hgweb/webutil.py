@@ -331,7 +331,7 @@ def changesetentry(web, req, tmpl, ctx):
         archives=web.archivelist(ctx.hex()),
         tags=nodetagsdict(web.repo, ctx.node()),
         bookmarks=nodebookmarksdict(web.repo, ctx.node()),
-        branch=nodebranchnodefault(ctx),
+        branch=showbranch,
         inbranch=nodeinbranch(web.repo, ctx),
         branches=nodebranchdict(web.repo, ctx))
 
