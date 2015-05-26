@@ -1177,7 +1177,8 @@ release_none:
 	return ret;
 }
 
-static inline void index_get_parents(indexObject *self, int rev, int *ps)
+static inline void index_get_parents(indexObject *self, Py_ssize_t rev,
+				int *ps)
 {
 	if (rev >= self->length - 1) {
 		PyObject *tuple = PyList_GET_ITEM(self->added,
