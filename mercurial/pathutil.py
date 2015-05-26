@@ -1,4 +1,4 @@
-import os, errno, stat
+import os, errno, stat, posixpath
 
 import encoding
 import util
@@ -188,7 +188,7 @@ def normasprefix(path):
     else:
         return path
 
-def join(path, *paths):
+def join(*args):
     '''Join two or more pathname components, inserting '/' as needed.
 
     Based on the posix os.path.join() implementation.
@@ -214,17 +214,7 @@ def join(path, *paths):
     >>> join ('foo', '', '', 'bar')
     'foo/bar'
     '''
-    sep = '/'
-    if not paths:
-        path[:0] + sep #23780: Ensure compatible data type even if p is null.
-    for piece in paths:
-        if piece.startswith(sep):
-            path = piece
-        elif not path or path.endswith(sep):
-            path += piece
-        else:
-            path += sep + piece
-    return path
+    return posixpath.join(*args)
 
 def dirname(path):
     '''returns the directory portion of the given path
@@ -246,9 +236,4 @@ def dirname(path):
     >>> dirname('/foo//bar')
     '/foo'
     '''
-    sep = '/'
-    i = path.rfind(sep) + 1
-    dirname = path[:i]
-    if dirname and dirname != sep * len(dirname):
-        dirname = dirname.rstrip(sep)
-    return dirname
+    return posixpath.dirname(path)
