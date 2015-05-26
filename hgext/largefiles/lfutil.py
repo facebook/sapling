@@ -238,11 +238,11 @@ def linktousercache(repo, hash):
     if path:
         link(storepath(repo, hash), path)
 
-def getstandinmatcher(repo, pats=[]):
-    '''Return a match object that applies pats to the standin directory'''
+def getstandinmatcher(repo, rmatcher=None):
+    '''Return a match object that applies rmatcher to the standin directory'''
     standindir = repo.wjoin(shortname)
-    if pats:
-        pats = [os.path.join(standindir, pat) for pat in pats]
+    if rmatcher and rmatcher.files():
+        pats = [os.path.join(standindir, pat) for pat in rmatcher.files()]
     else:
         # no patterns: relative to repo root
         pats = [standindir]
@@ -255,7 +255,7 @@ def composestandinmatcher(repo, rmatcher):
     '''Return a matcher that accepts standins corresponding to the
     files accepted by rmatcher. Pass the list of files in the matcher
     as the paths specified by the user.'''
-    smatcher = getstandinmatcher(repo, rmatcher.files())
+    smatcher = getstandinmatcher(repo, rmatcher)
     isstandin = smatcher.matchfn
     def composedmatchfn(f):
         return isstandin(f) and rmatcher.matchfn(splitstandin(f))
