@@ -708,9 +708,9 @@ BROKEN: should be '-1'
 Test working-directory revision
   $ hg debugrevspec 'wdir()'
   None
-BROKEN: should include 'None'
   $ hg debugrevspec 'tip or wdir()'
   9
+  None
   $ hg debugrevspec '0:tip and wdir()'
 
   $ log 'outgoing()'
