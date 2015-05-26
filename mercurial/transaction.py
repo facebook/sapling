@@ -222,7 +222,7 @@ class transaction(object):
     def _addbackupentry(self, entry):
         """register a new backup entry and write it to disk"""
         self._backupentries.append(entry)
-        self._backupmap[entry] = len(self._backupentries) - 1
+        self._backupmap[entry[1]] = len(self._backupentries) - 1
         self._backupsfile.write("%s\0%s\0%s\0%d\n" % entry)
         self._backupsfile.flush()
 
