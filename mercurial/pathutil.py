@@ -188,52 +188,8 @@ def normasprefix(path):
     else:
         return path
 
-def join(*args):
-    '''Join two or more pathname components, inserting '/' as needed.
-
-    Based on the posix os.path.join() implementation.
-
-    >>> join('foo', 'bar')
-    'foo/bar'
-    >>> join('/foo', 'bar')
-    '/foo/bar'
-    >>> join('foo', '/bar')
-    '/bar'
-    >>> join('foo', 'bar/')
-    'foo/bar/'
-    >>> join('foo', 'bar', 'gah')
-    'foo/bar/gah'
-    >>> join('foo')
-    'foo'
-    >>> join('', 'foo')
-    'foo'
-    >>> join('foo/', 'bar')
-    'foo/bar'
-    >>> join('', '', '')
-    ''
-    >>> join ('foo', '', '', 'bar')
-    'foo/bar'
-    '''
-    return posixpath.join(*args)
-
-def dirname(path):
-    '''returns the directory portion of the given path
-
-    Based on the posix os.path.split() implementation.
-
-    >>> dirname('foo')
-    ''
-    >>> dirname('foo/')
-    'foo'
-    >>> dirname('foo/bar')
-    'foo'
-    >>> dirname('/foo')
-    '/'
-    >>> dirname('/foo/bar')
-    '/foo'
-    >>> dirname('/foo//bar/poo')
-    '/foo//bar'
-    >>> dirname('/foo//bar')
-    '/foo'
-    '''
-    return posixpath.dirname(path)
+# forward two methods from posixpath that do what we need, but we'd
+# rather not let our internals know that we're thinking in posix terms
+# - instead we'll let them be oblivious.
+join = posixpath.join
+dirname = posixpath.dirname
