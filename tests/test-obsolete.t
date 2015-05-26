@@ -886,3 +886,33 @@ Test issue 4506
 
 #endif
 
+Test heads computation on pending index changes with obsolescence markers
+  $ cd ..
+  $ cat >$TESTTMP/test_extension.py  << EOF
+  > from mercurial import cmdutil
+  > from mercurial.i18n import _
+  > 
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command("amendtransient",[], _('hg amendtransient [rev]'))
+  > def amend(ui, repo, *pats, **opts):
+  >   def commitfunc(ui, repo, message, match, opts):
+  >     return repo.commit(message, repo['.'].user(), repo['.'].date(), match)
+  >   opts['message'] = 'Test'
+  >   opts['logfile'] = None
+  >   cmdutil.amend(ui, repo, commitfunc, repo['.'], {}, pats, opts)
+  >   print repo.changelog.headrevs()
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > testextension=$TESTTMP/test_extension.py
+  > EOF
+  $ hg init repo-issue-nativerevs-pending-changes
+  $ cd repo-issue-nativerevs-pending-changes
+  $ mkcommit a
+  $ mkcommit b
+  $ hg up ".^"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo aa > a
+  $ hg amendtransient
+  [1, 3]

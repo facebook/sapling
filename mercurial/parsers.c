@@ -1194,7 +1194,7 @@ static inline void index_get_parents(indexObject *self, Py_ssize_t rev,
 
 static PyObject *index_headrevs(indexObject *self, PyObject *args)
 {
-	Py_ssize_t i, len, addlen;
+	Py_ssize_t i, j, len;
 	char *nothead = NULL;
 	PyObject *heads = NULL;
 	PyObject *filter = NULL;
@@ -1237,46 +1237,9 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 	if (nothead == NULL)
 		goto bail;
 
-	for (i = 0; i < self->raw_length; i++) {
-		const char *data;
-		int parent_1, parent_2, isfiltered;
-
-		isfiltered = check_filter(filter, i);
-		if (isfiltered == -1) {
-			PyErr_SetString(PyExc_TypeError,
-				"unable to check filter");
-			goto bail;
-		}
-
-		if (isfiltered) {
-			nothead[i] = 1;
-			continue;
-		}
-
-		data = index_deref(self, i);
-		parent_1 = getbe32(data + 24);
-		parent_2 = getbe32(data + 28);
-
-		if (parent_1 >= 0)
-			nothead[parent_1] = 1;
-		if (parent_2 >= 0)
-			nothead[parent_2] = 1;
-	}
-
-	addlen = self->added ? PyList_GET_SIZE(self->added) : 0;
-
-	for (i = 0; i < addlen; i++) {
-		PyObject *rev = PyList_GET_ITEM(self->added, i);
-		PyObject *p1 = PyTuple_GET_ITEM(rev, 5);
-		PyObject *p2 = PyTuple_GET_ITEM(rev, 6);
-		long parent_1, parent_2;
+	for (i = 0; i < len; i++) {
 		int isfiltered;
-
-		if (!PyInt_Check(p1) || !PyInt_Check(p2)) {
-			PyErr_SetString(PyExc_TypeError,
-					"revlog parents are invalid");
-			goto bail;
-		}
+		int parents[2];
 
 		isfiltered = check_filter(filter, i);
 		if (isfiltered == -1) {
@@ -1290,12 +1253,11 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 			continue;
 		}
 
-		parent_1 = PyInt_AS_LONG(p1);
-		parent_2 = PyInt_AS_LONG(p2);
-		if (parent_1 >= 0)
-			nothead[parent_1] = 1;
-		if (parent_2 >= 0)
-			nothead[parent_2] = 1;
+		index_get_parents(self, i, parents);
+		for (j = 0; j < 2; j++) {
+			if (parents[j] >= 0)
+				nothead[parents[j]] = 1;
+		}
 	}
 
 	for (i = 0; i < len; i++) {
