@@ -697,10 +697,10 @@ Test null revision
   $ log 'reverse(null:)' | tail -2
   0
   -1
+BROKEN: should be '-1'
   $ log 'first(null:)'
-  -1
+BROKEN: should be '-1'
   $ log 'min(null:)'
-  -1
   $ log 'tip:null and all()' | tail -2
   1
   0
@@ -708,9 +708,9 @@ Test null revision
 Test working-directory revision
   $ hg debugrevspec 'wdir()'
   None
+BROKEN: should include 'None'
   $ hg debugrevspec 'tip or wdir()'
   9
-  None
   $ hg debugrevspec '0:tip and wdir()'
 
   $ log 'outgoing()'
@@ -1699,6 +1699,46 @@ tests for concatenation of strings/symbols by "##"
   $ log "cat2n2(2785f5, 1eece5, 24286f, 4ae135)"
   0
   4
+
+  $ cd ..
+
+prepare repository that has "default" branches of multiple roots
+
+  $ hg init namedbranch
+  $ cd namedbranch
+
+  $ echo default0 >> a
+  $ hg ci -Aqm0
+  $ echo default1 >> a
+  $ hg ci -m1
+
+  $ hg branch -q stable
+  $ echo stable2 >> a
+  $ hg ci -m2
+  $ echo stable3 >> a
+  $ hg ci -m3
+
+  $ hg update -q null
+  $ echo default4 >> a
+  $ hg ci -Aqm4
+  $ echo default5 >> a
+  $ hg ci -m5
+
+"null" revision belongs to "default" branch (issue4683)
+
+  $ log 'branch(null)'
+  0
+  1
+  4
+  5
+
+"null" revision belongs to "default" branch, but it shouldn't appear in set
+unless explicitly specified (issue4682)
+
+  $ log 'children(branch(default))'
+  1
+  2
+  5
 
   $ cd ..
 

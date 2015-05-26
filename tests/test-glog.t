@@ -2375,4 +2375,12 @@ should not draw line down to null due to the magic of fullreposet
      summary:     add a
   
 
+  $ hg log -G -r 'branch(default)' | tail -6
+  |
+  o  changeset:   0:f8035bb17114
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+
   $ cd ..

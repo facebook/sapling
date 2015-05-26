@@ -329,7 +329,8 @@ def _getrevsource(repo, r):
 
 def stringset(repo, subset, x):
     x = repo[x].rev()
-    if x in subset:
+    if (x in subset
+        or x == node.nullrev and isinstance(subset, fullreposet)):
         return baseset([x])
     return baseset()
 
@@ -1911,7 +1912,7 @@ def user(repo, subset, x):
 def wdir(repo, subset, x):
     # i18n: "wdir" is a keyword
     getargs(x, 0, 0, _("wdir takes no arguments"))
-    if None in subset:
+    if None in subset or isinstance(subset, fullreposet):
         return baseset([None])
     return baseset()
 
@@ -3469,11 +3470,6 @@ class fullreposet(spanset):
 
     def __init__(self, repo):
         super(fullreposet, self).__init__(repo)
-
-    def __contains__(self, rev):
-        # assumes the given rev is valid
-        hidden = self._hiddenrevs
-        return not (hidden and rev in hidden)
 
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be
