@@ -5,7 +5,7 @@ Create a repository:
   defaults.commit=-d "0 0"
   defaults.shelve=--date "0 0"
   defaults.tag=-d "0 0"
-  devel.all=true
+  devel.all-warnings=true
   largefiles.usercache=$TESTTMP/.cache/largefiles (glob)
   ui.slash=True
   ui.interactive=False

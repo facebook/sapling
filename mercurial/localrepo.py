@@ -944,7 +944,7 @@ class localrepository(object):
         return None
 
     def transaction(self, desc, report=None):
-        if (self.ui.configbool('devel', 'all')
+        if (self.ui.configbool('devel', 'all-warnings')
                 or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is None or not l.held:
@@ -1249,7 +1249,7 @@ class localrepository(object):
 
         # We do not need to check for non-waiting lock aquisition.  Such
         # acquisition would not cause dead-lock as they would just fail.
-        if wait and (self.ui.configbool('devel', 'all')
+        if wait and (self.ui.configbool('devel', 'all-warnings')
                      or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is not None and l.held:

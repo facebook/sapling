@@ -44,7 +44,7 @@
   > [extensions]
   > buggylocking=$TESTTMP/buggylocking.py
   > [devel]
-  > all=1
+  > all-warnings=1
   > EOF
 
   $ hg init lock-checker

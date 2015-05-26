@@ -178,7 +178,7 @@ check that local configs for the cached repo aren't inherited when -R is used:
   defaults.commit=-d "0 0"
   defaults.shelve=--date "0 0"
   defaults.tag=-d "0 0"
-  devel.all=true
+  devel.all-warnings=true
   largefiles.usercache=$TESTTMP/.cache/largefiles
   ui.slash=True
   ui.interactive=False

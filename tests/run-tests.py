@@ -758,7 +758,7 @@ class Test(unittest.TestCase):
         hgrc.write(b'shelve = --date "0 0"\n')
         hgrc.write(b'tag = -d "0 0"\n')
         hgrc.write(b'[devel]\n')
-        hgrc.write(b'all = true\n')
+        hgrc.write(b'all-warnings = true\n')
         hgrc.write(b'[largefiles]\n')
         hgrc.write(b'usercache = %s\n' %
                    (os.path.join(self._testtmp, b'.cache/largefiles')))
