@@ -238,7 +238,7 @@ def linktousercache(repo, hash):
     if path:
         link(storepath(repo, hash), path)
 
-def getstandinmatcher(repo, pats=[], opts={}):
+def getstandinmatcher(repo, pats=[]):
     '''Return a match object that applies pats to the standin directory'''
     standindir = repo.wjoin(shortname)
     if pats:
@@ -247,7 +247,7 @@ def getstandinmatcher(repo, pats=[], opts={}):
         # no patterns: relative to repo root
         pats = [standindir]
     # no warnings about missing files or directories
-    match = scmutil.match(repo[None], pats, opts)
+    match = scmutil.match(repo[None], pats)
     match.bad = lambda f, msg: None
     return match
 
