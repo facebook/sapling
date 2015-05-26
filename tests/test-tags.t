@@ -625,3 +625,77 @@ Test for issue3911
   globaltag                          0:bbd179dfa0a7
 
   $ cd ..
+
+Create a repository with tags data to test .hgtags fnodes transfer
+
+  $ hg init tagsserver
+  $ cd tagsserver
+  $ cat > .hg/hgrc << EOF
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
+  $ touch foo
+  $ hg -q commit -A -m initial
+  $ hg tag -m 'tag 0.1' 0.1
+  $ echo second > foo
+  $ hg commit -m second
+  $ hg tag -m 'tag 0.2' 0.2
+  $ hg tags
+  tip                                3:40f0358cb314
+  0.2                                2:f63cc8fe54e4
+  0.1                                0:96ee1d7354c4
+  $ cd ..
+
+Cloning should pull down hgtags fnodes mappings and write the cache file
+
+  $ hg --config experimental.bundle2-exp=True clone --pull tagsserver tagsclient
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 4 changes to 2 files
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Missing tags2* files means the cache wasn't written through the normal mechanism.
+
+  $ ls tagsclient/.hg/cache
+  branch2-served
+  hgtagsfnodes1
+  rbc-names-v1
+  rbc-revs-v1
+
+Cache should contain the head only, even though other nodes have tags data
+
+  $ f --size --hexdump tagsclient/.hg/cache/hgtagsfnodes1
+  tagsclient/.hg/cache/hgtagsfnodes1: size=96
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0020: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0030: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0040: ff ff ff ff ff ff ff ff 40 f0 35 8c 19 e0 a7 d3 |........@.5.....|
+  0050: 8a 5c 6a 82 4d cf fb a5 87 d0 2f a3 1e 4f 2f 8a |.\j.M...../..O/.|
+
+Running hg tags should produce tags2* file and not change cache
+
+  $ hg -R tagsclient tags
+  tip                                3:40f0358cb314
+  0.2                                2:f63cc8fe54e4
+  0.1                                0:96ee1d7354c4
+
+  $ ls tagsclient/.hg/cache
+  branch2-served
+  hgtagsfnodes1
+  rbc-names-v1
+  rbc-revs-v1
+  tags2-visible
+
+  $ f --size --hexdump tagsclient/.hg/cache/hgtagsfnodes1
+  tagsclient/.hg/cache/hgtagsfnodes1: size=96
+  0000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0010: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0020: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0030: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff |................|
+  0040: ff ff ff ff ff ff ff ff 40 f0 35 8c 19 e0 a7 d3 |........@.5.....|
+  0050: 8a 5c 6a 82 4d cf fb a5 87 d0 2f a3 1e 4f 2f 8a |.\j.M...../..O/.|
+

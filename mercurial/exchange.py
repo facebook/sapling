@@ -12,6 +12,7 @@ import errno, urllib
 import util, scmutil, changegroup, base85, error, store
 import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
 import lock as lockmod
+import tags
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
@@ -1284,6 +1285,49 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
         markers = repo.obsstore.relevantmarkers(subset)
         markers = sorted(markers)
         buildobsmarkerspart(bundler, markers)
+
+@getbundle2partsgenerator('hgtagsfnodes')
+def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,
+                         b2caps=None, heads=None, common=None,
+                         **kwargs):
+    """Transfer the .hgtags filenodes mapping.
+
+    Only values for heads in this bundle will be transferred.
+
+    The part data consists of pairs of 20 byte changeset node and .hgtags
+    filenodes raw values.
+    """
+    # Don't send unless:
+    # - changeset are being exchanged,
+    # - the client supports it.
+    if not (kwargs.get('cg', True) and 'hgtagsfnodes' in b2caps):
+        return
+
+    outgoing = changegroup.computeoutgoing(repo, heads, common)
+
+    if not outgoing.missingheads:
+        return
+
+    cache = tags.hgtagsfnodescache(repo.unfiltered())
+    chunks = []
+
+    # .hgtags fnodes are only relevant for head changesets. While we could
+    # transfer values for all known nodes, there will likely be little to
+    # no benefit.
+    #
+    # We don't bother using a generator to produce output data because
+    # a) we only have 40 bytes per head and even esoteric numbers of heads
+    # consume little memory (1M heads is 40MB) b) we don't want to send the
+    # part if we don't have entries and knowing if we have entries requires
+    # cache lookups.
+    for node in outgoing.missingheads:
+        # Don't compute missing, as this may slow down serving.
+        fnode = cache.getfnode(node, computemissing=False)
+        if fnode is not None:
+            chunks.extend([node, fnode])
+
+    if chunks:
+        bundler.newpart('hgtagsfnodes', data=''.join(chunks))
 
 def check_heads(repo, their_heads, context):
     """check if the heads of a repo have been modified
