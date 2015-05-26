@@ -451,7 +451,7 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
 
         g1, g2 = f1.ancestors(), f2.ancestors()
         try:
-            f1r, f2r = f1.rev(), f2.rev()
+            f1r, f2r = f1.linkrev(), f2.linkrev()
 
             if f1r is None:
                 f1 = g1.next()
@@ -459,7 +459,7 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
                 f2 = g2.next()
 
             while True:
-                f1r, f2r = f1.rev(), f2.rev()
+                f1r, f2r = f1.linkrev(), f2.linkrev()
                 if f1r > f2r:
                     f1 = g1.next()
                 elif f2r > f1r:
@@ -474,7 +474,7 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     of = None
     seen = set([f])
     for oc in ctx(f, m1[f]).ancestors():
-        ocr = oc.rev()
+        ocr = oc.linkrev()
         of = oc.path()
         if of in seen:
             # check limit late - grab last rename before
