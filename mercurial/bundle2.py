@@ -736,6 +736,29 @@ class bundlepart(object):
         if self._generated is not None:
             raise RuntimeError('part can only be consumed once')
         self._generated = False
+
+        if ui.debugflag:
+            msg = ['bundle2-output-part: "%s"' % self.type]
+            if not self.mandatory:
+                msg.append(' (advisory)')
+            nbmp = len(self.mandatoryparams)
+            nbap = len(self.advisoryparams)
+            if nbmp or nbap:
+                msg.append(' (params:')
+                if nbmp:
+                    msg.append(' %i mandatory' % nbmp)
+                if nbap:
+                    msg.append(' %i advisory' % nbmp)
+                msg.append(')')
+            if not self.data:
+                msg.append(' empty payload')
+            elif util.safehasattr(self.data, 'next'):
+                msg.append(' streamed payload')
+            else:
+                msg.append(' %i bytes payload' % len(self.data))
+            msg.append('\n')
+            ui.debug(''.join(msg))
+
         #### header
         if self.mandatory:
             parttype = self.type.upper()

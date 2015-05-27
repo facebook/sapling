@@ -390,32 +390,39 @@ Test part
   bundle2-output: bundle parameter: 
   bundle2-output: start of parts
   bundle2-output: bundle part: "test:empty"
+  bundle2-output-part: "test:empty" (advisory) empty payload
   bundle2-output: part 0: "test:empty"
   bundle2-output: header chunk size: 17
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:empty"
+  bundle2-output-part: "test:empty" (advisory) empty payload
   bundle2-output: part 1: "test:empty"
   bundle2-output: header chunk size: 17
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:song"
+  bundle2-output-part: "test:song" (advisory) 178 bytes payload
   bundle2-output: part 2: "test:song"
   bundle2-output: header chunk size: 16
   bundle2-output: payload chunk size: 178
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:debugreply"
+  bundle2-output-part: "test:debugreply" (advisory) empty payload
   bundle2-output: part 3: "test:debugreply"
   bundle2-output: header chunk size: 22
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:math"
+  bundle2-output-part: "test:math" (advisory) (params: 2 mandatory 2 advisory) 2 bytes payload
   bundle2-output: part 4: "test:math"
   bundle2-output: header chunk size: 43
   bundle2-output: payload chunk size: 2
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:song"
+  bundle2-output-part: "test:song" (advisory) (params: 1 mandatory) empty payload
   bundle2-output: part 5: "test:song"
   bundle2-output: header chunk size: 29
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "test:ping"
+  bundle2-output-part: "test:ping" (advisory) empty payload
   bundle2-output: part 6: "test:ping"
   bundle2-output: header chunk size: 16
   bundle2-output: closing payload chunk
@@ -741,6 +748,7 @@ Support for changegroup
   bundle2-output: bundle parameter: 
   bundle2-output: start of parts
   bundle2-output: bundle part: "changegroup"
+  bundle2-output-part: "changegroup" (advisory) streamed payload
   bundle2-output: part 0: "changegroup"
   bundle2-output: header chunk size: 18
   bundling: 1/4 changesets (25.00%)
