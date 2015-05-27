@@ -804,6 +804,8 @@ class bundlepart(object):
                 yield chunk
         except BaseException, exc:
             # backup exception data for later
+            ui.debug('bundle2-input-stream-interrupt: encoding exception %s'
+                     % exc)
             exc_info = sys.exc_info()
             msg = 'unexpected error: %s' % exc
             interpart = bundlepart('error:abort', [('message', msg)],
