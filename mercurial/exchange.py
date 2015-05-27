@@ -895,7 +895,6 @@ def pull(repo, remote, heads=None, force=False, bookmarks=()):
                     " %s") % (', '.join(sorted(missing)))
             raise util.Abort(msg)
 
-    pullop.remotebookmarks = remote.listkeys('bookmarks')
     lock = pullop.repo.lock()
     try:
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
@@ -942,6 +941,16 @@ def _pulldiscovery(pullop):
     for stepname in pulldiscoveryorder:
         step = pulldiscoverymapping[stepname]
         step(pullop)
+
+@pulldiscovery('b1:bookmarks')
+def _pullbookmarkbundle1(pullop):
+    """fetch bookmark data in bundle1 case
+
+    If not using bundle2, we have to fetch bookmarks before changeset
+    discovery to reduce the chance and impact of race conditions."""
+    if not _canusebundle2(pullop): # all bundle2 server now support listkeys
+        pullop.remotebookmarks = pullop.remote.listkeys('bookmarks')
+
 
 @pulldiscovery('changegroup')
 def _pulldiscoverychangegroup(pullop):
