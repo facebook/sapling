@@ -4,6 +4,10 @@
   > publish=false
   > [ui]
   > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
+  > [experimental]
+  > # drop me once bundle2 is the default,
+  > # added to get test change early.
+  > bundle2-exp = True
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -307,6 +311,7 @@ Try to pull markers
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 4 files (+1 heads)
+  5 new obsolescence markers
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -348,6 +353,7 @@ Try to push markers
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 4 files (+1 heads)
+  5 new obsolescence markers
   $ hg -R tmpd debugobsolete | sort
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
@@ -410,6 +416,7 @@ On pull
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 4 files (+1 heads)
+  5 new obsolescence markers
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -426,6 +433,7 @@ On push
   pushing to ../tmpc
   searching for changes
   no changes found
+  1 new obsolescence markers
   [1]
   $ hg -R ../tmpc debugobsolete
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -508,6 +516,7 @@ Don't try to push extinct changeset
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 6 files (+1 heads)
+  7 new obsolescence markers
 
 no warning displayed
 
@@ -547,6 +556,7 @@ Do not warn about new head when the new head is a successors of a remote one
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  1 new obsolescence markers
 
 test relevance computation
 ---------------------------------------
@@ -764,6 +774,7 @@ This test issue 3814
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  2 new obsolescence markers
   $ hg out ../repo-issue3814
   comparing with ../repo-issue3814
   searching for changes
