@@ -7,6 +7,9 @@
   > publish=False
   > [experimental]
   > evolution=createmarkers,exchange
+  > # drop me once bundle2 is the default,
+  > # added to get test change early.
+  > bundle2-exp = True
   > EOF
 
 initialize
@@ -274,9 +277,9 @@ update a bookmark in the middle of a client pulling changes
   $ hg pull
   pulling from $TESTTMP/pull-race (glob)
   searching for changes
-  adding changesets
   adding f3
   committed in pull-race
+  adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
@@ -368,6 +371,7 @@ Update to a successor works
   remote: adding manifests
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 1 files (+1 heads)
+  remote: 2 new obsolescence markers
   updating bookmark Y
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
@@ -436,6 +440,7 @@ hgweb
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
+  2 new obsolescence markers
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
@@ -571,6 +576,7 @@ bookmark, not all outgoing changes:
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
+  2 new obsolescence markers
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd addmarks
