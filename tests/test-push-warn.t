@@ -1,3 +1,9 @@
+  $ cat << EOF >> $HGRCPATH
+  > [experimental]
+  > # drop me once bundle2 is the default,
+  > # added to get test change early.
+  > bundle2-exp = True
+  > EOF
   $ hg init a
   $ cd a
   $ echo foo > t1
@@ -150,9 +156,9 @@ Specifying a revset that evaluates to null will abort
   searching for changes
   2 changesets found
   uncompressed size of bundle content:
-       308 (changelog)
-       286 (manifests)
-       213  foo
+       348 (changelog)
+       326 (manifests)
+       253  foo
   adding changesets
   adding manifests
   adding file changes
