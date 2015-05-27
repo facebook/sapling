@@ -557,18 +557,21 @@ Process the bundle
   bundle2-input: part id: "0"
   bundle2-input: part parameters: 0
   bundle2-input: ignoring unsupported advisory part test:empty
+  bundle2-input-part: "test:empty" (advisory) unsupported-type
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 17
   bundle2-input: part type: "test:empty"
   bundle2-input: part id: "1"
   bundle2-input: part parameters: 0
   bundle2-input: ignoring unsupported advisory part test:empty
+  bundle2-input-part: "test:empty" (advisory) unsupported-type
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 16
   bundle2-input: part type: "test:song"
   bundle2-input: part id: "2"
   bundle2-input: part parameters: 0
   bundle2-input: found a handler for part 'test:song'
+  bundle2-input-part: "test:song" (advisory) supported
   The choir starts singing:
   bundle2-input: payload chunk size: 178
   bundle2-input: payload chunk size: 0
@@ -580,6 +583,7 @@ Process the bundle
   bundle2-input: part id: "3"
   bundle2-input: part parameters: 0
   bundle2-input: found a handler for part 'test:debugreply'
+  bundle2-input-part: "test:debugreply" (advisory) supported
   debugreply: no reply
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 43
@@ -587,6 +591,7 @@ Process the bundle
   bundle2-input: part id: "4"
   bundle2-input: part parameters: 3
   bundle2-input: ignoring unsupported advisory part test:math
+  bundle2-input-part: "test:math" (advisory) (params: 2 mandatory 2 advisory) unsupported-type
   bundle2-input: payload chunk size: 2
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 29
@@ -595,12 +600,14 @@ Process the bundle
   bundle2-input: part parameters: 1
   bundle2-input: found a handler for part 'test:song'
   bundle2-input: ignoring unsupported advisory part test:song - randomparam
+  bundle2-input-part: "test:song" (advisory) (params: 1 mandatory) unsupported-params (['randomparam'])
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 16
   bundle2-input: part type: "test:ping"
   bundle2-input: part id: "6"
   bundle2-input: part parameters: 0
   bundle2-input: found a handler for part 'test:ping'
+  bundle2-input-part: "test:ping" (advisory) supported
   received ping request (id 6)
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 0

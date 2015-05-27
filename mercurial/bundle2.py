@@ -359,23 +359,43 @@ def _processpart(op, part):
 
     The part is guaranteed to have been fully consumed when the function exits
     (even if an exception is raised)."""
+    status = 'unknown' # used by debug output
     try:
         try:
             handler = parthandlermapping.get(part.type)
             if handler is None:
+                status = 'unsupported-type'
                 raise error.UnsupportedPartError(parttype=part.type)
             indebug(op.ui, 'found a handler for part %r' % part.type)
             unknownparams = part.mandatorykeys - handler.params
             if unknownparams:
                 unknownparams = list(unknownparams)
                 unknownparams.sort()
+                status = 'unsupported-params (%s)' % unknownparams
                 raise error.UnsupportedPartError(parttype=part.type,
                                                params=unknownparams)
+            status = 'supported'
         except error.UnsupportedPartError, exc:
             if part.mandatory: # mandatory parts
                 raise
             indebug(op.ui, 'ignoring unsupported advisory part %s' % exc)
             return # skip to part processing
+        finally:
+            if op.ui.debugflag:
+                msg = ['bundle2-input-part: "%s"' % part.type]
+                if not part.mandatory:
+                    msg.append(' (advisory)')
+                nbmp = len(part.mandatorykeys)
+                nbap = len(part.params) - nbmp
+                if nbmp or nbap:
+                    msg.append(' (params:')
+                    if nbmp:
+                        msg.append(' %i mandatory' % nbmp)
+                    if nbap:
+                        msg.append(' %i advisory' % nbmp)
+                    msg.append(')')
+                msg.append(' %s\n' % status)
+                op.ui.debug(''.join(msg))
 
         # handler is called outside the above try block so that we don't
         # risk catching KeyErrors from anything other than the
