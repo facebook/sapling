@@ -948,7 +948,7 @@ class recordhunk(object):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
-def filterpatch(ui, headers):
+def filterpatch(ui, headers, operation=None):
     """Interactively filter patch chunks into applied-only chunks"""
 
     def prompt(skipfile, skipall, query, chunk):

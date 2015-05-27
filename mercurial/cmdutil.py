@@ -45,7 +45,7 @@ def setupwrapcolorwrite(ui):
     setattr(ui, 'write', wrap)
     return oldwrite
 
-def filterchunks(ui, originalhunks, usecurses, testfile):
+def filterchunks(ui, originalhunks, usecurses, testfile, operation=None):
     if usecurses:
         if testfile:
             recordfn = crecordmod.testdecorator(testfile,
@@ -53,17 +53,23 @@ def filterchunks(ui, originalhunks, usecurses, testfile):
         else:
             recordfn = crecordmod.chunkselector
 
-        return crecordmod.filterpatch(ui, originalhunks, recordfn)
+        return crecordmod.filterpatch(ui, originalhunks, recordfn, operation)
 
     else:
-        return patch.filterpatch(ui, originalhunks)
+        return patch.filterpatch(ui, originalhunks, operation)
 
-def recordfilter(ui, originalhunks):
+def recordfilter(ui, originalhunks, operation=None):
+    """ Prompts the user to filter the originalhunks and return a list of
+    selected hunks.
+    *operation* is used for ui purposes to indicate the user
+    what kind of filtering they are doing: reverting, commiting, shelving, etc.
+    """
     usecurses =  ui.configbool('experimental', 'crecord', False)
     testfile = ui.config('experimental', 'crecordtest', None)
     oldwrite = setupwrapcolorwrite(ui)
     try:
-        newchunks = filterchunks(ui, originalhunks, usecurses, testfile)
+        newchunks = filterchunks(ui, originalhunks, usecurses, testfile,
+                                 operation)
     finally:
         ui.write = oldwrite
     return newchunks
