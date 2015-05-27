@@ -1329,6 +1329,9 @@ def handlepushkey(op, inpart):
         rpart = op.reply.newpart('reply:pushkey')
         rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
         rpart.addparam('return', '%i' % ret, mandatory=False)
+    if inpart.mandatory and not ret:
+        raise util.Abort(_('failed to update value for "%s/%s"')
+                         % (namespace, key))
 
 @parthandler('reply:pushkey', ('return', 'in-reply-to'))
 def handlepushkeyreply(op, inpart):

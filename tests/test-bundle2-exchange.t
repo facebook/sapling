@@ -717,3 +717,145 @@ Check output capture control.
   remote: rollback completed
   abort: pretxnchangegroup hook exited with status 1
   [255]
+
+Check abort from mandatory pushkey
+
+  $ cat > mandatorypart.py << EOF
+  > from mercurial import exchange
+  > from mercurial import pushkey
+  > from mercurial import node
+  > @exchange.b2partsgenerator('failingpuskey')
+  > def addfailingpushey(pushop, bundler):
+  >     enc = pushkey.encode
+  >     part = bundler.newpart('pushkey')
+  >     part.addparam('namespace', enc('phases'))
+  >     part.addparam('key', enc(pushop.repo['cd010b8cd998'].hex()))
+  >     part.addparam('old', enc(str(0))) # successful update
+  >     part.addparam('new', enc(str(0)))
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [hooks]
+  > pretxnchangegroup=
+  > pretxnclose.failpush=
+  > prepushkey.failpush = sh -c "echo 'do not push the key !'; false"
+  > [extensions]
+  > mandatorypart=$TESTTMP/mandatorypart.py
+  > EOF
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
+  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ cat other.pid >> $DAEMON_PIDS
+
+(Failure from a hook)
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  do not push the key !
+  pushkey-abort: prepushkey.failpush hook exited with status 1
+  transaction abort!
+  Cleaning up the mess...
+  rollback completed
+  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  [255]
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: do not push the key !
+  remote: pushkey-abort: prepushkey.failpush hook exited with status 1
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  [255]
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: do not push the key !
+  remote: pushkey-abort: prepushkey.failpush hook exited with status 1
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  [255]
+
+(Failure from a the pushkey)
+
+  $ cat > mandatorypart.py << EOF
+  > from mercurial import exchange
+  > from mercurial import pushkey
+  > from mercurial import node
+  > @exchange.b2partsgenerator('failingpuskey')
+  > def addfailingpushey(pushop, bundler):
+  >     enc = pushkey.encode
+  >     part = bundler.newpart('pushkey')
+  >     part.addparam('namespace', enc('phases'))
+  >     part.addparam('key', enc(pushop.repo['cd010b8cd998'].hex()))
+  >     part.addparam('old', enc(str(4))) # will fail
+  >     part.addparam('new', enc(str(3)))
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [hooks]
+  > prepushkey.failpush =
+  > EOF
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
+  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ cat other.pid >> $DAEMON_PIDS
+
+  $ hg -R main push other -r e7ec4e813ba6
+  pushing to other
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  transaction abort!
+  Cleaning up the mess...
+  rollback completed
+  pushkey: lock state after "phases"
+  lock:  free
+  wlock: free
+  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  [255]
+  $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
+  pushing to ssh://user@dummy/other
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  remote: pushkey: lock state after "phases"
+  remote: lock:  free
+  remote: wlock: free
+  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  [255]
+  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: transaction abort!
+  remote: Cleaning up the mess...
+  remote: rollback completed
+  remote: pushkey: lock state after "phases"
+  remote: lock:  free
+  remote: wlock: free
+  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  [255]
+
