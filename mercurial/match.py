@@ -224,19 +224,18 @@ class match(object):
         '''
         if dir in self._excluderoots:
             return False
-        parentdirs = None
         if (self._includeroots and
             dir not in self._includeroots and
             dir not in self._includedirs):
-            parentdirs = list(util.finddirs(dir))
-            if not any(parent in self._includeroots for parent in parentdirs):
+            if not any(parent in self._includeroots
+                       for parent in util.finddirs(dir)):
                 return False
         return (not self._fileroots or
                 '.' in self._fileroots or
                 dir in self._fileroots or
                 dir in self._dirs or
                 any(parentdir in self._fileroots
-                    for parentdir in parentdirs or util.finddirs(dir)))
+                    for parentdir in util.finddirs(dir)))
 
     def exact(self, f):
         '''Returns True if f is in .files().'''
