@@ -901,6 +901,9 @@ class interrupthandler(unpackermixin):
         return None
 
     def __call__(self):
+
+        self.ui.debug('bundle2-input-stream-interrupt:'
+                      ' opening out of band context\n')
         indebug(self.ui, 'bundle2 stream interruption, looking for a part.')
         headerblock = self._readpartheader()
         if headerblock is None:
@@ -909,6 +912,8 @@ class interrupthandler(unpackermixin):
         part = unbundlepart(self.ui, headerblock, self._fp)
         op = interruptoperation(self.ui)
         _processpart(op, part)
+        self.ui.debug('bundle2-input-stream-interrupt:'
+                      ' closing out of band context\n')
 
 class interruptoperation(object):
     """A limited operation to be use by part handler during interruption
