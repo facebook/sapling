@@ -1080,7 +1080,9 @@ def branch(ui, repo, label=None, **opts):
     change.
 
     Use the command :hg:`update` to switch to an existing branch. Use
-    :hg:`commit --close-branch` to mark this branch as closed.
+    :hg:`commit --close-branch` to mark this branch head as closed.
+    When all heads of the branch are closed, the branch will be
+    considered closed.
 
     Returns 0 on success.
     """
@@ -1418,7 +1420,7 @@ def clone(ui, source, dest=None, **opts):
     [('A', 'addremove', None,
      _('mark new/missing files as added/removed before committing')),
     ('', 'close-branch', None,
-     _('mark a branch as closed, hiding it from the branch list')),
+     _('mark a branch head as closed')),
     ('', 'amend', None, _('amend the parent of the working directory')),
     ('s', 'secret', None, _('use the secret phase for committing')),
     ('e', 'edit', None, _('invoke editor on commit messages')),
@@ -1443,6 +1445,10 @@ def commit(ui, repo, *pats, **opts):
     configured editor where you can enter a message. In case your
     commit fails, you will find a backup of your message in
     ``.hg/last-message.txt``.
+
+    The --close-branch flag can be used to mark the current branch
+    head closed. When all heads of a branch are closed, the branch
+    will be considered closed and no longer listed.
 
     The --amend flag can be used to amend the parent of the
     working directory with a new commit that contains the changes

@@ -45,8 +45,7 @@ Record help
   
    -A --addremove           mark new/missing files as added/removed before
                             committing
-      --close-branch        mark a branch as closed, hiding it from the branch
-                            list
+      --close-branch        mark a branch head as closed
       --amend               amend the parent of the working directory
    -s --secret              use the secret phase for committing
    -e --edit                invoke editor on commit messages
