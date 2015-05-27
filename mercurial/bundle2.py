@@ -177,6 +177,10 @@ def outdebug(ui, message):
     """debug regarding output stream (bundling)"""
     ui.debug('bundle2-output: %s\n' % message)
 
+def indebug(ui, message):
+    """debug on input stream (unbundling)"""
+    ui.debug(message)
+
 def validateparttype(parttype):
     """raise ValueError if a parttype contains invalid character"""
     if _parttypeforbidden.search(parttype):
@@ -346,7 +350,7 @@ def _processpart(op, part):
             handler = parthandlermapping.get(part.type)
             if handler is None:
                 raise error.UnsupportedPartError(parttype=part.type)
-            op.ui.debug('found a handler for part %r\n' % part.type)
+            indebug(op.ui, 'found a handler for part %r\n' % part.type)
             unknownparams = part.mandatorykeys - handler.params
             if unknownparams:
                 unknownparams = list(unknownparams)
@@ -356,7 +360,7 @@ def _processpart(op, part):
         except error.UnsupportedPartError, exc:
             if part.mandatory: # mandatory parts
                 raise
-            op.ui.debug('ignoring unsupported advisory part %s\n' % exc)
+            indebug(op.ui, 'ignoring unsupported advisory part %s\n' % exc)
             return # skip to part processing
 
         # handler is called outside the above try block so that we don't
@@ -559,7 +563,7 @@ def getunbundler(ui, fp, header=None):
     if unbundlerclass is None:
         raise util.Abort(_('unknown bundle version %s') % version)
     unbundler = unbundlerclass(ui, fp)
-    ui.debug('start processing of %s stream\n' % header)
+    indebug(ui, 'start processing of %s stream\n' % header)
     return unbundler
 
 class unbundle20(unpackermixin):
@@ -576,7 +580,7 @@ class unbundle20(unpackermixin):
     @util.propertycache
     def params(self):
         """dictionary of stream level parameters"""
-        self.ui.debug('reading bundle2 stream parameters\n')
+        indebug(self.ui, 'reading bundle2 stream parameters\n')
         params = {}
         paramssize = self._unpack(_fstreamparamsize)[0]
         if paramssize < 0:
@@ -609,7 +613,7 @@ class unbundle20(unpackermixin):
         # Some logic will be later added here to try to process the option for
         # a dict of known parameter.
         if name[0].islower():
-            self.ui.debug("ignoring unknown parameter %r\n" % name)
+            indebug(self.ui, "ignoring unknown parameter %r\n" % name)
         else:
             raise error.UnsupportedPartError(params=(name,))
 
@@ -618,14 +622,14 @@ class unbundle20(unpackermixin):
         """yield all parts contained in the stream"""
         # make sure param have been loaded
         self.params
-        self.ui.debug('start extraction of bundle2 parts\n')
+        indebug(self.ui, 'start extraction of bundle2 parts\n')
         headerblock = self._readpartheader()
         while headerblock is not None:
             part = unbundlepart(self.ui, headerblock, self._fp)
             yield part
             part.seek(0, 2)
             headerblock = self._readpartheader()
-        self.ui.debug('end of bundle2 stream\n')
+        indebug(self.ui, 'end of bundle2 stream\n')
 
     def _readpartheader(self):
         """reads a part header size and return the bytes blob
@@ -635,7 +639,7 @@ class unbundle20(unpackermixin):
         if headersize < 0:
             raise error.BundleValueError('negative part header size: %i'
                                          % headersize)
-        self.ui.debug('part header size: %i\n' % headersize)
+        indebug(self.ui, 'part header size: %i\n' % headersize)
         if headersize:
             return self._readexact(headersize)
         return None
@@ -821,16 +825,16 @@ class interrupthandler(unpackermixin):
         if headersize < 0:
             raise error.BundleValueError('negative part header size: %i'
                                          % headersize)
-        self.ui.debug('part header size: %i\n' % headersize)
+        indebug(self.ui, 'part header size: %i\n' % headersize)
         if headersize:
             return self._readexact(headersize)
         return None
 
     def __call__(self):
-        self.ui.debug('bundle2 stream interruption, looking for a part.\n')
+        indebug(self.ui, 'bundle2 stream interruption, looking for a part.\n')
         headerblock = self._readpartheader()
         if headerblock is None:
-            self.ui.debug('no part found during interruption.\n')
+            indebug(self.ui, 'no part found during interruption.\n')
             return
         part = unbundlepart(self.ui, headerblock, self._fp)
         op = interruptoperation(self.ui)
@@ -914,7 +918,7 @@ class unbundlepart(unpackermixin):
 
         pos = self._chunkindex[chunknum][0]
         payloadsize = self._unpack(_fpayloadsize)[0]
-        self.ui.debug('payload chunk size: %i\n' % payloadsize)
+        indebug(self.ui, 'payload chunk size: %i\n' % payloadsize)
         while payloadsize:
             if payloadsize == flaginterrupt:
                 # interruption detection, the handler will now read a
@@ -932,7 +936,7 @@ class unbundlepart(unpackermixin):
                                              super(unbundlepart, self).tell()))
                 yield result
             payloadsize = self._unpack(_fpayloadsize)[0]
-            self.ui.debug('payload chunk size: %i\n' % payloadsize)
+            indebug(self.ui, 'payload chunk size: %i\n' % payloadsize)
 
     def _findchunk(self, pos):
         '''for a given payload position, return a chunk number and offset'''
@@ -947,16 +951,16 @@ class unbundlepart(unpackermixin):
         """read the header and setup the object"""
         typesize = self._unpackheader(_fparttypesize)[0]
         self.type = self._fromheader(typesize)
-        self.ui.debug('part type: "%s"\n' % self.type)
+        indebug(self.ui, 'part type: "%s"\n' % self.type)
         self.id = self._unpackheader(_fpartid)[0]
-        self.ui.debug('part id: "%s"\n' % self.id)
+        indebug(self.ui, 'part id: "%s"\n' % self.id)
         # extract mandatory bit from type
         self.mandatory = (self.type != self.type.lower())
         self.type = self.type.lower()
         ## reading parameters
         # param count
         mancount, advcount = self._unpackheader(_fpartparamcount)
-        self.ui.debug('part parameters: %i\n' % (mancount + advcount))
+        indebug(self.ui, 'part parameters: %i\n' % (mancount + advcount))
         # param size
         fparamsizes = _makefpartparamsizes(mancount + advcount)
         paramsizes = self._unpackheader(fparamsizes)
