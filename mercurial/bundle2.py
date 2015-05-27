@@ -179,7 +179,7 @@ def outdebug(ui, message):
 
 def indebug(ui, message):
     """debug on input stream (unbundling)"""
-    ui.debug(message)
+    ui.debug('bundle2-input: %s' % message)
 
 def validateparttype(parttype):
     """raise ValueError if a parttype contains invalid character"""

@@ -350,17 +350,17 @@ file content is ok
 unbundling debug
 
   $ hg statbundle2 --debug --config progress.debug=true < ../out.hg2
-  start processing of HG20 stream
-  reading bundle2 stream parameters
-  ignoring unknown parameter 'e|! 7/'
-  ignoring unknown parameter 'simple'
+  bundle2-input: start processing of HG20 stream
+  bundle2-input: reading bundle2 stream parameters
+  bundle2-input: ignoring unknown parameter 'e|! 7/'
+  bundle2-input: ignoring unknown parameter 'simple'
   options count: 2
   - e|! 7/
       babar%#==tutu
   - simple
-  start extraction of bundle2 parts
-  part header size: 0
-  end of bundle2 stream
+  bundle2-input: start extraction of bundle2 parts
+  bundle2-input: part header size: 0
+  bundle2-input: end of bundle2 stream
   parts count:   0
 
 
@@ -437,77 +437,77 @@ Test part
   parts count:   7
 
   $ hg statbundle2 --debug --config progress.debug=true < ../parts.hg2
-  start processing of HG20 stream
-  reading bundle2 stream parameters
+  bundle2-input: start processing of HG20 stream
+  bundle2-input: reading bundle2 stream parameters
   options count: 0
-  start extraction of bundle2 parts
-  part header size: 17
-  part type: "test:empty"
-  part id: "0"
-  part parameters: 0
+  bundle2-input: start extraction of bundle2 parts
+  bundle2-input: part header size: 17
+  bundle2-input: part type: "test:empty"
+  bundle2-input: part id: "0"
+  bundle2-input: part parameters: 0
     :test:empty:
       mandatory: 0
       advisory: 0
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 0
       payload: 0 bytes
-  part header size: 17
-  part type: "test:empty"
-  part id: "1"
-  part parameters: 0
+  bundle2-input: part header size: 17
+  bundle2-input: part type: "test:empty"
+  bundle2-input: part id: "1"
+  bundle2-input: part parameters: 0
     :test:empty:
       mandatory: 0
       advisory: 0
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 0
       payload: 0 bytes
-  part header size: 16
-  part type: "test:song"
-  part id: "2"
-  part parameters: 0
+  bundle2-input: part header size: 16
+  bundle2-input: part type: "test:song"
+  bundle2-input: part id: "2"
+  bundle2-input: part parameters: 0
     :test:song:
       mandatory: 0
       advisory: 0
-  payload chunk size: 178
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 178
+  bundle2-input: payload chunk size: 0
       payload: 178 bytes
-  part header size: 22
-  part type: "test:debugreply"
-  part id: "3"
-  part parameters: 0
+  bundle2-input: part header size: 22
+  bundle2-input: part type: "test:debugreply"
+  bundle2-input: part id: "3"
+  bundle2-input: part parameters: 0
     :test:debugreply:
       mandatory: 0
       advisory: 0
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 0
       payload: 0 bytes
-  part header size: 43
-  part type: "test:math"
-  part id: "4"
-  part parameters: 3
+  bundle2-input: part header size: 43
+  bundle2-input: part type: "test:math"
+  bundle2-input: part id: "4"
+  bundle2-input: part parameters: 3
     :test:math:
       mandatory: 2
       advisory: 1
-  payload chunk size: 2
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 2
+  bundle2-input: payload chunk size: 0
       payload: 2 bytes
-  part header size: 29
-  part type: "test:song"
-  part id: "5"
-  part parameters: 1
+  bundle2-input: part header size: 29
+  bundle2-input: part type: "test:song"
+  bundle2-input: part id: "5"
+  bundle2-input: part parameters: 1
     :test:song:
       mandatory: 1
       advisory: 0
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 0
       payload: 0 bytes
-  part header size: 16
-  part type: "test:ping"
-  part id: "6"
-  part parameters: 0
+  bundle2-input: part header size: 16
+  bundle2-input: part type: "test:ping"
+  bundle2-input: part id: "6"
+  bundle2-input: part parameters: 0
     :test:ping:
       mandatory: 0
       advisory: 0
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 0
       payload: 0 bytes
-  part header size: 0
-  end of bundle2 stream
+  bundle2-input: part header size: 0
+  bundle2-input: end of bundle2 stream
   parts count:   7
 
 Test actual unbundling of test part
@@ -516,62 +516,62 @@ Test actual unbundling of test part
 Process the bundle
 
   $ hg unbundle2 --debug --config progress.debug=true < ../parts.hg2
-  start processing of HG20 stream
-  reading bundle2 stream parameters
-  start extraction of bundle2 parts
-  part header size: 17
-  part type: "test:empty"
-  part id: "0"
-  part parameters: 0
-  ignoring unsupported advisory part test:empty
-  payload chunk size: 0
-  part header size: 17
-  part type: "test:empty"
-  part id: "1"
-  part parameters: 0
-  ignoring unsupported advisory part test:empty
-  payload chunk size: 0
-  part header size: 16
-  part type: "test:song"
-  part id: "2"
-  part parameters: 0
-  found a handler for part 'test:song'
+  bundle2-input: start processing of HG20 stream
+  bundle2-input: reading bundle2 stream parameters
+  bundle2-input: start extraction of bundle2 parts
+  bundle2-input: part header size: 17
+  bundle2-input: part type: "test:empty"
+  bundle2-input: part id: "0"
+  bundle2-input: part parameters: 0
+  bundle2-input: ignoring unsupported advisory part test:empty
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 17
+  bundle2-input: part type: "test:empty"
+  bundle2-input: part id: "1"
+  bundle2-input: part parameters: 0
+  bundle2-input: ignoring unsupported advisory part test:empty
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 16
+  bundle2-input: part type: "test:song"
+  bundle2-input: part id: "2"
+  bundle2-input: part parameters: 0
+  bundle2-input: found a handler for part 'test:song'
   The choir starts singing:
-  payload chunk size: 178
-  payload chunk size: 0
+  bundle2-input: payload chunk size: 178
+  bundle2-input: payload chunk size: 0
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  part header size: 22
-  part type: "test:debugreply"
-  part id: "3"
-  part parameters: 0
-  found a handler for part 'test:debugreply'
+  bundle2-input: part header size: 22
+  bundle2-input: part type: "test:debugreply"
+  bundle2-input: part id: "3"
+  bundle2-input: part parameters: 0
+  bundle2-input: found a handler for part 'test:debugreply'
   debugreply: no reply
-  payload chunk size: 0
-  part header size: 43
-  part type: "test:math"
-  part id: "4"
-  part parameters: 3
-  ignoring unsupported advisory part test:math
-  payload chunk size: 2
-  payload chunk size: 0
-  part header size: 29
-  part type: "test:song"
-  part id: "5"
-  part parameters: 1
-  found a handler for part 'test:song'
-  ignoring unsupported advisory part test:song - randomparam
-  payload chunk size: 0
-  part header size: 16
-  part type: "test:ping"
-  part id: "6"
-  part parameters: 0
-  found a handler for part 'test:ping'
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 43
+  bundle2-input: part type: "test:math"
+  bundle2-input: part id: "4"
+  bundle2-input: part parameters: 3
+  bundle2-input: ignoring unsupported advisory part test:math
+  bundle2-input: payload chunk size: 2
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 29
+  bundle2-input: part type: "test:song"
+  bundle2-input: part id: "5"
+  bundle2-input: part parameters: 1
+  bundle2-input: found a handler for part 'test:song'
+  bundle2-input: ignoring unsupported advisory part test:song - randomparam
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 16
+  bundle2-input: part type: "test:ping"
+  bundle2-input: part id: "6"
+  bundle2-input: part parameters: 0
+  bundle2-input: found a handler for part 'test:ping'
   received ping request (id 6)
-  payload chunk size: 0
-  part header size: 0
-  end of bundle2 stream
+  bundle2-input: payload chunk size: 0
+  bundle2-input: part header size: 0
+  bundle2-input: end of bundle2 stream
   0 unread bytes
   3 total verses sung
 
