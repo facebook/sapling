@@ -322,6 +322,13 @@ Test files from the root.
   c.txt
   d.py
 
+Excludes with a glob should not exclude everything from the glob's root
+
+  $ hg files -r . -X 'b/fo?' b
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+
 Test files for a subdirectory.
 
   $ mv .hg/store/meta/a oldmf
@@ -337,7 +344,7 @@ Test files with just includes and excludes.
   $ mv .hg/store/meta/a oldmf
   $ mv .hg/store/meta/b/bar/orange/fly oldmf2
   $ mv .hg/store/meta/b/foo/apple/bees oldmf3
-  $ hg files -r . -I b/bar -X b/bar/orange/fly -I b/foo -X b/foo/apple/bees
+  $ hg files -r . -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
   b/bar/fruits.txt (glob)
   $ mv oldmf .hg/store/meta/a
   $ mv oldmf2 .hg/store/meta/b/bar/orange/fly
@@ -347,7 +354,7 @@ Test files for a subdirectory, excluding a directory within it.
 
   $ mv .hg/store/meta/a oldmf
   $ mv .hg/store/meta/b/foo oldmf2
-  $ hg files -r . -X b/foo b
+  $ hg files -r . -X path:b/foo b
   b/bar/fruits.txt (glob)
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
@@ -359,7 +366,7 @@ including an unrelated directory.
 
   $ mv .hg/store/meta/a oldmf
   $ mv .hg/store/meta/b/foo oldmf2
-  $ hg files -r . -I b/bar/orange -I a b
+  $ hg files -r . -I path:b/bar/orange -I path:a b
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
   $ mv oldmf .hg/store/meta/a
@@ -371,7 +378,7 @@ within that.
   $ mv .hg/store/meta/a oldmf
   $ mv .hg/store/meta/b/foo oldmf2
   $ mv .hg/store/meta/b/bar/orange oldmf3
-  $ hg files -r . glob:**.txt -I b/bar -X b/bar/orange
+  $ hg files -r . glob:**.txt -I path:b/bar -X path:b/bar/orange
   b/bar/fruits.txt (glob)
   $ mv oldmf .hg/store/meta/a
   $ mv oldmf2 .hg/store/meta/b/foo

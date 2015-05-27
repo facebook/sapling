@@ -129,8 +129,9 @@ class match(object):
             kindpats = self._normalize(exclude, 'glob', root, cwd, auditor)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
-            self._excluderoots.update(_roots(kindpats))
-            self._excluderoots.discard('.')
+            if not _anypats(kindpats):
+                self._excluderoots.update(_roots(kindpats))
+                self._excluderoots.discard('.')
             matchfns.append(lambda f: not em(f))
         if exact:
             if isinstance(patterns, list):
