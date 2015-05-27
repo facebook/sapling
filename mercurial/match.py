@@ -126,7 +126,6 @@ class match(object):
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
             self._includeroots.update(_roots(kindpats))
-            self._includeroots.discard('.')
             self._includedirs.update(util.dirs(self._includeroots))
             matchfns.append(im)
         if exclude:
@@ -225,6 +224,7 @@ class match(object):
         if dir in self._excluderoots:
             return False
         if (self._includeroots and
+            '.' not in self._includeroots and
             dir not in self._includeroots and
             dir not in self._includedirs and
             not any(parent in self._includeroots
