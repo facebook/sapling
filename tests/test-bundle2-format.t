@@ -336,7 +336,7 @@ Test debug output
 
 bundling debug
 
-  $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2 --config progress.debug=true
+  $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2 --config progress.debug=true --config devel.bundle2.debug=true
   bundle2-output-bundle: "HG20", (2 params) 0 parts total
   bundle2-output: start emission of HG20 stream
   bundle2-output: bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
@@ -350,7 +350,7 @@ file content is ok
 
 unbundling debug
 
-  $ hg statbundle2 --debug --config progress.debug=true < ../out.hg2
+  $ hg statbundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true < ../out.hg2
   bundle2-input: start processing of HG20 stream
   bundle2-input: reading bundle2 stream parameters
   bundle2-input: ignoring unknown parameter 'e|! 7/'
@@ -384,7 +384,7 @@ bad parameter name
 Test part
 =================
 
-  $ hg bundle2 --parts ../parts.hg2 --debug --config progress.debug=true
+  $ hg bundle2 --parts ../parts.hg2 --debug --config progress.debug=true --config devel.bundle2.debug=true
   bundle2-output-bundle: "HG20", 7 parts total
   bundle2-output: start emission of HG20 stream
   bundle2-output: bundle parameter: 
@@ -468,7 +468,7 @@ Test part
       payload: 0 bytes
   parts count:   7
 
-  $ hg statbundle2 --debug --config progress.debug=true < ../parts.hg2
+  $ hg statbundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true < ../parts.hg2
   bundle2-input: start processing of HG20 stream
   bundle2-input: reading bundle2 stream parameters
   options count: 0
@@ -549,7 +549,7 @@ Test actual unbundling of test part
 
 Process the bundle
 
-  $ hg unbundle2 --debug --config progress.debug=true < ../parts.hg2
+  $ hg unbundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true < ../parts.hg2
   bundle2-input: start processing of HG20 stream
   bundle2-input: reading bundle2 stream parameters
   bundle2-input-bundle: with-transaction
@@ -749,7 +749,7 @@ Support for changegroup
   @  0:3903775176ed draft test  a
   
 
-  $ hg bundle2 --debug --config progress.debug=true --rev '8+7+5+4' ../rev.hg2
+  $ hg bundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true --rev '8+7+5+4' ../rev.hg2
   4 changesets found
   list of changesets:
   32af7686d403cf45b5d95f2d70cebea587ac806a
