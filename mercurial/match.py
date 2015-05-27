@@ -50,7 +50,7 @@ def _expandsubinclude(kindpats, root):
 
     for kind, pat, source in kindpats:
         if kind == 'subinclude':
-            sourceroot = pathutil.dirname(source)
+            sourceroot = pathutil.dirname(util.normpath(source))
             pat = util.pconvert(pat)
             path = pathutil.join(sourceroot, pat)
 
