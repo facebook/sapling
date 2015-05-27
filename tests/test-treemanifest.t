@@ -313,12 +313,12 @@ the files command with various parameters.
 Test files from the root.
 
   $ hg files -r .
-  a/one.txt
-  a/two.txt
-  b/bar/fruits.txt
-  b/bar/orange/fly/gnat.py
-  b/bar/orange/fly/housefly.txt
-  b/foo/apple/bees/flower.py
+  a/one.txt (glob)
+  a/two.txt (glob)
+  b/bar/fruits.txt (glob)
+  b/bar/orange/fly/gnat.py (glob)
+  b/bar/orange/fly/housefly.txt (glob)
+  b/foo/apple/bees/flower.py (glob)
   c.txt
   d.py
 
@@ -326,10 +326,10 @@ Test files for a subdirectory.
 
   $ mv .hg/store/meta/a oldmf
   $ hg files -r . b
-  b/bar/fruits.txt
-  b/bar/orange/fly/gnat.py
-  b/bar/orange/fly/housefly.txt
-  b/foo/apple/bees/flower.py
+  b/bar/fruits.txt (glob)
+  b/bar/orange/fly/gnat.py (glob)
+  b/bar/orange/fly/housefly.txt (glob)
+  b/foo/apple/bees/flower.py (glob)
   $ mv oldmf .hg/store/meta/a
 
 Test files with just includes and excludes.
@@ -338,7 +338,7 @@ Test files with just includes and excludes.
   $ mv .hg/store/meta/b/bar/orange/fly oldmf2
   $ mv .hg/store/meta/b/foo/apple/bees oldmf3
   $ hg files -r . -I b/bar -X b/bar/orange/fly -I b/foo -X b/foo/apple/bees
-  b/bar/fruits.txt
+  b/bar/fruits.txt (glob)
   $ mv oldmf .hg/store/meta/a
   $ mv oldmf2 .hg/store/meta/b/bar/orange/fly
   $ mv oldmf3 .hg/store/meta/b/foo/apple/bees
@@ -348,9 +348,9 @@ Test files for a subdirectory, excluding a directory within it.
   $ mv .hg/store/meta/a oldmf
   $ mv .hg/store/meta/b/foo oldmf2
   $ hg files -r . -X b/foo b
-  b/bar/fruits.txt
-  b/bar/orange/fly/gnat.py
-  b/bar/orange/fly/housefly.txt
+  b/bar/fruits.txt (glob)
+  b/bar/orange/fly/gnat.py (glob)
+  b/bar/orange/fly/housefly.txt (glob)
   $ mv oldmf .hg/store/meta/a
   $ mv oldmf2 .hg/store/meta/b/foo
 
@@ -360,8 +360,8 @@ including an unrelated directory.
   $ mv .hg/store/meta/a oldmf
   $ mv .hg/store/meta/b/foo oldmf2
   $ hg files -r . -I b/bar/orange -I a b
-  b/bar/orange/fly/gnat.py
-  b/bar/orange/fly/housefly.txt
+  b/bar/orange/fly/gnat.py (glob)
+  b/bar/orange/fly/housefly.txt (glob)
   $ mv oldmf .hg/store/meta/a
   $ mv oldmf2 .hg/store/meta/b/foo
 
@@ -372,7 +372,7 @@ within that.
   $ mv .hg/store/meta/b/foo oldmf2
   $ mv .hg/store/meta/b/bar/orange oldmf3
   $ hg files -r . glob:**.txt -I b/bar -X b/bar/orange
-  b/bar/fruits.txt
+  b/bar/fruits.txt (glob)
   $ mv oldmf .hg/store/meta/a
   $ mv oldmf2 .hg/store/meta/b/foo
   $ mv oldmf3 .hg/store/meta/b/bar/orange
