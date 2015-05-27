@@ -337,10 +337,10 @@ Test debug output
 bundling debug
 
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2 --config progress.debug=true
-  start emission of HG20 stream
-  bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
-  start of parts
-  end of bundle
+  bundle2-output: start emission of HG20 stream
+  bundle2-output: bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
+  bundle2-output: start of parts
+  bundle2-output: end of bundle
 
 file content is ok
 
@@ -384,17 +384,17 @@ Test part
 =================
 
   $ hg bundle2 --parts ../parts.hg2 --debug --config progress.debug=true
-  start emission of HG20 stream
-  bundle parameter: 
-  start of parts
-  bundle part: "test:empty"
-  bundle part: "test:empty"
-  bundle part: "test:song"
-  bundle part: "test:debugreply"
-  bundle part: "test:math"
-  bundle part: "test:song"
-  bundle part: "test:ping"
-  end of bundle
+  bundle2-output: start emission of HG20 stream
+  bundle2-output: bundle parameter: 
+  bundle2-output: start of parts
+  bundle2-output: bundle part: "test:empty"
+  bundle2-output: bundle part: "test:empty"
+  bundle2-output: bundle part: "test:song"
+  bundle2-output: bundle part: "test:debugreply"
+  bundle2-output: bundle part: "test:math"
+  bundle2-output: bundle part: "test:song"
+  bundle2-output: bundle part: "test:ping"
+  bundle2-output: end of bundle
 
   $ cat ../parts.hg2
   HG20\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
@@ -711,10 +711,10 @@ Support for changegroup
   9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   eea13746799a9e0bfd88f29d3c2e9dc9389f524f
   02de42196ebee42ef284b6780a87cdc96e8eaab6
-  start emission of HG20 stream
-  bundle parameter: 
-  start of parts
-  bundle part: "changegroup"
+  bundle2-output: start emission of HG20 stream
+  bundle2-output: bundle parameter: 
+  bundle2-output: start of parts
+  bundle2-output: bundle part: "changegroup"
   bundling: 1/4 changesets (25.00%)
   bundling: 2/4 changesets (50.00%)
   bundling: 3/4 changesets (75.00%)
@@ -726,7 +726,7 @@ Support for changegroup
   bundling: D 1/3 files (33.33%)
   bundling: E 2/3 files (66.67%)
   bundling: H 3/3 files (100.00%)
-  end of bundle
+  bundle2-output: end of bundle
 
   $ cat ../rev.hg2
   HG20\x00\x00\x00\x00\x00\x00\x00\x12\x0bchangegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
