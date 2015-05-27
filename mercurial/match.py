@@ -135,7 +135,6 @@ class match(object):
                                               listsubrepos, root)
             if not _anypats(kindpats):
                 self._excluderoots.update(_roots(kindpats))
-                self._excluderoots.discard('.')
             matchfns.append(lambda f: not em(f))
         if exact:
             if isinstance(patterns, list):
