@@ -472,6 +472,12 @@ class bundle20(object):
 
     # methods used to generate the bundle2 stream
     def getchunks(self):
+        if self.ui.debugflag:
+            msg = ['bundle2-output-bundle: "%s",' % self._magicstring]
+            if self._params:
+                msg.append(' (%i params)' % len(self._params))
+            msg.append(' %i parts total\n' % len(self._parts))
+            self.ui.debug(''.join(msg))
         outdebug(self.ui, 'start emission of %s stream' % self._magicstring)
         yield self._magicstring
         param = self._paramchunk()

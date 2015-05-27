@@ -337,6 +337,7 @@ Test debug output
 bundling debug
 
   $ hg bundle2 --debug --param 'e|! 7/=babar%#==tutu' --param simple ../out.hg2 --config progress.debug=true
+  bundle2-output-bundle: "HG20", (2 params) 0 parts total
   bundle2-output: start emission of HG20 stream
   bundle2-output: bundle parameter: e%7C%21%207/=babar%25%23%3D%3Dtutu simple
   bundle2-output: start of parts
@@ -384,6 +385,7 @@ Test part
 =================
 
   $ hg bundle2 --parts ../parts.hg2 --debug --config progress.debug=true
+  bundle2-output-bundle: "HG20", 7 parts total
   bundle2-output: start emission of HG20 stream
   bundle2-output: bundle parameter: 
   bundle2-output: start of parts
@@ -734,6 +736,7 @@ Support for changegroup
   9520eea781bcca16c1e15acc0ba14335a0e8e5ba
   eea13746799a9e0bfd88f29d3c2e9dc9389f524f
   02de42196ebee42ef284b6780a87cdc96e8eaab6
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output: start emission of HG20 stream
   bundle2-output: bundle parameter: 
   bundle2-output: start of parts
