@@ -550,6 +550,7 @@ Process the bundle
   $ hg unbundle2 --debug --config progress.debug=true < ../parts.hg2
   bundle2-input: start processing of HG20 stream
   bundle2-input: reading bundle2 stream parameters
+  bundle2-input-bundle: with-transaction
   bundle2-input: start extraction of bundle2 parts
   bundle2-input: part header size: 17
   bundle2-input: part type: "test:empty"

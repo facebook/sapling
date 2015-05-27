@@ -318,6 +318,16 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
     # - replace this is a init function soon.
     # - exception catching
     unbundler.params
+    if repo.ui.debugflag:
+        msg = ['bundle2-input-bundle:']
+        if unbundler.params:
+            msg.append(' %i params')
+        if op.gettransaction is None:
+            msg.append(' no-transaction')
+        else:
+            msg.append(' with-transaction')
+        msg.append('\n')
+        repo.ui.debug(''.join(msg))
     iterparts = unbundler.iterparts()
     part = None
     try:
