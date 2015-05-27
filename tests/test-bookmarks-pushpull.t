@@ -705,7 +705,17 @@ Local push
 Using ssh
 ---------
 
-  $ hg push -B @ ssh
+  $ hg push -B @ ssh --config experimental.bundle2-exp=True
+  pushing to ssh://user@dummy/issue4455-dest
+  searching for changes
+  no changes found
+  remote: pushkey-abort: prepushkey hook exited with status 1
+  exporting bookmark @ failed!
+  [1]
+  $ hg -R ../issue4455-dest/ bookmarks
+  no bookmarks set
+
+  $ hg push -B @ ssh --config experimental.bundle2-exp=False
   pushing to ssh://user@dummy/issue4455-dest
   searching for changes
   no changes found
@@ -718,7 +728,17 @@ Using ssh
 Using http
 ----------
 
-  $ hg push -B @ http
+  $ hg push -B @ http --config experimental.bundle2-exp=True
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  remote: pushkey-abort: prepushkey hook exited with status 1
+  exporting bookmark @ failed!
+  [1]
+  $ hg -R ../issue4455-dest/ bookmarks
+  no bookmarks set
+
+  $ hg push -B @ http --config experimental.bundle2-exp=False
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found
