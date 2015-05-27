@@ -1048,7 +1048,16 @@ same over the wire
   $ cat ../beta.pid >> $DAEMON_PIDS
   $ cd ../gamma
 
-  $ hg pull http://localhost:$HGPORT/
+  $ hg pull http://localhost:$HGPORT/ --config experimental.bundle2-exp=True
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ hg phase f54f1bb90ff3
+  2: draft
+
+enforce bundle1
+
+  $ hg pull http://localhost:$HGPORT/ --config experimental.bundle2-exp=False
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
