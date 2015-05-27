@@ -37,11 +37,11 @@
   $ hg push ssh://user@dummy/master
   pushing to ssh://user@dummy/master
   searching for changes
+  abort: pretxnclose.abort hook exited with status 1
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  abort: pretxnclose.abort hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
   [255]

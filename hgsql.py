@@ -237,7 +237,10 @@ def wraprepo(repo):
             self.sqlconn.autocommit(False)
             waittimeout = self.ui.config('hgsql', 'waittimeout', '300')
             waittimeout = self.sqlconn.escape_string("%s" % (waittimeout,))
+            locktimeout = self.ui.config('hgsql', 'locktimeout', '60')
+            locktimeout = self.sqlconn.escape_string("%s" % (locktimeout,))
             self.sqlconn.query("SET wait_timeout=%s" % waittimeout)
+            self.sqlconn.query("SET innodb_lock_wait_timeout=%s" % locktimeout)
             self.sqlcursor = self.sqlconn.cursor()
 
         def sqlclose(self):
