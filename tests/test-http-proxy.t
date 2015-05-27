@@ -1,4 +1,10 @@
 #require serve
+  $ cat << EOF >> $HGRCPATH
+  > [experimental]
+  > # drop me once bundle2 is the default,
+  > # added to get test change early.
+  > bundle2-exp = True
+  > EOF
 
   $ hg init a
   $ cd a
@@ -103,26 +109,22 @@ do not use the proxy if it is in the no list
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=branchmap HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=stream_out HTTP/1.1" - - (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D83180e7845de420a1bb46896fd5fe05294f8d629 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=0&common=83180e7845de420a1bb46896fd5fe05294f8d629&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phase%2Cbookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
-  *- - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
-  *- - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
-  *- - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629 (glob)
-  *- - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phase%2Cbookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phase%2Cbookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phase%2Cbookmarks (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phase%2Cbookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=phases (glob)
