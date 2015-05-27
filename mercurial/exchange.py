@@ -305,6 +305,20 @@ def _pushdiscoveryphase(pushop):
     unfi = pushop.repo.unfiltered()
     remotephases = pushop.remote.listkeys('phases')
     publishing = remotephases.get('publishing', False)
+    if (pushop.ui.configbool('ui', '_usedassubrepo', False)
+        and remotephases    # server supports phases
+        and not pushop.outgoing.missing # no changesets to be pushed
+        and publishing):
+        # When:
+        # - this is a subrepo push
+        # - and remote support phase
+        # - and no changeset are to be pushed
+        # - and remote is publishing
+        # We may be in issue 3871 case!
+        # We drop the possible phase synchronisation done by
+        # courtesy to publish changesets possibly locally draft
+        # on the remote.
+        remotephases = {'publishing': 'True'}
     ana = phases.analyzeremotephases(pushop.repo,
                                      pushop.fallbackheads,
                                      remotephases)

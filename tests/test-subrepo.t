@@ -1490,7 +1490,17 @@ Courtesy phases synchronisation to publishing server does not block the push
   > [paths]
   > default=../issue3781-dest/
   > EOF
-  $ hg push
+  $ hg push --config experimental.bundle2-exp=False
+  pushing to $TESTTMP/issue3781-dest (glob)
+  pushing subrepo s to $TESTTMP/issue3781-dest/s
+  searching for changes
+  no changes found
+  searching for changes
+  no changes found
+  [1]
+# clean the push cache
+  $ rm s/.hg/cache/storehash/*
+  $ hg push --config experimental.bundle2-exp=True
   pushing to $TESTTMP/issue3781-dest (glob)
   pushing subrepo s to $TESTTMP/issue3781-dest/s
   searching for changes
