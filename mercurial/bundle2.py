@@ -173,6 +173,10 @@ preferedchunksize = 4096
 
 _parttypeforbidden = re.compile('[^a-zA-Z0-9_:-]')
 
+def outdebug(ui, message):
+    """debug regarding output stream (bundling)"""
+    ui.debug(message)
+
 def validateparttype(parttype):
     """raise ValueError if a parttype contains invalid character"""
     if _parttypeforbidden.search(parttype):
@@ -464,20 +468,20 @@ class bundle20(object):
 
     # methods used to generate the bundle2 stream
     def getchunks(self):
-        self.ui.debug('start emission of %s stream\n' % self._magicstring)
+        outdebug(self.ui, 'start emission of %s stream\n' % self._magicstring)
         yield self._magicstring
         param = self._paramchunk()
-        self.ui.debug('bundle parameter: %s\n' % param)
+        outdebug(self.ui, 'bundle parameter: %s\n' % param)
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
 
-        self.ui.debug('start of parts\n')
+        outdebug(self.ui, 'start of parts\n')
         for part in self._parts:
-            self.ui.debug('bundle part: "%s"\n' % part.type)
+            outdebug(self.ui, 'bundle part: "%s"\n' % part.type)
             for chunk in part.getchunks():
                 yield chunk
-        self.ui.debug('end of bundle\n')
+        outdebug(self.ui, 'end of bundle\n')
         yield _pack(_fpartheadersize, 0)
 
     def _paramchunk(self):
