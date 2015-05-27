@@ -483,7 +483,7 @@ class bundle20(object):
         outdebug(self.ui, 'start of parts')
         for part in self._parts:
             outdebug(self.ui, 'bundle part: "%s"' % part.type)
-            for chunk in part.getchunks():
+            for chunk in part.getchunks(ui=self.ui):
                 yield chunk
         outdebug(self.ui, 'end of bundle')
         yield _pack(_fpartheadersize, 0)
@@ -726,7 +726,7 @@ class bundlepart(object):
         params.append((name, value))
 
     # methods used to generates the bundle2 stream
-    def getchunks(self):
+    def getchunks(self, ui):
         if self._generated is not None:
             raise RuntimeError('part can only be consumed once')
         self._generated = False
@@ -735,6 +735,7 @@ class bundlepart(object):
             parttype = self.type.upper()
         else:
             parttype = self.type.lower()
+        outdebug(ui, 'part %s: "%s"' % (self.id, parttype))
         ## parttype
         header = [_pack(_fparttypesize, len(parttype)),
                   parttype, _pack(_fpartid, self.id),
@@ -763,11 +764,13 @@ class bundlepart(object):
             header.append(value)
         ## finalize header
         headerchunk = ''.join(header)
+        outdebug(ui, 'header chunk size: %i' % len(headerchunk))
         yield _pack(_fpartheadersize, len(headerchunk))
         yield headerchunk
         ## payload
         try:
             for chunk in self._payloadchunks():
+                outdebug(ui, 'payload chunk size: %i' % len(chunk))
                 yield _pack(_fpayloadsize, len(chunk))
                 yield chunk
         except BaseException, exc:
@@ -778,12 +781,14 @@ class bundlepart(object):
                                    mandatory=False)
             interpart.id = 0
             yield _pack(_fpayloadsize, -1)
-            for chunk in interpart.getchunks():
+            for chunk in interpart.getchunks(ui=ui):
                 yield chunk
+            outdebug(ui, 'closing payload chunk')
             # abort current part payload
             yield _pack(_fpayloadsize, 0)
             raise exc_info[0], exc_info[1], exc_info[2]
         # end of payload
+        outdebug(ui, 'closing payload chunk')
         yield _pack(_fpayloadsize, 0)
         self._generated = True
 
