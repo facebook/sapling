@@ -1,6 +1,13 @@
 commit hooks can see env vars
 (and post-transaction one are run unlocked)
 
+  $ cat << EOF >> $HGRCPATH
+  > [experimental]
+  > # drop me once bundle2 is the default,
+  > # added to get test change early.
+  > bundle2-exp = True
+  > EOF
+
   $ cat > $TESTTMP/txnabort.checkargs.py <<EOF
   > def showargs(ui, repo, hooktype, **kwargs):
   >     ui.write('%s python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
@@ -228,10 +235,10 @@ pushkey hook
   pushing to ../a
   searching for changes
   no changes found
-  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmarks (glob)
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=push (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_PENDING=$TESTTMP/a HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
   exporting bookmark foo
   [1]
   $ cd ../a
@@ -244,10 +251,11 @@ listkeys hook
   $ hg pull -B bar ../a
   pulling from ../a
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
-  listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
-  listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
+  listkeys hook: HG_NAMESPACE=phase HG_VALUES={}
+  listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   adding remote bookmark bar
+  listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   $ cd ../a
 
 test that prepushkey can prevent incoming keys
@@ -261,10 +269,13 @@ test that prepushkey can prevent incoming keys
   listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
-  listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
-  prepushkey.forbid hook: HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000
+  pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=push (glob)
+  prepushkey.forbid hook: HG_BUNDLE2=1 HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pushkey-abort: prepushkey hook exited with status 1
+  pretxnclose hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  txnclose hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
   exporting bookmark baz failed!
+  listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   [1]
   $ cd ../a
 
@@ -333,8 +344,8 @@ outgoing hooks can see env vars
   pulling from ../a
   searching for changes
   preoutgoing hook: HG_SOURCE=pull
-  adding changesets
   outgoing hook: HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_SOURCE=pull
+  adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
