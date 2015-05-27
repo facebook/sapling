@@ -500,6 +500,7 @@ Test part
       advisory: 0
   bundle2-input: payload chunk size: 178
   bundle2-input: payload chunk size: 0
+  bundle2-input-part: total payload size 178
       payload: 178 bytes
   bundle2-input: part header size: 22
   bundle2-input: part type: "test:debugreply"
@@ -519,6 +520,7 @@ Test part
       advisory: 1
   bundle2-input: payload chunk size: 2
   bundle2-input: payload chunk size: 0
+  bundle2-input-part: total payload size 2
       payload: 2 bytes
   bundle2-input: part header size: 29
   bundle2-input: part type: "test:song"
@@ -575,6 +577,7 @@ Process the bundle
   The choir starts singing:
   bundle2-input: payload chunk size: 178
   bundle2-input: payload chunk size: 0
+  bundle2-input-part: total payload size 178
       Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
       Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
       Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
@@ -594,6 +597,7 @@ Process the bundle
   bundle2-input-part: "test:math" (advisory) (params: 2 mandatory 2 advisory) unsupported-type
   bundle2-input: payload chunk size: 2
   bundle2-input: payload chunk size: 0
+  bundle2-input-part: total payload size 2
   bundle2-input: part header size: 29
   bundle2-input: part type: "test:song"
   bundle2-input: part id: "5"

@@ -1060,9 +1060,12 @@ class unbundlepart(unpackermixin):
             data = self._payloadstream.read()
         else:
             data = self._payloadstream.read(size)
-        if size is None or len(data) < size:
-            self.consumed = True
         self._pos += len(data)
+        if size is None or len(data) < size:
+            if not self.consumed and self._pos:
+                self.ui.debug('bundle2-input-part: total payload size %i\n'
+                              % self._pos)
+            self.consumed = True
         return data
 
     def tell(self):
