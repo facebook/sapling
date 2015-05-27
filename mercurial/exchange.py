@@ -523,7 +523,7 @@ def _pushb2phases(pushop, bundler):
     part2node = []
     enc = pushkey.encode
     for newremotehead in pushop.outdatedphases:
-        part = bundler.newpart('pushkey')
+        part = bundler.newpart('pushkey', mandatory=False)
         part.addparam('namespace', enc('phases'))
         part.addparam('key', enc(newremotehead.hex()))
         part.addparam('old', enc(str(phases.draft)))
@@ -567,7 +567,7 @@ def _pushb2bookmarks(pushop, bundler):
     part2book = []
     enc = pushkey.encode
     for book, old, new in pushop.outbookmarks:
-        part = bundler.newpart('pushkey')
+        part = bundler.newpart('pushkey', mandatory=False)
         part.addparam('namespace', enc('bookmarks'))
         part.addparam('key', enc(book))
         part.addparam('old', enc(old))
