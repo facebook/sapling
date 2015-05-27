@@ -950,6 +950,8 @@ class recordhunk(object):
 
 def filterpatch(ui, headers, operation=None):
     """Interactively filter patch chunks into applied-only chunks"""
+    if operation is None:
+        operation = _('record')
 
     def prompt(skipfile, skipall, query, chunk):
         """prompt query, and process base inputs

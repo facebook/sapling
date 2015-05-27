@@ -428,6 +428,8 @@ class uihunk(patchnode):
 def filterpatch(ui, chunks, chunkselector, operation=None):
     """interactively filter patch chunks into applied-only chunks"""
 
+    if operation is None:
+        operation = _('confirm')
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
     # with curses.  create a list of headers only.
