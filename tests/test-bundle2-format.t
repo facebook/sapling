@@ -605,6 +605,7 @@ Process the bundle
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 0
   bundle2-input: end of bundle2 stream
+  bundle2-input-bundle: 6 parts total
   0 unread bytes
   3 total verses sung
 

@@ -328,13 +328,14 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
             msg.append(' with-transaction')
         msg.append('\n')
         repo.ui.debug(''.join(msg))
-    iterparts = unbundler.iterparts()
+    iterparts = enumerate(unbundler.iterparts())
     part = None
+    nbpart = 0
     try:
-        for part in iterparts:
+        for nbpart, part in iterparts:
             _processpart(op, part)
     except BaseException, exc:
-        for part in iterparts:
+        for nbpart, part in iterparts:
             # consume the bundle content
             part.seek(0, 2)
         # Small hack to let caller code distinguish exceptions from bundle2
@@ -348,6 +349,9 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
             salvaged = op.reply.salvageoutput()
         exc._bundle2salvagedoutput = salvaged
         raise
+    finally:
+        repo.ui.debug('bundle2-input-bundle: %i parts total\n' % nbpart)
+
     return op
 
 def _processpart(op, part):
