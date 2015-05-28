@@ -569,8 +569,17 @@ def _pushb2bookmarks(pushop, bundler):
     pushop.stepsdone.add('bookmarks')
     part2book = []
     enc = pushkey.encode
+
+    def handlefailure(pushop, exc):
+        targetid = int(exc.partid)
+        for partid, book, action in part2book:
+            if partid == targetid:
+                raise error.Abort(bookmsgmap[action][1].rstrip() % book)
+        # we should not be called for part we did not generated
+        assert False
+
     for book, old, new in pushop.outbookmarks:
-        part = bundler.newpart('pushkey', mandatory=False)
+        part = bundler.newpart('pushkey')
         part.addparam('namespace', enc('bookmarks'))
         part.addparam('key', enc(book))
         part.addparam('old', enc(old))
@@ -581,7 +590,7 @@ def _pushb2bookmarks(pushop, bundler):
         elif not new:
             action = 'delete'
         part2book.append((part.id, book, action))
-
+        pushop.pkfailcb[part.id] = handlefailure
 
     def handlereply(op):
         ui = pushop.ui

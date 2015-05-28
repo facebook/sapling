@@ -755,8 +755,8 @@ Local push
   searching for changes
   no changes found
   pushkey-abort: prepushkey hook exited with status 1
-  exporting bookmark @ failed!
-  [1]
+  abort: exporting bookmark @ failed!
+  [255]
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
@@ -768,8 +768,8 @@ Using ssh
   searching for changes
   no changes found
   remote: pushkey-abort: prepushkey hook exited with status 1
-  exporting bookmark @ failed!
-  [1]
+  abort: exporting bookmark @ failed!
+  [255]
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
@@ -791,8 +791,8 @@ Using http
   searching for changes
   no changes found
   remote: pushkey-abort: prepushkey hook exited with status 1
-  exporting bookmark @ failed!
-  [1]
+  abort: exporting bookmark @ failed!
+  [255]
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 

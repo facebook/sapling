@@ -271,11 +271,8 @@ test that prepushkey can prevent incoming keys
   pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=push (glob)
   prepushkey.forbid hook: HG_BUNDLE2=1 HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pushkey-abort: prepushkey hook exited with status 1
-  pretxnclose hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
-  txnclose hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
-  exporting bookmark baz failed!
-  listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
-  [1]
+  abort: exporting bookmark baz failed!
+  [255]
   $ cd ../a
 
 test that prelistkeys can prevent listing keys
