@@ -25,6 +25,8 @@ These imports will not be delayed:
 '''
 
 import __builtin__, os, sys
+from contextlib import contextmanager
+
 _origimport = __import__
 
 nothing = object()
@@ -179,3 +181,16 @@ def enable():
 def disable():
     "disable global demand-loading of modules"
     __builtin__.__import__ = _origimport
+
+@contextmanager
+def deactivated():
+    "context manager for disabling demandimport in 'with' blocks"
+    demandenabled = isenabled()
+    if demandenabled:
+        disable()
+
+    try:
+        yield
+    finally:
+        if demandenabled:
+            enable()
