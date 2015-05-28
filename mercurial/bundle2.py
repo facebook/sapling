@@ -1019,6 +1019,8 @@ class unbundlepart(unpackermixin):
                 raise util.Abort(_('Seek failed\n'))
             self._pos = newpos
 
+# These are only the static capabilities.
+# Check the 'getrepocaps' function for the rest.
 capabilities = {'HG20': (),
                 'listkeys': (),
                 'pushkey': (),
