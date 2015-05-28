@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import wireproto, changegroup, match, util, changelog, context
+from mercurial import exchange
 from mercurial.extensions import wrapfunction
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
@@ -78,7 +79,18 @@ def onetimesetup(ui):
             if includepattern or excludepattern:
                 state.match = match.match(repo.root, '', None,
                     includepattern, excludepattern)
-            return wireproto.stream(repo, proto)
+            streamres = wireproto.stream(repo, proto)
+
+            # Force the first value to execute, so the file list is computed
+            # within the try/finally scope
+            first = streamres.gen.next()
+            second = streamres.gen.next()
+            def gen():
+                yield first
+                yield second
+                for value in streamres.gen:
+                    yield value
+            return wireproto.streamres(gen())
         finally:
             state.shallowremote = oldshallow
             state.match = oldmatch
@@ -123,7 +135,11 @@ def onetimesetup(ui):
             for x in orig(repo):
                 yield x
 
-    wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
+    # This function moved in Mercurial 3.5
+    if util.safehasattr(wireproto, '_walkstreamfiles'):
+        wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
+    else:
+        wrapfunction(exchange, '_walkstreamfiles', _walkstreamfiles)
 
     # We no longer use getbundle_shallow commands, but we must still
     # support it for migration purposes
