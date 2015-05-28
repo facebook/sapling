@@ -5123,6 +5123,10 @@ def pull(ui, repo, source="default", **opts):
         if opts.get('bookmark'):
             if not revs:
                 revs = []
+            # The list of bookmark used here is not the one used to actually
+            # update the bookmark name. This can result in the revision pulled
+            # not ending up with the name of the bookmark because of a race
+            # condition on the server. (See issue 4689 for details)
             remotebookmarks = other.listkeys('bookmarks')
             for b in opts['bookmark']:
                 if b not in remotebookmarks:
@@ -5131,6 +5135,9 @@ def pull(ui, repo, source="default", **opts):
 
         if revs:
             try:
+                # When 'rev' is a bookmark name, we cannot guarantee that it
+                # will be updated with that name because of a race condition
+                # server side. (See issue 4689 for details)
                 revs = [other.lookup(rev) for rev in revs]
             except error.CapabilityError:
                 err = _("other repository doesn't support revision lookup, "
