@@ -35,32 +35,27 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             if modpath and modfile:
                 sys.path = sys.path[:] + [modpath]
                 modname = modfile
-        demandimportenabled = demandimport.isenabled()
-        if demandimportenabled:
-            demandimport.disable()
-        try:
-            obj = __import__(modname)
-        except ImportError:
-            e1 = sys.exc_type, sys.exc_value, sys.exc_traceback
+        with demandimport.deactivated():
             try:
-                # extensions are loaded with hgext_ prefix
-                obj = __import__("hgext_%s" % modname)
+                obj = __import__(modname)
             except ImportError:
-                e2 = sys.exc_type, sys.exc_value, sys.exc_traceback
-                if ui.tracebackflag:
-                    ui.warn(_('exception from first failed import '
-                              'attempt:\n'))
-                ui.traceback(e1)
-                if ui.tracebackflag:
-                    ui.warn(_('exception from second failed import '
-                              'attempt:\n'))
-                ui.traceback(e2)
-                raise util.Abort(_('%s hook is invalid '
-                                   '(import of "%s" failed)') %
-                                 (hname, modname))
-        finally:
-            if demandimportenabled:
-                demandimport.enable()
+                e1 = sys.exc_type, sys.exc_value, sys.exc_traceback
+                try:
+                    # extensions are loaded with hgext_ prefix
+                    obj = __import__("hgext_%s" % modname)
+                except ImportError:
+                    e2 = sys.exc_type, sys.exc_value, sys.exc_traceback
+                    if ui.tracebackflag:
+                        ui.warn(_('exception from first failed import '
+                                  'attempt:\n'))
+                    ui.traceback(e1)
+                    if ui.tracebackflag:
+                        ui.warn(_('exception from second failed import '
+                                  'attempt:\n'))
+                    ui.traceback(e2)
+                    raise util.Abort(_('%s hook is invalid '
+                                       '(import of "%s" failed)') %
+                                     (hname, modname))
         sys.path = oldpaths
         try:
             for p in funcname.split('.')[1:]:
