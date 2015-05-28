@@ -170,60 +170,6 @@ def lfconvert(ui, src, dest, *pats, **opts):
             # we failed, remove the new directory
             shutil.rmtree(rdst.root)
 
-def _addchangeset(ui, rsrc, rdst, ctx, revmap):
-    # Convert src parents to dst parents
-    parents = _convertparents(ctx, revmap)
-
-    # Generate list of changed files
-    files = _getchangedfiles(ctx, parents)
-
-    def getfilectx(repo, memctx, f):
-        if lfutil.standin(f) in files:
-            # if the file isn't in the manifest then it was removed
-            # or renamed, raise IOError to indicate this
-            try:
-                fctx = ctx.filectx(lfutil.standin(f))
-            except error.LookupError:
-                return None
-            renamed = fctx.renamed()
-            if renamed:
-                renamed = lfutil.splitstandin(renamed[0])
-
-            hash = fctx.data().strip()
-            path = lfutil.findfile(rsrc, hash)
-
-            # If one file is missing, likely all files from this rev are
-            if path is None:
-                cachelfiles(ui, rsrc, ctx.node())
-                path = lfutil.findfile(rsrc, hash)
-
-                if path is None:
-                    raise util.Abort(
-                        _("missing largefile \'%s\' from revision %s")
-                         % (f, node.hex(ctx.node())))
-
-            data = ''
-            fd = None
-            try:
-                fd = open(path, 'rb')
-                data = fd.read()
-            finally:
-                if fd:
-                    fd.close()
-            return context.memfilectx(repo, f, data, 'l' in fctx.flags(),
-                                      'x' in fctx.flags(), renamed)
-        else:
-            return _getnormalcontext(repo, ctx, f, revmap)
-
-    dstfiles = []
-    for file in files:
-        if lfutil.isstandin(file):
-            dstfiles.append(lfutil.splitstandin(file))
-        else:
-            dstfiles.append(file)
-    # Commit
-    _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap)
-
 def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
         matcher, size, lfiletohash):
     # Convert src parents to dst parents
