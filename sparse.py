@@ -204,7 +204,7 @@ def _setuplog(ui):
             sparsematch = repo.sparsematch()
             def ctxmatch(rev):
                 ctx = repo[rev]
-                return util.any(f for f in ctx.files() if sparsematch(f))
+                return any(f for f in ctx.files() if sparsematch(f))
             revs = revs.filter(ctxmatch)
         return revs
     extensions.wrapfunction(cmdutil, '_logrevs', _logrevs)
@@ -745,6 +745,9 @@ class forceincludematcher(object):
     def anypats(self):
         return True
 
+    def prefix(self):
+        return False
+
     def hash(self):
         sha1 = util.sha1()
         sha1.update(_hashmatcher(self._matcher))
@@ -774,6 +777,9 @@ class unionmatcher(object):
 
     def anypats(self):
         return True
+
+    def prefix(self):
+        return False
 
     def hash(self):
         sha1 = util.sha1()

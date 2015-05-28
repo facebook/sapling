@@ -27,12 +27,12 @@ Test pushing vars to repo
   $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true"
   pushing to $TESTTMP/repo
   searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
   HG_USERVAR_DEBUG=1
   HG_USERVAR_BYPASS_REVIEW=true
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 
 Test pushing var with empty right-hand side
 
@@ -41,11 +41,11 @@ Test pushing var with empty right-hand side
   $ hg push --pushvars "DEBUG="
   pushing to $TESTTMP/repo
   searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
   HG_USERVAR_DEBUG=
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 
 Test pushing bad vars
 
