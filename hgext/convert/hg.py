@@ -128,7 +128,10 @@ class mercurial_sink(converter_sink):
                 continue
             revid = revmap.get(source.lookuprev(s[0]))
             if not revid:
-                continue
+                if s[0] == hex(nullid):
+                    revid = s[0]
+                else:
+                    continue
             fp.write('%s %s\n' % (revid, s[1]))
         return fp.getvalue()
 
