@@ -1093,20 +1093,14 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	PyObject *ret = NULL;
 	PyObject *phaseslist = NULL;
 	PyObject *phaseroots = NULL;
-	PyObject *rev = NULL;
-	PyObject *p1 = NULL;
-	PyObject *p2 = NULL;
 	PyObject *phaseset = NULL;
 	PyObject *phasessetlist = NULL;
-	Py_ssize_t addlen = self->added ? PyList_GET_SIZE(self->added) : 0;
 	Py_ssize_t len = index_length(self) - 1;
 	Py_ssize_t numphase = 0;
 	Py_ssize_t minrevallphases = 0;
 	Py_ssize_t minrevphase = 0;
 	Py_ssize_t i = 0;
-	int parent_1, parent_2;
 	char *phases = NULL;
-	const char *data;
 	long phase;
 
 	if (!PyArg_ParseTuple(args, "O", &roots))
@@ -1142,21 +1136,10 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	}
 	/* Propagate the phase information from the roots to the revs */
 	if (minrevallphases != -1) {
-		for (i = minrevallphases; i < self->raw_length; i++) {
-			data = index_deref(self, i);
-			set_phase_from_parents(phases, getbe32(data+24), getbe32(data+28), i);
-		}
-		for (i = 0; i < addlen; i++) {
-			rev = PyList_GET_ITEM(self->added, i);
-			p1 = PyTuple_GET_ITEM(rev, 5);
-			p2 = PyTuple_GET_ITEM(rev, 6);
-			if (!PyInt_Check(p1) || !PyInt_Check(p2)) {
-				PyErr_SetString(PyExc_TypeError, "revlog parents are invalid");
-				goto release_phasesetlist;
-			}
-			parent_1 = (int)PyInt_AS_LONG(p1);
-			parent_2 = (int)PyInt_AS_LONG(p2);
-			set_phase_from_parents(phases, parent_1, parent_2, i+self->raw_length);
+		int parents[2];
+		for (i = minrevallphases; i < len; i++) {
+			index_get_parents(self, i, parents);
+			set_phase_from_parents(phases, parents[0], parents[1], i);
 		}
 	}
 	/* Transform phase list to a python list */
