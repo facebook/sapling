@@ -741,6 +741,22 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 	return PyString_AS_STRING(self->data) + pos * v1_hdrsize;
 }
 
+static inline void index_get_parents(indexObject *self, Py_ssize_t rev,
+				int *ps)
+{
+	if (rev >= self->length - 1) {
+		PyObject *tuple = PyList_GET_ITEM(self->added,
+						  rev - self->length + 1);
+		ps[0] = (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 5));
+		ps[1] = (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 6));
+	} else {
+		const char *data = index_deref(self, rev);
+		ps[0] = getbe32(data + 24);
+		ps[1] = getbe32(data + 28);
+	}
+}
+
+
 /*
  * RevlogNG format (all in big endian, data may be inlined):
  *    6 bytes: offset
@@ -1175,21 +1191,6 @@ release_phases:
 	free(phases);
 release_none:
 	return ret;
-}
-
-static inline void index_get_parents(indexObject *self, Py_ssize_t rev,
-				int *ps)
-{
-	if (rev >= self->length - 1) {
-		PyObject *tuple = PyList_GET_ITEM(self->added,
-						  rev - self->length + 1);
-		ps[0] = (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 5));
-		ps[1] = (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 6));
-	} else {
-		const char *data = index_deref(self, rev);
-		ps[0] = getbe32(data + 24);
-		ps[1] = getbe32(data + 28);
-	}
 }
 
 static PyObject *index_headrevs(indexObject *self, PyObject *args)
