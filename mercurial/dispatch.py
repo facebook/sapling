@@ -11,6 +11,7 @@ import difflib
 import util, commands, hg, fancyopts, extensions, hook, error
 import cmdutil, encoding
 import ui as uimod
+import demandimport
 
 class request(object):
     def __init__(self, args, ui=None, repo=None, fin=None, fout=None,
@@ -137,10 +138,11 @@ def _runcatch(req):
                 # This import can be slow for fancy debuggers, so only
                 # do it when absolutely necessary, i.e. when actual
                 # debugging has been requested
-                try:
-                    debugmod = __import__(debugger)
-                except ImportError:
-                    pass # Leave debugmod = pdb
+                with demandimport.deactivated():
+                    try:
+                        debugmod = __import__(debugger)
+                    except ImportError:
+                        pass # Leave debugmod = pdb
 
             debugtrace[debugger] = debugmod.set_trace
             debugmortem[debugger] = debugmod.post_mortem
