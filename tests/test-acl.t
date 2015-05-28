@@ -102,7 +102,7 @@ Extension disabled for lack of a hook
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -120,7 +120,7 @@ Extension disabled for lack of a hook
   adding quux/file.py revisions
   added 3 changesets with 3 changes to 3 files
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -166,7 +166,7 @@ Extension disabled for lack of acl.sources
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -186,7 +186,7 @@ Extension disabled for lack of acl.sources
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -233,7 +233,7 @@ No [acl.allow]/[acl.deny]
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -263,7 +263,7 @@ No [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -310,7 +310,7 @@ Empty [acl.allow]
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -375,7 +375,7 @@ fred is allowed inside foo/
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -445,7 +445,7 @@ Empty [acl.deny]
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -512,7 +512,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -584,7 +584,7 @@ fred is allowed inside foo/, but not foo/Bar/
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -653,7 +653,7 @@ fred is allowed inside foo/, but not foo/Bar/
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -724,7 +724,7 @@ barney is allowed everywhere
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -754,7 +754,7 @@ barney is allowed everywhere
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -808,7 +808,7 @@ wilma can change files with a .txt extension
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -886,7 +886,7 @@ file specified by acl.config does not exist
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -959,7 +959,7 @@ betty is allowed inside foo/ by a acl.config file
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1043,7 +1043,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1073,7 +1073,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -1130,7 +1130,7 @@ fred is always allowed
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1160,7 +1160,7 @@ fred is always allowed
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -1213,7 +1213,7 @@ no one is allowed inside foo/Bar/
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1289,7 +1289,7 @@ OS-level groups
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1320,7 +1320,7 @@ OS-level groups
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1606
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
   bundle2-input-bundle: 3 parts total
   updating the branch cache
@@ -1373,7 +1373,7 @@ OS-level groups
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1488,8 +1488,8 @@ No branch acls specified
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1523,9 +1523,9 @@ No branch acls specified
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2101
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
   updating the branch cache
@@ -1577,8 +1577,8 @@ Branch acl deny test
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1651,8 +1651,8 @@ Branch acl empty allow test
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1721,8 +1721,8 @@ Branch acl allow other
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1785,8 +1785,8 @@ Branch acl allow other
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1820,9 +1820,9 @@ Branch acl allow other
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2101
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
   updating the branch cache
@@ -1879,8 +1879,8 @@ push foobar into the remote
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -1914,9 +1914,9 @@ push foobar into the remote
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2101
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
   updating the branch cache
@@ -1972,8 +1972,8 @@ Branch acl conflicting deny
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -2041,8 +2041,8 @@ User 'astro' must not be denied
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155
@@ -2076,9 +2076,9 @@ User 'astro' must not be denied
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2101
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (advisory) (params: 4 mandatory) supported
+  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
   pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
   bundle2-input-bundle: 4 parts total
   updating the branch cache
@@ -2128,8 +2128,8 @@ Non-astro users must be denied
   bundle2-output-part: "replycaps" 155 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (advisory) (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 155

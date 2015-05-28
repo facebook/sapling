@@ -524,14 +524,23 @@ def _pushb2phases(pushop, bundler):
         return
     pushop.stepsdone.add('phases')
     part2node = []
+
+    def handlefailure(pushop, exc):
+        targetid = int(exc.partid)
+        for partid, node in part2node:
+            if partid == targetid:
+                raise error.Abort(_('updating %s to public failed') % node)
+
     enc = pushkey.encode
     for newremotehead in pushop.outdatedphases:
-        part = bundler.newpart('pushkey', mandatory=False)
+        part = bundler.newpart('pushkey')
         part.addparam('namespace', enc('phases'))
         part.addparam('key', enc(newremotehead.hex()))
         part.addparam('old', enc(str(phases.draft)))
         part.addparam('new', enc(str(phases.public)))
         part2node.append((part.id, newremotehead))
+        pushop.pkfailcb[part.id] = handlefailure
+
     def handlereply(op):
         for partid, node in part2node:
             partrep = op.records.getreplies(partid)

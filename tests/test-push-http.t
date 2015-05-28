@@ -125,8 +125,11 @@ expect push success, phase change failure
   remote: added 1 changesets with 1 changes to 1 files
   remote: prepushkey hook: HG_BUNDLE2=1 HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_OLD=1 HG_PENDING=$TESTTMP/test HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   remote: pushkey-abort: prepushkey hook exited with status 1
-  updating ba677d0156c1 to public failed!
+  remote: transaction abort!
+  remote: rollback completed
+  abort: updating ba677d0156c1 to public failed
   % serve errors
+  [255]
 
 expect phase change success
 
@@ -134,9 +137,12 @@ expect phase change success
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
-  no changes found
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: prepushkey hook: HG_BUNDLE2=1 HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_OLD=1 HG_PENDING=$TESTTMP/test HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   % serve errors
-  [1]
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
 
