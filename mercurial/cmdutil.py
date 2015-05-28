@@ -63,6 +63,7 @@ def recordfilter(ui, originalhunks, operation=None):
     selected hunks.
     *operation* is used for ui purposes to indicate the user
     what kind of filtering they are doing: reverting, commiting, shelving, etc.
+    *operation* has to be a translated string.
     """
     usecurses =  ui.configbool('experimental', 'crecord', False)
     testfile = ui.config('experimental', 'crecordtest', None)
