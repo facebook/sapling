@@ -226,6 +226,7 @@ add another largefile to the new largefiles repo
   $ hg commit -m "add anotherlarge (should be a largefile)"
   $ cat .hglf/anotherlarge
   3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
+  $ hg tag mytag
   $ cd ..
 
 round-trip: converting back to a normal (non-largefiles) repo with
@@ -233,25 +234,30 @@ round-trip: converting back to a normal (non-largefiles) repo with
   $ cd largefiles-repo
   $ hg lfconvert --to-normal . ../normal-repo
   initializing destination ../normal-repo
+  0 additional largefiles cached
+  scanning source...
+  sorting...
+  converting...
+  7 add large, normal1
+  6 add sub/*
+  5 rename sub/ to stuff/
+  4 add normal3, modify sub/*
+  3 remove large, normal3
+  2 merge
+  1 add anotherlarge (should be a largefile)
+  0 Added tag mytag for changeset abacddda7028
   $ cd ../normal-repo
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > largefiles = !
   > EOF
 
-# Hmmm: the changeset ID for rev 5 is different from the original
-# normal repo (../bigfile-repo), because the changelog filelist
-# differs between the two incarnations of rev 5: this repo includes
-# 'large' in the list, but ../bigfile-repo does not. Since rev 5
-# removes 'large' relative to the first parent in both repos, it seems
-# to me that lfconvert is doing a *better* job than
-# "hg remove" + "hg merge" + "hg commit".
-#  $ hg -R ../bigfile-repo debugdata -c 5
-#  $ hg debugdata -c 5
   $ hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
-  o  6:1635824e6f59  add anotherlarge (should be a largefile)
+  o  7:b5fedc110b9d  Added tag mytag for changeset 867ab992ecf4
   |
-  o    5:7215f8deeaaf  merge
+  o  6:867ab992ecf4  add anotherlarge (should be a largefile)
+  |
+  o    5:4884f215abda  merge
   |\
   | o  4:7285f817b77e  remove large, normal3
   | |
@@ -264,8 +270,9 @@ round-trip: converting back to a normal (non-largefiles) repo with
   o  0:117b8328f97a  add large, normal1
   
   $ hg update
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg locate
+  .hgtags
   anotherlarge
   normal1
   stuff/maybelarge.dat
@@ -284,15 +291,18 @@ from the working dir on a convert.
   scanning source...
   sorting...
   converting...
-  6 add large, normal1
-  5 add sub/*
-  4 rename sub/ to stuff/
-  3 add normal3, modify sub/*
-  2 remove large, normal3
-  1 merge
-  0 add anotherlarge (should be a largefile)
+  7 add large, normal1
+  6 add sub/*
+  5 rename sub/ to stuff/
+  4 add normal3, modify sub/*
+  3 remove large, normal3
+  2 merge
+  1 add anotherlarge (should be a largefile)
+  0 Added tag mytag for changeset abacddda7028
 
   $ hg -R largefiles-repo-hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
+  o  7:2f08f66459b7  Added tag mytag for changeset 17126745edfd
+  |
   o  6:17126745edfd  add anotherlarge (should be a largefile)
   |
   o    5:9cc5aa7204f0  merge
@@ -315,8 +325,8 @@ process.
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  8 files, 7 changesets, 12 total revisions
-  searching 7 changesets for largefiles
+  9 files, 8 changesets, 13 total revisions
+  searching 8 changesets for largefiles
   changeset 0:d4892ec57ce2: large references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/2e000fa7e85759c7f4c254d4d9c33ef481e459a7 (glob)
   changeset 1:334e5237836d: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c (glob)
   changeset 2:261ad3f3f037: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c (glob)
@@ -336,6 +346,18 @@ Ensure the largefile can be cached in the source if necessary
   $ rm -f "${USERCACHE}"/*
   $ hg lfconvert --to-normal issue3519 normalized3519
   initializing destination normalized3519
+  4 additional largefiles cached
+  scanning source...
+  sorting...
+  converting...
+  7 add large, normal1
+  6 add sub/*
+  5 rename sub/ to stuff/
+  4 add normal3, modify sub/*
+  3 remove large, normal3
+  2 merge
+  1 add anotherlarge (should be a largefile)
+  0 Added tag mytag for changeset abacddda7028
 
 Ensure the abort message is useful if a largefile is entirely unavailable
   $ rm -rf normalized3519
@@ -344,8 +366,20 @@ Ensure the abort message is useful if a largefile is entirely unavailable
   $ rm largefiles-repo/.hg/largefiles/*
   $ hg lfconvert --to-normal issue3519 normalized3519
   initializing destination normalized3519
+  anotherlarge: largefile 3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  stuff/maybelarge.dat: largefile 76236b6a2c6102826c61af4297dd738fb3b1de38 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  stuff/maybelarge.dat: largefile 76236b6a2c6102826c61af4297dd738fb3b1de38 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  sub/maybelarge.dat: largefile 76236b6a2c6102826c61af4297dd738fb3b1de38 not available from file:/*/$TESTTMP/largefiles-repo (glob)
   large: largefile 2e000fa7e85759c7f4c254d4d9c33ef481e459a7 not available from file:/*/$TESTTMP/largefiles-repo (glob)
-  abort: missing largefile 'large' from revision d4892ec57ce212905215fad1d9018f56b99202ad
+  sub/maybelarge.dat: largefile 76236b6a2c6102826c61af4297dd738fb3b1de38 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  large: largefile 2e000fa7e85759c7f4c254d4d9c33ef481e459a7 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  stuff/maybelarge.dat: largefile 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  large: largefile 2e000fa7e85759c7f4c254d4d9c33ef481e459a7 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  sub/maybelarge.dat: largefile 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  large: largefile 2e000fa7e85759c7f4c254d4d9c33ef481e459a7 not available from file:/*/$TESTTMP/largefiles-repo (glob)
+  0 additional largefiles cached
+  11 largefiles failed to download
+  abort: all largefiles must be present locally
   [255]
 
 

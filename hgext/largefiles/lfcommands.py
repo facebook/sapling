@@ -16,6 +16,9 @@ from mercurial import util, match as match_, hg, node, context, error, \
 from mercurial.i18n import _
 from mercurial.lock import release
 
+from hgext.convert import convcmd
+from hgext.convert import filemap
+
 import lfutil
 import basestore
 
@@ -70,12 +73,6 @@ def lfconvert(ui, src, dest, *pats, **opts):
     success = False
     dstwlock = dstlock = None
     try:
-        # Lock destination to prevent modification while it is converted to.
-        # Don't need to lock src because we are just reading from its history
-        # which can't change.
-        dstwlock = rdst.wlock()
-        dstlock = rdst.lock()
-
         # Get a list of all changesets in the source.  The easy way to do this
         # is to simply walk the changelog, using changelog.nodesbetween().
         # Take a look at mercurial/revlog.py:639 for more details.
@@ -84,6 +81,12 @@ def lfconvert(ui, src, dest, *pats, **opts):
             rsrc.heads())[0])
         revmap = {node.nullid: node.nullid}
         if tolfile:
+            # Lock destination to prevent modification while it is converted to.
+            # Don't need to lock src because we are just reading from its
+            # history which can't change.
+            dstwlock = rdst.wlock()
+            dstlock = rdst.lock()
+
             lfiles = set()
             normalfiles = set()
             if not pats:
@@ -118,16 +121,51 @@ def lfconvert(ui, src, dest, *pats, **opts):
                 rdst.requirements.add('largefiles')
                 rdst._writerequirements()
         else:
-            for ctx in ctxs:
-                ui.progress(_('converting revisions'), ctx.rev(),
-                    unit=_('revision'), total=rsrc['tip'].rev())
-                _addchangeset(ui, rsrc, rdst, ctx, revmap)
+            class lfsource(filemap.filemap_source):
+                def __init__(self, ui, source):
+                    super(lfsource, self).__init__(ui, source, None)
+                    self.filemapper.rename[lfutil.shortname] = '.'
 
-            ui.progress(_('converting revisions'), None)
+                def getfile(self, name, rev):
+                    realname, realrev = rev
+                    f = super(lfsource, self).getfile(name, rev)
+
+                    if (not realname.startswith(lfutil.shortnameslash)
+                            or f[0] is None):
+                        return f
+
+                    # Substitute in the largefile data for the hash
+                    hash = f[0].strip()
+                    path = lfutil.findfile(rsrc, hash)
+
+                    if path is None:
+                        raise util.Abort(_("missing largefile for \'%s\' in %s")
+                                          % (realname, realrev))
+                    fp = open(path, 'rb')
+
+                    try:
+                        return (fp.read(), f[1])
+                    finally:
+                        fp.close()
+
+            class converter(convcmd.converter):
+                def __init__(self, ui, source, dest, revmapfile, opts):
+                    src = lfsource(ui, source)
+
+                    super(converter, self).__init__(ui, src, dest, revmapfile,
+                                                    opts)
+
+            found, missing = downloadlfiles(ui, rsrc)
+            if missing != 0:
+                raise util.Abort(_("all largefiles must be present locally"))
+
+            convcmd.converter = converter
+            convcmd.convert(ui, src, dest)
         success = True
     finally:
-        rdst.dirstate.clear()
-        release(dstlock, dstwlock)
+        if tolfile:
+            rdst.dirstate.clear()
+            release(dstlock, dstwlock)
         if not success:
             # we failed, remove the new directory
             shutil.rmtree(rdst.root)
