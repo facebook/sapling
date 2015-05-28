@@ -151,6 +151,21 @@ class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
     pass
 
+class PushkeyFailed(Abort):
+    """error raised when a pushkey part failed to update a value"""
+
+    def __init__(self, partid, namespace=None, key=None, new=None, old=None,
+                 ret=None):
+        self.partid = partid
+        self.namespace = namespace
+        self.key = key
+        self.new = new
+        self.old = old
+        self.ret = ret
+        # no i18n expected to be processed into a better message
+        Abort.__init__(self, 'failed to update value for "%s/%s"'
+                       % (namespace, key))
+
 class CensoredNodeError(RevlogError):
     """error raised when content verification fails on a censored node
 
