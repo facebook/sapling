@@ -5119,11 +5119,11 @@ def pull(ui, repo, source="default", **opts):
         revs, checkout = hg.addbranchrevs(repo, other, branches,
                                           opts.get('rev'))
 
-        remotebookmarks = other.listkeys('bookmarks')
 
         if opts.get('bookmark'):
             if not revs:
                 revs = []
+            remotebookmarks = other.listkeys('bookmarks')
             for b in opts['bookmark']:
                 if b not in remotebookmarks:
                     raise util.Abort(_('remote bookmark %s not found!') % b)

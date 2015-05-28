@@ -458,9 +458,6 @@ debug output
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 45 bytes
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 45 bytes
   query 1; heads
   sending batch command
   searching for changes
