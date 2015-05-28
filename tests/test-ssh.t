@@ -1,10 +1,3 @@
-  $ cat << EOF >> $HGRCPATH
-  > [experimental]
-  > # drop me once bundle2 is the default,
-  > # added to get test change early.
-  > bundle2-exp = True
-  > EOF
-
 
 This test tries to exercise the ssh functionality with a dummy script
 
