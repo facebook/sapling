@@ -34,7 +34,12 @@ except ImportError:
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
-from mercurial import ignore
+try:
+    from mercurial import ignore
+    ignoremod = True
+except ImportError:
+    # The ignore module disappeared in Mercurial 3.5
+    ignoremod = False
 from mercurial import localrepo
 from mercurial import manifest
 from mercurial.node import hex
@@ -164,10 +169,13 @@ def gverify(ui, repo, **opts):
     return verify.verify(ui, repo, ctx)
 
 if (getattr(dirstate, 'rootcache', False) and
-    getattr(ignore, 'readpats', False)):
+    (not ignoremod or getattr(ignore, 'readpats', False))):
     # only install our dirstate wrapper if it has a hope of working
     import gitdirstate
-    extensions.wrapfunction(ignore, 'ignore', gitdirstate.gignore)
+    if ignoremod:
+        def ignorewrap(orig, *args, **kwargs):
+            return gitdirstate.gignore(*args, **kwargs)
+        extensions.wrapfunction(ignore, 'ignore', ignorewrap)
     dirstate.dirstate = gitdirstate.gitdirstate
 
 @command('git-cleanup')

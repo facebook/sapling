@@ -4,7 +4,12 @@ import re
 import errno
 
 from mercurial import dirstate
-from mercurial import ignore
+try:
+    from mercurial import ignore
+    ignoremod = True
+except:
+    # ignore module was removed in Mercurial 3.5
+    ignoremod = False
 from mercurial import match as matchmod
 from mercurial import osutil
 from mercurial import scmutil
@@ -62,13 +67,18 @@ def gignorepats(orig, lines, root=None):
 
     return patterns, warnings
 
-def gignore(orig, root, files, warn, extrapatterns=None):
-    pats = ignore.readpats(root, files, warn)
+def gignore(root, files, warn, extrapatterns=None):
     allpats = []
+    pats = []
+    if ignoremod:
+        pats = ignore.readpats(root, files, warn)
+        for f, patlist in pats:
+            allpats.extend(patlist)
+    else:
+        allpats.extend(['include:%s' % f for f in files])
+
     if extrapatterns:
         allpats.extend(extrapatterns)
-    for f, patlist in pats:
-        allpats.extend(patlist)
     if not allpats:
         return util.never
     try:
@@ -110,7 +120,7 @@ class gitdirstate(dirstate.dirstate):
                 for warning in warnings:
                     self._ui.warn("%s: %s\n" % (fn, warning))
                 patterns.extend(pats)
-        return ignore.ignore(self._root, files, self._ui.warn,
+        return gignore(self._root, files, self._ui.warn,
                              extrapatterns=patterns)
 
     def _finddotgitignores(self):
