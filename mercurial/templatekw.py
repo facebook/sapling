@@ -206,12 +206,12 @@ def showbranches(**args):
 
 def showbookmarks(**args):
     """:bookmarks: List of strings. Any bookmarks associated with the
-    changeset.
+    changeset. Also sets 'active', the name of the active bookmark.
     """
     repo = args['ctx']._repo
     bookmarks = args['ctx'].bookmarks()
-    current = repo._activebookmark
-    makemap = lambda v: {'bookmark': v, 'current': current}
+    active = repo._activebookmark
+    makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
     f = _showlist('bookmark', bookmarks, **args)
     return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 

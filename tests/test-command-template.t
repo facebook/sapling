@@ -3086,7 +3086,7 @@ Test current bookmark templating
 
   $ hg book foo
   $ hg book bar
-  $ hg log --template "{rev} {bookmarks % '{bookmark}{ifeq(bookmark, current, \"*\")} '}\n"
+  $ hg log --template "{rev} {bookmarks % '{bookmark}{ifeq(bookmark, active, \"*\")} '}\n"
   2 bar* foo 
   1 
   0 

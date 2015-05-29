@@ -90,9 +90,9 @@ Some sample command line templates:
 
    $ hg log -r 0 --template "{join(extras, '\n')}\n"
 
-- Mark the current bookmark with '*'::
+- Mark the active bookmark with '*'::
 
-   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, current, \"*\")} '}\n"
+   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, \"*\")} '}\n"
 
 - Mark the working copy parent with '@'::
 
