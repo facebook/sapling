@@ -783,7 +783,7 @@ is a no-op), works (issue4398)
   bookmarks: *test
   commit: 2 unknown (clean)
   update: (current)
-  phases: 5 draft (draft)
+  phases: 5 draft
 
   $ hg shelve --delete --stat
   abort: options '--delete' and '--stat' may not be used together

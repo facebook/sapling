@@ -254,14 +254,13 @@ Test summary
   branch: default
   commit: (clean)
   update: 5 new changesets (update)
-  phases: (public)
   $ hg summary -R initialrepo
   parent: 7:17a481b3bccb tip
    merge B' and E
   branch: default
-  commit: (clean)
+  commit: (clean) (secret)
   update: 1 new changesets, 2 branch heads (merge)
-  phases: 3 draft, 3 secret (secret)
+  phases: 3 draft, 3 secret
   $ hg summary -R initialrepo --quiet
   parent: 7:17a481b3bccb tip
   update: 1 new changesets, 2 branch heads (merge)

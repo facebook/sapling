@@ -360,7 +360,7 @@ merge it with the other head
   branch: default
   commit: 2 modified, 1 removed (merge)
   update: (current)
-  phases: 3 draft (draft)
+  phases: 3 draft
 
 clarifies who added what
 

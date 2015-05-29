@@ -6004,6 +6004,14 @@ def summary(ui, repo, **opts):
     elif pnode not in bheads:
         t += _(' (new branch head)')
 
+    if parents:
+        pendingphase = max(p.phase() for p in parents)
+    else:
+        pendingphase = phases.public
+
+    if pendingphase > phases.newcommitphase(ui):
+        t += ' (%s)' % phases.phasenames[pendingphase]
+
     if cleanworkdir:
         # i18n: column positioning for "hg summary"
         ui.status(_('commit: %s\n') % t.strip())
@@ -6034,16 +6042,8 @@ def summary(ui, repo, **opts):
     if secret:
         t.append(_('%d secret') % secret)
 
-    if parents:
-        parentphase = max(p.phase() for p in parents)
-    else:
-        parentphase = phases.public
-
     if draft or secret:
-        ui.status(_('phases: %s (%s)\n') % (', '.join(t),
-                                            phases.phasenames[parentphase]))
-    else:
-        ui.note(_('phases: (%s)\n') % phases.phasenames[parentphase])
+        ui.status(_('phases: %s\n') % ', '.join(t))
 
     cmdutil.summaryhooks(ui, repo)
 

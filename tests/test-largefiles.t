@@ -71,7 +71,7 @@ Test status and dirstate of largefiles and that summary output is correct.
   branch: default
   commit: (clean)
   update: (current)
-  phases: 2 draft (draft)
+  phases: 2 draft
   largefiles: (no remote repo)
 
 Commit preserved largefile contents.
@@ -1004,7 +1004,7 @@ Test cloning with --all-largefiles flag
   branch: default
   commit: (clean)
   update: 7 new changesets (update)
-  phases: 8 draft (draft)
+  phases: 8 draft
 
   $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles -u 1 a a-clone1
@@ -1027,7 +1027,7 @@ Test cloning with --all-largefiles flag
   branch: default
   commit: (clean)
   update: 6 new changesets (update)
-  phases: 8 draft (draft)
+  phases: 8 draft
 
   $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles -U a a-clone-u
@@ -1037,7 +1037,7 @@ Test cloning with --all-largefiles flag
   branch: default
   commit: (clean)
   update: 8 new changesets (update)
-  phases: 8 draft (public)
+  phases: 8 draft
 
 Show computed destination directory:
 

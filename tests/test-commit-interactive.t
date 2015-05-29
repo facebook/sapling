@@ -81,7 +81,7 @@ Summary shows we updated to the new cset
   branch: default
   commit: (clean)
   update: (current)
-  phases: 1 draft (draft)
+  phases: 1 draft
 
 Rename empty file
 

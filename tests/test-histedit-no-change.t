@@ -183,7 +183,7 @@ abort editing session, after first forcibly updating away
   branch: default
   commit: 1 added, 1 unknown (new branch head)
   update: 6 new changesets (update)
-  phases: 7 draft (draft)
+  phases: 7 draft
   hist:   2 remaining (histedit --continue)
 
   $ hg histedit --abort 2>&1 | fixbundle

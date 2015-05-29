@@ -990,7 +990,7 @@ Issue2102: hg export and hg import speak different languages
   branch: default
   commit: (clean)
   update: (current)
-  phases: 2 draft (draft)
+  phases: 2 draft
 
   $ hg diff --git -c tip
   diff --git a/lib/place-holder b/lib/place-holder

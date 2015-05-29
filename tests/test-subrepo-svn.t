@@ -72,7 +72,7 @@ make sure we avoid empty commits (issue2445)
   branch: default
   commit: (clean)
   update: (current)
-  phases: 2 draft (draft)
+  phases: 2 draft
   $ hg ci -moops
   nothing changed
   [1]
@@ -97,7 +97,7 @@ change file in svn and hg, commit
   branch: default
   commit: 1 modified, 1 subrepos
   update: (current)
-  phases: 2 draft (draft)
+  phases: 2 draft
   $ hg commit --subrepos -m 'Message!' | grep -v Updating
   committing subrepository s
   Sending*s/alpha (glob)
@@ -138,7 +138,7 @@ bringing any changes.
   branch: default
   commit: (clean)
   update: (current)
-  phases: 3 draft (draft)
+  phases: 3 draft
 
   $ echo a > s/a
 

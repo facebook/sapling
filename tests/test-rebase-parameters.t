@@ -476,7 +476,7 @@ Test --tool parameter:
   branch: default
   commit: 1 modified, 1 unresolved (merge)
   update: (current)
-  phases: 3 draft (draft)
+  phases: 3 draft
   rebase: 0 rebased, 1 remaining (rebase --continue)
 
   $ hg resolve -l

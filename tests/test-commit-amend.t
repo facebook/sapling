@@ -72,7 +72,7 @@ Check proper abort for empty message
   branch: default
   commit: 1 added, 1 unknown
   update: (current)
-  phases: 2 draft (draft)
+  phases: 2 draft
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
   transaction abort!
   rollback completed
@@ -84,7 +84,7 @@ Check proper abort for empty message
   branch: default
   commit: 1 added, 1 unknown
   update: (current)
-  phases: 2 draft (draft)
+  phases: 2 draft
 
 Add new file:
   $ hg ci --amend -m 'amend base1 new file'
