@@ -1385,6 +1385,77 @@ def parsefilename(str):
             return s
     return s[:i]
 
+def reversehunks(hunks):
+    '''reverse the signs in the hunks given as argument
+
+    This function operates on hunks coming out of patch.filterpatch, that is
+    a list of the form: [header1, hunk1, hunk2, header2...]. Example usage:
+
+    >>> rawpatch = """diff --git a/folder1/g b/folder1/g
+    ... --- a/folder1/g
+    ... +++ b/folder1/g
+    ... @@ -1,7 +1,7 @@
+    ... +firstline
+    ...  c
+    ...  1
+    ...  2
+    ... + 3
+    ... -4
+    ...  5
+    ...  d
+    ... +lastline"""
+    >>> hunks = parsepatch(rawpatch)
+    >>> hunkscomingfromfilterpatch = []
+    >>> for h in hunks:
+    ...     hunkscomingfromfilterpatch.append(h)
+    ...     hunkscomingfromfilterpatch.extend(h.hunks)
+
+    >>> reversedhunks = reversehunks(hunkscomingfromfilterpatch)
+    >>> fp = cStringIO.StringIO()
+    >>> for c in reversedhunks:
+    ...      c.write(fp)
+    >>> fp.seek(0)
+    >>> reversedpatch = fp.read()
+    >>> print reversedpatch
+    diff --git a/folder1/g b/folder1/g
+    --- a/folder1/g
+    +++ b/folder1/g
+    @@ -1,4 +1,3 @@
+    -firstline
+     c
+     1
+     2
+    @@ -1,6 +2,6 @@
+     c
+     1
+     2
+    - 3
+    +4
+     5
+     d
+    @@ -5,3 +6,2 @@
+     5
+     d
+    -lastline
+
+    '''
+
+    import crecord as crecordmod
+    newhunks = []
+    for c in hunks:
+        if isinstance(c, crecordmod.uihunk):
+            # curses hunks encapsulate the record hunk in _hunk
+            c = c._hunk
+        if isinstance(c, recordhunk):
+            for j, line in enumerate(c.hunk):
+                if line.startswith("-"):
+                    c.hunk[j] = "+" + c.hunk[j][1:]
+                elif line.startswith("+"):
+                    c.hunk[j] = "-" + c.hunk[j][1:]
+            c.added, c.removed = c.removed, c.added
+        newhunks.append(c)
+    return newhunks
+
 def parsepatch(originalchunks):
     """patch -> [] of headers -> [] of hunks """
     class parser(object):

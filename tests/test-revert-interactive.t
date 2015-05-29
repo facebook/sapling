@@ -320,3 +320,74 @@ Check editing files newly added by a revert
   4
   5
   b
+
+Check the experimental config to invert the selection:
+  $ cat <<EOF >> $HGRCPATH
+  > [experimental]
+  > revertalternateinteractivemode=True
+  > EOF
+
+
+  $ hg up -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf 'firstline\nc\n1\n2\n3\n 3\n5\nd\nlastline\n' > folder1/g
+  $ hg diff --nodates
+  diff -r 5a858e056dc0 folder1/g
+  --- a/folder1/g
+  +++ b/folder1/g
+  @@ -1,7 +1,9 @@
+  +firstline
+   c
+   1
+   2
+   3
+  -4
+  + 3
+   5
+   d
+  +lastline
+  $ hg revert -i <<EOF
+  > y
+  > y
+  > y
+  > n
+  > EOF
+  reverting folder1/g (glob)
+  diff --git a/folder1/g b/folder1/g
+  3 hunks, 3 lines changed
+  examine changes to 'folder1/g'? [Ynesfdaq?] y
+  
+  @@ -1,4 +1,5 @@
+  +firstline
+   c
+   1
+   2
+   3
+  record change 1/3 to 'folder1/g'? [Ynesfdaq?] y
+  
+  @@ -1,7 +2,7 @@
+   c
+   1
+   2
+   3
+  -4
+  + 3
+   5
+   d
+  record change 2/3 to 'folder1/g'? [Ynesfdaq?] y
+  
+  @@ -6,2 +7,3 @@
+   5
+   d
+  +lastline
+  record change 3/3 to 'folder1/g'? [Ynesfdaq?] n
+  
+  $ hg diff --nodates
+  diff -r 5a858e056dc0 folder1/g
+  --- a/folder1/g
+  +++ b/folder1/g
+  @@ -5,3 +5,4 @@
+   4
+   5
+   d
+  +lastline

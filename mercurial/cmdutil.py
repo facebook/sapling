@@ -3139,10 +3139,21 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         diffopts = patch.difffeatureopts(repo.ui, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
-        diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
+        reversehunks =  repo.ui.configbool('experimental',
+                                           'revertalternateinteractivemode',
+                                           False)
+        if reversehunks:
+            diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
+        else:
+            diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
         originalchunks = patch.parsepatch(diff)
+
         try:
+
             chunks = recordfilter(repo.ui, originalchunks)
+            if reversehunks:
+                chunks = patch.reversehunks(chunks)
+
         except patch.PatchError, err:
             raise util.Abort(_('error parsing patch: %s') % err)
 
