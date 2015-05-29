@@ -726,7 +726,7 @@ class revlog(object):
             return self._headrevs()
 
     def computephases(self, roots):
-        return self.index.computephases(roots)
+        return self.index.computephasesmapsets(roots)
 
     def _headrevs(self):
         count = len(self)
