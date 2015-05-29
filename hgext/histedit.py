@@ -741,7 +741,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
 
     replacements = []
-    keep = opts.get('keep', False)
+    state.keep = opts.get('keep', False)
 
     # rebuild state
     if goal == 'continue':
@@ -810,7 +810,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                     'exactly one common root'))
             root = rr[0].node()
 
-        revs = between(repo, root, topmost, keep)
+        revs = between(repo, root, topmost, state.keep)
         if not revs:
             raise util.Abort(_('%s is not an ancestor of working directory') %
                              node.short(root))
@@ -834,7 +834,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
         state.parentctxnode = parentctxnode
         state.rules = rules
-        state.keep = keep
         state.topmost = topmost
         state.replacements = replacements
 
@@ -870,7 +869,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
-    if not keep:
+    if not state.keep:
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
