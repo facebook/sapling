@@ -295,3 +295,32 @@ Test that trimming description using multi-byte characters
   #  m, mess = edit message without changing commit content
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Test --continue with --keep
+
+  $ hg strip -q -r . --config extensions.strip=
+  $ hg histedit '.^' -q --keep --commands - << EOF
+  > edit eb57da33312f 2 three
+  > pick f3cfcca30c44 4 x
+  > EOF
+  Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+  [1]
+  $ echo edit >> alpha
+  $ hg histedit -q --continue
+  $ hg log -G -T '{rev}:{node|short} {desc}'
+  @  6:8fda0c726bf2 x
+  |
+  o  5:63379946892c three
+  |
+  | o  4:f3cfcca30c44 x
+  | |
+  | | o  3:2a30f3cfee78 four
+  | |/   ***
+  | |    five
+  | o  2:eb57da33312f three
+  |/
+  o  1:579e40513370 two
+  |
+  o  0:6058cbb6cfd7 one
+  
