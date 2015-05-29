@@ -23,7 +23,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, bookmarks, error, scmutil, exchange
 
-from common import NoRepo, commit, converter_source, converter_sink
+from common import NoRepo, commit, converter_source, converter_sink, mapfile
 
 import re
 sha1re = re.compile(r'\b[0-9a-f]{12,40}\b')
@@ -59,6 +59,7 @@ class mercurial_sink(converter_sink):
         self.lock = None
         self.wlock = None
         self.filemapmode = False
+        self.subrevmaps = {}
 
     def before(self):
         self.ui.debug('run hg sink pre-conversion action\n')
@@ -135,6 +136,45 @@ class mercurial_sink(converter_sink):
             fp.write('%s %s\n' % (revid, s[1]))
         return fp.getvalue()
 
+    def _rewritesubstate(self, source, data):
+        fp = cStringIO.StringIO()
+        for line in data.splitlines():
+            s = line.split(' ', 1)
+            if len(s) != 2:
+                continue
+
+            revid = s[0]
+            subpath = s[1]
+            if revid != hex(nullid):
+                revmap = self.subrevmaps.get(subpath)
+                if revmap is None:
+                    revmap = mapfile(self.ui,
+                                     self.repo.wjoin(subpath, '.hg/shamap'))
+                    self.subrevmaps[subpath] = revmap
+
+                    # It is reasonable that one or more of the subrepos don't
+                    # need to be converted, in which case they can be cloned
+                    # into place instead of converted.  Therefore, only warn
+                    # once.
+                    msg = _('no ".hgsubstate" updates will be made for "%s"\n')
+                    if len(revmap) == 0:
+                        sub = self.repo.wvfs.reljoin(subpath, '.hg')
+
+                        if self.repo.wvfs.exists(sub):
+                            self.ui.warn(msg % subpath)
+
+                newid = revmap.get(revid)
+                if not newid:
+                    if len(revmap) > 0:
+                        self.ui.warn(_("%s is missing from %s/.hg/shamap\n") %
+                                     (revid, subpath))
+                else:
+                    revid = newid
+
+            fp.write('%s %s\n' % (revid, subpath))
+
+        return fp.getvalue()
+
     def putcommit(self, files, copies, parents, commit, source, revmap, full,
                   cleanp2):
         files = dict(files)
@@ -152,6 +192,8 @@ class mercurial_sink(converter_sink):
                 return None
             if f == '.hgtags':
                 data = self._rewritetags(source, revmap, data)
+            if f == '.hgsubstate':
+                data = self._rewritesubstate(source, data)
             return context.memfilectx(self.repo, f, data, 'l' in mode,
                                       'x' in mode, copies.get(f))
 

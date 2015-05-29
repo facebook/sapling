@@ -279,6 +279,12 @@
       Mercurial Destination
       #####################
   
+      The Mercurial destination will recognize Mercurial subrepositories in the
+      destination directory, and update the .hgsubstate file automatically if
+      the destination subrepositories contain the <dest>/<sub>/.hg/shamap file.
+      Converting a repository with subrepositories requires converting a single
+      repository at a time, from the bottom up.
+  
       The following options are supported:
   
       convert.hg.clonebranches
