@@ -292,7 +292,7 @@ Check editing files newly added by a revert
   $ hg st
 
 4) Use interactive revert to recover f and change it on the fly
-  $ HGEDITOR="\"sh\" \"${TESTTMP}/editor.sh\"" PRINTHUNK="YES" hg revert -i -r ".^^"  <<EOF
+  $ HGEDITOR="\"sh\" \"${TESTTMP}/editor.sh\"" hg revert -i -r ".^^"  <<EOF
   > y
   > e
   > EOF
