@@ -69,7 +69,7 @@ list bookmarks
    * Y                         0:719295282060
      Z                         -1:000000000000
 
-Verify that switching to Z updates the current bookmark:
+Verify that switching to Z updates the active bookmark:
   $ hg update Z
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark Z)
@@ -118,7 +118,7 @@ set bookmark Z using -i
    * Y                         0:719295282060
      Z                         0:719295282060
 
-deactivate current bookmark using -i
+deactivate active bookmark using -i
 
   $ hg bookmark -i Y
   $ hg bookmarks
@@ -137,7 +137,7 @@ deactivate current bookmark using -i
    * Y                         0:719295282060
      Z                         0:719295282060
 
-deactivate current bookmark while renaming
+deactivate active bookmark while renaming
 
   $ hg bookmark -i -m Y X
   $ hg bookmarks

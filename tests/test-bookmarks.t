@@ -530,7 +530,7 @@ create bundle with two heads
   added 2 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
-update to current bookmark if it's not the parent
+update to active bookmark if it's not the parent
 
   $ hg summary
   parent: 2:db815d6d32e6 

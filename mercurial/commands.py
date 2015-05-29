@@ -1041,8 +1041,8 @@ def bookmark(ui, repo, *names, **opts):
         if len(marks) == 0 and not fm:
             ui.status(_("no bookmarks set\n"))
         for bmark, n in sorted(marks.iteritems()):
-            current = repo._activebookmark
-            if bmark == current:
+            active = repo._activebookmark
+            if bmark == active:
                 prefix, label = '*', activebookmarklabel
             else:
                 prefix, label = ' ', ''
@@ -1054,7 +1054,7 @@ def bookmark(ui, repo, *names, **opts):
             pad = " " * (25 - encoding.colwidth(bmark))
             fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s',
                          repo.changelog.rev(n), hexfn(n), label=label)
-            fm.data(active=(bmark == current))
+            fm.data(active=(bmark == active))
             fm.plain('\n')
         fm.end()
 
@@ -1523,7 +1523,7 @@ def commit(ui, repo, *pats, **opts):
                                match,
                                extra=extra)
 
-        current = repo._activebookmark
+        active = repo._activebookmark
         marks = old.bookmarks()
         node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
         if node == old.node():
@@ -1535,7 +1535,7 @@ def commit(ui, repo, *pats, **opts):
             newmarks = repo._bookmarks
             for bm in marks:
                 newmarks[bm] = node
-                if bm == current:
+                if bm == active:
                     bookmarks.activate(repo, bm)
             newmarks.write()
     else:
@@ -5933,15 +5933,15 @@ def summary(ui, repo, **opts):
         ui.status(m, label='log.branch')
 
     if marks:
-        current = repo._activebookmark
+        active = repo._activebookmark
         # i18n: column positioning for "hg summary"
         ui.write(_('bookmarks:'), label='log.bookmark')
-        if current is not None:
-            if current in marks:
-                ui.write(' *' + current, label=activebookmarklabel)
-                marks.remove(current)
+        if active is not None:
+            if active in marks:
+                ui.write(' *' + active, label=activebookmarklabel)
+                marks.remove(active)
             else:
-                ui.write(' [%s]' % current, label=activebookmarklabel)
+                ui.write(' [%s]' % active, label=activebookmarklabel)
         for m in marks:
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
@@ -6361,7 +6361,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     Update the repository's working directory to the specified
     changeset. If no changeset is specified, update to the tip of the
-    current named branch and move the current bookmark (see :hg:`help
+    current named branch and move the active bookmark (see :hg:`help
     bookmarks`).
 
     Update sets the working directory's parent revision to the specified
@@ -6414,7 +6414,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     cmdutil.clearunfinished(repo)
 
-    # with no argument, we also move the current bookmark, if any
+    # with no argument, we also move the active bookmark, if any
     rev, movemarkfrom = bookmarks.calculateupdate(ui, repo, rev)
 
     # if we defined a bookmark, we have to remember the original bookmark name

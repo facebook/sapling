@@ -3082,7 +3082,7 @@ Test revset function
   Rev: 0
   Ancestor: 0
   
-Test current bookmark templating
+Test active bookmark templating
 
   $ hg book foo
   $ hg book bar
