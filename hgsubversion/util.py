@@ -227,6 +227,9 @@ class PrefixMatch(object):
     def anypats(self):
         return True
 
+    def prefix(self):
+        return False
+
 def outgoing_revisions(repo, reverse_map, sourcerev):
     """Given a repo and an hg_editor, determines outgoing revisions for the
     current working copy state.
