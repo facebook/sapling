@@ -1,5 +1,12 @@
 #require killdaemons
 
+  $ cat << EOF >> $HGRCPATH
+  > [experimental]
+  > # drop me once bundle2 is the default,
+  > # added to get test change early.
+  > bundle2-exp = True
+  > EOF
+
   $ hg init test
   $ cd test
   $ echo a > a
@@ -73,6 +80,7 @@ expect error, pulling not allowed
 
   $ req
   pulling from http://localhost:$HGPORT/
+  searching for changes
   abort: authorization failed
   % serve errors
 
