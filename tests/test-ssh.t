@@ -457,8 +457,10 @@ debug output
   remote: 1
   preparing listkeys for "bookmarks"
   sending listkeys command
+  received listkey for "bookmarks": 45 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
+  received listkey for "bookmarks": 45 bytes
   query 1; heads
   sending batch command
   searching for changes
@@ -466,6 +468,7 @@ debug output
   no changes found
   preparing listkeys for "phases"
   sending listkeys command
+  received listkey for "phases": 15 bytes
   checking for updated bookmarks
 
   $ cd ..
