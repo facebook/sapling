@@ -837,12 +837,9 @@ def activepath(ui, remote):
         else:
             if uri.startswith('http'):
                 try:
-                    uri = url.url(uri).authinfo()[0]
+                    uri = util.url(uri).authinfo()[0]
                 except AttributeError:
-                    try:
-                        uri = util.url(uri).authinfo()[0]
-                    except AttributeError:
-                        uri = url.getauthinfo(uri)[0]
+                    uri = url.getauthinfo(uri)[0]
         uri = uri.rstrip('/')
         # guard against hgsubversion nonsense
         if not isinstance(rpath, basestring):
