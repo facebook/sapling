@@ -92,6 +92,10 @@ def _peerlookup(path):
     try:
         return thing(path)
     except TypeError:
+        # we can't test callable(thing) because 'thing' can be an unloaded
+        # module that implements __call__
+        if not util.safehasattr(thing, 'instance'):
+            raise
         return thing
 
 def islocal(repo):
