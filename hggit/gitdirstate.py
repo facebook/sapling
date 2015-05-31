@@ -6,6 +6,7 @@ import errno
 from mercurial import dirstate
 try:
     from mercurial import ignore
+    ignore.readpats
     ignoremod = True
 except:
     # ignore module was removed in Mercurial 3.5

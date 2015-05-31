@@ -36,6 +36,7 @@ from mercurial import help
 from mercurial import hg
 try:
     from mercurial import ignore
+    ignore.readpats
     ignoremod = True
 except ImportError:
     # The ignore module disappeared in Mercurial 3.5
