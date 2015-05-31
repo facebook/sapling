@@ -226,10 +226,10 @@ class match(object):
             return False
         if (self._includeroots and
             dir not in self._includeroots and
-            dir not in self._includedirs):
-            if not any(parent in self._includeroots
-                       for parent in util.finddirs(dir)):
-                return False
+            dir not in self._includedirs and
+            not any(parent in self._includeroots
+                    for parent in util.finddirs(dir))):
+            return False
         return (not self._fileroots or
                 '.' in self._fileroots or
                 dir in self._fileroots or
