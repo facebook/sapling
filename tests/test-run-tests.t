@@ -21,7 +21,9 @@ a succesful test
   >   $ echo babar
   >   babar
   >   $ echo xyzzy
+  >   never happens (?)
   >   xyzzy
+  >   nor this (?)
   > EOF
 
   $ $TESTDIR/run-tests.py --with-hg=`which hg`
@@ -237,8 +239,8 @@ Running In Debug Mode
   *SALT* 2 0 (glob)
   + echo xyzzy
   xyzzy
-  + echo *SALT* 4 0 (glob)
-  *SALT* 4 0 (glob)
+  + echo *SALT* 6 0 (glob)
+  *SALT* 6 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 

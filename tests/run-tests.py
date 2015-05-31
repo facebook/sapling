@@ -1043,7 +1043,7 @@ class TTest(Test):
             if salt in l:
                 lout, lcmd = l.split(salt, 1)
 
-            if lout:
+            while lout:
                 if not lout.endswith(b'\n'):
                     lout += b' (no-eol)\n'
 
@@ -1060,6 +1060,9 @@ class TTest(Test):
                     elif r == '-glob':
                         lout = ''.join(el.rsplit(' (glob)', 1))
                         r = '' # Warn only this line.
+                    elif r == "retry":
+                        postout.append(b'  ' + el)
+                        continue
                     else:
                         log('\ninfo, unknown linematch result: %r\n' % r)
                         r = False
@@ -1074,6 +1077,15 @@ class TTest(Test):
                         warnonly = 3 # for sure not
                     elif warnonly == 1: # Is "not yet" and line is warn only.
                         warnonly = 2 # Yes do warn.
+                break
+
+            # clean up any optional leftovers
+            while expected.get(pos, None):
+                el = expected[pos].pop(0)
+                if not el.endswith(" (?)\n"):
+                    expected[pos].insert(0, el)
+                    break
+                postout.append(b'  ' + el)
 
             if lcmd:
                 # Add on last return code.
@@ -1136,9 +1148,13 @@ class TTest(Test):
 
     @staticmethod
     def linematch(el, l):
+        retry = False
         if el == l: # perfect match (fast)
             return True
         if el:
+            if el.endswith(" (?)\n"):
+                retry = "retry"
+                el = el[:-5] + "\n"
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
                     el = el[:-7].decode('unicode_escape') + '\n'
@@ -1148,7 +1164,7 @@ class TTest(Test):
             if el == l or os.name == 'nt' and el[:-1] + b'\r\n' == l:
                 return True
             if el.endswith(b" (re)\n"):
-                return TTest.rematch(el[:-6], l)
+                return TTest.rematch(el[:-6], l) or retry
             if el.endswith(b" (glob)\n"):
                 # ignore '(glob)' added to l by 'replacements'
                 if l.endswith(b" (glob)\n"):
@@ -1156,7 +1172,7 @@ class TTest(Test):
                 return TTest.globmatch(el[:-8], l)
             if os.altsep and l.replace(b'\\', b'/') == el:
                 return b'+glob'
-        return False
+        return retry
 
     @staticmethod
     def parsehghaveoutput(lines):
