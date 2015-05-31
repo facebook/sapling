@@ -867,6 +867,7 @@ class ui(object):
                                ''.join(causetb),
                                ''.join(exconly))
             else:
+                self.flush()  # flush debug or status message
                 traceback.print_exception(exc[0], exc[1], exc[2],
                                           file=self.ferr)
         return self.tracebackflag or force
