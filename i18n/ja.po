@@ -159,8 +159,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2015-04-29 18:27+0900\n"
-"PO-Revision-Date: 2015-04-29 21:20+0900\n"
+"POT-Creation-Date: 2015-06-01 09:53+0900\n"
+"PO-Revision-Date: 2015-06-01 10:28+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -1390,18 +1390,6 @@ msgstr ""
 " * 個人識別情報、あるいはそれに類する個人情報"
 
 msgid ""
-"Censored file revisions are listed in a tracked file called .hgcensored "
-"stored\n"
-"in the repository root. The censor command adds an entry to the .hgcensored "
-"file\n"
-"in the working directory and commits it (much like ``hg tag`` and .hgtags). "
-"The\n"
-"censored file data is then replaced with a pointer to the new commit, "
-"enabling\n"
-"verification."
-msgstr ""
-
-msgid ""
 "Censored nodes can interrupt mercurial's typical operation whenever the "
 "excised\n"
 "data needs to be materialized. Some commands, like ``hg cat``/``hg "
@@ -1410,15 +1398,14 @@ msgid ""
 "and\n"
 "``hg update``, must be capable of tolerating censored data to continue to\n"
 "function in a meaningful way. Such commands only tolerate censored file\n"
-"revisions if they are allowed by the policy specified by the \"censor.allow"
-"\"\n"
-"config option.\n"
+"revisions if they are allowed by the \"censor.policy=ignore\" config "
+"option.\n"
 msgstr ""
 "検閲によって消去されたファイル内容は、 参照することができなくなります。\n"
 ":hg:`cat` や :hg:`revert` 等のコマンドは、 単純に処理が中断されます。\n"
 ":hg:`verify` や :hg:`update` 等の場合、 検閲済みのファイルを無視して、\n"
 "処理を継続することもできます。 検閲済みファイルによる中断を回避するには、\n"
-"``[censor] allow`` 設定を有効にしてください。\n"
+"``[censor] policy=ignore`` を設定してください。\n"
 
 msgid "REV"
 msgstr "リビジョン"
@@ -1457,13 +1444,13 @@ msgid "cannot censor file in heads (%s)"
 msgstr "ヘッドリビジョン (%s) の内容は検閲できません"
 
 msgid "clean/delete and commit first"
-msgstr ""
+msgstr "検閲対象データの削除、又は当該ファイルの登録除外のコミットが必要"
 
 msgid "cannot censor working directory"
 msgstr "作業領域の親リビジョンの内容は検閲できません"
 
 msgid "clean/delete/update first"
-msgstr ""
+msgstr "対象データ削除(又は対象ファイル登録除外)済みリビジョンへの更新が必要"
 
 #, python-format
 msgid "censor does not support revlog version %d"
@@ -10687,8 +10674,8 @@ msgstr "指定日時をコミット日時として記録"
 msgid "record the specified user as committer"
 msgstr "指定ユーザをコミットユーザとして記録"
 
-msgid "display with template (DEPRECATED)"
-msgstr "当該テンプレートで表示をカスタマイズ (非推奨)"
+msgid "display with template (EXPERIMENTAL)"
+msgstr "当該テンプレートで表示をカスタマイズ (実験的実装)"
 
 msgid "STYLE"
 msgstr "スタイル"
@@ -16035,11 +16022,11 @@ msgstr "hg: 解析エラー: %s\n"
 
 #, python-format
 msgid "(did you mean %r?)\n"
-msgstr "(もしかして %r のことですか？)\n"
+msgstr "(推測される候補: %r)\n"
 
 #, python-format
 msgid "(did you mean one of %s?)\n"
-msgstr "(もしかして %s のいずれかのことですか？)\n"
+msgstr "(推測される候補: %s)\n"
 
 msgid "entering debugger - type c to continue starting hg or h for help\n"
 msgstr "デバッガ動作開始 - 継続なら c 、 ヘルプなら h を入力してください\n"
@@ -28006,6 +27993,10 @@ msgstr ""
 msgid "date expects one or two arguments"
 msgstr "date の引数は1つまたは2つです"
 
+#. i18n: "date" is a keyword
+msgid "date expects a date information"
+msgstr "date の入力には日付情報を与えてください"
+
 msgid ""
 ":diff([includepattern [, excludepattern]]): Show a diff, optionally\n"
 "    specifying files to include or exclude."
@@ -28167,12 +28158,15 @@ msgstr "startswith の引数は2つです"
 
 msgid ":word(number, text[, separator]): Return the nth word from a string."
 msgstr ""
-":word(number, text[, separator]): text の冒頭 number 個の単語を抽出します。"
+":word(number, text[, separator]): text の number 個目の単語を抽出します。"
 
 #. i18n: "word" is a keyword
 #, python-format
 msgid "word expects two or three arguments, got %d"
 msgstr "word は2または3の引数が必要です (実際の引数は %d 個)"
+
+msgid "Use strings like '3' for numbers passed to word function"
+msgstr "word 関数には '3' のような文字列形式で数値を指定してください"
 
 msgid "unmatched quotes"
 msgstr "引用符の対応関係が不正です"

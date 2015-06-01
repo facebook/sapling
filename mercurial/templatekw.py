@@ -111,7 +111,7 @@ def _showlist(name, values, plural=None, **args):
 
 def getfiles(repo, ctx, revcache):
     if 'files' not in revcache:
-        revcache['files'] = repo.status(ctx.p1().node(), ctx.node())[:3]
+        revcache['files'] = repo.status(ctx.p1(), ctx)[:3]
     return revcache['files']
 
 def getlatesttags(repo, ctx, cache):
