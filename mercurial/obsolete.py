@@ -1215,7 +1215,8 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
 
             if not prec.mutable():
                 raise util.Abort("cannot obsolete public changeset: %s"
-                                 % prec)
+                                 % prec,
+                                 hint='see "hg help phases" for details')
             nprec = prec.node()
             nsucs = tuple(s.node() for s in sucs)
             npare = None

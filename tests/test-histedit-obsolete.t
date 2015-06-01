@@ -220,6 +220,7 @@ Check that histedit respect immutability
   
   $ hg histedit -r '.~2'
   abort: cannot edit public changeset: cb9a9f314b8b
+  (see "hg help phases" for details)
   [255]
 
 
