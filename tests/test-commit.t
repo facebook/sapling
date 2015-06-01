@@ -441,10 +441,16 @@ specific template keywords work well
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset = {desc}
+  >     HG: mods={file_mods}
+  >     HG: adds={file_adds}
+  >     HG: dels={file_dels}
   >     HG: files={files}
   >     HG:
   >     {splitlines(diff()) % 'HG: {line}\n'
   >    }HG:
+  >     HG: mods={file_mods}
+  >     HG: adds={file_adds}
+  >     HG: dels={file_dels}
   >     HG: files={files}\n
   > EOF
   $ hg status -amr
@@ -453,6 +459,9 @@ specific template keywords work well
   R removed
   $ HGEDITOR=cat hg commit -q -e -m "foo bar" changed
   foo bar
+  HG: mods=changed
+  HG: adds=
+  HG: dels=
   HG: files=changed
   HG:
   HG: --- a/changed	Thu Jan 01 00:00:00 1970 +0000
@@ -461,6 +470,9 @@ specific template keywords work well
   HG:  changed
   HG: +changed
   HG:
+  HG: mods=changed
+  HG: adds=
+  HG: dels=
   HG: files=changed
   $ hg status -amr
   A added
@@ -474,25 +486,43 @@ specific template keywords work well
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset = {desc}
+  >     HG: mods={file_mods}
+  >     HG: adds={file_adds}
+  >     HG: dels={file_dels}
   >     HG: files={files}
   >     HG:
   >     {splitlines(diff("changed")) % 'HG: {line}\n'
   >    }HG:
+  >     HG: mods={file_mods}
+  >     HG: adds={file_adds}
+  >     HG: dels={file_dels}
   >     HG: files={files}
   >     HG:
   >     {splitlines(diff("added")) % 'HG: {line}\n'
   >    }HG:
+  >     HG: mods={file_mods}
+  >     HG: adds={file_adds}
+  >     HG: dels={file_dels}
   >     HG: files={files}
   >     HG:
   >     {splitlines(diff("removed")) % 'HG: {line}\n'
   >    }HG:
+  >     HG: mods={file_mods}
+  >     HG: adds={file_adds}
+  >     HG: dels={file_dels}
   >     HG: files={files}\n
   > EOF
   $ HGEDITOR=cat hg commit -q -e -m "foo bar" added removed
   foo bar
+  HG: mods=
+  HG: adds=added
+  HG: dels=removed
   HG: files=added removed
   HG:
   HG:
+  HG: mods=
+  HG: adds=added
+  HG: dels=removed
   HG: files=added removed
   HG:
   HG: --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
@@ -500,6 +530,9 @@ specific template keywords work well
   HG: @@ -0,0 +1,1 @@
   HG: +added
   HG:
+  HG: mods=
+  HG: adds=added
+  HG: dels=removed
   HG: files=added removed
   HG:
   HG: --- a/removed	Thu Jan 01 00:00:00 1970 +0000
@@ -507,6 +540,9 @@ specific template keywords work well
   HG: @@ -1,1 +0,0 @@
   HG: -removed
   HG:
+  HG: mods=
+  HG: adds=added
+  HG: dels=removed
   HG: files=added removed
   $ hg status -amr
   M changed
