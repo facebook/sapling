@@ -944,6 +944,25 @@ Test collapse = True
 
 Test intermediate directories
 
+Hide the subrepo parent
+
+  $ cp $root/notrepo/f/.hg/hgrc $root/notrepo/f/.hg/hgrc.bak
+  $ cat >> $root/notrepo/f/.hg/hgrc << EOF
+  > [web]
+  > hidden = True
+  > EOF
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 'rcoll/notrepo/?style=raw'
+  200 Script output follows
+  
+  
+  /rcoll/notrepo/e/
+  /rcoll/notrepo/e/e2/
+  
+
+Subrepo parent not hidden
+  $ mv $root/notrepo/f/.hg/hgrc.bak $root/notrepo/f/.hg/hgrc
+
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 'rcoll/notrepo/?style=raw'
   200 Script output follows
   
