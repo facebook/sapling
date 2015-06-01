@@ -356,6 +356,7 @@ class hgwebdir(object):
 
                 contact = get_contact(get)
                 description = get("web", "description", "")
+                seenrepos.add(name)
                 name = get("web", "name", name)
                 row = {'contact': contact or "unknown",
                        'contact_sort': contact.upper() or "unknown",
@@ -370,7 +371,6 @@ class hgwebdir(object):
                        'isdirectory': None,
                        }
 
-                seenrepos.add(name)
                 yield row
 
         sortdefault = None, False

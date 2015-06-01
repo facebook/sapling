@@ -56,6 +56,13 @@ create a subdirectory containing repositories and subrepositories
   $ echo f2 > f/f2/f2
   $ hg --cwd f/f2 ci -Amf2 -d '4 0'
   adding f2
+  $ echo 'f2 = f2' > f/.hgsub
+  $ hg -R f ci -Am 'add subrepo' -d'4 0'
+  adding .hgsub
+  $ cat >> f/.hg/hgrc << EOF
+  > [web]
+  > name = fancy name for repo f
+  > EOF
   $ cd ..
 
 create repository without .hg/store
@@ -305,7 +312,7 @@ should succeed, slashy names
   </tr>
   
   <tr>
-  <td><a href="/coll/notrepo/f/?style=paper">coll/notrepo/f</a></td>
+  <td><a href="/coll/notrepo/f/?style=paper">fancy name for repo f</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
@@ -409,7 +416,7 @@ should succeed, slashy names
   </tr>
   
   <tr>
-  <td><a href="/rcoll/notrepo/f/?style=paper">rcoll/notrepo/f</a></td>
+  <td><a href="/rcoll/notrepo/f/?style=paper">fancy name for repo f</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
@@ -500,7 +507,7 @@ should succeed, slashy names
   </tr>
   
   <tr>
-  <td><a href="/star/webdir/notrepo/f/?style=paper">star/webdir/notrepo/f</a></td>
+  <td><a href="/star/webdir/notrepo/f/?style=paper">fancy name for repo f</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
@@ -604,7 +611,7 @@ should succeed, slashy names
   </tr>
   
   <tr>
-  <td><a href="/starstar/webdir/notrepo/f/?style=paper">starstar/webdir/notrepo/f</a></td>
+  <td><a href="/starstar/webdir/notrepo/f/?style=paper">fancy name for repo f</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
@@ -900,6 +907,7 @@ Test collapse = True
   $ cat >> paths.conf <<EOF
   > [web]
   > collapse=true
+  > descend = true
   > EOF
   $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
   >     -A access-paths.log -E error-paths-3.log
