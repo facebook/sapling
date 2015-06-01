@@ -203,11 +203,12 @@ def unescapearg(escaped):
 #
 # :nodes: list of binary nodes
 # :csv:   list of comma-separated values
+# :scsv:  list of comma-separated values return as set
 # :plain: string with no transformation needed.
 gboptsmap = {'heads':  'nodes',
              'common': 'nodes',
              'obsmarkers': 'boolean',
-             'bundlecaps': 'csv',
+             'bundlecaps': 'scsv',
              'listkeys': 'csv',
              'cg': 'boolean'}
 
@@ -360,7 +361,7 @@ class wirepeer(peer.peerrepository):
                 assert False, 'unexpected'
             elif keytype == 'nodes':
                 value = encodelist(value)
-            elif keytype == 'csv':
+            elif keytype in ('csv', 'scsv'):
                 value = ','.join(value)
             elif keytype == 'boolean':
                 value = '%i' % bool(value)
@@ -665,6 +666,8 @@ def getbundle(repo, proto, others):
         if keytype == 'nodes':
             opts[k] = decodelist(v)
         elif keytype == 'csv':
+            opts[k] = list(v.split(','))
+        elif keytype == 'scsv':
             opts[k] = set(v.split(','))
         elif keytype == 'boolean':
             opts[k] = bool(v)

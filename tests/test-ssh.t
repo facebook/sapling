@@ -466,8 +466,8 @@ debug output
   sending getbundle command
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
-  bundle2-input-part: total payload size 45
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
+  bundle2-input-part: total payload size 45
   bundle2-input-bundle: 1 parts total
   checking for updated bookmarks
   preparing listkeys for "phases"
