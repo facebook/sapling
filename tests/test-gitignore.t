@@ -1,5 +1,4 @@
   $ python -c 'from mercurial.dirstate import rootcache' || exit 80
-  $ python -c 'from mercurial.ignore import readpats' || exit 80
 
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
