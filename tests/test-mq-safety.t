@@ -25,17 +25,17 @@ Try to operate on public mq changeset
   $ hg phase --public qbase
   $ echo babar >> foo
   $ hg qref
-  abort: cannot refresh immutable revision
+  abort: cannot refresh public revision
   (see "hg help phases" for details)
   [255]
   $ hg revert -a
   reverting foo
   $ hg qpop
-  abort: popping would remove an immutable revision
+  abort: popping would remove a public revision
   (see "hg help phases" for details)
   [255]
   $ hg qfold bar
-  abort: cannot refresh immutable revision
+  abort: cannot refresh public revision
   (see "hg help phases" for details)
   [255]
   $ hg revert -a

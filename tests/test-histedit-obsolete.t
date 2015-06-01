@@ -219,7 +219,7 @@ Check that histedit respect immutability
   o  0:cb9a9f314b8b (public) a
   
   $ hg histedit -r '.~2'
-  abort: cannot edit immutable changeset: cb9a9f314b8b
+  abort: cannot edit public changeset: cb9a9f314b8b
   [255]
 
 

@@ -330,7 +330,7 @@ def rebase(ui, repo, **opts):
 
             root = min(rebaseset)
             if not keepf and not repo[root].mutable():
-                raise util.Abort(_("can't rebase immutable changeset %s")
+                raise util.Abort(_("can't rebase public changeset %s")
                                  % repo[root],
                                  hint=_('see "hg help phases" for details'))
 
@@ -869,7 +869,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
     immutable = [d for d in dstates if not repo[d].mutable()]
     cleanup = True
     if immutable:
-        repo.ui.warn(_("warning: can't clean up immutable changesets %s\n")
+        repo.ui.warn(_("warning: can't clean up public changesets %s\n")
                      % ', '.join(str(repo[r]) for r in immutable),
                      hint=_('see "hg help phases" for details'))
         cleanup = False

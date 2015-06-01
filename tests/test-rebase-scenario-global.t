@@ -308,7 +308,7 @@ Check rebasing public changeset
   nothing to rebase
   [1]
   $ hg rebase -d 5 -b 6
-  abort: can't rebase immutable changeset e1c4361dd923
+  abort: can't rebase public changeset e1c4361dd923
   (see "hg help phases" for details)
   [255]
 

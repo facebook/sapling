@@ -258,7 +258,7 @@ Change phase on B and B'
 Abort the rebasing:
 
   $ hg rebase --abort
-  warning: can't clean up immutable changesets 45396c49d53b
+  warning: can't clean up public changesets 45396c49d53b
   rebase aborted
 
   $ hg tglogp

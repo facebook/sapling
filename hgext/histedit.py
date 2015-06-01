@@ -928,7 +928,7 @@ def between(repo, old, new, keep):
             raise util.Abort(_('cannot edit history that contains merges'))
         root = ctxs[0] # list is already sorted by repo.set
         if not root.mutable():
-            raise util.Abort(_('cannot edit immutable changeset: %s') % root)
+            raise util.Abort(_('cannot edit public changeset: %s') % root)
     return [c.node() for c in ctxs]
 
 def makedesc(repo, action, rev):

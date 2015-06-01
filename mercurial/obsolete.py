@@ -1214,7 +1214,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
                 localmetadata.update(rel[2])
 
             if not prec.mutable():
-                raise util.Abort("cannot obsolete immutable changeset: %s"
+                raise util.Abort("cannot obsolete public changeset: %s"
                                  % prec)
             nprec = prec.node()
             nsucs = tuple(s.node() for s in sucs)
