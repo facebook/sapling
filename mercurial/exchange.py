@@ -1006,7 +1006,11 @@ def _pullbundle2(pullop):
     kwargs['heads'] = pullop.heads or pullop.rheads
     kwargs['cg'] = pullop.fetch
     if 'listkeys' in remotecaps:
-        kwargs['listkeys'] = ['phase', 'bookmarks']
+        kwargs['listkeys'] = ['phase']
+        if pullop.remotebookmarks is None:
+            # make sure to always includes bookmark data when migrating
+            # `hg incoming --bundle` to using this function.
+            kwargs['listkeys'].append('bookmarks')
     if not pullop.fetch:
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
@@ -1038,7 +1042,10 @@ def _pullbundle2(pullop):
     for namespace, value in op.records['listkeys']:
         if namespace == 'bookmarks':
             pullop.remotebookmarks = value
-            _pullbookmarks(pullop)
+
+    # bookmark data were either already there or pulled in the bundle
+    if pullop.remotebookmarks is not None:
+        _pullbookmarks(pullop)
 
 def _pullbundle2extraprepare(pullop, kwargs):
     """hook function so that extensions can extend the getbundle call"""
