@@ -156,7 +156,7 @@ import pushkey
 import url
 import re
 
-import changegroup, error
+import changegroup, error, tags
 from i18n import _
 
 _pack = struct.pack
@@ -1110,6 +1110,7 @@ capabilities = {'HG20': (),
                 'pushkey': (),
                 'digests': tuple(sorted(util.DIGESTS.keys())),
                 'remote-changegroup': ('http', 'https'),
+                'hgtagsfnodes': (),
                }
 
 def getrepocaps(repo, allowpushback=False):
@@ -1360,3 +1361,24 @@ def handlepushkeyreply(op, inpart):
     ret = int(inpart.params['new'])
     partid = int(inpart.params['in-reply-to'])
     op.records.add('obsmarkers', {'new': ret}, partid)
+
+@parthandler('hgtagsfnodes')
+def handlehgtagsfnodes(op, inpart):
+    """Applies .hgtags fnodes cache entries to the local repo.
+
+    Payload is pairs of 20 byte changeset nodes and filenodes.
+    """
+    cache = tags.hgtagsfnodescache(op.repo.unfiltered())
+
+    count = 0
+    while True:
+        node = inpart.read(20)
+        fnode = inpart.read(20)
+        if len(node) < 20 or len(fnode) < 20:
+            op.ui.debug('received incomplete .hgtags fnodes data, ignoring\n')
+            break
+        cache.setfnode(node, fnode)
+        count += 1
+
+    cache.write()
+    op.ui.debug('applied %i hgtags fnodes cache entries\n' % count)
