@@ -153,6 +153,10 @@ indexformatng = ">Qiiiiii20s12x"
 ngshaoffset = 32
 versionformat = ">I"
 
+# corresponds to uncompressed length of indexformatng (2 gigs, 4-byte
+# signed integer)
+_maxentrysize = 0x7fffffff
+
 class revlogio(object):
     def __init__(self):
         self.size = struct.calcsize(indexformatng)
@@ -163,6 +167,12 @@ class revlogio(object):
         return index, getattr(index, 'nodemap', None), cache
 
     def packentry(self, entry, node, version, rev):
+        uncompressedlength = entry[2]
+        if uncompressedlength > _maxentrysize:
+            raise RevlogError(
+                _("size of %d bytes exceeds maximum revlog storage of 2GiB")
+                % uncompressedlength)
+
         p = _pack(indexformatng, *entry)
         if rev == 0:
             p = _pack(versionformat, version) + p[4:]
