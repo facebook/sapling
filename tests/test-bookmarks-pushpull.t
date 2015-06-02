@@ -263,7 +263,14 @@ update a bookmark in the middle of a client pulling changes
 
   $ cd ..
   $ hg clone -q a pull-race
-  $ hg clone -q pull-race pull-race2
+
+We want to use http because it is stateless and therefore more susceptible to
+race conditions
+
+  $ hg -R pull-race serve -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
+  $ cat pull-race.pid >> $DAEMON_PIDS
+
+  $ hg clone -q http://localhost:$HGPORT/ pull-race2
   $ cd pull-race
   $ hg up -q Y
   $ echo c4 > f2
@@ -273,17 +280,22 @@ update a bookmark in the middle of a client pulling changes
   > [hooks]
   > outgoing.makecommit = hg ci -Am5; echo committed in pull-race
   > EOF
-  $ cd ../pull-race2
+
+(new config needs a server restart)
+
+  $ cd ..
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg -R pull-race serve -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
+  $ cat pull-race.pid >> $DAEMON_PIDS
+  $ cd pull-race2
   $ hg -R $TESTTMP/pull-race book
      @                         1:0d2164f0ce0d
      X                         1:0d2164f0ce0d
    * Y                         4:b0a5eff05604
      Z                         1:0d2164f0ce0d
   $ hg pull
-  pulling from $TESTTMP/pull-race (glob)
+  pulling from http://localhost:$HGPORT/
   searching for changes
-  adding f3
-  committed in pull-race
   adding changesets
   adding manifests
   adding file changes
@@ -295,6 +307,10 @@ update a bookmark in the middle of a client pulling changes
      X                         1:0d2164f0ce0d
      Y                         4:b0a5eff05604
      Z                         1:0d2164f0ce0d
+
+(done with this section of the test)
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cd ../b
 
 diverging a remote bookmark fails
