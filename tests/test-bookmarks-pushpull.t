@@ -274,6 +274,11 @@ update a bookmark in the middle of a client pulling changes
   > outgoing.makecommit = hg ci -Am5; echo committed in pull-race
   > EOF
   $ cd ../pull-race2
+  $ hg -R $TESTTMP/pull-race book
+     @                         1:0d2164f0ce0d
+     X                         1:0d2164f0ce0d
+   * Y                         4:b0a5eff05604
+     Z                         1:0d2164f0ce0d
   $ hg pull
   pulling from $TESTTMP/pull-race (glob)
   searching for changes
