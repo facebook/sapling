@@ -886,8 +886,11 @@ class transactionmanager(object):
         if self._tr is not None:
             self._tr.release()
 
-def pull(repo, remote, heads=None, force=False, bookmarks=()):
-    pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks)
+def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None):
+    if opargs is None:
+        opargs = {}
+    pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks,
+                           **opargs)
     if pullop.remote.local():
         missing = set(pullop.remote.requirements) - pullop.repo.supported
         if missing:

@@ -5120,6 +5120,7 @@ def pull(ui, repo, source="default", **opts):
                                           opts.get('rev'))
 
 
+        pullopargs = {}
         if opts.get('bookmark'):
             if not revs:
                 revs = []
@@ -5152,7 +5153,8 @@ def pull(ui, repo, source="default", **opts):
 
         modheads = exchange.pull(repo, other, heads=revs,
                                  force=opts.get('force'),
-                                 bookmarks=opts.get('bookmark', ())).cgresult
+                                 bookmarks=opts.get('bookmark', ()),
+                                 opargs=pullopargs).cgresult
         if checkout:
             checkout = str(repo.changelog.rev(checkout))
         repo._subtoppath = source
