@@ -325,9 +325,9 @@ Test files from the root.
 Excludes with a glob should not exclude everything from the glob's root
 
   $ hg files -r . -X 'b/fo?' b
-  b/bar/fruits.txt
-  b/bar/orange/fly/gnat.py
-  b/bar/orange/fly/housefly.txt
+  b/bar/fruits.txt (glob)
+  b/bar/orange/fly/gnat.py (glob)
+  b/bar/orange/fly/housefly.txt (glob)
 
 Test files for a subdirectory.
 
