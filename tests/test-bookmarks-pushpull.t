@@ -308,6 +308,43 @@ race conditions
      Y                         4:b0a5eff05604
      Z                         1:0d2164f0ce0d
 
+Update a bookmark right after the initial lookup -B (issue4689)
+
+  $ echo c6 > ../pull-race/f3 # to be committed during the race
+  $ cat <<EOF > ../pull-race/.hg/hgrc
+  > [hooks]
+  > # If anything to commit, commit it right after the first key listing used
+  > # during lookup. This makes the commit appear before the actual getbundle
+  > # call.
+  > listkeys.makecommit= ((hg st | grep -q M) && (hg commit -m race; echo commited in pull-race)) || exit 0
+  > EOF
+
+(new config need server restart)
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ hg -R ../pull-race serve -p $HGPORT -d --pid-file=../pull-race.pid -E main-error.log
+  $ cat ../pull-race.pid >> $DAEMON_PIDS
+
+  $ hg -R $TESTTMP/pull-race book
+     @                         1:0d2164f0ce0d
+     X                         1:0d2164f0ce0d
+   * Y                         5:35d1ef0a8d1b
+     Z                         1:0d2164f0ce0d
+  $ hg pull -B Y
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark Y
+  (run 'hg update' to get a working copy)
+  $ hg book
+   * @                         1:0d2164f0ce0d
+     X                         1:0d2164f0ce0d
+     Y                         5:35d1ef0a8d1b
+     Z                         1:0d2164f0ce0d
+
 (done with this section of the test)
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS

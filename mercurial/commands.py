@@ -5129,6 +5129,7 @@ def pull(ui, repo, source="default", **opts):
             # not ending up with the name of the bookmark because of a race
             # condition on the server. (See issue 4689 for details)
             remotebookmarks = other.listkeys('bookmarks')
+            pullopargs['remotebookmarks'] = remotebookmarks
             for b in opts['bookmark']:
                 if b not in remotebookmarks:
                     raise util.Abort(_('remote bookmark %s not found!') % b)

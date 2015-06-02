@@ -808,7 +808,8 @@ class pulloperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote, heads=None, force=False, bookmarks=()):
+    def __init__(self, repo, remote, heads=None, force=False, bookmarks=(),
+                 remotebookmarks=None):
         # repo we pull into
         self.repo = repo
         # repo we pull from
@@ -828,7 +829,7 @@ class pulloperation(object):
         # list of missing changeset to fetch remotely
         self.fetch = None
         # remote bookmarks data
-        self.remotebookmarks = None
+        self.remotebookmarks = remotebookmarks
         # result of changegroup pulling (used as return code by pull)
         self.cgresult = None
         # list of step already done
