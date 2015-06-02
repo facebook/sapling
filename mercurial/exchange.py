@@ -949,6 +949,8 @@ def _pullbookmarkbundle1(pullop):
 
     If not using bundle2, we have to fetch bookmarks before changeset
     discovery to reduce the chance and impact of race conditions."""
+    if pullop.remotebookmarks is not None:
+        return
     if not _canusebundle2(pullop): # all bundle2 server now support listkeys
         pullop.remotebookmarks = pullop.remote.listkeys('bookmarks')
 
