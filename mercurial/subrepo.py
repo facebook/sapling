@@ -340,6 +340,25 @@ def subrepo(ctx, path):
         raise util.Abort(_('unknown subrepo type %s') % state[2])
     return types[state[2]](ctx, path, state[:2])
 
+def nullsubrepo(ctx, path, pctx):
+    """return an empty subrepo in pctx for the extant subrepo in ctx"""
+    # subrepo inherently violates our import layering rules
+    # because it wants to make repo objects from deep inside the stack
+    # so we manually delay the circular imports to not break
+    # scripts that don't use our demand-loading
+    global hg
+    import hg as h
+    hg = h
+
+    pathutil.pathauditor(ctx.repo().root)(path)
+    state = ctx.substate[path]
+    if state[2] not in types:
+        raise util.Abort(_('unknown subrepo type %s') % state[2])
+    subrev = ''
+    if state[2] == 'hg':
+        subrev = "0" * 40
+    return types[state[2]](pctx, path, (state[0], subrev))
+
 def newcommitphase(ui, ctx):
     commitphase = phases.newcommitphase(ui)
     substate = getattr(ctx, "substate", None)
