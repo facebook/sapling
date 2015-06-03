@@ -251,6 +251,9 @@ class basectx(object):
     def sub(self, path):
         return subrepo.subrepo(self, path)
 
+    def nullsub(self, path, pctx):
+        return subrepo.nullsubrepo(self, path, pctx)
+
     def match(self, pats=[], include=None, exclude=None, default='glob',
               listsubrepos=False):
         r = self._repo
