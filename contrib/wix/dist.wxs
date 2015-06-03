@@ -7,24 +7,28 @@
   <Fragment>
     <DirectoryRef Id="INSTALLDIR" FileSource="$(var.SourceDir)">
       <Component Id="distOutput" Guid="$(var.dist.guid)" Win64='$(var.IsX64)'>
-        <File Name="library.zip" KeyPath="yes" />
-        <File Name="mercurial.base85.pyd" />
-        <File Name="mercurial.bdiff.pyd" />
-        <File Name="mercurial.diffhelpers.pyd" />
-        <File Name="mercurial.mpatch.pyd" />
-        <File Name="mercurial.osutil.pyd" />
-        <File Name="mercurial.parsers.pyd" />
-        <File Name="pyexpat.pyd" />
-        <File Name="python27.dll" />
-        <File Name="bz2.pyd" />
-        <File Name="select.pyd" />
-        <File Name="unicodedata.pyd" />
-        <File Name="_ctypes.pyd" />
-        <File Name="_elementtree.pyd" />
-        <File Name="_hashlib.pyd" />
-        <File Name="_socket.pyd" />
-        <File Name="_ssl.pyd" />
+        <File Name="python27.dll" KeyPath="yes" />
       </Component>
+      <Directory Id="libdir" Name="lib" FileSource="$(var.SourceDir)/lib">
+        <Component Id="libOutput" Guid="$(var.lib.guid)" Win64='$(var.IsX64)'>
+          <File Name="library.zip" KeyPath="yes" />
+          <File Name="mercurial.base85.pyd" />
+          <File Name="mercurial.bdiff.pyd" />
+          <File Name="mercurial.diffhelpers.pyd" />
+          <File Name="mercurial.mpatch.pyd" />
+          <File Name="mercurial.osutil.pyd" />
+          <File Name="mercurial.parsers.pyd" />
+          <File Name="pyexpat.pyd" />
+          <File Name="bz2.pyd" />
+          <File Name="select.pyd" />
+          <File Name="unicodedata.pyd" />
+          <File Name="_ctypes.pyd" />
+          <File Name="_elementtree.pyd" />
+          <File Name="_hashlib.pyd" />
+          <File Name="_socket.pyd" />
+          <File Name="_ssl.pyd" />
+        </Component>
+      </Directory>
     </DirectoryRef>
   </Fragment>
 

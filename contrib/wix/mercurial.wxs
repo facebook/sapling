@@ -118,6 +118,7 @@
              Level='1' Absent='disallow' >
         <ComponentRef Id='MainExecutable' />
         <ComponentRef Id='distOutput' />
+        <ComponentRef Id='libOutput' />
         <ComponentRef Id='ProgramMenuDir' />
         <ComponentRef Id='ReadMe' />
         <ComponentRef Id='COPYING' />

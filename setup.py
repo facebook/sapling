@@ -557,6 +557,8 @@ if py2exeloaded:
          'product_version':version}]
     # sub command of 'build' because 'py2exe' does not handle sub_commands
     build.sub_commands.insert(0, ('build_hgextindex', None))
+    # put dlls in sub directory so that they won't pollute PATH
+    extra['zipfile'] = 'lib/library.zip'
 
 if os.name == 'nt':
     # Windows binary file versions for exe/dll files must have the
