@@ -106,6 +106,7 @@ handle subrepos safely on qnew
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
+  A sub/a
   % qnew -X path:no-effect -m0 0.diff
   path sub
    source   sub
@@ -121,6 +122,7 @@ handle subrepos safely on qnew
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
+  A sub2/a
   % qnew --cwd .. -R repo-2499-qnew -X path:no-effect -m1 1.diff
   path sub
    source   sub
@@ -165,6 +167,7 @@ handle subrepos safely on qrefresh
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
+  A sub/a
   % qrefresh
   path sub
    source   sub
@@ -181,6 +184,7 @@ handle subrepos safely on qrefresh
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
+  A sub2/a
   % qrefresh
   path sub
    source   sub
@@ -304,6 +308,7 @@ handle subrepos safely on qrecord
   [255]
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
+  A sub/a
   % qrecord --config ui.interactive=1 -m0 0.diff
   diff --git a/.hgsub b/.hgsub
   new file mode 100644
@@ -339,6 +344,7 @@ handle subrepos safely on qrecord
   [255]
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
+  A sub2/a
   % qrecord --config ui.interactive=1 -m1 1.diff
   diff --git a/.hgsub b/.hgsub
   1 hunks, 1 lines changed

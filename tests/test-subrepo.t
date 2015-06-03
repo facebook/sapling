@@ -1703,4 +1703,37 @@ Test that '[paths]' is configured correctly at subrepo creation
   [paths]
   default = $TESTTMP/t/t
   default-push = /foo/bar/t
+
+  $ cd $TESTTMP/t
+  $ hg up -qC 0
+  $ echo 'bar' > bar.txt
+  $ hg ci -Am 'branch before subrepo add'
+  adding bar.txt
+  created new head
+  $ hg merge -r "first(subrepo('s'))"
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg status -S -X '.hgsub*'
+  A s/a
+  ? s/b
+  ? s/c
+  ? s/f1
+  $ hg status -S --rev 'p2()'
+  A bar.txt
+  ? s/b
+  ? s/c
+  ? s/f1
+  $ hg diff -S -X '.hgsub*' --nodates
+  diff -r 000000000000 s/a
+  --- /dev/null
+  +++ b/s/a
+  @@ -0,0 +1,1 @@
+  +a
+  $ hg diff -S --rev 'p2()' --nodates
+  diff -r 7cf8cfea66e4 bar.txt
+  --- /dev/null
+  +++ b/bar.txt
+  @@ -0,0 +1,1 @@
+  +bar
+
   $ cd ..

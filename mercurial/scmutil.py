@@ -80,8 +80,23 @@ def itersubrepos(ctx1, ctx2):
     # has been modified (in ctx2) but not yet committed (in ctx1).
     subpaths = dict.fromkeys(ctx2.substate, ctx2)
     subpaths.update(dict.fromkeys(ctx1.substate, ctx1))
+
+    missing = set()
+
+    for subpath in ctx2.substate:
+        if subpath not in ctx1.substate:
+            del subpaths[subpath]
+            missing.add(subpath)
+
     for subpath, ctx in sorted(subpaths.iteritems()):
         yield subpath, ctx.sub(subpath)
+
+    # Yield an empty subrepo based on ctx1 for anything only in ctx2.  That way,
+    # status and diff will have an accurate result when it does
+    # 'sub.{status|diff}(rev2)'.  Otherwise, the ctx2 subrepo is compared
+    # against itself.
+    for subpath in missing:
+        yield subpath, ctx2.nullsub(subpath, ctx1)
 
 def nochangesfound(ui, repo, excluded=None):
     '''Report no changes for push/pull, excluded is None or a list of
