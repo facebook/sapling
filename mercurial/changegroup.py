@@ -615,7 +615,7 @@ def getlocalchangegroup(repo, source, outgoing, bundlecaps=None):
     bundler = cg1packer(repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
-def _computeoutgoing(repo, heads, common):
+def computeoutgoing(repo, heads, common):
     """Computes which revs are outgoing given a set of common
     and a set of heads.
 
@@ -646,7 +646,7 @@ def getchangegroupraw(repo, source, heads=None, common=None, bundlecaps=None,
     The nodes in common might not all be known locally due to the way the
     current discovery protocol works. Returns a raw changegroup generator.
     """
-    outgoing = _computeoutgoing(repo, heads, common)
+    outgoing = computeoutgoing(repo, heads, common)
     return getlocalchangegroupraw(repo, source, outgoing, bundlecaps=bundlecaps,
                                   version=version)
 
@@ -659,7 +659,7 @@ def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None):
     The nodes in common might not all be known locally due to the way the
     current discovery protocol works.
     """
-    outgoing = _computeoutgoing(repo, heads, common)
+    outgoing = computeoutgoing(repo, heads, common)
     return getlocalchangegroup(repo, source, outgoing, bundlecaps=bundlecaps)
 
 def changegroup(repo, basenodes, source):
