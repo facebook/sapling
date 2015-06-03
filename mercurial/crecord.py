@@ -1554,6 +1554,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.togglefolded(foldparent=True)
         elif keypressed in ["?"]:
             self.helpwindow()
+            self.stdscr.clear()
+            self.stdscr.refresh()
 
     def main(self, stdscr):
         """
