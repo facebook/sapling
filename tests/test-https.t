@@ -346,7 +346,7 @@ Test https with cert problems through proxy
   [255]
 
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ "$TESTDIR/killdaemons.py" hg0.pid
 
 #if sslcontext
 
