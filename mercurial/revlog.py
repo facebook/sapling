@@ -167,12 +167,6 @@ class revlogio(object):
         return index, getattr(index, 'nodemap', None), cache
 
     def packentry(self, entry, node, version, rev):
-        uncompressedlength = entry[2]
-        if uncompressedlength > _maxentrysize:
-            raise RevlogError(
-                _("size of %d bytes exceeds maximum revlog storage of 2GiB")
-                % uncompressedlength)
-
         p = _pack(indexformatng, *entry)
         if rev == 0:
             p = _pack(versionformat, version) + p[4:]
@@ -1190,6 +1184,12 @@ class revlog(object):
         if link == nullrev:
             raise RevlogError(_("attempted to add linkrev -1 to %s")
                               % self.indexfile)
+
+        if len(text) > _maxentrysize:
+            raise RevlogError(
+                _("%s: size of %d bytes exceeds maximum revlog storage of 2GiB")
+                % (self.indexfile, len(text)))
+
         node = node or self.hash(text, p1, p2)
         if node in self.nodemap:
             return node
