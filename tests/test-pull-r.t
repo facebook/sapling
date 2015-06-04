@@ -101,4 +101,44 @@ This used to abort: received changelog group is empty:
 
   $ hg pull -qr 1 ../repo
 
+Test race condition with -r and -U (issue4707)
+
+We pull '-U -r <name>' and the name change right after/during the changegroup emission.
+We use http because http is better is our racy-est option.
+
+
+  $ echo babar > ../repo/jungle
+  $ cat <<EOF > ../repo/.hg/hgrc
+  > [hooks]
+  > outgoing.makecommit = hg ci -Am 'racy commit'; echo committed in pull-race
+  > EOF
+  $ hg -R ../repo serve -p $HGPORT2 -d --pid-file=../repo.pid
+  $ cat ../repo.pid >> $DAEMON_PIDS
+  $ hg pull --rev default --update http://localhost:$HGPORT2/
+  pulling from http://localhost:$HGPORT2/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G
+  @  changeset:   2:effea6de0384
+  |  tag:         tip
+  |  parent:      0:bbd179dfa0a7
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add bar
+  |
+  | o  changeset:   1:ed1b79f46b9a
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     change foo
+  |
+  o  changeset:   0:bbd179dfa0a7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add foo
+  
+
   $ cd ..

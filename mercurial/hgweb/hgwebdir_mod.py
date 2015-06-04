@@ -291,6 +291,12 @@ class hgwebdir(object):
                         # remove name parts plus accompanying slash
                         path = path[:-len(discarded) - 1]
 
+                        try:
+                            r = hg.repository(self.ui, path)
+                            directory = False
+                        except (IOError, error.RepoError):
+                            pass
+
                 parts = [name]
                 if 'PATH_INFO' in req.env:
                     parts.insert(0, req.env['PATH_INFO'].rstrip('/'))

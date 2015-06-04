@@ -5138,7 +5138,13 @@ def pull(ui, repo, source="default", **opts):
                 # When 'rev' is a bookmark name, we cannot guarantee that it
                 # will be updated with that name because of a race condition
                 # server side. (See issue 4689 for details)
-                revs = [other.lookup(rev) for rev in revs]
+                oldrevs = revs
+                revs = [] # actually, nodes
+                for r in oldrevs:
+                    node = other.lookup(r)
+                    revs.append(node)
+                    if r == checkout:
+                        checkout = node
             except error.CapabilityError:
                 err = _("other repository doesn't support revision lookup, "
                         "so a rev cannot be specified.")
@@ -5148,7 +5154,7 @@ def pull(ui, repo, source="default", **opts):
                                  force=opts.get('force'),
                                  bookmarks=opts.get('bookmark', ())).cgresult
         if checkout:
-            checkout = str(repo.changelog.rev(other.lookup(checkout)))
+            checkout = str(repo.changelog.rev(checkout))
         repo._subtoppath = source
         try:
             ret = postincoming(ui, repo, modheads, opts.get('update'), checkout)
