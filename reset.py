@@ -195,9 +195,10 @@ def _moveto(repo, bookmark, ctx, clean=False):
         dirchanges = [f for f in dirstate if dirstate[f] != 'n']
         changedfiles.extend(dirchanges)
 
-        dirstate.beginparentchange()
-        dirstate.rebuild(ctx.node(), m2, changedfiles)
-        dirstate.endparentchange()
+        if changedfiles or ctx.node() != repo['.'].node():
+            dirstate.beginparentchange()
+            dirstate.rebuild(ctx.node(), m2, changedfiles)
+            dirstate.endparentchange()
 
     # Move bookmark over
     if bookmark:

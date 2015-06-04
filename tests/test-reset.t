@@ -192,3 +192,14 @@ Reset touches commits to revive
   |
   o  0
   
+Reset to the commit your on is a no-op
+  $ hg status
+  $ hg log -r . -T '{rev}\n'
+  4
+  $ hg reset .
+  $ hg log -r . -T '{rev}\n'
+  4
+  $ hg debugdirstate
+  n 644          0 2015-06-04 22:28:59 a
+  n 644          0 2015-06-04 22:28:59 tobeadded
+  n 644          4 2015-06-04 22:28:59 x
