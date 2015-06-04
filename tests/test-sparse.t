@@ -312,3 +312,17 @@ Test that add -s adds dirs to sparse profile
   [exclude]
   
   
+
+  $ cd ..
+
+Test non-sparse repos work while sparse is loaded
+  $ hg init sparserepo
+  $ hg init nonsparserepo
+  $ cd sparserepo
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > sparse=$(dirname $TESTDIR)/sparse.py
+  > EOF
+  $ hg clone ../nonsparserepo ../nonsparserepo2
+  updating to branch default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved

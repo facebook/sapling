@@ -169,7 +169,7 @@ def _setupupdates(ui):
 
         # If we're updating to a location, clean up any stale temporary includes
         # (ex: this happens during hg rebase --abort).
-        if not branchmerge:
+        if not branchmerge and util.safehasattr(repo, 'sparsematch'):
             repo.prunetemporaryincludes()
         return results
 
@@ -181,14 +181,15 @@ def _setupcommit(ui):
         """
         orig(self, node)
         repo = self._repo
-        ctx = repo[node]
-        _, _, profiles = repo.getsparsepatterns(ctx.rev())
-        if set(profiles) & set(ctx.files()):
-            origstatus = repo.status()
-            origsparsematch = repo.sparsematch()
-            _refresh(repo.ui, repo, origstatus, origsparsematch, True)
+        if util.safehasattr(repo, 'sparsematch'):
+            ctx = repo[node]
+            _, _, profiles = repo.getsparsepatterns(ctx.rev())
+            if set(profiles) & set(ctx.files()):
+                origstatus = repo.status()
+                origsparsematch = repo.sparsematch()
+                _refresh(repo.ui, repo, origstatus, origsparsematch, True)
 
-        repo.prunetemporaryincludes()
+            repo.prunetemporaryincludes()
 
     extensions.wrapfunction(context.committablectx, 'markcommitted',
         _refreshoncommit)
