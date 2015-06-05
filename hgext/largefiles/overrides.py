@@ -100,10 +100,10 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
             lfmatcher = match_.match(repo.root, '', list(lfpats))
 
     lfnames = []
-    m = copy.copy(matcher)
-    m.bad = lambda x, y: None
+    m = matcher
+
     wctx = repo[None]
-    for f in repo.walk(m):
+    for f in repo.walk(match_.badmatch(m, lambda x, y: None)):
         exact = m.exact(f)
         lfile = lfutil.standin(f) in wctx
         nfile = f in wctx
