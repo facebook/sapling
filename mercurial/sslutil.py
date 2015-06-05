@@ -12,61 +12,54 @@ from mercurial import util
 from mercurial.i18n import _
 
 _canloaddefaultcerts = False
+CERT_REQUIRED = ssl.CERT_REQUIRED
 try:
-    CERT_REQUIRED = ssl.CERT_REQUIRED
-    try:
-        ssl_context = ssl.SSLContext
-        _canloaddefaultcerts = util.safehasattr(ssl_context,
-                                                'load_default_certs')
+    ssl_context = ssl.SSLContext
+    _canloaddefaultcerts = util.safehasattr(ssl_context, 'load_default_certs')
 
-        def wrapsocket(sock, keyfile, certfile, ui,
-                       cert_reqs=ssl.CERT_NONE,
-                       ca_certs=None, serverhostname=None):
-            # Allow any version of SSL starting with TLSv1 and
-            # up. Note that specifying TLSv1 here prohibits use of
-            # newer standards (like TLSv1_2), so this is the right way
-            # to do this. Note that in the future it'd be better to
-            # support using ssl.create_default_context(), which sets
-            # up a bunch of things in smart ways (strong ciphers,
-            # protocol versions, etc) and is upgraded by Python
-            # maintainers for us, but that breaks too many things to
-            # do it in a hurry.
-            sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-            sslcontext.options &= ssl.OP_NO_SSLv2 & ssl.OP_NO_SSLv3
-            if certfile is not None:
-                def password():
-                    f = keyfile or certfile
-                    return ui.getpass(_('passphrase for %s: ') % f, '')
-                sslcontext.load_cert_chain(certfile, keyfile, password)
-            sslcontext.verify_mode = cert_reqs
-            if ca_certs is not None:
-                sslcontext.load_verify_locations(cafile=ca_certs)
-            elif _canloaddefaultcerts:
-                sslcontext.load_default_certs()
+    def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
+                   ca_certs=None, serverhostname=None):
+        # Allow any version of SSL starting with TLSv1 and
+        # up. Note that specifying TLSv1 here prohibits use of
+        # newer standards (like TLSv1_2), so this is the right way
+        # to do this. Note that in the future it'd be better to
+        # support using ssl.create_default_context(), which sets
+        # up a bunch of things in smart ways (strong ciphers,
+        # protocol versions, etc) and is upgraded by Python
+        # maintainers for us, but that breaks too many things to
+        # do it in a hurry.
+        sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        sslcontext.options &= ssl.OP_NO_SSLv2 & ssl.OP_NO_SSLv3
+        if certfile is not None:
+            def password():
+                f = keyfile or certfile
+                return ui.getpass(_('passphrase for %s: ') % f, '')
+            sslcontext.load_cert_chain(certfile, keyfile, password)
+        sslcontext.verify_mode = cert_reqs
+        if ca_certs is not None:
+            sslcontext.load_verify_locations(cafile=ca_certs)
+        elif _canloaddefaultcerts:
+            sslcontext.load_default_certs()
 
-            sslsocket = sslcontext.wrap_socket(sock,
-                                               server_hostname=serverhostname)
-            # check if wrap_socket failed silently because socket had been
-            # closed
-            # - see http://bugs.python.org/issue13721
-            if not sslsocket.cipher():
-                raise util.Abort(_('ssl connection failed'))
-            return sslsocket
-    except AttributeError:
-        def wrapsocket(sock, keyfile, certfile, ui,
-                       cert_reqs=ssl.CERT_NONE,
-                       ca_certs=None, serverhostname=None):
-            sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
-                                        cert_reqs=cert_reqs, ca_certs=ca_certs,
-                                        ssl_version=ssl.PROTOCOL_TLSv1)
-            # check if wrap_socket failed silently because socket had been
-            # closed
-            # - see http://bugs.python.org/issue13721
-            if not sslsocket.cipher():
-                raise util.Abort(_('ssl connection failed'))
-            return sslsocket
-except ImportError:
-    raise
+        sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
+        # check if wrap_socket failed silently because socket had been
+        # closed
+        # - see http://bugs.python.org/issue13721
+        if not sslsocket.cipher():
+            raise util.Abort(_('ssl connection failed'))
+        return sslsocket
+except AttributeError:
+    def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
+                   ca_certs=None, serverhostname=None):
+        sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
+                                    cert_reqs=cert_reqs, ca_certs=ca_certs,
+                                    ssl_version=ssl.PROTOCOL_TLSv1)
+        # check if wrap_socket failed silently because socket had been
+        # closed
+        # - see http://bugs.python.org/issue13721
+        if not sslsocket.cipher():
+            raise util.Abort(_('ssl connection failed'))
+        return sslsocket
 
 def _verifycert(cert, hostname):
     '''Verify that cert (in socket.getpeercert() format) matches hostname.
