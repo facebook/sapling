@@ -78,7 +78,7 @@ def _kindpatsalwaysmatch(kindpats):
 class match(object):
     def __init__(self, root, cwd, patterns, include=[], exclude=[],
                  default='glob', exact=False, auditor=None, ctx=None,
-                 listsubrepos=False, warn=None):
+                 listsubrepos=False, warn=None, badfn=None):
         """build an object to match a set of file patterns
 
         arguments:
@@ -90,6 +90,7 @@ class match(object):
         default - if a pattern in patterns has no explicit type, assume this one
         exact - patterns are actually filenames (include/exclude still apply)
         warn - optional function used for printing warnings
+        badfn - optional bad() callback for this matcher instead of the default
 
         a pattern is one of:
         'glob:<glob>' - a glob relative to cwd
@@ -115,6 +116,9 @@ class match(object):
         self._includeroots = set()
         self._includedirs = set(['.'])
         self._excluderoots = set()
+
+        if badfn is not None:
+            self.bad = badfn
 
         matchfns = []
         if include:
@@ -299,8 +303,8 @@ class match(object):
             kindpats.append((kind, pat, ''))
         return kindpats
 
-def exact(root, cwd, files):
-    return match(root, cwd, files, exact=True)
+def exact(root, cwd, files, badfn=None):
+    return match(root, cwd, files, exact=True, badfn=badfn)
 
 def always(root, cwd):
     return match(root, cwd, [])
@@ -378,12 +382,12 @@ class icasefsmatcher(match):
     """
 
     def __init__(self, root, cwd, patterns, include, exclude, default, auditor,
-                 ctx, listsubrepos=False):
+                 ctx, listsubrepos=False, badfn=None):
         init = super(icasefsmatcher, self).__init__
         self._dsnormalize = ctx.repo().dirstate.normalize
 
         init(root, cwd, patterns, include, exclude, default, auditor=auditor,
-             ctx=ctx, listsubrepos=listsubrepos)
+             ctx=ctx, listsubrepos=listsubrepos, badfn=badfn)
 
         # m.exact(file) must be based off of the actual user input, otherwise
         # inexact case matches are treated as exact, and not noted without -v.
