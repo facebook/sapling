@@ -12,7 +12,6 @@ from mercurial import util
 from mercurial.i18n import _
 
 _canloaddefaultcerts = False
-CERT_REQUIRED = ssl.CERT_REQUIRED
 try:
     ssl_context = ssl.SSLContext
     _canloaddefaultcerts = util.safehasattr(ssl_context, 'load_default_certs')
@@ -144,7 +143,7 @@ def sslkwargs(ui, host):
         ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
     if cacerts != '!':
         kws.update({'ca_certs': cacerts,
-                    'cert_reqs': CERT_REQUIRED,
+                    'cert_reqs': ssl.CERT_REQUIRED,
                     })
     return kws
 
