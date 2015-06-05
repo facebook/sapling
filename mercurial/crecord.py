@@ -1468,9 +1468,11 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 f.close()
                 # start the editor and wait for it to complete
                 editor = self.ui.geteditor()
-                self.ui.system("%s \"%s\"" % (editor, patchfn),
-                          environ={'hguser': self.ui.username()},
-                          onerr=util.Abort, errprefix=_("edit failed"))
+                ret = self.ui.system("%s \"%s\"" % (editor, patchfn),
+                          environ={'hguser': self.ui.username()})
+                if ret != 0:
+                    self.errorstr = "Editor exited with status %d" % ret
+                    return None
                 # remove comment lines
                 patchfp = open(patchfn)
                 ncpatchfp = cStringIO.StringIO()
@@ -1495,6 +1497,10 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         beforeadded, beforeremoved = item.added, item.removed
         newpatches = editpatchwitheditor(self, item)
+        if newpatches is None:
+            if not test:
+                updateui(self)
+            return
         header = item.header
         editedhunkindex = header.hunks.index(item)
         hunksbefore = header.hunks[:editedhunkindex]

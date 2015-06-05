@@ -65,14 +65,16 @@ Committing only one file
   a
   a
 
-Committing only one hunk
+Committing only one hunk while aborting edition of hunk
 
 - Untoggle all the hunks, go down to the second file
 - unfold it
 - go down to second hunk (1 for the first hunk, 1 for the first hunkline, 1 for the second hunk, 1 for the second hunklike)
 - toggle the second hunk
+- edit the hunk and quit the editor imediately with non-zero status
 - commit
 
+  $ printf "printf 'editor ran\n'; exit 1" > editor.sh
   $ echo "x" > c
   $ cat b >> c
   $ echo "y" >> c
@@ -86,9 +88,12 @@ Committing only one hunk
   > KEY_DOWN
   > KEY_DOWN
   > TOGGLE
+  > e
   > X
   > EOF
-  $ hg commit -i  -m "one hunk" -d "0 0"
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit -i  -m "one hunk" -d "0 0"
+  editor ran
+  $ rm editor.sh
   $ hg tip
   changeset:   2:7d10dfe755a8
   tag:         tip
