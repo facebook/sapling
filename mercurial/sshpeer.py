@@ -65,7 +65,7 @@ class doublepipe(object):
 
         (This will only wait for data if the setup is supported by `util.poll`)
         """
-        if self._main.hasbuffer:
+        if getattr(self._main, 'hasbuffer', False): # getattr for classic pipe
             return (True, True) # main has data, assume side is worth poking at.
         fds = [self._main.fileno(), self._side.fileno()]
         try:
