@@ -433,6 +433,10 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     ctxs = list(repo.set('%d::%d', first, last))
     if not ctxs:
         return None
+    for c in ctxs:
+        if not c.mutable():
+            raise util.Abort(
+                _("cannot fold into public change %s") % node.short(c.node()))
     base = first.parents()[0]
 
     # commit a new version of the old changeset, including the update

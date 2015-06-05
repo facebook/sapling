@@ -456,12 +456,12 @@ Attempting to fold a change into a public change should not work:
   > cat "\$1" | sed s/pick/fold/ > tmp
   > mv tmp "\$1"
   > EOF
-(BROKEN)
   $ HGEDITOR="sh ../edit.sh" hg histedit 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   reverting a
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/18aa70c8ad22-3aea8ae3-backup.hg (glob)
-(BROKEN)
+  abort: cannot fold into public change 18aa70c8ad22
+  [255]
+TODO: this abort shouldn't be required, but it is for now to leave the repo in
+a clean state.
+  $ hg histedit --abort
