@@ -277,7 +277,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         kwargs.update(sslutil.sslkwargs(self.ui, host))
 
         con = HTTPConnection(host, port, use_ssl=True,
-                             ssl_wrap_socket=sslutil.ssl_wrap_socket,
+                             ssl_wrap_socket=sslutil.wrapsocket,
                              ssl_validator=sslutil.validator(self.ui, host),
                              **kwargs)
         return con

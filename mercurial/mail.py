@@ -45,8 +45,8 @@ class STARTTLS(smtplib.SMTP):
             raise smtplib.SMTPException(msg)
         (resp, reply) = self.docmd("STARTTLS")
         if resp == 220:
-            self.sock = sslutil.ssl_wrap_socket(self.sock, keyfile, certfile,
-                                                **self._sslkwargs)
+            self.sock = sslutil.wrapsocket(self.sock, keyfile, certfile,
+                                           **self._sslkwargs)
             if not util.safehasattr(self.sock, "read"):
                 # using httplib.FakeSocket with Python 2.5.x or earlier
                 self.sock.read = self.sock.recv
@@ -74,9 +74,9 @@ if util.safehasattr(smtplib.SMTP, '_get_socket'):
             if self.debuglevel > 0:
                 print >> sys.stderr, 'connect:', (host, port)
             new_socket = socket.create_connection((host, port), timeout)
-            new_socket = sslutil.ssl_wrap_socket(new_socket,
-                                                 self.keyfile, self.certfile,
-                                                 **self._sslkwargs)
+            new_socket = sslutil.wrapsocket(new_socket,
+                                            self.keyfile, self.certfile,
+                                            **self._sslkwargs)
             self.file = smtplib.SSLFakeFile(new_socket)
             return new_socket
 else:

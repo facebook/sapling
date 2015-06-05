@@ -21,9 +21,9 @@ try:
         _canloaddefaultcerts = util.safehasattr(ssl_context,
                                                 'load_default_certs')
 
-        def ssl_wrap_socket(sock, keyfile, certfile, ui,
-                            cert_reqs=ssl.CERT_NONE,
-                            ca_certs=None, serverhostname=None):
+        def wrapsocket(sock, keyfile, certfile, ui,
+                       cert_reqs=ssl.CERT_NONE,
+                       ca_certs=None, serverhostname=None):
             # Allow any version of SSL starting with TLSv1 and
             # up. Note that specifying TLSv1 here prohibits use of
             # newer standards (like TLSv1_2), so this is the right way
@@ -55,9 +55,9 @@ try:
                 raise util.Abort(_('ssl connection failed'))
             return sslsocket
     except AttributeError:
-        def ssl_wrap_socket(sock, keyfile, certfile, ui,
-                            cert_reqs=ssl.CERT_NONE,
-                            ca_certs=None, serverhostname=None):
+        def wrapsocket(sock, keyfile, certfile, ui,
+                       cert_reqs=ssl.CERT_NONE,
+                       ca_certs=None, serverhostname=None):
             sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
                                         cert_reqs=cert_reqs, ca_certs=ca_certs,
                                         ssl_version=ssl.PROTOCOL_TLSv1)
@@ -72,9 +72,9 @@ except ImportError:
 
     import socket, httplib
 
-    def ssl_wrap_socket(sock, keyfile, certfile, ui,
-                        cert_reqs=CERT_REQUIRED,
-                        ca_certs=None, serverhostname=None):
+    def wrapsocket(sock, keyfile, certfile, ui,
+                   cert_reqs=CERT_REQUIRED,
+                   ca_certs=None, serverhostname=None):
         if not util.safehasattr(socket, 'ssl'):
             raise util.Abort(_('Python SSL support not found'))
         if ca_certs:
