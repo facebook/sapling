@@ -798,11 +798,12 @@ def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
 
-    m = ctx.match(pats, opts.get('include'), opts.get('exclude'),
-                         default, listsubrepos=opts.get('subrepos'))
     def badfn(f, msg):
         ctx.repo().ui.warn("%s: %s\n" % (m.rel(f), msg))
-    m.bad = badfn
+
+    m = ctx.match(pats, opts.get('include'), opts.get('exclude'),
+                  default, listsubrepos=opts.get('subrepos'), badfn=badfn)
+
     if m.always():
         pats = []
     return m, pats
