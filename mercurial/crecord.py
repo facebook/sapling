@@ -1419,6 +1419,13 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         """
             edit the currently chelected chunk
         """
+        def updateui(self):
+            self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
+            self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
+            self.updatescroll()
+            self.stdscr.refresh()
+            self.statuswin.refresh()
+            self.stdscr.keypad(1)
 
         def editpatchwitheditor(self, chunk):
             if chunk is None:
@@ -1501,12 +1508,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         self.currentselecteditem = header
 
         if not test:
-            self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
-            self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
-            self.updatescroll()
-            self.stdscr.refresh()
-            self.statuswin.refresh()
-            self.stdscr.keypad(1)
+            updateui(self)
 
     def emptypatch(self):
         item = self.headerlist
