@@ -1291,6 +1291,33 @@ Malformed patch - error handling
   abort: error parsing patch: unhandled transition: range -> range
   [255]
 
+Exiting editor with status 1, ignores the edit but does not stop the recording
+session
+
+  $ HGEDITOR=false hg commit -i <<EOF
+  > y
+  > e
+  > n
+  > EOF
+  diff --git a/editedfile b/editedfile
+  1 hunks, 3 lines changed
+  examine changes to 'editedfile'? [Ynesfdaq?] y
+  
+  @@ -1,3 +1,3 @@
+  -This is the first line
+  -This change will be committed
+  -This is the third line
+  +This change will not be committed
+  +This is the second line
+  +This line has been added
+  record this change to 'editedfile'? [Ynesfdaq?] e
+  
+  editor exited with exit code 1
+  record this change to 'editedfile'? [Ynesfdaq?] n
+  
+  no changes to record
+
+
 random text in random positions is still an error
 
   $ cat > editor.sh << '__EOF__'

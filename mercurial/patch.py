@@ -1023,9 +1023,11 @@ the hunk is left unchanged.
                     f.close()
                     # Start the editor and wait for it to complete
                     editor = ui.geteditor()
-                    ui.system("%s \"%s\"" % (editor, patchfn),
-                              environ={'HGUSER': ui.username()},
-                              onerr=util.Abort, errprefix=_("edit failed"))
+                    ret = ui.system("%s \"%s\"" % (editor, patchfn),
+                                    environ={'HGUSER': ui.username()})
+                    if ret != 0:
+                        ui.warn(_("editor exited with exit code %d\n") % ret)
+                        continue
                     # Remove comment lines
                     patchfp = open(patchfn)
                     ncpatchfp = cStringIO.StringIO()
