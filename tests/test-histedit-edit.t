@@ -436,3 +436,32 @@ rollback should not work after a histedit
   $ HGEDITOR=true hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-backup.hg (glob)
+
+  $ hg log -G
+  @  changeset:   0:0efcea34f18a
+     tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  
+  $ echo foo >> b
+  $ hg addr
+  adding b
+  $ hg ci -m 'add b'
+  $ echo foo >> a
+  $ hg ci -m 'extend a'
+  $ hg phase --public 1
+Attempting to fold a change into a public change should not work:
+  $ cat > ../edit.sh <<EOF
+  > cat "\$1" | sed s/pick/fold/ > tmp
+  > mv tmp "\$1"
+  > EOF
+(BROKEN)
+  $ HGEDITOR="sh ../edit.sh" hg histedit 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting a
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/18aa70c8ad22-3aea8ae3-backup.hg (glob)
+(BROKEN)
