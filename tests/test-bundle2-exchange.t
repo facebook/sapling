@@ -724,6 +724,7 @@ Check abort from mandatory pushkey
   > from mercurial import exchange
   > from mercurial import pushkey
   > from mercurial import node
+  > from mercurial import error
   > @exchange.b2partsgenerator('failingpuskey')
   > def addfailingpushey(pushop, bundler):
   >     enc = pushkey.encode
@@ -732,6 +733,9 @@ Check abort from mandatory pushkey
   >     part.addparam('key', enc(pushop.repo['cd010b8cd998'].hex()))
   >     part.addparam('old', enc(str(0))) # successful update
   >     part.addparam('new', enc(str(0)))
+  >     def fail(pushop, exc):
+  >         raise error.Abort('Correct phase push failed (because hooks)')
+  >     pushop.pkfailcb[part.id] = fail
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [hooks]
@@ -759,7 +763,7 @@ Check abort from mandatory pushkey
   transaction abort!
   Cleaning up the mess...
   rollback completed
-  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  abort: Correct phase push failed (because hooks)
   [255]
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
@@ -796,6 +800,7 @@ Check abort from mandatory pushkey
   > from mercurial import exchange
   > from mercurial import pushkey
   > from mercurial import node
+  > from mercurial import error
   > @exchange.b2partsgenerator('failingpuskey')
   > def addfailingpushey(pushop, bundler):
   >     enc = pushkey.encode
@@ -804,6 +809,9 @@ Check abort from mandatory pushkey
   >     part.addparam('key', enc(pushop.repo['cd010b8cd998'].hex()))
   >     part.addparam('old', enc(str(4))) # will fail
   >     part.addparam('new', enc(str(3)))
+  >     def fail(pushop, exc):
+  >         raise error.Abort('Clown phase push failed')
+  >     pushop.pkfailcb[part.id] = fail
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [hooks]
@@ -826,7 +834,7 @@ Check abort from mandatory pushkey
   pushkey: lock state after "phases"
   lock:  free
   wlock: free
-  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  abort: Clown phase push failed
   [255]
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other

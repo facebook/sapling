@@ -117,6 +117,9 @@ class pushoperation(object):
         self.outbookmarks = []
         # transaction manager
         self.trmanager = None
+        # map { pushkey partid -> callback handling failure}
+        # used to handle exception from mandatory pushkey part failure
+        self.pkfailcb = {}
 
     @util.propertycache
     def futureheads(self):
@@ -623,16 +626,22 @@ def _pushbundle2(pushop):
         return
     stream = util.chunkbuffer(bundler.getchunks())
     try:
-        reply = pushop.remote.unbundle(stream, ['force'], 'push')
-    except error.BundleValueError, exc:
-        raise util.Abort('missing support for %s' % exc)
-    try:
-        trgetter = None
-        if pushback:
-            trgetter = pushop.trmanager.transaction
-        op = bundle2.processbundle(pushop.repo, reply, trgetter)
-    except error.BundleValueError, exc:
-        raise util.Abort('missing support for %s' % exc)
+        try:
+            reply = pushop.remote.unbundle(stream, ['force'], 'push')
+        except error.BundleValueError, exc:
+            raise util.Abort('missing support for %s' % exc)
+        try:
+            trgetter = None
+            if pushback:
+                trgetter = pushop.trmanager.transaction
+            op = bundle2.processbundle(pushop.repo, reply, trgetter)
+        except error.BundleValueError, exc:
+            raise util.Abort('missing support for %s' % exc)
+    except error.PushkeyFailed, exc:
+        partid = int(exc.partid)
+        if partid not in pushop.pkfailcb:
+            raise
+        pushop.pkfailcb[partid](pushop, exc)
     for rephand in replyhandlers:
         rephand(op)
 
