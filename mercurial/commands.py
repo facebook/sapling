@@ -350,8 +350,8 @@ def annotate(ui, repo, *pats, **opts):
     def bad(x, y):
         raise util.Abort("%s: %s" % (x, y))
 
-    m = scmutil.match(ctx, pats, opts)
-    m.bad = bad
+    m = scmutil.match(ctx, pats, opts, badfn=bad)
+
     follow = not opts.get('no_follow')
     diffopts = patch.difffeatureopts(ui, opts, section='annotate',
                                      whitespace=True)
@@ -4442,8 +4442,8 @@ def locate(ui, repo, *pats, **opts):
 
     ret = 1
     ctx = repo[rev]
-    m = scmutil.match(ctx, pats, opts, default='relglob')
-    m.bad = lambda x, y: False
+    m = scmutil.match(ctx, pats, opts, default='relglob',
+                      badfn=lambda x, y: False)
 
     for abs in ctx.matches(m):
         if opts.get('fullpath'):
