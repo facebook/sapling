@@ -51,8 +51,8 @@ def composenormalfilematcher(match, manifest, exclude=None):
 def installnormalfilesmatchfn(manifest):
     '''installmatchfn with a matchfn that ignores all largefiles'''
     def overridematch(ctx, pats=[], opts={}, globbed=False,
-            default='relpath'):
-        match = oldmatch(ctx, pats, opts, globbed, default)
+            default='relpath', badfn=None):
+        match = oldmatch(ctx, pats, opts, globbed, default, badfn=badfn)
         return composenormalfilematcher(match, manifest)
     oldmatch = installmatchfn(overridematch)
 
@@ -288,13 +288,14 @@ def overridedirty(orig, repo, ignoreupdate=False):
 
 def overridelog(orig, ui, repo, *pats, **opts):
     def overridematchandpats(ctx, pats=[], opts={}, globbed=False,
-            default='relpath'):
+            default='relpath', badfn=None):
         """Matcher that merges root directory with .hglf, suitable for log.
         It is still possible to match .hglf directly.
         For any listed files run log on the standin too.
         matchfn tries both the given filename and with .hglf stripped.
         """
-        matchandpats = oldmatchandpats(ctx, pats, opts, globbed, default)
+        matchandpats = oldmatchandpats(ctx, pats, opts, globbed, default,
+                                       badfn=badfn)
         m, p = copy.copy(matchandpats)
 
         if m.always():
@@ -377,9 +378,9 @@ def overridelog(orig, ui, repo, *pats, **opts):
     # (2) to determine what files to print out diffs for.
     # The magic matchandpats override should be used for case (1) but not for
     # case (2).
-    def overridemakelogfilematcher(repo, pats, opts):
+    def overridemakelogfilematcher(repo, pats, opts, badfn=None):
         wctx = repo[None]
-        match, pats = oldmatchandpats(wctx, pats, opts)
+        match, pats = oldmatchandpats(wctx, pats, opts, badfn=badfn)
         return lambda rev: match
 
     oldmatchandpats = installmatchandpatsfn(overridematchandpats)
@@ -613,7 +614,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 
         manifest = repo[None].manifest()
         def overridematch(ctx, pats=[], opts={}, globbed=False,
-                default='relpath'):
+                default='relpath', badfn=None):
             newpats = []
             # The patterns were previously mangled to add the standin
             # directory; we need to remove that now
@@ -622,7 +623,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
                     newpats.append(pat.replace(lfutil.shortname, ''))
                 else:
                     newpats.append(pat)
-            match = oldmatch(ctx, newpats, opts, globbed, default)
+            match = oldmatch(ctx, newpats, opts, globbed, default, badfn=badfn)
             m = copy.copy(match)
             lfile = lambda f: lfutil.standin(f) in manifest
             m._files = [lfutil.standin(f) for f in m._files if lfile(f)]
@@ -722,8 +723,8 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
         oldstandins = lfutil.getstandinsstate(repo)
 
         def overridematch(mctx, pats=[], opts={}, globbed=False,
-                default='relpath'):
-            match = oldmatch(mctx, pats, opts, globbed, default)
+                default='relpath', badfn=None):
+            match = oldmatch(mctx, pats, opts, globbed, default, badfn=badfn)
             m = copy.copy(match)
 
             # revert supports recursing into subrepos, and though largefiles

@@ -790,16 +790,21 @@ def expandpats(pats):
         ret.append(kindpat)
     return ret
 
-def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
+def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath',
+                 badfn=None):
     '''Return a matcher and the patterns that were used.
-    The matcher will warn about bad matches.'''
+    The matcher will warn about bad matches, unless an alternate badfn callback
+    is provided.'''
     if pats == ("",):
         pats = []
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
 
-    def badfn(f, msg):
+    def bad(f, msg):
         ctx.repo().ui.warn("%s: %s\n" % (m.rel(f), msg))
+
+    if badfn is None:
+        badfn = bad
 
     m = ctx.match(pats, opts.get('include'), opts.get('exclude'),
                   default, listsubrepos=opts.get('subrepos'), badfn=badfn)
@@ -808,17 +813,17 @@ def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
         pats = []
     return m, pats
 
-def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
+def match(ctx, pats=[], opts={}, globbed=False, default='relpath', badfn=None):
     '''Return a matcher that will warn about bad matches.'''
-    return matchandpats(ctx, pats, opts, globbed, default)[0]
+    return matchandpats(ctx, pats, opts, globbed, default, badfn=badfn)[0]
 
 def matchall(repo):
     '''Return a matcher that will efficiently match everything.'''
     return matchmod.always(repo.root, repo.getcwd())
 
-def matchfiles(repo, files):
+def matchfiles(repo, files, badfn=None):
     '''Return a matcher that will efficiently match exactly these files.'''
-    return matchmod.exact(repo.root, repo.getcwd(), files)
+    return matchmod.exact(repo.root, repo.getcwd(), files, badfn=badfn)
 
 def addremove(repo, matcher, prefix, opts={}, dry_run=None, similarity=None):
     m = matcher
@@ -885,9 +890,8 @@ def addremove(repo, matcher, prefix, opts={}, dry_run=None, similarity=None):
 def marktouched(repo, files, similarity=0.0):
     '''Assert that files have somehow been operated upon. files are relative to
     the repo root.'''
-    m = matchfiles(repo, files)
+    m = matchfiles(repo, files, badfn=lambda x, y: rejected.append(x))
     rejected = []
-    m.bad = lambda x, y: rejected.append(x)
 
     added, unknown, deleted, removed, forgotten = _interestingfiles(repo, m)
 
