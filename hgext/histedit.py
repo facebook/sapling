@@ -385,7 +385,7 @@ def commitfuncfor(repo, src):
 
     - Add a 'histedit_source' entry in extra.
 
-    Note that fold have its own separated logic because its handling is a bit
+    Note that fold has its own separated logic because its handling is a bit
     different and not easily factored out of the fold method.
     """
     phasemin = src.phase()
