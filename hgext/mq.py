@@ -1138,12 +1138,11 @@ class queue(object):
         if inclsubs:
             substatestate = repo.dirstate['.hgsubstate']
         if opts.get('include') or opts.get('exclude') or pats:
-            match = scmutil.match(repo[None], pats, opts)
             # detect missing files in pats
             def badfn(f, msg):
                 if f != '.hgsubstate': # .hgsubstate is auto-created
                     raise util.Abort('%s: %s' % (f, msg))
-            match.bad = badfn
+            match = scmutil.match(repo[None], pats, opts, badfn=badfn)
             changes = repo.status(match=match)
         else:
             changes = self.checklocalchanges(repo, force=True)
