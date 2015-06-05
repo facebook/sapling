@@ -850,15 +850,14 @@ def addremove(repo, matcher, prefix, opts={}, dry_run=None, similarity=None):
                                  % join(subpath))
 
     rejected = []
-    origbad = m.bad
     def badfn(f, msg):
         if f in m.files():
-            origbad(f, msg)
+            m.bad(f, msg)
         rejected.append(f)
 
-    m.bad = badfn
-    added, unknown, deleted, removed, forgotten = _interestingfiles(repo, m)
-    m.bad = origbad
+    badmatch = matchmod.badmatch(m, badfn)
+    added, unknown, deleted, removed, forgotten = _interestingfiles(repo,
+                                                                    badmatch)
 
     unknownset = set(unknown + forgotten)
     toprint = unknownset.copy()
