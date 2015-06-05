@@ -1423,10 +1423,6 @@ User interface controls.
 ``remotecmd``
     remote command to use for clone/push/pull operations. Default is ``hg``.
 
-``reportoldssl``
-    Warn if an SSL certificate is unable to be used due to using Python
-    2.5 or earlier. True or False. Default is True.
-
 ``report_untrusted``
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
     trusted user or group. True or False. Default is True.

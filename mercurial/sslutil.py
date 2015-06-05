@@ -6,15 +6,13 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-import os, sys
+import os, sys, ssl
 
 from mercurial import util
 from mercurial.i18n import _
 
 _canloaddefaultcerts = False
 try:
-    # avoid using deprecated/broken FakeSocket in python 2.6
-    import ssl
     CERT_REQUIRED = ssl.CERT_REQUIRED
     try:
         ssl_context = ssl.SSLContext
@@ -68,21 +66,7 @@ try:
                 raise util.Abort(_('ssl connection failed'))
             return sslsocket
 except ImportError:
-    CERT_REQUIRED = 2
-
-    import socket, httplib
-
-    def wrapsocket(sock, keyfile, certfile, ui,
-                   cert_reqs=CERT_REQUIRED,
-                   ca_certs=None, serverhostname=None):
-        if not util.safehasattr(socket, 'ssl'):
-            raise util.Abort(_('Python SSL support not found'))
-        if ca_certs:
-            raise util.Abort(_(
-                'certificate checking requires Python 2.6'))
-
-        ssl = socket.ssl(sock, keyfile, certfile)
-        return httplib.FakeSocket(sock, ssl)
+    raise
 
 def _verifycert(cert, hostname):
     '''Verify that cert (in socket.getpeercert() format) matches hostname.
@@ -123,9 +107,6 @@ def _verifycert(cert, hostname):
 
 # CERT_REQUIRED means fetch the cert from the server all the time AND
 # validate it against the CA store provided in web.cacerts.
-#
-# We COMPLETELY ignore CERT_REQUIRED on Python <= 2.5, as it's totally
-# busted on those versions.
 
 def _plainapplepython():
     """return true if this seems to be a pure Apple Python that
@@ -183,17 +164,6 @@ class validator(object):
         host = self.host
         cacerts = self.ui.config('web', 'cacerts')
         hostfingerprint = self.ui.config('hostfingerprints', host)
-        if not getattr(sock, 'getpeercert', False): # python 2.5 ?
-            if hostfingerprint:
-                raise util.Abort(_("host fingerprint for %s can't be "
-                                   "verified (Python too old)") % host)
-            if strict:
-                raise util.Abort(_("certificate for %s can't be verified "
-                                   "(Python too old)") % host)
-            if self.ui.configbool('ui', 'reportoldssl', True):
-                self.ui.warn(_("warning: certificate for %s can't be verified "
-                               "(Python too old)\n") % host)
-            return
 
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise util.Abort(_('%s ssl connection error') % host)
