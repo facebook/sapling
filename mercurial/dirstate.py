@@ -572,7 +572,8 @@ class dirstate(object):
         self._dirty = True
 
     def rebuild(self, parent, allfiles, changedfiles=None):
-        changedfiles = changedfiles or allfiles
+        if changedfiles is None:
+            changedfiles = allfiles
         oldmap = self._map
         self.clear()
         for f in allfiles:
