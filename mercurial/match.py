@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re
+import copy, re
 import util, pathutil
 from i18n import _
 
@@ -304,6 +304,14 @@ def exact(root, cwd, files):
 
 def always(root, cwd):
     return match(root, cwd, [])
+
+def badmatch(match, badfn):
+    """Make a copy of the given matcher, replacing its bad method with the given
+    one.
+    """
+    m = copy.copy(match)
+    m.bad = badfn
+    return m
 
 class narrowmatcher(match):
     """Adapt a matcher to work on a subdirectory only.
