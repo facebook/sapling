@@ -21,6 +21,7 @@
   >     hg qnew .mqfoo
   >     hg qnew 'foo#bar'
   >     hg qnew 'foo:bar'
+  >     hg qnew "`echo foo; echo bar`"
   > 
   >     hg qinit -c
   > 
@@ -110,6 +111,7 @@ plain headers
   abort: patch name cannot begin with ".mq"
   abort: '#' cannot be used in the name of a patch
   abort: ':' cannot be used in the name of a patch
+  abort: '\n' cannot be used in the name of a patch
   % qnew with name containing slash
   abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory
@@ -178,6 +180,7 @@ hg headers
   abort: patch name cannot begin with ".mq"
   abort: '#' cannot be used in the name of a patch
   abort: ':' cannot be used in the name of a patch
+  abort: '\n' cannot be used in the name of a patch
   % qnew with name containing slash
   abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory

@@ -1102,7 +1102,7 @@ class queue(object):
             if name.startswith(prefix):
                 raise util.Abort(_('patch name cannot begin with "%s"')
                                  % prefix)
-        for c in ('#', ':'):
+        for c in ('#', ':', '\r', '\n'):
             if c in name:
                 raise util.Abort(_('%r cannot be used in the name of a patch')
                                  % c)
