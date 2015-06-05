@@ -2838,8 +2838,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         targetsubs = sorted(s for s in wctx.substate if m(s))
 
         if not m.always():
-            m.bad = lambda x, y: False
-            for abs in repo.walk(m):
+            for abs in repo.walk(matchmod.badmatch(m, lambda x, y: False)):
                 names[abs] = m.rel(abs), m.exact(abs)
 
             # walk target manifest to fill `names`
@@ -2855,8 +2854,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                         return
                 ui.warn("%s: %s\n" % (m.rel(path), msg))
 
-            m.bad = badfn
-            for abs in ctx.walk(m):
+            for abs in ctx.walk(matchmod.badmatch(m, badfn)):
                 if abs not in names:
                     names[abs] = m.rel(abs), m.exact(abs)
 
