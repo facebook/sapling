@@ -2251,11 +2251,11 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
 def forget(ui, repo, match, prefix, explicitonly):
     join = lambda f: os.path.join(prefix, f)
     bad = []
-    oldbad = match.bad
-    match.bad = lambda x, y: bad.append(x) or oldbad(x, y)
+    badfn = lambda x, y: bad.append(x) or match.bad(x, y)
     wctx = repo[None]
     forgot = []
-    s = repo.status(match=match, clean=True)
+
+    s = repo.status(match=matchmod.badmatch(match, badfn), clean=True)
     forget = sorted(s[0] + s[1] + s[3] + s[6])
     if explicitonly:
         forget = [f for f in forget if match.exact(f)]
