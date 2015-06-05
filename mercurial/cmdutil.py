@@ -2213,15 +2213,16 @@ def graphrevs(repo, nodes, opts):
 def add(ui, repo, match, prefix, explicitonly, **opts):
     join = lambda f: os.path.join(prefix, f)
     bad = []
-    oldbad = match.bad
-    match.bad = lambda x, y: bad.append(x) or oldbad(x, y)
+
+    badfn = lambda x, y: bad.append(x) or match.bad(x, y)
     names = []
     wctx = repo[None]
     cca = None
     abort, warn = scmutil.checkportabilityalert(ui)
     if abort or warn:
         cca = scmutil.casecollisionauditor(ui, abort, repo.dirstate)
-    for f in wctx.walk(match):
+
+    for f in wctx.walk(matchmod.badmatch(match, badfn)):
         exact = match.exact(f)
         if exact or not explicitonly and f not in wctx and repo.wvfs.lexists(f):
             if cca:
