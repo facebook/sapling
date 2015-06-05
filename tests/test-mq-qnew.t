@@ -108,8 +108,8 @@ plain headers
   abort: ".." cannot be used as the name of a patch
   abort: patch name cannot begin with ".hg"
   abort: patch name cannot begin with ".mq"
-  abort: "#" cannot be used in the name of a patch
-  abort: ":" cannot be used in the name of a patch
+  abort: '#' cannot be used in the name of a patch
+  abort: ':' cannot be used in the name of a patch
   % qnew with name containing slash
   abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory
@@ -176,8 +176,8 @@ hg headers
   abort: ".." cannot be used as the name of a patch
   abort: patch name cannot begin with ".hg"
   abort: patch name cannot begin with ".mq"
-  abort: "#" cannot be used in the name of a patch
-  abort: ":" cannot be used in the name of a patch
+  abort: '#' cannot be used in the name of a patch
+  abort: ':' cannot be used in the name of a patch
   % qnew with name containing slash
   abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory

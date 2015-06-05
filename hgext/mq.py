@@ -1104,7 +1104,7 @@ class queue(object):
                                  % prefix)
         for c in ('#', ':'):
             if c in name:
-                raise util.Abort(_('"%s" cannot be used in the name of a patch')
+                raise util.Abort(_('%r cannot be used in the name of a patch')
                                  % c)
 
     def checkpatchname(self, name, force=False):
