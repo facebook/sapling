@@ -1332,7 +1332,7 @@ the following are valid keystrokes:
  right/left-arrow [l/h] : go to child item / parent item
  shift-left-arrow   [h] : go to parent header / fold selected header
                       f : fold / unfold item, hiding/revealing its children
-                      f : fold / unfold parent item and all of its ancestors
+                      F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
                       e : edit the currently selected hunk
                       a : toggle amend mode (hg rev >= 2.2)
@@ -1547,7 +1547,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.toggleedit(test=test)
         elif keypressed in ["f"]:
             self.togglefolded()
-        elif keypressed in ["f"]:
+        elif keypressed in ["F"]:
             self.togglefolded(foldparent=True)
         elif keypressed in ["?"]:
             self.helpwindow()
