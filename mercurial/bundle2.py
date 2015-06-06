@@ -1106,6 +1106,7 @@ class unbundlepart(unpackermixin):
 # These are only the static capabilities.
 # Check the 'getrepocaps' function for the rest.
 capabilities = {'HG20': (),
+                'error': ('abort', 'unsupportedcontent', 'pushraced'),
                 'listkeys': (),
                 'pushkey': (),
                 'digests': tuple(sorted(util.DIGESTS.keys())),
