@@ -347,8 +347,11 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
         # craziness in a future version.
         exc.duringunbundle2 = True
         salvaged = []
+        replycaps = None
         if op.reply is not None:
             salvaged = op.reply.salvageoutput()
+            replycaps = op.reply.capabilities
+        exc._replycaps = replycaps
         exc._bundle2salvagedoutput = salvaged
         raise
     finally:
