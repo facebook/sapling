@@ -26,7 +26,6 @@ testpid = win32.testpid
 unlink = win32.unlink
 
 umask = 0022
-_SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
 
 def posixfile(name, mode='r', buffering=-1):
     '''Open a file with even more POSIX-like semantics'''
@@ -36,7 +35,7 @@ def posixfile(name, mode='r', buffering=-1):
         # The position when opening in append mode is implementation defined, so
         # make it consistent with other platforms, which position at EOF.
         if 'a' in mode:
-            fp.seek(0, _SEEK_END)
+            fp.seek(0, os.SEEK_END)
 
         return fp
     except WindowsError, err:
