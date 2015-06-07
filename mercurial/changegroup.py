@@ -695,7 +695,7 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
     return revisions, files
 
 def addchangegroup(repo, source, srctype, url, emptyok=False,
-                   targetphase=phases.draft):
+                   targetphase=phases.draft, expectedtotal=None):
     """Add the changegroup returned by source.read() to this repo.
     srctype is a string like 'push', 'pull', or 'unbundle'.  url is
     the URL of the repo where this changegroup is coming from.
@@ -744,7 +744,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             step = _('changesets')
             count = 1
             ui = repo.ui
-            total = None
+            total = expectedtotal
             def __call__(repo):
                 repo.ui.progress(repo.step, repo.count, unit=_('chunks'),
                                  total=repo.total)
