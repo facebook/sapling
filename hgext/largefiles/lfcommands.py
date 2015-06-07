@@ -364,9 +364,7 @@ def verifylfiles(ui, repo, all=False, contents=False):
     matches the revision ID).  With --all, check every changeset in
     this repository.'''
     if all:
-        # Pass a list to the function rather than an iterator because we know a
-        # list will work.
-        revs = range(len(repo))
+        revs = repo.revs('all()')
     else:
         revs = ['.']
 

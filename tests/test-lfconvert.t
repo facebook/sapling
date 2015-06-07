@@ -320,13 +320,21 @@ from the working dir on a convert.
 Verify will fail (for now) if the usercache is purged before converting, since
 largefiles are not cached in the converted repo's local store by the conversion
 process.
+  $ cd largefiles-repo-hg
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > evolution=createmarkers
+  > EOF
+  $ hg debugobsolete `hg log -r tip -T "{node}"`
+  $ cd ..
+
   $ hg -R largefiles-repo-hg verify --large --lfa
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   9 files, 8 changesets, 13 total revisions
-  searching 8 changesets for largefiles
+  searching 7 changesets for largefiles
   changeset 0:d4892ec57ce2: large references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/2e000fa7e85759c7f4c254d4d9c33ef481e459a7 (glob)
   changeset 1:334e5237836d: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c (glob)
   changeset 2:261ad3f3f037: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c (glob)
