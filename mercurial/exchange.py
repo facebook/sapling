@@ -1294,10 +1294,10 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
             if not cgversions:
                 raise ValueError(_('no common changegroup version'))
             version = getcgkwargs['version'] = max(cgversions)
-        cg = changegroup.getchangegroupraw(repo, source, heads=heads,
-                                           common=common,
-                                           bundlecaps=bundlecaps,
-                                           **getcgkwargs)
+        outgoing = changegroup.computeoutgoing(repo, heads, common)
+        cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
+                                                bundlecaps=bundlecaps,
+                                                **getcgkwargs)
 
     if cg:
         part = bundler.newpart('changegroup', data=cg)
