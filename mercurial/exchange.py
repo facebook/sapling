@@ -1303,6 +1303,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         part = bundler.newpart('changegroup', data=cg)
         if version is not None:
             part.addparam('version', version)
+        part.addparam('nbchanges', str(len(outgoing.missing)), mandatory=False)
 
 @getbundle2partsgenerator('listkeys')
 def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,
