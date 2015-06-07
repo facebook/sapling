@@ -1288,19 +1288,16 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         # build changegroup bundle here.
         version = None
         cgversions = b2caps.get('changegroup')
-        if not cgversions:  # 3.1 and 3.2 ship with an empty value
-            cg = changegroup.getchangegroupraw(repo, source, heads=heads,
-                                               common=common,
-                                               bundlecaps=bundlecaps)
-        else:
+        getcgkwargs = {}
+        if cgversions:  # 3.1 and 3.2 ship with an empty value
             cgversions = [v for v in cgversions if v in changegroup.packermap]
             if not cgversions:
                 raise ValueError(_('no common changegroup version'))
-            version = max(cgversions)
-            cg = changegroup.getchangegroupraw(repo, source, heads=heads,
-                                               common=common,
-                                               bundlecaps=bundlecaps,
-                                               version=version)
+            version = getcgkwargs['version'] = max(cgversions)
+        cg = changegroup.getchangegroupraw(repo, source, heads=heads,
+                                           common=common,
+                                           bundlecaps=bundlecaps,
+                                           **getcgkwargs)
 
     if cg:
         part = bundler.newpart('changegroup', data=cg)
