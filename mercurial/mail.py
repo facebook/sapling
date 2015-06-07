@@ -104,7 +104,8 @@ def _smtp(ui):
     if (starttls or smtps) and verifycert:
         sslkwargs = sslutil.sslkwargs(ui, mailhost)
     else:
-        sslkwargs = {}
+        # 'ui' is required by sslutil.wrapsocket() and set by sslkwargs()
+        sslkwargs = {'ui': ui}
     if smtps:
         ui.note(_('(using smtps)\n'))
         s = SMTPS(sslkwargs, local_hostname=local_hostname)
