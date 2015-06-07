@@ -634,22 +634,6 @@ def computeoutgoing(repo, heads, common):
         heads = cl.heads()
     return discovery.outgoing(cl, common, heads)
 
-def getchangegroupraw(repo, source, heads=None, common=None, bundlecaps=None,
-                      version='01'):
-    """Like changegroupsubset, but returns the set difference between the
-    ancestors of heads and the ancestors common.
-
-    If heads is None, use the local heads. If common is None, use [nullid].
-
-    If version is None, use a version '1' changegroup.
-
-    The nodes in common might not all be known locally due to the way the
-    current discovery protocol works. Returns a raw changegroup generator.
-    """
-    outgoing = computeoutgoing(repo, heads, common)
-    return getlocalchangegroupraw(repo, source, outgoing, bundlecaps=bundlecaps,
-                                  version=version)
-
 def getchangegroup(repo, source, heads=None, common=None, bundlecaps=None):
     """Like changegroupsubset, but returns the set difference between the
     ancestors of heads and the ancestors common.
