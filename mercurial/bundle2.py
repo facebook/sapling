@@ -1146,7 +1146,7 @@ def obsmarkersversion(caps):
     obscaps = caps.get('obsmarkers', ())
     return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
-@parthandler('changegroup', ('version',))
+@parthandler('changegroup', ('version', 'nbchanges'))
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
@@ -1165,7 +1165,11 @@ def handlechangegroup(op, inpart):
     cg = unpacker(inpart, 'UN')
     # the source and url passed here are overwritten by the one contained in
     # the transaction.hookargs argument. So 'bundle2' is a placeholder
-    ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
+    nbchangesets = None
+    if 'nbchanges' in inpart.params:
+        nbchangesets = int(inpart.params.get('nbchanges'))
+    ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2',
+                                     expectedtotal=nbchangesets)
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
         # This is definitely not the final form of this
