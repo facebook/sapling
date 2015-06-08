@@ -60,7 +60,7 @@ check for HTTP opener failures when cachefile does not exist
   $ rm .hg/cache/*
   $ cd ../local
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
+  $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
   $ hg pull
   pulling from static-http://localhost:$HGPORT/remote
   searching for changes

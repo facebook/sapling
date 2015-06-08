@@ -28,7 +28,7 @@ enable obsolescence
   > [hooks]
   > pretxnclose.tip = hg log -r tip -T "pre-close-tip:{node|short} {phase} {bookmarks}\n"
   > txnclose.tip = hg log -r tip -T "postclose-tip:{node|short} {phase} {bookmarks}\n"
-  > txnclose.env = sh -c  "HG_LOCAL= python \"$TESTDIR/printenv.py\" txnclose"
+  > txnclose.env = sh -c  "HG_LOCAL= printenv.py txnclose"
   > pushkey= sh "$TESTTMP/bundle2-pushkey-hook.sh"
   > EOF
 

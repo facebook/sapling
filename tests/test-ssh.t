@@ -27,7 +27,7 @@ configure for serving
   > uncompressed = True
   > 
   > [hooks]
-  > changegroup = python "$TESTDIR/printenv.py" changegroup-in-remote 0 ../dummylog
+  > changegroup = printenv.py changegroup-in-remote 0 ../dummylog
   > EOF
   $ cd ..
 
@@ -104,7 +104,7 @@ verify
   checking files
   2 files, 3 changesets, 2 total revisions
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup-in-local 0 ../dummylog" >> .hg/hgrc
+  $ echo "changegroup = printenv.py changegroup-in-local 0 ../dummylog" >> .hg/hgrc
 
 empty default pull
 

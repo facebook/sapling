@@ -68,8 +68,8 @@ expect success
 
   $ echo 'allow_push = *' >> .hg/hgrc
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup 0" >> .hg/hgrc
-  $ echo "pushkey = python \"$TESTDIR/printenv.py\" pushkey 0" >> .hg/hgrc
+  $ echo "changegroup = printenv.py changegroup 0" >> .hg/hgrc
+  $ echo "pushkey = printenv.py pushkey 0" >> .hg/hgrc
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
@@ -121,7 +121,7 @@ expect push success, phase change failure
   > push_ssl = false
   > allow_push = *
   > [hooks]
-  > prepushkey = python "$TESTDIR/printenv.py" prepushkey 1
+  > prepushkey = printenv.py prepushkey 1
   > EOF
   $ req
   pushing to http://localhost:$HGPORT/
@@ -134,7 +134,7 @@ expect push success, phase change failure
 
 expect phase change success
 
-  $ echo "prepushkey = python \"$TESTDIR/printenv.py\" prepushkey 0" >> .hg/hgrc
+  $ echo "prepushkey = printenv.py prepushkey 0" >> .hg/hgrc
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes

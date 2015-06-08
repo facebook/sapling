@@ -201,7 +201,7 @@ pull without cacert
 
   $ cd copy-pull
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
+  $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
   $ hg pull $DISABLEOSXDUMMYCERT
   pulling from https://localhost:$HGPORT/
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)

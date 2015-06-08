@@ -67,9 +67,9 @@ Add two linear commits
   $ cd ../clone
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
-  > pretxnchangegroup = sh -c "python \"$TESTDIR/printenv.py\" pretxnchangegroup"
-  > changegroup = sh -c "python \"$TESTDIR/printenv.py\" changegroup"
-  > incoming = sh -c "python \"$TESTDIR/printenv.py\" incoming"
+  > pretxnchangegroup = sh -c "printenv.py pretxnchangegroup"
+  > changegroup = sh -c "printenv.py changegroup"
+  > incoming = sh -c "printenv.py incoming"
   > EOF
 
 Pull the new commits in the clone

@@ -119,7 +119,7 @@ pull
 
   $ cd copy-pull
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
+  $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
   $ hg pull
   pulling from http://localhost:$HGPORT1/
   searching for changes
