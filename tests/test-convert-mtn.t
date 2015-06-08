@@ -220,7 +220,7 @@ test large file support (> 32kB)
   >>> fp = file('large-file', 'wb')
   >>> for x in xrange(10000): fp.write('%d\n' % x)
   >>> fp.close()
-  $ $TESTDIR/md5sum.py large-file
+  $ md5sum.py large-file
   5d6de8a95c3b6bf9e0ffb808ba5299c1  large-file
   $ mtn add large-file
   mtn: adding 'large-file' to workspace manifest
@@ -386,7 +386,7 @@ check divergent directory moves
 
 test large file support (> 32kB)
 
-  $ $TESTDIR/md5sum.py large-file
+  $ md5sum.py large-file
   5d6de8a95c3b6bf9e0ffb808ba5299c1  large-file
 
 check branch closing

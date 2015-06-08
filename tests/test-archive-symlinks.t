@@ -18,7 +18,7 @@ files
 
   $ cd "$origdir"
   $ cd archive
-  $ "$TESTDIR/readlink.py" dangling
+  $ readlink.py dangling
   dangling -> nothing
 
 tar
@@ -26,7 +26,7 @@ tar
   $ cd "$origdir"
   $ tar xf archive.tar
   $ cd tar
-  $ "$TESTDIR/readlink.py" dangling
+  $ readlink.py dangling
   dangling -> nothing
 
 zip
@@ -34,7 +34,7 @@ zip
   $ cd "$origdir"
   $ unzip archive.zip > /dev/null 2>&1
   $ cd zip
-  $ "$TESTDIR/readlink.py" dangling
+  $ readlink.py dangling
   dangling -> nothing
 
   $ cd ..

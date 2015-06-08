@@ -466,7 +466,7 @@ Setting up
   > failpush=$TESTTMP/failpush.py
   > EOF
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
@@ -562,7 +562,7 @@ Doing the actual push: hook abort
   > txnabort.failpush = sh -c "echo 'Cleaning up the mess...'"
   > EOF
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
@@ -625,7 +625,7 @@ Check error from hook during the unbundling process itself
   $ cat << EOF >> $HGRCPATH
   > pretxnchangegroup = sh -c "echo 'Fail early!'; false"
   > EOF
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
+  $ killdaemons.py $DAEMON_PIDS # reload http config
   $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 

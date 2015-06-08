@@ -86,13 +86,13 @@ this should show the rename information in the metadata
   copy: a
   copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 
-  $ "$TESTDIR/md5sum.py" .hg/store/data/b.i
+  $ md5sum.py .hg/store/data/b.i
   4999f120a3b88713bbefddd195cf5133  .hg/store/data/b.i
   $ hg cat b > bsum
-  $ "$TESTDIR/md5sum.py" bsum
+  $ md5sum.py bsum
   60b725f10c9c85c70d97880dfe8191b3  bsum
   $ hg cat a > asum
-  $ "$TESTDIR/md5sum.py" asum
+  $ md5sum.py asum
   60b725f10c9c85c70d97880dfe8191b3  asum
   $ hg verify
   checking changesets

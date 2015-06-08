@@ -32,7 +32,7 @@ Add
 
 Modify
 
-  $ "$TESTDIR/svn-safe-append.py" a a/a
+  $ svn-safe-append.py a a/a
   $ hg --cwd a ci -d '1 0' -m 'modify a file'
   $ hg --cwd a tip -q
   1:e0e2b8a9156b
@@ -354,12 +354,12 @@ Branchy history
   $ hg --cwd b ci -d '0 0' -Ambase
   adding b
 
-  $ "$TESTDIR/svn-safe-append.py" left-1 b/b
+  $ svn-safe-append.py left-1 b/b
   $ echo left-1 > b/left-1
   $ hg --cwd b ci -d '1 0' -Amleft-1
   adding left-1
 
-  $ "$TESTDIR/svn-safe-append.py" left-2 b/b
+  $ svn-safe-append.py left-2 b/b
   $ echo left-2 > b/left-2
   $ hg --cwd b ci -d '2 0' -Amleft-2
   adding left-2
@@ -367,13 +367,13 @@ Branchy history
   $ hg --cwd b up 0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
-  $ "$TESTDIR/svn-safe-append.py" right-1 b/b
+  $ svn-safe-append.py right-1 b/b
   $ echo right-1 > b/right-1
   $ hg --cwd b ci -d '3 0' -Amright-1
   adding right-1
   created new head
 
-  $ "$TESTDIR/svn-safe-append.py" right-2 b/b
+  $ svn-safe-append.py right-2 b/b
   $ echo right-2 > b/right-2
   $ hg --cwd b ci -d '4 0' -Amright-2
   adding right-2

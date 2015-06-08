@@ -346,7 +346,7 @@ Test actual protocol when pulling one new head in addition to common heads
   searching for changes
   e64a39e7da8b
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ cut -d' ' -f6- access.log | grep -v cmd=known # cmd=known uses random sampling
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D513314ca8b3ae4dac8eec56966265b00fcf866db

@@ -46,7 +46,7 @@ Update svn repository
   Transmitting file data .
   Committed revision 2.
 
-  $ "$TESTDIR/svn-safe-append.py" world 'letter .txt'
+  $ svn-safe-append.py world 'letter .txt'
   $ svn ci -m world
   Sending        letter .txt
   Transmitting file data .
@@ -56,7 +56,7 @@ Update svn repository
   
   Committed revision 4.
 
-  $ "$TESTDIR/svn-safe-append.py" 'nice day today!' 'letter .txt'
+  $ svn-safe-append.py 'nice day today!' 'letter .txt'
   $ svn ci -m "nice day"
   Sending        letter .txt
   Transmitting file data .
@@ -86,7 +86,7 @@ a fixed difference from UTC.
 Update svn repository again
 
   $ cd B
-  $ "$TESTDIR/svn-safe-append.py" "see second letter" 'letter .txt'
+  $ svn-safe-append.py "see second letter" 'letter .txt'
   $ echo "nice to meet you" > letter2.txt
   $ svn add letter2.txt
   A         letter2.txt
@@ -100,7 +100,7 @@ Update svn repository again
   
   Committed revision 7.
 
-  $ "$TESTDIR/svn-safe-append.py" "blah-blah-blah" letter2.txt
+  $ svn-safe-append.py "blah-blah-blah" letter2.txt
   $ svn ci -m "work in progress"
   Sending        letter2.txt
   Transmitting file data .

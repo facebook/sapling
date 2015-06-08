@@ -1251,7 +1251,7 @@ Dish up an empty repo; serve it cold.
   $ hg serve -R "$TESTTMP/test" -n test -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help"
+  $ get-with-headers.py 127.0.0.1:$HGPORT "help"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1802,7 +1802,7 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help/add"
+  $ get-with-headers.py 127.0.0.1:$HGPORT "help/add"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1962,7 +1962,7 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help/remove"
+  $ get-with-headers.py 127.0.0.1:$HGPORT "help/remove"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2155,7 +2155,7 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help/revisions"
+  $ get-with-headers.py 127.0.0.1:$HGPORT "help/revisions"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -2250,6 +2250,6 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 
 #endif

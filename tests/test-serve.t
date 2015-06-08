@@ -9,7 +9,7 @@
   >    cat hg.pid >> "$DAEMON_PIDS"
   >    echo % errors
   >    cat errors.log
-  >    "$TESTDIR/killdaemons.py" hg.pid
+  >    killdaemons.py hg.pid
   > }
 
   $ hg init test

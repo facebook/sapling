@@ -196,7 +196,7 @@ Test display of largefiles in hgweb
 
   $ hg serve -d -p $HGPORT --pid-file ../hg.pid
   $ cat ../hg.pid >> $DAEMON_PIDS
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/tip/?style=raw'
   200 Script output follows
   
   
@@ -205,7 +205,7 @@ Test display of largefiles in hgweb
   -rw-r--r-- 9 normal3
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/sub/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/tip/sub/?style=raw'
   200 Script output follows
   
   
@@ -213,7 +213,7 @@ Test display of largefiles in hgweb
   -rw-r--r-- 9 normal4
   
   
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 #endif
 
 Test archiving the various revisions.  These hit corner cases known with

@@ -54,7 +54,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo
   
-  $ "$TESTDIR/killdaemons.py" hg.pid
+  $ killdaemons.py hg.pid
 
 verify 7e7d56fe4833 (encoding fallback in branchmap to maintain compatibility with 1.3.x)
 

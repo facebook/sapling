@@ -53,7 +53,7 @@ Set up the repo
 
 Logs and changes
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/?style=atom'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log/?style=atom'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -239,7 +239,7 @@ Logs and changes
    </entry>
   
   </feed>
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/?style=rss'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log/?style=rss'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -413,7 +413,7 @@ Logs and changes
   
     </channel>
   </rss> (no-eol)
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/?style=atom'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log/1/?style=atom'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -513,7 +513,7 @@ Logs and changes
    </entry>
   
   </feed>
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/?style=rss'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log/1/?style=rss'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -607,7 +607,7 @@ Logs and changes
   
     </channel>
   </rss> (no-eol)
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/foo/?style=atom'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log/1/foo/?style=atom'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -662,7 +662,7 @@ Logs and changes
    </entry>
   
   </feed>
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/1/foo/?style=rss'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log/1/foo/?style=rss'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -683,7 +683,7 @@ Logs and changes
   
     </channel>
   </rss>
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog/'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'shortlog/'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -824,7 +824,7 @@ Logs and changes
   </body>
   </html>
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'rev/0/'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'rev/0/'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -953,7 +953,7 @@ Logs and changes
   </body>
   </html>
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'rev/1/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'rev/1/?style=raw'
   200 Script output follows
   
   
@@ -970,7 +970,7 @@ Logs and changes
   @@ -0,0 +1,1 @@
   +2ef0ac749a14e4f57a5a822464a0902c6f7f448f 1.0
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=base'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=base'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1058,12 +1058,12 @@ Logs and changes
   </body>
   </html>
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=stable&style=raw' | grep 'revision:'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=stable&style=raw' | grep 'revision:'
   revision:    2
 
 Search with revset syntax
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=tip^&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=tip^&style=raw'
   200 Script output follows
   
   
@@ -1080,7 +1080,7 @@ Search with revset syntax
   branch:      stable
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(all(),2)^&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=last(all(),2)^&style=raw'
   200 Script output follows
   
   
@@ -1104,7 +1104,7 @@ Search with revset syntax
   branch:      default
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(all(,2)^&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=last(all(,2)^&style=raw'
   200 Script output follows
   
   
@@ -1114,7 +1114,7 @@ Search with revset syntax
   # Mode literal keyword search
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(al(),2)^&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=last(al(),2)^&style=raw'
   200 Script output follows
   
   
@@ -1124,7 +1124,7 @@ Search with revset syntax
   # Mode literal keyword search
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=bookmark(anotherthing)&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=bookmark(anotherthing)&style=raw'
   200 Script output follows
   
   
@@ -1142,7 +1142,7 @@ Search with revset syntax
   bookmark:    anotherthing
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=bookmark(abc)&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=bookmark(abc)&style=raw'
   200 Script output follows
   
   
@@ -1152,7 +1152,7 @@ Search with revset syntax
   # Mode literal keyword search
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=deadbeef:&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=deadbeef:&style=raw'
   200 Script output follows
   
   
@@ -1163,7 +1163,7 @@ Search with revset syntax
   
   
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=user("test")&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=user("test")&style=raw'
   200 Script output follows
   
   
@@ -1204,7 +1204,7 @@ Search with revset syntax
   bookmark:    anotherthing
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=user("re:test")&style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=user("re:test")&style=raw'
   200 Script output follows
   
   
@@ -1217,11 +1217,11 @@ Search with revset syntax
 
 File-related
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/1/foo/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/1/foo/?style=raw'
   200 Script output follows
   
   foo
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'annotate/1/foo/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'annotate/1/foo/?style=raw'
   200 Script output follows
   
   
@@ -1230,7 +1230,7 @@ File-related
   
   
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/1/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/1/?style=raw'
   200 Script output follows
   
   
@@ -1246,7 +1246,7 @@ File-related
   $ hg parents --template "{node|short}\n" -r 1 foo
   2ef0ac749a14
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/1/foo'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/1/foo'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1340,7 +1340,7 @@ File-related
   </body>
   </html>
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'filediff/0/foo/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'filediff/0/foo/?style=raw'
   200 Script output follows
   
   
@@ -1354,7 +1354,7 @@ File-related
   
   
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'filediff/1/foo/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'filediff/1/foo/?style=raw'
   200 Script output follows
   
   
@@ -1370,7 +1370,7 @@ File-related
   $ hg parents --template "{node|short}\n" -r 2 foo
   2ef0ac749a14
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/2/foo'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file/2/foo'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1468,23 +1468,23 @@ File-related
 
 Overviews
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'raw-tags'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'raw-tags'
   200 Script output follows
   
   tip	cad8025a2e87f88c06259790adfa15acb4080123
   1.0	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'raw-branches'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'raw-branches'
   200 Script output follows
   
   unstable	cad8025a2e87f88c06259790adfa15acb4080123	open
   stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	inactive
   default	a4f92ed23982be056b9852de5dfe873eaac7f0de	inactive
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'raw-bookmarks'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'raw-bookmarks'
   200 Script output follows
   
   anotherthing	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   something	cad8025a2e87f88c06259790adfa15acb4080123
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'summary/?style=gitweb'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'summary/?style=gitweb'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -1686,7 +1686,7 @@ Overviews
   </body>
   </html>
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/?style=gitweb'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'graph/?style=gitweb'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -1833,7 +1833,7 @@ Overviews
   
 raw graph
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/?style=raw'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'graph/?style=raw'
   200 Script output follows
   
   
@@ -1883,28 +1883,28 @@ raw graph
 
 capabilities
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
   200 Script output follows
   
   lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1*%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 (glob)
 
 heads
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=heads'
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=heads'
   200 Script output follows
   
   cad8025a2e87f88c06259790adfa15acb4080123
 
 branches
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=branches&nodes=0000000000000000000000000000000000000000'
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=branches&nodes=0000000000000000000000000000000000000000'
   200 Script output follows
   
   0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
 
 changegroup
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=changegroup&roots=0000000000000000000000000000000000000000'
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=changegroup&roots=0000000000000000000000000000000000000000'
   200 Script output follows
   
   x\x9c\xbd\x94MHTQ\x14\xc7'+\x9d\xc66\x81\x89P\xc1\xa3\x14\xcct\xba\xef\xbe\xfb\xde\xbb\xcfr0\xb3"\x02\x11[%\x98\xdcO\xa7\xd2\x19\x98y\xd2\x07h"\x96\xa0e\xda\xa6lUY-\xca\x08\xa2\x82\x16\x96\xd1\xa2\xf0#\xc8\x95\x1b\xdd$!m*"\xc8\x82\xea\xbe\x9c\x01\x85\xc9\x996\x1d\xf8\xc1\xe3~\x9d\xff9\xef\x7f\xaf\xcf\xe7\xbb\x19\xfc4\xec^\xcb\x9b\xfbz\xa6\xbe\xb3\x90_\xef/\x8d\x9e\xad\xbe\xe4\xcb0\xd2\xec\xad\x12X:\xc8\x12\x12\xd9:\x95\xba	\x1cG\xb7$\xc5\xc44\x1c(\x1d\x03\x03\xdb\x84\x0cK#\xe0\x8a\xb8\x1b\x00\x1a\x08p\xb2SF\xa3\x01\x8f\x00%q\xa1Ny{k!8\xe5t>[{\xe2j\xddl\xc3\xcf\xee\xd0\xddW\x9ff3U\x9djobj\xbb\x87E\x88\x05l\x001\x12\x18\x13\xc6 \xb7(\xe3\x02a\x80\x81\xcel.u\x9b\x1b\x8c\x91\x80Z\x0c\x15\x15 (esc)
@@ -1915,14 +1915,14 @@ changegroup
 
 stream_out
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=stream_out'
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=stream_out'
   200 Script output follows
   
   1
 
 failing unbundle, requires POST request
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=unbundle'
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=unbundle'
   405 push requires POST request
   
   0
@@ -1931,7 +1931,7 @@ failing unbundle, requires POST request
 
 Static files
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'static/style.css'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'static/style.css'
   200 Script output follows
   
   a { text-decoration:none; }
@@ -2043,7 +2043,7 @@ Static files
 
 Stop and restart with HGENCODING=cp932 and preferuncompressed
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ HGENCODING=cp932 hg serve --config server.preferuncompressed=True -n test \
   >     -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
@@ -2055,7 +2055,7 @@ commit message with Japanese Kanji 'Noh', which ends with '\x5c'
 
 Graph json escape of multibyte character
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/' > out
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'graph/' > out
   >>> for line in open("out"):
   ...     if line.startswith("var data ="):
   ...         print line,
@@ -2063,7 +2063,7 @@ Graph json escape of multibyte character
 
 capabilities
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
   200 Script output follows
   
   lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred stream bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1*%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 (glob)
@@ -2073,7 +2073,7 @@ heads
 ERRORS ENCOUNTERED
 
   $ cat errors.log
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 
   $ cd ..
 
@@ -2112,23 +2112,23 @@ Test graph paging
 
 Test paging
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  $ get-with-headers.py 127.0.0.1:$HGPORT \
   >   'graph/?style=raw' | grep changeset
   changeset:   aed2d9c1d0e7
   changeset:   b60a39a85a01
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  $ get-with-headers.py 127.0.0.1:$HGPORT \
   >   'graph/?style=raw&revcount=3' | grep changeset
   changeset:   aed2d9c1d0e7
   changeset:   b60a39a85a01
   changeset:   ada793dcc118
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  $ get-with-headers.py 127.0.0.1:$HGPORT \
   >   'graph/e06180cbfb0?style=raw&revcount=3' | grep changeset
   changeset:   e06180cbfb0c
   changeset:   b4e73ffab476
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  $ get-with-headers.py 127.0.0.1:$HGPORT \
   >   'graph/b4e73ffab47?style=raw&revcount=3' | grep changeset
   changeset:   b4e73ffab476
 

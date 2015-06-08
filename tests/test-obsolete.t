@@ -658,37 +658,37 @@ check hgweb does not explode
 
 check changelog view
 
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'shortlog/'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'shortlog/'
   200 Script output follows
 
 check graph view
 
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'graph'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'graph'
   200 Script output follows
 
 check filelog view
 
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg log -r . -T "{node}"`/'babar'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'log/'`hg log -r . -T "{node}"`/'babar'
   200 Script output follows
 
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/68'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'rev/68'
   200 Script output follows
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'rev/67'
   404 Not Found
   [1]
 
 check that web.view config option:
 
-  $ "$TESTDIR/killdaemons.py" hg.pid
+  $ killdaemons.py hg.pid
   $ cat >> .hg/hgrc << EOF
   > [web]
   > view=all
   > EOF
   $ wait
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'rev/67'
   200 Script output follows
-  $ "$TESTDIR/killdaemons.py" hg.pid
+  $ killdaemons.py hg.pid
 
 Checking _enable=False warning if obsolete marker exists
 
@@ -756,7 +756,7 @@ This test issue 3805
   no changes found
   [1]
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 
 #endif
 
@@ -885,15 +885,15 @@ Test issue 4506
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/1'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'rev/1'
   404 Not Found
   [1]
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'file/tip/bar'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'file/tip/bar'
   200 Script output follows
-  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'annotate/tip/bar'
+  $ get-with-headers.py --headeronly localhost:$HGPORT 'annotate/tip/bar'
   200 Script output follows
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 
 #endif
 

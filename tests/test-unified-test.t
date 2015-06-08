@@ -88,14 +88,14 @@ Combining esc with other markups - and handling lines ending with \r instead of 
 
 testing hghave
 
-  $ "$TESTDIR/hghave" true
-  $ "$TESTDIR/hghave" false
+  $ hghave true
+  $ hghave false
   skipped: missing feature: nail clipper
   [1]
-  $ "$TESTDIR/hghave" no-true
+  $ hghave no-true
   skipped: system supports yak shaving
   [1]
-  $ "$TESTDIR/hghave" no-false
+  $ hghave no-false
 
 Conditional sections based on hghave:
 

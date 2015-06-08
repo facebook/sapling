@@ -21,7 +21,7 @@ Setup HTTP server control:
   >   cat hg.pid >> $DAEMON_PIDS
   > }
   $ tstop() {
-  >   "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  >   killdaemons.py $DAEMON_PIDS
   >   [ "$1" ] && cut -d' ' -f6- access.log && cat errors.log
   >   rm access.log errors.log
   > }

@@ -302,11 +302,11 @@ Fingerprints
   5fed3813f7f5
 
 HGPORT1 is reused below for tinyproxy tests. Kill that server.
-  $ "$TESTDIR/killdaemons.py" hg1.pid
+  $ killdaemons.py hg1.pid
 
 Prepare for connecting through proxy
 
-  $ "$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log </dev/null 2>&1 &
+  $ tinyproxy.py $HGPORT1 localhost >proxy.log </dev/null 2>&1 &
   $ while [ ! -f proxy.pid ]; do sleep 0; done
   $ cat proxy.pid >> $DAEMON_PIDS
 
@@ -346,7 +346,7 @@ Test https with cert problems through proxy
   [255]
 
 
-  $ "$TESTDIR/killdaemons.py" hg0.pid
+  $ killdaemons.py hg0.pid
 
 #if sslcontext
 

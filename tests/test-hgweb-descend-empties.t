@@ -29,7 +29,7 @@ Set up the repo
 
 manifest with descending (paper)
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -145,7 +145,7 @@ manifest with descending (paper)
 
 manifest with descending (coal)
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file?style=coal'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file?style=coal'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -261,7 +261,7 @@ manifest with descending (coal)
 
 manifest with descending (monoblue)
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file?style=monoblue'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file?style=monoblue'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -380,7 +380,7 @@ manifest with descending (monoblue)
 
 manifest with descending (gitweb)
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file?style=gitweb'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file?style=gitweb'
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -484,7 +484,7 @@ manifest with descending (gitweb)
 
 manifest with descending (spartan)
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file?style=spartan'
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'file?style=spartan'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">

@@ -99,7 +99,7 @@ hg serve shared clone
 
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-file/'
+  $ get-with-headers.py localhost:$HGPORT 'raw-file/'
   200 Script output follows
   
   
@@ -299,5 +299,5 @@ verify bookmark behavior after unshare
 
 Explicitly kill daemons to let the test exit on Windows
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 

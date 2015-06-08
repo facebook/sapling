@@ -103,7 +103,7 @@ test revlog corruption
 
 test revlog format 0
 
-  $ "$TESTDIR/revlog-formatv0.py"
+  $ revlog-formatv0.py
   $ cd formatv0
   $ hg verify
   repository uses revlog format 0

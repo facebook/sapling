@@ -6,7 +6,7 @@ Some tests for hgweb in an empty repository
   $ cd test
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'shortlog')
+  $ (get-with-headers.py localhost:$HGPORT 'shortlog')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -117,7 +117,7 @@ Some tests for hgweb in an empty repository
   
   $ echo babar
   babar
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log')
+  $ (get-with-headers.py localhost:$HGPORT 'log')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -226,7 +226,7 @@ Some tests for hgweb in an empty repository
   </body>
   </html>
   
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'graph')
+  $ (get-with-headers.py localhost:$HGPORT 'graph')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -380,7 +380,7 @@ Some tests for hgweb in an empty repository
   </body>
   </html>
   
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'file')
+  $ (get-with-headers.py localhost:$HGPORT 'file')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">

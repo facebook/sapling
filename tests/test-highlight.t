@@ -55,7 +55,7 @@ hg serve
 
 hgweb filerevision, html
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'file/tip/primes.py') \
+  $ (get-with-headers.py localhost:$HGPORT 'file/tip/primes.py') \
   >     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
   200 Script output follows
   
@@ -185,7 +185,7 @@ hgweb filerevision, html
 
 hgweb fileannotate, html
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'annotate/tip/primes.py') \
+  $ (get-with-headers.py localhost:$HGPORT 'annotate/tip/primes.py') \
   >     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mi\"/class=\"mf\"/g"
   200 Script output follows
   
@@ -515,7 +515,7 @@ hgweb fileannotate, html
 
 hgweb fileannotate, raw
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'annotate/tip/primes.py?style=raw') \
+  $ (get-with-headers.py localhost:$HGPORT 'annotate/tip/primes.py?style=raw') \
   >     | sed "s/test@//" > a
   $ echo "200 Script output follows" > b
   $ echo "" >> b
@@ -529,7 +529,7 @@ hgweb fileannotate, raw
 
 hgweb filerevision, raw
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'file/tip/primes.py?style=raw') \
+  $ (get-with-headers.py localhost:$HGPORT 'file/tip/primes.py?style=raw') \
   >     > a
   $ echo "200 Script output follows" > b
   $ echo "" >> b
@@ -538,7 +538,7 @@ hgweb filerevision, raw
 
 hgweb highlightcss friendly
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'highlightcss' > out
+  $ get-with-headers.py localhost:$HGPORT 'highlightcss' > out
   $ head -n 4 out
   200 Script output follows
   
@@ -549,7 +549,7 @@ hgweb highlightcss friendly
 errors encountered
 
   $ cat errors.log
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 
 Change the pygments style
 
@@ -565,7 +565,7 @@ hg serve again
 
 hgweb highlightcss fruity
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'highlightcss' > out
+  $ get-with-headers.py localhost:$HGPORT 'highlightcss' > out
   $ head -n 4 out
   200 Script output follows
   
@@ -583,13 +583,13 @@ errors encountered
   $ hg ci -Ama
   adding eucjp.txt
   $ hgserveget () {
-  >     "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  >     killdaemons.py $DAEMON_PIDS
   >     echo % HGENCODING="$1" hg serve
   >     HGENCODING="$1" hg serve -p $HGPORT -d -n test --pid-file=hg.pid -E errors.log
   >     cat hg.pid >> $DAEMON_PIDS
   > 
   >     echo % hgweb filerevision, html
-  >     "$TESTDIR/get-with-headers.py" localhost:$HGPORT "file/tip/$2" \
+  >     get-with-headers.py localhost:$HGPORT "file/tip/$2" \
   >         | grep '<div class="parity0 source">'
   >     echo % errors encountered
   >     cat errors.log

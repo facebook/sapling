@@ -10,7 +10,7 @@ Avoid interference from actual test env:
 Smoke test
 ============
 
-  $ $TESTDIR/run-tests.py $HGTEST_RUN_TESTS_PURE
+  $ run-tests.py $HGTEST_RUN_TESTS_PURE
   
   # Ran 0 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -26,7 +26,7 @@ a succesful test
   >   nor this (?)
   > EOF
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg`
+  $ run-tests.py --with-hg=`which hg`
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -44,7 +44,7 @@ failing test
   >>> fh.write(u'  $ echo babar\u03b1\n'.encode('utf-8')) and None
   >>> fh.write(u'  l\u03b5\u03b5t\n'.encode('utf-8')) and None
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg`
+  $ run-tests.py --with-hg=`which hg`
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -73,7 +73,7 @@ failing test
   [1]
 
 test --xunit support
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --xunit=xunit.xml
+  $ run-tests.py --with-hg=`which hg` --xunit=xunit.xml
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -129,7 +129,7 @@ test --xunit support
 test for --retest
 ====================
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --retest
+  $ run-tests.py --with-hg=`which hg` --retest
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -152,18 +152,18 @@ Selecting Tests To Run
 
 successful
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-success.t
+  $ run-tests.py --with-hg=`which hg` test-success.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
 success w/ keyword
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` -k xyzzy
+  $ run-tests.py --with-hg=`which hg` -k xyzzy
   .
   # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
 
 failed
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-failure.t
+  $ run-tests.py --with-hg=`which hg` test-failure.t
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -182,7 +182,7 @@ failed
   [1]
 
 failure w/ keyword
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` -k rataxes
+  $ run-tests.py --with-hg=`which hg` -k rataxes
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -208,7 +208,7 @@ it's actually the same test being reported for failure twice.
   $ cat > test-serve-fail.t <<EOF
   >   $ echo 'abort: child process failed to start blah'
   > EOF
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-serve-fail.t
+  $ run-tests.py --with-hg=`which hg` test-serve-fail.t
   
   ERROR: test-serve-fail.t output changed
   !
@@ -224,7 +224,7 @@ it's actually the same test being reported for failure twice.
 Running In Debug Mode
 ======================
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --debug 2>&1 | grep -v pwd
+  $ run-tests.py --with-hg=`which hg` --debug 2>&1 | grep -v pwd
   + echo *SALT* 0 0 (glob)
   *SALT* 0 0 (glob)
   + echo babar
@@ -250,7 +250,7 @@ Parallel runs
 (duplicate the failing test to get predictable output)
   $ cp test-failure.t test-failure-copy.t
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --jobs 2 test-failure*.t -n
+  $ run-tests.py --with-hg=`which hg` --jobs 2 test-failure*.t -n
   !!
   Failed test-failure*.t: output changed (glob)
   Failed test-failure*.t: output changed (glob)
@@ -262,7 +262,7 @@ failures in parallel with --first should only print one failure
   >>> f = open('test-nothing.t', 'w')
   >>> f.write('foo\n' * 1024) and None
   >>> f.write('  $ sleep 1') and None
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --jobs 2 --first
+  $ run-tests.py --with-hg=`which hg` --jobs 2 --first
   
   --- $TESTTMP/test-failure*.t (glob)
   +++ $TESTTMP/test-failure*.t.err (glob)
@@ -292,7 +292,7 @@ Interactive run
 
 Refuse the fix
 
-  $ echo 'n' | $TESTDIR/run-tests.py --with-hg=`which hg` -i
+  $ echo 'n' | run-tests.py --with-hg=`which hg` -i
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -318,7 +318,7 @@ Refuse the fix
 
 Interactive with custom view
 
-  $ echo 'n' | $TESTDIR/run-tests.py --with-hg=`which hg` -i --view echo
+  $ echo 'n' | run-tests.py --with-hg=`which hg` -i --view echo
   $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err (glob)
   Accept this change? [n]* (glob)
   ERROR: test-failure.t output changed
@@ -330,7 +330,7 @@ Interactive with custom view
 
 View the fix
 
-  $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` --view echo
+  $ echo 'y' | run-tests.py --with-hg=`which hg` --view echo
   $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err (glob)
   
   ERROR: test-failure.t output changed
@@ -348,7 +348,7 @@ Accept the fix
   $ echo "  saved backup bundle to \$TESTTMP/foo.hg (glob)" >> test-failure.t
   $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
   $ echo "  saved backup bundle to \$TESTTMP/*.hg (glob)" >> test-failure.t
-  $ echo 'y' | $TESTDIR/run-tests.py --with-hg=`which hg` -i 2>&1 | \
+  $ echo 'y' | run-tests.py --with-hg=`which hg` -i 2>&1 | \
   >   sed -e 's,(glob)$,&<,g'
   
   --- $TESTTMP/test-failure.t
@@ -386,7 +386,7 @@ Accept the fix
 No Diff
 ===============
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --nodiff
+  $ run-tests.py --with-hg=`which hg` --nodiff
   !.
   Failed test-failure.t: output changed
   # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
@@ -396,7 +396,7 @@ No Diff
 test for --time
 ==================
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-success.t --time
+  $ run-tests.py --with-hg=`which hg` test-success.t --time
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
   # Producing time report
@@ -406,7 +406,7 @@ test for --time
 test for --time with --job enabled
 ====================================
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-success.t --time --jobs 2
+  $ run-tests.py --with-hg=`which hg` test-success.t --time --jobs 2
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
   # Producing time report
@@ -419,7 +419,7 @@ Skips
   >   $ echo xyzzy
   > #require false
   > EOF
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --nodiff
+  $ run-tests.py --with-hg=`which hg` --nodiff
   !.s
   Skipped test-skip.t: skipped
   Failed test-failure.t: output changed
@@ -427,13 +427,13 @@ Skips
   python hash seed: * (glob)
   [1]
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy
+  $ run-tests.py --with-hg=`which hg` --keyword xyzzy
   .s
   Skipped test-skip.t: skipped
   # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
 
 Skips with xml
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --keyword xyzzy \
+  $ run-tests.py --with-hg=`which hg` --keyword xyzzy \
   >  --xunit=xunit.xml
   .s
   Skipped test-skip.t: skipped
@@ -446,7 +446,7 @@ Skips with xml
 
 Missing skips or blacklisted skips don't count as executed:
   $ echo test-failure.t > blacklist
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --blacklist=blacklist \
+  $ run-tests.py --with-hg=`which hg` --blacklist=blacklist \
   >   test-failure.t test-bogus.t
   ss
   Skipped test-bogus.t: Doesn't exist
@@ -458,7 +458,7 @@ Missing skips or blacklisted skips don't count as executed:
 test for --json
 ==================
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` --json
+  $ run-tests.py --with-hg=`which hg` --json
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -508,7 +508,7 @@ test for --json
 Test that failed test accepted through interactive are properly reported:
 
   $ cp test-failure.t backup
-  $ echo y | $TESTDIR/run-tests.py --with-hg=`which hg` --json -i
+  $ echo y | run-tests.py --with-hg=`which hg` --json -i
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
@@ -560,7 +560,7 @@ backslash on end of line with glob matching is handled properly
   >   foo * \ (glob)
   > EOF
 
-  $ $TESTDIR/run-tests.py --with-hg=`which hg` test-glob-backslash.t
+  $ run-tests.py --with-hg=`which hg` test-glob-backslash.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 

@@ -984,7 +984,7 @@ locally (issue4109)
   > EOF
   $ hg -R pull-dst -q pull -u http://localhost:$HGPORT
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 #endif
 
 Test overridden functions work correctly even for repos disabling

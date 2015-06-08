@@ -289,4 +289,4 @@ check qimport phase:
 
   $ cd ..
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS

@@ -27,7 +27,7 @@
 
 log
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT "rev/tip" | grep bts
+  $ get-with-headers.py localhost:$HGPORT "rev/tip" | grep bts
   <div class="description"><a href="http://bts.example.org/issue123">Issue123</a>: fixed the <i class="x">bug</i>!</div>
 errors
 

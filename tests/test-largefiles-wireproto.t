@@ -106,7 +106,7 @@ exit code with nothing outgoing (issue3611)
   [255]
 
 used all HGPORTs, kill all daemons
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 #endif
 
 vanilla clients locked out from largefiles ssh repos
@@ -291,6 +291,6 @@ largefiles pulled on update - no server side problems:
   $ rm -rf empty http-clone*
 
 used all HGPORTs, kill all daemons
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
 
 #endif

@@ -27,7 +27,7 @@ Serve from a bundle file
 
 Ensure we're serving from the bundle
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'file/tip/?style=raw')
+  $ (get-with-headers.py localhost:$HGPORT 'file/tip/?style=raw')
   200 Script output follows
   
   

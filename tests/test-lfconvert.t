@@ -89,7 +89,7 @@ Test link+rename largefile codepath
   normal
   $ cat sub/normal2
   alsonormal
-  $ "$TESTDIR/md5sum.py" large sub/maybelarge.dat
+  $ md5sum.py large sub/maybelarge.dat
   ec87a838931d4d5d2e94a04644788a55  large
   1276481102f218c981e0324180bafd9f  sub/maybelarge.dat
 
@@ -115,7 +115,7 @@ add some changesets to rename/remove/merge
   $ echo blah >> normal3
   $ echo blah >> sub/normal2
   $ echo blah >> sub/maybelarge.dat
-  $ "$TESTDIR/md5sum.py" sub/maybelarge.dat
+  $ md5sum.py sub/maybelarge.dat
   1dd0b99ff80e19cff409702a1d3f5e15  sub/maybelarge.dat
   $ hg commit -A -m"add normal3, modify sub/*"
   adding normal3
@@ -193,7 +193,7 @@ lfconvert with rename, merge, and remove
   $ cat stuff/normal2
   alsonormal
   blah
-  $ "$TESTDIR/md5sum.py" stuff/maybelarge.dat
+  $ md5sum.py stuff/maybelarge.dat
   1dd0b99ff80e19cff409702a1d3f5e15  stuff/maybelarge.dat
   $ cat .hglf/stuff/maybelarge.dat
   76236b6a2c6102826c61af4297dd738fb3b1de38

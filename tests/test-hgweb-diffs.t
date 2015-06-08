@@ -36,7 +36,7 @@ set up hgweb
 
 revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'rev/0'
+  $ get-with-headers.py localhost:$HGPORT 'rev/0'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -168,7 +168,7 @@ revision
 
 raw revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-rev/0'
+  $ get-with-headers.py localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
   
   
@@ -201,7 +201,7 @@ diff removed file
   $ hg parents --template "{node|short}\n" -r tip b
   0cd96de13884
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/tip/b'
+  $ get-with-headers.py localhost:$HGPORT 'diff/tip/b'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -302,13 +302,13 @@ diff removed file
 
 set up hgweb with git diffs
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ hg serve --config 'diff.git=1' -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
 revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'rev/0'
+  $ get-with-headers.py localhost:$HGPORT 'rev/0'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -442,7 +442,7 @@ revision
 
 revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-rev/0'
+  $ get-with-headers.py localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
   
   
@@ -477,7 +477,7 @@ diff modified file
   $ hg parents --template "{node|short}\n" -r tip a
   0cd96de13884
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/tip/a'
+  $ get-with-headers.py localhost:$HGPORT 'diff/tip/a'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -580,7 +580,7 @@ comparison new file
   $ hg log --template "{rev}:{node|short}\n" -r 0
   0:0cd96de13884
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/0/a'
+  $ get-with-headers.py localhost:$HGPORT 'comparison/0/a'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -707,7 +707,7 @@ comparison existing file
   $ hg log --template "{rev}:{node|short}\n" -r tip
   2:d73db4d812ff
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/a'
+  $ get-with-headers.py localhost:$HGPORT 'comparison/tip/a'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -836,7 +836,7 @@ comparison removed file
   $ hg log --template "{rev}:{node|short}\n" -r tip
   3:20e80271eb7a
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/a'
+  $ get-with-headers.py localhost:$HGPORT 'comparison/tip/a'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -971,7 +971,7 @@ comparison not-modified file
   $ hg parents --template "{rev}:{node|short}\n" -r tip e
   4:402bea3b0976
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/e'
+  $ get-with-headers.py localhost:$HGPORT 'comparison/tip/e'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -1094,7 +1094,7 @@ test import rev as raw-rev
 
 raw revision with diff block numbers
 
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ cat <<EOF > .hg/hgrc
   > [web]
   > templates = rawdiff
@@ -1114,7 +1114,7 @@ raw revision with diff block numbers
   > EOF
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-rev/0'
+  $ get-with-headers.py localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
   
   Block: 1
@@ -1131,7 +1131,7 @@ raw revision with diff block numbers
   @@ -0,0 +1,1 @@
   +b
   
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+  $ killdaemons.py $DAEMON_PIDS
   $ rm .hg/hgrc rawdiff/map
   $ rmdir rawdiff
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log

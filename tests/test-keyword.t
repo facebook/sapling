@@ -980,14 +980,14 @@ hg serve
 
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'file/tip/a/?style=raw'
+  $ get-with-headers.py localhost:$HGPORT 'file/tip/a/?style=raw'
   200 Script output follows
   
   expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
   do not process $Id:
   xxx $
   $Xinfo: User Name <user@example.com>: firstline $
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'annotate/tip/a/?style=raw'
+  $ get-with-headers.py localhost:$HGPORT 'annotate/tip/a/?style=raw'
   200 Script output follows
   
   
@@ -999,7 +999,7 @@ hg serve
   
   
   
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'rev/tip/?style=raw'
+  $ get-with-headers.py localhost:$HGPORT 'rev/tip/?style=raw'
   200 Script output follows
   
   
@@ -1019,7 +1019,7 @@ hg serve
   +xxx $
   +$Xinfo$
   
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/bb948857c743/a?style=raw'
+  $ get-with-headers.py localhost:$HGPORT 'diff/bb948857c743/a?style=raw'
   200 Script output follows
   
   

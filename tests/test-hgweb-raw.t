@@ -17,9 +17,9 @@ Test raw style of hgweb
   $ hg serve -p $HGPORT -A access.log -E error.log -d --pid-file=hg.pid
 
   $ cat hg.pid >> $DAEMON_PIDS
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
+  $ (get-with-headers.py localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
 
-  $ "$TESTDIR/killdaemons.py" hg.pid
+  $ killdaemons.py hg.pid
 
   $ cat getoutput.txt
   200 Script output follows
@@ -39,8 +39,8 @@ Test raw style of hgweb
   > --config web.guessmime=True
 
   $ cat hg.pid >> $DAEMON_PIDS
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
-  $ "$TESTDIR/killdaemons.py" hg.pid
+  $ (get-with-headers.py localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
+  $ killdaemons.py hg.pid
 
   $ cat getoutput.txt
   200 Script output follows
