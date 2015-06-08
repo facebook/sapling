@@ -41,5 +41,5 @@ The hash here is always the same since the remote repository only has the null h
 
 Explicitly kill daemons to let the test exit on Windows
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 

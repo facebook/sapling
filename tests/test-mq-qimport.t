@@ -289,4 +289,4 @@ check qimport phase:
 
   $ cd ..
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py

@@ -213,7 +213,7 @@ Test display of largefiles in hgweb
   -rw-r--r-- 9 normal4
   
   
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 #endif
 
 Test archiving the various revisions.  These hit corner cases known with

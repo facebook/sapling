@@ -114,5 +114,5 @@ SSH (try to exercise the ssh functionality with a dummy script):
 
 Explicitly kill daemons to let the test exit on Windows
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 

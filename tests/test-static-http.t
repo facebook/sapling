@@ -159,4 +159,4 @@ test with non-repo
   $ hg clone static-http://localhost:$HGPORT/notarepo local3
   abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository!
   [255]
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py

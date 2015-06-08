@@ -35,5 +35,5 @@ Test via HTTP:
   $ hg debugknown http://localhost:$HGPORT/
   
   $ cat error.log
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 

@@ -284,7 +284,7 @@ race conditions
 (new config needs a server restart)
 
   $ cd ..
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg -R pull-race serve -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
   $ cat pull-race.pid >> $DAEMON_PIDS
   $ cd pull-race2
@@ -321,7 +321,7 @@ Update a bookmark right after the initial lookup -B (issue4689)
 
 (new config need server restart)
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg -R ../pull-race serve -p $HGPORT -d --pid-file=../pull-race.pid -E main-error.log
   $ cat ../pull-race.pid >> $DAEMON_PIDS
 
@@ -347,7 +347,7 @@ Update a bookmark right after the initial lookup -B (issue4689)
 
 (done with this section of the test)
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cd ../b
 
 diverging a remote bookmark fails
@@ -743,7 +743,7 @@ Check hook preventing push (issue4455)
   > push_ssl = false
   > allow_push = *
   > EOF
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg -R ../issue4455-dest serve -p $HGPORT -d --pid-file=../issue4455.pid -E ../issue4455-error.log
   $ cat ../issue4455.pid >> $DAEMON_PIDS
 

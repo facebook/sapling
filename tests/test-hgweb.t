@@ -321,7 +321,7 @@ try bad style
 
 stop and restart
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -594,7 +594,7 @@ no style can be loaded from directories other than the specified paths
   > mimetype = 'text/plain'
   > EOF
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log \
   > --config web.style=fallback --config web.templates=x/templates
   $ cat hg.pid >> $DAEMON_PIDS
@@ -625,7 +625,7 @@ errors
 
 Uncaught exceptions result in a logged error and canned HTTP response
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg --config extensions.hgweberror=$TESTDIR/hgweberror.py serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -636,7 +636,7 @@ Uncaught exceptions result in a logged error and canned HTTP response
   Internal Server Error (no-eol)
   [1]
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ head -1 errors.log
   .* Exception happened during processing request '/raiseerror': (re)
 
@@ -652,5 +652,5 @@ Uncaught exception after partial content sent
   partial content
   Internal Server Error (no-eol)
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cd ..

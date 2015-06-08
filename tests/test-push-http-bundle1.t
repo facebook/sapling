@@ -27,7 +27,7 @@ which does not need to exist to keep bundle1 working.
   >     cat hg.pid >> $DAEMON_PIDS
   >     hg --cwd ../test2 push http://localhost:$HGPORT/
   >     exitstatus=$?
-  >     killdaemons.py $DAEMON_PIDS
+  >     killdaemons.py
   >     echo % serve errors
   >     cat errors.log
   >     return $exitstatus

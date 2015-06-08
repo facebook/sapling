@@ -589,4 +589,4 @@ Not a bundle 1.0
   
   $ rm -rf clone
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py

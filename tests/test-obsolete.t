@@ -756,7 +756,7 @@ This test issue 3805
   no changes found
   [1]
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 #endif
 
@@ -893,7 +893,7 @@ Test issue 4506
   $ get-with-headers.py --headeronly localhost:$HGPORT 'annotate/tip/bar'
   200 Script output follows
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 #endif
 

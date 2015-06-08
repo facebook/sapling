@@ -1193,6 +1193,6 @@ server won't turn changeset public.
 
   $ cd ..
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 #endif

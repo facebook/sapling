@@ -40,7 +40,7 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   [ui]
   # name and email (local to this repository, optional), e.g.
   # username = Jane Doe <jdoe@example.com>
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 expect error, cloning not allowed
 
@@ -55,7 +55,7 @@ expect error, cloning not allowed
   $ hg clone http://localhost:$HGPORT/ test4 --config experimental.bundle2-exp=False
   abort: authorization failed
   [255]
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 serve errors
 

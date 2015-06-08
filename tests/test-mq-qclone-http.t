@@ -152,5 +152,5 @@ test --mq works and uses correct repository config
   $ hg --cwd d log --mq --template '{rev} {desc|firstline}\n'
   0 b.patch
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 

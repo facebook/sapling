@@ -2250,6 +2250,6 @@ Dish up an empty repo; serve it cold.
   </html>
   
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 #endif

@@ -18,4 +18,4 @@
   $ hg clone http://localhost:$HGPORT/foo copy2
   abort: HTTP Error 404: * (glob)
   [255]
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py

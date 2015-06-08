@@ -33,7 +33,7 @@ Setup HTTP server control:
   >   cat hg.pid >> $DAEMON_PIDS
   > }
   $ tstop() {
-  >   killdaemons.py $DAEMON_PIDS
+  >   killdaemons.py
   >   cp $HGRCPATH-withcap $HGRCPATH
   > }
 

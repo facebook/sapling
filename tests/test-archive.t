@@ -31,7 +31,7 @@
   >     echo % $3 and $4 disallowed should both give 403
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$3" | head -n 1
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$4" | head -n 1
-  >     killdaemons.py $DAEMON_PIDS
+  >     killdaemons.py
   >     cat errors.log
   >     cp .hg/hgrc-base .hg/hgrc
   > }
@@ -134,7 +134,7 @@ test that we reject unsafe patterns
   $ python getarchive.py "$TIP" gz relre:baz
   HTTP Error 404: file(s) not found: relre:baz
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
   $ hg archive -t tar test.tar
   $ tar tf test.tar

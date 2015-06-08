@@ -299,5 +299,5 @@ verify bookmark behavior after unshare
 
 Explicitly kill daemons to let the test exit on Windows
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 

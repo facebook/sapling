@@ -70,7 +70,7 @@ subrepo debug for 'main' clone
    source   ../sub
    revision 863c1745b441bd97a8c4a096e87793073f4fb215
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
 
 subrepo paths with ssh urls
 

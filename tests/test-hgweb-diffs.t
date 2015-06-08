@@ -302,7 +302,7 @@ diff removed file
 
 set up hgweb with git diffs
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg serve --config 'diff.git=1' -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -1094,7 +1094,7 @@ test import rev as raw-rev
 
 raw revision with diff block numbers
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat <<EOF > .hg/hgrc
   > [web]
   > templates = rawdiff
@@ -1131,7 +1131,7 @@ raw revision with diff block numbers
   @@ -0,0 +1,1 @@
   +b
   
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ rm .hg/hgrc rawdiff/map
   $ rmdir rawdiff
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log

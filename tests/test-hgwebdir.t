@@ -903,7 +903,7 @@ Test [paths] '**' extension
 
 Test collapse = True
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat >> paths.conf <<EOF
   > [web]
   > collapse=true
@@ -989,7 +989,7 @@ Test subrepositories inside intermediate directories
 
 Test descend = False
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat >> paths.conf <<EOF
   > descend=false
   > EOF
@@ -1050,7 +1050,7 @@ Test [paths] '*' in a repo root
   $ hg id http://localhost:$HGPORT1/astar
   8580ff50825a
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat > paths.conf <<EOF
   > [paths]
   > t/a = $root/a
@@ -1078,7 +1078,7 @@ Test [paths] '*' in a repo root
 
 Test collapse = True
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat >> paths.conf <<EOF
   > [web]
   > collapse=true
@@ -1103,7 +1103,7 @@ Test collapse = True
 
 test descend = False
 
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat >> paths.conf <<EOF
   > descend=false
   > EOF
@@ -1123,7 +1123,7 @@ test descend = False
   /t/a/
   /t/b/
   
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ cat > paths.conf <<EOF
   > [paths]
   > nostore = $root/nostore
@@ -1227,7 +1227,7 @@ rss-log with basedir /
 
   $ get-with-headers.py localhost:$HGPORT2 'a/rss-log' | grep '<guid'
       <guid isPermaLink="true">http://hg.example.com:8080/a/rev/8580ff50825a</guid>
-  $ killdaemons.py $DAEMON_PIDS
+  $ killdaemons.py
   $ hg serve --config web.baseurl=http://hg.example.com:8080/foo/ -p $HGPORT2 -d \
   >     --pid-file=hg.pid --webdir-conf collections.conf \
   >     -A access-collections-2.log -E error-collections-2.log
