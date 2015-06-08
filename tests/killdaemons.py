@@ -87,5 +87,9 @@ def killdaemons(pidfile, tryhard=True, remove=False, logfn=None):
         pass
 
 if __name__ == '__main__':
-    path, = sys.argv[1:]
+    if len(sys.argv) > 1:
+        path, = sys.argv[1:]
+    else:
+        path = os.environ["DAEMON_PIDS"]
+
     killdaemons(path)
