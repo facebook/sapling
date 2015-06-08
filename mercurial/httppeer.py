@@ -30,6 +30,7 @@ class httppeer(wireproto.wirepeer):
         self.caps = None
         self.handler = None
         self.urlopener = None
+        self.requestbuilder = None
         u = util.url(path)
         if u.query or u.fragment:
             raise util.Abort(_('unsupported URL component: "%s"') %
@@ -42,6 +43,7 @@ class httppeer(wireproto.wirepeer):
         self.ui.debug('using %s\n' % self._url)
 
         self.urlopener = url.opener(ui, authinfo)
+        self.requestbuilder = urllib2.Request
 
     def __del__(self):
         if self.urlopener:
@@ -111,7 +113,7 @@ class httppeer(wireproto.wirepeer):
             q += sorted(args.items())
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
-        req = urllib2.Request(cu, data, headers)
+        req = self.requestbuilder(cu, data, headers)
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
             req.add_unredirected_header('Content-Length', '%d' % size)
