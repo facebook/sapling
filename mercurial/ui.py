@@ -7,7 +7,7 @@
 
 from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
-import config, scmutil, util, error, formatter
+import config, scmutil, util, error, formatter, progress
 from node import hex
 
 samplehgrcs = {
@@ -983,3 +983,15 @@ class path(object):
         self.name = name
         # We'll do more intelligent things with rawloc in the future.
         self.loc = rawloc
+
+# we instantiate one globally shared progress bar to avoid
+# competing progress bars when multiple UI objects get created
+_progresssingleton = None
+
+def getprogbar(ui):
+    global _progresssingleton
+    if _progresssingleton is None:
+        # passing 'ui' object to the singleton is fishy,
+        # this is how the extension used to work but feel free to rework it.
+        _progresssingleton = progress.progbar(ui)
+    return _progresssingleton

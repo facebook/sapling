@@ -36,11 +36,9 @@ characters.
 """
 
 from mercurial import progress
-
-_singleton = None
+from mercurial import ui as uimod
 
 def uisetup(ui):
-    global _singleton
     class progressui(ui.__class__):
         _progbar = None
 
@@ -73,9 +71,7 @@ def uisetup(ui):
             # we instantiate one globally-shared progress bar to avoid
             # competing progress bars when multiple UI objects get created
             if not progressui._progbar:
-                if _singleton is None:
-                    _singleton = progress.progbar(ui)
-                progressui._progbar = _singleton
+                progressui._progbar = uimod.getprogbar(ui)
 
 def reposetup(ui, repo):
     uisetup(repo.ui)
