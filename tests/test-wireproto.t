@@ -90,26 +90,13 @@ HTTP without the httpheader capability:
 
 SSH (try to exercise the ssh functionality with a dummy script):
 
-  $ cat <<EOF > dummyssh
-  > import sys
-  > import os
-  > os.chdir(os.path.dirname(sys.argv[0]))
-  > if sys.argv[1] != "user@dummy":
-  >     sys.exit(-1)
-  > if not os.path.exists("dummyssh"):
-  >     sys.exit(-1)
-  > os.environ["SSH_CLIENT"] = "127.0.0.1 1 2"
-  > r = os.system(sys.argv[2])
-  > sys.exit(bool(r))
-  > EOF
-
-  $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo uno due tre quattro
+  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo uno due tre quattro
   uno due tre quattro None
-  $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo eins zwei --four vier
+  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo eins zwei --four vier
   eins zwei None vier None
-  $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo eins zwei
+  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo eins zwei
   eins zwei None None None
-  $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo eins zwei --five fuenf
+  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo eins zwei --five fuenf
   eins zwei None None None
 
 Explicitly kill daemons to let the test exit on Windows
