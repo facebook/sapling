@@ -955,8 +955,12 @@ def _pullbookmarkbundle1(pullop):
     discovery to reduce the chance and impact of race conditions."""
     if pullop.remotebookmarks is not None:
         return
-    if not _canusebundle2(pullop): # all bundle2 server now support listkeys
-        pullop.remotebookmarks = pullop.remote.listkeys('bookmarks')
+    if (_canusebundle2(pullop)
+            and 'listkeys' in bundle2.bundle2caps(pullop.remote)):
+        # all known bundle2 servers now support listkeys, but lets be nice with
+        # new implementation.
+        return
+    pullop.remotebookmarks = pullop.remote.listkeys('bookmarks')
 
 
 @pulldiscovery('changegroup')
