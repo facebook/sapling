@@ -12,10 +12,3 @@ to draw progress bars that are as informative as possible. Some progress
 bars only offer indeterminate information, while others have a definite
 end point.
 """
-
-def uisetup(ui):
-    if ui.config('progress', 'disable', None) is None:
-        ui.setconfig('progress', 'disable', 'False', 'hgext-progress')
-
-def reposetup(ui, repo):
-    uisetup(repo.ui)
