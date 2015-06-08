@@ -312,13 +312,15 @@ def uisetup(ui):
     if ui.configbool('progress', 'disable'):
         return
     if shouldprint(ui) and not ui.debugflag and not ui.quiet:
-        ui.__class__ = progressui
-        # we instantiate one globally shared progress bar to avoid
-        # competing progress bars when multiple UI objects get created
-        if not progressui._progbar:
-            if _singleton is None:
-                _singleton = progbar(ui)
-            progressui._progbar = _singleton
+        dval = object()
+        if getattr(ui, '_progbar', dval) is dval:
+            ui.__class__ = progressui
+            # we instantiate one globally-shared progress bar to avoid
+            # competing progress bars when multiple UI objects get created
+            if not progressui._progbar:
+                if _singleton is None:
+                    _singleton = progbar(ui)
+                progressui._progbar = _singleton
 
 def reposetup(ui, repo):
     uisetup(repo.ui)

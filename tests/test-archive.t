@@ -282,18 +282,11 @@ enable progress extension:
   $ hg archive ../with-progress
   \r (no-eol) (esc)
   archiving [                                           ] 0/6\r (no-eol) (esc)
-  archiving [                                           ] 0/6\r (no-eol) (esc)
-  archiving [======>                                    ] 1/6\r (no-eol) (esc)
   archiving [======>                                    ] 1/6\r (no-eol) (esc)
   archiving [=============>                             ] 2/6\r (no-eol) (esc)
-  archiving [=============>                             ] 2/6\r (no-eol) (esc)
-  archiving [====================>                      ] 3/6\r (no-eol) (esc)
   archiving [====================>                      ] 3/6\r (no-eol) (esc)
   archiving [===========================>               ] 4/6\r (no-eol) (esc)
-  archiving [===========================>               ] 4/6\r (no-eol) (esc)
   archiving [==================================>        ] 5/6\r (no-eol) (esc)
-  archiving [==================================>        ] 5/6\r (no-eol) (esc)
-  archiving [==========================================>] 6/6\r (no-eol) (esc)
   archiving [==========================================>] 6/6\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
