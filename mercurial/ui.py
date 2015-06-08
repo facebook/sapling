@@ -892,7 +892,7 @@ class ui(object):
     def _progbar(self):
         """setup the progbar singleton to the ui object"""
         if (self.quiet or self.debugflag
-                or self.configbool('progress', 'disable', True)
+                or self.configbool('progress', 'disable', False)
                 or not progress.shouldprint(self)):
             return None
         return getprogbar(self)
