@@ -584,6 +584,7 @@ class ui(object):
         "cmdname.type" is recommended. For example, status issues
         a label of "status.modified" for modified files.
         '''
+        self._progclear()
         if self._buffers:
             self._buffers[-1].extend([str(a) for a in args])
         else:
@@ -591,6 +592,7 @@ class ui(object):
                 self.fout.write(str(a))
 
     def write_err(self, *args, **opts):
+        self._progclear()
         try:
             if self._bufferstates and self._bufferstates[-1][0]:
                 return self.write(*args, **opts)
@@ -886,6 +888,22 @@ class ui(object):
                 os.environ.get("VISUAL") or
                 os.environ.get("EDITOR", editor))
 
+    @util.propertycache
+    def _progbar(self):
+        """setup the progbar singleton to the ui object"""
+        if (self.quiet or self.debugflag
+                or self.configbool('progress', 'disable', True)
+                or not progress.shouldprint(self)):
+            return None
+        return getprogbar(self)
+
+    def _progclear(self):
+        """clear progress bar output if any. use it before any output"""
+        if '_progbar' not in vars(self): # nothing loadef yet
+            return
+        if self._progbar is not None and self._progbar.printed:
+            self._progbar.clear()
+
     def progress(self, topic, pos, item="", unit="", total=None):
         '''show a progress message
 
@@ -902,7 +920,9 @@ class ui(object):
         All topics should be marked closed by setting pos to None at
         termination.
         '''
-
+        if self._progbar is not None:
+            self._progbar.progress(topic, pos, item=item, unit=unit,
+                                   total=total)
         if pos is None or not self.configbool('progress', 'debug'):
             return
 

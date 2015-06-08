@@ -258,6 +258,7 @@ Enable progress extension for archive tests:
   > [extensions]
   > progress =
   > [progress]
+  > disable=False
   > assume-tty = 1
   > delay = 0
   > # set changedelay really large so we don't see nested topics

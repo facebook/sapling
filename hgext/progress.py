@@ -35,43 +35,9 @@ would take the last num characters, or ``+<num>`` for the first num
 characters.
 """
 
-from mercurial import progress
-from mercurial import ui as uimod
-
 def uisetup(ui):
-    class progressui(ui.__class__):
-        _progbar = None
-
-        def _quiet(self):
-            return self.debugflag or self.quiet
-
-        def progress(self, *args, **opts):
-            if not self._quiet():
-                self._progbar.progress(*args, **opts)
-            return super(progressui, self).progress(*args, **opts)
-
-        def write(self, *args, **opts):
-            if not self._quiet() and self._progbar.printed:
-                self._progbar.clear()
-            return super(progressui, self).write(*args, **opts)
-
-        def write_err(self, *args, **opts):
-            if not self._quiet() and self._progbar.printed:
-                self._progbar.clear()
-            return super(progressui, self).write_err(*args, **opts)
-
-    # Apps that derive a class from ui.ui() can use
-    # setconfig('progress', 'disable', 'True') to disable this extension
-    if ui.configbool('progress', 'disable'):
-        return
-    if progress.shouldprint(ui) and not ui.debugflag and not ui.quiet:
-        dval = object()
-        if getattr(ui, '_progbar', dval) is dval:
-            ui.__class__ = progressui
-            # we instantiate one globally-shared progress bar to avoid
-            # competing progress bars when multiple UI objects get created
-            if not progressui._progbar:
-                progressui._progbar = uimod.getprogbar(ui)
+    if ui.config('progress', 'disable', None) is None:
+        ui.setconfig('progress', 'disable', 'False', 'hgext-progress')
 
 def reposetup(ui, repo):
     uisetup(repo.ui)
