@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+#
 # simple script to be used in hooks
 #
 # put something like this in the repo .hg/hgrc:
