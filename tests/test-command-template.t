@@ -3042,6 +3042,14 @@ Test pad function
   1------------------- {node|short}
   0------------------- test
 
+Test template string in pad function
+
+  $ hg log -r 0 -T '{pad("\{{rev}}", 10)} {author|user}\n'
+  {0}        test
+
+  $ hg log -r 0 -T '{pad(r"\{rev}", 10)} {author|user}\n'
+  \0         test
+
 Test ifcontains function
 
   $ hg log --template '{rev} {ifcontains(rev, "2 two 0", "is in the string", "is not")}\n'

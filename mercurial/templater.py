@@ -310,10 +310,7 @@ def pad(context, mapping, args):
 
     width = int(args[1][1])
 
-    text = stringify(args[0][0](context, mapping, args[0][1]))
-    if args[0][0] == runstring:
-        text = stringify(runtemplate(context, mapping,
-            compiletemplate(text, context)))
+    text = stringify(_evalifliteral(args[0], context, mapping))
 
     right = False
     fillchar = ' '
