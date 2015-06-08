@@ -5,10 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""show progress bars for some actions
+"""show progress bars for some actions (DEPRECATED)
 
-This extension uses the progress information logged by hg commands
-to draw progress bars that are as informative as possible. Some progress
-bars only offer indeterminate information, while others have a definite
-end point.
+This extension has been merged into core, you can remove it from your config.
+See hg help config.progress for configuration options.
 """

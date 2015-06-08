@@ -264,7 +264,6 @@ Test extension help:
        notify        hooks for sending email push notifications
        pager         browse command output with an external pager
        patchbomb     command to send changesets as (a series of) patch emails
-       progress      show progress bars for some actions
        purge         command to delete untracked files from the working
                      directory
        record        commands to interactively select changes for
