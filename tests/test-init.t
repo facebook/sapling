@@ -84,7 +84,7 @@ test failure
 
 init+push to remote2
 
-  $ hg init -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote2
+  $ hg init -e dummyssh ssh://user@dummy/remote2
   $ hg incoming -R remote2 local
   comparing with local
   changeset:   0:08b9e9f63b32
@@ -94,7 +94,7 @@ init+push to remote2
   summary:     init
   
 
-  $ hg push -R local -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote2
+  $ hg push -R local -e dummyssh ssh://user@dummy/remote2
   pushing to ssh://user@dummy/remote2
   searching for changes
   remote: adding changesets
@@ -104,7 +104,7 @@ init+push to remote2
 
 clone to remote1
 
-  $ hg clone -e "python \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remote1
+  $ hg clone -e dummyssh local ssh://user@dummy/remote1
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -112,7 +112,7 @@ clone to remote1
   remote: added 1 changesets with 1 changes to 1 files
 
 The largefiles extension doesn't crash
-  $ hg clone -e "python \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remotelf --config extensions.largefiles=
+  $ hg clone -e dummyssh local ssh://user@dummy/remotelf --config extensions.largefiles=
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -121,14 +121,14 @@ The largefiles extension doesn't crash
 
 init to existing repo
 
-  $ hg init -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote1
+  $ hg init -e dummyssh ssh://user@dummy/remote1
   abort: repository remote1 already exists!
   abort: could not create remote repo!
   [255]
 
 clone to existing repo
 
-  $ hg clone -e "python \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remote1
+  $ hg clone -e dummyssh local ssh://user@dummy/remote1
   abort: repository remote1 already exists!
   abort: could not create remote repo!
   [255]
@@ -224,7 +224,7 @@ clone bookmarks
   $ hg -R local bookmark test
   $ hg -R local bookmarks
    * test                      0:08b9e9f63b32
-  $ hg clone -e "python \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remote-bookmarks
+  $ hg clone -e dummyssh local ssh://user@dummy/remote-bookmarks
   searching for changes
   remote: adding changesets
   remote: adding manifests

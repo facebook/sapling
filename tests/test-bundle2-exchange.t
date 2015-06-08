@@ -18,7 +18,7 @@ enable obsolescence
   > bundle2-exp=True
   > bundle2-output-capture=True
   > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
+  > ssh=dummyssh
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [web]
   > push_ssl = false

@@ -81,7 +81,7 @@ Start a simple HTTP server to serve bundles
   > [experimental]
   > bundle2-exp=True
   > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
+  > ssh=dummyssh
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > EOF
 

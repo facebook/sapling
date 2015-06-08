@@ -734,7 +734,7 @@ Check hook preventing push (issue4455)
   > ssh=ssh://user@dummy/issue4455-dest
   > http=http://localhost:$HGPORT/
   > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
+  > ssh=dummyssh
   > EOF
   $ cat >> ../issue4455-dest/.hg/hgrc << EOF
   > [hooks]
