@@ -98,6 +98,9 @@ class hgwebdir(object):
             u = ui.ui()
             u.setconfig('ui', 'report_untrusted', 'off', 'hgwebdir')
             u.setconfig('ui', 'nontty', 'true', 'hgwebdir')
+            # displaying bundling progress bar while serving feels wrong and may
+            # break some wsgi implementations.
+            u.setconfig('progress', 'disable', 'true', 'hgweb')
 
         if not isinstance(self.conf, (dict, list, tuple)):
             map = {'paths': 'hgweb-paths'}

@@ -69,6 +69,10 @@ class hgweb(object):
         r.baseui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
         r.ui.setconfig('ui', 'nontty', 'true', 'hgweb')
         r.baseui.setconfig('ui', 'nontty', 'true', 'hgweb')
+        # displaying bundling progress bar while serving feel wrong and may
+        # break some wsgi implementation.
+        r.ui.setconfig('progress', 'disable', 'true', 'hgweb')
+        r.baseui.setconfig('progress', 'disable', 'true', 'hgweb')
         self.repo = r
         hook.redirect(True)
         self.repostate = ((-1, -1), (-1, -1))
