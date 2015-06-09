@@ -6,6 +6,8 @@ from mercurial import repoview, branchmap, merge, copies
 import time, os, sys
 import functools
 
+formatteropts = commands.formatteropts
+
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
@@ -60,9 +62,9 @@ def _timer(fm, func, title=None):
     fm.write('count',  ' (best of %d)', count)
     fm.plain('\n')
 
-@command('perfwalk')
-def perfwalk(ui, repo, *pats):
-    timer, fm = gettimer(ui)
+@command('perfwalk', formatteropts)
+def perfwalk(ui, repo, *pats, **opts):
+    timer, fm = gettimer(ui, opts)
     try:
         m = scmutil.match(repo[None], pats, {})
         timer(lambda: len(list(repo.dirstate.walk(m, [], True, False))))
@@ -74,27 +76,27 @@ def perfwalk(ui, repo, *pats):
             timer(lambda: len(list(cmdutil.walk(repo, pats, {}))))
     fm.end()
 
-@command('perfannotate')
-def perfannotate(ui, repo, f):
-    timer, fm = gettimer(ui)
+@command('perfannotate', formatteropts)
+def perfannotate(ui, repo, f, **opts):
+    timer, fm = gettimer(ui, opts)
     fc = repo['.'][f]
     timer(lambda: len(fc.annotate(True)))
     fm.end()
 
 @command('perfstatus',
          [('u', 'unknown', False,
-           'ask status to look for unknown files')])
+           'ask status to look for unknown files')] + formatteropts)
 def perfstatus(ui, repo, **opts):
     #m = match.always(repo.root, repo.getcwd())
     #timer(lambda: sum(map(len, repo.dirstate.status(m, [], False, False,
     #                                                False))))
-    timer, fm = gettimer(ui)
-    timer(lambda: sum(map(len, repo.status(**opts))))
+    timer, fm = gettimer(ui, **opts)
+    timer(lambda: sum(map(len, repo.status(unknown=opts['unknown']))))
     fm.end()
 
-@command('perfaddremove')
-def perfaddremove(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfaddremove', formatteropts)
+def perfaddremove(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     try:
         oldquiet = repo.ui.quiet
         repo.ui.quiet = True
@@ -113,9 +115,9 @@ def clearcaches(cl):
         cl._nodecache = {nullid: nullrev}
         cl._nodepos = None
 
-@command('perfheads')
-def perfheads(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfheads', formatteropts)
+def perfheads(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     cl = repo.changelog
     def d():
         len(cl.headrevs())
@@ -123,11 +125,11 @@ def perfheads(ui, repo):
     timer(d)
     fm.end()
 
-@command('perftags')
-def perftags(ui, repo):
+@command('perftags', formatteropts)
+def perftags(ui, repo, **opts):
     import mercurial.changelog
     import mercurial.manifest
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     def t():
         repo.changelog = mercurial.changelog.changelog(repo.svfs)
         repo.manifest = mercurial.manifest.manifest(repo.svfs)
@@ -136,9 +138,9 @@ def perftags(ui, repo):
     timer(t)
     fm.end()
 
-@command('perfancestors')
-def perfancestors(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfancestors', formatteropts)
+def perfancestors(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     heads = repo.changelog.headrevs()
     def d():
         for a in repo.changelog.ancestors(heads):
@@ -146,9 +148,9 @@ def perfancestors(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfancestorset')
-def perfancestorset(ui, repo, revset):
-    timer, fm = gettimer(ui)
+@command('perfancestorset', formatteropts)
+def perfancestorset(ui, repo, revset, **opts):
+    timer, fm = gettimer(ui, opts)
     revs = repo.revs(revset)
     heads = repo.changelog.headrevs()
     def d():
@@ -158,9 +160,9 @@ def perfancestorset(ui, repo, revset):
     timer(d)
     fm.end()
 
-@command('perfdirs')
-def perfdirs(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfdirs', formatteropts)
+def perfdirs(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
@@ -169,9 +171,9 @@ def perfdirs(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfdirstate')
-def perfdirstate(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfdirstate', formatteropts)
+def perfdirstate(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     "a" in repo.dirstate
     def d():
         repo.dirstate.invalidate()
@@ -179,9 +181,9 @@ def perfdirstate(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfdirstatedirs')
-def perfdirstatedirs(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfdirstatedirs', formatteropts)
+def perfdirstatedirs(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     "a" in repo.dirstate
     def d():
         "a" in repo.dirstate._dirs
@@ -189,9 +191,9 @@ def perfdirstatedirs(ui, repo):
     timer(d)
     fm.end()
 
-@command('perffilefoldmap')
-def perffilefoldmap(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfdirstatefoldmap', formatteropts)
+def perffilefoldmap(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
@@ -200,9 +202,9 @@ def perffilefoldmap(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfdirfoldmap')
-def perfdirfoldmap(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfdirfoldmap', formatteropts)
+def perfdirfoldmap(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
@@ -212,9 +214,9 @@ def perfdirfoldmap(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfdirstatewrite')
-def perfdirstatewrite(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfdirstatewrite', formatteropts)
+def perfdirstatewrite(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     ds = repo.dirstate
     "a" in ds
     def d():
@@ -224,9 +226,9 @@ def perfdirstatewrite(ui, repo):
     fm.end()
 
 @command('perfmergecalculate',
-         [('r', 'rev', '.', 'rev to merge against')])
-def perfmergecalculate(ui, repo, rev):
-    timer, fm = gettimer(ui)
+         [('r', 'rev', '.', 'rev to merge against')] + formatteropts)
+def perfmergecalculate(ui, repo, rev, **opts):
+    timer, fm = gettimer(ui, opts)
     wctx = repo[None]
     rctx = scmutil.revsingle(repo, rev, rev)
     ancestor = wctx.ancestor(rctx)
@@ -242,8 +244,8 @@ def perfmergecalculate(ui, repo, rev):
     fm.end()
 
 @command('perfpathcopies', [], "REV REV")
-def perfpathcopies(ui, repo, rev1, rev2):
-    timer, fm = gettimer(ui)
+def perfpathcopies(ui, repo, rev1, rev2, **opts):
+    timer, fm = gettimer(ui, opts)
     ctx1 = scmutil.revsingle(repo, rev1, rev1)
     ctx2 = scmutil.revsingle(repo, rev2, rev2)
     def d():
@@ -252,8 +254,8 @@ def perfpathcopies(ui, repo, rev1, rev2):
     fm.end()
 
 @command('perfmanifest', [], 'REV')
-def perfmanifest(ui, repo, rev):
-    timer, fm = gettimer(ui)
+def perfmanifest(ui, repo, rev, **opts):
+    timer, fm = gettimer(ui, opts)
     ctx = scmutil.revsingle(repo, rev, rev)
     t = ctx.manifestnode()
     def d():
@@ -263,9 +265,9 @@ def perfmanifest(ui, repo, rev):
     timer(d)
     fm.end()
 
-@command('perfchangeset')
-def perfchangeset(ui, repo, rev):
-    timer, fm = gettimer(ui)
+@command('perfchangeset', formatteropts)
+def perfchangeset(ui, repo, rev, **opts):
+    timer, fm = gettimer(ui, opts)
     n = repo[rev].node()
     def d():
         repo.changelog.read(n)
@@ -273,10 +275,10 @@ def perfchangeset(ui, repo, rev):
     timer(d)
     fm.end()
 
-@command('perfindex')
-def perfindex(ui, repo):
+@command('perfindex', formatteropts)
+def perfindex(ui, repo, **opts):
     import mercurial.revlog
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo["tip"].node()
     def d():
@@ -285,18 +287,18 @@ def perfindex(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfstartup')
-def perfstartup(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfstartup', formatteropts)
+def perfstartup(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     cmd = sys.argv[0]
     def d():
         os.system("HGRCPATH= %s version -q > /dev/null" % cmd)
     timer(d)
     fm.end()
 
-@command('perfparents')
-def perfparents(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfparents', formatteropts)
+def perfparents(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     nl = [repo.changelog.node(i) for i in xrange(1000)]
     def d():
         for n in nl:
@@ -304,41 +306,45 @@ def perfparents(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfctxfiles')
-def perfparents(ui, repo, x):
+@command('perfctxfiles', formatteropts)
+def perfparents(ui, repo, x, **opts):
     x = int(x)
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     def d():
         len(repo[x].files())
     timer(d)
     fm.end()
 
-@command('perfrawfiles')
-def perfparents(ui, repo, x):
+@command('perfrawfiles', formatteropts)
+def perfparents(ui, repo, x, **opts):
     x = int(x)
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     cl = repo.changelog
     def d():
         len(cl.read(x)[3])
     timer(d)
     fm.end()
 
-@command('perflookup')
-def perflookup(ui, repo, rev):
-    timer, fm = gettimer(ui)
+@command('perflookup', formatteropts)
+def perflookup(ui, repo, rev, **opts):
+    timer, fm = gettimer(ui, opts)
+
+@command('perflookup', formatteropts)
+def perflookup(ui, repo, rev, **opts):
+    timer, fm = gettimer(ui, opts)
     timer(lambda: len(repo.lookup(rev)))
     fm.end()
 
-@command('perfrevrange')
-def perfrevrange(ui, repo, *specs):
-    timer, fm = gettimer(ui)
+@command('perfrevrange', formatteropts)
+def perfrevrange(ui, repo, *specs, **opts):
+    timer, fm = gettimer(ui, opts)
     revrange = scmutil.revrange
     timer(lambda: len(revrange(repo, specs)))
     fm.end()
 
-@command('perfnodelookup')
-def perfnodelookup(ui, repo, rev):
-    timer, fm = gettimer(ui)
+@command('perfnodelookup', formatteropts)
+def perfnodelookup(ui, repo, rev, **opts):
+    timer, fm = gettimer(ui, opts)
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo[rev].node()
@@ -350,22 +356,22 @@ def perfnodelookup(ui, repo, rev):
     fm.end()
 
 @command('perflog',
-         [('', 'rename', False, 'ask log to follow renames')])
+         [('', 'rename', False, 'ask log to follow renames')] + formatteropts)
 def perflog(ui, repo, **opts):
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     ui.pushbuffer()
     timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
                                copies=opts.get('rename')))
     ui.popbuffer()
     fm.end()
 
-@command('perfmoonwalk')
-def perfmoonwalk(ui, repo):
+@command('perfmoonwalk', formatteropts)
+def perfmoonwalk(ui, repo, **opts):
     """benchmark walking the changelog backwards
 
     This also loads the changelog data for each revision in the changelog.
     """
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     def moonwalk():
         for i in xrange(len(repo), -1, -1):
             ctx = repo[i]
@@ -373,9 +379,9 @@ def perfmoonwalk(ui, repo):
     timer(moonwalk)
     fm.end()
 
-@command('perftemplating')
-def perftemplating(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perftemplating', formatteropts)
+def perftemplating(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     ui.pushbuffer()
     timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
                                template='{date|shortdate} [{rev}:{node|short}]'
@@ -383,24 +389,24 @@ def perftemplating(ui, repo):
     ui.popbuffer()
     fm.end()
 
-@command('perfcca')
-def perfcca(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perfcca', formatteropts)
+def perfcca(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     timer(lambda: scmutil.casecollisionauditor(ui, False, repo.dirstate))
     fm.end()
 
-@command('perffncacheload')
-def perffncacheload(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perffncacheload', formatteropts)
+def perffncacheload(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     s = repo.store
     def d():
         s.fncache._load()
     timer(d)
     fm.end()
 
-@command('perffncachewrite')
-def perffncachewrite(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perffncachewrite', formatteropts)
+def perffncachewrite(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     s = repo.store
     s.fncache._load()
     def d():
@@ -409,9 +415,9 @@ def perffncachewrite(ui, repo):
     timer(d)
     fm.end()
 
-@command('perffncacheencode')
-def perffncacheencode(ui, repo):
-    timer, fm = gettimer(ui)
+@command('perffncacheencode', formatteropts)
+def perffncacheencode(ui, repo, **opts):
+    timer, fm = gettimer(ui, opts)
     s = repo.store
     s.fncache._load()
     def d():
@@ -420,10 +426,10 @@ def perffncacheencode(ui, repo):
     timer(d)
     fm.end()
 
-@command('perfdiffwd')
-def perfdiffwd(ui, repo):
+@command('perfdiffwd', formatteropts)
+def perfdiffwd(ui, repo, **opts):
     """Profile diff of working directory changes"""
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     options = {
         'w': 'ignore_all_space',
         'b': 'ignore_space_change',
@@ -441,10 +447,10 @@ def perfdiffwd(ui, repo):
     fm.end()
 
 @command('perfrevlog',
-         [('d', 'dist', 100, 'distance between the revisions')],
+         [('d', 'dist', 100, 'distance between the revisions')] + formatteropts,
          "[INDEXFILE]")
 def perfrevlog(ui, repo, file_, **opts):
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     from mercurial import revlog
     dist = opts['dist']
     def d():
@@ -456,15 +462,15 @@ def perfrevlog(ui, repo, file_, **opts):
     fm.end()
 
 @command('perfrevset',
-         [('C', 'clear', False, 'clear volatile cache between each call.')],
-         "REVSET")
-def perfrevset(ui, repo, expr, clear=False):
+         [('C', 'clear', False, 'clear volatile cache between each call.')]
+         + formatteropts, "REVSET")
+def perfrevset(ui, repo, expr, clear=False, **opts):
     """benchmark the execution time of a revset
 
     Use the --clean option if need to evaluate the impact of build volatile
     revisions set cache on the revset execution. Volatile cache hold filtered
     and obsolete related cache."""
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     def d():
         if clear:
             repo.invalidatevolatilesets()
@@ -472,12 +478,12 @@ def perfrevset(ui, repo, expr, clear=False):
     timer(d)
     fm.end()
 
-@command('perfvolatilesets')
-def perfvolatilesets(ui, repo, *names):
+@command('perfvolatilesets', formatteropts)
+def perfvolatilesets(ui, repo, *names, **opts):
     """benchmark the computation of various volatile set
 
     Volatile set computes element related to filtering and obsolescence."""
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     repo = repo.unfiltered()
 
     def getobs(name):
@@ -510,13 +516,13 @@ def perfvolatilesets(ui, repo, *names):
 @command('perfbranchmap',
          [('f', 'full', False,
            'Includes build time of subset'),
-         ])
-def perfbranchmap(ui, repo, full=False):
+         ] + formatteropts)
+def perfbranchmap(ui, repo, full=False, **opts):
     """benchmark the update of a branchmap
 
     This benchmarks the full repo.branchmap() call with read and write disabled
     """
-    timer, fm = gettimer(ui)
+    timer, fm = gettimer(ui, opts)
     def getbranchmap(filtername):
         """generate a benchmark function for the filtername"""
         if filtername is None:
