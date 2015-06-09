@@ -36,19 +36,24 @@ def update(rev):
         print >> sys.stderr, 'update to revision %s failed, aborting' % rev
         sys.exit(exc.returncode)
 
+
+def hg(cmd, repo=None):
+    """run a mercurial command
+
+    <cmd> is the list of command + argument,
+    <repo> is an optional repository path to run this command in."""
+    fullcmd = ['./hg']
+    if repo is not None:
+        fullcmd += ['-R', repo]
+    fullcmd += ['--config',
+                'extensions.perf=' + os.path.join(contribdir, 'perf.py')]
+    fullcmd += cmd
+    return check_output(fullcmd, stderr=STDOUT)
+
 def perf(revset, target=None):
     """run benchmark for this very revset"""
     try:
-        cmd = ['./hg',
-               '--config',
-               'extensions.perf='
-               + os.path.join(contribdir, 'perf.py'),
-               'perfrevset',
-               revset]
-        if target is not None:
-            cmd.append('-R')
-            cmd.append(target)
-        output = check_output(cmd, stderr=STDOUT)
+        output = hg(['perfrevset', revset], repo=target)
         output = output.lstrip('!') # remove useless ! in this context
         return output.strip()
     except CalledProcessError, exc:
