@@ -92,12 +92,15 @@ def printrevision(rev):
     check_call(['hg', 'log', '--rev', str(rev), '--template',
                '{desc|firstline}\n'])
 
-def formatresult(data):
-    """format the data dict into a line of text for humans"""
-    return ("wall %f comb %f user %f sys %f (best of %d)"
-            % (data['wall'], data['comb'], data['user'],
-               data['sys'], data['count']))
+def printresult(idx, data, maxidx):
+    """print a line of result to stdout"""
+    mask = '%i) %s'
 
+    out = ("wall %f comb %f user %f sys %f (best of %d)"
+           % (data['wall'], data['comb'], data['user'],
+              data['sys'], data['count']))
+
+    print mask % (idx, out)
 
 def getrevs(spec):
     """get the list of rev matched by a revset"""
@@ -156,7 +159,7 @@ for r in revs:
     for idx, rset in enumerate(revsets):
         data = perf(rset, target=options.repo)
         res.append(data)
-        print "%i)" % idx, formatresult(data)
+        printresult(idx, data, len(revsets))
         sys.stdout.flush()
     print "----------------------------"
 
@@ -180,5 +183,5 @@ for ridx, rset in enumerate(revsets):
 
     print "revset #%i: %s" % (ridx, rset)
     for idx, data in enumerate(results):
-        print '%i) %s' % (idx, formatresult(data[ridx]))
+        printresult(idx, data[ridx], len(results))
     print
