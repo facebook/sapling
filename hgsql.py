@@ -520,6 +520,10 @@ def wraprepo(repo):
                             self.sqlconn.commit()
                             datasize = 0
 
+                if datasize > 0:
+                    # commit at the end just to make sure we're clean
+                    self.sqlconn.commit()
+
                 cursor.execute("""DELETE FROM revision_references WHERE repo = %s
                                AND namespace = 'heads'""", (reponame,))
 
@@ -541,7 +545,7 @@ def wraprepo(repo):
                     values.append(k)
                     values.append(hex(v))
 
-                cursor.execute("INSERT INTO revision_references(repo, namespace, name, value)" +
+                cursor.execute("INSERT INTO revision_references(repo, namespace, name, value) " +
                                "VALUES %s" % ','.join(tmpl), tuple(values))
 
                 # revision_references has multiple keys (primary key, and a unique index), so

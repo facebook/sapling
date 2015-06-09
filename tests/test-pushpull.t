@@ -101,3 +101,32 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+
+# Verify that multiple heads and bookmarks work
+
+  $ cd ../client
+  $ hg up 0
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (leaving bookmark foo)
+  $ echo a > a
+  $ hg commit -qAm a
+  $ hg book bar
+  $ hg push -f ../master -B bar
+  pushing to ../master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  exporting bookmark bar
+  $ hg log -R ../master -T '{rev} {bookmarks}\n' -G
+  o  4 bar
+  |
+  | @  3
+  | |
+  | o  2 foo
+  | |
+  | o  1
+  |/
+  o  0
+  
