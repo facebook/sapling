@@ -403,18 +403,12 @@ Note there's a slight output glitch on non-hardlink systems: the last
   $ hg archive --subrepos -r tip --prefix './' ../archive.tar.gz
   \r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
-  archiving [                                           ] 0/3\r (no-eol) (esc)
-  archiving [=============>                             ] 1/3\r (no-eol) (esc)
   archiving [=============>                             ] 1/3\r (no-eol) (esc)
   archiving [===========================>               ] 2/3\r (no-eol) (esc)
-  archiving [===========================>               ] 2/3\r (no-eol) (esc)
-  archiving [==========================================>] 3/3\r (no-eol) (esc)
   archiving [==========================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   linking [ <=>                                           ] 1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   linking [  <=>                                          ] 1cloning subrepo foo from $TESTTMP/repo/foo
