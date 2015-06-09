@@ -15,6 +15,7 @@
 
 import sys
 import os
+import re
 from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
 # cannot use argparse, python 2.7 only
 from optparse import OptionParser
@@ -54,8 +55,7 @@ def perf(revset, target=None):
     """run benchmark for this very revset"""
     try:
         output = hg(['perfrevset', revset], repo=target)
-        output = output.lstrip('!') # remove useless ! in this context
-        return output.strip()
+        return parseoutput(output)
     except CalledProcessError, exc:
         print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
         if exc.output is None:
@@ -64,12 +64,40 @@ def perf(revset, target=None):
             print >> sys.stderr, exc.output
         sys.exit(exc.returncode)
 
+outputre = re.compile(r'! wall (\d+.\d+) comb (\d+.\d+) user (\d+.\d+) '
+                      'sys (\d+.\d+) \(best of (\d+)\)')
+
+def parseoutput(output):
+    """parse a textual output into a dict
+
+    We cannot just use json because we want to compare with old
+    versions of Mercurial that may not support json output.
+    """
+    match = outputre.search(output)
+    if not match:
+        print >> sys.stderr, 'abort: invalid output:'
+        print >> sys.stderr, output
+        sys.exit(1)
+    return {'comb': float(match.group(2)),
+            'count': int(match.group(5)),
+            'sys': float(match.group(3)),
+            'user': float(match.group(4)),
+            'wall': float(match.group(1)),
+            }
+
 def printrevision(rev):
     """print data about a revision"""
     sys.stdout.write("Revision: ")
     sys.stdout.flush()
     check_call(['hg', 'log', '--rev', str(rev), '--template',
                '{desc|firstline}\n'])
+
+def formatresult(data):
+    """format the data dict into a line of text for humans"""
+    return ("wall %f comb %f user %f sys %f (best of %d)"
+            % (data['wall'], data['comb'], data['user'],
+               data['sys'], data['count']))
+
 
 def getrevs(spec):
     """get the list of rev matched by a revset"""
@@ -128,7 +156,7 @@ for r in revs:
     for idx, rset in enumerate(revsets):
         data = perf(rset, target=options.repo)
         res.append(data)
-        print "%i)" % idx, data
+        print "%i)" % idx, formatresult(data)
         sys.stdout.flush()
     print "----------------------------"
 
@@ -152,5 +180,5 @@ for ridx, rset in enumerate(revsets):
 
     print "revset #%i: %s" % (ridx, rset)
     for idx, data in enumerate(results):
-        print '%i) %s' % (idx, data[ridx])
+        print '%i) %s' % (idx, formatresult(data[ridx]))
     print
