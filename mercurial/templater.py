@@ -364,12 +364,13 @@ def get(context, mapping, args):
     yield dictarg.get(key)
 
 def _evalifliteral(arg, context, mapping):
-    t = stringify(arg[0](context, mapping, arg[1]))
-    if arg[0] == runstring or arg[0] == runrawstring:
+    # get back to token tag to reinterpret string as template
+    strtoken = {runstring: 'string', runrawstring: 'rawstring'}.get(arg[0])
+    if strtoken:
         yield runtemplate(context, mapping,
-                          compiletemplate(t, context, strtoken='rawstring'))
+                          compiletemplate(arg[1], context, strtoken))
     else:
-        yield t
+        yield stringify(arg[0](context, mapping, arg[1]))
 
 def if_(context, mapping, args):
     """:if(expr, then[, else]): Conditionally execute based on the result of

@@ -2857,6 +2857,17 @@ Test leading backslashes:
   \{rev} \{file} \\\head1
   $ cd ..
 
+Test leading backslashes in "if" expression (issue4714):
+
+  $ cd latesttag
+  $ hg log -r 2 -T '{if("1", "\{rev}")} {if("1", r"\{rev}")}\n'
+  {rev} \2
+  $ hg log -r 2 -T '{if("1", "\\{rev}")} {if("1", r"\\{rev}")}\n'
+  \2 \\2
+  $ hg log -r 2 -T '{if("1", "\\\{rev}")} {if("1", r"\\\{rev}")}\n'
+  \{rev} \\\2
+  $ cd ..
+
 "string-escape"-ed "\x5c\x786e" becomes r"\x6e" (once) or r"n" (twice)
 
   $ hg log -R a -r 0 --template '{if("1", "\x5c\x786e", "NG")}\n'
