@@ -523,21 +523,26 @@ def wraprepo(repo):
                 cursor.execute("""DELETE FROM revision_references WHERE repo = %s
                                AND namespace = 'heads'""", (reponame,))
 
-                for head in self.heads():
-                    cursor.execute("""INSERT INTO revision_references(repo, namespace, value)
-                                   VALUES(%s, 'heads', %s)""",
-                                   (reponame, hex(head)))
-
                 # Write the bookmarks that are part of this transaction. This
                 # may write them even if nothing has changed, but that's not
                 # a big deal.
                 cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
                                namespace = 'bookmarks'""", (repo.sqlreponame))
+                tmpl = []
+                values = []
+                for head in self.heads():
+                    tmpl.append("(%s, 'heads', NULL, %s)")
+                    values.append(reponame)
+                    values.append(hex(head))
 
                 for k, v in repo._bookmarks.iteritems():
-                    cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
-                                   VALUES(%s, 'bookmarks', %s, %s)""",
-                                   (repo.sqlreponame, k, hex(v)))
+                    tmpl.append("(%s, 'bookmarks', %s, %s)")
+                    values.append(repo.sqlreponame)
+                    values.append(k)
+                    values.append(hex(v))
+
+                cursor.execute("INSERT INTO revision_references(repo, namespace, name, value)" +
+                               "VALUES %s" % ','.join(tmpl), tuple(values))
 
                 # revision_references has multiple keys (primary key, and a unique index), so
                 # mysql gives a warning when using ON DUPLICATE KEY since it would only update one
