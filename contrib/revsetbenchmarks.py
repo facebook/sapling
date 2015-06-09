@@ -57,7 +57,11 @@ def perf(revset, target=None):
         output = output.lstrip('!') # remove useless ! in this context
         return output.strip()
     except CalledProcessError, exc:
-        print >> sys.stderr, 'abort: cannot run revset benchmark'
+        print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
+        if exc.output is None:
+            print >> sys.stderr, '(no ouput)'
+        else:
+            print >> sys.stderr, exc.output
         sys.exit(exc.returncode)
 
 def printrevision(rev):
