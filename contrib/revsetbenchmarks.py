@@ -82,10 +82,10 @@ def parseoutput(output):
 
 def printrevision(rev):
     """print data about a revision"""
-    sys.stdout.write("Revision: ")
+    sys.stdout.write("Revision ")
     sys.stdout.flush()
     check_call(['hg', 'log', '--rev', str(rev), '--template',
-               '{desc|firstline}\n'])
+                '{rev}:{node|short}: {desc|firstline}\n'])
 
 def idxwidth(nbidx):
     """return the max width of number used for index
@@ -196,7 +196,7 @@ Result by revset
 ================
 """
 
-print 'Revision:', revs
+print 'Revision:'
 for idx, rev in enumerate(revs):
     sys.stdout.write('%i) ' % idx)
     sys.stdout.flush()
