@@ -496,14 +496,14 @@ def templatelabel(context, mapping, args):
     # etc. don't need to be quoted
     mapping.update(dict([(k, k) for k in _effects]))
 
-    thing = templater._evalifliteral(args[1], context, mapping)
+    thing = args[1][0](context, mapping, args[1][1])
 
     # apparently, repo could be a string that is the favicon?
     repo = mapping.get('repo', '')
     if isinstance(repo, str):
         return thing
 
-    label = templater._evalifliteral(args[0], context, mapping)
+    label = args[0][0](context, mapping, args[0][1])
 
     thing = templater.stringify(thing)
     label = templater.stringify(label)

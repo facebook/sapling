@@ -2812,6 +2812,12 @@ Test string literal:
   $ hg log -Ra -r0 -T '{r"rawstring: {rev}"}\n'
   rawstring: {rev}
 
+because map operation requires template, raw string can't be used
+
+  $ hg log -Ra -r0 -T '{files % r"rawstring"}\n'
+  hg: parse error: expected template specifier
+  [255]
+
 Test string escaping:
 
   $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
@@ -2865,23 +2871,23 @@ stripped before parsing:
 Test leading backslashes:
 
   $ cd latesttag
-  $ hg log -r 2 -T '\{rev} {files % "\{file}"} {files % r"\{file}"}\n'
-  {rev} {file} \head1
-  $ hg log -r 2 -T '\\{rev} {files % "\\{file}"} {files % r"\\{file}"}\n'
-  \2 \head1 \\head1
-  $ hg log -r 2 -T '\\\{rev} {files % "\\\{file}"} {files % r"\\\{file}"}\n'
-  \{rev} \{file} \\\head1
+  $ hg log -r 2 -T '\{rev} {files % "\{file}"}\n'
+  {rev} {file}
+  $ hg log -r 2 -T '\\{rev} {files % "\\{file}"}\n'
+  \2 \head1
+  $ hg log -r 2 -T '\\\{rev} {files % "\\\{file}"}\n'
+  \{rev} \{file}
   $ cd ..
 
 Test leading backslashes in "if" expression (issue4714):
 
   $ cd latesttag
   $ hg log -r 2 -T '{if("1", "\{rev}")} {if("1", r"\{rev}")}\n'
-  {rev} \2
+  {rev} \{rev}
   $ hg log -r 2 -T '{if("1", "\\{rev}")} {if("1", r"\\{rev}")}\n'
-  \2 \\2
+  \2 \\{rev}
   $ hg log -r 2 -T '{if("1", "\\\{rev}")} {if("1", r"\\\{rev}")}\n'
-  \{rev} \\\2
+  \{rev} \\\{rev}
   $ cd ..
 
 "string-escape"-ed "\x5c\x786e" becomes r"\x6e" (once) or r"n" (twice)
@@ -2951,8 +2957,6 @@ Test leading backslashes in "if" expression (issue4714):
   fourth
   second
   third
-  $ hg log -R a -r 8 --template '{files % r"{file}\n"}\n'
-  fourth\nsecond\nthird\n
 
 Test string escaping in nested expression:
 
@@ -3064,7 +3068,7 @@ Test template string in pad function
   {0}        test
 
   $ hg log -r 0 -T '{pad(r"\{rev}", 10)} {author|user}\n'
-  \0         test
+  \{rev}     test
 
 Test ifcontains function
 

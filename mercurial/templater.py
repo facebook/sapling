@@ -146,8 +146,6 @@ def getfilter(exp, context):
 def gettemplate(exp, context):
     if exp[0] == 'template':
         return compiletemplate(exp[1], context)
-    if exp[0] == 'rawstring':
-        return compiletemplate(exp[1], context, strtoken=exp[0])
     if exp[0] == 'symbol':
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
@@ -302,8 +300,8 @@ def fill(context, mapping, args):
             # i18n: "fill" is a keyword
             raise error.ParseError(_("fill expects an integer width"))
         try:
-            initindent = stringify(_evalifliteral(args[2], context, mapping))
-            hangindent = stringify(_evalifliteral(args[3], context, mapping))
+            initindent = stringify(args[2][0](context, mapping, args[2][1]))
+            hangindent = stringify(args[3][0](context, mapping, args[3][1]))
         except IndexError:
             pass
 
@@ -318,7 +316,7 @@ def pad(context, mapping, args):
 
     width = int(args[1][1])
 
-    text = stringify(_evalifliteral(args[0], context, mapping))
+    text = stringify(args[0][0](context, mapping, args[0][1]))
 
     right = False
     fillchar = ' '
@@ -368,15 +366,6 @@ def get(context, mapping, args):
     key = args[1][0](context, mapping, args[1][1])
     yield dictarg.get(key)
 
-def _evalifliteral(arg, context, mapping):
-    # get back to token tag to reinterpret string as template
-    strtoken = {runrawstring: 'rawstring'}.get(arg[0])
-    if strtoken:
-        yield runtemplate(context, mapping,
-                          compiletemplate(arg[1], context, strtoken))
-    else:
-        yield stringify(arg[0](context, mapping, arg[1]))
-
 def if_(context, mapping, args):
     """:if(expr, then[, else]): Conditionally execute based on the result of
     an expression."""
@@ -386,9 +375,9 @@ def if_(context, mapping, args):
 
     test = stringify(args[0][0](context, mapping, args[0][1]))
     if test:
-        yield _evalifliteral(args[1], context, mapping)
+        yield args[1][0](context, mapping, args[1][1])
     elif len(args) == 3:
-        yield _evalifliteral(args[2], context, mapping)
+        yield args[2][0](context, mapping, args[2][1])
 
 def ifcontains(context, mapping, args):
     """:ifcontains(search, thing, then[, else]): Conditionally execute based
@@ -401,9 +390,9 @@ def ifcontains(context, mapping, args):
     items = args[1][0](context, mapping, args[1][1])
 
     if item in items:
-        yield _evalifliteral(args[2], context, mapping)
+        yield args[2][0](context, mapping, args[2][1])
     elif len(args) == 4:
-        yield _evalifliteral(args[3], context, mapping)
+        yield args[3][0](context, mapping, args[3][1])
 
 def ifeq(context, mapping, args):
     """:ifeq(expr1, expr2, then[, else]): Conditionally execute based on
@@ -415,9 +404,9 @@ def ifeq(context, mapping, args):
     test = stringify(args[0][0](context, mapping, args[0][1]))
     match = stringify(args[1][0](context, mapping, args[1][1]))
     if test == match:
-        yield _evalifliteral(args[2], context, mapping)
+        yield args[2][0](context, mapping, args[2][1])
     elif len(args) == 4:
-        yield _evalifliteral(args[3], context, mapping)
+        yield args[3][0](context, mapping, args[3][1])
 
 def join(context, mapping, args):
     """:join(list, sep): Join items in a list with a delimiter."""
@@ -451,7 +440,7 @@ def label(context, mapping, args):
         raise error.ParseError(_("label expects two arguments"))
 
     # ignore args[0] (the label string) since this is supposed to be a a no-op
-    yield _evalifliteral(args[1], context, mapping)
+    yield args[1][0](context, mapping, args[1][1])
 
 def revset(context, mapping, args):
     """:revset(query[, formatargs...]): Execute a revision set query. See
@@ -567,7 +556,7 @@ def sub(context, mapping, args):
 
     pat = stringify(args[0][0](context, mapping, args[0][1]))
     rpl = stringify(args[1][0](context, mapping, args[1][1]))
-    src = stringify(_evalifliteral(args[2], context, mapping))
+    src = stringify(args[2][0](context, mapping, args[2][1]))
     yield re.sub(pat, rpl, src)
 
 def startswith(context, mapping, args):
