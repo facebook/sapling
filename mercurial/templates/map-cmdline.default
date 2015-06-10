@@ -71,3 +71,5 @@ description = '{if(desc|strip, "{label('ui.note log.description',
                                        'description:')}
                                 {label('ui.note log.description',
                                        '{desc|strip}')}\n\n")}'
+
+status = '{status} {path}\n{if(copy, "  {copy}\n")}'
