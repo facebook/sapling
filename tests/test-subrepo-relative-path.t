@@ -74,7 +74,7 @@ subrepo debug for 'main' clone
 
 subrepo paths with ssh urls
 
-  $ hg clone -e dummyssh ssh://user@dummy/cloned sshclone
+  $ hg clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/cloned sshclone
   requesting all changes
   adding changesets
   adding manifests
@@ -89,7 +89,7 @@ subrepo paths with ssh urls
   added 1 changesets with 1 changes to 1 files
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg -R sshclone push -e dummyssh ssh://user@dummy/`pwd`/cloned
+  $ hg -R sshclone push -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/`pwd`/cloned
   pushing to ssh://user@dummy/$TESTTMP/cloned
   pushing subrepo sub to ssh://user@dummy/$TESTTMP/sub
   searching for changes

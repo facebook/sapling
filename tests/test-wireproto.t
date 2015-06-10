@@ -90,13 +90,13 @@ HTTP without the httpheader capability:
 
 SSH (try to exercise the ssh functionality with a dummy script):
 
-  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo uno due tre quattro
+  $ hg debugwireargs --ssh "python $TESTDIR/dummyssh" ssh://user@dummy/repo uno due tre quattro
   uno due tre quattro None
-  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo eins zwei --four vier
+  $ hg debugwireargs --ssh "python $TESTDIR/dummyssh" ssh://user@dummy/repo eins zwei --four vier
   eins zwei None vier None
-  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo eins zwei
+  $ hg debugwireargs --ssh "python $TESTDIR/dummyssh" ssh://user@dummy/repo eins zwei
   eins zwei None None None
-  $ hg debugwireargs --ssh dummyssh ssh://user@dummy/repo eins zwei --five fuenf
+  $ hg debugwireargs --ssh "python $TESTDIR/dummyssh" ssh://user@dummy/repo eins zwei --five fuenf
   eins zwei None None None
 
 Explicitly kill daemons to let the test exit on Windows

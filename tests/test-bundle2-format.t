@@ -210,7 +210,7 @@ Create an extension to test bundle2 API
   > bundle2-exp=True
   > evolution=createmarkers
   > [ui]
-  > ssh=dummyssh
+  > ssh=python "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [web]
   > push_ssl = false
