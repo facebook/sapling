@@ -819,7 +819,27 @@ def unbundle(repo, proto, heads):
         for out in getattr(exc, '_bundle2salvagedoutput', ()):
             bundler.addpart(out)
         try:
-            raise
+            try:
+                raise
+            except error.PushkeyFailed, exc:
+                # check client caps
+                remotecaps = getattr(exc, '_replycaps', None)
+                if (remotecaps is not None
+                        and 'pushkey' not in remotecaps.get('error', ())):
+                    # no support remote side, fallback to Abort handler.
+                    raise
+                part = bundler.newpart('error:pushkey')
+                part.addparam('in-reply-to', exc.partid)
+                if exc.namespace is not None:
+                    part.addparam('namespace', exc.namespace, mandatory=False)
+                if exc.key is not None:
+                    part.addparam('key', exc.key, mandatory=False)
+                if exc.new is not None:
+                    part.addparam('new', exc.new, mandatory=False)
+                if exc.old is not None:
+                    part.addparam('old', exc.old, mandatory=False)
+                if exc.ret is not None:
+                    part.addparam('ret', exc.ret, mandatory=False)
         except error.BundleValueError, exc:
             errpart = bundler.newpart('error:unsupportedcontent')
             if exc.parttype is not None:

@@ -777,7 +777,7 @@ Check abort from mandatory pushkey
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  abort: Correct phase push failed (because hooks)
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
@@ -791,7 +791,7 @@ Check abort from mandatory pushkey
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  abort: Correct phase push failed (because hooks)
   [255]
 
 (Failure from a the pushkey)
@@ -849,7 +849,7 @@ Check abort from mandatory pushkey
   remote: pushkey: lock state after "phases"
   remote: lock:  free
   remote: wlock: free
-  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  abort: Clown phase push failed
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
@@ -864,6 +864,6 @@ Check abort from mandatory pushkey
   remote: pushkey: lock state after "phases"
   remote: lock:  free
   remote: wlock: free
-  abort: failed to update value for "phases/cd010b8cd998f3981a5a8115f94f8da4ab506089"
+  abort: Clown phase push failed
   [255]
 

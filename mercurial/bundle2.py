@@ -1109,7 +1109,8 @@ class unbundlepart(unpackermixin):
 # These are only the static capabilities.
 # Check the 'getrepocaps' function for the rest.
 capabilities = {'HG20': (),
-                'error': ('abort', 'unsupportedcontent', 'pushraced'),
+                'error': ('abort', 'unsupportedcontent', 'pushraced',
+                          'pushkey'),
                 'listkeys': (),
                 'pushkey': (),
                 'digests': tuple(sorted(util.DIGESTS.keys())),
@@ -1289,6 +1290,17 @@ def handlereplycaps(op, inpart):
 def handleerrorabort(op, inpart):
     """Used to transmit abort error over the wire"""
     raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
+
+@parthandler('error:pushkey', ('namespace', 'key', 'new', 'old', 'ret',
+                               'in-reply-to'))
+def handleerrorpushkey(op, inpart):
+    """Used to transmit failure of a mandatory pushkey over the wire"""
+    kwargs = {}
+    for name in ('namespace', 'key', 'new', 'old', 'ret'):
+        value = inpart.params.get(name)
+        if value is not None:
+            kwargs[name] = value
+    raise error.PushkeyFailed(inpart.params['in-reply-to'], **kwargs)
 
 @parthandler('error:unsupportedcontent', ('parttype', 'params'))
 def handleerrorunsupportedcontent(op, inpart):
