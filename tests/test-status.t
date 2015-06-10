@@ -212,6 +212,33 @@ hg status -A:
   $ mkdir ignoreddir
   $ touch ignoreddir/file
 
+Test templater support:
+
+  $ hg status -AT "[{status}]\t{if(copy, '{copy} -> ')}{path}\n"
+  [M]	.hgignore
+  [A]	added
+  [A]	modified -> copied
+  [R]	removed
+  [!]	deleted
+  [?]	ignored
+  [?]	unknown
+  [I]	ignoreddir/file
+  [C]	modified
+  $ hg status -AT default
+  M .hgignore
+  A added
+  A copied
+    modified
+  R removed
+  ! deleted
+  ? ignored
+  ? unknown
+  I ignoreddir/file
+  C modified
+  $ hg status -T compact
+  abort: "status" not in template map
+  [255]
+
 hg status ignoreddir/file:
 
   $ hg status ignoreddir/file
