@@ -103,25 +103,25 @@ def idxwidth(nbidx):
         idxwidth = 1
     return idxwidth
 
-def printresult(idx, data, maxidx):
+def printresult(idx, data, maxidx, verbose=False):
     """print a line of result to stdout"""
     mask = '%%0%ii) %%s' % idxwidth(maxidx)
-    out = ['%10.6f' % data['wall'],
-           '%10.6f' % data['comb'],
-           '%10.6f' % data['user'],
-           '%10.6f' % data['sys'],
-           '%6d'    % data['count'],
-          ]
+    out = ['%10.6f' % data['wall']]
+    if verbose:
+        out.append('%10.6f' % data['comb'])
+        out.append('%10.6f' % data['user'])
+        out.append('%10.6f' % data['sys'])
+        out.append('%6d'    % data['count'])
     print mask % (idx, ' '.join(out))
 
-def printheader(maxidx):
+def printheader(maxidx, verbose=False):
     header = [' ' * (idxwidth(maxidx) + 1),
-              '  %-8s' % 'wall',
-              '  %-8s' % 'comb',
-              '  %-8s' % 'user',
-              '  %-8s' % 'sys',
-              '%6s' % 'count',
-             ]
+              '  %-8s' % 'time']
+    if verbose:
+        header.append('  %-8s' % 'comb')
+        header.append('  %-8s' % 'user')
+        header.append('  %-8s' % 'sys')
+        header.append('%6s' % 'count')
     print ' '.join(header)
 
 def getrevs(spec):
@@ -140,6 +140,10 @@ parser.add_option("-f", "--file",
                   metavar="FILE")
 parser.add_option("-R", "--repo",
                   help="run benchmark on REPO", metavar="REPO")
+
+parser.add_option("-v", "--verbose",
+                  action='store_true',
+                  help="display all timing data (not just best total time)")
 
 (options, args) = parser.parse_args()
 
@@ -177,11 +181,11 @@ for r in revs:
     update(r)
     res = []
     results.append(res)
-    printheader(len(revsets))
+    printheader(len(revsets), verbose=options.verbose)
     for idx, rset in enumerate(revsets):
         data = perf(rset, target=options.repo)
         res.append(data)
-        printresult(idx, data, len(revsets))
+        printresult(idx, data, len(revsets), verbose=options.verbose)
         sys.stdout.flush()
     print "----------------------------"
 
@@ -204,7 +208,7 @@ print
 for ridx, rset in enumerate(revsets):
 
     print "revset #%i: %s" % (ridx, rset)
-    printheader(len(results))
+    printheader(len(results), verbose=options.verbose)
     for idx, data in enumerate(results):
-        printresult(idx, data[ridx], len(results))
+        printresult(idx, data[ridx], len(results), verbose=options.verbose)
     print
