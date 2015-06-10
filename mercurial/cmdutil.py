@@ -14,6 +14,7 @@ import context, repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
 import encoding
+import formatter
 import crecord as crecordmod
 import lock as lockmod
 
@@ -1493,40 +1494,7 @@ def gettemplate(ui, tmpl, style):
     if not tmpl:
         return None, None
 
-    # looks like a literal template?
-    if '{' in tmpl:
-        return tmpl, None
-
-    # perhaps a stock style?
-    if not os.path.split(tmpl)[0]:
-        mapname = (templater.templatepath('map-cmdline.' + tmpl)
-                   or templater.templatepath(tmpl))
-        if mapname and os.path.isfile(mapname):
-            return None, mapname
-
-    # perhaps it's a reference to [templates]
-    t = ui.config('templates', tmpl)
-    if t:
-        try:
-            tmpl = templater.unquotestring(t)
-        except SyntaxError:
-            tmpl = t
-        return tmpl, None
-
-    if tmpl == 'list':
-        ui.write(_("available styles: %s\n") % templater.stylelist())
-        raise util.Abort(_("specify a template"))
-
-    # perhaps it's a path to a map or a template
-    if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):
-        # is it a mapfile for a style?
-        if os.path.basename(tmpl).startswith("map-"):
-            return None, os.path.realpath(tmpl)
-        tmpl = open(tmpl).read()
-        return tmpl, None
-
-    # constant string?
-    return tmpl, None
+    return formatter.lookuptemplate(ui, 'changeset', tmpl)
 
 def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.

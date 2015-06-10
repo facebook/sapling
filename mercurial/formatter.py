@@ -9,6 +9,8 @@ import cPickle
 from node import hex, short
 from i18n import _
 import encoding, util
+import templater
+import os
 
 class baseformatter(object):
     def __init__(self, ui, topic, opts):
@@ -132,6 +134,42 @@ class jsonformatter(baseformatter):
     def end(self):
         baseformatter.end(self)
         self._ui.write("\n]\n")
+
+def lookuptemplate(ui, topic, tmpl):
+    # looks like a literal template?
+    if '{' in tmpl:
+        return tmpl, None
+
+    # perhaps a stock style?
+    if not os.path.split(tmpl)[0]:
+        mapname = (templater.templatepath('map-cmdline.' + tmpl)
+                   or templater.templatepath(tmpl))
+        if mapname and os.path.isfile(mapname):
+            return None, mapname
+
+    # perhaps it's a reference to [templates]
+    t = ui.config('templates', tmpl)
+    if t:
+        try:
+            tmpl = templater.unquotestring(t)
+        except SyntaxError:
+            tmpl = t
+        return tmpl, None
+
+    if tmpl == 'list':
+        ui.write(_("available styles: %s\n") % templater.stylelist())
+        raise util.Abort(_("specify a template"))
+
+    # perhaps it's a path to a map or a template
+    if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):
+        # is it a mapfile for a style?
+        if os.path.basename(tmpl).startswith("map-"):
+            return None, os.path.realpath(tmpl)
+        tmpl = open(tmpl).read()
+        return tmpl, None
+
+    # constant string?
+    return tmpl, None
 
 def formatter(ui, topic, opts):
     template = opts.get("template", "")
