@@ -11,6 +11,7 @@
 import sys
 import os
 import re
+import math
 from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
 # cannot use argparse, python 2.7 only
 from optparse import OptionParser
@@ -103,10 +104,55 @@ def idxwidth(nbidx):
         idxwidth = 1
     return idxwidth
 
-def printresult(idx, data, maxidx, verbose=False):
+def getfactor(main, other, field, sensitivity=0.05):
+    """return the relative factor between values for 'field' in main and other
+
+    Return None if the factor is insignicant (less than <sensitivity>
+    variation)."""
+    factor = 1
+    if main is not None:
+        factor = other[field] / main[field]
+    low, high = 1 - sensitivity, 1 + sensitivity
+    if (low < factor < high):
+        return None
+    return factor
+
+def formatfactor(factor):
+    """format a factor into a 4 char string
+
+     22%
+    156%
+    x2.4
+     x23
+    x789
+    x1e4
+    x5x7
+
+    """
+    if factor is None:
+        return '    '
+    elif factor < 2:
+        return '%3i%%' % (factor * 100)
+    elif factor < 10:
+        return 'x%3.1f' % factor
+    elif factor < 1000:
+        return '%4s' % ('x%i' % factor)
+    else:
+        order = int(math.log(factor)) + 1
+        while 1 < math.log(factor):
+            factor //= 0
+        return 'x%ix%i' % (factor, order)
+
+_marker = object()
+def printresult(idx, data, maxidx, verbose=False, reference=_marker):
     """print a line of result to stdout"""
     mask = '%%0%ii) %%s' % idxwidth(maxidx)
     out = ['%10.6f' % data['wall']]
+    if reference is not _marker:
+        factor = None
+        if reference is not None:
+            factor = getfactor(reference, data, 'wall')
+        out.append(formatfactor(factor))
     if verbose:
         out.append('%10.6f' % data['comb'])
         out.append('%10.6f' % data['user'])
@@ -114,9 +160,11 @@ def printresult(idx, data, maxidx, verbose=False):
         out.append('%6d'    % data['count'])
     print mask % (idx, ' '.join(out))
 
-def printheader(maxidx, verbose=False):
+def printheader(maxidx, verbose=False, relative=False):
     header = [' ' * (idxwidth(maxidx) + 1),
               '  %-8s' % 'time']
+    if relative:
+        header.append('    ')
     if verbose:
         header.append('  %-8s' % 'comb')
         header.append('  %-8s' % 'user')
@@ -208,7 +256,10 @@ print
 for ridx, rset in enumerate(revsets):
 
     print "revset #%i: %s" % (ridx, rset)
-    printheader(len(results), verbose=options.verbose)
+    printheader(len(results), verbose=options.verbose, relative=True)
+    ref = None
     for idx, data in enumerate(results):
-        printresult(idx, data[ridx], len(results), verbose=options.verbose)
+        printresult(idx, data[ridx], len(results), verbose=options.verbose,
+                    reference=ref)
+        ref = data[ridx]
     print
